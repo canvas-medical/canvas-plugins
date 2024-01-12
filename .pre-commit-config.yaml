@@ -1,0 +1,129 @@
+default_language_version:
+  python: python3.11
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude_types:
+          - svg
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+        exclude_types:
+          - svg
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+        exclude_types:
+          - batch
+      - id: fix-byte-order-marker
+
+  - repo: https://github.com/pappasam/toml-sort
+    rev: v0.23.1
+    hooks:
+      - id: toml-sort
+        args: [--in-place, --all]
+        exclude: |
+          (?x)(
+            poetry.lock
+          )$
+
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.6.0
+    hooks:
+      - id: poetry-check
+        files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
+      - id: poetry-lock
+        args: [--no-update]
+        files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.12.0
+    hooks:
+      - id: pyupgrade
+        name: pyupgrade [canvas_core]
+        args: [--py310-plus]
+
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        exclude: |
+          (?x)(
+            migrations/.*
+          )$
+        additional_dependencies: [tomli]
+
+  # upgrading to v2.0.0 will cause package dependencies issues
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args: ["--remove-all-unused-imports", "--in-place", "--recursive"]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort (python)
+
+  - repo: https://github.com/psf/black
+    rev: 23.9.1
+    hooks:
+      - id: black
+        args: ["--config=pyproject.toml"]
+
+  - repo: https://github.com/rtts/djhtml
+    rev: 3.0.6
+    hooks:
+      - id: djhtml
+        # Indent only HTML files in template directories
+        files: .*/templates/.*\.html$
+        args: ["--tabwidth=2"]
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+        args: ["-x", "-e", "SC1091"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: name-tests-test
+        args: ["--django"]
+        exclude: |
+          (?x)(
+            tests/(factories|fixtures|utils)|
+            tests/.*/utils/.*\.py|
+            tests/.*/snapshots/.*\.py|
+            tests/.*/_.*\.py
+          )
+      - id: debug-statements
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+      - id: check-builtin-literals
+      - id: check-docstring-first
+      - id: check-ast
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        # https://github.com/python-poetry/poetry/issues/7184
+        entry: |
+          bash -c "
+            python -m pip install --upgrade pip setuptools wheel \
+            && poetry install --no-ansi \
+            && exec poetry run mypy --show-traceback $@
+          "
+        exclude: |
+          (?x)(
+            example/[^/]+/models.py
+          )

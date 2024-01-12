@@ -1,0 +1,56 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+check_untyped_defs = true
+color_output = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = false
+disallow_untyped_defs = true
+error_summary = true
+follow_imports = "normal"
+follow_imports_for_stubs = false
+ignore_missing_imports = true
+no_implicit_optional = true
+pretty = true
+show_error_context = true
+strict_equality = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = false
+warn_unreachable = true
+warn_unused_ignores = true
+
+[tool.poetry]
+authors = ["Canvas Team <engineering@canvasmedical.com>"]
+description = ""
+license = "MIT"
+name = "canvas-sdk"
+packages = [{include = "canvas_sdk"}]
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+canvas-core = "^0.84.1"
+python = "^3.12"
+
+[tool.poetry.dev-dependencies]
+canvas-brush = "^1.2.2"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "canvas-pypi"
+priority = "supplemental"
+url = "https://pypicloud.canvasmedical.com/simple/"
