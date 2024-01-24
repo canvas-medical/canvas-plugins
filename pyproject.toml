@@ -32,19 +32,23 @@ warn_unused_ignores = true
 
 [tool.poetry]
 authors = ["Canvas Team <engineering@canvasmedical.com>"]
-description = ""
+description = "SDK to power event-driven actions in your Canvas instance"
 license = "MIT"
 name = "canvas-sdk"
-packages = [{include = "canvas_sdk"}]
+packages = [{include = "canvas"}]
 readme = "README.md"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
 canvas-core = "^0.84.1"
 python = "^3.12"
+typer = "^0.9.0"
 
 [tool.poetry.dev-dependencies]
 canvas-brush = "^1.2.2"
+
+[tool.poetry.scripts]
+canvas = "canvas.main:app"
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -54,3 +58,7 @@ priority = "primary"
 name = "canvas-pypi"
 priority = "supplemental"
 url = "https://pypicloud.canvasmedical.com/simple/"
+
+[tool.pydocstyle]
+add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
+convention = "google"
