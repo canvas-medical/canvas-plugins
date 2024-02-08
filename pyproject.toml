@@ -32,20 +32,21 @@ warn_unused_ignores = true
 
 [tool.poetry]
 authors = ["Canvas Team <engineering@canvasmedical.com>"]
-description = "SDK to power event-driven actions in your Canvas instance"
+description = "SDK to customize event-driven actions in your Canvas instance"
 license = "MIT"
-name = "canvas-sdk"
+name = "canvas"
 packages = [{include = "canvas"}]
 readme = "README.md"
-version = "0.1.0"
+version = "0.1.4"
 
 [tool.poetry.dependencies]
+canvas-brush = "^1.2.2"
 canvas-core = "^0.84.1"
 python = "^3.12"
 typer = "^0.9.0"
 
 [tool.poetry.dev-dependencies]
-canvas-brush = "^1.2.2"
+twine = "^4.0.2"
 
 [tool.poetry.scripts]
 canvas = "canvas.main:app"
