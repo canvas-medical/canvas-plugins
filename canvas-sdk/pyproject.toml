@@ -32,16 +32,33 @@ warn_unused_ignores = true
 
 [tool.poetry]
 authors = ["Canvas Team <engineering@canvasmedical.com>"]
-description = ""
-name = "canvas-plugins"
-version = "1.0.0"
+description = "SDK to customize event-driven actions in your Canvas instance"
+license = "MIT"
+name = "canvas"
+packages = [{include = "canvas"}]
+readme = "README.md"
+version = "0.1.4"
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+canvas-brush = "^1.2.2"
+canvas-core = "^0.84.1"
+python = "^3.12"
+typer = "^0.9.0"
+
+[tool.poetry.dev-dependencies]
+twine = "^4.0.2"
+
+[tool.poetry.scripts]
+canvas = "canvas.main:app"
 
 [[tool.poetry.source]]
 name = "PyPI"
 priority = "primary"
+
+[[tool.poetry.source]]
+name = "canvas-pypi"
+priority = "supplemental"
+url = "https://pypicloud.canvasmedical.com/simple/"
 
 [tool.pydocstyle]
 add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
