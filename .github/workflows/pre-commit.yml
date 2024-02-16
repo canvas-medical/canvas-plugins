@@ -1,0 +1,36 @@
+name: Pre-commit
+
+on:
+  merge_group:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  pre-commit:
+    name: Enforce Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine head and base sha
+        id: set-sha
+        uses: canvas-medical/workflows/.github/actions/set-sha@main
+
+      - uses: canvas-medical/workflows/.github/actions/install-python-and-poetry@main
+        with:
+          CANVAS_PYPI_USERNAME: ${{ secrets.CANVAS_PRIVATE_PYPI_READ_ONLY_USERNAME }}
+          CANVAS_PYPI_PASSWORD: ${{ secrets.CANVAS_PRIVATE_PYPI_READ_ONLY_PASSWORD }}
+
+      - name: Run the pre-commit hooks
+        uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: >-
+            --all-files
+            --source ${{ steps.set-sha.outputs.base-sha }}
+            --origin ${{ steps.set-sha.outputs.base-sha }}
+            --show-diff-on-failure
+            --color=always
