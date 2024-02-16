@@ -1,0 +1,21 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: canvas-medical/workflows/.github/actions/install-python-and-poetry@main
+      - name: Install canvas
+        shell: bash
+        run: poetry install --no-interaction
+
+      # Run Pytest via Poetry.
+      - name: Run Pytest
+        run: poetry run pytest --ff --verbosity 2
