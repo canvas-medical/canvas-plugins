@@ -109,6 +109,7 @@ repos:
     rev: v1.5.1
     hooks:
       - id: mypy
+        exclude: canvas_cli/templates/
         # https://github.com/python-poetry/poetry/issues/7184
         entry: |
           bash -c "
@@ -116,7 +117,4 @@ repos:
             && poetry install --no-ansi \
             && exec poetry run mypy --show-traceback $@
           "
-        exclude: |
-          (?x)(
-            example/[^/]+/models.py
-          )
+        args: ["--install-types"]
