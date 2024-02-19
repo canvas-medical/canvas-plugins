@@ -16,8 +16,8 @@ disallow_untyped_calls = true
 disallow_untyped_decorators = false
 disallow_untyped_defs = true
 error_summary = true
-follow_imports = "normal"
-follow_imports_for_stubs = false
+follow_imports = "skip"
+follow_imports_for_stubs = true
 ignore_missing_imports = true
 no_implicit_optional = true
 pretty = true
@@ -32,12 +32,31 @@ warn_unused_ignores = true
 
 [tool.poetry]
 authors = ["Canvas Team <engineering@canvasmedical.com>"]
-description = ""
-name = "canvas-plugins"
-version = "1.0.0"
+description = "SDK to customize event-driven actions in your Canvas instance"
+license = "MIT"
+name = "canvas"
+packages = [{include = "canvas_cli"}, {include = "canvas_sdk"}]
+readme = "README.md"
+version = "0.1.4"
 
 [tool.poetry.dependencies]
+cookiecutter = "*"
+keyring = "*"
 python = ">=3.11"
+requests = "*"
+typer = {extras = ["all"], version = "*"}
+websocket-client = "^1.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "*"
+pytest = "*"
+pytest-mock = "*"
+python-semantic-release = "*"
+requests-mock = "*"
+types-requests = "*"
+
+[tool.poetry.scripts]
+canvas = "canvas_cli.main:app"
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -46,3 +65,23 @@ priority = "primary"
 [tool.pydocstyle]
 add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
 convention = "google"
+
+[tool.pytest.ini_options]
+addopts = "--durations=10"
+filterwarnings = [
+  'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
+  'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
+]
+markers = [
+  'integration: mark a test as being an integration test with external dependencies'
+]
+norecursedirs = [
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+  "__pycache__",
+  "node_modules",
+  "static",
+  "static-files"
+]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
