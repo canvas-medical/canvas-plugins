@@ -1,0 +1,9 @@
+syntax = 'proto3';
+
+import "messages/events.proto";
+
+package canvas;
+
+service PluginRunner {
+  rpc HandleEvent (Event) returns (stream EventResponse);
+}

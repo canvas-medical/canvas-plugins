@@ -48,6 +48,7 @@ python = ">=3.11"
 requests = "*"
 typer = {extras = ["all"], version = "*"}
 websocket-client = "^1.7.0"
+grpcio = "^1.60.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "*"
@@ -56,6 +57,7 @@ pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
 types-requests = "*"
+grpcio-tools = "^1.60.1"
 
 [tool.poetry.scripts]
 canvas = "canvas_cli.main:app"
