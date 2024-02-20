@@ -1,3 +1,3 @@
-from .plan import PlanCommand, PlanCommandAttributes
+from canvas_sdk.commands.plan.plan import PlanCommand
 
-__all__ = ("PlanCommand", "PlanCommandAttributes")
+__all__ = ("PlanCommand",)

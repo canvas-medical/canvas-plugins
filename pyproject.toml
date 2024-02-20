@@ -41,6 +41,7 @@ version = "0.1.4"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
+ipython = "^8.21.0"
 keyring = "*"
 python = ">=3.11"
 requests = "*"

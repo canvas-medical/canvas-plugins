@@ -31,37 +31,37 @@ def test_plan_command_init_sets_all_kwargs_with_correct_none_type() -> None:
 
 def test_plan_command_raises_error_when_wrong_type_is_set_on_user_id() -> None:
     with pytest.raises(TypeError) as e:
-        PlanCommand(user_id="1", note_id=100, command_uuid="123", narrative="hello in there")
-    assert "'user_id' requires a type of '<class 'int'>'" in repr(e.value)
+        PlanCommand(user_id="1", note_id=100, command_uuid="123", narrative="hello in there")  # type: ignore
+    assert "user_id was given type 'str', but requires a type of 'int'" in repr(e.value)
 
 
 def test_plan_command_raises_error_when_wrong_type_is_set_on_note_id() -> None:
     with pytest.raises(TypeError) as e:
-        PlanCommand(user_id=1, note_id="100", command_uuid="123", narrative="hello in there")
-    assert "'note_id' requires a type of 'int | None'" in repr(e.value)
+        PlanCommand(user_id=1, note_id="100", command_uuid="123", narrative="hello in there")  # type: ignore
+    assert "note_id was given type 'str', but requires a type of 'int | None'" in repr(e.value)
 
 
 def test_plan_command_raises_error_when_wrong_type_is_set_on_command_uuid() -> None:
     with pytest.raises(TypeError) as e:
-        PlanCommand(user_id=1, note_id=100, command_uuid=123, narrative="hello in there")
-    assert "'command_uuid' requires a type of 'str | None'" in repr(e.value)
+        PlanCommand(user_id=1, note_id=100, command_uuid=123, narrative="hello in there")  # type: ignore
+    assert "command_uuid was given type 'int', but requires a type of 'str | None'" in repr(e.value)
 
 
 def test_plan_command_raises_error_when_wrong_type_is_set_on_narrative() -> None:
     with pytest.raises(TypeError) as e:
         PlanCommand(user_id=1, note_id=100, command_uuid="123", narrative=143)  # type: ignore
-    assert "'narrative' requires a type of 'str | None'" in repr(e.value)
+    assert "narrative was given type 'int', but requires a type of 'str | None'" in repr(e.value)
 
 
 def test_plan_command_only_allows_defined_type_to_be_set_on_user_id() -> None:
     p = PlanCommand(user_id=1)
     with pytest.raises(TypeError) as e1:
         p.user_id = "1"  # type: ignore
-    assert "'user_id' requires a type of '<class 'int'>'" in repr(e1.value)
+    assert "user_id was given type 'str', but requires a type of 'int'" in repr(e1.value)
 
     with pytest.raises(TypeError) as e2:
         p.user_id = None  # type: ignore
-    assert "'user_id' requires a type of '<class 'int'>'" in repr(e2.value)
+    assert "user_id was given type 'NoneType', but requires a type of 'int'" in repr(e2.value)
 
     p.user_id = 100
     assert p.user_id == 100
@@ -71,7 +71,7 @@ def test_plan_command_only_allows_defined_type_to_be_set_on_note_id() -> None:
     p = PlanCommand(user_id=1)
     with pytest.raises(TypeError) as e:
         p.note_id = "1"  # type: ignore
-    assert "'note_id' requires a type of 'int | None'" in repr(e.value)
+    assert "note_id was given type 'str', but requires a type of 'int | None'" in repr(e.value)
 
     p.note_id = 100
     assert p.note_id == 100
@@ -84,7 +84,7 @@ def test_plan_command_only_allows_defined_type_to_be_set_on_command_uuid() -> No
     p = PlanCommand(user_id=1)
     with pytest.raises(TypeError) as e:
         p.command_uuid = 1  # type: ignore
-    assert "'command_uuid' requires a type of 'str | None'" in repr(e.value)
+    assert "command_uuid was given type 'int', but requires a type of 'str | None'" in repr(e.value)
 
     p.command_uuid = "100"
     assert p.command_uuid == "100"
@@ -97,7 +97,7 @@ def test_plan_command_only_allows_defined_type_to_be_set_on_narrative() -> None:
     p = PlanCommand(user_id=1)
     with pytest.raises(TypeError) as e:
         p.narrative = 1  # type: ignore
-    assert "'narrative' requires a type of 'str | None'" in repr(e.value)
+    assert "narrative was given type 'int', but requires a type of 'str | None'" in repr(e.value)
 
     p.narrative = "yeah"
     assert p.narrative == "yeah"

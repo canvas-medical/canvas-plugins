@@ -1,13 +1,20 @@
-from typing import Any, TypedDict
+from typing import Any
 
+# class _BaseCommandSchema:
+#     note_id = int | None
+#     command_uuid = str | None
+#     user_id = int
 
-class _BaseCommandAttributes(TypedDict):
-    note_id: int | None
-    command_uuid: str | None
-    user_id: int
+_BaseCommandSchema = {
+    "note_id": type(int | None),
+    "command_uuid": type(str | None),
+    "user_id": type(int),
+}
 
 
 class _BaseCommand:
+    schema = _BaseCommandSchema
+
     note_id: int | None
     command_uuid: str | None
     user_id: int
@@ -25,14 +32,18 @@ class _BaseCommand:
         self.command_uuid = command_uuid
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name not in _BaseCommandAttributes.__annotations__:
+        if name not in self.schema:
             return super().__setattr__(name, value)
 
-        expected_type = _BaseCommandAttributes.__annotations__[name]
-        if issubclass(type(value), expected_type):
+        expected_type = self.schema[name]
+        actual_type = type(value)
+        if issubclass(actual_type, expected_type):
             super().__setattr__(name, value)
         else:
-            raise TypeError(f"'{name}' requires a type of '{expected_type}'")
+            expected_type_name = getattr(expected_type, "__name__", expected_type)
+            raise TypeError(
+                f"{name} was given type '{actual_type.__name__}', but requires a type of '{expected_type_name}'"
+            )
 
     @property
     def values(self) -> dict:
