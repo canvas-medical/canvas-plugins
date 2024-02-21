@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from messages import events_pb2 as messages_dot_events__pb2
+from generated.messages import events_pb2 as generated_dot_messages_dot_events__pb2
 
 
 class PluginRunnerStub(object):
@@ -16,8 +16,8 @@ class PluginRunnerStub(object):
         """
         self.HandleEvent = channel.unary_stream(
                 '/canvas.PluginRunner/HandleEvent',
-                request_serializer=messages_dot_events__pb2.Event.SerializeToString,
-                response_deserializer=messages_dot_events__pb2.EventResponse.FromString,
+                request_serializer=generated_dot_messages_dot_events__pb2.Event.SerializeToString,
+                response_deserializer=generated_dot_messages_dot_events__pb2.EventResponse.FromString,
                 )
 
 
@@ -35,8 +35,8 @@ def add_PluginRunnerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'HandleEvent': grpc.unary_stream_rpc_method_handler(
                     servicer.HandleEvent,
-                    request_deserializer=messages_dot_events__pb2.Event.FromString,
-                    response_serializer=messages_dot_events__pb2.EventResponse.SerializeToString,
+                    request_deserializer=generated_dot_messages_dot_events__pb2.Event.FromString,
+                    response_serializer=generated_dot_messages_dot_events__pb2.EventResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -60,7 +60,7 @@ class PluginRunner(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/canvas.PluginRunner/HandleEvent',
-            messages_dot_events__pb2.Event.SerializeToString,
-            messages_dot_events__pb2.EventResponse.FromString,
+            generated_dot_messages_dot_events__pb2.Event.SerializeToString,
+            generated_dot_messages_dot_events__pb2.EventResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

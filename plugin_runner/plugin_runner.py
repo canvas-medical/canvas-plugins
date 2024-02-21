@@ -5,9 +5,9 @@ import logging
 
 import grpc
 
-from messages.effects_pb2 import Effect
-from messages.events_pb2 import EventResponse, EventType
-from services.plugin_runner_pb2_grpc import PluginRunnerServicer, add_PluginRunnerServicer_to_server
+from generated.messages.effects_pb2 import Effect
+from generated.messages.events_pb2 import EventResponse, EventType
+from generated.services.plugin_runner_pb2_grpc import PluginRunnerServicer, add_PluginRunnerServicer_to_server
 
 
 class PluginRunner(PluginRunnerServicer):
