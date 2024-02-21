@@ -8,6 +8,7 @@ from canvas_sdk.commands import (
     DiagnoseCommand,
     GoalCommand,
     HistoryOfPresentIllnessCommand,
+    MedicationStatementCommand,
     PlanCommand,
 )
 
@@ -207,11 +208,34 @@ from canvas_sdk.commands import (
             "1 validation error for HistoryOfPresentIllnessCommand\nnarrative\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
             {"user_id": 1, "narrative": "hiya"},
         ),
+        (
+            MedicationStatementCommand,
+            {"user_id": 1},
+            "1 validation error for MedicationStatementCommand\nfdb_code\n  Field required [type=missing, input_value={'user_id': 1}, input_type=dict]",
+            {"user_id": 1, "fdb_code": "44"},
+        ),
+        (
+            MedicationStatementCommand,
+            {"user_id": 1, "fdb_code": None},
+            "1 validation error for MedicationStatementCommand\nfdb_code\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1, "fdb_code": "44"},
+        ),
+        (
+            MedicationStatementCommand,
+            {"user_id": 1, "fdb_code": "44", "sig": 1},
+            "1 validation error for MedicationStatementCommand\nsig\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1, "fdb_code": "44"},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
     Command: (
-        PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand | HistoryOfPresentIllnessCommand
+        PlanCommand
+        | AssessCommand
+        | DiagnoseCommand
+        | GoalCommand
+        | HistoryOfPresentIllnessCommand
+        | MedicationStatementCommand
     ),
     err_kwargs: dict,
     err_msg: str,
@@ -333,11 +357,26 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "narrative": "hi!"},
             {"user_id": 1, "narrative": "hows your day!"},
         ),
+        (
+            MedicationStatementCommand,
+            {"user_id": 1, "fdb_code": "9888"},
+            {"user_id": 1, "fdb_code": "12333"},
+        ),
+        (
+            MedicationStatementCommand,
+            {"user_id": 1, "fdb_code": "9888", "sig": "1pobd"},
+            {"user_id": 1, "fdb_code": "9888", "sig": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
     Command: (
-        PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand | HistoryOfPresentIllnessCommand
+        PlanCommand
+        | AssessCommand
+        | DiagnoseCommand
+        | GoalCommand
+        | HistoryOfPresentIllnessCommand
+        | MedicationStatementCommand
     ),
     test_init_kwarg: dict,
     test_updated_value: dict,
