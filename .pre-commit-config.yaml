@@ -43,7 +43,7 @@ repos:
       - id: pydocstyle
         exclude: |
           (?x)(
-            migrations/.*
+            tests.py
           )$
         additional_dependencies: [tomli]
 
