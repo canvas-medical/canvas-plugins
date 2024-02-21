@@ -43,6 +43,7 @@ version = "0.1.4"
 cookiecutter = "*"
 ipython = "^8.21.0"
 keyring = "*"
+pydantic = "^2.6.1"
 python = ">=3.11"
 requests = "*"
 typer = {extras = ["all"], version = "*"}
