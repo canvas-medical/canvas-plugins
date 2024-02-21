@@ -21,30 +21,35 @@ class _BaseCommand(BaseModel):
 
     def originate(self) -> dict:
         """Originate a new command in the note body."""
+        # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.note_id:
             raise AttributeError("Note id is required to originate a command")
         return {"note_id": self.note_id, "user_id": self.user_id, "values": self.values}
 
     def update(self) -> dict:
         """Update the command."""
+        # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to update a command")
         return {"command_uuid": self.command_uuid, "user_id": self.user_id, "values": self.values}
 
     def delete(self) -> dict:
         """Delete the command."""
+        # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to delete a command")
         return {"command_uuid": self.command_uuid, "user_id": self.user_id, "delete": True}
 
     def commit(self) -> dict:
         """Commit the command."""
+        # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to commit a command")
         return {"command_uuid": self.command_uuid, "user_id": self.user_id, "commit": True}
 
     def enter_in_error(self) -> dict:
-        """Enter in error the command."""
+        """Mark the command as entered-in-error."""
+        # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to enter in error a command")
         return {"command_uuid": self.command_uuid, "user_id": self.user_id, "enter_in_error": True}
