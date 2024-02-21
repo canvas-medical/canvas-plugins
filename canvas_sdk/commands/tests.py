@@ -1,7 +1,9 @@
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
 
-from canvas_sdk.commands import AssessCommand, PlanCommand
+from canvas_sdk.commands import AssessCommand, DiagnoseCommand, PlanCommand
 from canvas_sdk.commands.assess.assess import AssessStatus
 
 
@@ -80,10 +82,55 @@ from canvas_sdk.commands.assess.assess import AssessStatus
             "1 validation error for AssessCommand\nnarrative\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
             {"user_id": 1, "condition_id": 100},
         ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5},
+            "1 validation error for DiagnoseCommand\nicd10_code\n  Field required [type=missing, input_value={'user_id': 5}, input_type=dict]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": None},
+            "1 validation error for DiagnoseCommand\nicd10_code\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": 1},
+            "1 validation error for DiagnoseCommand\nicd10_code\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": "Z00", "background": 1},
+            "1 validation error for DiagnoseCommand\nbackground\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": "Z00", "approximate_date_of_onset": 1},
+            "1 validation error for DiagnoseCommand\napproximate_date_of_onset\n  Input should be a valid datetime [type=datetime_type, input_value=1, input_type=int]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": "Z00", "approximate_date_of_onset": "1"},
+            "1 validation error for DiagnoseCommand\napproximate_date_of_onset\n  Input should be a valid datetime [type=datetime_type, input_value='1', input_type=str]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 5, "icd10_code": "Z00", "today_assessment": 1},
+            "1 validation error for DiagnoseCommand\ntoday_assessment\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1, "icd10_code": "Z00"},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
-    Command: PlanCommand | AssessCommand, err_kwargs: dict, err_msg: str, valid_kwargs: dict
+    Command: PlanCommand | AssessCommand | DiagnoseCommand,
+    err_kwargs: dict,
+    err_msg: str,
+    valid_kwargs: dict,
 ) -> None:
     with pytest.raises(ValidationError) as e1:
         Command(**err_kwargs)
@@ -133,10 +180,32 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 100, "condition_id": 100, "narrative": "1234567"},
             {"user_id": 100, "condition_id": 100, "narrative": None},
         ),
+        (
+            DiagnoseCommand,
+            {"user_id": 1, "icd10_code": "Z00"},
+            {"user_id": 1, "icd10_code": "400"},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 1, "icd10_code": "Z00", "background": "123"},
+            {"user_id": 1, "icd10_code": "Z00", "background": None},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 1, "icd10_code": "Z00", "approximate_date_of_onset": datetime.now()},
+            {"user_id": 1, "icd10_code": "Z00", "approximate_date_of_onset": None},
+        ),
+        (
+            DiagnoseCommand,
+            {"user_id": 1, "icd10_code": "Z00", "today_assessment": "hi"},
+            {"user_id": 1, "icd10_code": "Z00", "today_assessment": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
-    Command: PlanCommand | AssessCommand, test_init_kwarg: dict, test_updated_value: dict
+    Command: PlanCommand | AssessCommand | DiagnoseCommand,
+    test_init_kwarg: dict,
+    test_updated_value: dict,
 ) -> None:
     cmd = Command(**test_init_kwarg)
 
