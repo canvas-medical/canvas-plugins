@@ -1,0 +1,11 @@
+syntax = 'proto3';
+
+package canvas;
+
+message Effect {
+  string type = 1;
+  string payload = 2;
+  //Oneof effect_payload {
+  //  ...
+  //}
+}
