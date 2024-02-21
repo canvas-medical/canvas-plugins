@@ -3,8 +3,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from canvas_sdk.commands import AssessCommand, DiagnoseCommand, PlanCommand
-from canvas_sdk.commands.assess.assess import AssessStatus
+from canvas_sdk.commands import AssessCommand, DiagnoseCommand, GoalCommand, PlanCommand
 
 
 @pytest.mark.parametrize(
@@ -73,7 +72,7 @@ from canvas_sdk.commands.assess.assess import AssessStatus
         (
             AssessCommand,
             {"user_id": 5, "condition_id": 100, "status": "active"},
-            "1 validation error for AssessCommand\nstatus\n  Input should be an instance of AssessStatus [type=is_instance_of, input_value='active', input_type=str]",
+            "1 validation error for AssessCommand\nstatus\n  Input should be an instance of AssessCommand.Status [type=is_instance_of, input_value='active', input_type=str]",
             {"user_id": 1, "condition_id": 100},
         ),
         (
@@ -124,10 +123,76 @@ from canvas_sdk.commands.assess.assess import AssessStatus
             "1 validation error for DiagnoseCommand\ntoday_assessment\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
             {"user_id": 1, "icd10_code": "Z00"},
         ),
+        (
+            GoalCommand,
+            {"user_id": 5},
+            "1 validation error for GoalCommand\ngoal_statement\n  Field required [type=missing, input_value={'user_id': 5}, input_type=dict]",
+            {"user_id": 5, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": None},
+            "1 validation error for GoalCommand\ngoal_statement\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 5, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": 1},
+            "1 validation error for GoalCommand\ngoal_statement\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 5, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "start_date": 1},
+            "1 validation error for GoalCommand\nstart_date\n  Input should be a valid datetime [type=datetime_type, input_value=1, input_type=int]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "start_date": "1"},
+            "1 validation error for GoalCommand\nstart_date\n  Input should be a valid datetime [type=datetime_type, input_value='1', input_type=str]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "due_date": 1},
+            "1 validation error for GoalCommand\ndue_date\n  Input should be a valid datetime [type=datetime_type, input_value=1, input_type=int]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "due_date": "1"},
+            "1 validation error for GoalCommand\ndue_date\n  Input should be a valid datetime [type=datetime_type, input_value='1', input_type=str]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "today_assessment": 1},
+            "1 validation error for GoalCommand\ntoday_assessment\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "achievement_status": "improving"},
+            "1 validation error for GoalCommand\nachievement_status\n  Input should be an instance of GoalCommand.AchievementStatus [type=is_instance_of, input_value='improving', input_type=str]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "priority": "medium-priority"},
+            "1 validation error for GoalCommand\npriority\n  Input should be an instance of GoalCommand.Priority [type=is_instance_of, input_value='medium-priority', input_type=str]",
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 5, "goal_statement": "do some stuff!", "progress": 1},
+            "1 validation error for GoalCommand\nprogress\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 5, "goal_statement": "do some stuff!"},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
-    Command: PlanCommand | AssessCommand | DiagnoseCommand,
+    Command: PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand,
     err_kwargs: dict,
     err_msg: str,
     valid_kwargs: dict,
@@ -172,7 +237,7 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
         ),
         (
             AssessCommand,
-            {"user_id": 100, "condition_id": 100, "status": AssessStatus.DETERIORATED},
+            {"user_id": 100, "condition_id": 100, "status": AssessCommand.Status.DETERIORATED},
             {"user_id": 100, "condition_id": 100, "status": None},
         ),
         (
@@ -200,10 +265,53 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "icd10_code": "Z00", "today_assessment": "hi"},
             {"user_id": 1, "icd10_code": "Z00", "today_assessment": None},
         ),
+        (
+            GoalCommand,
+            {"user_id": 1, "goal_statement": "get out there!"},
+            {"user_id": 1, "goal_statement": "do some stuff!"},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 1, "goal_statement": "get out there!", "start_date": datetime.now()},
+            {"user_id": 1, "goal_statement": "get out there!", "start_date": None},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 1, "goal_statement": "get out there!", "due_date": datetime.now()},
+            {"user_id": 1, "goal_statement": "get out there!", "due_date": None},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 1, "goal_statement": "get out there!", "today_assessment": "wee-ooo"},
+            {"user_id": 1, "goal_statement": "get out there!", "today_assessment": None},
+        ),
+        (
+            GoalCommand,
+            {
+                "user_id": 100,
+                "goal_statement": "get out there!",
+                "achievement_status": GoalCommand.AchievementStatus.IN_PROGRESS,
+            },
+            {"user_id": 100, "goal_statement": "get out there!", "achievement_status": None},
+        ),
+        (
+            GoalCommand,
+            {
+                "user_id": 100,
+                "goal_statement": "get out there!",
+                "priority": GoalCommand.Priority.MEDIUM,
+            },
+            {"user_id": 100, "goal_statement": "get out there!", "priority": None},
+        ),
+        (
+            GoalCommand,
+            {"user_id": 1, "goal_statement": "get out there!", "progress": "hi"},
+            {"user_id": 1, "goal_statement": "get out there!", "progress": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
-    Command: PlanCommand | AssessCommand | DiagnoseCommand,
+    Command: PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand,
     test_init_kwarg: dict,
     test_updated_value: dict,
 ) -> None:

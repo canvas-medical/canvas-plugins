@@ -1,14 +1,20 @@
-from canvas_sdk.commands.assess.constants import AssessStatus
+from enum import Enum
+
 from canvas_sdk.commands.base import _BaseCommand
 
 
 class AssessCommand(_BaseCommand):
     """A class for managing an Assess command within a specific note."""
 
+    class Status(Enum):
+        IMPROVED = "improved"
+        STABLE = "stable"
+        DETERIORATED = "deteriorated"
+
     # how do we make sure that condition_id is a valid condition for the patient?
     condition_id: int
     background: str | None = None
-    status: AssessStatus | None = None
+    status: Status | None = None
     narrative: str | None = None
 
     @property
