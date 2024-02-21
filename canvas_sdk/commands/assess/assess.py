@@ -5,7 +5,7 @@ from canvas_sdk.commands.base import _BaseCommand
 class AssessCommand(_BaseCommand):
     """A class for managing an Assess command within a specific note."""
 
-    condition_id: int | None = None
+    condition_id: int
     background: str | None = None
     status: AssessStatus | None = None
     narrative: str | None = None
