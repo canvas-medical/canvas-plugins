@@ -3,7 +3,13 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from canvas_sdk.commands import AssessCommand, DiagnoseCommand, GoalCommand, PlanCommand
+from canvas_sdk.commands import (
+    AssessCommand,
+    DiagnoseCommand,
+    GoalCommand,
+    HistoryOfPresentIllnessCommand,
+    PlanCommand,
+)
 
 
 @pytest.mark.parametrize(
@@ -189,10 +195,24 @@ from canvas_sdk.commands import AssessCommand, DiagnoseCommand, GoalCommand, Pla
             "1 validation error for GoalCommand\nprogress\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
             {"user_id": 5, "goal_statement": "do some stuff!"},
         ),
+        (
+            HistoryOfPresentIllnessCommand,
+            {"user_id": 5},
+            "1 validation error for HistoryOfPresentIllnessCommand\nnarrative\n  Field required [type=missing, input_value={'user_id': 5}, input_type=dict]",
+            {"user_id": 1, "narrative": "hiya"},
+        ),
+        (
+            HistoryOfPresentIllnessCommand,
+            {"user_id": 5, "narrative": None},
+            "1 validation error for HistoryOfPresentIllnessCommand\nnarrative\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1, "narrative": "hiya"},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
-    Command: PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand,
+    Command: (
+        PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand | HistoryOfPresentIllnessCommand
+    ),
     err_kwargs: dict,
     err_msg: str,
     valid_kwargs: dict,
@@ -308,10 +328,17 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "goal_statement": "get out there!", "progress": "hi"},
             {"user_id": 1, "goal_statement": "get out there!", "progress": None},
         ),
+        (
+            HistoryOfPresentIllnessCommand,
+            {"user_id": 1, "narrative": "hi!"},
+            {"user_id": 1, "narrative": "hows your day!"},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
-    Command: PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand,
+    Command: (
+        PlanCommand | AssessCommand | DiagnoseCommand | GoalCommand | HistoryOfPresentIllnessCommand
+    ),
     test_init_kwarg: dict,
     test_updated_value: dict,
 ) -> None:
