@@ -12,6 +12,7 @@ from canvas_sdk.commands import (
     PlanCommand,
     QuestionnaireCommand,
     ReasonForVisitCommand,
+    StopMedicationCommand,
 )
 
 
@@ -306,6 +307,30 @@ from canvas_sdk.commands import (
             "1 validation error for ReasonForVisitCommand\ncomment\n  Input should be a valid string [type=string_type, input_value=5, input_type=int]",
             {"user_id": 1},
         ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1},
+            "1 validation error for StopMedicationCommand\nmedication_id\n  Field required [type=missing, input_value={'user_id': 1}, input_type=dict]",
+            {"user_id": 1, "medication_id": 500},
+        ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1, "medication_id": None},
+            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1, "medication_id": 500},
+        ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1, "medication_id": "5"},
+            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid integer [type=int_type, input_value='5', input_type=str]",
+            {"user_id": 1, "medication_id": 500},
+        ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1, "medication_id": 5, "rationale": 5},
+            "1 validation error for StopMedicationCommand\nrationale\n  Input should be a valid string [type=string_type, input_value=5, input_type=int]",
+            {"user_id": 1, "medication_id": 5},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
@@ -318,6 +343,7 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
         | MedicationStatementCommand
         | QuestionnaireCommand
         | ReasonForVisitCommand
+        | StopMedicationCommand
     ),
     err_kwargs: dict,
     err_msg: str,
@@ -479,6 +505,16 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "comment": "hey"},
             {"user_id": 1, "comment": None},
         ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1, "medication_id": 10},
+            {"user_id": 1, "medication_id": 1000},
+        ),
+        (
+            StopMedicationCommand,
+            {"user_id": 1, "medication_id": 10, "rationale": "hi"},
+            {"user_id": 1, "medication_id": 10, "rationale": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
@@ -491,6 +527,7 @@ def test_command_allows_kwarg_with_correct_type(
         | MedicationStatementCommand
         | QuestionnaireCommand
         | ReasonForVisitCommand
+        | StopMedicationCommand
     ),
     test_init_kwarg: dict,
     test_updated_value: dict,

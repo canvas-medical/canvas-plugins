@@ -6,6 +6,7 @@ from canvas_sdk.commands.medication_statement import MedicationStatementCommand
 from canvas_sdk.commands.plan import PlanCommand
 from canvas_sdk.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.reason_for_visit import ReasonForVisitCommand
+from canvas_sdk.commands.stop_medication import StopMedicationCommand
 
 __all__ = (
     "PlanCommand",
@@ -16,4 +17,5 @@ __all__ = (
     "MedicationStatementCommand",
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
+    "StopMedicationCommand",
 )
