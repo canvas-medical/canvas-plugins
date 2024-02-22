@@ -10,6 +10,7 @@ from canvas_sdk.commands import (
     HistoryOfPresentIllnessCommand,
     MedicationStatementCommand,
     PlanCommand,
+    QuestionnaireCommand,
 )
 
 
@@ -226,6 +227,30 @@ from canvas_sdk.commands import (
             "1 validation error for MedicationStatementCommand\nsig\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
             {"user_id": 1, "fdb_code": "44"},
         ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1},
+            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Field required [type=missing, input_value={'user_id': 1}, input_type=dict]",
+            {"user_id": 1, "questionnaire_id": 500},
+        ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1, "questionnaire_id": None},
+            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1, "questionnaire_id": 500},
+        ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1, "questionnaire_id": "5"},
+            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid integer [type=int_type, input_value='5', input_type=str]",
+            {"user_id": 1, "questionnaire_id": 500},
+        ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1, "questionnaire_id": 5, "result": 5},
+            "1 validation error for QuestionnaireCommand\nresult\n  Input should be a valid string [type=string_type, input_value=5, input_type=int]",
+            {"user_id": 1, "questionnaire_id": 5},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
@@ -236,6 +261,7 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
         | GoalCommand
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
+        | QuestionnaireCommand
     ),
     err_kwargs: dict,
     err_msg: str,
@@ -367,6 +393,16 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "fdb_code": "9888", "sig": "1pobd"},
             {"user_id": 1, "fdb_code": "9888", "sig": None},
         ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1, "questionnaire_id": 10},
+            {"user_id": 1, "questionnaire_id": 1000},
+        ),
+        (
+            QuestionnaireCommand,
+            {"user_id": 1, "questionnaire_id": 10, "result": "hi"},
+            {"user_id": 1, "questionnaire_id": 10, "result": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
@@ -377,6 +413,7 @@ def test_command_allows_kwarg_with_correct_type(
         | GoalCommand
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
+        | QuestionnaireCommand
     ),
     test_init_kwarg: dict,
     test_updated_value: dict,
