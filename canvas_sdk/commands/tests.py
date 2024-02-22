@@ -11,6 +11,7 @@ from canvas_sdk.commands import (
     MedicationStatementCommand,
     PlanCommand,
     QuestionnaireCommand,
+    ReasonForVisitCommand,
 )
 
 
@@ -251,6 +252,60 @@ from canvas_sdk.commands import (
             "1 validation error for QuestionnaireCommand\nresult\n  Input should be a valid string [type=string_type, input_value=5, input_type=int]",
             {"user_id": 1, "questionnaire_id": 5},
         ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "structured": True},
+            "1 validation error for ReasonForVisitCommand\n  Value error, Structured RFV should have a coding.",
+            {"user_id": 1, "structured": False},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": "h"},
+            "1 validation error for ReasonForVisitCommand\ncoding\n  Input should be a valid dictionary [type=dict_type, input_value='h', input_type=str]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": "x"}},
+            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Field required [type=missing, input_value={'code': 'x'}, input_type=dict]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": 1, "system": "y"}},
+            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": None, "system": "y"}},
+            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"system": "y"}},
+            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Field required [type=missing, input_value={'system': 'y'}, input_type=dict]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": "x", "system": 1}},
+            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type, input_value=1, input_type=int]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": "x", "system": None}},
+            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]",
+            {"user_id": 1},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "comment": 5},
+            "1 validation error for ReasonForVisitCommand\ncomment\n  Input should be a valid string [type=string_type, input_value=5, input_type=int]",
+            {"user_id": 1},
+        ),
     ],
 )
 def test_command_raises_error_when_kwarg_given_incorrect_type(
@@ -262,6 +317,7 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
         | QuestionnaireCommand
+        | ReasonForVisitCommand
     ),
     err_kwargs: dict,
     err_msg: str,
@@ -403,6 +459,26 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"user_id": 1, "questionnaire_id": 10, "result": "hi"},
             {"user_id": 1, "questionnaire_id": 10, "result": None},
         ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "structured": True, "coding": {"code": "x", "system": "y"}},
+            {"user_id": 1, "structured": True, "coding": {"code": "xx", "system": "yy"}},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "coding": {"code": "x", "system": "y"}, "structured": True},
+            {"user_id": 1, "coding": {"code": "x", "system": "y"}, "structured": False},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "structured": False, "coding": None},
+            {"user_id": 1, "structured": False, "coding": {"code": "x", "system": "y"}},
+        ),
+        (
+            ReasonForVisitCommand,
+            {"user_id": 1, "comment": "hey"},
+            {"user_id": 1, "comment": None},
+        ),
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
@@ -414,6 +490,7 @@ def test_command_allows_kwarg_with_correct_type(
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
         | QuestionnaireCommand
+        | ReasonForVisitCommand
     ),
     test_init_kwarg: dict,
     test_updated_value: dict,

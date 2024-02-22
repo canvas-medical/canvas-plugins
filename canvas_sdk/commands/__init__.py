@@ -5,6 +5,7 @@ from canvas_sdk.commands.history_present_illness import HistoryOfPresentIllnessC
 from canvas_sdk.commands.medication_statement import MedicationStatementCommand
 from canvas_sdk.commands.plan import PlanCommand
 from canvas_sdk.commands.questionnaire import QuestionnaireCommand
+from canvas_sdk.commands.reason_for_visit import ReasonForVisitCommand
 
 __all__ = (
     "PlanCommand",
@@ -14,4 +15,5 @@ __all__ = (
     "HistoryOfPresentIllnessCommand",
     "MedicationStatementCommand",
     "QuestionnaireCommand",
+    "ReasonForVisitCommand",
 )
