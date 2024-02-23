@@ -1,19 +1,12 @@
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict
 
 
 class _BaseCommand(BaseModel):
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=True, validate_assignment=True)
 
     note_id: int | None = None
     command_uuid: str | None = None
     user_id: int
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        dict_to_validate = self.__dict__ | {name: value}
-        self.model_validate(dict_to_validate, strict=True)
-        super().__setattr__(name, value)
 
     @property
     def values(self) -> dict:
