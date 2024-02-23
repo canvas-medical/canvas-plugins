@@ -1,4 +1,4 @@
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 
 class Coding(TypedDict):
@@ -6,3 +6,4 @@ class Coding(TypedDict):
 
     system: str
     code: str
+    display: NotRequired[str]

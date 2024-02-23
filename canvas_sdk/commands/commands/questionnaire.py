@@ -1,4 +1,4 @@
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.base import _BaseCommand
 
 
 class QuestionnaireCommand(_BaseCommand):
