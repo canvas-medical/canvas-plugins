@@ -20,7 +20,7 @@ async def serve():
     port = "50051"
     server = grpc.aio.server()
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
-    server.add_insecure_port("[::]:" + port)
+    server.add_insecure_port("127.0.0.1:" + port)
     logging.info("Starting server, listening on " + port)
     await server.start()
     await server.wait_for_termination()
