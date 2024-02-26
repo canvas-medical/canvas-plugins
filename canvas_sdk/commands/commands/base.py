@@ -1,19 +1,20 @@
-from typing import Any
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
+from typing_extensions import Self
 
 
 class _BaseCommand(BaseModel):
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=True, validate_assignment=True)
 
+    # to look into: should we use external identifiers? or an sdk note class
     note_id: int | None = None
     command_uuid: str | None = None
     user_id: int
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        dict_to_validate = self.__dict__ | {name: value}
-        self.model_validate(dict_to_validate, strict=True)
-        super().__setattr__(name, value)
+    @model_validator(mode="after")
+    def _verify_has_note_id_or_command_id(self) -> Self:
+        if not self.note_id and not self.command_uuid:
+            raise ValueError("Command should have either a note_id or a command_uuid.")
+        return self
 
     @property
     def values(self) -> dict:
@@ -26,11 +27,11 @@ class _BaseCommand(BaseModel):
             raise AttributeError("Note id is required to originate a command")
         return {"note_id": self.note_id, "user_id": self.user_id, "values": self.values}
 
-    def update(self) -> dict:
-        """Update the command."""
+    def edit(self) -> dict:
+        """Edit the command."""
         # note: this is a placeholder method until we've made some more definitive decisions about how command objects are manipulated
         if not self.command_uuid:
-            raise AttributeError("Command uuid is required to update a command")
+            raise AttributeError("Command uuid is required to edit a command")
         return {"command_uuid": self.command_uuid, "user_id": self.user_id, "values": self.values}
 
     def delete(self) -> dict:

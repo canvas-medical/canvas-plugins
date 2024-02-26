@@ -1,12 +1,11 @@
 from datetime import datetime
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.base import _BaseCommand
 
 
 class DiagnoseCommand(_BaseCommand):
     """A class for managing a Diagnose command within a specific note."""
 
-    # how do we make sure icd10_code is a valid code?
     icd10_code: str
     background: str | None = None
     approximate_date_of_onset: datetime | None = None
@@ -25,3 +24,16 @@ class DiagnoseCommand(_BaseCommand):
             ),
             "today_assessment": self.today_assessment,
         }
+
+
+# how do we make sure icd10_code is a valid code?
+
+# idea1:
+# create an auto-generated enum class of all possible icd10s, then type the field as that enum
+# will require releasing a new version with the new codes every year, and devs will need to update
+# to make sure they have the latest version to get the right set of codes.
+
+# idea2:
+# see if we can get ValueSets to play nicely with pydantic
+
+# idea3: runtime warning after pinging ontologies
