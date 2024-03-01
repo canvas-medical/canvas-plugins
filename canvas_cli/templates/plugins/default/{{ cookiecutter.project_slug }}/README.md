@@ -4,7 +4,6 @@
 
 {{ cookiecutter.project_short_description }}
 
-
 ## Structure
 
 ```
@@ -12,6 +11,7 @@
 ├── {{ cookiecutter.project_package_name }}/
 │   ├── __init__.py
 │   └── plugin.py # Add your plugin code here.
+├── CANVAS_MANIFEST.json
 ├── pyproject.toml
 ├── poetry.lock
 └── README.md

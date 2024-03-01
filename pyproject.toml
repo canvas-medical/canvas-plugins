@@ -41,23 +41,24 @@ version = "0.1.4"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
+grpcio = "^1.60.1"
 ipython = "^8.21.0"
+jsonschema = "^4.21.1"
 keyring = "*"
 pydantic = "^2.6.1"
 python = ">=3.11"
 requests = "*"
 typer = {extras = ["all"], version = "*"}
 websocket-client = "^1.7.0"
-grpcio = "^1.60.1"
 
 [tool.poetry.group.dev.dependencies]
+grpcio-tools = "^1.60.1"
 pre-commit = "*"
 pytest = "*"
 pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
 types-requests = "*"
-grpcio-tools = "^1.60.1"
 
 [tool.poetry.scripts]
 canvas = "canvas_cli.main:app"

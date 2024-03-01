@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "{{ cookiecutter.version }}",
+    "name": "{{ cookiecutter.project_name }}",
+    "description": "{{ cookiecutter.project_short_description }}",
+    "components": {
+        "protocols": [
+            {
+                "class": "path.to.ProtocolClass",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "assess_condition_selected",
+                    "read": [
+                        "conditions"
+                    ],
+                    "write": [
+                        "commands"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    }
+}

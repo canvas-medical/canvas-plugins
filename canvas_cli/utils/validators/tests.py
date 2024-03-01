@@ -1,7 +1,13 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from canvas_cli.utils.context.context import CLIContext
-from canvas_cli.utils.validators import get_api_key, get_default_host
+from canvas_cli.utils.validators import (
+    get_api_key,
+    get_default_host,
+    validate_manifest_file,
+)
 
 
 def test_get_default_host() -> None:
@@ -22,3 +28,31 @@ def test_get_api_key(mock_get_password: MagicMock) -> None:
     mock_host = "a_host"
     assert get_api_key(mock_host, None) == "a_password"
     assert get_api_key(mock_host, "an_api_key") == "an_api_key"
+
+
+@pytest.fixture
+def protocol_manifest_example() -> dict:
+    return {
+        "sdk_version": "0.3.1",
+        "plugin_version": "1.0.1",
+        "name": "Prompt to prescribe when assessing condition",
+        "description": "To assist in ....",
+        "components": {
+            "protocols": [
+                {
+                    "class": "prompt_to_prescribe.protocols.prompt_when_assessing.PromptWhenAssessing",
+                    "description": "probably the same as the plugin's description",
+                    "data_access": {
+                        "event": "assess_condition_selected",
+                        "read": ["conditions"],
+                        "write": ["commands"],
+                    },
+                }
+            ]
+        },
+    }
+
+
+def test_manifest_file_schema(protocol_manifest_example: dict) -> None:
+    """Test that no exception raised when a valid manifest file is validated"""
+    validate_manifest_file(protocol_manifest_example)

@@ -1,3 +1,4 @@
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -11,7 +12,11 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
 from canvas_cli.utils.urls.urls import CoreEndpoint
-from canvas_cli.utils.validators import get_api_key, get_default_host
+from canvas_cli.utils.validators import (
+    get_api_key,
+    get_default_host,
+    validate_manifest_file,
+)
 
 app = typer.Typer()
 
@@ -133,6 +138,29 @@ def init(
     print.json(f"Project created in {project_dir}", project_dir=project_dir)
 
 
+@app.command(short_help="Validates the Canvas Manifest File of a plugin package")
+def validate(
+    package: Path = typer.Argument(
+        ..., help="Path to a dir containing the python package to install"
+    ),
+) -> None:
+    """Validates the Canvas Manifest File of a plugin directory."""
+    if not package.exists():
+        raise typer.BadParameter(f"Package {package} does not exist")
+
+    if not package.is_dir():
+        raise typer.BadParameter(f"Package {package} is not a directory, nothing to validate")
+
+    manifest = Path(f"{package.name}/CANVAS_MANIFEST.json")
+    if not manifest.exists():
+        raise typer.BadParameter(
+            f"Package {package} does not have a CANVAS_MANIFEST.json file to validate"
+        )
+
+    validate_manifest_file(json.loads(manifest.read_text()))
+    print.json(f"Package {package} has a valid CANVAS_MANIFEST.json file")
+
+
 @app.command(short_help="Installs a given Python package into a running Canvas instance")
 def install(
     package: Path = typer.Argument(
@@ -159,6 +187,7 @@ def install(
         raise typer.BadParameter(f"Package {package} does not exist")
 
     if package.is_dir():
+        validate(package)
         built_package_path = _build_package(package)
     elif package.is_file() and (package.name.endswith("tar.gz") or package.name.endswith("whl")):
         built_package_path = package
