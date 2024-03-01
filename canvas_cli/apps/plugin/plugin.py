@@ -138,13 +138,13 @@ def init(
     print.json(f"Project created in {project_dir}", project_dir=project_dir)
 
 
-@app.command(short_help="Validates the Canvas Manifest File of a plugin package")
+@app.command(short_help="Validates the Canvas Manifest json file of a plugin package")
 def validate(
     package: Path = typer.Argument(
         ..., help="Path to a dir containing the python package to install"
     ),
 ) -> None:
-    """Validates the Canvas Manifest File of a plugin directory."""
+    """Validates the Canvas Manifest json file of a plugin directory."""
     if not package.exists():
         raise typer.BadParameter(f"Package {package} does not exist")
 

@@ -215,6 +215,24 @@ $ canvas plugin install [OPTIONS] PACKAGE
 - `--api-key TEXT`: Canvas api-key for the provided host
 - `--help`: Show this message and exit.
 
+### `canvas plugin validate`
+
+Validates the Canvas Manifest json file of a plugin package.
+
+**Usage**:
+
+```console
+$ canvas plugin validate [OPTIONS] PACKAGE
+```
+
+**Arguments**:
+
+- `PACKAGE`: Path to a dir containing the python package to install [required]
+
+**Options**:
+
+- `--help`: Show this message and exit.
+
 ### `canvas plugin list`
 
 Lists all plugins from the instance.
