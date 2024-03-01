@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: canvas-medical/workflows/.github/actions/install-python-and-poetry@main
         with:
           CANVAS_PYPI_USERNAME: ${{ secrets.CANVAS_PRIVATE_PYPI_READ_ONLY_USERNAME }}
