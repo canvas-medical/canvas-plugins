@@ -215,14 +215,14 @@ $ canvas plugin install [OPTIONS] PACKAGE
 - `--api-key TEXT`: Canvas api-key for the provided host
 - `--help`: Show this message and exit.
 
-### `canvas plugin validate`
+### `canvas plugin validate-manifest`
 
 Validates the Canvas Manifest json file of a plugin package.
 
 **Usage**:
 
 ```console
-$ canvas plugin validate [OPTIONS] PACKAGE
+$ canvas plugin validate-manifest [OPTIONS] PACKAGE
 ```
 
 **Arguments**:

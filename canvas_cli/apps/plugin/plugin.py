@@ -139,7 +139,7 @@ def init(
 
 
 @app.command(short_help="Validates the Canvas Manifest json file of a plugin package")
-def validate(
+def validate_manifest(
     package: Path = typer.Argument(
         ..., help="Path to a dir containing the python package to install"
     ),
@@ -157,7 +157,17 @@ def validate(
             f"Package {package} does not have a CANVAS_MANIFEST.json file to validate"
         )
 
-    validate_manifest_file(json.loads(manifest.read_text()))
+    try:
+        manifest_json = json.loads(manifest.read_text())
+    except json.JSONDecodeError:
+        print.json(
+            "There was a problem loading the manifest file, please ensure it's valid JSON",
+            success=False,
+            path=str(package),
+        )
+        raise typer.Abort()
+
+    validate_manifest_file(manifest_json)
     print.json(f"Package {package} has a valid CANVAS_MANIFEST.json file")
 
 
@@ -187,7 +197,7 @@ def install(
         raise typer.BadParameter(f"Package {package} does not exist")
 
     if package.is_dir():
-        validate(package)
+        validate_manifest(package)
         built_package_path = _build_package(package)
     elif package.is_file() and (package.name.endswith("tar.gz") or package.name.endswith("whl")):
         built_package_path = package
