@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "path.to.ProtocolClass",
+                "class": "{{ cookiecutter.project_slug }}.protocols.path.to.ProtocolClass",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "assess_condition_selected",
