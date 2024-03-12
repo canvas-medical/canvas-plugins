@@ -1,5 +1,5 @@
 from enum import EnumType
-from typing import Union, get_args, get_origin
+from typing import get_args
 
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
@@ -39,9 +39,9 @@ class _BaseCommand(BaseModel):
     @classmethod
     def _get_property_type(cls, name: str) -> type:
         annotation = cls.model_fields[name].annotation
-        if get_origin(annotation) is Union:
+        if annotation_args := get_args(annotation):
             # if its a union, take the first one (which is not None)
-            annotation = get_args(annotation)[0]
+            annotation = annotation_args[0]
 
         if type(annotation) is EnumType:
             return str
