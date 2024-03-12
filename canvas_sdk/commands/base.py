@@ -1,3 +1,6 @@
+from enum import EnumType
+from typing import Union, get_args, get_origin
+
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
@@ -24,6 +27,41 @@ class _BaseCommand(BaseModel):
     @property
     def values(self) -> dict:
         return {}
+
+    @classmethod
+    def _get_property_choices(cls, name: str, schema: dict) -> list[dict] | None:
+        definition = schema.get("properties", {}).get(name, {})
+        if not (choice_ref := next((a.get("$ref") for a in definition.get("anyOf", [])), None)):
+            return None
+        choice_key = choice_ref.split("#/$defs/")[-1]
+        return schema.get("$defs", {}).get(choice_key, {}).get("enum")
+
+    @classmethod
+    def _get_property_type(cls, name: str) -> type:
+        annotation = cls.model_fields[name].annotation
+        if get_origin(annotation) is Union:
+            # if its a union, take the first one (which is not None)
+            annotation = get_args(annotation)[0]
+
+        if type(annotation) is EnumType:
+            return str
+
+        return annotation
+
+    @classmethod
+    def command_schema(cls) -> dict:
+        """The schema of the command."""
+        base_properties = {"note_id", "command_uuid", "user_id"}
+        schema = cls.model_json_schema()
+        return {
+            definition.get("commands_api_name", name): {
+                "required": name in schema["required"],
+                "type": cls._get_property_type(name),
+                "choices": cls._get_property_choices(name, schema),
+            }
+            for name, definition in schema["properties"].items()
+            if name not in base_properties
+        }
 
     def originate(self) -> Effect:
         """Originate a new command in the note body."""

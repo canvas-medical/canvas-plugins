@@ -16,88 +16,47 @@ from canvas_sdk.commands import (
     ReasonForVisitCommand,
     StopMedicationCommand,
 )
+from canvas_sdk.commands.constants import Coding
 
 
 @pytest.mark.parametrize(
     "Command,err_kwargs,err_msg,valid_kwargs",
     [
         (
-            PlanCommand,
-            {"user_id": 1},
-            "1 validation error for PlanCommand\n  Value error, Command should have either a note_id or a command_uuid. [type=value",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1},
-            "1 validation error for PlanCommand\nuser_id\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": None},
-            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": "5"},
-            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"user_id": 5, "note_id": "100"},
-            "1 validation error for PlanCommand\nnote_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": 5, "command_uuid": 100},
-            "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": 5, "narrative": 143},
-            "1 validation error for PlanCommand\nnarrative\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
-        ),
-        (
             AssessCommand,
             {"note_id": 1, "user_id": 5},
             "1 validation error for AssessCommand\ncondition_id\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             AssessCommand,
             {"note_id": 1, "user_id": 5, "condition_id": None},
-            "1 validation error for AssessCommand\ncondition_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            "1 validation error for AssessCommand\ncondition_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 5, "condition_id": "h"},
-            "1 validation error for AssessCommand\ncondition_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            {"note_id": 1, "user_id": 5, "condition_id": 1},
+            "1 validation error for AssessCommand\ncondition_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 5, "condition_id": 100, "background": 100},
+            {"note_id": 1, "user_id": 5, "condition_id": "100", "background": 100},
             "1 validation error for AssessCommand\nbackground\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 5, "condition_id": 100, "status": "active"},
+            {"note_id": 1, "user_id": 5, "condition_id": "100", "status": "active"},
             "1 validation error for AssessCommand\nstatus\n  Input should be an instance of AssessCommand.Status [type=is_instance_of",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 5, "condition_id": 100, "narrative": 1},
+            {"note_id": 1, "user_id": 5, "condition_id": "100", "narrative": 1},
             "1 validation error for AssessCommand\nnarrative\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1, "condition_id": 100},
+            {"note_id": 1, "user_id": 1, "condition_id": "100"},
         ),
         (
             DiagnoseCommand,
@@ -185,12 +144,6 @@ from canvas_sdk.commands import (
         ),
         (
             GoalCommand,
-            {"note_id": 1, "user_id": 5, "goal_statement": "do some stuff!", "today_assessment": 1},
-            "1 validation error for GoalCommand\ntoday_assessment\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1, "goal_statement": "do some stuff!"},
-        ),
-        (
-            GoalCommand,
             {
                 "note_id": 1,
                 "user_id": 5,
@@ -248,28 +201,82 @@ from canvas_sdk.commands import (
             {"note_id": 1, "user_id": 1, "fdb_code": "44"},
         ),
         (
+            PlanCommand,
+            {"narrative": "yo", "user_id": 1},
+            "1 validation error for PlanCommand\n  Value error, Command should have either a note_id or a command_uuid. [type=value",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "note_id": 1},
+            "1 validation error for PlanCommand\nuser_id\n  Field required [type=missing",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "note_id": 1, "user_id": None},
+            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "note_id": 1, "user_id": "5"},
+            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "user_id": 5, "note_id": "100"},
+            "1 validation error for PlanCommand\nnote_id\n  Input should be a valid integer [type=int_type",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "note_id": 1, "user_id": 5, "command_uuid": 100},
+            "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
+            {"narrative": "yo", "note_id": 1, "user_id": 1},
+        ),
+        (
+            PlanCommand,
+            {"note_id": 1, "user_id": 5, "narrative": 143},
+            "1 validation error for PlanCommand\nnarrative\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "narrative": "143"},
+        ),
+        (
+            PlanCommand,
+            {"note_id": 1, "user_id": 5},
+            "1 validation error for PlanCommand\nnarrative\n  Field required [type=missing",
+            {"note_id": 1, "user_id": 1, "narrative": "143"},
+        ),
+        (
+            PlanCommand,
+            {"note_id": 1, "user_id": 5, "narrative": None},
+            "1 validation error for PlanCommand\nnarrative\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "narrative": "143"},
+        ),
+        (
             QuestionnaireCommand,
             {"note_id": 1, "user_id": 1},
             "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 500},
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "500"},
         ),
         (
             QuestionnaireCommand,
             {"note_id": 1, "user_id": 1, "questionnaire_id": None},
-            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 500},
+            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "500"},
         ),
         (
             QuestionnaireCommand,
-            {"note_id": 1, "user_id": 1, "questionnaire_id": "5"},
-            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 500},
-        ),
-        (
-            QuestionnaireCommand,
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 5, "result": 5},
-            "1 validation error for QuestionnaireCommand\nresult\n  Input should be a valid string [type=string_type",
             {"note_id": 1, "user_id": 1, "questionnaire_id": 5},
+            "1 validation error for QuestionnaireCommand\nquestionnaire_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "500"},
+        ),
+        (
+            QuestionnaireCommand,
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "5", "result": 5},
+            "1 validation error for QuestionnaireCommand\nresult\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "5"},
         ),
         (
             ReasonForVisitCommand,
@@ -335,25 +342,25 @@ from canvas_sdk.commands import (
             StopMedicationCommand,
             {"note_id": 1, "user_id": 1},
             "1 validation error for StopMedicationCommand\nmedication_id\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1, "medication_id": 500},
+            {"note_id": 1, "user_id": 1, "medication_id": "500"},
         ),
         (
             StopMedicationCommand,
             {"note_id": 1, "user_id": 1, "medication_id": None},
-            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "medication_id": 500},
+            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "medication_id": "500"},
         ),
         (
             StopMedicationCommand,
-            {"note_id": 1, "user_id": 1, "medication_id": "5"},
-            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid integer [type=int_type",
-            {"note_id": 1, "user_id": 1, "medication_id": 500},
-        ),
-        (
-            StopMedicationCommand,
-            {"note_id": 1, "user_id": 1, "medication_id": 5, "rationale": 5},
-            "1 validation error for StopMedicationCommand\nrationale\n  Input should be a valid string [type=string_type",
             {"note_id": 1, "user_id": 1, "medication_id": 5},
+            "1 validation error for StopMedicationCommand\nmedication_id\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "medication_id": "500"},
+        ),
+        (
+            StopMedicationCommand,
+            {"note_id": 1, "user_id": 1, "medication_id": "5", "rationale": 5},
+            "1 validation error for StopMedicationCommand\nrationale\n  Input should be a valid string [type=string_type",
+            {"note_id": 1, "user_id": 1, "medication_id": "5"},
         ),
     ],
 )
@@ -389,46 +396,30 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
 @pytest.mark.parametrize(
     "Command, test_init_kwarg,test_updated_value",
     [
-        (PlanCommand, {"note_id": 1, "user_id": 100}, {"note_id": 1, "user_id": 7}),
         (
-            PlanCommand,
-            {"command_uuid": "1", "user_id": 100, "note_id": 200},
-            {"command_uuid": "1", "user_id": 100, "note_id": None},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": 100, "command_uuid": "800"},
-            {"note_id": 1, "user_id": 100, "command_uuid": None},
-        ),
-        (
-            PlanCommand,
-            {"note_id": 1, "user_id": 100, "narrative": "123456"},
-            {"note_id": 1, "user_id": 100, "narrative": None},
+            AssessCommand,
+            {"note_id": 1, "user_id": 100, "condition_id": "100"},
+            {"note_id": 1, "user_id": 100, "condition_id": "9"},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 100, "condition_id": 100},
-            {"note_id": 1, "user_id": 100, "condition_id": 9},
-        ),
-        (
-            AssessCommand,
-            {"note_id": 1, "user_id": 100, "condition_id": 100, "background": "abcdefg"},
-            {"note_id": 1, "user_id": 100, "condition_id": 100, "background": None},
+            {"note_id": 1, "user_id": 100, "condition_id": "100", "background": "abcdefg"},
+            {"note_id": 1, "user_id": 100, "condition_id": "100", "background": None},
         ),
         (
             AssessCommand,
             {
                 "note_id": 1,
                 "user_id": 100,
-                "condition_id": 100,
+                "condition_id": "100",
                 "status": AssessCommand.Status.DETERIORATED,
             },
-            {"note_id": 1, "user_id": 100, "condition_id": 100, "status": None},
+            {"note_id": 1, "user_id": 100, "condition_id": "100", "status": None},
         ),
         (
             AssessCommand,
-            {"note_id": 1, "user_id": 100, "condition_id": 100, "narrative": "1234567"},
-            {"note_id": 1, "user_id": 100, "condition_id": 100, "narrative": None},
+            {"note_id": 1, "user_id": 100, "condition_id": "100", "narrative": "1234567"},
+            {"note_id": 1, "user_id": 100, "condition_id": "100", "narrative": None},
         ),
         (
             DiagnoseCommand,
@@ -484,21 +475,6 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             GoalCommand,
             {
                 "note_id": 1,
-                "user_id": 1,
-                "goal_statement": "get out there!",
-                "today_assessment": "wee-ooo",
-            },
-            {
-                "note_id": 1,
-                "user_id": 1,
-                "goal_statement": "get out there!",
-                "today_assessment": None,
-            },
-        ),
-        (
-            GoalCommand,
-            {
-                "note_id": 1,
                 "user_id": 100,
                 "goal_statement": "get out there!",
                 "achievement_status": GoalCommand.AchievementStatus.IN_PROGRESS,
@@ -541,14 +517,34 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
             {"note_id": 1, "user_id": 1, "fdb_code": "9888", "sig": None},
         ),
         (
-            QuestionnaireCommand,
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 10},
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 1000},
+            PlanCommand,
+            {"narrative": "143", "note_id": 1, "user_id": 100},
+            {"narrative": "143", "note_id": 1, "user_id": 7},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "143", "command_uuid": "1", "user_id": 100, "note_id": 200},
+            {"narrative": "143", "command_uuid": "1", "user_id": 100, "note_id": None},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "143", "note_id": 1, "user_id": 100, "command_uuid": "800"},
+            {"narrative": "143", "note_id": 1, "user_id": 100, "command_uuid": None},
+        ),
+        (
+            PlanCommand,
+            {"note_id": 1, "user_id": 100, "narrative": "123456"},
+            {"note_id": 1, "user_id": 100, "narrative": "78900"},
         ),
         (
             QuestionnaireCommand,
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 10, "result": "hi"},
-            {"note_id": 1, "user_id": 1, "questionnaire_id": 10, "result": None},
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "10"},
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "1000"},
+        ),
+        (
+            QuestionnaireCommand,
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "10", "result": "hi"},
+            {"note_id": 1, "user_id": 1, "questionnaire_id": "10", "result": None},
         ),
         (
             ReasonForVisitCommand,
@@ -597,13 +593,13 @@ def test_command_raises_error_when_kwarg_given_incorrect_type(
         ),
         (
             StopMedicationCommand,
-            {"note_id": 1, "user_id": 1, "medication_id": 10},
-            {"note_id": 1, "user_id": 1, "medication_id": 1000},
+            {"note_id": 1, "user_id": 1, "medication_id": "10"},
+            {"note_id": 1, "user_id": 1, "medication_id": "1000"},
         ),
         (
             StopMedicationCommand,
-            {"note_id": 1, "user_id": 1, "medication_id": 10, "rationale": "hi"},
-            {"note_id": 1, "user_id": 1, "medication_id": 10, "rationale": None},
+            {"note_id": 1, "user_id": 1, "medication_id": "10", "rationale": "hi"},
+            {"note_id": 1, "user_id": 1, "medication_id": "10", "rationale": None},
         ),
     ],
 )
@@ -645,176 +641,68 @@ def token() -> str:
     ).json()["access_token"]
 
 
+@pytest.fixture
+def command_type_map() -> dict[str, type]:
+    return {
+        "AutocompleteField": str,
+        "MultiLineTextField": str,
+        "TextField": str,
+        "ChoiceField": str,
+        "DateField": datetime,
+    }
+
+
 @pytest.mark.parametrize(
-    "command_key,uuid,exp_fields",
+    "Command,uuid",
     [
-        (
-            "plan",
-            "b381862c-4cbf-4ffc-9398-d8a0989a941f",
-            [
-                {
-                    "name": "narrative",
-                    "type": "MultiLineTextField",
-                    "required": True,
-                    "choices": None,
-                }
-            ],
-        ),
-        (
-            "assess",
-            "446812b3-8486-4e6c-946c-d971a1a247f7",
-            [
-                {
-                    "name": "condition",
-                    "type": "AutocompleteField",
-                    "required": True,
-                    "choices": None,
-                },
-                {
-                    "name": "background",
-                    "type": "MultiLineTextField",
-                    "required": False,
-                    "choices": None,
-                },
-                {
-                    "name": "status",
-                    "type": "ChoiceField",
-                    "required": False,
-                    "choices": [
-                        {"value": "improved", "text": "Improved"},
-                        {"value": "stable", "text": "Unchanged"},
-                        {"value": "deteriorated", "text": "Deteriorated"},
-                    ],
-                },
-                {
-                    "name": "narrative",
-                    "type": "MultiLineTextField",
-                    "required": False,
-                    "choices": None,
-                },
-            ],
-        ),
-        (
-            "goal",
-            "4dd6d032-0da5-4e7f-a834-161161c971d7",
-            [
-                {
-                    "name": "goal_statement",
-                    "type": "MultiLineTextField",
-                    "required": True,
-                    "choices": None,
-                },
-                {"name": "start_date", "type": "DateField", "required": False, "choices": None},
-                {"name": "due_date", "type": "DateField", "required": False, "choices": None},
-                {
-                    "name": "achievement_status",
-                    "type": "ChoiceField",
-                    "required": False,
-                    "choices": [
-                        {"value": "in-progress", "text": "In Progress"},
-                        {"value": "improving", "text": "Improving"},
-                        {"value": "worsening", "text": "Worsening"},
-                        {"value": "no-change", "text": "No Change"},
-                        {"value": "achieved", "text": "Achieved"},
-                        {"value": "sustaining", "text": "Sustaining"},
-                        {"value": "not-achieved", "text": "Not Achieved"},
-                        {"value": "no-progress", "text": "No Progress"},
-                        {"value": "not-attainable", "text": "Not Attainable"},
-                    ],
-                },
-                {
-                    "name": "priority",
-                    "type": "ChoiceField",
-                    "required": False,
-                    "choices": [
-                        {"value": "high-priority", "text": "High Priority"},
-                        {"value": "medium-priority", "text": "Medium Priority"},
-                        {"value": "low-priority", "text": "Low Priority"},
-                    ],
-                },
-                {
-                    "name": "progress",
-                    "type": "MultiLineTextField",
-                    "required": False,
-                    "choices": None,
-                },
-            ],
-        ),
-        (
-            "hpi",
-            "d3f904ba-a425-4605-9030-2eb29673c89d",
-            [
-                {
-                    "name": "narrative",
-                    "type": "MultiLineTextField",
-                    "required": True,
-                    "choices": None,
-                }
-            ],
-        ),
-        (
-            "medicationStatement",
-            "1e41d72a-62fb-4d46-83d2-d79d030f54cb",
-            [
-                {
-                    "name": "medication",
-                    "type": "AutocompleteField",
-                    "required": True,
-                    "choices": None,
-                },
-                {"name": "sig", "type": "MultiLineTextField", "required": False, "choices": None},
-            ],
-        ),
-        (
-            "reasonForVisit",
-            "9a9c7a79-816d-4618-a47f-a886a1acc1cf",
-            [
-                {"name": "coding", "type": "AutocompleteField", "required": False, "choices": None},
-                {
-                    "name": "comment",
-                    "type": "MultiLineTextField",
-                    "required": False,
-                    "choices": None,
-                },
-            ],
-        ),
-        (
-            "stopMedication",
-            "e041315d-74c7-468d-bac9-b814013123d8",
-            [
-                {
-                    "name": "medication",
-                    "type": "AutocompleteField",
-                    "required": True,
-                    "choices": None,
-                },
-                {
-                    "name": "rationale",
-                    "type": "MultiLineTextField",
-                    "required": False,
-                    "choices": None,
-                },
-            ],
-        ),
+        (AssessCommand, "446812b3-8486-4e6c-946c-d971a1a247f7"),
+        (GoalCommand, "4dd6d032-0da5-4e7f-a834-161161c971d7"),
+        (HistoryOfPresentIllnessCommand, "d3f904ba-a425-4605-9030-2eb29673c89d"),
+        (MedicationStatementCommand, "1e41d72a-62fb-4d46-83d2-d79d030f54cb"),
+        (PlanCommand, "b381862c-4cbf-4ffc-9398-d8a0989a941f"),
+        (QuestionnaireCommand, "a6a58bc2-f095-43ee-9cda-edba0db861ac"),
+        (ReasonForVisitCommand, "9a9c7a79-816d-4618-a47f-a886a1acc1cf"),
+        (StopMedicationCommand, "e041315d-74c7-468d-bac9-b814013123d8"),
     ],
 )
 def test_command_schema_matches_command_api(
-    token: str, command_key: str, uuid: str, exp_fields: list[dict]
+    token: str, command_type_map: dict[str, str], Command: AssessCommand, uuid: str
 ) -> None:
     headers = {"Authorization": f"Bearer {token}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/{uuid}/fields/"
     command_fields_resp = requests.get(url, headers=headers).json()
-    assert command_fields_resp["schema"] == command_key
+    assert command_fields_resp["schema"] == Command.Meta.key
 
     command_fields = command_fields_resp["fields"]
-    assert len(command_fields) == len(exp_fields)
-    for field in exp_fields:
-        assert field in command_fields
+    if Command.Meta.key == "questionnaire":
+        # questionnaire's fields vary per questionnaire, so just check the first two fields which never vary
+        command_fields = command_fields[:2]
+    expected_fields = Command.command_schema()
+    assert len(command_fields) == len(expected_fields)
+
+    for actual_field in command_fields:
+        name = actual_field["name"]
+        assert name in expected_fields
+        expected_field = expected_fields[name]
+
+        assert expected_field["required"] == actual_field["required"]
+
+        expected_type = expected_field["type"]
+        if expected_type is Coding:
+            expected_type = expected_type.__annotations__["code"]
+        assert expected_type == command_type_map.get(actual_field["type"])
+
+        if (choices := actual_field["choices"]) is None:
+            assert expected_field["choices"] is None
+            continue
+
+        assert len(expected_field["choices"]) == len(choices)
+        for choice in choices:
+            assert choice["value"] in expected_field["choices"]
 
 
 # Diagnose doesn't have an adapter in home-app
-# Questionnaires dont get assigned a command_uuid
 
 # todo:
 #    update canvas_core in home-app
-#    deploy to commands-sdk-collaboration
+#    deploy to plugin-testing
