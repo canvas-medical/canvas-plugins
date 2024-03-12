@@ -82,6 +82,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     POST_COMMAND_ENTER_IN_ERROR: _ClassVar[EventType]
     PRE_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
     POST_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
+    ASSESS_COMMAND__CONDITION_SELECTED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -155,6 +156,7 @@ PRE_COMMAND_ENTER_IN_ERROR: EventType
 POST_COMMAND_ENTER_IN_ERROR: EventType
 PRE_COMMAND_EXECUTE_ACTION: EventType
 POST_COMMAND_EXECUTE_ACTION: EventType
+ASSESS_COMMAND__CONDITION_SELECTED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target")
