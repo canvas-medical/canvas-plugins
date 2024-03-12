@@ -3,7 +3,6 @@
     "email": "developer@email.com",
     "version": "0.1.0",
     "project_name": "Plugin Boilerplate",
-    "project_slug": "{{ cookiecutter.project_name.lower().strip().replace(' ', '-') }}",
-    "project_package_name": "{{ cookiecutter.project_slug.replace('-', '_') }}",
+    "project_slug": "{{ cookiecutter.project_name.lower().strip().replace(' ', '_') }}",
     "project_short_description": "A plugin to interact with a Canvas Instance"
 }

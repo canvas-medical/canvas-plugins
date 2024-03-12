@@ -8,11 +8,11 @@
 
 ```
 {{ cookiecutter.project_slug }}/
-├── {{ cookiecutter.project_package_name }}/
-│   ├── __init__.py
-│   └── plugin.py # Add your plugin code here.
+├── commands/
+├── content/
+├── effects/
+├── protocols/
+├── views/
 ├── CANVAS_MANIFEST.json
-├── pyproject.toml
-├── poetry.lock
 └── README.md
 ```
