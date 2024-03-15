@@ -1,20 +1,26 @@
 import asyncio
 import json
 
+import importlib
 import logging
 
 import grpc
 
 from generated.messages.effects_pb2 import Effect, EffectType
 from generated.messages.events_pb2 import EventResponse, EventType
+from generated.messages.events_pb2 import Event, EventResponse, EventType
+from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
 
+# TODO load and store plugins globally
+LOADED_PLUGINS = {}
+
 
 class PluginRunner(PluginRunnerServicer):
-    async def HandleEvent(self, request, context):
+    async def HandleEvent(self, request: Event, context):
         event_name = EventType.Name(request.type)
 
         logging.info(f"Handling event: {event_name}")
@@ -22,6 +28,16 @@ class PluginRunner(PluginRunnerServicer):
         yield EventResponse(
             success=True, effects=[Effect(type="Log", payload=f'Handled Event: "{event_name}"')]
         )
+
+    async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
+        try:
+            for name, module in LOADED_PLUGINS.items():
+                logging.info(f"Reloading plugin: {name}")
+                importlib.reload(module)
+        except ImportError:
+            yield ReloadPluginsResponse(success=False)
+        else:
+            yield ReloadPluginsResponse(success=True)
 
 
 async def serve():
