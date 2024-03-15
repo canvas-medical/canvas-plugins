@@ -642,6 +642,26 @@ def token() -> str:
 
 
 @pytest.fixture
+def note_id(token: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    data = {
+        "patient": 1,
+        "provider": 1,
+        "note_type": "office",
+        "note_type_version": 1,
+        "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
+    }
+    note = requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/", headers=headers, json=data
+    ).json()
+    return note["externallyExposableId"]
+
+
+@pytest.fixture
 def command_type_map() -> dict[str, type]:
     return {
         "AutocompleteField": str,
@@ -653,23 +673,30 @@ def command_type_map() -> dict[str, type]:
 
 
 @pytest.mark.parametrize(
-    "Command,uuid",
+    "Command",
     [
-        (AssessCommand, "446812b3-8486-4e6c-946c-d971a1a247f7"),
-        (GoalCommand, "4dd6d032-0da5-4e7f-a834-161161c971d7"),
-        (HistoryOfPresentIllnessCommand, "d3f904ba-a425-4605-9030-2eb29673c89d"),
-        (MedicationStatementCommand, "1e41d72a-62fb-4d46-83d2-d79d030f54cb"),
-        (PlanCommand, "b381862c-4cbf-4ffc-9398-d8a0989a941f"),
-        (QuestionnaireCommand, "a6a58bc2-f095-43ee-9cda-edba0db861ac"),
-        (ReasonForVisitCommand, "9a9c7a79-816d-4618-a47f-a886a1acc1cf"),
-        (StopMedicationCommand, "e041315d-74c7-468d-bac9-b814013123d8"),
+        (AssessCommand),
+        # todo: add Diagnose once it has an adapter in home-app
+        (GoalCommand),
+        (HistoryOfPresentIllnessCommand),
+        (MedicationStatementCommand),
+        (PlanCommand),
+        (QuestionnaireCommand),
+        (ReasonForVisitCommand),
+        (StopMedicationCommand),
     ],
 )
 def test_command_schema_matches_command_api(
-    token: str, command_type_map: dict[str, str], Command: AssessCommand, uuid: str
+    token: str, command_type_map: dict[str, str], note_id: str, Command: AssessCommand
 ) -> None:
+    # first create the command in the new note
+    data = {"noteKey": note_id, "schemaKey": Command.Meta.key}
     headers = {"Authorization": f"Bearer {token}"}
-    url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/{uuid}/fields/"
+    url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
+    command_uuid = requests.post(url, headers=headers, data=data).json()["uuid"]
+
+    # next, request the fields of the newly created command
+    url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/{command_uuid}/fields/"
     command_fields_resp = requests.get(url, headers=headers).json()
     assert command_fields_resp["schema"] == Command.Meta.key
 
@@ -699,10 +726,3 @@ def test_command_schema_matches_command_api(
         assert len(expected_field["choices"]) == len(choices)
         for choice in choices:
             assert choice["value"] in expected_field["choices"]
-
-
-# Diagnose doesn't have an adapter in home-app
-
-# todo:
-#    update canvas_core in home-app
-#    deploy to plugin-testing
