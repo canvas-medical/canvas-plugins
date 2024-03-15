@@ -40,12 +40,24 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
+def load_plugins():
+    # TODO: walk plugins directory, import and add each plugin to
+    # LOADED_PLUGINS
+    pass
+
+
 async def serve():
     port = "50051"
+
     server = grpc.aio.server()
-    add_PluginRunnerServicer_to_server(PluginRunner(), server)
     server.add_insecure_port("127.0.0.1:" + port)
-    logging.info("Starting server, listening on " + port)
+
+    add_PluginRunnerServicer_to_server(PluginRunner(), server)
+
+    logging.info(f"Starting server, listening on port {port}")
+
+    load_plugins()
+
     await server.start()
     await server.wait_for_termination()
 
