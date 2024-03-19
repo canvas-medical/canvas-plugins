@@ -14,13 +14,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n generated/messages/effects.proto\x12\x06\x63\x61nvas\"\'\n\x06\x45\x66\x66\x65\x63t\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x0f\n\x07payload\x18\x02 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n generated/messages/effects.proto\x12\x06\x63\x61nvas\";\n\x06\x45\x66\x66\x65\x63t\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.canvas.EffectType\x12\x0f\n\x07payload\x18\x02 \x01(\t*?\n\nEffectType\x12\x12\n\x0eUNKNOWN_EFFECT\x10\x00\x12\x07\n\x03LOG\x10\x01\x12\x14\n\x10\x41\x44\x44_PLAN_COMMAND\x10\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'generated.messages.effects_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
+  _globals['_EFFECTTYPE']._serialized_start=105
+  _globals['_EFFECTTYPE']._serialized_end=168
   _globals['_EFFECT']._serialized_start=44
-  _globals['_EFFECT']._serialized_end=83
+  _globals['_EFFECT']._serialized_end=103
 # @@protoc_insertion_point(module_scope)

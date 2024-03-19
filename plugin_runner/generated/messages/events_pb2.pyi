@@ -70,7 +70,19 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     VITAL_SIGN_CREATED: _ClassVar[EventType]
     VITAL_SIGN_UPDATED: _ClassVar[EventType]
     CHART_OPENED: _ClassVar[EventType]
-    COMMAND_ORIGINATED: _ClassVar[EventType]
+    PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
+    POST_COMMAND_ORIGINATE: _ClassVar[EventType]
+    PRE_COMMAND_UPDATE: _ClassVar[EventType]
+    POST_COMMAND_UPDATE: _ClassVar[EventType]
+    PRE_COMMAND_COMMIT: _ClassVar[EventType]
+    POST_COMMAND_COMMIT: _ClassVar[EventType]
+    PRE_COMMAND_DELETE: _ClassVar[EventType]
+    POST_COMMAND_DELETE: _ClassVar[EventType]
+    PRE_COMMAND_ENTER_IN_ERROR: _ClassVar[EventType]
+    POST_COMMAND_ENTER_IN_ERROR: _ClassVar[EventType]
+    PRE_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
+    POST_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
+    ASSESS_COMMAND__CONDITION_SELECTED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -132,7 +144,19 @@ TASK_UPDATED: EventType
 VITAL_SIGN_CREATED: EventType
 VITAL_SIGN_UPDATED: EventType
 CHART_OPENED: EventType
-COMMAND_ORIGINATED: EventType
+PRE_COMMAND_ORIGINATE: EventType
+POST_COMMAND_ORIGINATE: EventType
+PRE_COMMAND_UPDATE: EventType
+POST_COMMAND_UPDATE: EventType
+PRE_COMMAND_COMMIT: EventType
+POST_COMMAND_COMMIT: EventType
+PRE_COMMAND_DELETE: EventType
+POST_COMMAND_DELETE: EventType
+PRE_COMMAND_ENTER_IN_ERROR: EventType
+POST_COMMAND_ENTER_IN_ERROR: EventType
+PRE_COMMAND_EXECUTE_ACTION: EventType
+POST_COMMAND_EXECUTE_ACTION: EventType
+ASSESS_COMMAND__CONDITION_SELECTED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target")
