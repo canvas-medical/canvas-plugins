@@ -11,10 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: canvas-medical/workflows/.github/actions/install-python-and-poetry@main
-        with:
-          CANVAS_PYPI_USERNAME: ${{ secrets.CANVAS_PRIVATE_PYPI_READ_ONLY_USERNAME }}
-          CANVAS_PYPI_PASSWORD: ${{ secrets.CANVAS_PRIVATE_PYPI_READ_ONLY_PASSWORD }}
+
+      - uses: ./.github/actions/install-python-and-poetry
+
       - name: Install canvas-plugins
         shell: bash
         run: poetry install --no-interaction

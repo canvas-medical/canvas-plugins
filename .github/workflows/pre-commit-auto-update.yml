@@ -6,7 +6,7 @@ on:
 
 jobs:
   pre-commit-auto-update:
-    uses: canvas-medical/workflows/.github/workflows/pre-commit-auto-update.yml@main
+    uses: ./.github/workflows/pre-commit-auto-update-base.yml
     with:
       PR_TITLE: "chore: auto-update pre-commit hooks"
       PR_TEAM_REVIEWERS: sdk-team

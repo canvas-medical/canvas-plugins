@@ -1,0 +1,36 @@
+name: Pre-commit auto-update
+
+on:
+  workflow_call:
+    inputs:
+      PR_TITLE:
+        description: "Title for the PR this workflow will open"
+        required: true
+        type: string
+      PR_TEAM_REVIEWERS:
+        description: "A comma-separated list of team usernames to be added as reviewers"
+        required: false
+        type: string
+
+jobs:
+  pre-commit-auto-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit autoupdate
+        run: pre-commit autoupdate
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.PROJECT_AND_REPO_PAT }}
+          branch: pre-commit-auto-update
+          title: ${{ inputs.PR_TITLE }}
+          commit-message: "auto-update pre-commit hooks"
+          body: |
+            Update pre-commit hooks to latest version
+          team-reviewers: ${{ inputs.PR_TEAM_REVIEWERS }}
