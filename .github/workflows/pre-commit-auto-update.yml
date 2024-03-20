@@ -6,7 +6,7 @@ on:
 
 jobs:
   pre-commit-auto-update:
-    uses: ./.github/workflows/pre-commit-auto-update-base.yml@main
+    uses: ./.github/workflows/pre-commit-auto-update-base
     with:
       PR_TITLE: "chore: auto-update pre-commit hooks"
       PR_TEAM_REVIEWERS: sdk-team
