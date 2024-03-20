@@ -1,8 +1,10 @@
 from datetime import datetime
 
 import pytest
+import requests
 from pydantic import ValidationError
 
+import settings
 from canvas_sdk.commands import (
     AssessCommand,
     DiagnoseCommand,
@@ -628,3 +630,191 @@ def test_command_allows_kwarg_with_correct_type(
     updated_k, updated_v = list(test_updated_value.items())[-1]
     setattr(cmd, updated_k, updated_v)
     assert getattr(cmd, updated_k) == updated_v
+
+
+@pytest.fixture
+def token() -> str:
+    return requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "grant_type": "client_credentials",
+            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+        },
+    ).json()["access_token"]
+
+
+@pytest.mark.parametrize(
+    "command_key,uuid,exp_fields",
+    [
+        (
+            "plan",
+            "b381862c-4cbf-4ffc-9398-d8a0989a941f",
+            [
+                {
+                    "name": "narrative",
+                    "type": "MultiLineTextField",
+                    "required": True,
+                    "choices": None,
+                }
+            ],
+        ),
+        (
+            "assess",
+            "446812b3-8486-4e6c-946c-d971a1a247f7",
+            [
+                {
+                    "name": "condition",
+                    "type": "AutocompleteField",
+                    "required": True,
+                    "choices": None,
+                },
+                {
+                    "name": "background",
+                    "type": "MultiLineTextField",
+                    "required": False,
+                    "choices": None,
+                },
+                {
+                    "name": "status",
+                    "type": "ChoiceField",
+                    "required": False,
+                    "choices": [
+                        {"value": "improved", "text": "Improved"},
+                        {"value": "stable", "text": "Unchanged"},
+                        {"value": "deteriorated", "text": "Deteriorated"},
+                    ],
+                },
+                {
+                    "name": "narrative",
+                    "type": "MultiLineTextField",
+                    "required": False,
+                    "choices": None,
+                },
+            ],
+        ),
+        (
+            "goal",
+            "4dd6d032-0da5-4e7f-a834-161161c971d7",
+            [
+                {
+                    "name": "goal_statement",
+                    "type": "MultiLineTextField",
+                    "required": True,
+                    "choices": None,
+                },
+                {"name": "start_date", "type": "DateField", "required": False, "choices": None},
+                {"name": "due_date", "type": "DateField", "required": False, "choices": None},
+                {
+                    "name": "achievement_status",
+                    "type": "ChoiceField",
+                    "required": False,
+                    "choices": [
+                        {"value": "in-progress", "text": "In Progress"},
+                        {"value": "improving", "text": "Improving"},
+                        {"value": "worsening", "text": "Worsening"},
+                        {"value": "no-change", "text": "No Change"},
+                        {"value": "achieved", "text": "Achieved"},
+                        {"value": "sustaining", "text": "Sustaining"},
+                        {"value": "not-achieved", "text": "Not Achieved"},
+                        {"value": "no-progress", "text": "No Progress"},
+                        {"value": "not-attainable", "text": "Not Attainable"},
+                    ],
+                },
+                {
+                    "name": "priority",
+                    "type": "ChoiceField",
+                    "required": False,
+                    "choices": [
+                        {"value": "high-priority", "text": "High Priority"},
+                        {"value": "medium-priority", "text": "Medium Priority"},
+                        {"value": "low-priority", "text": "Low Priority"},
+                    ],
+                },
+                {
+                    "name": "progress",
+                    "type": "MultiLineTextField",
+                    "required": False,
+                    "choices": None,
+                },
+            ],
+        ),
+        (
+            "hpi",
+            "d3f904ba-a425-4605-9030-2eb29673c89d",
+            [
+                {
+                    "name": "narrative",
+                    "type": "MultiLineTextField",
+                    "required": True,
+                    "choices": None,
+                }
+            ],
+        ),
+        (
+            "medicationStatement",
+            "1e41d72a-62fb-4d46-83d2-d79d030f54cb",
+            [
+                {
+                    "name": "medication",
+                    "type": "AutocompleteField",
+                    "required": True,
+                    "choices": None,
+                },
+                {"name": "sig", "type": "MultiLineTextField", "required": False, "choices": None},
+            ],
+        ),
+        (
+            "reasonForVisit",
+            "9a9c7a79-816d-4618-a47f-a886a1acc1cf",
+            [
+                {"name": "coding", "type": "AutocompleteField", "required": False, "choices": None},
+                {
+                    "name": "comment",
+                    "type": "MultiLineTextField",
+                    "required": False,
+                    "choices": None,
+                },
+            ],
+        ),
+        (
+            "stopMedication",
+            "e041315d-74c7-468d-bac9-b814013123d8",
+            [
+                {
+                    "name": "medication",
+                    "type": "AutocompleteField",
+                    "required": True,
+                    "choices": None,
+                },
+                {
+                    "name": "rationale",
+                    "type": "MultiLineTextField",
+                    "required": False,
+                    "choices": None,
+                },
+            ],
+        ),
+    ],
+)
+def test_command_schema_matches_command_api(
+    token: str, command_key: str, uuid: str, exp_fields: list[dict]
+) -> None:
+    headers = {"Authorization": f"Bearer {token}"}
+    url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/{uuid}/fields/"
+    command_fields_resp = requests.get(url, headers=headers).json()
+    assert command_fields_resp["schema"] == command_key
+
+    command_fields = command_fields_resp["fields"]
+    assert len(command_fields) == len(exp_fields)
+    for field in exp_fields:
+        assert field in command_fields
+
+
+# Diagnose doesn't have an adapter in home-app
+# Questionnaires dont get assigned a command_uuid
+
+# todo:
+#    update canvas_core in home-app
+#    deploy to commands-sdk-collaboration
