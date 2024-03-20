@@ -26,7 +26,7 @@ class PluginRunner(PluginRunnerServicer):
         logging.info(f"Handling event: {event_name}")
 
         yield EventResponse(
-            success=True, effects=[Effect(type="Log", payload=f'Handled Event: "{event_name}"')]
+            success=True, effects=[Effect(type=EffectType.LOG, payload=f'Handled Event: "{event_name}"')]
         )
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
