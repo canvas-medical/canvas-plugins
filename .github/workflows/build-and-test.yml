@@ -20,4 +20,8 @@ jobs:
 
       # Run Pytest via Poetry.
       - name: Run Pytest
+        env:
+          INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
+          INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
+          INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
         run: poetry run pytest --ff --verbosity 2

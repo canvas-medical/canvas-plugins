@@ -628,7 +628,7 @@ def test_command_allows_kwarg_with_correct_type(
     assert getattr(cmd, updated_k) == updated_v
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def token() -> str:
     return requests.post(
         f"{settings.INTEGRATION_TEST_URL}/auth/token/",
