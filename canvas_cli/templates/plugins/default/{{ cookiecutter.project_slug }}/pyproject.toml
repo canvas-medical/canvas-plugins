@@ -1,0 +1,14 @@
+[tool.poetry]
+classifiers = ["Environment :: Canvas :: Plugins"]
+name = "{{ cookiecutter.project_name.lower().strip().replace(' ', '_') }}"
+version = "{{ cookiecutter.version }}"
+description = ""
+authors = ["Beau Gunderson <beau@beaugunderson.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
