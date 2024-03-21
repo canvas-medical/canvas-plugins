@@ -15,35 +15,67 @@ from generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 
-# TODO load and store plugins globally
-LOADED_PLUGINS = {}
+import my_first_plugin
+import my_second_plugin
+
+# TODO load and store plugins externally
+def get_loaded_plugins():
+    return {
+        "my_first_plugin": my_first_plugin,
+        "my_second_plugin": my_second_plugin
+    }
 
 
 class PluginRunner(PluginRunnerServicer):
+    EVENT_PROTOCOL_MAP = {}
+
+    def __init__(self) -> None:
+        load_plugins()
+        self.refresh_event_type_map()
+        super().__init__()
+
     async def HandleEvent(self, request: Event, context):
         event_name = EventType.Name(request.type)
+        relevant_plugins = self.EVENT_PROTOCOL_MAP.get(event_name, [])
 
-        logging.info(f"Handling event: {event_name}")
+        effect_list = []
+        for plugin_name in relevant_plugins:
+            module = get_loaded_plugins().get(plugin_name)
+            protocol_class = getattr(module, plugin_name).protocols.protocol.Protocol
+            effects = protocol_class(request).compute()
 
+            effect_list = [Effect(type=EffectType.Value(effect["effect_type"]), payload=json.dumps(effect["payload"])) for effect in effects]
         yield EventResponse(
-            success=True, effects=[Effect(type=EffectType.LOG, payload=f'Handled Event: "{event_name}"')]
+            success=True, effects=effect_list
         )
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
-            for name, module in LOADED_PLUGINS.items():
-                logging.info(f"Reloading plugin: {name}")
-                importlib.reload(module)
+            load_plugins()
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
+            self.refresh_event_type_map()
             yield ReloadPluginsResponse(success=True)
+
+    def refresh_event_type_map(self):
+        self.EVENT_PROTOCOL_MAP = {}
+        for name, module in get_loaded_plugins().items():
+            protocol_class = None
+            try:
+                protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
+                protocol_class = protocol_file.Protocol
+            except ImportError:
+                continue
+
+            if protocol_class and hasattr(protocol_class, "RESPONDS_TO"):
+                self.EVENT_PROTOCOL_MAP[protocol_class.RESPONDS_TO] = [name]
 
 
 def load_plugins():
-    # TODO: walk plugins directory, import and add each plugin to
-    # LOADED_PLUGINS
-    pass
+    for name, module in get_loaded_plugins().items():
+        logging.info(f"Reloading plugin: {name}")
+        importlib.reload(module)
 
 
 async def serve():

@@ -1,0 +1,14 @@
+[tool.poetry]
+classifiers = ["Environment :: Canvas :: Plugins"]
+name = "my_first_plugin"
+version = "0.1.0"
+description = ""
+authors = ["Beau Gunderson <beau@beaugunderson.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
