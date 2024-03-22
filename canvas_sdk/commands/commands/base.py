@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
-from canvas_sdk.commands.constants import CommandEffect
+from canvas_sdk.effects.constants import Effect
 
 
 class _BaseCommand(BaseModel):
@@ -25,7 +25,7 @@ class _BaseCommand(BaseModel):
     def values(self) -> dict:
         return {}
 
-    def originate(self) -> CommandEffect:
+    def originate(self) -> Effect:
         """Originate a new command in the note body."""
         if not self.note_id:
             raise AttributeError("Note id is required to originate a command")
@@ -38,7 +38,7 @@ class _BaseCommand(BaseModel):
             },
         }
 
-    def edit(self) -> CommandEffect:
+    def edit(self) -> Effect:
         """Edit the command."""
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to edit a command")
@@ -51,7 +51,7 @@ class _BaseCommand(BaseModel):
             },
         }
 
-    def delete(self) -> CommandEffect:
+    def delete(self) -> Effect:
         """Delete the command."""
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to delete a command")
@@ -60,7 +60,7 @@ class _BaseCommand(BaseModel):
             "payload": {"command": self.command_uuid, "user": self.user_id},
         }
 
-    def commit(self) -> CommandEffect:
+    def commit(self) -> Effect:
         """Commit the command."""
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to commit a command")
@@ -69,7 +69,7 @@ class _BaseCommand(BaseModel):
             "payload": {"command": self.command_uuid, "user": self.user_id},
         }
 
-    def enter_in_error(self) -> CommandEffect:
+    def enter_in_error(self) -> Effect:
         """Mark the command as entered-in-error."""
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to enter in error a command")
