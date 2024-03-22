@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class DiagnoseCommand(_BaseCommand):

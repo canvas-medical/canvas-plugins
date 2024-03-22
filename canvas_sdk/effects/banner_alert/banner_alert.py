@@ -15,6 +15,7 @@ class BannerAlert(_BaseEffect):
     class Meta:
         effect_type = "SHOW_BANNER_ALERT"
 
+    patient_key: str
     narrative: str = Field(max_length=90)
     placements: list[BannerAlertPlacement] = Field(min_length=1)
     intents: list[BannerAlertIntent] = Field(min_length=1)
@@ -27,3 +28,8 @@ class BannerAlert(_BaseEffect):
             "placement": [p.value for p in self.placements],
             "intent": [i.value for i in self.intents],
         }
+
+    @property
+    def effect_payload(self) -> dict:
+        """The payload of the effect."""
+        return {"patient": self.patient_key, "data": self.values}

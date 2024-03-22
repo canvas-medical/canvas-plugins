@@ -1,7 +1,7 @@
 from pydantic import model_validator
 from typing_extensions import Self
 
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
 
 

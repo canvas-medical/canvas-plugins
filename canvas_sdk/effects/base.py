@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from canvas_sdk.effects.constants import Effect
+from plugin_runner.generated.messages.effects_pb2 import Effect
 
 
 class _BaseEffect(BaseModel):
@@ -13,14 +13,16 @@ class _BaseEffect(BaseModel):
 
     model_config = ConfigDict(strict=True, validate_assignment=True)
 
-    patient_key: str
-
     @property
     def values(self) -> dict:
         return {}
 
-    def manifest(self) -> Effect:
+    @property
+    def effect_payload(self) -> dict:
+        return {"data": self.values}
+
+    def apply(self) -> Effect:
         return {
-            "effect_type": self.Meta.effect_type,
-            "payload": {"patient": self.patient_key, "data": self.values},
+            "type": self.Meta.effect_type,
+            "payload": self.effect_payload,
         }

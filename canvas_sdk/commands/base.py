@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
-from canvas_sdk.effects.constants import Effect
+from plugin_runner.generated.messages.effects_pb2 import Effect
 
 
 class _BaseCommand(BaseModel):
@@ -30,7 +30,7 @@ class _BaseCommand(BaseModel):
         if not self.note_id:
             raise AttributeError("Note id is required to originate a command")
         return {
-            "effect_type": f"ADD_{self.Meta.key.upper()}_COMMAND",
+            "type": f"ADD_{self.Meta.key.upper()}_COMMAND",
             "payload": {
                 "user": self.user_id,
                 "note": self.note_id,
@@ -43,7 +43,7 @@ class _BaseCommand(BaseModel):
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to edit a command")
         return {
-            "effect_type": f"EDIT_{self.Meta.key.upper()}_COMMAND",
+            "type": f"EDIT_{self.Meta.key.upper()}_COMMAND",
             "payload": {
                 "user": self.user_id,
                 "command": self.command_uuid,
@@ -56,7 +56,7 @@ class _BaseCommand(BaseModel):
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to delete a command")
         return {
-            "effect_type": f"DELETE_{self.Meta.key.upper()}_COMMAND",
+            "type": f"DELETE_{self.Meta.key.upper()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
         }
 
@@ -65,7 +65,7 @@ class _BaseCommand(BaseModel):
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to commit a command")
         return {
-            "effect_type": f"COMMIT_{self.Meta.key.upper()}_COMMAND",
+            "type": f"COMMIT_{self.Meta.key.upper()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
         }
 
@@ -74,6 +74,6 @@ class _BaseCommand(BaseModel):
         if not self.command_uuid:
             raise AttributeError("Command uuid is required to enter in error a command")
         return {
-            "effect_type": f"ENTER_IN_ERROR_{self.Meta.key.upper()}_COMMAND",
+            "type": f"ENTER_IN_ERROR_{self.Meta.key.upper()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
         }
