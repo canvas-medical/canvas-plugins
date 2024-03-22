@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 from plugin_runner.generated.messages.effects_pb2 import Effect
@@ -14,11 +16,11 @@ class _BaseEffect(BaseModel):
     model_config = ConfigDict(strict=True, validate_assignment=True)
 
     @property
-    def values(self) -> dict:
+    def values(self) -> dict[str, Any]:
         return {}
 
     @property
-    def effect_payload(self) -> dict:
+    def effect_payload(self) -> dict[str, Any]:
         return {"data": self.values}
 
     def apply(self) -> Effect:

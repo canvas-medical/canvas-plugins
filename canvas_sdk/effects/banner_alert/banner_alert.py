@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import Field
 
 from canvas_sdk.effects.banner_alert.constants import (
@@ -21,7 +23,7 @@ class BannerAlert(_BaseEffect):
     intents: list[BannerAlertIntent] = Field(min_length=1)
 
     @property
-    def values(self) -> dict:
+    def values(self) -> dict[str, Any]:
         """The BannerAlert's values."""
         return {
             "narrative": self.narrative,
@@ -30,6 +32,6 @@ class BannerAlert(_BaseEffect):
         }
 
     @property
-    def effect_payload(self) -> dict:
+    def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"patient": self.patient_key, "data": self.values}
