@@ -88,6 +88,10 @@ def reload_plugins():
         logging.info(f"Reloading plugin: {name}")
         LOADED_PLUGINS[name] = importlib.reload(module)
 
+        protocol_class = getattr(LOADED_PLUGINS[name], name).protocols.protocol.Protocol
+
+        print(f"DEBUG: {name} {protocol_class.NARRATIVE_STRING}")
+
 
 async def serve():
     port = "50051"
@@ -98,6 +102,8 @@ async def serve():
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 
     logging.info(f"Starting server, listening on port {port}")
+
+    reload_plugins()
 
     await server.start()
     await server.wait_for_termination()
