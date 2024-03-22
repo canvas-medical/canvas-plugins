@@ -86,7 +86,10 @@ class PluginRunner(PluginRunnerServicer):
 def reload_plugins():
     for name, module in LOADED_PLUGINS.items():
         logging.info(f"Reloading plugin: {name}")
-        LOADED_PLUGINS[name] = importlib.reload(module)
+
+        protocol_module = getattr(LOADED_PLUGINS[name], name).protocols.protocol
+
+        importlib.reload(protocol_module)
 
         protocol_class = getattr(LOADED_PLUGINS[name], name).protocols.protocol.Protocol
 
