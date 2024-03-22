@@ -15,22 +15,27 @@ from generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 
-import my_first_plugin
-import my_second_plugin
+# import my_first_plugin
+# import my_second_plugin
+
+LOADED_PLUGINS =  {
+    "my_first_plugin": __import__("my_first_plugin.my_first_plugin.protocols.protocol"),
+    "my_second_plugin": __import__("my_second_plugin.my_second_plugin.protocols.protocol")
+}
 
 # TODO load and store plugins externally
-def get_loaded_plugins():
-    return {
-        "my_first_plugin": my_first_plugin,
-        "my_second_plugin": my_second_plugin
-    }
+# def get_loaded_plugins():
+#     return {
+#         "my_first_plugin": my_first_plugin,
+#         "my_second_plugin": my_second_plugin
+#     }
 
 
 class PluginRunner(PluginRunnerServicer):
     EVENT_PROTOCOL_MAP = {}
 
     def __init__(self) -> None:
-        load_plugins()
+        # load_plugins()
         self.refresh_event_type_map()
         super().__init__()
 
@@ -40,7 +45,7 @@ class PluginRunner(PluginRunnerServicer):
 
         effect_list = []
         for plugin_name in relevant_plugins:
-            module = get_loaded_plugins().get(plugin_name)
+            module = LOADED_PLUGINS.get(plugin_name)
             protocol_class = getattr(module, plugin_name).protocols.protocol.Protocol
             effects = protocol_class(request).compute()
 
@@ -51,7 +56,7 @@ class PluginRunner(PluginRunnerServicer):
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
-            load_plugins()
+            reload_plugins()
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
@@ -60,11 +65,13 @@ class PluginRunner(PluginRunnerServicer):
 
     def refresh_event_type_map(self):
         self.EVENT_PROTOCOL_MAP = {}
-        for name, module in get_loaded_plugins().items():
+        for name, module in LOADED_PLUGINS.items():
             protocol_class = None
             try:
-                protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
-                protocol_class = protocol_file.Protocol
+                #protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
+                # breakpoint()
+                protocol_file = getattr(module, name)
+                protocol_class = protocol_file.protocols.protocol.Protocol
             except ImportError:
                 continue
 
@@ -72,8 +79,8 @@ class PluginRunner(PluginRunnerServicer):
                 self.EVENT_PROTOCOL_MAP[protocol_class.RESPONDS_TO] = [name]
 
 
-def load_plugins():
-    for name, module in get_loaded_plugins().items():
+def reload_plugins():
+    for name, module in LOADED_PLUGINS.items():
         logging.info(f"Reloading plugin: {name}")
         importlib.reload(module)
 
@@ -87,8 +94,6 @@ async def serve():
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 
     logging.info(f"Starting server, listening on port {port}")
-
-    load_plugins()
 
     await server.start()
     await server.wait_for_termination()
