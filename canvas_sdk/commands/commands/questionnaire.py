@@ -4,6 +4,9 @@ from canvas_sdk.commands.commands.base import _BaseCommand
 class QuestionnaireCommand(_BaseCommand):
     """A class for managing a Questionnaire command within a specific note."""
 
+    class Meta:
+        key = "questionnaire"
+
     questionnaire_id: int
     result: str | None = None
 

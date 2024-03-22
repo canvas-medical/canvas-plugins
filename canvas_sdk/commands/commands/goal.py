@@ -7,6 +7,9 @@ from canvas_sdk.commands.commands.base import _BaseCommand
 class GoalCommand(_BaseCommand):
     """A class for managing a Goal command within a specific note."""
 
+    class Meta:
+        key = "goal"
+
     class Priority(Enum):
         HIGH = "high-priority"
         MEDIUM = "medium-priority"

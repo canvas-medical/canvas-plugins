@@ -6,6 +6,9 @@ from canvas_sdk.commands.commands.base import _BaseCommand
 class AssessCommand(_BaseCommand):
     """A class for managing an Assess command within a specific note."""
 
+    class Meta:
+        key = "assess"
+
     class Status(Enum):
         IMPROVED = "improved"
         STABLE = "stable"
