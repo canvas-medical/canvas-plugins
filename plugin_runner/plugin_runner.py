@@ -18,9 +18,9 @@ from generated.services.plugin_runner_pb2_grpc import (
 # import my_first_plugin
 # import my_second_plugin
 
-LOADED_PLUGINS =  {
+LOADED_PLUGINS = {
     "my_first_plugin": __import__("my_first_plugin.my_first_plugin.protocols.protocol"),
-    "my_second_plugin": __import__("my_second_plugin.my_second_plugin.protocols.protocol")
+    "my_second_plugin": __import__("my_second_plugin.my_second_plugin.protocols.protocol"),
 }
 
 # TODO load and store plugins externally
@@ -49,10 +49,14 @@ class PluginRunner(PluginRunnerServicer):
             protocol_class = getattr(module, plugin_name).protocols.protocol.Protocol
             effects = protocol_class(request).compute()
 
-            effect_list = [Effect(type=EffectType.Value(effect["effect_type"]), payload=json.dumps(effect["payload"])) for effect in effects]
-        yield EventResponse(
-            success=True, effects=effect_list
-        )
+            effect_list = [
+                Effect(
+                    type=EffectType.Value(effect["effect_type"]),
+                    payload=json.dumps(effect["payload"]),
+                )
+                for effect in effects
+            ]
+        yield EventResponse(success=True, effects=effect_list)
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
@@ -68,7 +72,7 @@ class PluginRunner(PluginRunnerServicer):
         for name, module in LOADED_PLUGINS.items():
             protocol_class = None
             try:
-                #protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
+                # protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
                 # breakpoint()
                 protocol_file = getattr(module, name)
                 protocol_class = protocol_file.protocols.protocol.Protocol
@@ -82,7 +86,7 @@ class PluginRunner(PluginRunnerServicer):
 def reload_plugins():
     for name, module in LOADED_PLUGINS.items():
         logging.info(f"Reloading plugin: {name}")
-        importlib.reload(module)
+        LOADED_PLUGINS[name] = importlib.reload(module)
 
 
 async def serve():
