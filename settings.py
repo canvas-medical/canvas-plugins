@@ -1,0 +1,9 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
+INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
+INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")

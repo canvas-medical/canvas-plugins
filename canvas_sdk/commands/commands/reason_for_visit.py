@@ -22,6 +22,14 @@ class ReasonForVisitCommand(_BaseCommand):
             raise ValueError("Structured RFV should have a coding.")
         return self
 
+    @classmethod
+    def command_schema(cls) -> dict:
+        """The schema of the command."""
+        command_schema = super().command_schema()
+        # the commands api does not include the 'structured' field in the fields response
+        command_schema.pop("structured")
+        return command_schema
+
     @property
     def values(self) -> dict:
         """The ReasonForVisit command's field values."""

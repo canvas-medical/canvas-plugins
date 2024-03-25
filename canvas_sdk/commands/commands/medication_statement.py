@@ -1,4 +1,5 @@
 from canvas_sdk.commands.base import _BaseCommand
+from pydantic import Field
 
 
 class MedicationStatementCommand(_BaseCommand):
@@ -7,7 +8,7 @@ class MedicationStatementCommand(_BaseCommand):
     class Meta:
         key = "medicationStatement"
 
-    fdb_code: str
+    fdb_code: str = Field(json_schema_extra={"commands_api_name": "medication"})
     sig: str | None = None
 
     @property

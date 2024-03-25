@@ -47,6 +47,7 @@ jsonschema = "^4.21.1"
 keyring = "*"
 pydantic = "^2.6.1"
 python = ">=3.11"
+python-dotenv = "^1.0.1"
 requests = "*"
 typer = {extras = ["all"], version = "*"}
 websocket-client = "^1.7.0"

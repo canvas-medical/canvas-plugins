@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand
 
 
@@ -9,7 +11,7 @@ class DiagnoseCommand(_BaseCommand):
     class Meta:
         key = "diagnose"
 
-    icd10_code: str
+    icd10_code: str = Field(json_schema_extra={"commands_api_name": "diagnose"})
     background: str | None = None
     approximate_date_of_onset: datetime | None = None
     today_assessment: str | None = None
