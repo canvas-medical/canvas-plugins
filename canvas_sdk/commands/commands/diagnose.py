@@ -8,18 +8,13 @@ from canvas_sdk.commands.base import _BaseCommand
 class DiagnoseCommand(_BaseCommand):
     """A class for managing a Diagnose command within a specific note."""
 
-    key: str = Field("diagnose", frozen=True)
+    class Meta:
+        key = "diagnose"
 
     icd10_code: str = Field(json_schema_extra={"commands_api_name": "diagnose"})
-    background: str | None = Field(
-        None, json_schema_extra={"commands_api_type": "MultiLineTextField"}
-    )
-    approximate_date_of_onset: datetime | None = Field(
-        None, json_schema_extra={"commands_api_type": "ApproximateDateField"}
-    )
-    today_assessment: str | None = Field(
-        None, json_schema_extra={"commands_api_type": "MultiLineTextField"}
-    )
+    background: str | None = None
+    approximate_date_of_onset: datetime | None = None
+    today_assessment: str | None = None
 
     @property
     def values(self) -> dict:
