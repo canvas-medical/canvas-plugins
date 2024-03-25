@@ -1,8 +1,11 @@
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class MedicationStatementCommand(_BaseCommand):
     """A class for managing a MedicationStatement command within a specific note."""
+
+    class Meta:
+        key = "medicationStatement"
 
     fdb_code: str
     sig: str | None = None

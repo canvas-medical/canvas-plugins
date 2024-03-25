@@ -1,8 +1,11 @@
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class StopMedicationCommand(_BaseCommand):
     """A class for managing a StopMedication command within a specific note."""
+
+    class Meta:
+        key = "stopMedication"
 
     # how do we make sure this is a valid medication_id for the patient?
     medication_id: int

@@ -1,10 +1,13 @@
 from datetime import datetime
 
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class DiagnoseCommand(_BaseCommand):
     """A class for managing a Diagnose command within a specific note."""
+
+    class Meta:
+        key = "diagnose"
 
     icd10_code: str
     background: str | None = None
