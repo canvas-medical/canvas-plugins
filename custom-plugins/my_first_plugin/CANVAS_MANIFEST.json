@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "My First Plugin",
+    "description": "A plugin to interact with a Canvas Instance",
+    "components": {
+        "protocols": [
+            {
+                "class": "my_first_plugin.protocols.protocol:Protocol",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "assess_condition_selected",
+                    "read": [
+                        "conditions"
+                    ],
+                    "write": [
+                        "commands"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    }
+}
