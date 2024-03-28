@@ -6,6 +6,8 @@ import os
 import pathlib
 import sys
 
+from collections import defaultdict
+
 import grpc
 
 from generated.messages.effects_pb2 import Effect, EffectType
@@ -78,7 +80,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     manifest_json = manifest_file.read_text()
 
     # the name is the folder name underneath the plugins directory
-    name = path.stem
+    name = path.name
 
     try:
         manifest_json = json.loads(manifest_json)
@@ -86,6 +88,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         logging.warn(f'Unable to load plugin "{name}":', e)
         return
 
+    # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
     except Exception as e:
@@ -93,6 +96,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         return
 
     for protocol in protocols:
+        # TODO add class colon validation to existing schema validation
         protocol_module, protocol_class = protocol["class"].split(":")
         name_and_class = f"{name}:{protocol_module}:{protocol_class}"
 
@@ -105,7 +109,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
             LOADED_PLUGINS[name_and_class]["active"] = True
         else:
-            logging.info(f"Reloading plugin: {name_and_class}")
+            logging.info(f"Loading plugin: {name_and_class}")
 
             module = importlib.import_module(protocol_module)
 
@@ -118,13 +122,19 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
 
 def refresh_event_type_map():
-    EVENT_PROTOCOL_MAP = {}
+    EVENT_PROTOCOL_MAP = defaultdict(list)
 
     for name, plugin in LOADED_PLUGINS.items():
         if hasattr(plugin["class"], "RESPONDS_TO"):
-            EVENT_PROTOCOL_MAP[plugin["class"].RESPONDS_TO] = [name]
+            responds_to = plugin["class"].RESPONDS_TO
 
-    logging.info(EVENT_PROTOCOL_MAP)
+            if isinstance(responds_to, str):
+                EVENT_PROTOCOL_MAP[responds_to].append(name)
+            elif isinstance(responds_to, list):
+                for event in responds_to:
+                    EVENT_PROTOCOL_MAP[event].append(name)
+            else:
+                logging.warn(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
 def load_plugins():
@@ -156,6 +166,9 @@ def load_plugins():
     refresh_event_type_map()
 
 
+_cleanup_coroutines = []
+
+
 async def serve():
     port = "50051"
 
@@ -169,9 +182,27 @@ async def serve():
     load_plugins()
 
     await server.start()
+
+    async def server_graceful_shutdown():
+        logging.info("Starting graceful shutdown...")
+        await server.stop(5)
+
+    _cleanup_coroutines.append(server_graceful_shutdown())
+
     await server.wait_for_termination()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(serve())
+
+    loop = asyncio.new_event_loop()
+
+    asyncio.set_event_loop(loop)
+
+    try:
+        loop.run_until_complete(serve())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.run_until_complete(*_cleanup_coroutines)
+        loop.close()
