@@ -1,13 +1,14 @@
 import asyncio
-import json
-
 import importlib
+import json
 import logging
+import os
+import pathlib
+import sys
 
 import grpc
 
 from generated.messages.effects_pb2 import Effect, EffectType
-from generated.messages.events_pb2 import EventResponse, EventType
 from generated.messages.events_pb2 import Event, EventResponse, EventType
 from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from generated.services.plugin_runner_pb2_grpc import (
@@ -15,38 +16,40 @@ from generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 
-# import my_first_plugin
-# import my_second_plugin
+ENV = os.getenv("ENV", "development")
 
-LOADED_PLUGINS = {
-    "my_first_plugin": __import__("my_first_plugin.my_first_plugin.protocols.protocol"),
-    "my_second_plugin": __import__("my_second_plugin.my_second_plugin.protocols.protocol"),
-}
+IS_PRODUCTION = ENV == "production"
 
-# TODO load and store plugins externally
-# def get_loaded_plugins():
-#     return {
-#         "my_first_plugin": my_first_plugin,
-#         "my_second_plugin": my_second_plugin
-#     }
+MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
+
+# specify a local plugin directory for development
+PLUGIN_DIRECTORY = "/plugin-runner/custom-plugins" if IS_PRODUCTION else "./custom-plugins"
+
+# when we import plugins we'll use the module name directly so we need to add the plugin
+# directory to the path
+sys.path.append(PLUGIN_DIRECTORY)
+
+# a global dictionary of loaded plugins
+# TODO: create typings here for the subkeys
+LOADED_PLUGINS = {}
+
+# a global dictionary of events to protocol class names
+EVENT_PROTOCOL_MAP = {}
 
 
 class PluginRunner(PluginRunnerServicer):
-    EVENT_PROTOCOL_MAP = {}
-
     def __init__(self) -> None:
-        # load_plugins()
-        self.refresh_event_type_map()
         super().__init__()
 
     async def HandleEvent(self, request: Event, context):
         event_name = EventType.Name(request.type)
-        relevant_plugins = self.EVENT_PROTOCOL_MAP.get(event_name, [])
+        relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
         effect_list = []
+
         for plugin_name in relevant_plugins:
-            module = LOADED_PLUGINS.get(plugin_name)
-            protocol_class = getattr(module, plugin_name).protocols.protocol.Protocol
+            plugin = LOADED_PLUGINS[plugin_name]
+            protocol_class = plugin["class"]
             effects = protocol_class(request).compute()
 
             effect_list = [
@@ -56,44 +59,101 @@ class PluginRunner(PluginRunnerServicer):
                 )
                 for effect in effects
             ]
+
         yield EventResponse(success=True, effects=effect_list)
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
-            reload_plugins()
+            load_plugins()
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
-            self.refresh_event_type_map()
             yield ReloadPluginsResponse(success=True)
 
-    def refresh_event_type_map(self):
-        self.EVENT_PROTOCOL_MAP = {}
-        for name, module in LOADED_PLUGINS.items():
-            protocol_class = None
-            try:
-                # protocol_file = importlib.import_module(f"{name}.{name}.protocols.protocol")
-                # breakpoint()
-                protocol_file = getattr(module, name)
-                protocol_class = protocol_file.protocols.protocol.Protocol
-            except ImportError:
-                continue
 
-            if protocol_class and hasattr(protocol_class, "RESPONDS_TO"):
-                self.EVENT_PROTOCOL_MAP[protocol_class.RESPONDS_TO] = [name]
+def load_or_reload_plugin(path: pathlib.Path) -> None:
+    logging.info(f"Loading {path}")
+
+    manifest_file = path / MANIFEST_FILE_NAME
+    manifest_json = manifest_file.read_text()
+
+    # the name is the folder name underneath the plugins directory
+    name = path.stem
+
+    try:
+        manifest_json = json.loads(manifest_json)
+    except Exception as e:
+        logging.warn(f'Unable to load plugin "{name}":', e)
+        return
+
+    try:
+        protocols = manifest_json["components"]["protocols"]
+    except Exception as e:
+        logging.warn(f'Unable to load plugin "{name}":', e)
+        return
+
+    for protocol in protocols:
+        protocol_module, protocol_class = protocol["class"].split(":")
+        name_and_class = f"{name}:{protocol_module}:{protocol_class}"
+
+        if name_and_class in LOADED_PLUGINS:
+            logging.info(f"Reloading plugin: {name_and_class}")
+
+            protocol_module = LOADED_PLUGINS[name_and_class]["module"]
+
+            importlib.reload(protocol_module)
+
+            LOADED_PLUGINS[name_and_class]["active"] = True
+        else:
+            logging.info(f"Reloading plugin: {name_and_class}")
+
+            module = importlib.import_module(protocol_module)
+
+            LOADED_PLUGINS[name_and_class] = {
+                "active": True,
+                "class": getattr(module, protocol_class),
+                "module": module,
+                "protocol": protocol,
+            }
 
 
-def reload_plugins():
-    for name, module in LOADED_PLUGINS.items():
-        logging.info(f"Reloading plugin: {name}")
+def refresh_event_type_map():
+    EVENT_PROTOCOL_MAP = {}
 
-        protocol_module = getattr(LOADED_PLUGINS[name], name).protocols.protocol
+    for name, plugin in LOADED_PLUGINS.items():
+        if hasattr(plugin["class"], "RESPONDS_TO"):
+            EVENT_PROTOCOL_MAP[plugin["class"].RESPONDS_TO] = [name]
 
-        importlib.reload(protocol_module)
+    logging.info(EVENT_PROTOCOL_MAP)
 
-        protocol_class = getattr(LOADED_PLUGINS[name], name).protocols.protocol.Protocol
 
-        print(f"DEBUG: {name} {protocol_class.NARRATIVE_STRING}")
+def load_plugins():
+    # first mark each plugin as inactive since we want to remove it from
+    # LOADED_PLUGINS if it no longer exists on disk
+    for plugin in LOADED_PLUGINS.values():
+        plugin["active"] = False
+
+    candidates = os.listdir(PLUGIN_DIRECTORY)
+
+    # convert to Paths
+    plugin_paths = [pathlib.Path(os.path.join(PLUGIN_DIRECTORY, name)) for name in candidates]
+
+    # get all directories under the plugin directory
+    plugin_paths = [path for path in plugin_paths if path.is_dir()]
+
+    # filter to only the directories containing a manifest file
+    plugin_paths = [path for path in plugin_paths if (path / MANIFEST_FILE_NAME).exists()]
+
+    # load or reload each plugin
+    for plugin_path in plugin_paths:
+        load_or_reload_plugin(plugin_path)
+
+    # if a plugin has been uninstalled/disabled remove it from LOADED_PLUGINS
+    for name, plugin in LOADED_PLUGINS.copy().items():
+        if not plugin["active"]:
+            del LOADED_PLUGINS[name]
+
+    refresh_event_type_map()
 
 
 async def serve():
@@ -106,7 +166,7 @@ async def serve():
 
     logging.info(f"Starting server, listening on port {port}")
 
-    reload_plugins()
+    load_plugins()
 
     await server.start()
     await server.wait_for_termination()
