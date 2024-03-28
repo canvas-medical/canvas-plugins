@@ -6,17 +6,19 @@ from canvas_sdk.commands.commands.history_present_illness import (
 )
 from canvas_sdk.commands.commands.medication_statement import MedicationStatementCommand
 from canvas_sdk.commands.commands.plan import PlanCommand
+from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 
 __all__ = (
-    "PlanCommand",
     "AssessCommand",
     "DiagnoseCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "MedicationStatementCommand",
+    "PlanCommand",
+    "PrescribeCommand",
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "StopMedicationCommand",
