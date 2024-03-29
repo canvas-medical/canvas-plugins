@@ -115,6 +115,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
 
 def refresh_event_type_map():
+    global EVENT_PROTOCOL_MAP
     EVENT_PROTOCOL_MAP = defaultdict(list)
 
     for name, plugin in LOADED_PLUGINS.items():
