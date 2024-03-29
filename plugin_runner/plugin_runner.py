@@ -54,15 +54,7 @@ class PluginRunner(PluginRunnerServicer):
             protocol_class = plugin["class"]
             effects = protocol_class(request).compute()
 
-            effect_list = [
-                Effect(
-                    type=EffectType.Value(effect["effect_type"]),
-                    payload=json.dumps(effect["payload"]),
-                )
-                for effect in effects
-            ]
-
-        yield EventResponse(success=True, effects=effect_list)
+        yield EventResponse(success=True, effects=effects)
 
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
