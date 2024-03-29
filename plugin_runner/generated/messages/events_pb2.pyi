@@ -165,12 +165,14 @@ MEDICATION_STATEMENT__MEDICATION__POST_SEARCH: EventType
 MEDICATION_STATEMENT__MEDICATION__SELECTED: EventType
 
 class Event(_message.Message):
-    __slots__ = ("type", "target")
+    __slots__ = ("type", "target", "context")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TARGET_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
     type: EventType
     target: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ...) -> None: ...
+    context: str
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")

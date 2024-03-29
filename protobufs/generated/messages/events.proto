@@ -99,6 +99,7 @@ message Event {
   //
   // }
   string target = 2;
+  string context = 3;
 }
 
 message EventResponse {
