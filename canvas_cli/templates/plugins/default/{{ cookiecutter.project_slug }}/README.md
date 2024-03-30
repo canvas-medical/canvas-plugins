@@ -8,11 +8,14 @@
 
 ```
 {{ cookiecutter.project_slug }}/
-├── commands/
-├── content/
-├── effects/
-├── protocols/
-├── views/
+├── {{ cookiecutter.project_slug }}/
+    ├── commands/
+    ├── content/
+    ├── effects/
+    ├── protocols/
+    ├── views/
 ├── CANVAS_MANIFEST.json
+├── CANVAS_PLUGIN_TAGS.json
+├── pyproject.toml
 └── README.md
 ```

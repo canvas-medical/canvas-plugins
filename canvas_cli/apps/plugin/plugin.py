@@ -12,11 +12,7 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
 from canvas_cli.utils.urls.urls import CoreEndpoint
-from canvas_cli.utils.validators import (
-    get_api_key,
-    get_default_host,
-    validate_manifest_file,
-)
+from canvas_cli.utils.validators import get_api_key, get_default_host, validate_manifest_file
 
 app = typer.Typer()
 
