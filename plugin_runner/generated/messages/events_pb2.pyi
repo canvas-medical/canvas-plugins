@@ -83,6 +83,9 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PRE_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
     POST_COMMAND_EXECUTE_ACTION: _ClassVar[EventType]
     ASSESS_COMMAND__CONDITION_SELECTED: _ClassVar[EventType]
+    MEDICATION_STATEMENT__MEDICATION__PRE_SEARCH: _ClassVar[EventType]
+    MEDICATION_STATEMENT__MEDICATION__POST_SEARCH: _ClassVar[EventType]
+    MEDICATION_STATEMENT__MEDICATION__SELECTED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -157,14 +160,19 @@ POST_COMMAND_ENTER_IN_ERROR: EventType
 PRE_COMMAND_EXECUTE_ACTION: EventType
 POST_COMMAND_EXECUTE_ACTION: EventType
 ASSESS_COMMAND__CONDITION_SELECTED: EventType
+MEDICATION_STATEMENT__MEDICATION__PRE_SEARCH: EventType
+MEDICATION_STATEMENT__MEDICATION__POST_SEARCH: EventType
+MEDICATION_STATEMENT__MEDICATION__SELECTED: EventType
 
 class Event(_message.Message):
-    __slots__ = ("type", "target")
+    __slots__ = ("type", "target", "context")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TARGET_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
     type: EventType
     target: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ...) -> None: ...
+    context: str
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")

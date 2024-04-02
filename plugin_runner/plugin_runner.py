@@ -53,14 +53,7 @@ class PluginRunner(PluginRunnerServicer):
             plugin = LOADED_PLUGINS[plugin_name]
             protocol_class = plugin["class"]
             effects = protocol_class(request).compute()
-
-            effect_list = [
-                Effect(
-                    type=EffectType.Value(effect["effect_type"]),
-                    payload=json.dumps(effect["payload"]),
-                )
-                for effect in effects
-            ]
+            effect_list += effects
 
         yield EventResponse(success=True, effects=effect_list)
 
@@ -122,6 +115,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
 
 def refresh_event_type_map():
+    global EVENT_PROTOCOL_MAP
     EVENT_PROTOCOL_MAP = defaultdict(list)
 
     for name, plugin in LOADED_PLUGINS.items():

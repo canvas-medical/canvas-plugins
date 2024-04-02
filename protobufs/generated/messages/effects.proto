@@ -7,6 +7,8 @@ enum EffectType {
 
   LOG = 1;
   ADD_PLAN_COMMAND = 2;
+
+  AUTOCOMPLETE_SEARCH_RESULTS = 3;
 }
 
 message Effect {
