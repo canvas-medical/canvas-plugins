@@ -111,10 +111,10 @@ repos:
       - id: mypy
         exclude: canvas_cli/templates/
         # https://github.com/python-poetry/poetry/issues/7184
-        #             && exec poetry run mypy --show-traceback $@
         entry: |
           bash -c "
             python -m pip install --upgrade pip setuptools wheel \
             && poetry install --no-ansi \
+            && exec poetry run mypy --show-traceback $@
           "
         args: ["--install-types"]
