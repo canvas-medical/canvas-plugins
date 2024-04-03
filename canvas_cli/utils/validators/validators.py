@@ -22,5 +22,5 @@ def get_api_key(host: str, api_key: str | None) -> str | None:
 
 
 def validate_manifest_file(manifest_json: dict) -> None:
-    """Validates a Canvas Manifest json against the manifest schema..."""
+    """Validates a Canvas Manifest json against the manifest schema."""
     validate(manifest_json, manifest_schema)
