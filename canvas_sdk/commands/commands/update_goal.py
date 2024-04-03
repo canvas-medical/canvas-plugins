@@ -9,6 +9,9 @@ from canvas_sdk.commands.base import _BaseCommand
 class UpdateGoalCommand(_BaseCommand):
     """A class for managing an UpdateGoal command within a specific note."""
 
+    class Meta:
+        key = "updateGoal"
+
     class AchievementStatus(Enum):
         IN_PROGRESS = "in-progress"
         IMPROVING = "improving"
