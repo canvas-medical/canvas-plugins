@@ -1,0 +1,23 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "Promote Kirkland Signature Drugs",
+    "description": "Annotates certain Kirkland Signature drugs and floats them to the top of searches.",
+    "components": {
+        "protocols": [
+            {
+                "class": "promote_kirkland_signature_drugs.protocols.protocol:Protocol",
+                "description": "Annotates certain Kirkland Signature drugs and floats them to the top of searches.",
+                "data_access": {
+                    "event": "MEDICATION_STATEMENT__MEDICATION__POST_SEARCH",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    }
+}

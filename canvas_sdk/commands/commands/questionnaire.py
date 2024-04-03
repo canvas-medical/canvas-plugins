@@ -1,10 +1,14 @@
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
+from pydantic import Field
 
 
 class QuestionnaireCommand(_BaseCommand):
     """A class for managing a Questionnaire command within a specific note."""
 
-    questionnaire_id: int
+    class Meta:
+        key = "questionnaire"
+
+    questionnaire_id: str = Field(json_schema_extra={"commands_api_name": "questionnaire"})
     result: str | None = None
 
     @property

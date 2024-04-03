@@ -1,10 +1,14 @@
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
+from pydantic import Field
 
 
 class MedicationStatementCommand(_BaseCommand):
     """A class for managing a MedicationStatement command within a specific note."""
 
-    fdb_code: str
+    class Meta:
+        key = "medicationStatement"
+
+    fdb_code: str = Field(json_schema_extra={"commands_api_name": "medication"})
     sig: str | None = None
 
     @property

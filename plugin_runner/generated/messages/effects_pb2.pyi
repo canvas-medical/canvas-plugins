@@ -10,9 +10,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UNKNOWN_EFFECT: _ClassVar[EffectType]
     LOG: _ClassVar[EffectType]
     ADD_PLAN_COMMAND: _ClassVar[EffectType]
+    AUTOCOMPLETE_SEARCH_RESULTS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
+AUTOCOMPLETE_SEARCH_RESULTS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload")

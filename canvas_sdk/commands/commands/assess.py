@@ -1,17 +1,21 @@
 from enum import Enum
 
-from canvas_sdk.commands.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand
+from pydantic import Field
 
 
 class AssessCommand(_BaseCommand):
     """A class for managing an Assess command within a specific note."""
+
+    class Meta:
+        key = "assess"
 
     class Status(Enum):
         IMPROVED = "improved"
         STABLE = "stable"
         DETERIORATED = "deteriorated"
 
-    condition_id: int
+    condition_id: str = Field(json_schema_extra={"commands_api_name": "condition"})
     background: str | None = None
     status: Status | None = None
     narrative: str | None = None

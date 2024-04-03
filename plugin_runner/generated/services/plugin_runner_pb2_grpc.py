@@ -3,6 +3,7 @@
 import grpc
 
 from generated.messages import events_pb2 as generated_dot_messages_dot_events__pb2
+from generated.messages import plugins_pb2 as generated_dot_messages_dot_plugins__pb2
 
 
 class PluginRunnerStub(object):
@@ -19,12 +20,23 @@ class PluginRunnerStub(object):
                 request_serializer=generated_dot_messages_dot_events__pb2.Event.SerializeToString,
                 response_deserializer=generated_dot_messages_dot_events__pb2.EventResponse.FromString,
                 )
+        self.ReloadPlugins = channel.unary_stream(
+                '/canvas.PluginRunner/ReloadPlugins',
+                request_serializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
+                response_deserializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
+                )
 
 
 class PluginRunnerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def HandleEvent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReloadPlugins(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +49,11 @@ def add_PluginRunnerServicer_to_server(servicer, server):
                     servicer.HandleEvent,
                     request_deserializer=generated_dot_messages_dot_events__pb2.Event.FromString,
                     response_serializer=generated_dot_messages_dot_events__pb2.EventResponse.SerializeToString,
+            ),
+            'ReloadPlugins': grpc.unary_stream_rpc_method_handler(
+                    servicer.ReloadPlugins,
+                    request_deserializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.FromString,
+                    response_serializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,5 +79,22 @@ class PluginRunner(object):
         return grpc.experimental.unary_stream(request, target, '/canvas.PluginRunner/HandleEvent',
             generated_dot_messages_dot_events__pb2.Event.SerializeToString,
             generated_dot_messages_dot_events__pb2.EventResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ReloadPlugins(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/canvas.PluginRunner/ReloadPlugins',
+            generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
+            generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

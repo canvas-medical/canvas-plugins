@@ -1,9 +1,12 @@
 syntax = 'proto3';
 
 import "generated/messages/events.proto";
+import "generated/messages/plugins.proto";
 
 package canvas;
 
 service PluginRunner {
   rpc HandleEvent (Event) returns (stream EventResponse);
+
+  rpc ReloadPlugins (ReloadPluginsRequest) returns (stream ReloadPluginsResponse);
 }
