@@ -29,7 +29,6 @@ class GoalCommand(_BaseCommand):
     goal_statement: str
     start_date: datetime | None = None
     due_date: datetime | None = None
-    today_assessment: str | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
     progress: str | None = None
@@ -41,7 +40,6 @@ class GoalCommand(_BaseCommand):
             "goal_statement": self.goal_statement,
             "start_date": (self.start_date.isoformat() if self.start_date else None),
             "due_date": (self.start_date.isoformat() if self.start_date else None),
-            "today_assessment": self.today_assessment,
             "achievement_status": (
                 self.achievement_status.value if self.achievement_status else None
             ),

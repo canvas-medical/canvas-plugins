@@ -7,7 +7,7 @@ class PlanCommand(_BaseCommand):
     class Meta:
         key = "plan"
 
-    narrative: str | None = None
+    narrative: str
 
     @property
     def values(self) -> dict:
