@@ -50,6 +50,12 @@ def protocol_manifest_example() -> dict:
                 }
             ]
         },
+        "tags": {"patient_sourcing_and_intake": ["symptom_triage"]},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "README.MD",
+        "public": True,
     }
 
 

@@ -281,6 +281,7 @@ def command_type_map() -> dict[str, type]:
     }
 
 
+@pytest.mark.integtest
 @pytest.mark.parametrize(
     "Command",
     [
