@@ -1,10 +1,11 @@
+import json
 from enum import EnumType
 from typing import get_args
 
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
-from plugin_runner.generated.messages.effects_pb2 import Effect
+from plugin_runner.generated.messages.effects_pb2 import Effect, EffectType
 
 
 class _BaseCommand(BaseModel):
@@ -13,9 +14,9 @@ class _BaseCommand(BaseModel):
     class Meta:
         key = ""
 
-    # todo: update int to str as we should use external identifiers
-    note_id: int | None = None
+    note_id: str | None = None
     command_uuid: str | None = None
+    # make this a UUID? which user does this represent?
     user_id: int
 
     @model_validator(mode="after")
@@ -67,14 +68,15 @@ class _BaseCommand(BaseModel):
         """Originate a new command in the note body."""
         if not self.note_id:
             raise AttributeError("Note id is required to originate a command")
-        return {
-            "type": f"ADD_{self.Meta.key.upper()}_COMMAND",
-            "payload": {
-                "user": self.user_id,
-                "note": self.note_id,
-                "data": self.values,
-            },
+        payload = {
+            "user": self.user_id,
+            "note": {"uuid": self.note_id},
+            "data": self.values,
         }
+        return Effect(
+            type=EffectType.Value(f"ADD_{self.Meta.key.upper()}_COMMAND"),
+            payload=json.dumps(payload)
+        )
 
     def edit(self) -> Effect:
         """Edit the command."""
