@@ -1,8 +1,6 @@
 import json
-from typing import TYPE_CHECKING
 
 from canvas_sdk.commands import PlanCommand
-
 from canvas_sdk.effects import Effect
 
 
