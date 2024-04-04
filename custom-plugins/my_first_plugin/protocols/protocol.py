@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING
 
 from canvas_sdk.commands import PlanCommand
 
-from generated.messages.effects_pb2 import Effect
+from canvas_sdk.effects import Effect
 
 
 class Protocol:
     RESPONDS_TO = "ASSESS_COMMAND__CONDITION_SELECTED"
 
-    NARRATIVE_STRING = "zebra"
+    NARRATIVE_STRING = "zombie"
 
     def __init__(self, event) -> None:
         self.event = event

@@ -1,7 +1,7 @@
 import json
 
 from generated.messages.events_pb2 import EventType
-from generated.messages.effects_pb2 import Effect, EffectType
+from canvas_sdk.effects import Effect, EffectType
 
 
 class Protocol:

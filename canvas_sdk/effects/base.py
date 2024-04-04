@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from plugin_runner.generated.messages.effects_pb2 import Effect
+from canvas_sdk.effects import Effect
 
 
 class _BaseEffect(BaseModel):

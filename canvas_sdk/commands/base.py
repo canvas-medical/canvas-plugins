@@ -5,7 +5,7 @@ from typing import get_args
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
-from plugin_runner.generated.messages.effects_pb2 import Effect, EffectType
+from canvas_sdk.effects import Effect, EffectType
 
 
 class _BaseCommand(BaseModel):
