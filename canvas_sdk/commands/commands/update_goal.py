@@ -1,19 +1,16 @@
 from datetime import datetime
 from enum import Enum
 
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand
 
 
-class GoalCommand(_BaseCommand):
-    """A class for managing a Goal command within a specific note."""
+class UpdateGoalCommand(_BaseCommand):
+    """A class for managing an UpdateGoal command within a specific note."""
 
     class Meta:
-        key = "goal"
-
-    class Priority(Enum):
-        HIGH = "high-priority"
-        MEDIUM = "medium-priority"
-        LOW = "low-priority"
+        key = "updateGoal"
 
     class AchievementStatus(Enum):
         IN_PROGRESS = "in-progress"
@@ -26,8 +23,12 @@ class GoalCommand(_BaseCommand):
         NO_PROGRESS = "no-progress"
         NOT_ATTAINABLE = "not-attainable"
 
-    goal_statement: str
-    start_date: datetime | None = None
+    class Priority(Enum):
+        HIGH = "high-priority"
+        MEDIUM = "medium-priority"
+        LOW = "low-priority"
+
+    goal_id: str = Field(json_schema_extra={"commands_api_name": "goal_statement"})
     due_date: datetime | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
@@ -35,11 +36,10 @@ class GoalCommand(_BaseCommand):
 
     @property
     def values(self) -> dict:
-        """The Goal command's field values."""
+        """The UpdateGoal command's field values."""
         return {
-            "goal_statement": self.goal_statement,
-            "start_date": (self.start_date.isoformat() if self.start_date else None),
-            "due_date": (self.due_date.isoformat() if self.start_date else None),
+            "goal_id": self.goal_id,
+            "due_date": (self.due_date.isoformat() if self.due_date else None),
             "achievement_status": (
                 self.achievement_status.value if self.achievement_status else None
             ),

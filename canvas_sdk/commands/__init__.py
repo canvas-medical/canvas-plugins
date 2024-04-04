@@ -10,6 +10,7 @@ from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
+from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 
 __all__ = (
     "AssessCommand",
@@ -22,4 +23,5 @@ __all__ = (
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "StopMedicationCommand",
+    "UpdateGoalCommand",
 )
