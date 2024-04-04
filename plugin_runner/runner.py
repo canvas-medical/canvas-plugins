@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import grpc
 
-from generated.messages.events_pb2 import Event, EventResponse, EventType
+from canvas_sdk.events import Event, EventResponse, EventType
 from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
