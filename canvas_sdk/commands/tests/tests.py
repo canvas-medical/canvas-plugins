@@ -327,7 +327,8 @@ def command_type_map() -> dict[str, type]:
         (HistoryOfPresentIllnessCommand),
         (MedicationStatementCommand),
         (PlanCommand),
-        (PrescribeCommand),
+        # todo: add Prescribe once its been refactored
+        # (PrescribeCommand),
         (QuestionnaireCommand),
         (ReasonForVisitCommand),
         (StopMedicationCommand),
