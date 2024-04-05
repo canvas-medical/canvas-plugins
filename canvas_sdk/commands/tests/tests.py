@@ -12,6 +12,7 @@ from canvas_sdk.commands import (
     HistoryOfPresentIllnessCommand,
     MedicationStatementCommand,
     PlanCommand,
+    PrescribeCommand,
     QuestionnaireCommand,
     ReasonForVisitCommand,
     StopMedicationCommand,
@@ -49,6 +50,22 @@ from canvas_sdk.commands.tests.test_utils import (
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
         (PlanCommand, ("narrative", "user_id", "command_uuid")),
+        (
+            PrescribeCommand,
+            (
+                "fdb_code",
+                "icd10_codes",
+                "sig",
+                "days_supply",
+                "quantity_to_dispense",
+                "type_to_dispense",
+                "refills",
+                "substitutions",
+                "pharmacy",
+                "prescriber_id",
+                "note_to_pharmacist",
+            ),
+        ),
         (QuestionnaireCommand, ("questionnaire_id", "result")),
         (ReasonForVisitCommand, ("coding", "comment")),
         (StopMedicationCommand, ("medication_id", "rationale")),
@@ -72,6 +89,7 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
         | PlanCommand
+        | PrescribeCommand
         | QuestionnaireCommand
         | ReasonForVisitCommand
         | StopMedicationCommand
@@ -202,6 +220,22 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
         (PlanCommand, ("narrative", "user_id", "command_uuid", "note_id")),
+        (
+            PrescribeCommand,
+            (
+                "fdb_code",
+                "icd10_codes",
+                "sig",
+                "days_supply",
+                "quantity_to_dispense",
+                "type_to_dispense",
+                "refills",
+                "substitutions",
+                "pharmacy",
+                "prescriber_id",
+                "note_to_pharmacist",
+            ),
+        ),
         (QuestionnaireCommand, ("questionnaire_id", "result")),
         (ReasonForVisitCommand, ("coding", "comment")),
         (StopMedicationCommand, ("medication_id", "rationale")),
@@ -225,6 +259,7 @@ def test_command_allows_kwarg_with_correct_type(
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
         | PlanCommand
+        | PrescribeCommand
         | QuestionnaireCommand
         | ReasonForVisitCommand
         | StopMedicationCommand
@@ -294,6 +329,7 @@ def command_type_map() -> dict[str, type]:
     }
 
 
+@pytest.mark.integtest
 @pytest.mark.parametrize(
     "Command",
     [
@@ -304,6 +340,8 @@ def command_type_map() -> dict[str, type]:
         (HistoryOfPresentIllnessCommand),
         (MedicationStatementCommand),
         (PlanCommand),
+        # todo: add Prescribe once its been refactored
+        # (PrescribeCommand),
         (QuestionnaireCommand),
         (ReasonForVisitCommand),
         (StopMedicationCommand),
@@ -321,6 +359,7 @@ def test_command_schema_matches_command_api(
         | HistoryOfPresentIllnessCommand
         | MedicationStatementCommand
         | PlanCommand
+        | PrescribeCommand
         | QuestionnaireCommand
         | ReasonForVisitCommand
         | StopMedicationCommand
