@@ -15,7 +15,6 @@
     ├── protocols/
     ├── views/
 ├── CANVAS_MANIFEST.json
-├── CANVAS_PLUGIN_TAGS.json
 ├── pyproject.toml
 └── README.md
 ```

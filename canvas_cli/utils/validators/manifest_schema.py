@@ -39,7 +39,6 @@ manifest_schema = {
         "license": {"type": "string"},
         "diagram": {"type": ["boolean", "string"]},
         "readme": {"type": ["boolean", "string"]},
-        "public": {"type": "boolean"},
     },
     "required": [
         "sdk_version",
@@ -48,11 +47,8 @@ manifest_schema = {
         "description",
         "components",
         "tags",
-        "references",
         "license",
-        "diagram",
         "readme",
-        "public",
     ],
     "additionalProperties": False,
     "$defs": {
