@@ -1,6 +1,6 @@
 import json
 
-from canvas_sdk.events import EventType
+from generated.messages.events_pb2 import EventType
 from canvas_sdk.effects import Effect, EffectType
 
 
