@@ -1,9 +1,9 @@
 import json
 
+from canvas_sdk.protocols import BaseProtocol
 
-class Protocol:
-    RESPONDS_TO = "SOMETHING_ELSE"
 
+class Protocol(BaseProtocol):
     NARRATIVE_STRING = ""
 
     def __init__(self, event) -> None:
