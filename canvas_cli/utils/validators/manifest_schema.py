@@ -34,6 +34,7 @@ manifest_schema = {
                 "interventions_and_safety": {"type": "array", "items": {"enum": []}},
                 "content": {"type": "array", "items": {"enum": ["patient_intake"]}},
             },
+            "additionalProperties": False,
         },
         "references": {"type": "array", "items": {"type": "string"}},
         "license": {"type": "string"},

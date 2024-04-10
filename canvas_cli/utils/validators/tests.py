@@ -55,7 +55,6 @@ def protocol_manifest_example() -> dict:
         "license": "",
         "diagram": False,
         "readme": "README.MD",
-        "public": True,
     }
 
 

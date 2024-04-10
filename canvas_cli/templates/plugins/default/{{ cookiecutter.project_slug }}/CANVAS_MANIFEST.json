@@ -28,6 +28,5 @@
     "references": [],
     "license": "",
     "diagram": false,
-    "readme": "./README.md",
-    "public": true
+    "readme": "./README.md"
 }
