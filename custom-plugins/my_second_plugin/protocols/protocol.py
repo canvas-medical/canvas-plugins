@@ -4,6 +4,8 @@ from canvas_sdk.protocols import BaseProtocol
 
 
 class Protocol(BaseProtocol):
+    RESPONDS_TO = []
+
     NARRATIVE_STRING = ""
 
     def __init__(self, event) -> None:

@@ -46,7 +46,8 @@ class PluginRunner(PluginRunnerServicer):
         super().__init__()
 
     async def HandleEvent(self, request: Event, context):
-        relevant_plugins = EVENT_PROTOCOL_MAP.get(request.type, [])
+        event_name = EventType.Name(request.type)
+        relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
         effect_list = []
 
@@ -120,26 +121,16 @@ def refresh_event_type_map():
     EVENT_PROTOCOL_MAP = defaultdict(list)
 
     for name, plugin in LOADED_PLUGINS.items():
-        try:
-            responds_to = cast(
-                int | list, EventType.Value(plugin["protocol"]["data_access"]["event"])
-            )
-        except ValueError as e:
-            logging.warn(e)
-            continue
+        if hasattr(plugin["class"], "RESPONDS_TO"):
+            responds_to = plugin["class"].RESPONDS_TO
 
-        unknown_type_message = f"Unknown RESPONDS_TO type: {type(responds_to)}"
-
-        if isinstance(responds_to, int):
-            EVENT_PROTOCOL_MAP[responds_to].append(name)
-        elif isinstance(responds_to, list):
-            for event in responds_to:
-                if isinstance(responds_to, int):
+            if isinstance(responds_to, str):
+                EVENT_PROTOCOL_MAP[responds_to].append(name)
+            elif isinstance(responds_to, list):
+                for event in responds_to:
                     EVENT_PROTOCOL_MAP[event].append(name)
-                else:
-                    logging.warn(unknown_type_message)
-        else:
-            logging.warn(unknown_type_message)
+            else:
+                logging.warn(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
 def load_plugins():

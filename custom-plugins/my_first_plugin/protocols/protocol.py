@@ -6,6 +6,8 @@ from canvas_sdk.protocols import BaseProtocol
 
 
 class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+
     NARRATIVE_STRING = "monkey"
 
     # TODO - move __init__ to BaseProtocol class;
