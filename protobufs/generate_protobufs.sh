@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 
+# Run this script from inside the /protobufs directory
+
 pushd ..
 
 python \
   -m grpc_tools.protoc \
   -I=protobufs/ \
-  --python_out=plugin_runner/ \
-  --pyi_out=plugin_runner/ \
-  --grpc_python_out=plugin_runner/ \
+  --python_out=./ \
+  --pyi_out=./ \
+  --grpc_python_out=./ \
   protobufs/generated/**/*.proto
 
 popd

@@ -43,7 +43,7 @@ def protocol_manifest_example() -> dict:
                     "class": "prompt_to_prescribe.protocols.prompt_when_assessing.PromptWhenAssessing",
                     "description": "probably the same as the plugin's description",
                     "data_access": {
-                        "event": "assess_condition_selected",
+                        "event": "",
                         "read": ["conditions"],
                         "write": ["commands"],
                     },
