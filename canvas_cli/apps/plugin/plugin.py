@@ -9,14 +9,11 @@ import typer
 from cookiecutter.exceptions import OutputDirExistsException
 from cookiecutter.main import cookiecutter
 
+from canvas_cli.apps.auth.utils import get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
 from canvas_cli.utils.urls.urls import CoreEndpoint
-from canvas_cli.utils.validators import (
-    get_api_key,
-    get_default_host,
-    validate_manifest_file,
-)
+from canvas_cli.utils.validators import get_default_host, validate_manifest_file
 
 app = typer.Typer()
 
@@ -58,12 +55,12 @@ def _build_package(package: Path) -> Path:
         raise RuntimeError("Could not find the path of the built archive in 'poetry build' output.")
 
 
-def _get_name_from_metadata(host: str, api_key: str, package: Path) -> Optional[str]:
+def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[str]:
     """Extract metadata from a provided package and return the package name if it exists in the metadata."""
     try:
         metadata_response = requests.post(
             CoreEndpoint.PLUGIN.build(host, "extract-metadata"),
-            headers={"Authorization": api_key},
+            headers={"Authorization": f"Bearer {token}"},
             files={"package": open(package, "rb")},
         )
     except requests.exceptions.RequestException:
@@ -80,7 +77,7 @@ def _get_name_from_metadata(host: str, api_key: str, package: Path) -> Optional[
 
 def get_base_plugin_template_path() -> Path:
     """Return context's base_plugin_template_path, so it can be used as a Typer default."""
-    return context.plugin_template_dir / context.default_plugin_template_name
+    return context.plugin_template_dir / context.default_plugin_template_name  # type: ignore
 
 
 @app.command(short_help="Delete a disabled plugin from an instance")
@@ -91,8 +88,11 @@ def delete(
         help="Canvas instance to connect to",
         default=None,
     ),
-    api_key: Optional[str] = typer.Option(
-        help="Canvas api-key for the provided host", default=None
+    client_id: Optional[str] = typer.Option(
+        help="Canvas client_id for the provided host", default=None
+    ),
+    client_secret: Optional[str] = typer.Option(
+        help="Canvas client_secret for the provided host", default=None
     ),
 ) -> None:
     """Delete a disabled plugin from an instance."""
@@ -103,13 +103,14 @@ def delete(
 
     print.verbose(f"Deleting {name} using {url}")
 
-    if not (final_api_key := get_api_key(host, api_key)):
-        raise typer.BadParameter("Please specify an api-key or add one via the `auth` command")
+    token = get_or_request_api_token(host, client_id, client_secret)
 
     try:
         r = requests.delete(
             url,
-            headers={"Authorization": final_api_key},
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
         )
     except requests.exceptions.RequestException:
         print.json(f"Failed to connect to {host}", success=False)
@@ -182,16 +183,18 @@ def install(
         help="Canvas instance to connect to",
         default=None,
     ),
-    api_key: Optional[str] = typer.Option(
-        help="Canvas api-key for the provided host", default=None
+    client_id: Optional[str] = typer.Option(
+        help="Canvas client_id for the provided host", default=None
+    ),
+    client_secret: Optional[str] = typer.Option(
+        help="Canvas client_secret for the provided host", default=None
     ),
 ) -> None:
     """Installs a given Python package into a running Canvas instance."""
     if not host:
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
-    if not (final_api_key := get_api_key(host, api_key)):
-        raise typer.BadParameter("Please specify an api-key or add one via the `auth` command")
+    token = get_or_request_api_token(host, client_id, client_secret)
 
     if not package.exists():
         raise typer.BadParameter(f"Package {package} does not exist")
@@ -217,7 +220,7 @@ def install(
             url,
             data={"is_enabled": True},
             files={"package": open(built_package_path, "rb")},
-            headers={"Authorization": final_api_key},
+            headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
         print.json(f"Failed to connect to {host}", success=False)
@@ -228,8 +231,15 @@ def install(
     # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
     elif r.status_code == requests.codes.bad_request:
-        plugin_name = _get_name_from_metadata(host, final_api_key, built_package_path)
-        update(plugin_name, built_package_path, is_enabled=True, host=host, api_key=final_api_key)
+        plugin_name = _get_name_from_metadata(host, token, built_package_path)
+        update(
+            plugin_name,
+            built_package_path,
+            is_enabled=True,
+            host=host,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
     else:
         print.response(r, success=False)
         raise typer.Exit(1)
@@ -242,8 +252,11 @@ def list(
         help="Canvas instance to connect to",
         default=None,
     ),
-    api_key: Optional[str] = typer.Option(
-        help="Canvas api-key for the provided host", default=None
+    client_id: Optional[str] = typer.Option(
+        help="Canvas client_id for the provided host", default=None
+    ),
+    client_secret: Optional[str] = typer.Option(
+        help="Canvas client_secret for the provided host", default=None
     ),
 ) -> None:
     """Lists all plugins from the instance."""
@@ -251,14 +264,14 @@ def list(
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
     url = CoreEndpoint.PLUGIN.build(host)
+    print(url)
 
-    if not (final_api_key := get_api_key(host, api_key)):
-        raise typer.BadParameter("Please specify an api-key or add one via the `auth` command")
+    token = get_or_request_api_token(host, client_id, client_secret)
 
     try:
         r = requests.get(
             url,
-            headers={"Authorization": final_api_key},
+            headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
         print.json(f"Failed to connect to {host}", success=False)
@@ -286,8 +299,11 @@ def update(
         help="Canvas instance to connect to",
         default=None,
     ),
-    api_key: Optional[str] = typer.Option(
-        help="Canvas api-key for the provided host", default=None
+    client_id: Optional[str] = typer.Option(
+        help="Canvas client_id for the provided host", default=None
+    ),
+    client_secret: Optional[str] = typer.Option(
+        help="Canvas client_secret for the provided host", default=None
     ),
 ) -> None:
     """Updates a plugin from an instance."""
@@ -297,8 +313,7 @@ def update(
     if package:
         validate_package(package)
 
-    if not (final_api_key := get_api_key(host, api_key)):
-        raise typer.BadParameter("Please specify an api-key or add one via the `auth` command")
+    token = get_or_request_api_token(host, client_id, client_secret)
 
     print.verbose(f"Updating plugin {name} from {host} with {is_enabled=}, {package=}")
 
@@ -311,7 +326,7 @@ def update(
             url,
             data={"is_enabled": is_enabled} if is_enabled is not None else {},
             files=binary_package,
-            headers={"Authorization": final_api_key},
+            headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
         print.json(f"Failed to connect to {host}", success=False)
