@@ -51,12 +51,14 @@ def test_validate_host_valid(scheme: str) -> None:
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_new_host(mock_set_password: MagicMock, mock_get_password: MagicMock) -> None:
+def test_add_api_client_credentials_new_host(
+    mock_set_password: MagicMock, mock_get_password: MagicMock
+) -> None:
     """Test a new password is set if the host doesn't already exist and ensure it isn't written to the config."""
     mock_get_password.return_value = None
     runner.invoke(
         app,
-        "auth add-api-key --host localhost --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
     )
     mock_set_password.assert_called()
     assert context.default_host is None
@@ -64,26 +66,29 @@ def test_add_api_key_new_host(mock_set_password: MagicMock, mock_get_password: M
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_new_host_set_default(
+def test_add_api_client_credentials_new_host_set_default(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is set if the host doesn't already exist and ensure it is written to the config."""
     mock_get_password.return_value = None
-    runner.invoke(app, "auth add-api-key --host localhost --api-key mock-api-key --is-default")
+    runner.invoke(
+        app,
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --is-default",
+    )
     mock_set_password.assert_called()
     assert context.default_host == "http://localhost"
 
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_existing_host_overwrite(
+def test_add_api_client_credentials_existing_host_overwrite(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is set if the host exists, but we want to override."""
-    mock_get_password.return_value = "a-domain-name.com"
+    mock_get_password.return_value = "http://a-domain-name.com"
     result = runner.invoke(
         app,
-        "auth add-api-key --host http://a-domain-name.com --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host http://a-domain-name.com --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
         input="y\n",
     )
     mock_set_password.assert_called()
@@ -96,11 +101,11 @@ def test_add_api_key_existing_host_abort(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is NOT set if the host already exists and we DO NOT override."""
-    mock_get_password.return_value = "a-domain-name.com"
+    mock_get_password.return_value = "http://a-domain-name.com"
 
     result = runner.invoke(
         app,
-        "auth add-api-key --host http://a-domain-name.com --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host http://a-domain-name.com --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
         input="n\n",
     )
 
@@ -119,10 +124,13 @@ def test_remove_api_key(
     """Test removing an api-key deletes it from the config file."""
     # First we need to add an api-key to the config file
     # The following command is tested, so we're not asserting the result
-    runner.invoke(app, "auth add-api-key --host localhost --api-key mock-api-key --is-default")
+    runner.invoke(
+        app,
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --is-default",
+    )
 
     # Then we remove the same host, which should delete the entry from the config file
-    result = runner.invoke(app, "auth remove-api-key localhost")
+    result = runner.invoke(app, "auth remove-api-client-credentials localhost")
 
     assert context.default_host is None
     mock_delete_password.assert_called()
