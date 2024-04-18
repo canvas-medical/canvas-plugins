@@ -2,12 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from canvas_cli.apps.auth.utils import get_api_client_credentials
 from canvas_cli.utils.context.context import CLIContext
-from canvas_cli.utils.validators import (
-    get_api_key,
-    get_default_host,
-    validate_manifest_file,
-)
+from canvas_cli.utils.validators import get_default_host, validate_manifest_file
 
 
 def test_get_default_host() -> None:
@@ -21,13 +18,17 @@ def test_get_default_host() -> None:
 
 
 @patch("keyring.get_password")
-def test_get_api_key(mock_get_password: MagicMock) -> None:
-    """Test get_api_key returns the given api_key or fetches from `get_password`."""
+def test_get_api_client_credentials(mock_get_password: MagicMock) -> None:
+    """Test get_api_client_credentials returns the given api_key or fetches from `get_password`."""
     mock_get_password.return_value = "a_password"
 
     mock_host = "a_host"
-    assert get_api_key(mock_host, None) == "a_password"
-    assert get_api_key(mock_host, "an_api_key") == "an_api_key"
+    assert get_api_client_credentials(mock_host, None, None) == "a_password"
+    assert get_api_client_credentials(mock_host, None, "secret") == "a_password"
+    assert get_api_client_credentials(mock_host, "id", None) == "a_password"
+    assert (
+        get_api_client_credentials(mock_host, "id", "secret") == "client_id=id&client_secret=secret"
+    )
 
 
 @pytest.fixture

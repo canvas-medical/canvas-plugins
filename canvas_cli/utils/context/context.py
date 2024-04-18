@@ -47,6 +47,9 @@ class CLIContext:
     # If True no colored output is shown
     _no_ansi: bool = False
 
+    # When the most recently requested api_token will expire
+    _token_expiration_date: str | None = None
+
     @staticmethod
     def persistent(fn: F | None = None, **options: Any) -> Callable[[F], F] | F:
         """A decorator to store a config value in the file everytime it's changed."""
@@ -114,6 +117,16 @@ class CLIContext:
     @no_ansi.setter
     def no_ansi(self, new_no_ansi: bool) -> None:
         self._no_ansi = new_no_ansi
+
+    @property
+    def token_expiration_date(self) -> str | None:
+        """When the most recently requested api_token will expire."""
+        return self._token_expiration_date
+
+    @token_expiration_date.setter
+    @persistent
+    def token_expiration_date(self, new_token_expiration_date: str) -> None:
+        self._token_expiration_date = new_token_expiration_date
 
     def load_from_file(self, file: Path) -> None:
         """Load the given config file into a dict. Aborts execution if it can't decode the file.
