@@ -111,5 +111,9 @@ def get_api_token(
     if not host:
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
-    token = get_or_request_api_token(host, client_id, client_secret)
+    try:
+        token = get_or_request_api_token(host, client_id, client_secret)
+    except Exception as e:
+        raise typer.BadParameter(e.__str__())
+
     print.json(message=None, token=token)

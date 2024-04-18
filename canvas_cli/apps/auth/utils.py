@@ -4,6 +4,7 @@ import keyring
 import requests
 
 from canvas_cli.utils.context.context import context
+from canvas_cli.utils.validators import get_default_host
 
 # Keyring namespace we'll use
 KEYRING_SERVICE = __name__
@@ -59,8 +60,13 @@ def is_token_valid() -> bool:
     return expiration_date is not None and datetime.fromisoformat(expiration_date) > datetime.now()
 
 
-def get_or_request_api_token(host: str, client_id: str | None, client_secret: str | None) -> str:
+def get_or_request_api_token(
+    host: str | None = None, client_id: str | None = None, client_secret: str | None = None
+) -> str:
     """Returns an existing stored token if it has not expired, or requests a new one."""
+    if not (host := get_default_host(host)):
+        raise Exception("Please specify a host or set a default via the `auth` command")
+
     host_token_key = f"{host}|token"
     token = get_password(host_token_key)
 
