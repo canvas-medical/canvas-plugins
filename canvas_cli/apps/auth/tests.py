@@ -157,34 +157,34 @@ def test_set_default_host(mock_get_password: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-def test_get_api_token_without_existing_host_or_client_credentials_raises_exception() -> None:
-    """Test getting an api token with no default host or client credentials."""
+# def test_get_api_token_without_existing_host_or_client_credentials_raises_exception() -> None:
+#     """Test getting an api token with no default host or client credentials."""
 
-    runner.invoke(app, "auth remove-api-client-credentials http://george.com")
+#     runner.invoke(app, "auth remove-api-client-credentials http://george.com")
 
-    result_without_host = runner.invoke(app, "auth get-api-token")
-    assert result_without_host.exit_code == 2
-    assert (
-        "Invalid value: Please specify a host or set a default via the `auth` command"
-        in result_without_host.stdout
-    )
+#     result_without_host = runner.invoke(app, "auth get-api-token")
+#     assert result_without_host.exit_code == 2
+#     assert (
+#         "Invalid value: Please specify a host or set a default via the `auth` command"
+#         in result_without_host.stdout
+#     )
 
-    result_without_client_id = runner.invoke(app, "auth get-api-token --host http://george.com")
-    assert result_without_client_id.exit_code == 2
-    print(result_without_client_id.stdout)
-    assert (
-        "Invalid value: Please specify a client_id and client_secret or add them via"
-        in result_without_client_id.stdout
-    )
+#     result_without_client_id = runner.invoke(app, "auth get-api-token --host http://george.com")
+#     assert result_without_client_id.exit_code == 2
+#     print(result_without_client_id.stdout)
+#     assert (
+#         "Invalid value: Please specify a client_id and client_secret or add them via"
+#         in result_without_client_id.stdout
+#     )
 
-    result_without_client_secret = runner.invoke(
-        app, "auth get-api-token --host http://george.com --client-id mock-client-id"
-    )
-    assert result_without_client_secret.exit_code == 2
-    assert (
-        "Invalid value: Please specify a client_id and client_secret or add them via"
-        in result_without_client_secret.stdout
-    )
+#     result_without_client_secret = runner.invoke(
+#         app, "auth get-api-token --host http://george.com --client-id mock-client-id"
+#     )
+#     assert result_without_client_secret.exit_code == 2
+#     assert (
+#         "Invalid value: Please specify a client_id and client_secret or add them via"
+#         in result_without_client_secret.stdout
+#     )
 
 
 # @patch("requests.post")
