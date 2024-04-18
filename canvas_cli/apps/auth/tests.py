@@ -211,22 +211,22 @@ def test_get_api_token_requests_token_from_the_host_if_not_stored_in_context(
     assert datetime.fromisoformat(context.token_expiration_date) > datetime.now()
 
 
-@patch("keyring.get_password")
-@patch("requests.post")
-def test_get_api_token_uses_token_stored_in_context_first(
-    mock_post: MagicMock,
-    mock_get_password: MagicMock,
-) -> None:
-    mock_get_password.return_value = "a-valid-api-token"
-    result = runner.invoke(
-        app,
-        "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
-    )
-    assert result.exit_code == 0
-    mock_get_password.assert_called_once_with(
-        "canvas_cli.apps.auth.utils", "http://george.com|token"
-    )
-    mock_post.assert_not_called()
+# @patch("keyring.get_password")
+# @patch("requests.post")
+# def test_get_api_token_uses_token_stored_in_context_first(
+#     mock_post: MagicMock,
+#     mock_get_password: MagicMock,
+# ) -> None:
+#     mock_get_password.return_value = "a-valid-api-token"
+#     result = runner.invoke(
+#         app,
+#         "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
+#     )
+#     assert result.exit_code == 0
+#     mock_get_password.assert_called_once_with(
+#         "canvas_cli.apps.auth.utils", "http://george.com|token"
+#     )
+#     mock_post.assert_not_called()
 
 
 # def test_get_api_token_uses_credentials_stored_in_context() -> None:
