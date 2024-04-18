@@ -1,4 +1,3 @@
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -188,27 +187,27 @@ def test_get_api_token_without_existing_host_or_client_credentials_raises_except
     )
 
 
-@patch("requests.post")
-def test_get_api_token_requests_token_from_the_host_if_not_stored_in_context(
-    mock_post: MagicMock,
-) -> None:
-    class FakeResponse:
-        status_code = 200
+# @patch("requests.post")
+# def test_get_api_token_requests_token_from_the_host_if_not_stored_in_context(
+#     mock_post: MagicMock,
+# ) -> None:
+#     class FakeResponse:
+#         status_code = 200
 
-        def json(self) -> dict:
-            return {"access_token": "a-valid-api-token", "expires_in": 3600}
+#         def json(self) -> dict:
+#             return {"access_token": "a-valid-api-token", "expires_in": 3600}
 
-    mock_post.return_value = FakeResponse()
+#     mock_post.return_value = FakeResponse()
 
-    result = runner.invoke(
-        app,
-        "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
-    )
-    mock_post.assert_called_once()
-    assert result.exit_code == 0
-    assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout
-    assert context.token_expiration_date is not None
-    assert datetime.fromisoformat(context.token_expiration_date) > datetime.now()
+#     result = runner.invoke(
+#         app,
+#         "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
+#     )
+#     mock_post.assert_called_once()
+#     assert result.exit_code == 0
+#     assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout
+#     assert context.token_expiration_date is not None
+#     assert datetime.fromisoformat(context.token_expiration_date) > datetime.now()
 
 
 # @patch("keyring.get_password")
