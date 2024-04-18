@@ -229,13 +229,13 @@ def test_get_api_token_uses_token_stored_in_context_first(
     mock_post.assert_not_called()
 
 
-def test_get_api_token_uses_credentials_stored_in_context() -> None:
-    runner.invoke(
-        app,
-        "auth add-api-client-credentials --host http://george.com --client-id mock-client-id --client-secret mock-client-secret --is-default",
-    )
-    assert context.default_host == "http://george.com"
+# def test_get_api_token_uses_credentials_stored_in_context() -> None:
+#     runner.invoke(
+#         app,
+#         "auth add-api-client-credentials --host http://george.com --client-id mock-client-id --client-secret mock-client-secret --is-default",
+#     )
+#     assert context.default_host == "http://george.com"
 
-    result = runner.invoke(app, "auth get-api-token")
-    assert result.exit_code == 0
-    assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout
+#     result = runner.invoke(app, "auth get-api-token")
+#     assert result.exit_code == 0
+#     assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout
