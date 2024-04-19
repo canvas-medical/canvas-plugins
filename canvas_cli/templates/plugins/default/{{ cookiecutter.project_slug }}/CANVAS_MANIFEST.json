@@ -9,7 +9,7 @@
                 "class": "{{ cookiecutter.project_slug }}.protocols.path.to.ProtocolClass",
                 "description": "A protocol that does xyz...",
                 "data_access": {
-                    "event": "assess_condition_selected",
+                    "event": "",
                     "read": [
                         "conditions"
                     ],

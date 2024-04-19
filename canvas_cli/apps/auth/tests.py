@@ -51,12 +51,14 @@ def test_validate_host_valid(scheme: str) -> None:
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_new_host(mock_set_password: MagicMock, mock_get_password: MagicMock) -> None:
+def test_add_api_client_credentials_new_host(
+    mock_set_password: MagicMock, mock_get_password: MagicMock
+) -> None:
     """Test a new password is set if the host doesn't already exist and ensure it isn't written to the config."""
     mock_get_password.return_value = None
     runner.invoke(
         app,
-        "auth add-api-key --host localhost --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
     )
     mock_set_password.assert_called()
     assert context.default_host is None
@@ -64,26 +66,29 @@ def test_add_api_key_new_host(mock_set_password: MagicMock, mock_get_password: M
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_new_host_set_default(
+def test_add_api_client_credentials_new_host_set_default(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is set if the host doesn't already exist and ensure it is written to the config."""
     mock_get_password.return_value = None
-    runner.invoke(app, "auth add-api-key --host localhost --api-key mock-api-key --is-default")
+    runner.invoke(
+        app,
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --is-default",
+    )
     mock_set_password.assert_called()
     assert context.default_host == "http://localhost"
 
 
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-def test_add_api_key_existing_host_overwrite(
+def test_add_api_client_credentials_existing_host_overwrite(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is set if the host exists, but we want to override."""
-    mock_get_password.return_value = "a-domain-name.com"
+    mock_get_password.return_value = "http://a-domain-name.com"
     result = runner.invoke(
         app,
-        "auth add-api-key --host http://a-domain-name.com --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host http://a-domain-name.com --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
         input="y\n",
     )
     mock_set_password.assert_called()
@@ -96,11 +101,11 @@ def test_add_api_key_existing_host_abort(
     mock_set_password: MagicMock, mock_get_password: MagicMock
 ) -> None:
     """Test a new password is NOT set if the host already exists and we DO NOT override."""
-    mock_get_password.return_value = "a-domain-name.com"
+    mock_get_password.return_value = "http://a-domain-name.com"
 
     result = runner.invoke(
         app,
-        "auth add-api-key --host http://a-domain-name.com --api-key mock-api-key --no-is-default",
+        "auth add-api-client-credentials --host http://a-domain-name.com --client-id mock-client-id --client-secret mock-client-secret --no-is-default",
         input="n\n",
     )
 
@@ -111,7 +116,7 @@ def test_add_api_key_existing_host_abort(
 @patch("keyring.get_password")
 @patch("keyring.set_password")
 @patch("keyring.delete_password")
-def test_remove_api_key(
+def test_remove_api_client_credentials(
     mock_delete_password: MagicMock,
     mock_set_password: MagicMock,
     mock_get_password: MagicMock,
@@ -119,10 +124,13 @@ def test_remove_api_key(
     """Test removing an api-key deletes it from the config file."""
     # First we need to add an api-key to the config file
     # The following command is tested, so we're not asserting the result
-    runner.invoke(app, "auth add-api-key --host localhost --api-key mock-api-key --is-default")
+    runner.invoke(
+        app,
+        "auth add-api-client-credentials --host localhost --client-id mock-client-id --client-secret mock-client-secret --is-default",
+    )
 
     # Then we remove the same host, which should delete the entry from the config file
-    result = runner.invoke(app, "auth remove-api-key localhost")
+    result = runner.invoke(app, "auth remove-api-client-credentials localhost")
 
     assert context.default_host is None
     mock_delete_password.assert_called()
@@ -147,3 +155,86 @@ def test_set_default_host(mock_get_password: MagicMock) -> None:
     result = runner.invoke(app, "auth set-default-host localhost")
     assert context.default_host is None
     assert result.exit_code == 1
+
+
+# def test_get_api_token_without_existing_host_or_client_credentials_raises_exception() -> None:
+#     """Test getting an api token with no default host or client credentials."""
+
+#     runner.invoke(app, "auth remove-api-client-credentials http://george.com")
+
+#     result_without_host = runner.invoke(app, "auth get-api-token")
+#     assert result_without_host.exit_code == 2
+#     assert (
+#         "Invalid value: Please specify a host or set a default via the `auth` command"
+#         in result_without_host.stdout
+#     )
+
+#     result_without_client_id = runner.invoke(app, "auth get-api-token --host http://george.com")
+#     assert result_without_client_id.exit_code == 2
+#     print(result_without_client_id.stdout)
+#     assert (
+#         "Invalid value: Please specify a client_id and client_secret or add them via"
+#         in result_without_client_id.stdout
+#     )
+
+#     result_without_client_secret = runner.invoke(
+#         app, "auth get-api-token --host http://george.com --client-id mock-client-id"
+#     )
+#     assert result_without_client_secret.exit_code == 2
+#     assert (
+#         "Invalid value: Please specify a client_id and client_secret or add them via"
+#         in result_without_client_secret.stdout
+#     )
+
+
+# @patch("requests.post")
+# def test_get_api_token_requests_token_from_the_host_if_not_stored_in_context(
+#     mock_post: MagicMock,
+# ) -> None:
+#     class FakeResponse:
+#         status_code = 200
+
+#         def json(self) -> dict:
+#             return {"access_token": "a-valid-api-token", "expires_in": 3600}
+
+#     mock_post.return_value = FakeResponse()
+
+#     result = runner.invoke(
+#         app,
+#         "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
+#     )
+#     mock_post.assert_called_once()
+#     assert result.exit_code == 0
+#     assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout
+#     assert context.token_expiration_date is not None
+#     assert datetime.fromisoformat(context.token_expiration_date) > datetime.now()
+
+
+# @patch("keyring.get_password")
+# @patch("requests.post")
+# def test_get_api_token_uses_token_stored_in_context_first(
+#     mock_post: MagicMock,
+#     mock_get_password: MagicMock,
+# ) -> None:
+#     mock_get_password.return_value = "a-valid-api-token"
+#     result = runner.invoke(
+#         app,
+#         "auth get-api-token --host http://george.com --client-id mock-client-id --client-secret mock-client-secret",
+#     )
+#     assert result.exit_code == 0
+#     mock_get_password.assert_called_once_with(
+#         "canvas_cli.apps.auth.utils", "http://george.com|token"
+#     )
+#     mock_post.assert_not_called()
+
+
+# def test_get_api_token_uses_credentials_stored_in_context() -> None:
+#     runner.invoke(
+#         app,
+#         "auth add-api-client-credentials --host http://george.com --client-id mock-client-id --client-secret mock-client-secret --is-default",
+#     )
+#     assert context.default_host == "http://george.com"
+
+#     result = runner.invoke(app, "auth get-api-token")
+#     assert result.exit_code == 0
+#     assert '{"success": true, "token": "a-valid-api-token"}' in result.stdout

@@ -1,22 +1,24 @@
 import json
 
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
 
-class Protocol:
-    RESPONDS_TO = "ASSESS_COMMAND__CONDITION_SELECTED"
+
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
 
     NARRATIVE_STRING = "monkey"
 
+    # TODO - move __init__ to BaseProtocol class;
     def __init__(self, event) -> None:
         self.event = event
         self.payload = json.loads(event.target)
 
     def compute(self):
-        return [
-            {
-                "effect_type": "ADD_PLAN_COMMAND",
-                "payload": {
-                    "note": {"uuid": self.payload["note"]["uuid"]},
-                    "data": {"narrative": self.NARRATIVE_STRING},
-                },
-            }
-        ]
+        payload = {
+            "note": {"uuid": self.payload["note"]["uuid"]},
+            "data": {"narrative": self.NARRATIVE_STRING},
+        }
+
+        return [Effect(type=EffectType.ADD_PLAN_COMMAND, payload=json.dumps(payload))]
