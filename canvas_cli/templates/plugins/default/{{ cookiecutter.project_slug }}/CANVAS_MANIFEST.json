@@ -23,5 +23,10 @@
         "content": [],
         "effects": [],
         "views": []
-    }
+    },
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
 }
