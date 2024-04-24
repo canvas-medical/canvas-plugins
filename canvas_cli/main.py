@@ -13,7 +13,7 @@ from canvas_cli.utils.print import print
 APP_NAME = "canvas_cli"
 
 # The main app
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 # Add other apps & top-level commands
 app.add_typer(auth_app, name="auth", help="Manage authenticating in Canvas instances")

@@ -1,21 +1,32 @@
 import json
 import re
 import subprocess
+import tarfile
+import tempfile
+
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urljoin
 
 import requests
 import typer
+
 from cookiecutter.exceptions import OutputDirExistsException
 from cookiecutter.main import cookiecutter
 
 from canvas_cli.apps.auth.utils import get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
-from canvas_cli.utils.urls.urls import CoreEndpoint
 from canvas_cli.utils.validators import get_default_host, validate_manifest_file
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
+
+
+def plugin_url(host: str, *paths: str) -> str:
+    join = "/".join(["plugin-io/plugins", "/".join(paths or [])])
+    join = join if join.endswith("/") else join + "/"
+
+    return urljoin(host, join)
 
 
 def validate_package(package: Path) -> Path:
@@ -37,29 +48,18 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
-    try:
-        output = subprocess.check_output(["poetry", "build"], cwd=package, text=True)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"'poetry build' failed with error: {e.output}")
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
+        with tarfile.open(file.name, "w:gz") as tar:
+            tar.add(package, arcname=".")
 
-    print.verbose(output)
-
-    # The output should be in the 'output' variable.
-    # We look for the line that says 'Built <path>'
-    match = re.search(r"Built (.+)", output)
-    if match:
-        # Return the path of the built archive
-        return package / "dist" / match.group(1)
-    else:
-        # If we can't find the path, raise an error
-        raise RuntimeError("Could not find the path of the built archive in 'poetry build' output.")
+        return Path(file.name)
 
 
 def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[str]:
     """Extract metadata from a provided package and return the package name if it exists in the metadata."""
     try:
         metadata_response = requests.post(
-            CoreEndpoint.PLUGIN.build(host, "extract-metadata"),
+            plugin_url(host, "extract-metadata"),
             headers={"Authorization": f"Bearer {token}"},
             files={"package": open(package, "rb")},
         )
@@ -99,7 +99,7 @@ def delete(
     if not host:
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
-    url = CoreEndpoint.PLUGIN.build(host, name)
+    url = plugin_url(host, name)
 
     print.verbose(f"Deleting {name} using {url}")
 
@@ -152,7 +152,8 @@ def validate_manifest(
     if not package.is_dir():
         raise typer.BadParameter(f"Package {package} is not a directory, nothing to validate")
 
-    manifest = Path(f"{package.name}/CANVAS_MANIFEST.json")
+    manifest = package / "CANVAS_MANIFEST.json"
+
     if not manifest.exists():
         raise typer.BadParameter(
             f"Package {package} does not have a CANVAS_MANIFEST.json file to validate"
@@ -169,6 +170,7 @@ def validate_manifest(
         raise typer.Abort()
 
     validate_manifest_file(manifest_json)
+
     print.json(f"Package {package} has a valid CANVAS_MANIFEST.json file")
 
 
@@ -211,7 +213,7 @@ def install(
 
     print.verbose(f"Installing package: {built_package_path} into {host}")
 
-    url = CoreEndpoint.PLUGIN.build(host)
+    url = plugin_url(host)
 
     print.verbose(f"Posting {built_package_path.absolute()} to {url}")
 
@@ -228,6 +230,7 @@ def install(
 
     if r.status_code == requests.codes.created:
         print.response(r)
+
     # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
     elif r.status_code == requests.codes.bad_request:
@@ -263,8 +266,7 @@ def list(
     if not host:
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
-    url = CoreEndpoint.PLUGIN.build(host)
-    print(url)
+    url = plugin_url(host)
 
     token = get_or_request_api_token(host, client_id, client_secret)
 
@@ -319,7 +321,7 @@ def update(
 
     binary_package = {"package": open(package, "rb")} if package else None
 
-    url = CoreEndpoint.PLUGIN.build(host, name)
+    url = plugin_url(host, name)
 
     try:
         r = requests.patch(

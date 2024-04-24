@@ -13,7 +13,7 @@ from canvas_cli.utils.context.context import context
 from canvas_cli.utils.print import print
 from canvas_cli.utils.validators import get_default_host
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 def validate_host(host: str) -> str:
