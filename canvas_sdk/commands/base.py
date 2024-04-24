@@ -1,4 +1,3 @@
-import json
 from enum import EnumType
 from typing import get_args
 
@@ -14,10 +13,9 @@ class _BaseCommand(BaseModel):
     class Meta:
         key = ""
 
-    # todo: update int to str as we should use external identifiers
-    note_id: int | None = None
+    note_id: str | None = None
     command_uuid: str | None = None
-    user_id: int
+    user_id: str
 
     @model_validator(mode="after")
     def _verify_has_note_id_or_command_id(self) -> Self:
