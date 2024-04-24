@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.1.0",
+    "plugin_version": "0.1.1",
     "name": "My First Plugin",
     "description": "A plugin to interact with a Canvas Instance",
     "components": {
@@ -23,5 +23,8 @@
         "content": [],
         "effects": [],
         "views": []
-    }
+    },
+    "tags": [],
+    "license": "NONE",
+    "readme": "NONE"
 }
