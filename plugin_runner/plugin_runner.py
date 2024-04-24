@@ -1,7 +1,5 @@
-from typing import cast
-
 import asyncio
-import importlib
+import importlib.util
 import json
 import logging
 import os
@@ -12,13 +10,14 @@ from collections import defaultdict
 
 import grpc
 
-from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import Event, EventResponse, EventType
 from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
+
+from sandbox import Sandbox
 
 ENV = os.getenv("ENV", "development")
 
@@ -45,6 +44,8 @@ class PluginRunner(PluginRunnerServicer):
     def __init__(self) -> None:
         super().__init__()
 
+    sandbox: Sandbox
+
     async def HandleEvent(self, request: Event, context):
         event_name = EventType.Name(request.type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
@@ -66,6 +67,20 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
+
+
+def sandbox_from_module_name(module_name: str):
+    spec = importlib.util.find_spec(module_name)
+
+    if not spec or not spec.origin:
+        raise Exception(f'Could not load plugin "{module_name}"')
+
+    origin = pathlib.Path(spec.origin)
+    source_code = origin.read_text()
+
+    sandbox = Sandbox(source_code)
+
+    return sandbox.execute()
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
@@ -98,20 +113,21 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         if name_and_class in LOADED_PLUGINS:
             logging.info(f"Reloading plugin: {name_and_class}")
 
-            protocol_module = LOADED_PLUGINS[name_and_class]["module"]
-
-            importlib.reload(protocol_module)
+            result = sandbox_from_module_name(protocol_module)
 
             LOADED_PLUGINS[name_and_class]["active"] = True
+
+            LOADED_PLUGINS[name_and_class]["class"] = result[protocol_class]
+            LOADED_PLUGINS[name_and_class]["sandbox"] = result
         else:
             logging.info(f"Loading plugin: {name_and_class}")
 
-            module = importlib.import_module(protocol_module)
+            result = sandbox_from_module_name(protocol_module)
 
             LOADED_PLUGINS[name_and_class] = {
                 "active": True,
-                "class": getattr(module, protocol_class),
-                "module": module,
+                "class": result[protocol_class],
+                "sandbox": result,
                 "protocol": protocol,
             }
 

@@ -1537,6 +1537,21 @@ files = [
 requests = ">=2.0.1,<3.0.0"
 
 [[package]]
+name = "restrictedpython"
+version = "7.1"
+description = "RestrictedPython is a defined subset of the Python language which allows to provide a program input into a trusted environment."
+optional = false
+python-versions = ">=3.7, <3.13"
+files = [
+    {file = "RestrictedPython-7.1-py3-none-any.whl", hash = "sha256:56d0c73e5de1757702053383601b0fcd3fb2e428039ee1df860409ad67b17d2b"},
+    {file = "RestrictedPython-7.1.tar.gz", hash = "sha256:875aeb51c139d78e34cef8605dc65309b449168060dd08551a1fe9edb47cb9a5"},
+]
+
+[package.extras]
+docs = ["Sphinx", "sphinx-rtd-theme"]
+test = ["pytest", "pytest-mock"]
+
+[[package]]
 name = "rich"
 version = "13.7.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -1944,5 +1959,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.11"
-content-hash = "33cee4067068cd731a65489c9bca00d1570d6f03fb19ecf865b13eb9451abb3e"
+python-versions = ">=3.11,<3.13"
+content-hash = "510372828fd1203954304bbbae17282beb9eb1b5fc6aa8ede1bd52e0c30655b9"

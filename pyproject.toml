@@ -46,11 +46,12 @@ ipython = "^8.21.0"
 jsonschema = "^4.21.1"
 keyring = "*"
 pydantic = "^2.6.1"
-python = ">=3.11"
+python = ">=3.11,<3.13"
 python-dotenv = "^1.0.1"
 requests = "*"
 typer = {extras = ["all"], version = "*"}
 websocket-client = "^1.7.0"
+restrictedpython = "^7.1"
 
 [tool.poetry.group.dev.dependencies]
 grpcio-tools = "^1.60.1"
