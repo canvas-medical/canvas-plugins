@@ -10,14 +10,9 @@ class Protocol(BaseProtocol):
 
     NARRATIVE_STRING = "monkey"
 
-    # TODO - move __init__ to BaseProtocol class;
-    def __init__(self, event) -> None:
-        self.event = event
-        self.payload = json.loads(event.target)
-
     def compute(self):
         payload = {
-            "note": {"uuid": self.payload["note"]["uuid"]},
+            "note": {"uuid": self.context["note"]["uuid"]},
             "data": {"narrative": self.NARRATIVE_STRING},
         }
 

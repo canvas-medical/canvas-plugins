@@ -8,10 +8,6 @@ from canvas_sdk.protocols import BaseProtocol
 class Protocol(BaseProtocol):
     RESPONDS_TO = EventType.Name(EventType.MEDICATION_STATEMENT__MEDICATION__POST_SEARCH)
 
-    def __init__(self, event) -> None:
-        self.event = event
-        self.context = json.loads(event.context)
-
     def compute(self):
         results = self.context.get("results")
 
