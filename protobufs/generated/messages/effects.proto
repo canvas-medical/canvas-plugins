@@ -9,10 +9,6 @@ enum EffectType {
   ADD_PLAN_COMMAND = 2;
 
   AUTOCOMPLETE_SEARCH_RESULTS = 3;
-
-  NEW_EFFECT = 4;
-
-  ANOTHER_EFFECT = 5;
 }
 
 message Effect {
