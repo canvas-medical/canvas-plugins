@@ -12,7 +12,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UNKNOWN: _ClassVar[EventType]
     ALLERGY_INTOLERANCE_CREATED: _ClassVar[EventType]
     ALLERGY_INTOLERANCE_UPDATED: _ClassVar[EventType]
-    APPOINTMENT_BOOKED: _ClassVar[EventType]
     APPOINTMENT_CANCELED: _ClassVar[EventType]
     APPOINTMENT_CHECKED_IN: _ClassVar[EventType]
     APPOINTMENT_CREATED: _ClassVar[EventType]
@@ -33,8 +32,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COVERAGE_UPDATED: _ClassVar[EventType]
     ENCOUNTER_CREATED: _ClassVar[EventType]
     ENCOUNTER_UPDATED: _ClassVar[EventType]
-    EXTERNAL_EVENT_CREATED: _ClassVar[EventType]
-    EXTERNAL_EVENT_UPDATED: _ClassVar[EventType]
     IMAGING_REPORT_CREATED: _ClassVar[EventType]
     IMAGING_REPORT_UPDATED: _ClassVar[EventType]
     IMMUNIZATION_CREATED: _ClassVar[EventType]
@@ -58,18 +55,12 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PRESCRIPTION_UPDATED: _ClassVar[EventType]
     REFERRAL_REPORT_CREATED: _ClassVar[EventType]
     REFERRAL_REPORT_UPDATED: _ClassVar[EventType]
-    TASK_ASSIGNED: _ClassVar[EventType]
-    TASK_CLOSED: _ClassVar[EventType]
     TASK_COMMENT_CREATED: _ClassVar[EventType]
-    TASK_COMMENT_UPDATED: _ClassVar[EventType]
-    TASK_COMPLETED: _ClassVar[EventType]
     TASK_CREATED: _ClassVar[EventType]
     TASK_LABELS_ADJUSTED: _ClassVar[EventType]
-    TASK_UNASSIGNED: _ClassVar[EventType]
     TASK_UPDATED: _ClassVar[EventType]
     VITAL_SIGN_CREATED: _ClassVar[EventType]
     VITAL_SIGN_UPDATED: _ClassVar[EventType]
-    CHART_OPENED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -221,7 +212,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
-APPOINTMENT_BOOKED: EventType
 APPOINTMENT_CANCELED: EventType
 APPOINTMENT_CHECKED_IN: EventType
 APPOINTMENT_CREATED: EventType
@@ -242,8 +232,6 @@ COVERAGE_CREATED: EventType
 COVERAGE_UPDATED: EventType
 ENCOUNTER_CREATED: EventType
 ENCOUNTER_UPDATED: EventType
-EXTERNAL_EVENT_CREATED: EventType
-EXTERNAL_EVENT_UPDATED: EventType
 IMAGING_REPORT_CREATED: EventType
 IMAGING_REPORT_UPDATED: EventType
 IMMUNIZATION_CREATED: EventType
@@ -267,18 +255,12 @@ PRESCRIPTION_CREATED: EventType
 PRESCRIPTION_UPDATED: EventType
 REFERRAL_REPORT_CREATED: EventType
 REFERRAL_REPORT_UPDATED: EventType
-TASK_ASSIGNED: EventType
-TASK_CLOSED: EventType
 TASK_COMMENT_CREATED: EventType
-TASK_COMMENT_UPDATED: EventType
-TASK_COMPLETED: EventType
 TASK_CREATED: EventType
 TASK_LABELS_ADJUSTED: EventType
-TASK_UNASSIGNED: EventType
 TASK_UPDATED: EventType
 VITAL_SIGN_CREATED: EventType
 VITAL_SIGN_UPDATED: EventType
-CHART_OPENED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType

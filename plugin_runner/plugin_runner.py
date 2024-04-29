@@ -48,6 +48,11 @@ class PluginRunner(PluginRunnerServicer):
 
     async def HandleEvent(self, request: Event, context):
         event_name = EventType.Name(request.type)
+        print("!!!")
+        print(event_name)
+        print("!!!")
+        print("")
+        breakpoint()
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
         effect_list = []
