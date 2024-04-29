@@ -40,14 +40,15 @@ $ canvas auth [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-- `add-api-key`: Add a host=api-key pair to the keychain, so it can be used in other requests
-- `get-api-key`: Print the api_key for the given host
-- `remove-api-key`: Removes a host from the keychain, and as the default if it's the one
+- `add-api-client-credentials`: Add a host=client_id&client_secret pair to the keychain, so it can be used to request future tokens
+- `get-api-client-credentials`: Print the api client credentials for the given host
+- `remove-api-client-credentials`: Removes a host from the keychain, and as the default if it's the one
 - `set-default-host`: Set the host as the default host in the config file
+- `get-api-token`: Print the current api token for the given host
 
-### `canvas auth add-api-key`
+### `canvas auth add-api-client-credentials`
 
-Add a host=api-key pair to the keychain, so it can be used in other requests.
+Add a host=client_id&client_secret pair to the keychain, so it can be used to request future tokens.
 Optionally set a default so `--host` isn't required everywhere
 
 **Usage**:
@@ -59,18 +60,19 @@ $ canvas auth add-api-key [OPTIONS]
 **Options**:
 
 - `--host TEXT`: [required]
-- `--api-key TEXT`: [required]
+- `--client-id TEXT`: [required]
+- `--client-secret TEXT`: [required]
 - `--is-default / --no-is-default`: [required]
 - `--help`: Show this message and exit.
 
-### `canvas auth get-api-key`
+### `canvas auth get-api-client-credentials`
 
-Print the api_key for the given host.
+Print the api client credentials for the given host.
 
 **Usage**:
 
 ```console
-$ canvas auth get-api-key [OPTIONS] HOST
+$ canvas auth get-api-client-credentials [OPTIONS] HOST
 ```
 
 **Arguments**:
@@ -81,7 +83,7 @@ $ canvas auth get-api-key [OPTIONS] HOST
 
 - `--help`: Show this message and exit.
 
-### `canvas auth remove-api-key`
+### `canvas auth remove-api-client-credentials`
 
 Removes a host from the keychain, and as the default if it's the one.
 This method always succeeds, regardless of username existence.
@@ -89,7 +91,7 @@ This method always succeeds, regardless of username existence.
 **Usage**:
 
 ```console
-$ canvas auth remove-api-key [OPTIONS] HOST
+$ canvas auth remove-api-client-credentials [OPTIONS] HOST
 ```
 
 **Arguments**:
@@ -118,6 +120,23 @@ $ canvas auth set-default-host [OPTIONS] HOST
 
 - `--help`: Show this message and exit.
 
+### `canvas auth get-api-token`
+
+Print the current api token for the given host.
+
+**Usage**:
+
+```console
+$ canvas auth get-api-token [OPTIONS]
+```
+
+**Options**:
+
+- `--host TEXT`: Canvas instance to connect to
+- `--client-id TEXT`: Canvas client_id credential for the provided host
+- `--client-secret TEXT`: Canvas client_secret credential for the provided host
+- `--help`: Show this message and exit.
+
 ## `canvas logs`
 
 Listens and prints log streams from the instance.
@@ -131,7 +150,8 @@ $ canvas logs [OPTIONS]
 **Options**:
 
 - `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
+- `--client-id TEXT`: Canvas client_id credential for the provided host
+- `--client-secret TEXT`: Canvas client_secret credential for the provided host
 - `--help`: Show this message and exit.
 
 ## `canvas plugin`
@@ -155,6 +175,7 @@ $ canvas plugin [OPTIONS] COMMAND [ARGS]...
 - `install`: Installs a given Python package into a running Canvas instance
 - `list`: Lists all plugins from the instance
 - `update`: Updates a plugin from an instance
+- `validate-manifest`: Validates the Canvas Manifest json file of a plugin package
 
 ### `canvas plugin delete`
 
