@@ -5,9 +5,9 @@ import "generated/messages/effects.proto";
 package canvas;
 
 enum EventType {
-  // Workflow kit-inspired events
-
   UNKNOWN = 0;
+
+  // Workflow kit-inspired events
 
   ALLERGY_INTOLERANCE_CREATED = 1;
   ALLERGY_INTOLERANCE_UPDATED = 2;
