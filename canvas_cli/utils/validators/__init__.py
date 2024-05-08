@@ -1,6 +1,3 @@
-from canvas_cli.utils.validators.validators import (
-    get_default_host,
-    validate_manifest_file,
-)
+from canvas_cli.utils.validators.validators import validate_manifest_file
 
-__all__ = ("get_default_host", "validate_manifest_file")
+__all__ = ("validate_manifest_file",)

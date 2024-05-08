@@ -4,9 +4,8 @@ from typing import Optional
 
 import typer
 
-from canvas_cli.apps.auth import app as auth_app
+from canvas_cli.apps import plugin
 from canvas_cli.apps.logs import logs as logs_command
-from canvas_cli.apps.plugin import app as plugin_app
 from canvas_cli.utils.context import context
 from canvas_cli.utils.print import print
 
@@ -15,10 +14,13 @@ APP_NAME = "canvas_cli"
 # The main app
 app = typer.Typer(no_args_is_help=True)
 
-# Add other apps & top-level commands
-app.add_typer(auth_app, name="auth", help="Manage authenticating in Canvas instances")
-app.add_typer(plugin_app, name="plugin", help="Manage plugins in a Canvas instance")
-app.command(short_help="Listens and prints log streams from the instance")(logs_command)
+# Commands
+app.command(short_help="Create a new plugin")(plugin.init)
+app.command(short_help="Install a plugin into a Canvas instance")(plugin.install)
+app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.uninstall)
+app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
+app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
+app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
 
 # Our current version
 __version__ = importlib.metadata.version("canvas")
@@ -48,12 +50,6 @@ def get_or_create_config_file() -> Path:
             file.write("{}")
 
     return config_path
-
-
-@app.command(short_help="Print the config and exit")
-def print_config() -> None:
-    """Simple command to print the config and exit."""
-    context.print_config()
 
 
 @app.callback()

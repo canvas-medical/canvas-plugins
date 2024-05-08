@@ -19,100 +19,93 @@ $ canvas [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-- `auth`: Manage authenticating in Canvas instances
-- `logs`: Listens and prints log streams from the instance
-- `plugin`: Manage plugins in a Canvas instance
-- `print-config`: Print the config and exit
+- `init`: Create a new plugin
+- `install`: Install a plugin into a Canvas instance
+- `uninstall`: Uninstall a plugin from a Canvas instance
+- `list`: List all plugins from a Canvas instance
+- `validate-manifest`: Validate the Canvas Manifest json file
+- `logs`: Listen and print log streams from a Canvas instance
 
-## `canvas auth`
+## `canvas init`
 
-Manage authenticating in Canvas instances
+Create a new plugin.
 
 **Usage**:
 
 ```console
-$ canvas auth [OPTIONS] COMMAND [ARGS]...
+$ canvas init [OPTIONS]
 ```
 
 **Options**:
 
 - `--help`: Show this message and exit.
 
-**Commands**:
+## `canvas install`
 
-- `add-api-key`: Add a host=api-key pair to the keychain, so it can be used in other requests
-- `get-api-key`: Print the api_key for the given host
-- `remove-api-key`: Removes a host from the keychain, and as the default if it's the one
-- `set-default-host`: Set the host as the default host in the config file
-
-### `canvas auth add-api-key`
-
-Add a host=api-key pair to the keychain, so it can be used in other requests.
-Optionally set a default so `--host` isn't required everywhere
+Install a plugin into a Canvas instance.
 
 **Usage**:
 
 ```console
-$ canvas auth add-api-key [OPTIONS]
-```
-
-**Options**:
-
-- `--host TEXT`: [required]
-- `--api-key TEXT`: [required]
-- `--is-default / --no-is-default`: [required]
-- `--help`: Show this message and exit.
-
-### `canvas auth get-api-key`
-
-Print the api_key for the given host.
-
-**Usage**:
-
-```console
-$ canvas auth get-api-key [OPTIONS] HOST
+$ canvas install [OPTIONS] PLUGIN_NAME
 ```
 
 **Arguments**:
 
-- `HOST`: [required]
+- `PLUGIN_NAME`: Path to plugin to install [required]
 
 **Options**:
 
+- `--host TEXT`: Canvas instance to connect to
 - `--help`: Show this message and exit.
 
-### `canvas auth remove-api-key`
+## `canvas uninstall`
 
-Removes a host from the keychain, and as the default if it's the one.
-This method always succeeds, regardless of username existence.
+Uninstall a plugin from a Canvas instance..
 
 **Usage**:
 
 ```console
-$ canvas auth remove-api-key [OPTIONS] HOST
+$ canvas uninstall [OPTIONS] NAME
 ```
 
 **Arguments**:
 
-- `HOST`: [required]
+- `NAME`: Plugin name to delete [required]
 
 **Options**:
 
+- `--host TEXT`: Canvas instance to connect to
 - `--help`: Show this message and exit.
 
-### `canvas auth set-default-host`
+## `canvas list`
 
-Set the host as the default host in the config file. Validates it exists in the keychain.
+List all plugins from a Canvas instance.
 
 **Usage**:
 
 ```console
-$ canvas auth set-default-host [OPTIONS] HOST
+$ canvas list [OPTIONS]
+```
+
+**Options**:
+
+- `--host TEXT`: Canvas instance to connect to
+- `--help`: Show this message and exit.
+
+## `canvas validate-manifest`
+
+Validate the Canvas Manifest json file.
+
+**Usage**:
+
+```console
+$ canvas validate-manifest [OPTIONS] PACKAGE
 ```
 
 **Arguments**:
 
-- `HOST`: [required]
+- `PLUGIN_NAME`: Path to plugin to install [required]
 
 **Options**:
 
@@ -131,156 +124,4 @@ $ canvas logs [OPTIONS]
 **Options**:
 
 - `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
-- `--help`: Show this message and exit.
-
-## `canvas plugin`
-
-Manage plugins in a Canvas instance
-
-**Usage**:
-
-```console
-$ canvas plugin [OPTIONS] COMMAND [ARGS]...
-```
-
-**Options**:
-
-- `--help`: Show this message and exit.
-
-**Commands**:
-
-- `delete`: Delete a disabled plugin from an instance
-- `init`: Create a plugin from a template using Cookiecutter
-- `install`: Installs a given Python package into a running Canvas instance
-- `list`: Lists all plugins from the instance
-- `update`: Updates a plugin from an instance
-
-### `canvas plugin delete`
-
-Delete a disabled plugin from an instance.
-
-**Usage**:
-
-```console
-$ canvas plugin delete [OPTIONS] NAME
-```
-
-**Arguments**:
-
-- `NAME`: Plugin name to delete [required]
-
-**Options**:
-
-- `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
-- `--help`: Show this message and exit.
-
-### `canvas plugin init`
-
-Create a plugin from a template using Cookiecutter.
-
-**Usage**:
-
-```console
-$ canvas plugin init [OPTIONS] [TEMPLATE]
-```
-
-**Arguments**:
-
-- `[TEMPLATE]`: [default: (dynamic)]
-
-**Options**:
-
-- `--no-input`: Don't prompt the user at command line
-- `--help`: Show this message and exit.
-
-### `canvas plugin install`
-
-Installs a given Python package into a running Canvas instance.
-
-**Usage**:
-
-```console
-$ canvas plugin install [OPTIONS] PACKAGE
-```
-
-**Arguments**:
-
-- `PACKAGE`: Path to either a dir or wheel or sdist file containing the python package to install [required]
-
-**Options**:
-
-- `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
-- `--help`: Show this message and exit.
-
-### `canvas plugin validate-manifest`
-
-Validates the Canvas Manifest json file of a plugin package.
-
-**Usage**:
-
-```console
-$ canvas plugin validate-manifest [OPTIONS] PACKAGE
-```
-
-**Arguments**:
-
-- `PACKAGE`: Path to a dir containing the python package to install [required]
-
-**Options**:
-
-- `--help`: Show this message and exit.
-
-### `canvas plugin list`
-
-Lists all plugins from the instance.
-
-**Usage**:
-
-```console
-$ canvas plugin list [OPTIONS]
-```
-
-**Options**:
-
-- `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
-- `--help`: Show this message and exit.
-
-### `canvas plugin update`
-
-Updates a plugin from an instance.
-
-**Usage**:
-
-```console
-$ canvas plugin update [OPTIONS] NAME
-```
-
-**Arguments**:
-
-- `NAME`: Plugin name to update [required]
-
-**Options**:
-
-- `--package PATH`: Path to a wheel or sdist file containing the python package to install
-- `--enable / --disable`: Enable/disable the plugin
-- `--host TEXT`: Canvas instance to connect to
-- `--api-key TEXT`: Canvas api-key for the provided host
-- `--help`: Show this message and exit.
-
-## `canvas print-config`
-
-Simple command to print the config and exit.
-
-**Usage**:
-
-```console
-$ canvas print-config [OPTIONS]
-```
-
-**Options**:
-
 - `--help`: Show this message and exit.

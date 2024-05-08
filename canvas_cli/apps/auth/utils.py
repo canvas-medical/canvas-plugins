@@ -1,13 +1,16 @@
+import configparser
 from datetime import datetime, timedelta
+from pathlib import Path
+from urllib.parse import urlparse
 
 import keyring
 import requests
 
-from canvas_cli.utils.context.context import context
-from canvas_cli.utils.validators import get_default_host
-
 # Keyring namespace we'll use
 KEYRING_SERVICE = __name__
+
+
+CONFIG_PATH = Path.home() / ".canvas" / "credentials.ini"
 
 
 def get_password(username: str) -> str | None:
@@ -25,17 +28,47 @@ def delete_password(username: str) -> None:
     keyring.delete_password(KEYRING_SERVICE, username=username)
 
 
-def get_api_client_credentials(
-    host: str, client_id: str | None, client_secret: str | None
-) -> str | None:
+def get_config() -> configparser.ConfigParser:
+    """Reads the config file and returns a ConfigParser object."""
+    config = configparser.ConfigParser()
+    if not config.read(CONFIG_PATH):
+        raise Exception(f"Please add your configuration file at '{CONFIG_PATH}'")
+    return config
+
+
+def read_config(host: str, property: str) -> str:
+    """Reads the config file and returns the property for a given section."""
+    config = get_config()
+    if host not in config:
+        raise Exception(f"'{host}' is not found in the configuration file at '{CONFIG_PATH}'")
+    return config.get(host, property)
+
+
+def get_api_client_credentials(host: str) -> str:
     """Either return the given api_key, or fetch it from the keyring."""
-    if client_id and client_secret:
-        return f"client_id={client_id}&client_secret={client_secret}"
+    instance = urlparse(host).hostname.removesuffix(".canvasmedical.com")
+    client_id = read_config(instance, "client_id")
+    client_secret = read_config(instance, "client_secret")
+    return f"client_id={client_id}&client_secret={client_secret}"
 
-    return get_password(host)
+
+def get_default_host(host: str | None = None) -> str:
+    """Return the explicitly stated default host, or first if none is indicated."""
+    if host:
+        return host
+
+    config = get_config()
+    if not (hosts := config.sections()):
+        raise Exception(f"No hosts found in the configuration file at '{CONFIG_PATH}'")
+
+    first_default_host = next(
+        (host for host in hosts if config.getboolean(host, "is_default", fallback=False) is True),
+        hosts[0],
+    )
+    return f"https://{first_default_host}.canvasmedical.com"
 
 
-def request_api_token(host: str, api_client_credentials: str) -> str | None:
+def request_api_token(host: str, api_client_credentials: str) -> dict:
     """Request an api token using the provided client_id and client_secret."""
     token_response = requests.post(
         f"{host}/auth/token/",
@@ -46,41 +79,52 @@ def request_api_token(host: str, api_client_credentials: str) -> str | None:
         raise Exception(
             "Unable to get a valid access token. Please check your host, client_id, and client_secret"
         )
-
-    token_response_json = token_response.json()
-
-    token_expiration_date = datetime.now() + timedelta(seconds=token_response_json["expires_in"])
-    context.token_expiration_date = token_expiration_date.isoformat()
-    return token_response_json["access_token"]
+    return token_response.json()
 
 
-def is_token_valid() -> bool:
+def is_token_valid(host_token_key: str, expiration_date: datetime | None = None) -> bool:
     """True if the token has not expired yet."""
-    expiration_date = context.token_expiration_date
-    return expiration_date is not None and datetime.fromisoformat(expiration_date) > datetime.now()
+    token_exp_date_key = f"{host_token_key}|exp_date"
+
+    if expiration_date:
+        if expiration_date <= datetime.now():
+            return False
+        set_password(token_exp_date_key, expiration_date.isoformat())
+        return True
+
+    stored_expiration_date = get_password(token_exp_date_key)
+    return (
+        stored_expiration_date is not None
+        and datetime.fromisoformat(stored_expiration_date) > datetime.now()
+    )
 
 
-def get_or_request_api_token(
-    host: str | None = None, client_id: str | None = None, client_secret: str | None = None
-) -> str:
+def get_or_request_api_token(host: str | None = None) -> str:
     """Returns an existing stored token if it has not expired, or requests a new one."""
     if not (host := get_default_host(host)):
-        raise Exception("Please specify a host or set a default via the `auth` command")
+        raise Exception(
+            f"Please specify a host or add one to the configuration file at '{CONFIG_PATH}'"
+        )
 
     host_token_key = f"{host}|token"
     token = get_password(host_token_key)
 
-    if token and is_token_valid():
+    if token and is_token_valid(host_token_key):
         return token
 
-    if not (api_client_credentials := get_api_client_credentials(host, client_id, client_secret)):
-        raise Exception(
-            "Please specify a client_id and client_secret or add them via the `auth` command"
-        )
+    api_client_credentials = get_api_client_credentials(host)
 
-    if not (new_token := request_api_token(host, api_client_credentials)):
+    if not (token_response := request_api_token(host, api_client_credentials)):
         raise Exception(
             "A token could not be acquired from the given host, client_id, and client_secret"
         )
+
+    token_expiration_date = datetime.now() + timedelta(seconds=token_response["expires_in"])
+    if not is_token_valid(host_token_key, token_expiration_date):
+        raise Exception(
+            "A valid token could not be acquired from the given host, client_id, and client_secret"
+        )
+
+    new_token = token_response["access_token"]
     set_password(host_token_key, new_token)
     return new_token

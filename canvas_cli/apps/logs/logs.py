@@ -4,9 +4,8 @@ from urllib.parse import urlparse
 import typer
 import websocket
 
-from canvas_cli.apps.auth.utils import get_or_request_api_token
+from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.print import print
-from canvas_cli.utils.validators import get_default_host
 
 
 def _on_message(ws: websocket.WebSocketApp, message: str) -> None:
@@ -28,19 +27,13 @@ def _on_open(ws: websocket.WebSocketApp) -> None:
 def logs(
     host: Optional[str] = typer.Option(
         callback=get_default_host, help="Canvas instance to connect to", default=None
-    ),
-    client_id: Optional[str] = typer.Option(
-        help="Canvas client_id for the provided host", default=None
-    ),
-    client_secret: Optional[str] = typer.Option(
-        help="Canvas client_secret for the provided host", default=None
-    ),
+    )
 ) -> None:
     """Listens and prints log streams from the instance."""
     if not host:
-        raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
-    token = get_or_request_api_token(host, client_id, client_secret)
+    token = get_or_request_api_token(host)
 
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
