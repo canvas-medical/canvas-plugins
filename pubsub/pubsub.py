@@ -4,7 +4,7 @@ import os
 
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
-CHANNEL_SUFFIX = "pluging-logging-stream"
+CHANNEL_SUFFIX = "plugin-logging-stream"
 
 
 class PubSubBase:
