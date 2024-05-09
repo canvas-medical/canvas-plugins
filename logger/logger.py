@@ -3,7 +3,7 @@ import os
 
 from pubsub.pubsub import Publisher
 
-ENV = os.getenv("ENV", "development")
+ENV = os.getenv("ENV")
 
 class PubSubLogHandler(logging.Handler):
     def __init__(self)-> None:
