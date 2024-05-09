@@ -1,13 +1,9 @@
 import logging
+import os
 
 from pubsub.pubsub import Publisher
 
-# Make this a flag when running the plugin runner.
-# IS_DEVELOPMENT=True will log to the console.
-# IS_DEVELOPMENT=False will publish to Redis.
-
-IS_DEVELOPMENT = False
-
+ENV = os.getenv("ENV", "development")
 
 class PubSubLogHandler(logging.Handler):
     def __init__(self)-> None:
@@ -29,7 +25,7 @@ class PluginLogger:
         streaming_handler.setFormatter(formatter)
         self.logger.addHandler(streaming_handler)
 
-        if not IS_DEVELOPMENT:
+        if ENV == "production":
             pubsub_handler = PubSubLogHandler()
             pubsub_handler.setFormatter(formatter)
             self.logger.addHandler(pubsub_handler)
