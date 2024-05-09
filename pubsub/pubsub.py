@@ -14,6 +14,9 @@ class PubSubBase:
         self.client = self._create_client()
 
     def _get_channel_name(self) -> str | None:
+        # TODO - remove; print statements for testing
+        print("Customer Identifier in plugin runner:")
+        print(CUSTOMER_IDENTIFIER)
         if CUSTOMER_IDENTIFIER:
             return f"{CUSTOMER_IDENTIFIER}:{CHANNEL_SUFFIX}"
 
