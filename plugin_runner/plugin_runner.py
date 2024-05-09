@@ -54,6 +54,10 @@ class PluginRunner(PluginRunnerServicer):
         event_name = EventType.Name(request.type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
+        # TODO - remove; print statements for testing
+        print("Customer Identifier in plugin runner:")
+        print(os.getenv("CUSTOMER_IDENTIFIER"))
+
         effect_list = []
 
         for plugin_name in relevant_plugins:
