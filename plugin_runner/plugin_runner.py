@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import sys
+import traceback
 
 from collections import defaultdict
 
@@ -58,7 +59,12 @@ class PluginRunner(PluginRunnerServicer):
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
             protocol_class = plugin["class"]
-            effects = protocol_class(request, plugin.get("secrets", {})).compute()
+
+            try:
+                effects = protocol_class(request, plugin.get("secrets", {})).compute()
+            except Exception as e:
+                log.error(traceback.format_exc())
+                continue
             effect_list += effects
 
         yield EventResponse(success=True, effects=effect_list)
