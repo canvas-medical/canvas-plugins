@@ -40,16 +40,34 @@ class Http:
         return self.session.get(url, headers=headers)
 
     @measure_time
-    def post(self, url: str, json: dict | None = None, headers: dict = {}) -> requests.Response:
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: dict = {},
+    ) -> requests.Response:
         """Sends a POST request."""
-        return self.session.post(url, json=json, headers=headers)
+        return self.session.post(url, json=json, data=data, headers=headers)
 
     @measure_time
-    def put(self, url: str, json: dict | None = None, headers: dict = {}) -> requests.Response:
+    def put(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: dict = {},
+    ) -> requests.Response:
         """Sends a PUT request."""
-        return self.session.put(url, json=json, headers=headers)
+        return self.session.put(url, json=json, data=data, headers=headers)
 
     @measure_time
-    def patch(self, url: str, json: dict | None = None, headers: dict = {}) -> requests.Response:
+    def patch(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: dict = {},
+    ) -> requests.Response:
         """Sends a PATCH request."""
-        return self.session.patch(url, json=json, headers=headers)
+        return self.session.patch(url, json=json, data=data, headers=headers)
