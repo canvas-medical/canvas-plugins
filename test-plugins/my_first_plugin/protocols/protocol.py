@@ -4,6 +4,8 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 
+from logger import log
+
 
 class Protocol(BaseProtocol):
     RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
@@ -11,6 +13,7 @@ class Protocol(BaseProtocol):
     NARRATIVE_STRING = "monkey"
 
     def compute(self):
+        log.info(self.NARRATIVE_STRING)
         payload = {
             "note": {"uuid": self.context["note"]["uuid"]},
             "data": {"narrative": self.NARRATIVE_STRING},

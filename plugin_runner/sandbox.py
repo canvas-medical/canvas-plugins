@@ -49,6 +49,7 @@ ALLOWED_MODULES = frozenset(
         "hmac",
         "http",
         "json",
+        "logger",
         "math",
         "operator",
         "pickletools",

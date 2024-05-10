@@ -18,8 +18,7 @@ from generated.services.plugin_runner_pb2_grpc import (
 
 from sandbox import Sandbox
 
-from logger.logger import PluginLogger
-log = PluginLogger()
+from logger import log
 
 ENV = os.getenv("ENV", "development")
 
