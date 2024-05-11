@@ -5,6 +5,7 @@ manifest_schema = {
         "plugin_version": {"type": "string"},
         "name": {"type": "string"},
         "description": {"type": "string"},
+        "secrets": {"type": "array", "items": {"type": "string"}},
         "components": {
             "type": "object",
             "properties": {
