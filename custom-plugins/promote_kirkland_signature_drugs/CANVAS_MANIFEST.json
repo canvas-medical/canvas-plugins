@@ -3,6 +3,10 @@
     "plugin_version": "0.1.0",
     "name": "Promote Kirkland Signature Drugs",
     "description": "Annotates certain Kirkland Signature drugs and floats them to the top of searches.",
+    "tags": [],
+    "license": "",
+    "readme": "",
+    "secrets": ["WEBHOOK_BASEURL", "WEBHOOK_API_KEY"],
     "components": {
         "protocols": [
             {
