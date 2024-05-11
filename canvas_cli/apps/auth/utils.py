@@ -65,6 +65,8 @@ def get_default_host(host: str | None = None) -> str:
         (host for host in hosts if config.getboolean(host, "is_default", fallback=False) is True),
         hosts[0],
     )
+    if first_default_host == 'localhost':
+        return "http://localhost:8000"
     return f"https://{first_default_host}.canvasmedical.com"
 
 
