@@ -25,6 +25,8 @@ IS_PRODUCTION = ENV == "production"
 
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
+SECRETS_FILE_NAME = "SECRETS.json"
+
 # specify a local plugin directory for development
 PLUGIN_DIRECTORY = "/plugin-runner/custom-plugins" if IS_PRODUCTION else "./custom-plugins"
 
@@ -55,7 +57,7 @@ class PluginRunner(PluginRunnerServicer):
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
             protocol_class = plugin["class"]
-            effects = protocol_class(request).compute()
+            effects = protocol_class(request, plugin.get("secrets", {})).compute()
             effect_list += effects
 
         yield EventResponse(success=True, effects=effect_list)
@@ -98,6 +100,15 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         logging.warn(f'Unable to load plugin "{name}":', e)
         return
 
+    secrets_file = path / SECRETS_FILE_NAME
+
+    secrets_json = {}
+    if secrets_file.exists():
+        try:
+            secrets_json = json.load(secrets_file.open())
+        except Exception as e:
+            logging.warn(f'Unable to load secrets for plugin "{name}":', e)
+
     # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
@@ -119,6 +130,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
             LOADED_PLUGINS[name_and_class]["class"] = result[protocol_class]
             LOADED_PLUGINS[name_and_class]["sandbox"] = result
+            LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
         else:
             logging.info(f"Loading plugin: {name_and_class}")
 
@@ -129,6 +141,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                 "class": result[protocol_class],
                 "sandbox": result,
                 "protocol": protocol,
+                "secrets": secrets_json,
             }
 
 
