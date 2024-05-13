@@ -1,10 +1,10 @@
 import asyncio
 import importlib.util
 import json
-import logging
 import os
 import pathlib
 import sys
+import traceback
 
 from collections import defaultdict
 
@@ -18,6 +18,8 @@ from generated.services.plugin_runner_pb2_grpc import (
 )
 
 from sandbox import Sandbox
+
+from logger import log
 
 ENV = os.getenv("ENV", "development")
 
@@ -57,7 +59,12 @@ class PluginRunner(PluginRunnerServicer):
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
             protocol_class = plugin["class"]
-            effects = protocol_class(request, plugin.get("secrets", {})).compute()
+
+            try:
+                effects = protocol_class(request, plugin.get("secrets", {})).compute()
+            except Exception as e:
+                log.error(traceback.format_exception(e))
+                continue
             effect_list += effects
 
         yield EventResponse(success=True, effects=effect_list)
@@ -86,7 +93,7 @@ def sandbox_from_module_name(module_name: str):
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
-    logging.info(f"Loading {path}")
+    log.info(f"Loading {path}")
 
     manifest_file = path / MANIFEST_FILE_NAME
     manifest_json = manifest_file.read_text()
@@ -97,7 +104,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     try:
         manifest_json = json.loads(manifest_json)
     except Exception as e:
-        logging.warn(f'Unable to load plugin "{name}":', e)
+        log.warning(f'Unable to load plugin "{name}":', e)
         return
 
     secrets_file = path / SECRETS_FILE_NAME
@@ -113,7 +120,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     try:
         protocols = manifest_json["components"]["protocols"]
     except Exception as e:
-        logging.warn(f'Unable to load plugin "{name}":', e)
+        log.warning(f'Unable to load plugin "{name}":', e)
         return
 
     for protocol in protocols:
@@ -122,7 +129,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         name_and_class = f"{name}:{protocol_module}:{protocol_class}"
 
         if name_and_class in LOADED_PLUGINS:
-            logging.info(f"Reloading plugin: {name_and_class}")
+            log.info(f"Reloading plugin: {name_and_class}")
 
             result = sandbox_from_module_name(protocol_module)
 
@@ -132,7 +139,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             LOADED_PLUGINS[name_and_class]["sandbox"] = result
             LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
         else:
-            logging.info(f"Loading plugin: {name_and_class}")
+            log.info(f"Loading plugin: {name_and_class}")
 
             result = sandbox_from_module_name(protocol_module)
 
@@ -159,7 +166,7 @@ def refresh_event_type_map():
                 for event in responds_to:
                     EVENT_PROTOCOL_MAP[event].append(name)
             else:
-                logging.warn(f"Unknown RESPONDS_TO type: {type(responds_to)}")
+                log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
 def load_plugins():
@@ -202,14 +209,14 @@ async def serve():
 
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 
-    logging.info(f"Starting server, listening on port {port}")
+    log.info(f"Starting server, listening on port {port}")
 
     load_plugins()
 
     await server.start()
 
     async def server_graceful_shutdown():
-        logging.info("Starting graceful shutdown...")
+        log.info("Starting graceful shutdown...")
         await server.stop(5)
 
     _cleanup_coroutines.append(server_graceful_shutdown())
@@ -218,8 +225,6 @@ async def serve():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
     loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
