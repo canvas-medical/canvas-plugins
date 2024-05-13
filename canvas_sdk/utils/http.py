@@ -22,7 +22,6 @@ class Http:
         def _decorator(fn: F) -> F:
             @wraps(fn)
             def wrapper(self: "Http", *args: Any, **kwargs: Any) -> Any:
-                print(fn.__name__)
                 start_time = time.time()
                 result = fn(self, *args, **kwargs)
                 end_time = time.time()
