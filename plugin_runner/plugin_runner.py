@@ -63,7 +63,7 @@ class PluginRunner(PluginRunnerServicer):
             try:
                 effects = protocol_class(request, plugin.get("secrets", {})).compute()
             except Exception as e:
-                log.error(traceback.format_exc())
+                log.error(traceback.format_exception(e))
                 continue
             effect_list += effects
 

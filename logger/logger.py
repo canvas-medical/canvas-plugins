@@ -3,8 +3,6 @@ import os
 
 from pubsub.pubsub import Publisher
 
-ENV = os.getenv("ENV")
-
 class PubSubLogHandler(logging.Handler):
     def __init__(self)-> None:
         self.publisher = Publisher()
@@ -25,7 +23,7 @@ class PluginLogger:
         streaming_handler.setFormatter(formatter)
         self.logger.addHandler(streaming_handler)
 
-        if ENV == "production":
+        if os.getenv("REDIS_ENDPOINT"):
             pubsub_handler = PubSubLogHandler()
             pubsub_handler.setFormatter(formatter)
             self.logger.addHandler(pubsub_handler)
