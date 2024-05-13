@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 import keyring
 import requests
 
+from canvas_sdk.utils import Http
+
 # Keyring namespace we'll use
 KEYRING_SERVICE = __name__
 
@@ -32,7 +34,23 @@ def get_config() -> configparser.ConfigParser:
     """Reads the config file and returns a ConfigParser object."""
     config = configparser.ConfigParser()
     if not config.read(CONFIG_PATH):
-        raise Exception(f"Please add your configuration file at '{CONFIG_PATH}'")
+        raise Exception(
+            f"""Please add your configuration file at '{CONFIG_PATH}' with the following format:
+
+            [my-canvas-instance]
+            client_id=myclientid
+            client_secret=myclientsecret
+
+            [my-dev-canvas-instance]
+            client_id=devclientid
+            client_secret=devclientsecret
+            is_default=true
+
+            [localhost]
+            client_id=localclientid
+            client_secret=localclientsecret
+            """
+        )
     return config
 
 
@@ -65,14 +83,16 @@ def get_default_host(host: str | None = None) -> str:
         (host for host in hosts if config.getboolean(host, "is_default", fallback=False) is True),
         hosts[0],
     )
-    if first_default_host == 'localhost':
+    if first_default_host == "localhost":
         return "http://localhost:8000"
+
     return f"https://{first_default_host}.canvasmedical.com"
 
 
 def request_api_token(host: str, api_client_credentials: str) -> dict:
     """Request an api token using the provided client_id and client_secret."""
-    token_response = requests.post(
+    http = Http()
+    token_response = http.post(
         f"{host}/auth/token/",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         data=f"grant_type=client_credentials&{api_client_credentials}",
