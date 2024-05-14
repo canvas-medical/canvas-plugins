@@ -37,11 +37,11 @@ def get_config() -> configparser.ConfigParser:
         raise Exception(
             f"""Please add your configuration file at '{CONFIG_PATH}' with the following format:
 
-            [my-canvas-instance]
+            [my-canvas-subdomain]
             client_id=myclientid
             client_secret=myclientsecret
 
-            [my-dev-canvas-instance]
+            [my-dev-canvas-subdomain]
             client_id=devclientid
             client_secret=devclientsecret
             is_default=true
@@ -91,16 +91,17 @@ def get_default_host(host: str | None = None) -> str:
 
 def request_api_token(host: str, api_client_credentials: str) -> dict:
     """Request an api token using the provided client_id and client_secret."""
+    grant_type = "grant_type=client_credentials"
+    scope = "scope=system/Plugins.*"
+
     http = Http()
     token_response = http.post(
         f"{host}/auth/token/",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data=f"grant_type=client_credentials&{api_client_credentials}",
+        data=f"{grant_type}&{scope}&{api_client_credentials}",
     )
     if token_response.status_code != requests.codes.ok:
-        raise Exception(
-            "Unable to get a valid access token. Please check your host, client_id, and client_secret"
-        )
+        raise Exception(f"Unable to get a valid access token from the given host '{host}'")
     return token_response.json()
 
 
@@ -130,22 +131,17 @@ def get_or_request_api_token(host: str | None = None) -> str:
 
     host_token_key = f"{host}|token"
     token = get_password(host_token_key)
-
     if token and is_token_valid(host_token_key):
         return token
 
     api_client_credentials = get_api_client_credentials(host)
 
     if not (token_response := request_api_token(host, api_client_credentials)):
-        raise Exception(
-            "A token could not be acquired from the given host, client_id, and client_secret"
-        )
+        raise Exception(f"A token could not be acquired from the given host '{host}'")
 
     token_expiration_date = datetime.now() + timedelta(seconds=token_response["expires_in"])
     if not is_token_valid(host_token_key, token_expiration_date):
-        raise Exception(
-            "A valid token could not be acquired from the given host, client_id, and client_secret"
-        )
+        raise Exception(f"A valid token could not be acquired from the given host '{host}'")
 
     new_token = token_response["access_token"]
     set_password(host_token_key, new_token)
