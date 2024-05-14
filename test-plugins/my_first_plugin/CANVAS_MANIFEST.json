@@ -25,6 +25,7 @@
         "views": []
     },
     "tags": [],
+    "secrets": ["WEBHOOK_URL", "WEBHOOK_API_KEY"],
     "license": "NONE",
     "readme": "NONE"
 }

@@ -1,8 +1,4 @@
 {
-    "full_name": "Plugin Developer",
-    "email": "developer@email.com",
-    "version": "0.1.0",
-    "project_name": "Plugin Boilerplate",
-    "project_slug": "{{ cookiecutter.project_name.lower().strip().replace(' ', '_') }}",
-    "project_short_description": "A plugin to interact with a Canvas Instance"
+    "project_name": "My Cool Plugin",
+    "__project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}"
 }
