@@ -1,21 +1,17 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "{{ cookiecutter.version }}",
-    "name": "{{ cookiecutter.project_name }}",
-    "description": "{{ cookiecutter.project_short_description }}",
+    "plugin_version": "0.0.1",
+    "name": "{{ cookiecutter.__project_slug }}",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
         "protocols": [
             {
-                "class": "{{ cookiecutter.project_slug }}.protocols.path.to.ProtocolClass",
+                "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol.Protocol",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
-                    "read": [
-                        "conditions"
-                    ],
-                    "write": [
-                        "commands"
-                    ]
+                    "read": [],
+                    "write": []
                 }
             }
         ],
@@ -24,6 +20,7 @@
         "effects": [],
         "views": []
     },
+    "secrets": [],
     "tags": {},
     "references": [],
     "license": "",
