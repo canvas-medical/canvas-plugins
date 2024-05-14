@@ -11,8 +11,9 @@ from canvas_sdk.utils import Http
 # Keyring namespace we'll use
 KEYRING_SERVICE = __name__
 
-
 CONFIG_PATH = Path.home() / ".canvas" / "credentials.ini"
+
+LOCALHOST = "http://localhost:8000"
 
 
 def get_password(username: str) -> str | None:
@@ -64,16 +65,29 @@ def read_config(host: str, property: str) -> str:
 
 def get_api_client_credentials(host: str) -> str:
     """Either return the given api_key, or fetch it from the keyring."""
-    instance = urlparse(host).hostname.removesuffix(".canvasmedical.com")
+    hostname = urlparse(host).hostname
+
+    if not hostname:
+        raise ValueError("Could not parse hostname from URL")
+
+    instance = hostname.removesuffix(".canvasmedical.com")
+
     client_id = read_config(instance, "client_id")
     client_secret = read_config(instance, "client_secret")
+
     return f"client_id={client_id}&client_secret={client_secret}"
 
 
 def get_default_host(host: str | None = None) -> str:
     """Return the explicitly stated default host, or first if none is indicated."""
     if host:
-        return host
+        if "://" in host:
+            return host
+
+        if "localhost" in host:
+            return LOCALHOST
+
+        return f"https://{host}.canvasmedical.com"
 
     config = get_config()
     if not (hosts := config.sections()):
@@ -84,7 +98,7 @@ def get_default_host(host: str | None = None) -> str:
         hosts[0],
     )
     if first_default_host == "localhost":
-        return "http://localhost:8000"
+        return LOCALHOST
 
     return f"https://{first_default_host}.canvasmedical.com"
 
@@ -131,6 +145,7 @@ def get_or_request_api_token(host: str | None = None) -> str:
 
     host_token_key = f"{host}|token"
     token = get_password(host_token_key)
+
     if token and is_token_valid(host_token_key):
         return token
 
