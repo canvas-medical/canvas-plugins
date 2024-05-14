@@ -5,10 +5,10 @@ import os
 import pathlib
 import sys
 import traceback
-
 from collections import defaultdict
 
 import grpc
+from sandbox import Sandbox
 
 from canvas_sdk.events import Event, EventResponse, EventType
 from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
@@ -16,9 +16,6 @@ from generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
-
-from sandbox import Sandbox
-
 from logger import log
 
 ENV = os.getenv("ENV", "development")
@@ -114,13 +111,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         try:
             secrets_json = json.load(secrets_file.open())
         except Exception as e:
-            logging.warn(f'Unable to load secrets for plugin "{name}":', e)
+            log.warning(f'Unable to load secrets for plugin "{name}": {str(e)}')
 
     # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
     except Exception as e:
-        log.warning(f'Unable to load plugin "{name}":', e)
+        log.warning(f'Unable to load plugin "{name}": {str(e)}')
         return
 
     for protocol in protocols:
