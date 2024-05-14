@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol.Protocol",
+                "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol:Protocol",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
