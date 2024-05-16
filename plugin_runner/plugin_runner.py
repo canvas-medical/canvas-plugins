@@ -101,7 +101,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     try:
         manifest_json = json.loads(manifest_json)
     except Exception as e:
-        log.warning(f'Unable to load plugin "{name}":', e)
+        log.warning(f'Unable to load plugin "{name}": {e}')
         return
 
     secrets_file = path / SECRETS_FILE_NAME
