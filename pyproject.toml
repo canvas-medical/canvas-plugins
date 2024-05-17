@@ -37,7 +37,7 @@ license = "MIT"
 name = "canvas"
 packages = [{include = "canvas_cli"}, {include = "canvas_sdk"}]
 readme = "README.md"
-version = "0.1.7"
+version = "0.1.8"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
