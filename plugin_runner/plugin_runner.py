@@ -5,6 +5,7 @@ import os
 import pathlib
 import sys
 import traceback
+
 from collections import defaultdict
 
 import grpc
@@ -17,6 +18,8 @@ from generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from logger import log
+
+from plugin_synchronizer import publish_message
 
 ENV = os.getenv("ENV", "development")
 
@@ -69,6 +72,7 @@ class PluginRunner(PluginRunnerServicer):
     async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
         try:
             load_plugins()
+            publish_message({"action": "restart"})
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
