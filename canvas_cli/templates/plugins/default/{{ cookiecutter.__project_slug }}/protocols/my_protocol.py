@@ -51,5 +51,5 @@ class Protocol(BaseProtocol):
 
         # Return zero, one, or many effects.
         # Example:
-        # return [Effect(type=EffectType.ADD_PLAN_COMMAND, payload=json.dumps(payload))]
+        # return [Effect(type=EffectType.LOG, payload=json.dumps(payload))]
         return []
