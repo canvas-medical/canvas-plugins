@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import signal
 import sys
 import traceback
 
@@ -77,6 +78,11 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
+
+
+def handle_hup_cb(_signum, _frame):
+    log.info("Received SIGHUP, reloading plugins...")
+    load_plugins()
 
 
 def sandbox_from_module_name(module_name: str):
@@ -229,6 +235,8 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
+
+    signal.signal(signal.SIGHUP, handle_hup_cb)
 
     try:
         loop.run_until_complete(serve())

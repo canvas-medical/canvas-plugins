@@ -52,24 +52,30 @@ def main():
         if message_type != "pmessage":
             continue
 
-        # pattern = message.get("pattern", b"").decode("utf-8")
-        # channel = message.get("channel", b"").decode("utf-8")
-
         data = pickle.loads(message.get("data", pickle.dumps({})))
 
         if "action" not in data or "client_id" not in data:
             return
 
+        # Don't respond to our own messages
         if data["client_id"] == CLIENT_ID:
             return
 
-        print("plugin-synchronizer: running ./manage.py install_plugins_v2")
+        if data["action"] == "restart":
+            # Run the plugin installer process
+            try:
+                print("plugin-synchronizer: installing plugins")
+                check_output(["./manage.py", "install_plugins_v2"], cwd="/app", stderr=STDOUT)
+            except CalledProcessError as e:
+                print("plugin-synchronizer: `./manage.py install_plugins_v2` failed:", e)
 
-        # Run the plugin installer process
-        try:
-            check_output(["./manage.py", "install_plugins_v2"], cwd="/app", stderr=STDOUT)
-        except CalledProcessError:
-            print("plugin-synchronizer: ./manage.py install_plugins_v2 failed")
+            try:
+                print("plugin-synchronizer: sending SIGHUP to plugin-runner")
+                check_output(
+                    ["circusctl", "signal", "plugin-runner", "1"], cwd="/app", stderr=STDOUT
+                )
+            except CalledProcessError as e:
+                print("plugin-synchronizer: `circusctl signal plugin-runner 1` failed:", e)
 
 
 if __name__ == "__main__":
