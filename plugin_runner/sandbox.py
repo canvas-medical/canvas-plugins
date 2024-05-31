@@ -39,6 +39,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.effects",
         "canvas_sdk.events",
         "canvas_sdk.protocols",
+        "canvas_sdk.utils",
         "canvas_workflow_kit",
         "contextlib",
         "datetime",
