@@ -109,11 +109,11 @@ def install(
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
-    print.verbose(f"Installing plugin: {built_package_path} into {host}")
+    print(f"Installing plugin: {built_package_path} into {host}")
 
     url = plugin_url(host)
 
-    print.verbose(f"Posting {built_package_path.absolute()} to {url}")
+    print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
         r = requests.post(
@@ -153,7 +153,7 @@ def uninstall(
 
     url = plugin_url(host, name)
 
-    print.verbose(f"Uninstalling {name} using {url}")
+    print(f"Uninstalling {name} using {url}")
 
     token = get_or_request_api_token(host)
 
@@ -262,7 +262,7 @@ def update(
 
     token = get_or_request_api_token(host)
 
-    print.verbose(f"Updating plugin {name} from {host} with {is_enabled=}, {package=}")
+    print(f"Updating plugin {name} from {host} with {is_enabled=}, {package=}")
 
     binary_package = {"package": open(package, "rb")} if package else None
 

@@ -12,7 +12,7 @@ from canvas_cli.utils.print import print
 APP_NAME = "canvas_cli"
 
 # The main app
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, rich_markup_mode=None, add_completion=False)
 
 # Commands
 app.command(short_help="Create a new plugin")(plugin.init)
@@ -54,24 +54,15 @@ def get_or_create_config_file() -> Path:
 
 @app.callback()
 def main(
-    no_ansi: bool = typer.Option(False, "--no-ansi", help="Disable colorized output"),
     version: Optional[bool] = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
-    verbose: bool = typer.Option(False, "--verbose", help="Show extra output"),
 ) -> None:
     """Canvas swiss army knife CLI tool."""
     # Fetch the config file and load our context from it.
     config_file = get_or_create_config_file()
 
     context.load_from_file(config_file)
-
-    context.no_ansi = no_ansi
-
-    # Set the --verbose flag
-    if verbose:
-        context.verbose = verbose
-        print.verbose("Verbose mode enabled")
 
 
 if __name__ == "__main__":

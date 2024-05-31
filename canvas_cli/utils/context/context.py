@@ -41,12 +41,6 @@ class CLIContext:
     # The default host to use for requests
     _default_host: str | None = None
 
-    # Print extra output
-    _verbose: bool = False
-
-    # If True no colored output is shown
-    _no_ansi: bool = False
-
     # When the most recently requested api_token will expire
     _token_expiration_date: str | None = None
 
@@ -60,7 +54,7 @@ class CLIContext:
                 fn(self, *args, **kwargs)
                 value = args[0]
 
-                print.verbose(f"Storing {fn.__name__}={value} in the config file")
+                print(f"Storing {fn.__name__}={value} in the config file")
 
                 self._config_file[fn.__name__] = value
                 with open(self._config_file_path, "w") as f:
@@ -99,24 +93,6 @@ class CLIContext:
     @persistent
     def default_host(self, new_default_host: str | None) -> None:
         self._default_host = new_default_host
-
-    @property
-    def verbose(self) -> bool:
-        """Enable extra output."""
-        return self._verbose
-
-    @verbose.setter
-    def verbose(self, new_verbose: bool) -> None:
-        self._verbose = new_verbose
-
-    @property
-    def no_ansi(self) -> bool:
-        """If set removes colorized output."""
-        return self._no_ansi
-
-    @no_ansi.setter
-    def no_ansi(self, new_no_ansi: bool) -> None:
-        self._no_ansi = new_no_ansi
 
     @property
     def token_expiration_date(self) -> str | None:
