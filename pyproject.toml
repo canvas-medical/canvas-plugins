@@ -37,7 +37,7 @@ license = "MIT"
 name = "canvas"
 packages = [{include = "canvas_cli"}, {include = "canvas_sdk"}]
 readme = "README.md"
-version = "0.1.7"
+version = "0.1.10"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
@@ -48,12 +48,12 @@ keyring = "*"
 pydantic = "^2.6.1"
 python = ">=3.11,<3.13"
 python-dotenv = "^1.0.1"
+redis = "^5.0.4"
 requests = "*"
 restrictedpython = "^7.1"
 statsd = "^4.0.1"
 typer = {extras = ["all"], version = "*"}
 websocket-client = "^1.7.0"
-redis = "^5.0.4"
 
 [tool.poetry.group.dev.dependencies]
 grpcio-tools = "^1.60.1"
