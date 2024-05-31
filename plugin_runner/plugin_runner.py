@@ -6,10 +6,10 @@ import pathlib
 import signal
 import sys
 import traceback
-
 from collections import defaultdict
 
 import grpc
+from plugin_synchronizer import publish_message
 from sandbox import Sandbox
 
 from canvas_sdk.events import Event, EventResponse, EventType
@@ -19,8 +19,6 @@ from generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from logger import log
-
-from plugin_synchronizer import publish_message
 
 ENV = os.getenv("ENV", "development")
 
@@ -62,7 +60,8 @@ class PluginRunner(PluginRunnerServicer):
             protocol_class = plugin["class"]
 
             try:
-                effects = protocol_class(request, plugin.get("secrets", {})).compute()
+                protocol = protocol_class(request, plugin.get("secrets", {}))
+                effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
             except Exception as e:
                 log.error(traceback.format_exception(e))
                 continue
