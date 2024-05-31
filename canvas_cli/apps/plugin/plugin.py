@@ -12,7 +12,6 @@ from cookiecutter.main import cookiecutter
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.context import context
-from canvas_cli.utils.print import print
 from canvas_cli.utils.validators import validate_manifest_file
 
 
@@ -59,11 +58,11 @@ def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[st
             files={"package": open(package, "rb")},
         )
     except requests.exceptions.RequestException:
-        print.json(f"Failed to connect to {host}", success=False)
+        print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
     if metadata_response.status_code != requests.codes.ok:
-        print.response(metadata_response, success=False)
+        print(f"Status code {metadata_response.status_code}: {metadata_response.text}")
         raise typer.Exit(1)
 
     metadata = metadata_response.json()
@@ -83,7 +82,7 @@ def init() -> None:
     except OutputDirExistsException:
         raise typer.BadParameter(f"The supplied directory already exists")
 
-    print.json(f"Project created in {project_dir}", project_dir=project_dir)
+    print(f"Project created in {project_dir}")
 
 
 def install(
@@ -123,11 +122,11 @@ def install(
             headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
-        print.json(f"Failed to connect to {host}", success=False)
+        print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.created:
-        print.response(r)
+        print("Plugin successfully installed!")
 
     # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
@@ -135,7 +134,7 @@ def install(
         plugin_name = _get_name_from_metadata(host, token, built_package_path)
         update(plugin_name, built_package_path, is_enabled=True, host=host)
     else:
-        print.response(r, success=False)
+        print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
 
 
@@ -165,13 +164,13 @@ def uninstall(
             },
         )
     except requests.exceptions.RequestException:
-        print.json(f"Failed to connect to {host}", success=False)
+        print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.no_content:
-        print.response(r)
+        print(r.text)
     else:
-        print.response(r, success=False)
+        print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
 
 
@@ -196,13 +195,16 @@ def list(
             headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
-        print.json(f"Failed to connect to {host}", success=False)
+        print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.ok:
-        print.response(r)
+        for plugin in r.json().get("results", []):
+            print(
+                f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'not enabled'}"
+            )
     else:
-        print.response(r, success=False)
+        print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
 
 
@@ -226,16 +228,12 @@ def validate_manifest(
     try:
         manifest_json = json.loads(manifest.read_text())
     except json.JSONDecodeError:
-        print.json(
-            "There was a problem loading the manifest file, please ensure it's valid JSON",
-            success=False,
-            path=str(plugin_name),
-        )
+        print("There was a problem loading the manifest file, please ensure it's valid JSON")
         raise typer.Abort()
 
     validate_manifest_file(manifest_json)
 
-    print.json(f"Plugin '{plugin_name}' has a valid CANVAS_MANIFEST.json file")
+    print(f"Plugin '{plugin_name}' has a valid CANVAS_MANIFEST.json file")
 
 
 def update(
@@ -276,11 +274,12 @@ def update(
             headers={"Authorization": f"Bearer {token}"},
         )
     except requests.exceptions.RequestException:
-        print.json(f"Failed to connect to {host}", success=False)
+        print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.ok:
-        print.response(r)
+        print("Plugin successfully updated!")
+
     else:
-        print.response(r, success=False)
+        print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)

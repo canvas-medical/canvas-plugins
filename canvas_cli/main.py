@@ -7,7 +7,6 @@ import typer
 from canvas_cli.apps import plugin
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.utils.context import context
-from canvas_cli.utils.print import print
 
 APP_NAME = "canvas_cli"
 
@@ -29,7 +28,7 @@ __version__ = importlib.metadata.version("canvas")
 def version_callback(value: bool) -> None:
     """Method called when the `--version` flag is set. Prints the version and exits the CLI."""
     if value:
-        print.json(f"{APP_NAME} Version: {__version__}", version=__version__)
+        print(f"{APP_NAME} Version: {__version__}")
         raise typer.Exit()
 
 
