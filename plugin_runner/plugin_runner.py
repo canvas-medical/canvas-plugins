@@ -131,31 +131,39 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
     for protocol in protocols:
         # TODO add class colon validation to existing schema validation
-        protocol_module, protocol_class = protocol["class"].split(":")
-        name_and_class = f"{name}:{protocol_module}:{protocol_class}"
+        # TODO when we encounter an exception here, disable the plugin in response
+        try:
+            protocol_module, protocol_class = protocol["class"].split(":")
+            name_and_class = f"{name}:{protocol_module}:{protocol_class}"
+        except ValueError:
+            log.error(f"Unable to parse class for plugin '{name}': '{protocol['class']}'")
+            continue
 
-        if name_and_class in LOADED_PLUGINS:
-            log.info(f"Reloading plugin: {name_and_class}")
+        try:
+            if name_and_class in LOADED_PLUGINS:
+                log.info(f"Reloading plugin '{name_and_class}'")
 
-            result = sandbox_from_module_name(protocol_module)
+                result = sandbox_from_module_name(protocol_module)
 
-            LOADED_PLUGINS[name_and_class]["active"] = True
+                LOADED_PLUGINS[name_and_class]["active"] = True
 
-            LOADED_PLUGINS[name_and_class]["class"] = result[protocol_class]
-            LOADED_PLUGINS[name_and_class]["sandbox"] = result
-            LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
-        else:
-            log.info(f"Loading plugin: {name_and_class}")
+                LOADED_PLUGINS[name_and_class]["class"] = result[protocol_class]
+                LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
+            else:
+                log.info(f"Loading plugin '{name_and_class}'")
 
-            result = sandbox_from_module_name(protocol_module)
+                result = sandbox_from_module_name(protocol_module)
 
-            LOADED_PLUGINS[name_and_class] = {
-                "active": True,
-                "class": result[protocol_class],
-                "sandbox": result,
-                "protocol": protocol,
-                "secrets": secrets_json,
-            }
+                LOADED_PLUGINS[name_and_class] = {
+                    "active": True,
+                    "class": result[protocol_class],
+                    "sandbox": result,
+                    "protocol": protocol,
+                    "secrets": secrets_json,
+                }
+        except ImportError as err:
+            log.error(f"Error importing module '{name_and_class}': {err}")
 
 
 def refresh_event_type_map():
