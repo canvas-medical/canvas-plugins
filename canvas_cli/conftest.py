@@ -25,4 +25,3 @@ def reset_context_variables() -> None:
     which definitely happens with tests run
     """
     context._default_host = None
-    context._verbose = False

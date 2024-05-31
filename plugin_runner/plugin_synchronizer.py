@@ -10,6 +10,7 @@ import redis
 
 APP_NAME = os.getenv("APP_NAME")
 
+# TODO: use CUSTOMER_IDENTIFIER here
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
 
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")

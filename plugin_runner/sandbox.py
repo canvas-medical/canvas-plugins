@@ -36,10 +36,13 @@ ALLOWED_MODULES = frozenset(
         "arrow",
         "base64",
         "cached_property",
+        "canvas_sdk.commands",
+        "canvas_sdk.data",
         "canvas_sdk.effects",
         "canvas_sdk.events",
         "canvas_sdk.protocols",
-        "canvas_workflow_kit",
+        "canvas_sdk.utils",
+        "canvas_sdk.views",
         "contextlib",
         "datetime",
         "dateutil",
@@ -62,7 +65,6 @@ ALLOWED_MODULES = frozenset(
         "typing",
         "urllib",
         "uuid",
-        "workflow_sdk_loader.builtin_cqms",
     ]
 )
 

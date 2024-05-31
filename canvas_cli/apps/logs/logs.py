@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -5,23 +6,28 @@ import typer
 import websocket
 
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
-from canvas_cli.utils.print import print
 
 
 def _on_message(ws: websocket.WebSocketApp, message: str) -> None:
-    print.json(message)
+    message_to_print = message
+    try:
+        message_json = json.loads(message)
+        message_to_print = f"{message_json['timestamp']} | {message_json['message']}"
+    except ValueError:
+        pass
+    print(message_to_print)
 
 
 def _on_error(ws: websocket.WebSocketApp, error: str) -> None:
-    print.json(f"Error: {error}", success=False)
+    print(f"Error: {error}")
 
 
 def _on_close(ws: websocket.WebSocketApp, close_status_code: str, close_msg: str) -> None:
-    print.json(f"Connection closed with status code {close_status_code}: {close_msg}")
+    print(f"Connection closed with status code {close_status_code}: {close_msg}")
 
 
 def _on_open(ws: websocket.WebSocketApp) -> None:
-    print.json("Connected to the logging service")
+    print("Connected to the logging service")
 
 
 def logs(
@@ -40,8 +46,8 @@ def logs(
     hostname = urlparse(host).hostname
     instance = hostname.removesuffix(".canvasmedical.com")
 
-    print.json(
-        f"Connecting to the log stream. Please be patient as there may be a delay before log messages appear."
+    print(
+        "Connecting to the log stream. Please be patient as there may be a delay before log messages appear."
     )
     websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token}"
 

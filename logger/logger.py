@@ -3,8 +3,9 @@ import os
 
 from pubsub.pubsub import Publisher
 
+
 class PubSubLogHandler(logging.Handler):
-    def __init__(self)-> None:
+    def __init__(self) -> None:
         self.publisher = Publisher()
         logging.Handler.__init__(self=self)
 
@@ -17,7 +18,7 @@ class PluginLogger:
     def __init__(self) -> None:
         self.logger = logging.getLogger("plugin_runner_logger")
         self.logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
+        formatter = logging.Formatter("%(levelname)s %(asctime)s %(message)s")
 
         streaming_handler = logging.StreamHandler()
         streaming_handler.setFormatter(formatter)
@@ -31,7 +32,7 @@ class PluginLogger:
     def debug(self, message) -> None:
         self.logger.debug(message)
 
-    def info(self,message) -> None:
+    def info(self, message) -> None:
         self.logger.info(message)
 
     def warning(self, message) -> None:
