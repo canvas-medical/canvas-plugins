@@ -1,9 +1,15 @@
-from generated.messages import effects_pb2 as _effects_pb2
-from google.protobuf.internal import containers as _containers
-from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from typing import ClassVar as _ClassVar
+from typing import Iterable as _Iterable
+from typing import Mapping as _Mapping
+from typing import Optional as _Optional
+from typing import Union as _Union
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+
+from generated.messages import effects_pb2 as _effects_pb2
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -89,6 +95,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ASSESS_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     ASSESS_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     ASSESS_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    ASSESS__CONDITION__POST_SEARCH: _ClassVar[EventType]
+    DIAGNOSE__DIAGNOSE__POST_SEARCH: _ClassVar[EventType]
     GOAL_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     GOAL_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     GOAL_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -149,6 +157,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PRESCRIBE_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     PRESCRIBE_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     PRESCRIBE_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    PRESCRIBE__PRESCRIBE__POST_SEARCH: _ClassVar[EventType]
     QUESTIONNAIRE_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     QUESTIONNAIRE_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     QUESTIONNAIRE_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -161,6 +170,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     QUESTIONNAIRE_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     QUESTIONNAIRE_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     QUESTIONNAIRE_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    QUESTIONNAIRE__QUESTIONNAIRE__POST_SEARCH: _ClassVar[EventType]
     REASON_FOR_VISIT_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     REASON_FOR_VISIT_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     REASON_FOR_VISIT_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -173,6 +183,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REASON_FOR_VISIT_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     REASON_FOR_VISIT_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     REASON_FOR_VISIT_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    REASON_FOR_VISIT__CODING__POST_SEARCH: _ClassVar[EventType]
     STOP_MEDICATION_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     STOP_MEDICATION_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     STOP_MEDICATION_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -185,6 +196,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     STOP_MEDICATION_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     STOP_MEDICATION_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     STOP_MEDICATION_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    STOP_MEDICATION__MEDICATION__POST_SEARCH: _ClassVar[EventType]
     TASK_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     TASK_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     TASK_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -209,6 +221,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_GOAL_COMMAND__POST_ENTER_IN_ERROR: _ClassVar[EventType]
     UPDATE_GOAL_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     UPDATE_GOAL_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
+    UPDATE_GOAL__GOAL_STATEMENT__POST_SEARCH: _ClassVar[EventType]
+
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -289,6 +303,8 @@ ASSESS_COMMAND__PRE_ENTER_IN_ERROR: EventType
 ASSESS_COMMAND__POST_ENTER_IN_ERROR: EventType
 ASSESS_COMMAND__PRE_EXECUTE_ACTION: EventType
 ASSESS_COMMAND__POST_EXECUTE_ACTION: EventType
+ASSESS__CONDITION__POST_SEARCH: EventType
+DIAGNOSE__DIAGNOSE__POST_SEARCH: EventType
 GOAL_COMMAND__PRE_ORIGINATE: EventType
 GOAL_COMMAND__POST_ORIGINATE: EventType
 GOAL_COMMAND__PRE_UPDATE: EventType
@@ -349,6 +365,7 @@ PRESCRIBE_COMMAND__PRE_ENTER_IN_ERROR: EventType
 PRESCRIBE_COMMAND__POST_ENTER_IN_ERROR: EventType
 PRESCRIBE_COMMAND__PRE_EXECUTE_ACTION: EventType
 PRESCRIBE_COMMAND__POST_EXECUTE_ACTION: EventType
+PRESCRIBE__PRESCRIBE__POST_SEARCH: EventType
 QUESTIONNAIRE_COMMAND__PRE_ORIGINATE: EventType
 QUESTIONNAIRE_COMMAND__POST_ORIGINATE: EventType
 QUESTIONNAIRE_COMMAND__PRE_UPDATE: EventType
@@ -361,6 +378,7 @@ QUESTIONNAIRE_COMMAND__PRE_ENTER_IN_ERROR: EventType
 QUESTIONNAIRE_COMMAND__POST_ENTER_IN_ERROR: EventType
 QUESTIONNAIRE_COMMAND__PRE_EXECUTE_ACTION: EventType
 QUESTIONNAIRE_COMMAND__POST_EXECUTE_ACTION: EventType
+QUESTIONNAIRE__QUESTIONNAIRE__POST_SEARCH: EventType
 REASON_FOR_VISIT_COMMAND__PRE_ORIGINATE: EventType
 REASON_FOR_VISIT_COMMAND__POST_ORIGINATE: EventType
 REASON_FOR_VISIT_COMMAND__PRE_UPDATE: EventType
@@ -373,6 +391,7 @@ REASON_FOR_VISIT_COMMAND__PRE_ENTER_IN_ERROR: EventType
 REASON_FOR_VISIT_COMMAND__POST_ENTER_IN_ERROR: EventType
 REASON_FOR_VISIT_COMMAND__PRE_EXECUTE_ACTION: EventType
 REASON_FOR_VISIT_COMMAND__POST_EXECUTE_ACTION: EventType
+REASON_FOR_VISIT__CODING__POST_SEARCH: EventType
 STOP_MEDICATION_COMMAND__PRE_ORIGINATE: EventType
 STOP_MEDICATION_COMMAND__POST_ORIGINATE: EventType
 STOP_MEDICATION_COMMAND__PRE_UPDATE: EventType
@@ -385,6 +404,7 @@ STOP_MEDICATION_COMMAND__PRE_ENTER_IN_ERROR: EventType
 STOP_MEDICATION_COMMAND__POST_ENTER_IN_ERROR: EventType
 STOP_MEDICATION_COMMAND__PRE_EXECUTE_ACTION: EventType
 STOP_MEDICATION_COMMAND__POST_EXECUTE_ACTION: EventType
+STOP_MEDICATION__MEDICATION__POST_SEARCH: EventType
 TASK_COMMAND__PRE_ORIGINATE: EventType
 TASK_COMMAND__POST_ORIGINATE: EventType
 TASK_COMMAND__PRE_UPDATE: EventType
@@ -409,6 +429,7 @@ UPDATE_GOAL_COMMAND__PRE_ENTER_IN_ERROR: EventType
 UPDATE_GOAL_COMMAND__POST_ENTER_IN_ERROR: EventType
 UPDATE_GOAL_COMMAND__PRE_EXECUTE_ACTION: EventType
 UPDATE_GOAL_COMMAND__POST_EXECUTE_ACTION: EventType
+UPDATE_GOAL__GOAL_STATEMENT__POST_SEARCH: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context")
@@ -418,7 +439,12 @@ class Event(_message.Message):
     type: EventType
     target: str
     context: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self,
+        type: _Optional[_Union[EventType, str]] = ...,
+        target: _Optional[str] = ...,
+        context: _Optional[str] = ...,
+    ) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")
@@ -426,4 +452,8 @@ class EventResponse(_message.Message):
     EFFECTS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
-    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
+    def __init__(
+        self,
+        success: bool = ...,
+        effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...,
+    ) -> None: ...
