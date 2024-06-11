@@ -1,15 +1,9 @@
-from typing import ClassVar as _ClassVar
-from typing import Iterable as _Iterable
-from typing import Mapping as _Mapping
-from typing import Optional as _Optional
-from typing import Union as _Union
-
-from google.protobuf import descriptor as _descriptor
-from google.protobuf import message as _message
+from generated.messages import effects_pb2 as _effects_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
-
-from generated.messages import effects_pb2 as _effects_pb2
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -222,7 +216,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_GOAL_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     UPDATE_GOAL_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
     UPDATE_GOAL__GOAL_STATEMENT__POST_SEARCH: _ClassVar[EventType]
-
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -439,12 +432,7 @@ class Event(_message.Message):
     type: EventType
     target: str
     context: str
-    def __init__(
-        self,
-        type: _Optional[_Union[EventType, str]] = ...,
-        target: _Optional[str] = ...,
-        context: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")
@@ -452,8 +440,4 @@ class EventResponse(_message.Message):
     EFFECTS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
-    def __init__(
-        self,
-        success: bool = ...,
-        effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...,
-    ) -> None: ...
+    def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
