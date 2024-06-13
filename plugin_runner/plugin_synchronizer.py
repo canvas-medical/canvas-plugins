@@ -2,16 +2,17 @@
 
 import os
 import pickle
-
 from pathlib import Path
-from subprocess import CalledProcessError, check_output, STDOUT
+from subprocess import STDOUT, CalledProcessError, check_output
 
 import redis
 
 APP_NAME = os.getenv("APP_NAME")
 
-# TODO: use CUSTOMER_IDENTIFIER here
+CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
+
+CHANNEL_NAME = f"{CUSTOMER_IDENTIFIER}:{PLUGINS_PUBSUB_CHANNEL}"
 
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
 
@@ -33,7 +34,7 @@ def publish_message(message: dict) -> None:
 
     message_with_id = {**message, "client_id": CLIENT_ID}
 
-    client.publish(PLUGINS_PUBSUB_CHANNEL, pickle.dumps(message_with_id))
+    client.publish(CHANNEL_NAME, pickle.dumps(message_with_id))
     client.close()
 
 
@@ -42,7 +43,7 @@ def main():
 
     _, pubsub = get_client()
 
-    pubsub.psubscribe(PLUGINS_PUBSUB_CHANNEL)
+    pubsub.psubscribe(CHANNEL_NAME)
 
     for message in pubsub.listen():
         if not message:
