@@ -1,0 +1,1 @@
+{"EventType": "MEDICATION_STATEMENT_COMMAND__POST_ORIGINATE", "target": "a2f51df6-860c-47d8-9ff3-f8eeb11661a9", "context": "{\"fields\": {\"medication\": null, \"sig\": \"\"}, \"note\": {\"uuid\": \"521454d8-3969-43bd-ac23-1325fc6950ea\"}}"}
