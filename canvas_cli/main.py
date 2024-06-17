@@ -2,11 +2,10 @@ import importlib.metadata
 import json
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import grpc
 import typer
-from typing_extensions import Annotated
 
 from canvas_cli.apps import plugin
 from canvas_cli.apps.logs import logs as logs_command
@@ -72,7 +71,7 @@ def emit(
     Valid fixture files are newline-delimited JSON, with each containing the keys `EventType`, `target`, and `context`. Some fixture files are included in the canvas-plugins repo.
     """
     # Grab a random event from the fixture file ndjson
-    lines = open(event_fixture).read().splitlines()
+    lines = Path(event_fixture).read_text().splitlines()
     myline = random.choice(lines)
     event_data = json.loads(myline)
     event = PluginRunnerEvent(
