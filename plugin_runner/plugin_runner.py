@@ -84,6 +84,8 @@ class PluginRunner(PluginRunnerServicer):
                     f"plugins.protocol_duration_ms,customer={CUSTOMER_IDENTIFIER},protocol={plugin_name}",
                     delta=compute_duration,
                 )
+                # TODO - remove this, just for testing
+                log.info("Sent to statsd")
             except Exception as e:
                 log.error(traceback.format_exception(e))
                 continue
