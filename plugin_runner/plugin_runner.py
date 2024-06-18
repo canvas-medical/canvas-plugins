@@ -5,12 +5,14 @@ import os
 import pathlib
 import signal
 import sys
+import time
 import traceback
 from collections import defaultdict
 from types import FrameType
 from typing import Any, Optional
 
 import grpc
+import statsd
 from plugin_synchronizer import publish_message
 from sandbox import Sandbox
 
@@ -23,11 +25,14 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from canvas_sdk.events import Event, EventResponse, EventType
+from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
 
 ENV = os.getenv("ENV", "development")
 
 IS_PRODUCTION = ENV == "production"
+
+CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
 
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
@@ -52,12 +57,14 @@ class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
     def __init__(self) -> None:
+        self.statsd_client = statsd.StatsClient()
         super().__init__()
 
     sandbox: Sandbox
 
     async def HandleEvent(self, request: Event, context: Any) -> EventResponse:
         """This is invoked when an event comes in."""
+        event_start_time = time.time()
         event_name = EventType.Name(request.type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
@@ -69,12 +76,27 @@ class PluginRunner(PluginRunnerServicer):
 
             try:
                 protocol = protocol_class(request, plugin.get("secrets", {}))
+                compute_start_time = time.time()
                 effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
+                compute_duration = get_duration_ms(compute_start_time)
+                log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
+                self.statsd_client.timing(
+                    f"plugin-protocol.duration,customer={CUSTOMER_IDENTIFIER},protocol={plugin_name}",
+                    delta=compute_duration,
+                )
             except Exception as e:
                 log.error(traceback.format_exception(e))
                 continue
             effect_list += effects
 
+        event_duration = get_duration_ms(event_start_time)
+        # Don't log anything if a protocol didn't actually run.
+        if relevant_plugins:
+            log.info(f"Responded to Event {event_name} ({event_duration} ms)")
+            self.statsd_client.timing(
+                f"plugin-event.duration,customer={CUSTOMER_IDENTIFIER},event={event_name}",
+                delta=event_duration,
+            )
         yield EventResponse(success=True, effects=effect_list)
 
     async def ReloadPlugins(
