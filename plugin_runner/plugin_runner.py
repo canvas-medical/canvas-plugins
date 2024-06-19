@@ -24,6 +24,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventResponse, EventType
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
@@ -71,11 +72,16 @@ class PluginRunner(PluginRunnerServicer):
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
             protocol_class = plugin["class"]
+            base_plugin_name = plugin_name.split(":")[0]
 
             try:
                 protocol = protocol_class(request, plugin.get("secrets", {}))
                 compute_start_time = time.time()
-                effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
+                _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
+                effects = [
+                    Effect(type=effect.type, payload=effect.payload, plugin_name=base_plugin_name)
+                    for effect in _effects
+                ]
                 compute_duration = get_duration_ms(compute_start_time)
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
                 statsd_tags = tags_to_line_protocol({"plugin": plugin_name})

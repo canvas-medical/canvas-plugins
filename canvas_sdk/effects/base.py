@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -24,7 +25,4 @@ class _BaseEffect(BaseModel):
         return {"data": self.values}
 
     def apply(self) -> Effect:
-        return {
-            "type": self.Meta.effect_type,
-            "payload": self.effect_payload,
-        }
+        return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
