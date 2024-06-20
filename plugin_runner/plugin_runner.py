@@ -81,11 +81,9 @@ class PluginRunner(PluginRunnerServicer):
                 compute_duration = get_duration_ms(compute_start_time)
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
                 self.statsd_client.timing(
-                    f"plugins.protocol_duration_ms,plugin={plugin_name}",
+                    f"plugins.protocol_duration_ms,{tags_to_line_protocol({"plugin": plugin_name})}",
                     delta=compute_duration,
                 )
-                # TODO - remove this, just for testing
-                log.info("Sent to statsd")
             except Exception as e:
                 log.error(traceback.format_exception(e))
                 continue
@@ -96,7 +94,7 @@ class PluginRunner(PluginRunnerServicer):
         if relevant_plugins:
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
             self.statsd_client.timing(
-                f"plugins.event_duration_ms,event={event_name}",
+                f"plugins.event_duration_ms,{tags_to_line_protocol({"event": event_name})}",
                 delta=event_duration,
             )
         yield EventResponse(success=True, effects=effect_list)
