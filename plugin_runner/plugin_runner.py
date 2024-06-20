@@ -32,8 +32,6 @@ ENV = os.getenv("ENV", "development")
 
 IS_PRODUCTION = ENV == "production"
 
-CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
-
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
