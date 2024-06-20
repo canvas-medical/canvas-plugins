@@ -80,8 +80,9 @@ class PluginRunner(PluginRunnerServicer):
                 effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 compute_duration = get_duration_ms(compute_start_time)
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
+                statsd_tags = tags_to_line_protocol({"plugin": plugin_name})
                 self.statsd_client.timing(
-                    f"plugins.protocol_duration_ms,{tags_to_line_protocol({"plugin": plugin_name})}",
+                    f"plugins.protocol_duration_ms,{statsd_tags}",
                     delta=compute_duration,
                 )
             except Exception as e:
@@ -93,8 +94,9 @@ class PluginRunner(PluginRunnerServicer):
         # Don't log anything if a protocol didn't actually run.
         if relevant_plugins:
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
+            statsd_tags = tags_to_line_protocol({"event": event_name})
             self.statsd_client.timing(
-                f"plugins.event_duration_ms,{tags_to_line_protocol({"event": event_name})}",
+                f"plugins.event_duration_ms,{statsd_tags}",
                 delta=event_duration,
             )
         yield EventResponse(success=True, effects=effect_list)

@@ -1,4 +1,5 @@
 from time import time
+from typing import Any
 
 
 def get_duration_ms(start_time: time) -> int:
