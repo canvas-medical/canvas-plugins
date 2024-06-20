@@ -1,6 +1,6 @@
 syntax = 'proto3';
 
-import "generated/messages/effects.proto";
+import "canvas_generated/messages/effects.proto";
 
 package canvas;
 

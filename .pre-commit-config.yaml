@@ -8,6 +8,7 @@ repos:
       - id: end-of-file-fixer
         exclude_types:
           - svg
+        exclude: &generated canvas_generated/
       - id: trailing-whitespace
         args: ["--markdown-linebreak-ext=md"]
         exclude_types:
@@ -41,30 +42,22 @@ repos:
     rev: 6.3.0
     hooks:
       - id: pydocstyle
-        exclude: |
-          (?x)(
-            tests.py
-          )$
+        exclude: *generated
         additional_dependencies: [tomli]
-
-  # upgrading to v2.0.0 will cause package dependencies issues
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v2.2.1
-    hooks:
-      - id: autoflake
-        args: ["--remove-all-unused-imports", "--in-place", "--recursive"]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
         name: isort (python)
+        exclude: *generated
 
   - repo: https://github.com/psf/black
     rev: 23.9.1
     hooks:
       - id: black
         args: ["--config=pyproject.toml"]
+        exclude: *generated
 
   - repo: https://github.com/rtts/djhtml
     rev: 3.0.6
@@ -109,7 +102,7 @@ repos:
     rev: v1.9.0
     hooks:
       - id: mypy
-        exclude: canvas_cli/templates/
+        exclude: "canvas_generated/|canvas_cli/templates/"
         # https://github.com/python-poetry/poetry/issues/7184
         entry: |
           bash -c "

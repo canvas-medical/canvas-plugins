@@ -1,1 +1,1 @@
-from generated.messages.effects_pb2 import Effect, EffectType
+from canvas_generated.messages.effects_pb2 import Effect, EffectType

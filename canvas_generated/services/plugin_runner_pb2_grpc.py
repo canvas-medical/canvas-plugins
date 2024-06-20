@@ -2,8 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from generated.messages import events_pb2 as generated_dot_messages_dot_events__pb2
-from generated.messages import plugins_pb2 as generated_dot_messages_dot_plugins__pb2
+from canvas_generated.messages import events_pb2 as canvas__generated_dot_messages_dot_events__pb2
+from canvas_generated.messages import plugins_pb2 as canvas__generated_dot_messages_dot_plugins__pb2
 
 
 class PluginRunnerStub(object):
@@ -17,13 +17,13 @@ class PluginRunnerStub(object):
         """
         self.HandleEvent = channel.unary_stream(
                 '/canvas.PluginRunner/HandleEvent',
-                request_serializer=generated_dot_messages_dot_events__pb2.Event.SerializeToString,
-                response_deserializer=generated_dot_messages_dot_events__pb2.EventResponse.FromString,
+                request_serializer=canvas__generated_dot_messages_dot_events__pb2.Event.SerializeToString,
+                response_deserializer=canvas__generated_dot_messages_dot_events__pb2.EventResponse.FromString,
                 )
         self.ReloadPlugins = channel.unary_stream(
                 '/canvas.PluginRunner/ReloadPlugins',
-                request_serializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
-                response_deserializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
+                request_serializer=canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
+                response_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
                 )
 
 
@@ -47,13 +47,13 @@ def add_PluginRunnerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'HandleEvent': grpc.unary_stream_rpc_method_handler(
                     servicer.HandleEvent,
-                    request_deserializer=generated_dot_messages_dot_events__pb2.Event.FromString,
-                    response_serializer=generated_dot_messages_dot_events__pb2.EventResponse.SerializeToString,
+                    request_deserializer=canvas__generated_dot_messages_dot_events__pb2.Event.FromString,
+                    response_serializer=canvas__generated_dot_messages_dot_events__pb2.EventResponse.SerializeToString,
             ),
             'ReloadPlugins': grpc.unary_stream_rpc_method_handler(
                     servicer.ReloadPlugins,
-                    request_deserializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.FromString,
-                    response_serializer=generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.SerializeToString,
+                    request_deserializer=canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.FromString,
+                    response_serializer=canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -77,8 +77,8 @@ class PluginRunner(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/canvas.PluginRunner/HandleEvent',
-            generated_dot_messages_dot_events__pb2.Event.SerializeToString,
-            generated_dot_messages_dot_events__pb2.EventResponse.FromString,
+            canvas__generated_dot_messages_dot_events__pb2.Event.SerializeToString,
+            canvas__generated_dot_messages_dot_events__pb2.EventResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -94,7 +94,7 @@ class PluginRunner(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/canvas.PluginRunner/ReloadPlugins',
-            generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
-            generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
+            canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsRequest.SerializeToString,
+            canvas__generated_dot_messages_dot_plugins__pb2.ReloadPluginsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

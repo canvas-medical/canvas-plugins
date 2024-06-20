@@ -1,7 +1,7 @@
 syntax = 'proto3';
 
-import "generated/messages/events.proto";
-import "generated/messages/plugins.proto";
+import "canvas_generated/messages/events.proto";
+import "canvas_generated/messages/plugins.proto";
 
 package canvas;
 
