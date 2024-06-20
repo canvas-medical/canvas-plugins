@@ -10,9 +10,9 @@ import typer
 from canvas_cli.apps import plugin
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.utils.context import context
-from generated.messages.events_pb2 import Event as PluginRunnerEvent
-from generated.messages.events_pb2 import EventType as PluginRunnerEventType
-from generated.services.plugin_runner_pb2_grpc import PluginRunnerStub
+from canvas_generated.messages.events_pb2 import Event as PluginRunnerEvent
+from canvas_generated.messages.events_pb2 import EventType as PluginRunnerEventType
+from canvas_generated.services.plugin_runner_pb2_grpc import PluginRunnerStub
 
 APP_NAME = "canvas_cli"
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 # Run this script from inside the /protobufs directory
 
@@ -10,6 +11,6 @@ python \
   --python_out=./ \
   --pyi_out=./ \
   --grpc_python_out=./ \
-  protobufs/generated/**/*.proto
+  protobufs/canvas_generated/**/*.proto
 
 popd

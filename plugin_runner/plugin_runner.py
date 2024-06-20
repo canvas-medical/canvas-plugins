@@ -7,17 +7,22 @@ import signal
 import sys
 import traceback
 from collections import defaultdict
+from types import FrameType
+from typing import Any, Optional
 
 import grpc
 from plugin_synchronizer import publish_message
 from sandbox import Sandbox
 
-from canvas_sdk.events import Event, EventResponse, EventType
-from generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
-from generated.services.plugin_runner_pb2_grpc import (
+from canvas_generated.messages.plugins_pb2 import (
+    ReloadPluginsRequest,
+    ReloadPluginsResponse,
+)
+from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
+from canvas_sdk.events import Event, EventResponse, EventType
 from logger import log
 
 ENV = os.getenv("ENV", "development")
@@ -37,19 +42,22 @@ sys.path.append(PLUGIN_DIRECTORY)
 
 # a global dictionary of loaded plugins
 # TODO: create typings here for the subkeys
-LOADED_PLUGINS = {}
+LOADED_PLUGINS: dict = {}
 
 # a global dictionary of events to protocol class names
-EVENT_PROTOCOL_MAP = {}
+EVENT_PROTOCOL_MAP: dict = {}
 
 
 class PluginRunner(PluginRunnerServicer):
+    """This process runs provided plugins that register interest in incoming events."""
+
     def __init__(self) -> None:
         super().__init__()
 
     sandbox: Sandbox
 
-    async def HandleEvent(self, request: Event, context):
+    async def HandleEvent(self, request: Event, context: Any) -> EventResponse:
+        """This is invoked when an event comes in."""
         event_name = EventType.Name(request.type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
 
@@ -69,7 +77,10 @@ class PluginRunner(PluginRunnerServicer):
 
         yield EventResponse(success=True, effects=effect_list)
 
-    async def ReloadPlugins(self, request: ReloadPluginsRequest, context):
+    async def ReloadPlugins(
+        self, request: ReloadPluginsRequest, context: Any
+    ) -> ReloadPluginsResponse:
+        """This is invoked when we need to reload plugins."""
         try:
             load_plugins()
             publish_message({"action": "restart"})
@@ -79,12 +90,14 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
-def handle_hup_cb(_signum, _frame):
+def handle_hup_cb(_signum: int, _frame: Optional[FrameType]) -> None:
+    """handle_hup_cb."""
     log.info("Received SIGHUP, reloading plugins...")
     load_plugins()
 
 
-def sandbox_from_module_name(module_name: str):
+def sandbox_from_module_name(module_name: str) -> Any:
+    """Sandbox the code execution."""
     spec = importlib.util.find_spec(module_name)
 
     if not spec or not spec.origin:
@@ -99,6 +112,7 @@ def sandbox_from_module_name(module_name: str):
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
+    """Given a path, load or reload a plugin."""
     log.info(f"Loading {path}")
 
     manifest_file = path / MANIFEST_FILE_NAME
@@ -166,7 +180,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             log.error(f"Error importing module '{name_and_class}': {err}")
 
 
-def refresh_event_type_map():
+def refresh_event_type_map() -> None:
+    """Ensure the event subscriptions are up to date."""
     global EVENT_PROTOCOL_MAP
     EVENT_PROTOCOL_MAP = defaultdict(list)
 
@@ -183,7 +198,8 @@ def refresh_event_type_map():
                 log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
-def load_plugins():
+def load_plugins() -> None:
+    """Load the plugins."""
     # first mark each plugin as inactive since we want to remove it from
     # LOADED_PLUGINS if it no longer exists on disk
     for plugin in LOADED_PLUGINS.values():
@@ -215,7 +231,8 @@ def load_plugins():
 _cleanup_coroutines = []
 
 
-async def serve():
+async def serve() -> None:
+    """Run the server."""
     port = "50051"
 
     server = grpc.aio.server()
@@ -229,7 +246,7 @@ async def serve():
 
     await server.start()
 
-    async def server_graceful_shutdown():
+    async def server_graceful_shutdown() -> None:
         log.info("Starting graceful shutdown...")
         await server.stop(5)
 
