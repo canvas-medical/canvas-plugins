@@ -9,11 +9,15 @@ enum EffectType {
   ADD_PLAN_COMMAND = 2;
 
   AUTOCOMPLETE_SEARCH_RESULTS = 3;
+
+  ADD_BANNER_ALERT = 4;
+  REMOVE_BANNER_ALERT = 5;
 }
 
 message Effect {
   EffectType type = 1;
   string payload = 2;
+  string plugin_name = 3;
   //Oneof effect_payload {
   //  ...
   //}

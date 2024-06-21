@@ -1,8 +1,9 @@
+import json
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, EffectType
 
 
 class _BaseEffect(BaseModel):
@@ -11,7 +12,7 @@ class _BaseEffect(BaseModel):
     """
 
     class Meta:
-        effect_type = ""
+        effect_type = EffectType.UNKNOWN_EFFECT
 
     model_config = ConfigDict(strict=True, validate_assignment=True)
 
@@ -24,7 +25,4 @@ class _BaseEffect(BaseModel):
         return {"data": self.values}
 
     def apply(self) -> Effect:
-        return {
-            "type": self.Meta.effect_type,
-            "payload": self.effect_payload,
-        }
+        return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))

@@ -14,15 +14,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/effects.proto\x12\x06\x63\x61nvas\";\n\x06\x45\x66\x66\x65\x63t\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.canvas.EffectType\x12\x0f\n\x07payload\x18\x02 \x01(\t*`\n\nEffectType\x12\x12\n\x0eUNKNOWN_EFFECT\x10\x00\x12\x07\n\x03LOG\x10\x01\x12\x14\n\x10\x41\x44\x44_PLAN_COMMAND\x10\x02\x12\x1f\n\x1b\x41UTOCOMPLETE_SEARCH_RESULTS\x10\x03\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/effects.proto\x12\x06\x63\x61nvas\"P\n\x06\x45\x66\x66\x65\x63t\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.canvas.EffectType\x12\x0f\n\x07payload\x18\x02 \x01(\t\x12\x13\n\x0bplugin_name\x18\x03 \x01(\t*\x8f\x01\n\nEffectType\x12\x12\n\x0eUNKNOWN_EFFECT\x10\x00\x12\x07\n\x03LOG\x10\x01\x12\x14\n\x10\x41\x44\x44_PLAN_COMMAND\x10\x02\x12\x1f\n\x1b\x41UTOCOMPLETE_SEARCH_RESULTS\x10\x03\x12\x14\n\x10\x41\x44\x44_BANNER_ALERT\x10\x04\x12\x17\n\x13REMOVE_BANNER_ALERT\x10\x05\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'canvas_generated.messages.effects_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_EFFECTTYPE']._serialized_start=112
-  _globals['_EFFECTTYPE']._serialized_end=208
+  _globals['_EFFECTTYPE']._serialized_start=134
+  _globals['_EFFECTTYPE']._serialized_end=277
   _globals['_EFFECT']._serialized_start=51
-  _globals['_EFFECT']._serialized_end=110
+  _globals['_EFFECT']._serialized_end=131
 # @@protoc_insertion_point(module_scope)
