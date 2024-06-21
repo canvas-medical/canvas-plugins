@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, EffectType
 
 
 class _BaseEffect(BaseModel):
@@ -12,7 +12,7 @@ class _BaseEffect(BaseModel):
     """
 
     class Meta:
-        effect_type = ""
+        effect_type = EffectType.UNKNOWN_EFFECT
 
     model_config = ConfigDict(strict=True, validate_assignment=True)
 

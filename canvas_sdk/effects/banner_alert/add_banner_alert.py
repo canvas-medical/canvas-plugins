@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import Field
 
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
 class AddBannerAlert(_BaseEffect):
@@ -12,7 +12,7 @@ class AddBannerAlert(_BaseEffect):
     """
 
     class Meta:
-        effect_type = "ADD_BANNER_ALERT"
+        effect_type = EffectType.ADD_BANNER_ALERT
 
     class Placement(Enum):
         CHART = "chart"
@@ -26,7 +26,7 @@ class AddBannerAlert(_BaseEffect):
         WARNING = "warning"
         ALERT = "alert"
 
-    patient_key: str
+    patient_id: str
     key: str
     narrative: str = Field(max_length=90)
     placement: list[Placement] = Field(min_length=1)
@@ -46,4 +46,4 @@ class AddBannerAlert(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
-        return {"patient": self.patient_key, "key": self.key, "data": self.values}
+        return {"patient": self.patient_id, "key": self.key, "data": self.values}
