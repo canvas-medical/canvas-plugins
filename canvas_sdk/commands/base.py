@@ -69,7 +69,7 @@ class _BaseCommand(BaseModel):
         if not self.note_id:
             raise AttributeError("Note id is required to originate a command")
         return {
-            "type": f"ADD_{self.Meta.key.upper()}_COMMAND",
+            "type": f"ORIGINATE_{self.Meta.key.upper()}_COMMAND",
             "payload": {
                 "user": self.user_id,
                 "note": self.note_id,
