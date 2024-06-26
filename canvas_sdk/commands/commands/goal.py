@@ -39,7 +39,7 @@ class GoalCommand(_BaseCommand):
         return {
             "goal_statement": self.goal_statement,
             "start_date": (self.start_date.isoformat() if self.start_date else None),
-            "due_date": (self.due_date.isoformat() if self.start_date else None),
+            "due_date": (self.due_date.isoformat() if self.due_date else None),
             "achievement_status": (
                 self.achievement_status.value if self.achievement_status else None
             ),
