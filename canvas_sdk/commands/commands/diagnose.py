@@ -19,14 +19,22 @@ class DiagnoseCommand(_BaseCommand):
     @property
     def values(self) -> dict:
         """The Diagnose command's field values."""
+        approximate_date_of_onset = None
+        if self.approximate_date_of_onset:
+            approximate_date_of_onset = {
+                "date": self.approximate_date_of_onset.isoformat(),
+                "input": self.approximate_date_of_onset.isoformat(),
+            }
+        diagnose = None
+        if self.icd10_code:
+            diagnose = {
+                # TODO: make the diagnosis show
+            }
         return {
             "icd10_code": self.icd10_code,
+            "diagnose": diagnose,
             "background": self.background,
-            "approximate_date_of_onset": (
-                self.approximate_date_of_onset.isoformat()
-                if self.approximate_date_of_onset
-                else None
-            ),
+            "approximate_date_of_onset": approximate_date_of_onset,
             "today_assessment": self.today_assessment,
         }
 
@@ -42,3 +50,5 @@ class DiagnoseCommand(_BaseCommand):
 # see if we can get ValueSets to play nicely with pydantic
 
 # idea3: runtime warning after pinging ontologies
+
+# idea4: garbage in, garbage out
