@@ -21,18 +21,9 @@ class DiagnoseCommand(_BaseCommand):
         """The Diagnose command's field values."""
         approximate_date_of_onset = None
         if self.approximate_date_of_onset:
-            approximate_date_of_onset = {
-                "date": self.approximate_date_of_onset.isoformat(),
-                "input": self.approximate_date_of_onset.isoformat(),
-            }
-        diagnose = None
-        if self.icd10_code:
-            diagnose = {
-                # TODO: make the diagnosis show
-            }
+            approximate_date_of_onset = self.approximate_date_of_onset.isoformat()
         return {
             "icd10_code": self.icd10_code,
-            "diagnose": diagnose,
             "background": self.background,
             "approximate_date_of_onset": approximate_date_of_onset,
             "today_assessment": self.today_assessment,
