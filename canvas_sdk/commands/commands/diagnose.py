@@ -19,27 +19,13 @@ class DiagnoseCommand(_BaseCommand):
     @property
     def values(self) -> dict:
         """The Diagnose command's field values."""
-        approximate_date_of_onset = None
-        if self.approximate_date_of_onset:
-            approximate_date_of_onset = self.approximate_date_of_onset.isoformat()
         return {
             "icd10_code": self.icd10_code,
             "background": self.background,
-            "approximate_date_of_onset": approximate_date_of_onset,
+            "approximate_date_of_onset": (
+                self.approximate_date_of_onset.isoformat()
+                if self.approximate_date_of_onset
+                else None
+            ),
             "today_assessment": self.today_assessment,
         }
-
-
-# how do we make sure icd10_code is a valid code?
-
-# idea1:
-# create an auto-generated enum class of all possible icd10s, then type the field as that enum
-# will require releasing a new version with the new codes every year, and devs will need to update
-# to make sure they have the latest version to get the right set of codes.
-
-# idea2:
-# see if we can get ValueSets to play nicely with pydantic
-
-# idea3: runtime warning after pinging ontologies
-
-# idea4: garbage in, garbage out
