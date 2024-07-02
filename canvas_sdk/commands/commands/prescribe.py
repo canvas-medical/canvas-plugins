@@ -41,7 +41,7 @@ class PrescribeCommand(_BaseCommand):
             "quantity_to_dispense": str(Decimal(self.quantity_to_dispense))
             if self.quantity_to_dispense
             else None,
-            "type_to_dispense": self.type_to_dispense,
+            # "type_to_dispense": self.type_to_dispense,
             "refills": self.refills,
             "substitutions": self.substitutions.value,
             "pharmacy": self.pharmacy,
