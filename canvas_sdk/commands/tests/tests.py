@@ -57,7 +57,6 @@ from canvas_sdk.commands.tests.test_utils import (
                 "icd10_codes",
                 "sig",
                 "days_supply",
-                "quantity_to_dispense",
                 "type_to_dispense",
                 "refills",
                 "substitutions",
@@ -126,7 +125,7 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
         (
             PlanCommand,
             {"narrative": "yo", "user_id": 5, "note_uuid": 1},
-            "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid areinf [type=string_type",
+            "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
             {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
