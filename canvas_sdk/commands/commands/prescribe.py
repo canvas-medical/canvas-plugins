@@ -18,11 +18,11 @@ class PrescribeCommand(_BaseCommand):
 
     fdb_code: str = Field(json_schema_extra={"commands_api_name": "prescribe"})
     icd10_codes: list[str] | None = Field(
-        None, json_schema_extra={"commandsd_api_name": "indications"}
+        None, json_schema_extra={"commands_api_name": "indications"}
     )
     sig: str
     days_supply: int | None = None
-    quantity_to_dispense: Decimal
+    quantity_to_dispense: Decimal | float | int | None = None
     type_to_dispense: str
     refills: int
     substitutions: Substitutions = Substitutions.ALLOWED  # type: ignore
@@ -38,10 +38,12 @@ class PrescribeCommand(_BaseCommand):
             "icd10_codes": self.icd10_codes,
             "sig": self.sig,
             "days_supply": self.days_supply,
-            "quantity_to_dispense": self.quantity_to_dispense,
+            "quantity_to_dispense": str(Decimal(self.quantity_to_dispense))
+            if self.quantity_to_dispense
+            else None,
             "type_to_dispense": self.type_to_dispense,
             "refills": self.refills,
-            "substitutions": self.substitutions,
+            "substitutions": self.substitutions.value,
             "pharmacy": self.pharmacy,
             "prescriber_id": self.prescriber_id,
             "note_to_pharmacist": self.note_to_pharmacist,
