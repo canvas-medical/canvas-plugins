@@ -57,7 +57,6 @@ from canvas_sdk.commands.tests.test_utils import (
                 "icd10_codes",
                 "sig",
                 "days_supply",
-                "quantity_to_dispense",
                 "type_to_dispense",
                 "refills",
                 "substitutions",
@@ -98,7 +97,7 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     fields_to_test: tuple[str],
 ) -> None:
     schema = Command.model_json_schema()
-    schema["required"].append("note_id")
+    schema["required"].append("note_uuid")
     required_fields = {k: v for k, v in schema["properties"].items() if k in schema["required"]}
     base = {field: fake(props, Command) for field, props in required_fields.items()}
     for field in fields_to_test:
@@ -114,68 +113,100 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
         (
             PlanCommand,
             {"narrative": "yo", "user_id": 1},
-            "1 validation error for PlanCommand\n  Value error, Command should have either a note_id or a command_uuid. [type=value",
-            {"narrative": "yo", "note_id": 1, "user_id": 1},
+            "1 validation error for PlanCommand\n  Value error, Command should have either a note_uuid or a command_uuid. [type=value",
+            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 1, "note_id": None},
-            "1 validation error for PlanCommand\n  Value error, Command should have either a note_id or a command_uuid. [type=value",
-            {"narrative": "yo", "note_id": 1, "user_id": 1},
+            {"narrative": "yo", "user_id": 1, "note_uuid": None},
+            "1 validation error for PlanCommand\n  Value error, Command should have either a note_uuid or a command_uuid. [type=value",
+            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 5, "note_id": "100"},
-            "1 validation error for PlanCommand\nnote_id\n  Input should be a valid integer [type=int_type",
-            {"narrative": "yo", "note_id": 1, "user_id": 1},
+            {"narrative": "yo", "user_id": 5, "note_uuid": 1},
+            "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
+            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "structured": True},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1, "structured": True},
             "1 validation error for ReasonForVisitCommand\n  Value error, Structured RFV should have a coding.",
-            {"note_id": 1, "user_id": 1, "structured": False},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "structured": False,
+            },
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": "x"}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": "x"},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": 1, "system": "y"}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": 1, "system": "y"},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": None, "system": "y"}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": None, "system": "y"},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"system": "y"}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"system": "y"},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Field required [type=missing",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": "x", "system": 1}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": "x", "system": 1},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": "x", "system": None}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": "x", "system": None},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
             ReasonForVisitCommand,
-            {"note_id": 1, "user_id": 1, "coding": {"code": "x", "system": "y", "display": 1}},
+            {
+                "note_uuid": "00000000-0000-0000-0000-000000000000",
+                "user_id": 1,
+                "coding": {"code": "x", "system": "y", "display": 1},
+            },
             "1 validation error for ReasonForVisitCommand\ncoding.display\n  Input should be a valid string [type=string_type",
-            {"note_id": 1, "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
     ],
 )
@@ -219,7 +250,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
         ),
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
-        (PlanCommand, ("narrative", "user_id", "command_uuid", "note_id")),
+        (PlanCommand, ("narrative", "user_id", "command_uuid", "note_uuid")),
         (
             PrescribeCommand,
             (
@@ -268,7 +299,7 @@ def test_command_allows_kwarg_with_correct_type(
     fields_to_test: tuple[str],
 ) -> None:
     schema = Command.model_json_schema()
-    schema["required"].append("note_id")
+    schema["required"].append("note_uuid")
     required_fields = {k: v for k, v in schema["properties"].items() if k in schema["required"]}
     base = {field: fake(props, Command) for field, props in required_fields.items()}
 
@@ -299,7 +330,7 @@ def token() -> str:
 
 
 @pytest.fixture
-def note_id(token: str) -> str:
+def note_uuid(token: str) -> str:
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -351,7 +382,7 @@ def command_type_map() -> dict[str, type]:
 def test_command_schema_matches_command_api(
     token: str,
     command_type_map: dict[str, str],
-    note_id: str,
+    note_uuid: str,
     Command: (
         AssessCommand
         | DiagnoseCommand
@@ -367,7 +398,7 @@ def test_command_schema_matches_command_api(
     ),
 ) -> None:
     # first create the command in the new note
-    data = {"noteKey": note_id, "schemaKey": Command.Meta.key}
+    data = {"noteKey": note_uuid, "schemaKey": Command.Meta.key}
     headers = {"Authorization": f"Bearer {token}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
     command_resp = requests.post(url, headers=headers, data=data).json()
