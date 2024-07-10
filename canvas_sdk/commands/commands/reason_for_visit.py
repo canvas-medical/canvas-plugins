@@ -1,5 +1,6 @@
-from pydantic import model_validator
-from typing_extensions import Self
+from typing import Literal
+
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
@@ -16,11 +17,17 @@ class ReasonForVisitCommand(_BaseCommand):
     coding: Coding | None = None
     comment: str | None = None
 
-    @model_validator(mode="after")
-    def _verify_structured_has_a_coding(self) -> Self:
+    def _get_error_details(
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+    ) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
         if self.structured and not self.coding:
-            raise ValueError("Structured RFV should have a coding.")
-        return self
+            errors.append(
+                self._create_error_detail(
+                    "value", f"Structured RFV should have a coding.", self.coding
+                )
+            )
+        return errors
 
     @classmethod
     def command_schema(cls) -> dict:

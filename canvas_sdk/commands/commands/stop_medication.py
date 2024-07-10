@@ -1,5 +1,6 @@
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class StopMedicationCommand(_BaseCommand):
@@ -7,9 +8,12 @@ class StopMedicationCommand(_BaseCommand):
 
     class Meta:
         key = "stopMedication"
+        originate_required_fields = ("medication_id",)
 
     # how do we make sure this is a valid medication_id for the patient?
-    medication_id: str = Field(json_schema_extra={"commands_api_name": "medication"})
+    medication_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "medication"}
+    )
     rationale: str | None = None
 
     @property

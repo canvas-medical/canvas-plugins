@@ -11,23 +11,33 @@ class PrescribeCommand(_BaseCommand):
 
     class Meta:
         key = "prescribe"
+        originate_required_fields = (
+            "fdb_code",
+            "sig",
+            "type_to_dispense",
+            "refills",
+            "substitutions",
+            "prescriber_id",
+        )
 
     class Substitutions(Enum):
         ALLOWED = "allowed"
         NOT_ALLOWED = "not_allowed"
 
-    fdb_code: str = Field(json_schema_extra={"commands_api_name": "prescribe"})
+    fdb_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "prescribe"})
     icd10_codes: list[str] | None = Field(
         None, json_schema_extra={"commands_api_name": "indications"}
     )
-    sig: str
+    sig: str | None = None
     days_supply: int | None = None
     quantity_to_dispense: Decimal | float | int | None = None
-    type_to_dispense: str
-    refills: int
+    type_to_dispense: str | None = None
+    refills: int | None = None
     substitutions: Substitutions = Substitutions.ALLOWED  # type: ignore
     pharmacy: str | None = None
-    prescriber_id: str = Field(json_schema_extra={"commands_api_name": "prescriber"})
+    prescriber_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "prescriber"}
+    )
     note_to_pharmacist: str | None = None
 
     @property
@@ -38,9 +48,9 @@ class PrescribeCommand(_BaseCommand):
             "icd10_codes": self.icd10_codes,
             "sig": self.sig,
             "days_supply": self.days_supply,
-            "quantity_to_dispense": str(Decimal(self.quantity_to_dispense))
-            if self.quantity_to_dispense
-            else None,
+            "quantity_to_dispense": (
+                str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
+            ),
             # "type_to_dispense": self.type_to_dispense,
             "refills": self.refills,
             "substitutions": self.substitutions.value,

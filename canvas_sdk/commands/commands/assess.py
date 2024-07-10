@@ -1,7 +1,8 @@
 from enum import Enum
 
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class AssessCommand(_BaseCommand):
@@ -9,13 +10,16 @@ class AssessCommand(_BaseCommand):
 
     class Meta:
         key = "assess"
+        originate_required_fields = ("condition_id",)
 
     class Status(Enum):
         IMPROVED = "improved"
         STABLE = "stable"
         DETERIORATED = "deteriorated"
 
-    condition_id: str = Field(json_schema_extra={"commands_api_name": "condition"})
+    condition_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "condition"}
+    )
     background: str | None = None
     status: Status | None = None
     narrative: str | None = None

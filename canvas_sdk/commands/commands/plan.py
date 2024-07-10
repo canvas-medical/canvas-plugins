@@ -6,8 +6,9 @@ class PlanCommand(_BaseCommand):
 
     class Meta:
         key = "plan"
+        originate_required_fields = ("narrative",)
 
-    narrative: str
+    narrative: str | None = None
 
     @property
     def values(self) -> dict:

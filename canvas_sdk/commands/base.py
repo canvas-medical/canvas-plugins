@@ -1,33 +1,73 @@
 import json
 import re
 from enum import EnumType
-from typing import get_args
+from typing import Any, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, model_validator
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict
+from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
 
 from canvas_sdk.effects import Effect, EffectType
 
 
 class _BaseCommand(BaseModel):
-    model_config = ConfigDict(strict=True, validate_assignment=True)
+    model_config = ConfigDict(strict=True, revalidate_instances="always")
 
     class Meta:
         key = ""
+        originate_required_fields = (
+            "user_id",
+            "note_uuid",
+        )
+        edit_required_fields = (
+            "user_id",
+            "command_uuid",
+        )
+        delete_required_fields = (
+            "user_id",
+            "command_uuid",
+        )
+        commit_required_fields = (
+            "user_id",
+            "command_uuid",
+        )
+        enter_in_error_required_fields = (
+            "user_id",
+            "command_uuid",
+        )
 
     def constantized_key(self) -> str:
         return re.sub(r"(?<!^)(?=[A-Z])", "_", self.Meta.key).upper()
 
-    # todo: update int to str as we should use external identifiers
     note_uuid: str | None = None
     command_uuid: str | None = None
-    user_id: int
+    user_id: int | None = None
 
-    @model_validator(mode="after")
-    def _verify_has_note_uuid_or_command_id(self) -> Self:
-        if not self.note_uuid and not self.command_uuid:
-            raise ValueError("Command should have either a note_uuid or a command_uuid.")
-        return self
+    def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
+        return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})
+
+    def _get_error_details(
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+    ) -> list[InitErrorDetails]:
+        base_required_fields: tuple = getattr(
+            _BaseCommand.Meta, f"{method}_required_fields", tuple()
+        )
+        command_required_fields: tuple = getattr(self.Meta, f"{method}_required_fields", tuple())
+        required_fields = tuple(set(base_required_fields) | set(command_required_fields))
+
+        return [
+            self._create_error_detail(
+                "missing", f"Field '{field}' is required to {method.replace('_', ' ')} a command", v
+            )
+            for field in required_fields
+            if (v := getattr(self, field)) is None
+        ]
+
+    def _validate_before_effect(
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+    ) -> None:
+        self.model_validate(self)
+        if error_details := self._get_error_details(method):
+            raise ValidationError.from_exception_data(self.__class__.__name__, error_details)
 
     @property
     def values(self) -> dict:
@@ -70,8 +110,7 @@ class _BaseCommand(BaseModel):
 
     def originate(self) -> Effect:
         """Originate a new command in the note body."""
-        if not self.note_uuid:
-            raise AttributeError("Note id is required to originate a command")
+        self._validate_before_effect("originate")
         return Effect(
             type=EffectType.Value(f"ORIGINATE_{self.constantized_key()}_COMMAND"),
             payload=json.dumps(
@@ -85,8 +124,7 @@ class _BaseCommand(BaseModel):
 
     def edit(self) -> Effect:
         """Edit the command."""
-        if not self.command_uuid:
-            raise AttributeError("Command uuid is required to edit a command")
+        self._validate_before_effect("edit")
         return {
             "type": f"EDIT_{self.constantized_key()}_COMMAND",
             "payload": {
@@ -98,8 +136,7 @@ class _BaseCommand(BaseModel):
 
     def delete(self) -> Effect:
         """Delete the command."""
-        if not self.command_uuid:
-            raise AttributeError("Command uuid is required to delete a command")
+        self._validate_before_effect("delete")
         return {
             "type": f"DELETE_{self.constantized_key()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
@@ -107,8 +144,7 @@ class _BaseCommand(BaseModel):
 
     def commit(self) -> Effect:
         """Commit the command."""
-        if not self.command_uuid:
-            raise AttributeError("Command uuid is required to commit a command")
+        self._validate_before_effect("commit")
         return {
             "type": f"COMMIT_{self.constantized_key()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
@@ -116,8 +152,7 @@ class _BaseCommand(BaseModel):
 
     def enter_in_error(self) -> Effect:
         """Mark the command as entered-in-error."""
-        if not self.command_uuid:
-            raise AttributeError("Command uuid is required to enter in error a command")
+        self._validate_before_effect("enter_in_error")
         return {
             "type": f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
             "payload": {"command": self.command_uuid, "user": self.user_id},
