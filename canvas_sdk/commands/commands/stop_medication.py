@@ -1,5 +1,6 @@
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class StopMedicationCommand(_BaseCommand):
@@ -16,3 +17,11 @@ class StopMedicationCommand(_BaseCommand):
     def values(self) -> dict:
         """The StopMedication command's field values."""
         return {"medication_id": self.medication_id, "rationale": self.rationale}
+
+
+class StopMedicationCommandNoInitValidation:
+    """Stop Medication Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> StopMedicationCommand:
+        """Returns an initialized Stop Medication Command without any validation."""
+        return StopMedicationCommand.model_construct(**kwargs)

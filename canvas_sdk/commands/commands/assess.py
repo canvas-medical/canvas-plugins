@@ -1,7 +1,8 @@
 from enum import Enum
 
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class AssessCommand(_BaseCommand):
@@ -29,6 +30,14 @@ class AssessCommand(_BaseCommand):
             "status": self.status.value if self.status else None,
             "narrative": self.narrative,
         }
+
+
+class AssessCommandNoInitValidation:
+    """Assess Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> AssessCommand:
+        """Returns an initialized Assess Command without any validation."""
+        return AssessCommand.model_construct(**kwargs)
 
 
 # how do we make sure that condition_id is a valid condition for the patient?

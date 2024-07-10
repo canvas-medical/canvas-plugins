@@ -1,5 +1,6 @@
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class MedicationStatementCommand(_BaseCommand):
@@ -15,6 +16,14 @@ class MedicationStatementCommand(_BaseCommand):
     def values(self) -> dict:
         """The MedicationStatement command's field values."""
         return {"fdb_code": self.fdb_code, "sig": self.sig}
+
+
+class MedicationStatementCommandNoInitValidation:
+    """Medication Statement Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> MedicationStatementCommand:
+        """Returns an initialized Medication Statement Command without any validation."""
+        return MedicationStatementCommand.model_construct(**kwargs)
 
 
 # how do we make sure fdb_code is a valid code?

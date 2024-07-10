@@ -1,5 +1,6 @@
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class QuestionnaireCommand(_BaseCommand):
@@ -15,3 +16,11 @@ class QuestionnaireCommand(_BaseCommand):
     def values(self) -> dict:
         """The Questionnaire command's field values."""
         return {"questionnaire_id": self.questionnaire_id, "result": self.result}
+
+
+class QuestionnaireCommandNoInitValidation:
+    """Questionnaire Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> QuestionnaireCommand:
+        """Returns an initialized Questionnaire Command without any validation."""
+        return QuestionnaireCommand.model_construct(**kwargs)

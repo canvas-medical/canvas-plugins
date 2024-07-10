@@ -13,3 +13,11 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
     def values(self) -> dict:
         """The HPI command's field values."""
         return {"narrative": self.narrative}
+
+
+class HistoryOfPresentIllnessCommandNoInitValidation:
+    """HPI Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> HistoryOfPresentIllnessCommand:
+        """Returns an initialized HPI Command without any validation."""
+        return HistoryOfPresentIllnessCommand.model_construct(**kwargs)

@@ -38,9 +38,9 @@ class PrescribeCommand(_BaseCommand):
             "icd10_codes": self.icd10_codes,
             "sig": self.sig,
             "days_supply": self.days_supply,
-            "quantity_to_dispense": str(Decimal(self.quantity_to_dispense))
-            if self.quantity_to_dispense
-            else None,
+            "quantity_to_dispense": (
+                str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
+            ),
             # "type_to_dispense": self.type_to_dispense,
             "refills": self.refills,
             "substitutions": self.substitutions.value,
@@ -48,3 +48,11 @@ class PrescribeCommand(_BaseCommand):
             "prescriber_id": self.prescriber_id,
             "note_to_pharmacist": self.note_to_pharmacist,
         }
+
+
+class PrescribeCommandNoInitValidation:
+    """Prescribe Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> PrescribeCommand:
+        """Returns an initialized Prescribe Command without any validation."""
+        return PrescribeCommand.model_construct(**kwargs)

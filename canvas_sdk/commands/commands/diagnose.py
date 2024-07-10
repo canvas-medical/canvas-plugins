@@ -29,3 +29,11 @@ class DiagnoseCommand(_BaseCommand):
             ),
             "today_assessment": self.today_assessment,
         }
+
+
+class DiagnoseCommandNoInitValidation:
+    """Diagnose Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> DiagnoseCommand:
+        """Returns an initialized Diagnose Command without any validation."""
+        return DiagnoseCommand.model_construct(**kwargs)

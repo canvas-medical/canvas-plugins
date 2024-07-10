@@ -46,3 +46,11 @@ class GoalCommand(_BaseCommand):
             "priority": (self.priority.value if self.priority else None),
             "progress": self.progress,
         }
+
+
+class GoalCommandNoInitValidation:
+    """Goal Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> GoalCommand:
+        """Returns an initialized Goal Command without any validation."""
+        return GoalCommand.model_construct(**kwargs)

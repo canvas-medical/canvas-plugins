@@ -6,7 +6,7 @@ from canvas_sdk.commands.constants import Coding
 
 
 class ReasonForVisitCommand(_BaseCommand):
-    """A class for managing a ReasonForVisit command within a specific note."""
+    """A class for managing a Reason For Visit command within a specific note."""
 
     class Meta:
         key = "reasonForVisit"
@@ -34,3 +34,11 @@ class ReasonForVisitCommand(_BaseCommand):
     def values(self) -> dict:
         """The ReasonForVisit command's field values."""
         return {"structured": self.structured, "coding": self.coding, "comment": self.comment}
+
+
+class ReasonForVisitCommandNoInitValidation:
+    """Reson For Visit Command without validation on initialization."""
+
+    def __new__(cls, **kwargs: dict) -> ReasonForVisitCommand:
+        """Returns an initialized Reson For Visit Command without any validation."""
+        return ReasonForVisitCommand.model_construct(**kwargs)
