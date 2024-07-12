@@ -21,6 +21,7 @@ from canvas_sdk.commands import (
 )
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.commands.tests.test_utils import (
+    Secret,
     fake,
     get_field_type,
     raises_none_error_for_effect_method,
@@ -325,22 +326,24 @@ def test_command_allows_kwarg_with_correct_type(
 
 
 @pytest.fixture(scope="session")
-def token() -> str:
-    return requests.post(
-        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={
-            "grant_type": "client_credentials",
-            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
-            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
-        },
-    ).json()["access_token"]
+def token() -> Secret:
+    return Secret(
+        requests.post(
+            f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+                "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+            },
+        ).json()["access_token"]
+    )
 
 
 @pytest.fixture
-def note_uuid(token: str) -> str:
+def note_uuid(token: Secret) -> str:
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -389,7 +392,7 @@ def command_type_map() -> dict[str, type]:
     ],
 )
 def test_command_schema_matches_command_api(
-    token: str,
+    token: Secret,
     command_type_map: dict[str, str],
     note_uuid: str,
     Command: (
@@ -408,7 +411,7 @@ def test_command_schema_matches_command_api(
 ) -> None:
     # first create the command in the new note
     data = {"noteKey": note_uuid, "schemaKey": Command.Meta.key}
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token.value}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
     command_resp = requests.post(url, headers=headers, data=data).json()
     assert "uuid" in command_resp
