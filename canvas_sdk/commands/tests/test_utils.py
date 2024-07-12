@@ -77,79 +77,7 @@ def fake(
         return random.choice([e for e in getattr(Command, t)])
 
 
-def raises_missing_error(
-    base: dict,
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-    ),
-    field: str,
-) -> None:
-    err_kwargs = base.copy()
-    err_kwargs.pop(field)
-    with pytest.raises(ValidationError) as e:
-        Command(**err_kwargs)
-    err_msg = repr(e.value)
-    assert (
-        f"1 validation error for {Command.__name__}\n{field}\n  Field required [type=missing"
-        in err_msg
-    )
-
-
-def raises_none_error(
-    base: dict,
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-    ),
-    field: str,
-) -> None:
-    field_props = Command.model_json_schema()["properties"][field]
-    field_type = get_field_type(field_props)
-
-    with pytest.raises(ValidationError) as e1:
-        err_kwargs = base | {field: None}
-        Command(**err_kwargs)
-    err_msg1 = repr(e1.value)
-
-    valid_kwargs = base | {field: fake(field_props, Command)}
-    cmd = Command(**valid_kwargs)
-    with pytest.raises(ValidationError) as e2:
-        setattr(cmd, field, None)
-    err_msg2 = repr(e2.value)
-
-    assert f"1 validation error for {Command.__name__}\n{field}" in err_msg1
-    assert f"1 validation error for {Command.__name__}\n{field}" in err_msg2
-
-    if field_type == "number":
-        assert f"Input should be an instance of Decimal" in err_msg1
-        assert f"Input should be an instance of Decimal" in err_msg2
-    elif field_type[0].isupper():
-        assert f"Input should be an instance of {Command.__name__}.{field_type}" in err_msg1
-        assert f"Input should be an instance of {Command.__name__}.{field_type}" in err_msg2
-    else:
-        assert f"Input should be a valid {field_type}" in err_msg1
-        assert f"Input should be a valid {field_type}" in err_msg2
-
-
 def raises_wrong_type_error(
-    base: dict,
     Command: (
         AssessCommand
         | DiagnoseCommand
@@ -169,11 +97,11 @@ def raises_wrong_type_error(
     wrong_field_type = "integer" if field_type == "string" else "string"
 
     with pytest.raises(ValidationError) as e1:
-        err_kwargs = base | {field: fake({"type": wrong_field_type}, Command)}
+        err_kwargs = {field: fake({"type": wrong_field_type}, Command)}
         Command(**err_kwargs)
     err_msg1 = repr(e1.value)
 
-    valid_kwargs = base | {field: fake(field_props, Command)}
+    valid_kwargs = {field: fake(field_props, Command)}
     cmd = Command(**valid_kwargs)
     err_value = fake({"type": wrong_field_type}, Command)
     with pytest.raises(ValidationError) as e2:
@@ -193,3 +121,31 @@ def raises_wrong_type_error(
     else:
         assert f"Input should be a valid {field_type}" in err_msg1
         assert f"Input should be a valid {field_type}" in err_msg2
+
+
+def raises_none_error_for_effect_method(
+    Command: (
+        AssessCommand
+        | DiagnoseCommand
+        | GoalCommand
+        | HistoryOfPresentIllnessCommand
+        | MedicationStatementCommand
+        | PlanCommand
+        | PrescribeCommand
+        | QuestionnaireCommand
+        | ReasonForVisitCommand
+        | StopMedicationCommand
+    ),
+    method: str,
+) -> None:
+    cmd = Command()
+    method_required_fields = cmd._get_effect_method_required_fields(method)
+    with pytest.raises(ValidationError) as e:
+        getattr(cmd, method)()
+    e_msg = repr(e.value)
+    assert f"{len(method_required_fields)} validation errors for {Command.__name__}" in e_msg
+    for f in method_required_fields:
+        assert (
+            f"Field '{f}' is required to {method.replace('_', ' ')} a command [type=missing, input_value=None, input_type=NoneType]"
+            in e_msg
+        )

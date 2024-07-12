@@ -8,7 +8,7 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
         key = "hpi"
         originate_required_fields = ("narrative",)
 
-    narrative: str | None
+    narrative: str | None = None
 
     @property
     def values(self) -> dict:

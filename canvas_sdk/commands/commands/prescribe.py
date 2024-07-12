@@ -14,6 +14,7 @@ class PrescribeCommand(_BaseCommand):
         originate_required_fields = (
             "fdb_code",
             "sig",
+            "quantity_to_dispense",
             "type_to_dispense",
             "refills",
             "substitutions",
@@ -33,7 +34,7 @@ class PrescribeCommand(_BaseCommand):
     quantity_to_dispense: Decimal | float | int | None = None
     type_to_dispense: str | None = None
     refills: int | None = None
-    substitutions: Substitutions = Substitutions.ALLOWED  # type: ignore
+    substitutions: Substitutions | None = None
     pharmacy: str | None = None
     prescriber_id: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "prescriber"}
@@ -53,7 +54,7 @@ class PrescribeCommand(_BaseCommand):
             ),
             # "type_to_dispense": self.type_to_dispense,
             "refills": self.refills,
-            "substitutions": self.substitutions.value,
+            "substitutions": self.substitutions.value if self.substitutions else None,
             "pharmacy": self.pharmacy,
             "prescriber_id": self.prescriber_id,
             "note_to_pharmacist": self.note_to_pharmacist,

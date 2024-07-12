@@ -9,7 +9,7 @@ class GoalCommand(_BaseCommand):
 
     class Meta:
         key = "goal"
-        originate_required_fields = ("goal_statement",)
+        originate_required_fields = ("goal_statement", "start_date")
 
     class Priority(Enum):
         HIGH = "high-priority"

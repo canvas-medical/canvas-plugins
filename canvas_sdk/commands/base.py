@@ -10,7 +10,7 @@ from canvas_sdk.effects import Effect, EffectType
 
 
 class _BaseCommand(BaseModel):
-    model_config = ConfigDict(strict=True, revalidate_instances="always")
+    model_config = ConfigDict(strict=True, revalidate_instances="always", validate_assignment=True)
 
     class Meta:
         key = ""
@@ -42,18 +42,22 @@ class _BaseCommand(BaseModel):
     command_uuid: str | None = None
     user_id: int | None = None
 
+    def _get_effect_method_required_fields(
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+    ) -> tuple[str]:
+        base_required_fields: tuple = getattr(
+            _BaseCommand.Meta, f"{method}_required_fields", tuple()
+        )
+        command_required_fields: tuple = getattr(self.Meta, f"{method}_required_fields", tuple())
+        return tuple(set(base_required_fields) | set(command_required_fields))
+
     def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
         return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})
 
     def _get_error_details(
         self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
     ) -> list[InitErrorDetails]:
-        base_required_fields: tuple = getattr(
-            _BaseCommand.Meta, f"{method}_required_fields", tuple()
-        )
-        command_required_fields: tuple = getattr(self.Meta, f"{method}_required_fields", tuple())
-        required_fields = tuple(set(base_required_fields) | set(command_required_fields))
-
+        required_fields = self._get_effect_method_required_fields(method)
         return [
             self._create_error_detail(
                 "missing", f"Field '{field}' is required to {method.replace('_', ' ')} a command", v
@@ -98,9 +102,10 @@ class _BaseCommand(BaseModel):
         """The schema of the command."""
         base_properties = {"note_uuid", "command_uuid", "user_id"}
         schema = cls.model_json_schema()
+        required_fields: tuple = getattr(cls.Meta, "originate_required_fields", tuple())
         return {
             definition.get("commands_api_name", name): {
-                "required": name in schema["required"],
+                "required": name in required_fields,
                 "type": cls._get_property_type(name),
                 "choices": cls._get_property_choices(name, schema),
             }
