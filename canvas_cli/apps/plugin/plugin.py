@@ -174,6 +174,80 @@ def uninstall(
         raise typer.Exit(1)
 
 
+def enable(
+    name: str = typer.Argument(..., help="Plugin name to enable"),
+    host: Optional[str] = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+) -> None:
+    """Enable a plugin from a Canvas instance."""
+    if not host:
+        raise typer.BadParameter("Please specify a host or or add one to the configuration file")
+
+    url = plugin_url(host, name)
+
+    print(f"Enabling {name} using {url}")
+
+    token = get_or_request_api_token(host)
+
+    try:
+        r = requests.patch(
+            url,
+            data={"is_enabled": True},
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+    except requests.exceptions.RequestException:
+        print(f"Failed to connect to {host}")
+        raise typer.Exit(1)
+
+    if r.status_code == requests.codes.no_content:
+        print(r.text)
+    else:
+        print(f"Status code {r.status_code}: {r.text}")
+        raise typer.Exit(1)
+
+
+def disable(
+    name: str = typer.Argument(..., help="Plugin name to disable"),
+    host: Optional[str] = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+) -> None:
+    """Disable a plugin from a Canvas instance."""
+    if not host:
+        raise typer.BadParameter("Please specify a host or or add one to the configuration file")
+
+    url = plugin_url(host, name)
+
+    print(f"Disabling {name} using {url}")
+
+    token = get_or_request_api_token(host)
+
+    try:
+        r = requests.patch(
+            url,
+            data={"is_enabled": False},
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+    except requests.exceptions.RequestException:
+        print(f"Failed to connect to {host}")
+        raise typer.Exit(1)
+
+    if r.status_code == requests.codes.no_content:
+        print(r.text)
+    else:
+        print(f"Status code {r.status_code}: {r.text}")
+        raise typer.Exit(1)
+
+
 def list(
     host: Optional[str] = typer.Option(
         callback=get_default_host,

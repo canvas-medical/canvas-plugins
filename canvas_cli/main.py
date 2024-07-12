@@ -23,6 +23,8 @@ app = typer.Typer(no_args_is_help=True, rich_markup_mode=None, add_completion=Fa
 app.command(short_help="Create a new plugin")(plugin.init)
 app.command(short_help="Install a plugin into a Canvas instance")(plugin.install)
 app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.uninstall)
+app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
+app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
 app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
