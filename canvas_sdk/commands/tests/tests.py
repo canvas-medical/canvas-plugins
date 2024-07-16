@@ -21,7 +21,7 @@ from canvas_sdk.commands import (
 )
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.commands.tests.test_utils import (
-    Secret,
+    MaskedValue,
     fake,
     get_field_type,
     raises_none_error_for_effect_method,
@@ -326,8 +326,8 @@ def test_command_allows_kwarg_with_correct_type(
 
 
 @pytest.fixture(scope="session")
-def token() -> Secret:
-    return Secret(
+def token() -> MaskedValue:
+    return MaskedValue(
         requests.post(
             f"{settings.INTEGRATION_TEST_URL}/auth/token/",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -341,7 +341,7 @@ def token() -> Secret:
 
 
 @pytest.fixture
-def note_uuid(token: Secret) -> str:
+def note_uuid(token: MaskedValue) -> str:
     headers = {
         "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
@@ -392,7 +392,7 @@ def command_type_map() -> dict[str, type]:
     ],
 )
 def test_command_schema_matches_command_api(
-    token: Secret,
+    token: MaskedValue,
     command_type_map: dict[str, str],
     note_uuid: str,
     Command: (

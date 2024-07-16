@@ -22,12 +22,12 @@ from canvas_sdk.commands import (
 from canvas_sdk.commands.constants import Coding
 
 
-class Secret:
+class MaskedValue:
     def __init__(self, value):
         self.value = value
 
     def __repr__(self) -> str:
-        return "Secret(********)"
+        return "MaskedValue(********)"
 
     def __str___(self) -> str:
         return "*******"
