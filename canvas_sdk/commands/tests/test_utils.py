@@ -22,6 +22,17 @@ from canvas_sdk.commands import (
 from canvas_sdk.commands.constants import Coding
 
 
+class MaskedValue:
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self) -> str:
+        return "MaskedValue(********)"
+
+    def __str___(self) -> str:
+        return "*******"
+
+
 def get_field_type_unformatted(field_props: dict[str, Any]) -> str:
     if t := field_props.get("type"):
         return field_props.get("format") or t
