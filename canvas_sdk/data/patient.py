@@ -1,8 +1,6 @@
-from typing import Optional
-
 from canvas_sdk.data import DataModel
 
 
 class Patient(DataModel):
-    id: Optional[str]
+    id: str | None = None
     # TODO - populate more attributes

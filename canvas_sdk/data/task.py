@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from canvas_sdk.data import DataModel
 from canvas_sdk.data.patient import Patient
@@ -17,14 +16,14 @@ class Task(DataModel):
         CLOSED = "Closed"
         OPEN = "Open"
 
-    id: Optional[str] = None
-    assignee: Optional[Staff] = None
-    patient: Optional[Patient] = None
-    title: Optional[str] = None
-    due: Optional[datetime] = None
-    status: Optional[Status] = None
-    comments: "Optional[list[TaskComment]]" = None
-    labels: Optional[list[str]] = None
+    id: str | None = None
+    assignee: Staff | None = None
+    patient: Patient | None = None
+    title: str | None = None
+    due: datetime | None = None
+    status: Status | None = None
+    comments: "list[TaskComment] | None" = None
+    labels: list[str] | None = None
 
     def create(self) -> Effect:
         self._validate_before_effect("create")
@@ -53,9 +52,9 @@ class TaskComment(DataModel):
             "task",
         )
 
-    id: Optional[str] = None
-    task: Optional[Task] = None
-    body: Optional[str] = None
+    id: str | None = None
+    task: Task | None = None
+    body: str | None = None
 
 
 Task.model_rebuild()
