@@ -1,5 +1,6 @@
-from canvas_sdk.commands.base import _BaseCommand
 from pydantic import Field
+
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class QuestionnaireCommand(_BaseCommand):
@@ -7,8 +8,11 @@ class QuestionnaireCommand(_BaseCommand):
 
     class Meta:
         key = "questionnaire"
+        originate_required_fields = ("questionnaire_id",)
 
-    questionnaire_id: str = Field(json_schema_extra={"commands_api_name": "questionnaire"})
+    questionnaire_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "questionnaire"}
+    )
     result: str | None = None
 
     @property
