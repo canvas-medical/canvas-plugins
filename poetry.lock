@@ -335,6 +335,24 @@ requests = ">=2.23.0"
 rich = "*"
 
 [[package]]
+name = "cron-converter"
+version = "1.2.1"
+description = "Cron string parser and scheduler for Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "cron_converter-1.2.1-py3-none-any.whl", hash = "sha256:4604e356c15a8fbe76a86bb42508f611ad3cade7dd65e2d6f601c2e0d5226ffc"},
+    {file = "cron_converter-1.2.1.tar.gz", hash = "sha256:6766c6ba44b8236201ac03030f314fd655343c1c4848ce216458e8d340066c59"},
+]
+
+[package.dependencies]
+python-dateutil = "*"
+
+[package.extras]
+mypy = ["mypy", "types-python-dateutil"]
+test = ["python-dateutil"]
+
+[[package]]
 name = "cryptography"
 version = "42.0.4"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -2000,4 +2018,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "e4774eca4cc784e661d08c285a855364a183866a33992a4315e09dfebf72d9d5"
+content-hash = "b03aebbbbf00e8ebd98decbceb4ca29ed2dd49f1d7d7feea1f2a3c0b5ae95431"
