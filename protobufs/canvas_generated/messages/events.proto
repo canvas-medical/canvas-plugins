@@ -61,6 +61,8 @@ enum EventType {
   VITAL_SIGN_CREATED = 58;
   VITAL_SIGN_UPDATED = 59;
 
+  CRON = 60;
+
   // General Command Events
 
   PRE_COMMAND_ORIGINATE = 100;

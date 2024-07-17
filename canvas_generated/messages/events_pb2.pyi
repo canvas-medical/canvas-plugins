@@ -61,6 +61,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TASK_UPDATED: _ClassVar[EventType]
     VITAL_SIGN_CREATED: _ClassVar[EventType]
     VITAL_SIGN_UPDATED: _ClassVar[EventType]
+    CRON: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -268,6 +269,7 @@ TASK_LABELS_ADJUSTED: EventType
 TASK_UPDATED: EventType
 VITAL_SIGN_CREATED: EventType
 VITAL_SIGN_UPDATED: EventType
+CRON: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
