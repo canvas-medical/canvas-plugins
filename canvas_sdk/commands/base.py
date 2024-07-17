@@ -1,17 +1,13 @@
 import json
 import re
 from enum import EnumType
-from typing import Any, Literal, get_args
+from typing import Literal, get_args
 
-from pydantic import BaseModel, ConfigDict
-from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
-
+from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect, EffectType
 
 
-class _BaseCommand(BaseModel):
-    model_config = ConfigDict(strict=True, revalidate_instances="always", validate_assignment=True)
-
+class _BaseCommand(Model):
     class Meta:
         key = ""
         originate_required_fields = (
@@ -48,30 +44,8 @@ class _BaseCommand(BaseModel):
         base_required_fields: tuple = getattr(
             _BaseCommand.Meta, f"{method}_required_fields", tuple()
         )
-        command_required_fields: tuple = getattr(self.Meta, f"{method}_required_fields", tuple())
+        command_required_fields = super()._get_effect_method_required_fields(method)
         return tuple(set(base_required_fields) | set(command_required_fields))
-
-    def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
-        return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})
-
-    def _get_error_details(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> list[InitErrorDetails]:
-        required_fields = self._get_effect_method_required_fields(method)
-        return [
-            self._create_error_detail(
-                "missing", f"Field '{field}' is required to {method.replace('_', ' ')} a command", v
-            )
-            for field in required_fields
-            if (v := getattr(self, field)) is None
-        ]
-
-    def _validate_before_effect(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> None:
-        self.model_validate(self)
-        if error_details := self._get_error_details(method):
-            raise ValidationError.from_exception_data(self.__class__.__name__, error_details)
 
     @property
     def values(self) -> dict:
