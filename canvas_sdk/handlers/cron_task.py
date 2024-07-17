@@ -15,8 +15,7 @@ class CronTask(BaseHandler):
 
     RESPONDS_TO = EventType.Name(EventType.CRON)
 
-    # Every minute unless specified
-    SCHEDULE: str = "* * * * *"
+    SCHEDULE: str = ""  # e.g. "* * * * *" for every minute.
 
     @abstractmethod
     def execute(self) -> list[Effect]:
@@ -26,8 +25,10 @@ class CronTask(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """
-        See if the task should execute given the timestamp
+        See if the task should execute given the timestamp.
         """
+        if not self.SCHEDULE:
+            raise ValueError("You must set a SCHEDULE.")
         datetime = arrow.get(self.target).datetime
         if datetime in Cron(self.SCHEDULE):
             return self.execute()
