@@ -41,8 +41,10 @@ class _BaseCommand(Model):
     def _get_effect_method_required_fields(
         self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
     ) -> tuple[str]:
-        base_required_fields = super()._get_effect_method_required_fields(method)
-        command_required_fields: tuple = getattr(self.Meta, f"{method}_required_fields", tuple())
+        base_required_fields: tuple = getattr(
+            _BaseCommand.Meta, f"{method}_required_fields", tuple()
+        )
+        command_required_fields = super()._get_effect_method_required_fields(method)
         return tuple(set(base_required_fields) | set(command_required_fields))
 
     @property
