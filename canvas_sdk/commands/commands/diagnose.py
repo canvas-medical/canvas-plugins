@@ -10,8 +10,11 @@ class DiagnoseCommand(_BaseCommand):
 
     class Meta:
         key = "diagnose"
+        originate_required_fields = ("icd10_code",)
 
-    icd10_code: str = Field(json_schema_extra={"commands_api_name": "diagnose"})
+    icd10_code: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "diagnose"}
+    )
     background: str | None = None
     approximate_date_of_onset: datetime | None = None
     today_assessment: str | None = None

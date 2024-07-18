@@ -39,6 +39,8 @@ $ canvas [OPTIONS] COMMAND [ARGS]...
 - `init`: Create a new plugin
 - `install`: Install a plugin into a Canvas instance
 - `uninstall`: Uninstall a plugin from a Canvas instance
+- `disable`: Disable a plugin from a Canvas instance
+- `enable`: Enable a plugin from a Canvas instance
 - `list`: List all plugins from a Canvas instance
 - `validate-manifest`: Validate the Canvas Manifest json file
 - `logs`: Listen and print log streams from a Canvas instance
@@ -89,6 +91,44 @@ $ canvas uninstall [OPTIONS] NAME
 **Arguments**:
 
 - `NAME`: Plugin name to delete [required]
+
+**Options**:
+
+- `--host TEXT`: Canvas instance to connect to
+- `--help`: Show this message and exit.
+
+## `canvas enable`
+
+Enable a plugin from a Canvas instance..
+
+**Usage**:
+
+```console
+$ canvas enable [OPTIONS] NAME
+```
+
+**Arguments**:
+
+- `NAME`: Plugin name to enable [required]
+
+**Options**:
+
+- `--host TEXT`: Canvas instance to connect to
+- `--help`: Show this message and exit.
+
+## `canvas disable`
+
+Disable a plugin from a Canvas instance..
+
+**Usage**:
+
+```console
+$ canvas disable [OPTIONS] NAME
+```
+
+**Arguments**:
+
+- `NAME`: Plugin name to disable [required]
 
 **Options**:
 

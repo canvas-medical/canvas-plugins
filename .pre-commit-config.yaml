@@ -42,7 +42,7 @@ repos:
     rev: 6.3.0
     hooks:
       - id: pydocstyle
-        exclude: *generated
+        exclude: "generated/|tests.py"
         additional_dependencies: [tomli]
 
   - repo: https://github.com/pycqa/isort

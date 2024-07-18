@@ -152,7 +152,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     try:
         manifest_json = json.loads(manifest_json)
     except Exception as e:
-        log.warning(f'Unable to load plugin "{name}": {e}')
+        log.error(f'Unable to load plugin "{name}": {e}')
         return
 
     secrets_file = path / SECRETS_FILE_NAME
@@ -162,13 +162,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         try:
             secrets_json = json.load(secrets_file.open())
         except Exception as e:
-            log.warning(f'Unable to load secrets for plugin "{name}": {str(e)}')
+            log.error(f'Unable to load secrets for plugin "{name}": {str(e)}')
 
     # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
     except Exception as e:
-        log.warning(f'Unable to load plugin "{name}": {str(e)}')
+        log.error(f'Unable to load plugin "{name}": {str(e)}')
         return
 
     for protocol in protocols:
@@ -204,8 +204,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                     "protocol": protocol,
                     "secrets": secrets_json,
                 }
-        except ImportError as err:
+        except Exception as err:
             log.error(f"Error importing module '{name_and_class}': {err}")
+            for error_line in traceback.format_exception(err):
+                log.error(error_line)
 
 
 def refresh_event_type_map() -> None:

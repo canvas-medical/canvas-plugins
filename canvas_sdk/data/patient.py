@@ -1,25 +1,24 @@
 from datetime import datetime
 from typing import Self
 
-from pydantic import BaseModel as Model
+from canvas_sdk.data import DataModel
 
 from . import data_access_layer_client as dal_client
 
 
-# TODO: Sync this model with Joe's PR
-class Patient(Model):
+class Patient(DataModel):
     """Patient model."""
 
-    id: str | None
-    first_name: str
-    last_name: str
-    birth_date: datetime
+    id: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    birth_date: datetime | None = None
 
     @classmethod
     def get(cls, id: str) -> Self:
         """Given an ID, get the Patient from the Data Access Layer."""
         patient = dal_client.get_patient(id)
-        return cls(
+        return cls(  # type: ignore[call-arg]
             id=patient.id,
             first_name=patient.first_name,
             last_name=patient.last_name,

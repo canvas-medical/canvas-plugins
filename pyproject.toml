@@ -35,12 +35,18 @@ authors = ["Canvas Team <engineering@canvasmedical.com>"]
 description = "SDK to customize event-driven actions in your Canvas instance"
 license = "MIT"
 name = "canvas"
-packages = [{include = "canvas_cli"}, {include = "canvas_sdk"}]
+packages = [
+  {include = "canvas_cli"},
+  {include = "canvas_generated"},
+  {include = "canvas_sdk"},
+  {include = "logger"}
+]
 readme = "README.md"
-version = "0.1.12"
+version = "0.1.14"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
+cron-converter = "^1.2.1"
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
 jsonschema = "^4.21.1"

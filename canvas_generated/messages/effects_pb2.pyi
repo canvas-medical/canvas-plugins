@@ -68,6 +68,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
     COMMIT_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
+    CREATE_TASK: _ClassVar[EffectType]
+    UPDATE_TASK: _ClassVar[EffectType]
+    CREATE_TASK_COMMENT: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -129,6 +132,9 @@ EDIT_UPDATE_GOAL_COMMAND: EffectType
 DELETE_UPDATE_GOAL_COMMAND: EffectType
 COMMIT_UPDATE_GOAL_COMMAND: EffectType
 ENTER_IN_ERROR_UPDATE_GOAL_COMMAND: EffectType
+CREATE_TASK: EffectType
+UPDATE_TASK: EffectType
+CREATE_TASK_COMMENT: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name")

@@ -18,7 +18,10 @@ class PluginLogger:
     def __init__(self) -> None:
         self.logger = logging.getLogger("plugin_runner_logger")
         self.logger.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(levelname)s %(asctime)s %(message)s")
+        log_prefix = os.getenv("HOSTNAME", "")
+        if log_prefix != "":
+            log_prefix = f"[{log_prefix}] "
+        formatter = logging.Formatter(f"{log_prefix}%(levelname)s %(asctime)s %(message)s")
 
         streaming_handler = logging.StreamHandler()
         streaming_handler.setFormatter(formatter)

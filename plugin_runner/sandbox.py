@@ -1,10 +1,9 @@
 import ast
 import builtins
-
+from _ast import AnnAssign
 from functools import cached_property
 from typing import Any, cast
 
-from _ast import AnnAssign
 from RestrictedPython import (
     CompileResult,
     PrintCollector,
@@ -40,6 +39,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.data",
         "canvas_sdk.effects",
         "canvas_sdk.events",
+        "canvas_sdk.handlers",
         "canvas_sdk.protocols",
         "canvas_sdk.utils",
         "canvas_sdk.views",

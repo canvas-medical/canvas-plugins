@@ -1,3 +1,4 @@
+import decimal
 from datetime import datetime
 
 import pytest
@@ -20,10 +21,10 @@ from canvas_sdk.commands import (
 )
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.commands.tests.test_utils import (
+    MaskedValue,
     fake,
     get_field_type,
-    raises_missing_error,
-    raises_none_error,
+    raises_none_error_for_effect_method,
     raises_wrong_type_error,
 )
 
@@ -96,15 +97,11 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     ),
     fields_to_test: tuple[str],
 ) -> None:
-    schema = Command.model_json_schema()
-    schema["required"].append("note_uuid")
-    required_fields = {k: v for k, v in schema["properties"].items() if k in schema["required"]}
-    base = {field: fake(props, Command) for field, props in required_fields.items()}
     for field in fields_to_test:
-        raises_wrong_type_error(base, Command, field)
-        if field in required_fields:
-            raises_missing_error(base, Command, field)
-            raises_none_error(base, Command, field)
+        raises_wrong_type_error(Command, field)
+
+    for method in ["originate", "edit", "delete", "commit", "enter_in_error"]:
+        raises_none_error_for_effect_method(Command, method)
 
 
 @pytest.mark.parametrize(
@@ -112,26 +109,26 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     [
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 1},
-            "1 validation error for PlanCommand\n  Value error, Command should have either a note_uuid or a command_uuid. [type=value",
-            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
-        ),
-        (
-            PlanCommand,
-            {"narrative": "yo", "user_id": 1, "note_uuid": None},
-            "1 validation error for PlanCommand\n  Value error, Command should have either a note_uuid or a command_uuid. [type=value",
-            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
-        ),
-        (
-            PlanCommand,
             {"narrative": "yo", "user_id": 5, "note_uuid": 1},
             "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
             {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
         ),
         (
+            PlanCommand,
+            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": 5},
+            "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
+            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": "5"},
+        ),
+        (
+            PlanCommand,
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": "5"},
+            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": 5},
+        ),
+        (
             ReasonForVisitCommand,
             {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1, "structured": True},
-            "1 validation error for ReasonForVisitCommand\n  Value error, Structured RFV should have a coding.",
+            "1 validation error for ReasonForVisitCommand\n  Structured RFV should have a coding",
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "user_id": 1,
@@ -217,7 +214,9 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     valid_kwargs: dict,
 ) -> None:
     with pytest.raises(ValidationError) as e1:
-        Command(**err_kwargs)
+        cmd = Command(**err_kwargs)
+        cmd.originate()
+        cmd.edit()
     assert err_msg in repr(e1.value)
 
     cmd = Command(**valid_kwargs)
@@ -226,6 +225,8 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     key, value = list(err_kwargs.items())[-1]
     with pytest.raises(ValidationError) as e2:
         setattr(cmd, key, value)
+        cmd.originate()
+        cmd.edit()
     assert err_msg in repr(e2.value)
 
 
@@ -299,15 +300,12 @@ def test_command_allows_kwarg_with_correct_type(
     fields_to_test: tuple[str],
 ) -> None:
     schema = Command.model_json_schema()
-    schema["required"].append("note_uuid")
-    required_fields = {k: v for k, v in schema["properties"].items() if k in schema["required"]}
-    base = {field: fake(props, Command) for field, props in required_fields.items()}
 
     for field in fields_to_test:
-        field_type = get_field_type(Command.model_json_schema()["properties"][field])
+        field_type = get_field_type(schema["properties"][field])
 
         init_field_value = fake({"type": field_type}, Command)
-        init_kwargs = base | {field: init_field_value}
+        init_kwargs = {field: init_field_value}
         cmd = Command(**init_kwargs)
         assert getattr(cmd, field) == init_field_value
 
@@ -315,24 +313,37 @@ def test_command_allows_kwarg_with_correct_type(
         setattr(cmd, field, updated_field_value)
         assert getattr(cmd, field) == updated_field_value
 
+    for method in ["originate", "edit", "delete", "commit", "enter_in_error"]:
+        required_fields = {
+            k: v
+            for k, v in schema["properties"].items()
+            if k in Command()._get_effect_method_required_fields(method)
+        }
+        base = {field: fake(props, Command) for field, props in required_fields.items()}
+        cmd = Command(**base)
+        effect = getattr(cmd, method)()
+        assert effect is not None
+
 
 @pytest.fixture(scope="session")
-def token() -> str:
-    return requests.post(
-        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={
-            "grant_type": "client_credentials",
-            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
-            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
-        },
-    ).json()["access_token"]
+def token() -> MaskedValue:
+    return MaskedValue(
+        requests.post(
+            f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+                "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+            },
+        ).json()["access_token"]
+    )
 
 
 @pytest.fixture
-def note_uuid(token: str) -> str:
+def note_uuid(token: MaskedValue) -> str:
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -357,6 +368,9 @@ def command_type_map() -> dict[str, type]:
         "TextField": str,
         "ChoiceField": str,
         "DateField": datetime,
+        "ApproximateDateField": datetime,
+        "IntegerField": int,
+        "DecimalField": decimal.Decimal,
     }
 
 
@@ -365,14 +379,12 @@ def command_type_map() -> dict[str, type]:
     "Command",
     [
         (AssessCommand),
-        # todo: add Diagnose once it has an adapter in home-app
-        # (DiagnoseCommand),
+        (DiagnoseCommand),
         (GoalCommand),
         (HistoryOfPresentIllnessCommand),
         (MedicationStatementCommand),
         (PlanCommand),
-        # todo: add Prescribe once its been refactored
-        # (PrescribeCommand),
+        (PrescribeCommand),
         (QuestionnaireCommand),
         (ReasonForVisitCommand),
         (StopMedicationCommand),
@@ -380,7 +392,7 @@ def command_type_map() -> dict[str, type]:
     ],
 )
 def test_command_schema_matches_command_api(
-    token: str,
+    token: MaskedValue,
     command_type_map: dict[str, str],
     note_uuid: str,
     Command: (
@@ -399,7 +411,7 @@ def test_command_schema_matches_command_api(
 ) -> None:
     # first create the command in the new note
     data = {"noteKey": note_uuid, "schemaKey": Command.Meta.key}
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token.value}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
     command_resp = requests.post(url, headers=headers, data=data).json()
     assert "uuid" in command_resp
@@ -427,7 +439,15 @@ def test_command_schema_matches_command_api(
         expected_type = expected_field["type"]
         if expected_type is Coding:
             expected_type = expected_type.__annotations__["code"]
-        assert expected_type == command_type_map.get(actual_field["type"])
+
+        actual_type = command_type_map.get(actual_field["type"])
+        if actual_field["type"] == "AutocompleteField" and name[-1] == "s":
+            # this condition initially created for Prescribe.indications,
+            # but could apply to other AutocompleteField fields that are lists
+            # making the assumption here that if the field ends in 's' (like indications), it is a list
+            actual_type = list[actual_type]  # type: ignore
+
+        assert expected_type == actual_type
 
         if (choices := actual_field["choices"]) is None:
             assert expected_field["choices"] is None

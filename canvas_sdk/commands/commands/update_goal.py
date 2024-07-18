@@ -11,6 +11,7 @@ class UpdateGoalCommand(_BaseCommand):
 
     class Meta:
         key = "updateGoal"
+        originate_required_fields = ("goal_id",)
 
     class AchievementStatus(Enum):
         IN_PROGRESS = "in-progress"
@@ -28,7 +29,9 @@ class UpdateGoalCommand(_BaseCommand):
         MEDIUM = "medium-priority"
         LOW = "low-priority"
 
-    goal_id: str = Field(json_schema_extra={"commands_api_name": "goal_statement"})
+    goal_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "goal_statement"}
+    )
     due_date: datetime | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
