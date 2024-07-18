@@ -2,11 +2,17 @@
 Data Access Layer client.
 
 This module is primarily responsible for executing calls to the gRPC service so that such details
-are abstracted away from callers. The results of the functions in this module are protobufs which
-must be mapped to user-facing objects.
+are abstracted away from callers. The return values of the methods on the client class are protobufs
+which must be mapped to user-facing objects.
 """
 
+import functools
+from collections.abc import Callable
+from types import FunctionType
+from typing import Any
+
 import grpc
+from grpc import StatusCode
 
 from canvas_generated.data_access_layer.data_access_layer_pb2 import ID, Patient
 from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
@@ -14,10 +20,68 @@ from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
 )
 from settings import DAL_TARGET
 
-_CHANNEL = grpc.insecure_channel(DAL_TARGET)
-_STUB = DataAccessLayerStub(_CHANNEL)
+from . import exceptions
 
 
-def get_patient(id: str) -> Patient:
-    """Given an ID, get the Patient from the Data Access Layer."""
-    return _STUB.GetPatient(ID(id=id))
+class _DataAccessLayerClientMeta(type):
+    """
+    Metaclass for the Data Access Layer client class.
+
+    Wraps all methods of a class with a gRPC error handler.
+    """
+
+    def __new__(cls, name: str, bases: tuple, attrs: dict) -> type:
+        for name, value in attrs.items():
+            if isinstance(value, FunctionType):
+                attrs[name] = cls.handle_grpc_errors(value)
+        return super().__new__(cls, name, bases, attrs)
+
+    @classmethod
+    def handle_grpc_errors(cls, func: Callable[..., Any]) -> Callable[..., Any]:
+        """
+        Decorator that wraps a try-except block around all class methods. gRPC errors are mapped to
+        a defined set of exceptions from a Data Access Layer exception hierarchy.
+        """
+
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return func(*args, **kwargs)
+            except grpc.RpcError as error:
+                # gRPC exceptions aren't tightly defined, so we'll try to get a status code and
+                # handle it if we don't
+                try:
+                    status_code = error.code()
+                except Exception:
+                    status_code = None
+
+                # Map more gRPC status codes to exception types as needed
+                match status_code:
+                    case StatusCode.NOT_FOUND:
+                        raise exceptions.DataAccessLayerNotFoundError(error.details()) from error
+                    case _:
+                        raise exceptions.DataAccessLayerError from error
+
+        return wrapper
+
+
+class _DataAccessLayerClient(metaclass=_DataAccessLayerClientMeta):
+    """
+    Data Access Layer client.
+
+    Do not instantiate -- just import the global variable DAL_CLIENT.
+    """
+
+    def __init__(self) -> None:
+        self._channel = grpc.insecure_channel(DAL_TARGET)
+        self._stub = DataAccessLayerStub(self._channel)
+
+    def get_patient(self, id: str) -> Patient:
+        """Given an ID, get the Patient from the Data Access Layer."""
+        return self._stub.GetPatient(ID(id=id))
+
+
+# There should only be one instantiation of the client, so this global will act as a singleton in a
+# way. This is the value that should be imported; no one should be instantiating the DAL client
+# (hence the underscore notation indicating that the class is "private").
+DAL_CLIENT = _DataAccessLayerClient()

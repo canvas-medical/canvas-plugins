@@ -3,7 +3,7 @@ from typing import Self
 
 from canvas_sdk.data import DataModel
 
-from . import data_access_layer_client as dal_client
+from .data_access_layer_client import DAL_CLIENT
 
 
 class Patient(DataModel):
@@ -17,7 +17,7 @@ class Patient(DataModel):
     @classmethod
     def get(cls, id: str) -> Self:
         """Given an ID, get the Patient from the Data Access Layer."""
-        patient = dal_client.get_patient(id)
+        patient = DAL_CLIENT.get_patient(id)
         return cls(
             id=patient.id,
             first_name=patient.first_name or None,
