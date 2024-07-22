@@ -31,9 +31,9 @@ class _DataAccessLayerClientMeta(type):
     """
 
     def __new__(cls, name: str, bases: tuple, attrs: dict) -> type:
-        for name, value in attrs.items():
-            if isinstance(value, FunctionType):
-                attrs[name] = cls.handle_grpc_errors(value)
+        for attr_name, attr_value in attrs.items():
+            if isinstance(attr_value, FunctionType):
+                attrs[attr_name] = cls.handle_grpc_errors(attr_value)
         return super().__new__(cls, name, bases, attrs)
 
     @classmethod
