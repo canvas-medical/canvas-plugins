@@ -50,16 +50,21 @@ class _DataAccessLayerClientMeta(type):
                 return func(*args, **kwargs)
             except grpc.RpcError as error:
                 # gRPC exceptions aren't tightly defined, so we'll try to get a status code and
-                # handle it if we don't
+                # error details, and handle it if we can't
                 try:
                     status_code = error.code()
                 except Exception:
                     status_code = None
 
+                try:
+                    error_details = error.details()
+                except Exception:
+                    error_details = ""
+
                 # Map more gRPC status codes to exception types as needed
                 match status_code:
                     case StatusCode.NOT_FOUND:
-                        raise exceptions.DataAccessLayerNotFoundError(error.details()) from error
+                        raise exceptions.DataAccessLayerNotFoundError(error_details) from error
                     case _:
                         raise exceptions.DataAccessLayerError from error
             except Exception as exception:
