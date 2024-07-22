@@ -21,7 +21,7 @@ from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
 from settings import DAL_TARGET
 
 from . import exceptions
-from .exceptions import DataAccessLayerError
+from .exceptions import DataModuleError
 
 
 class _DataAccessLayerClientMeta(type):
@@ -64,11 +64,11 @@ class _DataAccessLayerClientMeta(type):
                 # Map more gRPC status codes to exception types as needed
                 match status_code:
                     case StatusCode.NOT_FOUND:
-                        raise exceptions.DataAccessLayerNotFoundError(error_details) from error
+                        raise exceptions.DataModuleNotFoundError(error_details) from error
                     case _:
-                        raise exceptions.DataAccessLayerError from error
+                        raise exceptions.DataModuleError from error
             except Exception as exception:
-                raise DataAccessLayerError from exception
+                raise DataModuleError from exception
 
         return wrapper
 

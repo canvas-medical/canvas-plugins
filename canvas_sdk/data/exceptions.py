@@ -1,7 +1,7 @@
 """Data Access Layer exceptions."""
 
 
-class DataAccessLayerError(RuntimeError):
+class DataModuleError(RuntimeError):
     """
     General Data Access Layer error; base class and also used to represent errors of indeterminate
     cause.
@@ -10,7 +10,7 @@ class DataAccessLayerError(RuntimeError):
     pass
 
 
-class DataAccessLayerNotFoundError(DataAccessLayerError):
+class DataModuleNotFoundError(DataModuleError):
     """Object not found error."""
 
     pass
