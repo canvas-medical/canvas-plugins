@@ -21,6 +21,7 @@ from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
 from settings import DAL_TARGET
 
 from . import exceptions
+from .exceptions import DataAccessLayerError
 
 
 class _DataAccessLayerClientMeta(type):
@@ -61,6 +62,8 @@ class _DataAccessLayerClientMeta(type):
                         raise exceptions.DataAccessLayerNotFoundError(error.details()) from error
                     case _:
                         raise exceptions.DataAccessLayerError from error
+            except Exception as exception:
+                raise DataAccessLayerError from exception
 
         return wrapper
 
