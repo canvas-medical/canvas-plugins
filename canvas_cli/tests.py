@@ -52,7 +52,8 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
             f.write(original_content)
 
     os.remove(temp_path)
-    shutil.rmtree(Path(f"./{plugin_name}"))
+    if Path(f"./{plugin_name}").exists():
+        shutil.rmtree(Path(f"./{plugin_name}"))
 
 
 def test_canvas_init() -> None:
