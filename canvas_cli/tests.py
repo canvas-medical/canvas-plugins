@@ -1,15 +1,60 @@
+import os
 import shutil
 from pathlib import Path
+from typing import Any, Generator
+from urllib.parse import urlparse
 
 import pytest
 from typer.testing import CliRunner
+
+import settings
+from canvas_cli.apps.auth.utils import CONFIG_PATH
 
 from .main import app
 
 runner = CliRunner()
 
 
-@pytest.mark.integtest
+@pytest.fixture(autouse=True)
+def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator[Any, Any, Any]:
+    """Creates the necessary config file for auth before performing cli tests."""
+
+    host = urlparse(settings.INTEGRATION_TEST_URL).hostname
+    client_id = settings.INTEGRATION_TEST_CLIENT_ID
+    client_secret = settings.INTEGRATION_TEST_CLIENT_SECRET
+
+    path = CONFIG_PATH
+    if not path.exists():
+        if not path.parent.exists():
+            path.parent.mkdir()
+        path.touch()
+
+    temp_path = path.parent / "temp_credentials.ini"
+
+    with open(path, "r+") as f:
+        original_content = f.read()
+        f.seek(0, 0)
+        f.writelines(
+            [
+                f"[{host}]\n",
+                f"client_id={client_id}\n",
+                f"client_secret={client_secret}\n",
+            ]
+        )
+        with open(temp_path, "a") as temp:
+            temp.write(original_content)
+
+    yield
+
+    with open(temp_path, "r") as temp:
+        original_content = temp.read()
+        with open(path, "w") as f:
+            f.write(original_content)
+
+    os.remove(temp_path)
+    shutil.rmtree(Path(f"./{plugin_name}"))
+
+
 def test_canvas_init() -> None:
     """Tests that the CLI successfully creates a plugin with init."""
     result = runner.invoke(app, "init", input="testing_init")
@@ -52,18 +97,20 @@ def plugin_name() -> str:
 
 
 @pytest.fixture
-def cli_test_steps(plugin_name: str) -> list[tuple[str, int, list[str]]]:
+def cli_test_steps(plugin_name: str) -> list[tuple[str, str, int, list[str]]]:
     """
     The steps for the cli integration test.
-    Formatted as (command, expected_exit_code, expected_outputs).
+    Formatted as (step_name, command, expected_exit_code, expected_outputs).
     """
     return [
         (
+            "List empty plugins",
             "list",
             0,
             ["No plugins are currently installed on "],
         ),
         (
+            "Install new plugin",
             f"install {plugin_name}",
             0,
             [
@@ -74,26 +121,31 @@ def cli_test_steps(plugin_name: str) -> list[tuple[str, int, list[str]]]:
             ],
         ),
         (
+            "List newly installed plugin",
             "list",
             0,
             [f"{plugin_name}@0.0.1	enabled"],
         ),
         (
+            "Disable plugin",
             f"disable {plugin_name}",
             0,
             [f"Disabling {plugin_name} using ", f"Plugin {plugin_name} successfully disabled!"],
         ),
         (
+            "List disabled plugin",
             "list",
             0,
             [f"{plugin_name}@0.0.1	disabled"],
         ),
         (
+            "Enable plugin",
             f"enable {plugin_name}",
             0,
             [f"Enabling {plugin_name} using ", f"Plugin {plugin_name} successfully enabled!"],
         ),
         (
+            "Uninstall enabled plugin",
             f"uninstall {plugin_name}",
             1,
             [
@@ -101,8 +153,9 @@ def cli_test_steps(plugin_name: str) -> list[tuple[str, int, list[str]]]:
                 'Status code 403: {"detail":"Cannot delete an enabled plugin."}',
             ],
         ),
-        (f"disable {plugin_name}", 0, []),
+        ("Disable plugin", f"disable {plugin_name}", 0, []),
         (
+            "Uninstall disabled plugin",
             f"uninstall {plugin_name}",
             0,
             [
@@ -110,13 +163,13 @@ def cli_test_steps(plugin_name: str) -> list[tuple[str, int, list[str]]]:
                 f"Plugin {plugin_name} successfully uninstalled!",
             ],
         ),
-        ("list", 0, ["No plugins are currently installed on "]),
+        ("List empty plugins again", "list", 0, ["No plugins are currently installed on "]),
     ]
 
 
 @pytest.mark.integtest
 def test_canvas_list_install_disable_enable_uninstall(
-    plugin_name: str, cli_test_steps: list[tuple[str, int, list[str]]]
+    plugin_name: str, cli_test_steps: list[tuple[str, str, int, list[str]]]
 ) -> None:
     """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin"""
 
@@ -139,10 +192,9 @@ def test_canvas_list_install_disable_enable_uninstall(
     protocol.writelines(p)
     protocol.close()
 
-    for command, expected_exit_code, expected_outputs in cli_test_steps:
+    for step_name, command, expected_exit_code, expected_outputs in cli_test_steps:
+        print(step_name)
         result = runner.invoke(app, command)
         assert result.exit_code == expected_exit_code
         for expected_output in expected_outputs:
             assert expected_output in result.stdout
-
-    shutil.rmtree(Path(f"./{plugin_name}"))
