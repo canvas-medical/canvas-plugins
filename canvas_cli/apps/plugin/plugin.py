@@ -204,8 +204,8 @@ def enable(
         print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
-    if r.status_code == requests.codes.no_content:
-        print(r.text)
+    if r.ok:
+        print(f"Plugin {name} successfully enabled!")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -241,8 +241,8 @@ def disable(
         print(f"Failed to connect to {host}")
         raise typer.Exit(1)
 
-    if r.status_code == requests.codes.no_content:
-        print(r.text)
+    if r.ok:
+        print(f"Plugin {name} successfully disabled!")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
