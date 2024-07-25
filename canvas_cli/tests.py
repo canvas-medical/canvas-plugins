@@ -20,7 +20,7 @@ runner = CliRunner()
 def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator[Any, Any, Any]:
     """Creates the necessary config file for auth before performing cli tests."""
 
-    host = urlparse(settings.INTEGRATION_TEST_URL).hostname
+    host = urlparse(settings.INTEGRATION_TEST_URL).hostname.replace(".canvasmedical.com", "")
     client_id = settings.INTEGRATION_TEST_CLIENT_ID
     client_secret = settings.INTEGRATION_TEST_CLIENT_SECRET
 
@@ -197,7 +197,7 @@ def test_canvas_list_install_disable_enable_uninstall(
         "\n",
         "\tdef compute(self):\n",
         "\t\tlog.info(self.NARRATIVE_STRING)\n",
-        "\t\treturn [\n",
+        "\t\treturn []\n",
     ]
     protocol.writelines(p)
     protocol.close()
