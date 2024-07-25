@@ -1,8 +1,11 @@
+import shutil
 from pathlib import Path
 
 import pytest
 import typer
 from typer.testing import CliRunner
+
+from canvas_cli.main import app
 
 from .plugin import validate_package
 
@@ -30,3 +33,38 @@ def test_validate_package_valid_file(tmp_path: Path) -> None:
     package_path.write_text("something")
     result = validate_package(package_path)
     assert result == package_path
+
+
+def test_canvas_init() -> None:
+    """Tests that the CLI successfully creates a plugin with init."""
+    result = runner.invoke(app, "init", input="testing_init")
+    assert result.exit_code == 0
+
+    # plugin directory exists
+    plugin = Path("./testing_init")
+    assert plugin.exists()
+    assert plugin.is_dir()
+
+    # manifest file exists
+    manifest = Path("./testing_init/CANVAS_MANIFEST.json")
+    assert manifest.exists()
+    assert manifest.is_file()
+    manifest_result = runner.invoke(app, "validate-manifest testing_init")
+    assert manifest_result.exit_code == 0
+
+    # readme file exists
+    readme = Path("./testing_init/README.md")
+    assert readme.exists()
+    assert readme.is_file()
+
+    # protocols dir exists
+    protocols = Path("./testing_init/protocols")
+    assert protocols.exists()
+    assert protocols.is_dir()
+
+    # protocol file exists in protocols dir
+    protocol = Path("./testing_init/protocols/my_protocol.py")
+    assert protocol.exists()
+    assert protocol.is_file()
+
+    shutil.rmtree(plugin)
