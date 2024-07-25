@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any, Generator
+from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
 import pytest
@@ -168,11 +169,19 @@ def cli_test_steps(plugin_name: str) -> list[tuple[str, str, int, list[str]]]:
     ]
 
 
+@patch("keyring.get_password")
+@patch("keyring.set_password")
 @pytest.mark.integtest
 def test_canvas_list_install_disable_enable_uninstall(
-    plugin_name: str, cli_test_steps: list[tuple[str, str, int, list[str]]]
+    mock_get_password: MagicMock,
+    mock_set_password: MagicMock,
+    plugin_name: str,
+    cli_test_steps: list[tuple[str, str, int, list[str]]],
 ) -> None:
     """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin"""
+
+    mock_get_password.return_value = None
+    mock_set_password.return_value = None
 
     runner.invoke(app, "init", input=plugin_name)
     protocol = open(f"./{plugin_name}/protocols/my_protocol.py", "w")
