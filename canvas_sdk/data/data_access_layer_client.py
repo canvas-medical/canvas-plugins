@@ -18,7 +18,7 @@ from canvas_generated.data_access_layer.data_access_layer_pb2 import ID, Patient
 from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
     DataAccessLayerStub,
 )
-from settings import DAL_TARGET
+from settings import PLUGIN_RUNNER_DAL_TARGET
 
 from . import exceptions
 from .exceptions import DataModuleError
@@ -81,7 +81,7 @@ class _DataAccessLayerClient(metaclass=_DataAccessLayerClientMeta):
     """
 
     def __init__(self) -> None:
-        self._channel = grpc.insecure_channel(DAL_TARGET)
+        self._channel = grpc.insecure_channel(PLUGIN_RUNNER_DAL_TARGET)
         self._stub = DataAccessLayerStub(self._channel)
 
     def get_patient(self, id: str) -> Patient:
