@@ -18,10 +18,14 @@ jobs:
         shell: bash
         run: poetry install --no-interaction
 
-      # Run Pytest via Poetry.
-      - name: Run Pytest
+      # Run Pytest tests via Poetry.
+      - name: Run Pytest tests
+        run: poetry run pytest -m "not integtest" --ff --verbosity 2
+
+      # Run Pytest integration tests via Poetry.
+      - name: Run Pytest integration tests
         env:
           INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: poetry run pytest --ff --verbosity 2
+        run: poetry run pytest -m "integtest" --ff --verbosity 2

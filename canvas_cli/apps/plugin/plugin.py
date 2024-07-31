@@ -126,7 +126,7 @@ def install(
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.created:
-        print("Plugin successfully installed!")
+        print(f"Plugin {plugin_name} successfully installed!")
 
     # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
@@ -168,7 +168,7 @@ def uninstall(
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.no_content:
-        print(r.text)
+        print(f"Plugin {name} successfully uninstalled!")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -273,9 +273,12 @@ def list(
         raise typer.Exit(1)
 
     if r.status_code == requests.codes.ok:
-        for plugin in r.json().get("results", []):
+        plugins = r.json().get("results", [])
+        if not plugins:
+            print(f"No plugins are currently installed on {host}")
+        for plugin in plugins:
             print(
-                f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'not enabled'}"
+                f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'disabled'}"
             )
     else:
         print(f"Status code {r.status_code}: {r.text}")
@@ -287,16 +290,16 @@ def validate_manifest(
 ) -> None:
     """Validate the Canvas Manifest json file."""
     if not plugin_name.exists():
-        raise typer.BadParameter(f"Plugin '{plugin_name}' does not exist")
+        raise typer.BadParameter(f"Plugin {plugin_name} does not exist")
 
     if not plugin_name.is_dir():
-        raise typer.BadParameter(f"Plugin '{plugin_name}' is not a directory, nothing to validate")
+        raise typer.BadParameter(f"Plugin {plugin_name} is not a directory, nothing to validate")
 
     manifest = plugin_name / "CANVAS_MANIFEST.json"
 
     if not manifest.exists():
         raise typer.BadParameter(
-            f"Plugin '{plugin_name}' does not have a CANVAS_MANIFEST.json file to validate"
+            f"Plugin {plugin_name} does not have a CANVAS_MANIFEST.json file to validate"
         )
 
     try:
@@ -307,7 +310,7 @@ def validate_manifest(
 
     validate_manifest_file(manifest_json)
 
-    print(f"Plugin '{plugin_name}' has a valid CANVAS_MANIFEST.json file")
+    print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
 
 
 def update(
