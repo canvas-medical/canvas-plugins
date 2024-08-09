@@ -14,7 +14,7 @@ from typing import Any
 import grpc
 from grpc import StatusCode
 
-from canvas_generated.data_access_layer.data_access_layer_pb2 import ID, Patient
+from canvas_generated.data_access_layer.data_access_layer_pb2 import ID, Patient, PatientTasks, StaffAssignedTasks, Task, TaskComments, TaskLabels
 from canvas_generated.data_access_layer.data_access_layer_pb2_grpc import (
     DataAccessLayerStub,
 )
@@ -87,6 +87,23 @@ class _DataAccessLayerClient(metaclass=_DataAccessLayerClientMeta):
     def get_patient(self, id: str) -> Patient:
         """Given an ID, get the Patient from the Data Access Layer."""
         return self._stub.GetPatient(ID(id=id))
+
+    def get_task(self, id: str) -> Task:
+        """Given an ID, get the Patient from the Data Access Layer."""
+        return self._stub.GetTask(ID(id=id))
+
+    def get_task_labels(self, id: str) -> TaskLabels:
+        return self._stub.GetTaskLabels(ID(id=id))
+
+    def get_task_comments(self, id: str) -> TaskComments:
+        return self._stub.GetTaskComments(ID(id=id))
+
+    def get_patient_tasks(self, id: str) -> PatientTasks:
+        return self._stub.GetPatientTasks(ID(id=id))
+
+    def get_staff_assigned_tasks(self, id: str) -> StaffAssignedTasks:
+        return self._stub.GetStaffAssignedTasks(ID(id=id))
+
 
 
 # There should only be one instantiation of the client, so this global will act as a singleton in a

@@ -2,6 +2,16 @@ syntax = 'proto3';
 
 service DataAccessLayer {
   rpc GetPatient(ID) returns (Patient) {}
+
+  rpc GetTask(ID) returns (Task) {}
+
+  rpc GetTaskLabels(ID) returns (TaskLabels) {}
+
+  rpc GetTaskComments(ID) returns (TaskComments) {}
+
+  rpc GetPatientTasks(ID) returns (PatientTasks) {}
+
+  rpc GetStaffAssignedTasks(ID) returns (StaffAssignedTasks) {}
 }
 
 message ID {
@@ -13,4 +23,56 @@ message Patient {
   optional string first_name = 2;
   optional string last_name = 3;
   optional string birth_date = 4;
+}
+
+message Staff {
+  string id = 1;
+}
+
+message Team {
+  string id = 1;
+  string name = 2;
+}
+
+message Task {
+  string id = 1;
+  optional Staff assignee = 2;
+  optional Patient patient = 3;
+  string title = 4;
+  optional string due = 5;
+  string status = 6;
+  string created = 7;
+  string modified = 8;
+  optional Team team = 9;
+  string task_type = 10;
+  optional Staff creator = 11;
+}
+
+message TaskLabels {
+  string id = 1; // This is the Task id;
+  repeated string labels = 2;
+}
+
+message TaskComment {
+  string id = 1;
+  string created = 2;
+  string modified = 3;
+  Task task = 4;
+  Staff creator = 5;
+  string body = 6;
+}
+
+message TaskComments {
+  string id = 1; // This is the Task id;
+  repeated TaskComment comments = 2;
+}
+
+message PatientTasks {
+  string id = 1; // The patient ID
+  repeated Task tasks = 2;
+}
+
+message StaffAssignedTasks {
+  string id = 1; // The Staff ID
+  repeated Task tasks = 2;
 }
