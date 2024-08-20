@@ -11,7 +11,7 @@ class PrescribeCommand(_BaseCommand):
 
     class Meta:
         key = "prescribe"
-        originate_required_fields = (
+        commit_required_fields = (
             "fdb_code",
             "sig",
             "quantity_to_dispense",
@@ -29,7 +29,7 @@ class PrescribeCommand(_BaseCommand):
     icd10_codes: list[str] | None = Field(
         None, json_schema_extra={"commands_api_name": "indications"}
     )
-    sig: str | None = None
+    sig: str = ""
     days_supply: int | None = None
     quantity_to_dispense: Decimal | float | int | None = None
     type_to_dispense: str | None = None

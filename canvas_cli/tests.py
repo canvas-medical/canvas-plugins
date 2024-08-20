@@ -32,18 +32,15 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
     temp_path = path.parent / "temp_credentials.ini"
 
-    with open(path, "r+") as f:
-        original_content = f.read()
-        f.seek(0, 0)
-        f.writelines(
-            [
-                f"[{host}]\n",
-                f"client_id={client_id}\n",
-                f"client_secret={client_secret}\n",
-            ]
-        )
-        with open(temp_path, "a") as temp:
-            temp.write(original_content)
+    original_content = open(path, "r").read()
+    open(path, "w").writelines(
+        [
+            f"[{host}]\n",
+            f"client_id={client_id}\n",
+            f"client_secret={client_secret}\n",
+        ]
+    )
+    open(temp_path, "a").write(original_content)
 
     yield
 
@@ -59,7 +56,7 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
 @pytest.fixture
 def plugin_name() -> str:
-    """The plugin name to be used for the canvas cli commands test"""
+    """The plugin name to be used for the canvas cli test"""
     return "cli"
 
 

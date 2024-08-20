@@ -1,11 +1,18 @@
 import decimal
+import shutil
+from contextlib import chdir
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import pytest
 import requests
 from pydantic import ValidationError
+from typer.testing import CliRunner
 
 import settings
+from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
+from canvas_cli.main import app
 from canvas_sdk.commands import (
     AssessCommand,
     DiagnoseCommand,
@@ -27,6 +34,8 @@ from canvas_sdk.commands.tests.test_utils import (
     raises_none_error_for_effect_method,
     raises_wrong_type_error,
 )
+
+runner = CliRunner()
 
 
 @pytest.mark.parametrize(
@@ -341,7 +350,7 @@ def token() -> MaskedValue:
 
 
 @pytest.fixture
-def note_uuid(token: MaskedValue) -> str:
+def new_note(token: MaskedValue) -> dict:
     headers = {
         "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
@@ -354,10 +363,9 @@ def note_uuid(token: MaskedValue) -> str:
         "note_type_version": 1,
         "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
     }
-    note = requests.post(
+    return requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/", headers=headers, json=data
     ).json()
-    return note["externallyExposableId"]
 
 
 @pytest.fixture
@@ -394,7 +402,7 @@ def command_type_map() -> dict[str, type]:
 def test_command_schema_matches_command_api(
     token: MaskedValue,
     command_type_map: dict[str, str],
-    note_uuid: str,
+    new_note: dict,
     Command: (
         AssessCommand
         | DiagnoseCommand
@@ -410,7 +418,7 @@ def test_command_schema_matches_command_api(
     ),
 ) -> None:
     # first create the command in the new note
-    data = {"noteKey": note_uuid, "schemaKey": Command.Meta.key}
+    data = {"noteKey": new_note["externallyExposableId"], "schemaKey": Command.Meta.key}
     headers = {"Authorization": f"Bearer {token.value}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
     command_resp = requests.post(url, headers=headers, data=data).json()
@@ -456,3 +464,125 @@ def test_command_schema_matches_command_api(
         assert len(expected_field["choices"]) == len(choices)
         for choice in choices:
             assert choice["value"] in expected_field["choices"]
+
+
+@pytest.fixture
+def commands_to_test() -> list[Any]:
+    return [
+        AssessCommand,
+        DiagnoseCommand,
+        GoalCommand,
+        HistoryOfPresentIllnessCommand,
+        MedicationStatementCommand,
+        PlanCommand,
+        PrescribeCommand,
+        QuestionnaireCommand,
+        ReasonForVisitCommand,
+        StopMedicationCommand,
+        UpdateGoalCommand,
+    ]
+
+
+@pytest.fixture
+def new_note_id_and_commands_protocol_code(
+    new_note: dict, commands_to_test: list[Any]
+) -> tuple[int, str]:
+    note_uuid = new_note["externallyExposableId"]
+    imports = ", ".join([c.__name__ for c in commands_to_test])
+    effects = ", ".join(
+        [f"{c.__name__}(note_uuid='{note_uuid}', user_id=1).originate()" for c in commands_to_test]
+    )
+    protocol_code = f"""from canvas_sdk.commands import {imports}
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
+
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
+    def compute(self):
+        return [{effects}]
+"""
+
+    return (new_note["id"], protocol_code)
+
+
+@pytest.mark.integtest
+def test_protocol_that_inserts_every_command(
+    token: MaskedValue,
+    commands_to_test: list[Any],
+    new_note_id_and_commands_protocol_code: tuple[int, str],
+) -> None:
+    note_id, commands_protocol_code = new_note_id_and_commands_protocol_code
+
+    with chdir(Path("./custom-plugins")):
+        runner.invoke(app, "init", input="commands")
+
+    protocol = open("./custom-plugins/commands/protocols/my_protocol.py", "w")
+    protocol.write(commands_protocol_code)
+    protocol.close()
+
+    # install the plugin
+    requests.post(
+        plugin_url(settings.INTEGRATION_TEST_URL),
+        data={"is_enabled": True},
+        files={"package": open(_build_package(Path("./custom-plugins/commands")), "rb")},
+        headers={"Authorization": f"Bearer {token.value}"},
+    )
+
+    # trigger the event
+    requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/",
+        headers={
+            "Authorization": f"Bearer {token.value}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json={
+            "patient": 2,
+            "provider": 1,
+            "note_type": "office",
+            "note_type_version": 1,
+            "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
+        },
+    )
+
+    original_note = requests.get(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/{note_id}",
+        headers={
+            "Authorization": f"Bearer {token.value}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    ).json()
+
+    body = original_note["body"]
+    commands_in_body = [
+        line["value"]
+        for line in body
+        if "data" in line
+        and "commandUuid" in line["data"]
+        and "id" in line["data"]
+        and line["type"] == "command"
+    ]
+    command_keys = [c.Meta.key for c in commands_to_test]
+
+    assert len(command_keys) == len(commands_in_body)
+    for i, command_key in enumerate(command_keys):
+        assert commands_in_body[i] == command_key
+
+    # clean up
+    if Path(f"./custom-plugins/commands").exists():
+        shutil.rmtree(Path(f"./custom-plugins/commands"))
+
+    # disable
+    requests.patch(
+        plugin_url(settings.INTEGRATION_TEST_URL, "commands"),
+        data={"is_enabled": False},
+        headers={
+            "Authorization": f"Bearer {token.value}",
+        },
+    )
+    # delete
+    requests.delete(
+        plugin_url(settings.INTEGRATION_TEST_URL, "commands"),
+        headers={"Authorization": f"Bearer {token.value}"},
+    )

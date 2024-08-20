@@ -76,7 +76,7 @@ class _BaseCommand(Model):
         """The schema of the command."""
         base_properties = {"note_uuid", "command_uuid", "user_id"}
         schema = cls.model_json_schema()
-        required_fields: tuple = getattr(cls.Meta, "originate_required_fields", tuple())
+        required_fields: tuple = getattr(cls.Meta, "commit_required_fields", tuple())
         return {
             definition.get("commands_api_name", name): {
                 "required": name in required_fields,
