@@ -23,7 +23,7 @@ from canvas_sdk.commands.constants import Coding
 
 
 class MaskedValue:
-    def __init__(self, value):
+    def __init__(self, value: str) -> None:
         self.value = value
 
     def __repr__(self) -> str:
@@ -154,8 +154,12 @@ def raises_none_error_for_effect_method(
     with pytest.raises(ValidationError) as e:
         getattr(cmd, method)()
     e_msg = repr(e.value)
-    assert f"{len(method_required_fields)} validation errors for {Command.__name__}" in e_msg
-    for f in method_required_fields:
+    missing_fields = [field for field in method_required_fields if getattr(cmd, field) is None]
+    num_errs = len(missing_fields)
+    assert (
+        f"{num_errs} validation error{'s' if num_errs > 1 else ''} for {Command.__name__}" in e_msg
+    )
+    for f in missing_fields:
         assert (
             f"Field '{f}' is required to {method.replace('_', ' ')} a command [type=missing, input_value=None, input_type=NoneType]"
             in e_msg

@@ -166,5 +166,5 @@ def test_canvas_list_install_disable_enable_uninstall(
         assert result.exit_code == expected_exit_code
         for expected_output in expected_outputs:
             assert expected_output in result.stdout
-        for expected_no_ouput in expected_no_outputs:
-            assert expected_no_ouput not in result.stdout
+        for expected_no_output in expected_no_outputs:
+            assert expected_no_output not in result.stdout

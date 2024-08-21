@@ -59,7 +59,7 @@ runner = CliRunner()
         ),
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
-        (PlanCommand, ("narrative", "user_id", "command_uuid")),
+        (PlanCommand, ("narrative", "command_uuid")),
         (
             PrescribeCommand,
             (
@@ -118,29 +118,22 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     [
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 5, "note_uuid": 1},
+            {"narrative": "yo", "note_uuid": 1},
             "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
-            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": 5},
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": 5},
             "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
-            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": "5"},
-        ),
-        (
-            PlanCommand,
-            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": "5"},
-            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
-            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": 5},
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": "5"},
         ),
         (
             ReasonForVisitCommand,
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1, "structured": True},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "structured": True},
             "1 validation error for ReasonForVisitCommand\n  Structured RFV should have a coding",
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "structured": False,
             },
         ),
@@ -148,71 +141,64 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Field required [type=missing",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": 1, "system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": None, "system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Field required [type=missing",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": 1},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": None},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": "y", "display": 1},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.display\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
     ],
 )
@@ -260,7 +246,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
         ),
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
-        (PlanCommand, ("narrative", "user_id", "command_uuid", "note_uuid")),
+        (PlanCommand, ("narrative", "command_uuid", "note_uuid")),
         (
             PrescribeCommand,
             (
@@ -490,7 +476,7 @@ def new_note_id_and_commands_protocol_code(
     note_uuid = new_note["externallyExposableId"]
     imports = ", ".join([c.__name__ for c in commands_to_test])
     effects = ", ".join(
-        [f"{c.__name__}(note_uuid='{note_uuid}', user_id=1).originate()" for c in commands_to_test]
+        [f"{c.__name__}(note_uuid='{note_uuid}').originate()" for c in commands_to_test]
     )
     protocol_code = f"""from canvas_sdk.commands import {imports}
 from canvas_sdk.events import EventType
