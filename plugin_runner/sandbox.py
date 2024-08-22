@@ -44,6 +44,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.utils",
         "canvas_sdk.views",
         "contextlib",
+        "data_access_layer.client",
         "datetime",
         "dateutil",
         "enum",
