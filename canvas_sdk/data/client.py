@@ -56,14 +56,13 @@ class _CanvasGQLClient:
         )
         self.client = Client(transport=transport, fetch_schema_from_transport=True)
 
-    def query(self, gql_query: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        if params is None:
-            query_params = {}
+    def query(self, gql_query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+        if variables is None:
+            query_variables = {}
         else:
-            query_params = params
+            query_variables = variables
 
-        result = self.client.execute(gql(gql_query), variable_values=query_params)
-        return result
+        return self.client.execute(gql(gql_query), variable_values=query_variables)
 
 
 GQL_CLIENT = _CanvasGQLClient()
