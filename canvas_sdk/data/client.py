@@ -47,6 +47,9 @@ class _CanvasGQLClient:
     client = _CanvasGQLClient()
     result = client.query(TEST_QUERY_NO_PARAMS)
     print(result)
+
+    For use in plugins, it is included in the instantiation of Protocol class. This means
+    it can simply be referred to as self.client in plugin code.
     """
 
     def __init__(self) -> None:
