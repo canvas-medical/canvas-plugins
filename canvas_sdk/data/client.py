@@ -53,10 +53,7 @@ class _CanvasGQLClient:
     """
 
     def __init__(self) -> None:
-        transport = AIOHTTPTransport(
-            url=cast(str, GRAPHQL_ENDPOINT),
-            headers={"Authorization": f"{cast(str, GRAPHQL_AUTH_KEY)}"},
-        )
+        transport = AIOHTTPTransport(url=cast(str, GRAPHQL_ENDPOINT))
         self.client = Client(transport=transport, fetch_schema_from_transport=True)
 
     def query(self, gql_query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -76,7 +76,7 @@ class PluginRunner(PluginRunnerServicer):
             base_plugin_name = plugin_name.split(":")[0]
 
             try:
-                protocol = protocol_class(request, plugin.get("secrets", {}), GQL_CLIENT)
+                protocol = protocol_class(request, plugin.get("secrets", {}))
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from canvas_generated.messages.events_pb2 import Event
-    from canvas_sdk.data.client import _CanvasGQLClient
 
 
 class BaseHandler:
@@ -15,7 +14,6 @@ class BaseHandler:
         self,
         event: "Event",
         secrets: dict[str, Any] | None = None,
-        client: "_CanvasGQLClient | None" = None,
     ) -> None:
         self.event = event
         try:
@@ -24,4 +22,3 @@ class BaseHandler:
             self.context = {}
         self.target = event.target
         self.secrets = secrets or {}
-        self.client = client
