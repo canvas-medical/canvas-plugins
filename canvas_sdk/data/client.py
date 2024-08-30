@@ -3,7 +3,7 @@ from typing import Any, cast
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from settings import DAL_GRAPHQL_AUTH_KEY, DAL_GRAPHQL_ENDPOINT
+from settings import GRAPHQL_AUTH_KEY, GRAPHQL_ENDPOINT
 
 
 class _CanvasGQLClient:
@@ -54,8 +54,8 @@ class _CanvasGQLClient:
 
     def __init__(self) -> None:
         transport = AIOHTTPTransport(
-            url=cast(str, DAL_GRAPHQL_ENDPOINT),
-            headers={"Authorization": f"{cast(str, DAL_GRAPHQL_AUTH_KEY)}"},
+            url=cast(str, GRAPHQL_ENDPOINT),
+            headers={"Authorization": f"{cast(str, GRAPHQL_AUTH_KEY)}"},
         )
         self.client = Client(transport=transport, fetch_schema_from_transport=True)
 
