@@ -24,6 +24,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
 )
+from canvas_sdk.data.client import GQL_CLIENT
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventResponse, EventType
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
@@ -75,7 +76,7 @@ class PluginRunner(PluginRunnerServicer):
             base_plugin_name = plugin_name.split(":")[0]
 
             try:
-                protocol = protocol_class(request, plugin.get("secrets", {}))
+                protocol = protocol_class(request, plugin.get("secrets", {}), GQL_CLIENT)
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [
