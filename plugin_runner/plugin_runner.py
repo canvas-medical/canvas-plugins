@@ -13,6 +13,7 @@ from typing import Any, Optional
 
 import grpc
 import statsd
+from authentication import token_for_plugin
 from plugin_synchronizer import publish_message
 from sandbox import Sandbox
 
@@ -28,7 +29,6 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventResponse, EventType
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
-from plugin_runner.authentication import token_for_plugin
 
 ENV = os.getenv("ENV", "development")
 
