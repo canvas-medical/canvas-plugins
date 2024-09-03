@@ -10,15 +10,20 @@ class BaseHandler:
     The class that all handlers inherit from.
     """
 
+    secrets: dict[str, Any]
+    target: str
+
     def __init__(
         self,
         event: "Event",
         secrets: dict[str, Any] | None = None,
     ) -> None:
         self.event = event
+
         try:
             self.context = json.loads(event.context)
         except ValueError:
             self.context = {}
+
         self.target = event.target
         self.secrets = secrets or {}

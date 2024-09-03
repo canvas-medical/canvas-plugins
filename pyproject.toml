@@ -51,6 +51,7 @@ gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
 jsonschema = "^4.21.1"
+pyjwt = "2.3.0"
 keyring = "*"
 protobuf = "^4.25.3"
 pydantic = "^2.6.1"

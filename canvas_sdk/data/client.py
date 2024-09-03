@@ -3,7 +3,7 @@ from typing import Any, cast
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from settings import GRAPHQL_AUTH_KEY, GRAPHQL_ENDPOINT
+from settings import GRAPHQL_ENDPOINT
 
 
 class _CanvasGQLClient:
@@ -53,16 +53,27 @@ class _CanvasGQLClient:
     """
 
     def __init__(self) -> None:
-        transport = AIOHTTPTransport(url=cast(str, GRAPHQL_ENDPOINT))
-        self.client = Client(transport=transport, fetch_schema_from_transport=True)
+        self.client = Client(
+            transport=AIOHTTPTransport(url=cast(str, GRAPHQL_ENDPOINT)),
+            fetch_schema_from_transport=True,
+        )
 
-    def query(self, gql_query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    def query(
+        self,
+        gql_query: str,
+        variables: dict[str, Any] | None = None,
+        extra_args: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         if variables is None:
             query_variables = {}
         else:
             query_variables = variables
 
-        return self.client.execute(gql(gql_query), variable_values=query_variables)
+        return self.client.execute(
+            gql(gql_query),
+            variable_values=query_variables,
+            extra_args=extra_args,
+        )
 
 
 GQL_CLIENT = _CanvasGQLClient()
