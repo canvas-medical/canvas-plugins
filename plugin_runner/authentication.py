@@ -4,9 +4,6 @@ from typing import cast
 import arrow
 from jwt import encode
 
-# import base64
-
-
 ONE_DAY_IN_MINUTES = 60 * 24
 
 
@@ -38,9 +35,3 @@ def token_for_plugin(
     )
 
     return token
-
-
-# def jwt_header_for_plugin(plugin_name: str, audience: str = "home", expiration_minutes: int = 5):
-#     jwt = token_for_plugin(plugin_name, audience=audience, expiration_minutes=expiration_minutes)
-#
-#     return base64.b64encode(f"jwt:{jwt}".encode()).decode()
