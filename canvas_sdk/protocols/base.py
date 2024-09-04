@@ -9,7 +9,7 @@ class BaseProtocol(BaseHandler):
     The class that protocols inherit from.
     """
 
-    def run_gql_query(self, query: str, variables: dict | None = None) -> dict[str, Any]:
+    def _beta_run_gql_query(self, query: str, variables: dict | None = None) -> dict[str, Any]:
         return GQL_CLIENT.query(
             query,
             variables=variables,
