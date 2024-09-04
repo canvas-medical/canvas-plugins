@@ -10,8 +10,12 @@ class BaseProtocol(BaseHandler):
     """
 
     def run_gql_query(self, query: str, variables: dict | None = None) -> dict[str, Any]:
-        return GQL_CLIENT.query(query, variables=variables, extra_args={
-            'headers': {
-                'Authorization': f'Bearer {self.secrets['graphql_jwt']}',
+        return GQL_CLIENT.query(
+            query,
+            variables=variables,
+            extra_args={
+                "headers": {
+                    "Authorization": f'Bearer {self.secrets["graphql_jwt"]}',
+                },
             },
-        })
+        )
