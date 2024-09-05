@@ -31,7 +31,7 @@ def token_for_plugin(
             **extra_kwargs,
         },
         jwt_signing_key,
-        algorithm="HS512",
+        algorithm="HS256",
     )
 
     return token
