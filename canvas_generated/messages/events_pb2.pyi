@@ -217,6 +217,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_GOAL_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     UPDATE_GOAL_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
     UPDATE_GOAL__GOAL_STATEMENT__POST_SEARCH: _ClassVar[EventType]
+    PATIENT_CHART__CONDITIONS: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -425,6 +426,7 @@ UPDATE_GOAL_COMMAND__POST_ENTER_IN_ERROR: EventType
 UPDATE_GOAL_COMMAND__PRE_EXECUTE_ACTION: EventType
 UPDATE_GOAL_COMMAND__POST_EXECUTE_ACTION: EventType
 UPDATE_GOAL__GOAL_STATEMENT__POST_SEARCH: EventType
+PATIENT_CHART__CONDITIONS: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context")

@@ -71,6 +71,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
+    ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -135,6 +136,7 @@ ENTER_IN_ERROR_UPDATE_GOAL_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
+ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name")
