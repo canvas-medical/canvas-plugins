@@ -13,6 +13,7 @@ from typing import Any, Optional
 
 import grpc
 import statsd
+from authentication import token_for_plugin
 from plugin_synchronizer import publish_message
 from sandbox import Sandbox
 
@@ -74,8 +75,12 @@ class PluginRunner(PluginRunnerServicer):
             protocol_class = plugin["class"]
             base_plugin_name = plugin_name.split(":")[0]
 
+            secrets = plugin.get('secrets', {})
+            secrets['graphql_jwt'] = token_for_plugin(plugin_name=plugin_name, audience='home')
+
             try:
-                protocol = protocol_class(request, plugin.get("secrets", {}))
+                protocol = protocol_class(request, secrets)
+
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [
@@ -83,6 +88,7 @@ class PluginRunner(PluginRunnerServicer):
                     for effect in _effects
                 ]
                 compute_duration = get_duration_ms(compute_start_time)
+
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
                 statsd_tags = tags_to_line_protocol({"plugin": plugin_name})
                 self.statsd_client.timing(
@@ -92,9 +98,11 @@ class PluginRunner(PluginRunnerServicer):
             except Exception as e:
                 log.error(traceback.format_exception(e))
                 continue
+
             effect_list += effects
 
         event_duration = get_duration_ms(event_start_time)
+
         # Don't log anything if a protocol didn't actually run.
         if relevant_plugins:
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
@@ -103,6 +111,7 @@ class PluginRunner(PluginRunnerServicer):
                 f"plugins.event_duration_ms,{statsd_tags}",
                 delta=event_duration,
             )
+
         yield EventResponse(success=True, effects=effect_list)
 
     async def ReloadPlugins(
