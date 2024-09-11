@@ -1,12 +1,20 @@
 import random
+import shutil
 import string
+from contextlib import chdir
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
 from pydantic import ValidationError
+from typer.testing import CliRunner
 
+import settings
+from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
+from canvas_cli.main import app
 from canvas_sdk.commands import (
     AssessCommand,
     DiagnoseCommand,
@@ -19,7 +27,10 @@ from canvas_sdk.commands import (
     ReasonForVisitCommand,
     StopMedicationCommand,
 )
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
+
+runner = CliRunner()
 
 
 class MaskedValue:
@@ -164,3 +175,93 @@ def raises_none_error_for_effect_method(
             f"Field '{f}' is required to {method.replace('_', ' ')} a command [type=missing, input_value=None, input_type=NoneType]"
             in e_msg
         )
+
+
+def write_protocol_code(note_uuid: str, plugin_name: str, commands: list[_BaseCommand]) -> None:
+    imports = ", ".join([c.__name__ for c in commands])
+    effects = ", ".join([f"{c.__name__}(note_uuid='{note_uuid}').originate()" for c in commands])
+
+    protocol_code = f"""from canvas_sdk.commands import {imports}
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
+
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
+    def compute(self):
+        return [{effects}]
+"""
+
+    with chdir(Path("./custom-plugins")):
+        runner.invoke(app, "init", input=plugin_name)
+
+    protocol = open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w")
+    protocol.write(protocol_code)
+    protocol.close()
+
+
+def install_plugin(plugin_name: str, token: MaskedValue) -> None:
+    requests.post(
+        plugin_url(settings.INTEGRATION_TEST_URL),
+        data={"is_enabled": True},
+        files={"package": open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb")},
+        headers={"Authorization": f"Bearer {token.value}"},
+    )
+
+
+def trigger_plugin_event(token: MaskedValue) -> None:
+    requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/",
+        headers={
+            "Authorization": f"Bearer {token.value}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json={
+            "patient": 2,
+            "provider": 1,
+            "note_type": "office",
+            "note_type_version": 1,
+            "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
+        },
+    )
+
+
+def get_original_note_body_commands(new_note_id: int, token: MaskedValue) -> list[str]:
+    original_note = requests.get(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/{new_note_id}",
+        headers={
+            "Authorization": f"Bearer {token.value}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    ).json()
+
+    body = original_note["body"]
+    return [
+        line["value"]
+        for line in body
+        if "data" in line
+        and "commandUuid" in line["data"]
+        and "id" in line["data"]
+        and line["type"] == "command"
+    ]
+
+
+def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
+    # clean up
+    if Path(f"./custom-plugins/{plugin_name}").exists():
+        shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
+
+    # disable
+    requests.patch(
+        plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
+        data={"is_enabled": False},
+        headers={
+            "Authorization": f"Bearer {token.value}",
+        },
+    )
+    # delete
+    requests.delete(
+        plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
+        headers={"Authorization": f"Bearer {token.value}"},
+    )
