@@ -133,7 +133,7 @@ class Protocol(BaseProtocol):
 
     # confirm no more banner
     patient_banners_none = requests.get(
-        f"http://localhost:8000/api/BannerAlert/?patient__key={patient_id}",
+        f"{settings.INTEGRATION_TEST_URL}/api/BannerAlert/?patient__key={patient_id}",
         headers={
             "Authorization": f"Bearer {token.value}",
         },
