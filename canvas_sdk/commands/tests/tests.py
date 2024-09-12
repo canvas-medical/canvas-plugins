@@ -1,5 +1,6 @@
 import decimal
 from datetime import datetime
+from typing import Any, Generator
 
 import pytest
 import requests
@@ -311,7 +312,7 @@ def token() -> MaskedValue:
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def new_note(token: MaskedValue) -> dict:
     headers = {
         "Authorization": f"Bearer {token.value}",
@@ -363,7 +364,7 @@ COMMANDS = [
 @pytest.mark.integtest
 @pytest.mark.parametrize(
     "Command",
-    [CMD for CMD in COMMANDS],
+    COMMANDS,
 )
 def test_command_schema_matches_command_api(
     token: MaskedValue,
@@ -425,12 +426,20 @@ def plugin_name() -> str:
     return f"commands{datetime.now().timestamp()}".replace(".", "")
 
 
-@pytest.mark.integtest
-def test_protocol_that_inserts_every_command(
-    token: MaskedValue, plugin_name: str, new_note: dict
-) -> None:
+@pytest.fixture(autouse=True, scope="session")
+def write_and_install_protocol_and_clean_up(
+    plugin_name: str, token: MaskedValue, new_note: dict
+) -> Generator[Any, Any, Any]:
     write_protocol_code(new_note["externallyExposableId"], plugin_name, COMMANDS)
     install_plugin(plugin_name, token)
+
+    yield
+
+    clean_up_files_and_plugins(plugin_name, token)
+
+
+@pytest.mark.integtest
+def test_protocol_that_inserts_every_command(token: MaskedValue, new_note: dict) -> None:
     trigger_plugin_event(token)
 
     commands_in_body = get_original_note_body_commands(new_note["id"], token)
@@ -439,5 +448,3 @@ def test_protocol_that_inserts_every_command(
     assert len(command_keys) == len(commands_in_body)
     for i, command_key in enumerate(command_keys):
         assert commands_in_body[i] == command_key
-
-    clean_up_files_and_plugins(plugin_name, token)
