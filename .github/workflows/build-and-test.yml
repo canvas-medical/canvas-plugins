@@ -18,8 +18,8 @@ jobs:
         shell: bash
         run: poetry install --no-interaction
 
-      # Run Pytest tests via Poetry.
-      - name: Run Pytest tests
+      # Run Pytest unit tests via Poetry.
+      - name: Run Pytest unit tests
         env:
           INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
