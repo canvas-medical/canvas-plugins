@@ -8,7 +8,7 @@ class QuestionnaireCommand(_BaseCommand):
 
     class Meta:
         key = "questionnaire"
-        originate_required_fields = ("questionnaire_id",)
+        commit_required_fields = ("questionnaire_id",)
 
     questionnaire_id: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "questionnaire"}
