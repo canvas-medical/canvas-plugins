@@ -1,17 +1,6 @@
 import logging
 import os
-
-from pubsub.pubsub import Publisher
-
-
-class PubSubLogHandler(logging.Handler):
-    def __init__(self) -> None:
-        self.publisher = Publisher()
-        logging.Handler.__init__(self=self)
-
-    def emit(self, record) -> None:
-        message = self.format(record)
-        self.publisher.publish(message)
+from logging.handlers import SocketHandler
 
 
 class PluginLogger:
@@ -27,10 +16,15 @@ class PluginLogger:
         streaming_handler.setFormatter(formatter)
         self.logger.addHandler(streaming_handler)
 
-        if os.getenv("REDIS_ENDPOINT"):
-            pubsub_handler = PubSubLogHandler()
-            pubsub_handler.setFormatter(formatter)
-            self.logger.addHandler(pubsub_handler)
+        socket_handler = SocketHandler(
+            "localhost",
+            os.getenv(
+                "PLUGIN_RUNNER_LOG_PORT",
+                6521,
+            ),
+        )
+        socket_handler.setFormatter(formatter)
+        self.logger.addHandler(socket_handler)
 
     def debug(self, message) -> None:
         self.logger.debug(message)
