@@ -4,6 +4,7 @@ from enum import Enum
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.constants import Coding
 
 
 class PrescribeCommand(_BaseCommand):
@@ -59,3 +60,8 @@ class PrescribeCommand(_BaseCommand):
             "prescriber_id": self.prescriber_id,
             "note_to_pharmacist": self.note_to_pharmacist,
         }
+
+    @property
+    def coding_filter(self) -> Coding:
+        """The coding filter used for command insertion in protocol cards."""
+        return {"code": self.fdb_code, "system": "fdb"}

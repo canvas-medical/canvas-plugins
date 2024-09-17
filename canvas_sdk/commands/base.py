@@ -4,7 +4,9 @@ from enum import EnumType
 from typing import Literal, get_args
 
 from canvas_sdk.base import Model
+from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(Model):
@@ -34,6 +36,11 @@ class _BaseCommand(Model):
     @property
     def values(self) -> dict:
         return {}
+
+    @property
+    def coding_filter(self) -> Coding | None:
+        """The coding filter used for command insertion in protocol cards."""
+        return None
 
     @classmethod
     def _get_property_choices(cls, name: str, schema: dict) -> list[dict] | None:
@@ -118,3 +125,14 @@ class _BaseCommand(Model):
             "type": f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
             "payload": {"command": self.command_uuid},
         }
+
+    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+        """Returns a command recommendation to be inserted via Protocol Card."""
+        if button is None:
+            button = self.constantized_key().lower().replace("_", " ")
+
+        command = Recommendation.Command({"type": self.Meta.key.lower()})
+        if self.coding_filter:
+            command["filter"] = {"coding": [self.coding_filter]}
+
+        return Recommendation(title=title, button=button, command=command, context=self.values)

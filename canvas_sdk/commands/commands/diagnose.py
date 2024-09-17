@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.constants import Coding
 
 
 class DiagnoseCommand(_BaseCommand):
@@ -32,3 +33,8 @@ class DiagnoseCommand(_BaseCommand):
             ),
             "today_assessment": self.today_assessment,
         }
+
+    @property
+    def coding_filter(self) -> Coding:
+        """The coding filter used for command insertion in protocol cards."""
+        return {"code": self.icd10_code, "system": "icd10cm"}

@@ -1,6 +1,7 @@
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.constants import Coding
 
 
 class MedicationStatementCommand(_BaseCommand):
@@ -19,6 +20,11 @@ class MedicationStatementCommand(_BaseCommand):
     def values(self) -> dict:
         """The MedicationStatement command's field values."""
         return {"fdb_code": self.fdb_code, "sig": self.sig}
+
+    @property
+    def coding_filter(self) -> Coding:
+        """The coding filter used for command insertion in protocol cards."""
+        return {"code": self.fdb_code, "system": "fdb"}
 
 
 # how do we make sure fdb_code is a valid code?
