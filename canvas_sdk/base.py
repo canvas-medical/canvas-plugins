@@ -23,7 +23,7 @@ class Model(BaseModel):
         },
     )
 
-    def _get_effect_method_required_fields(self, method: str) -> tuple[str]:
+    def _get_effect_method_required_fields(self, method: str) -> tuple[str] | tuple:
         return getattr(self.Meta, f"{method}_required_fields", tuple())
 
     def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
@@ -33,7 +33,9 @@ class Model(BaseModel):
         required_fields = self._get_effect_method_required_fields(method)
         return [
             self._create_error_detail(
-                "missing", f"Field '{field}' is required to {method.replace('_', ' ')} a command", v
+                "missing",
+                f"Field '{field}' is required to {method.replace('_', ' ')} a {self.__repr_name__()}",
+                v,
             )
             for field in required_fields
             if (v := getattr(self, field)) is None

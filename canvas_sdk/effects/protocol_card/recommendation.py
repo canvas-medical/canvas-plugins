@@ -1,8 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Literal, NotRequired, TypedDict
 
-from canvas_sdk.commands.constants import Coding
-
 
 class Recommendation(BaseModel):
     """
@@ -11,9 +9,13 @@ class Recommendation(BaseModel):
 
     model_config = ConfigDict(strict=True, validate_assignment=True)
 
+    class CodingFilter(TypedDict):
+        system: Literal["cpt", "cvx", "snomedct", "rxnorm", "loinc", "icd10cm", "fdb", "ndc"]
+        code: str
+
     class Command(TypedDict):
         type: str
-        filter: NotRequired[dict[Literal["coding"], list[Coding]]]
+        filter: NotRequired[dict[Literal["coding"], list[CodingFilter]]]
 
     title: str = ""
     button: str = ""

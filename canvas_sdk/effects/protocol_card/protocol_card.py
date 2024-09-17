@@ -16,9 +16,10 @@ class ProtocolCard(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+        apply_required_fields = ("patient_id", "key")
 
-    patient_id: str
-    key: str
+    patient_id: str | None = None
+    key: str | None = None
     title: str = ""
     narrative: str = ""
     recommendations: list[Recommendation] = []
@@ -30,8 +31,8 @@ class ProtocolCard(_BaseEffect):
         return {
             "title": self.title,
             "narrative": self.narrative,
-            "recommendations": self.recommendations,
-            "status": self.status,
+            "recommendations": [rec.model_dump() for rec in self.recommendations],
+            "status": self.status.value,
         }
 
     @property

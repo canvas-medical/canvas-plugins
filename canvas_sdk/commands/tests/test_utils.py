@@ -172,7 +172,7 @@ def raises_none_error_for_effect_method(
     )
     for f in missing_fields:
         assert (
-            f"Field '{f}' is required to {method.replace('_', ' ')} a command [type=missing, input_value=None, input_type=NoneType]"
+            f"Field '{f}' is required to {method.replace('_', ' ')} a {Command.__name__} [type=missing, input_value=None, input_type=NoneType]"
             in e_msg
         )
 
