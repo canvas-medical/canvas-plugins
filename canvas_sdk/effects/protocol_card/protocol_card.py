@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.protocol_card.constants import RecommendationCommand
 from canvas_sdk.effects.protocol_card.recommendation import Recommendation
 
 
@@ -45,7 +46,7 @@ class ProtocolCard(_BaseEffect):
         title: str = "",
         button: str = "",
         href: str | None = None,
-        command: Recommendation.Command | None = None,
+        command: RecommendationCommand | None = None,
         context: dict | None = None,
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""

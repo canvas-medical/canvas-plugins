@@ -7,6 +7,7 @@ from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.protocol_card import Recommendation
+from canvas_sdk.effects.protocol_card.constants import RecommendationCommand
 
 
 class _BaseCommand(Model):
@@ -131,7 +132,7 @@ class _BaseCommand(Model):
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
 
-        command = Recommendation.Command({"type": self.Meta.key.lower()})
+        command = RecommendationCommand({"type": self.Meta.key.lower()})
         if self.coding_filter:
             command["filter"] = {"coding": [self.coding_filter]}
 

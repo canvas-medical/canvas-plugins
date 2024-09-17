@@ -1,7 +1,48 @@
 import pytest
 from pydantic import ValidationError
 
+from canvas_sdk.commands import (
+    AssessCommand,
+    DiagnoseCommand,
+    GoalCommand,
+    HistoryOfPresentIllnessCommand,
+    MedicationStatementCommand,
+    PlanCommand,
+    PrescribeCommand,
+    QuestionnaireCommand,
+    ReasonForVisitCommand,
+    StopMedicationCommand,
+    UpdateGoalCommand,
+)
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
+
+
+def test_apply_method_succeeds_with_patient_id_and_key() -> None:
+    p = ProtocolCard(patient_id="uuid", key="something-unique")
+    applied = p.apply()
+    assert (
+        applied.payload
+        == '{"patient": "uuid", "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due"}}'
+    )
+
+
+def test_apply_method_raises_error_without_patient_id_and_key() -> None:
+    p = ProtocolCard()
+
+    with pytest.raises(ValidationError) as e:
+        p.apply()
+    err_msg = repr(e.value)
+
+    assert "2 validation errors for ProtocolCard" in err_msg
+    assert (
+        "Field 'patient_id' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
+        in err_msg
+    )
+    assert (
+        "Field 'key' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
+        in err_msg
+    )
 
 
 @pytest.mark.parametrize(
@@ -139,28 +180,44 @@ def test_add_recommendations_with_command_coding_filter_raises_error_when_invali
     assert p.values["recommendations"] == []
 
 
-def test_apply_method_succeeds_with_patient_id_and_key() -> None:
-    p = ProtocolCard(patient_id="uuid", key="something-unique")
-    applied = p.apply()
-    assert (
-        applied.payload
-        == '{"patient": "uuid", "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due"}}'
-    )
+@pytest.mark.parametrize(
+    "Command,init_params",
+    [
+        (AssessCommand, {}),
+        (DiagnoseCommand, {"icd10_code": "I10"}),
+        (GoalCommand, {}),
+        (HistoryOfPresentIllnessCommand, {}),
+        (MedicationStatementCommand, {"fdb_code": "fakeroo"}),
+        (PlanCommand, {}),
+        (PrescribeCommand, {"fdb_code": "fake"}),
+        (QuestionnaireCommand, {}),
+        (ReasonForVisitCommand, {}),
+        (StopMedicationCommand, {}),
+        (UpdateGoalCommand, {}),
+    ],
+)
+def test_add_recommendations_from_commands(
+    Command: _BaseCommand, init_params: dict[str, str]
+) -> None:
+    cmd = Command(**init_params)
+    p = ProtocolCard(patient_id="uuid", key="commands")
+    p.recommendations.append(cmd.recommend())
+    p.recommendations.append(cmd.recommend(title="hello", button="click"))
 
+    recommendation1, recommendation2 = p.values["recommendations"]
+    assert recommendation1["title"] == ""
+    assert recommendation1["button"] == cmd.constantized_key().lower().replace("_", " ")
+    assert recommendation1["href"] is None
+    assert recommendation1["context"] == cmd.values
+    assert recommendation1["command"]["type"] == cmd.Meta.key.lower()
 
-def test_apply_method_raises_error_without_patient_id_and_key() -> None:
-    p = ProtocolCard()
+    assert recommendation2["title"] == "hello"
+    assert recommendation2["button"] == "click"
+    assert recommendation2["href"] is None
+    assert recommendation2["context"] == cmd.values
+    assert recommendation2["command"]["type"] == cmd.Meta.key.lower()
 
-    with pytest.raises(ValidationError) as e:
-        p.apply()
-    err_msg = repr(e.value)
-
-    assert "2 validation errors for ProtocolCard" in err_msg
-    assert (
-        "Field 'patient_id' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
-        in err_msg
-    )
-    assert (
-        "Field 'key' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
-        in err_msg
-    )
+    if init_params:
+        code = list(init_params.values())[0]
+        assert recommendation1["command"]["filter"]["coding"][0]["code"] == code
+        assert recommendation2["command"]["filter"]["coding"][0]["code"] == code
