@@ -160,6 +160,9 @@ def raises_none_error_for_effect_method(
     ),
     method: str,
 ) -> None:
+    cmd_name = Command.__name__
+    cmd_name_article = "an" if cmd_name.startswith(("A", "E", "I", "O", "U")) else "a"
+
     cmd = Command()
     method_required_fields = cmd._get_effect_method_required_fields(method)
     with pytest.raises(ValidationError) as e:
@@ -167,12 +170,10 @@ def raises_none_error_for_effect_method(
     e_msg = repr(e.value)
     missing_fields = [field for field in method_required_fields if getattr(cmd, field) is None]
     num_errs = len(missing_fields)
-    assert (
-        f"{num_errs} validation error{'s' if num_errs > 1 else ''} for {Command.__name__}" in e_msg
-    )
+    assert f"{num_errs} validation error{'s' if num_errs > 1 else ''} for {cmd_name}" in e_msg
     for f in missing_fields:
         assert (
-            f"Field '{f}' is required to {method.replace('_', ' ')} a {Command.__name__} [type=missing, input_value=None, input_type=NoneType]"
+            f"Field '{f}' is required to {method.replace('_', ' ')} {cmd_name_article} {cmd_name} [type=missing, input_value=None, input_type=NoneType]"
             in e_msg
         )
 

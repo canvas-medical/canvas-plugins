@@ -31,10 +31,12 @@ class Model(BaseModel):
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         required_fields = self._get_effect_method_required_fields(method)
+        class_name = self.__repr_name__()
+        class_name_article = "an" if class_name.startswith(("A", "E", "I", "O", "U")) else "a"
         return [
             self._create_error_detail(
                 "missing",
-                f"Field '{field}' is required to {method.replace('_', ' ')} a {self.__repr_name__()}",
+                f"Field '{field}' is required to {method.replace('_', ' ')} {class_name_article} {class_name}",
                 v,
             )
             for field in required_fields
