@@ -1,0 +1,2 @@
+class ValueSet(object):
+    pass

@@ -1,7 +1,11 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
+
+
+class MedicationQuerySet(ValueSetLookupQuerySet):
+    pass
 
 
 class Medication(models.Model):
@@ -10,7 +14,7 @@ class Medication(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_medication_001"
 
-    objects = CommittableModelManager()
+    objects = CommittableModelManager.from_queryset(MedicationQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
