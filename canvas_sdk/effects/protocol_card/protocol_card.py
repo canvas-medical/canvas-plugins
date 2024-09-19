@@ -1,8 +1,34 @@
 from enum import Enum
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-from canvas_sdk.effects.protocol_card.recommendation import Recommendation
+
+
+class Recommendation(BaseModel):
+    """
+    A Recommendation for a Protocol Card.
+    """
+
+    model_config = ConfigDict(strict=True, validate_assignment=True)
+
+    title: str = ""
+    button: str = ""
+    href: str | None = None
+    command: str | None = None
+    context: dict | None = None
+
+    @property
+    def values(self) -> dict:
+        """The ProtocolCard recommendation's values."""
+        return {
+            "title": self.title,
+            "button": self.button,
+            "href": self.href,
+            "command": {"type": self.command} if self.command else {},
+            "context": self.context or {},
+        }
 
 
 class ProtocolCard(_BaseEffect):
