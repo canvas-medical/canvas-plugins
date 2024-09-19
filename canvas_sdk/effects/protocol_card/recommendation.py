@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
 
-from canvas_sdk.effects.protocol_card.constants import RecommendationCommand
+from pydantic import BaseModel, ConfigDict
 
 
 class Recommendation(BaseModel):
@@ -13,5 +13,16 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    command: RecommendationCommand | None = None
+    command: str | None = None
     context: dict | None = None
+
+    @property
+    def values(self) -> dict:
+        """The ProtocolCard recommendation's values."""
+        return {
+            "title": self.title,
+            "button": self.button,
+            "href": self.href,
+            "command": {"type": self.command} if self.command else {},
+            "context": self.context or {},
+        }

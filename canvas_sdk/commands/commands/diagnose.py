@@ -1,9 +1,8 @@
-from datetime import datetime
+from datetime import date
 
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.commands.constants import Coding
 
 
 class DiagnoseCommand(_BaseCommand):
@@ -17,7 +16,7 @@ class DiagnoseCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "diagnose"}
     )
     background: str | None = None
-    approximate_date_of_onset: datetime | None = None
+    approximate_date_of_onset: date | None = None
     today_assessment: str | None = None
 
     @property
@@ -33,8 +32,3 @@ class DiagnoseCommand(_BaseCommand):
             ),
             "today_assessment": self.today_assessment,
         }
-
-    @property
-    def coding_filter(self) -> Coding:
-        """The coding filter used for command insertion in protocol cards."""
-        return {"code": self.icd10_code, "system": "icd10cm"}

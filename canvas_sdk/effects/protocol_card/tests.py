@@ -72,13 +72,13 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
             {
                 "title": "this is a command",
                 "button": "click this",
-                "command": {"type": "updategoal"},
+                "command": "updategoal",
                 "context": {"progress": "none"},
             },
             {
                 "title": "another command",
                 "button": "hypertension",
-                "command": {"type": "diagnose"},
+                "command": "diagnose",
                 "context": {"background": "stuff"},
             },
         ),
@@ -92,19 +92,13 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
             {
                 "title": "hypertension",
                 "button": "diagnose",
-                "command": {
-                    "type": "diagnose",
-                    "filter": {"coding": [{"code": "I10", "system": "icd10cm"}]},
-                },
-                "context": {"background": "hey"},
+                "command": "diagnose",
+                "context": {"background": "hey", "icd10_code": "I10"},
             },
             {
                 "title": "fake medication",
                 "button": "prescribe",
-                "command": {
-                    "type": "prescribe",
-                    "filter": {"coding": [{"code": "fake", "system": "fdb"}]},
-                },
+                "command": "prescribe",
                 "context": {"sig": "1pobid"},
             },
         ),
@@ -125,59 +119,21 @@ def test_add_recommendations(
                 "title": rec1_params.get("title", None),
                 "button": rec1_params.get("button", None),
                 "href": rec1_params.get("href", None),
-                "command": rec1_params.get("command", None),
-                "context": rec1_params.get("context", None),
+                "command": {"type": rec1_params["command"]} if "command" in rec1_params else {},
+                "context": rec1_params.get("context", {}),
+                "key": 0,
             },
             {
                 "title": rec2_params.get("title", None),
                 "button": rec2_params.get("button", None),
                 "href": rec2_params.get("href", None),
-                "command": rec2_params.get("command", None),
-                "context": rec2_params.get("context", None),
+                "command": {"type": rec2_params["command"]} if "command" in rec2_params else {},
+                "context": rec2_params.get("context", {}),
+                "key": 1,
             },
         ],
         "status": "due",
     }
-
-
-def test_add_recommendations_with_command_coding_filter_raises_error_when_invalid_coding_system() -> (
-    None
-):
-    p = ProtocolCard()
-
-    with pytest.raises(ValidationError) as e1:
-        p.add_recommendation(
-            title="hypertension",
-            button="diagnose",
-            command={
-                "type": "diagnose",
-                "filter": {"coding": [{"code": "I10", "system": "something-else"}]},
-            },
-            context={"background": "hey"},
-        )
-    err_msg1 = repr(e1.value)
-    assert "1 validation error for Recommendation" in err_msg1
-    assert "command.filter.coding.0.system" in err_msg1
-    assert (
-        "Input should be 'cpt', 'cvx', 'snomedct', 'rxnorm', 'loinc', 'icd10cm', 'fdb' or 'ndc'"
-        in err_msg1
-    )
-
-    with pytest.raises(ValidationError) as e2:
-        p.recommendations.append(
-            Recommendation(
-                title="fake medication",
-                button="prescribe",
-                command={"type": "prescribe", "filter": {"coding": [{"code": "fake"}]}},
-                context={"sig": "1pobid"},
-            )
-        )
-    err_msg2 = repr(e2.value)
-    assert "1 validation error for Recommendation" in err_msg2
-    assert "command.filter.coding.0.system" in err_msg2
-    assert "Field required [type=missing, input_value={'code': 'fake'}" in err_msg2
-
-    assert p.values["recommendations"] == []
 
 
 @pytest.mark.parametrize(
@@ -203,21 +159,26 @@ def test_add_recommendations_from_commands(
     p = ProtocolCard(patient_id="uuid", key="commands")
     p.recommendations.append(cmd.recommend())
     p.recommendations.append(cmd.recommend(title="hello", button="click"))
+    p.add_recommendation(
+        title="yeehaw", button="click here", command=cmd.Meta.key.lower(), context=init_params
+    )
 
-    recommendation1, recommendation2 = p.values["recommendations"]
-    assert recommendation1["title"] == ""
-    assert recommendation1["button"] == cmd.constantized_key().lower().replace("_", " ")
-    assert recommendation1["href"] is None
-    assert recommendation1["context"] == cmd.values
-    assert recommendation1["command"]["type"] == cmd.Meta.key.lower()
+    rec1, rec2, rec3 = p.values["recommendations"]
+    assert rec1["title"] == ""
+    assert rec1["button"] == cmd.constantized_key().lower().replace("_", " ")
+    assert rec1["href"] is None
+    assert rec1["context"] == cmd.values
+    assert rec1["command"]["type"] == cmd.Meta.key.lower()
 
-    assert recommendation2["title"] == "hello"
-    assert recommendation2["button"] == "click"
-    assert recommendation2["href"] is None
-    assert recommendation2["context"] == cmd.values
-    assert recommendation2["command"]["type"] == cmd.Meta.key.lower()
+    assert rec2["title"] == "hello"
+    assert rec2["button"] == "click"
+    assert rec2["href"] is None
+    assert rec2["context"] == cmd.values
+    assert rec2["command"]["type"] == cmd.Meta.key.lower()
 
-    if init_params:
-        code = list(init_params.values())[0]
-        assert recommendation1["command"]["filter"]["coding"][0]["code"] == code
-        assert recommendation2["command"]["filter"]["coding"][0]["code"] == code
+    assert rec3["title"] == "yeehaw"
+    assert rec3["button"] == "click here"
+    assert rec3["href"] is None
+    assert rec3["command"]["type"] == cmd.Meta.key.lower()
+    for k, v in init_params.items():
+        assert rec3["context"][k] == v
