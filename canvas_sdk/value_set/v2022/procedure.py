@@ -143,7 +143,7 @@ class HepatitisBVaccineAdministered(ValueSet):
         "3E0234Z",  # Introduction of Serum, Toxoid and Vaccine into Muscle, Percutaneous Approach
     }
     ICD9CM = {
-        "99.55",  # Prophylactic administration of vaccine against other diseases
+        "9955",  # Prophylactic administration of vaccine against other diseases
     }
     SNOMEDCT = {
         "16584000",  # Administration of vaccine product containing only Hepatitis B virus antigen (procedure)
@@ -568,16 +568,16 @@ class HysterectomyWithNoResidualCervix(ValueSet):
         "0UTC8ZZ",  # Resection of Cervix, Via Natural or Artificial Opening Endoscopic
     }
     ICD9CM = {
-        "618.5",  # Prolapse of vaginal vault after hysterectomy
-        "68.41",  # Laparoscopic total abdominal hysterectomy
-        "68.49",  # Other and unspecified total abdominal hysterectomy
-        "68.51",  # Laparoscopically assisted vaginal hysterectomy (LAVH)
-        "68.59",  # Other and unspecified vaginal hysterectomy
-        "68.61",  # Laparoscopic radical abdominal hysterectomy
-        "68.69",  # Other and unspecified radical abdominal hysterectomy
-        "68.71",  # Laparoscopic radical vaginal hysterectomy [LRVH]
-        "68.79",  # Other and unspecified radical vaginal hysterectomy
-        "68.8",  # Pelvic evisceration
+        "6185",  # Prolapse of vaginal vault after hysterectomy
+        "6841",  # Laparoscopic total abdominal hysterectomy
+        "6849",  # Other and unspecified total abdominal hysterectomy
+        "6851",  # Laparoscopically assisted vaginal hysterectomy (LAVH)
+        "6859",  # Other and unspecified vaginal hysterectomy
+        "6861",  # Laparoscopic radical abdominal hysterectomy
+        "6869",  # Other and unspecified radical abdominal hysterectomy
+        "6871",  # Laparoscopic radical vaginal hysterectomy [LRVH]
+        "6879",  # Other and unspecified radical vaginal hysterectomy
+        "688",  # Pelvic evisceration
     }
     SNOMEDCT = {
         "24293001",  # Excision of cervical stump by abdominal approach (procedure)
@@ -645,10 +645,10 @@ class BilateralMastectomy(ValueSet):
         "0HTV0ZZ",  # Resection of Bilateral Breast, Open Approach
     }
     ICD9CM = {
-        "85.42",  # Bilateral simple mastectomy
-        "85.44",  # Bilateral extended simple mastectomy
-        "85.46",  # Bilateral radical mastectomy
-        "85.48",  # Bilateral extended radical mastectomy
+        "8542",  # Bilateral simple mastectomy
+        "8544",  # Bilateral extended simple mastectomy
+        "8546",  # Bilateral radical mastectomy
+        "8548",  # Bilateral extended radical mastectomy
     }
     SNOMEDCT = {
         "14693006",  # Bilateral subcutaneous mammectomy (procedure)
@@ -1054,9 +1054,9 @@ class TotalColectomy(ValueSet):
         "0DTE8ZZ",  # Resection of Large Intestine, Via Natural or Artificial Opening Endoscopic
     }
     ICD9CM = {
-        "45.81",  # Laparoscopic total intra-abdominal colectomy
-        "45.82",  # Open total intra-abdominal colectomy
-        "45.83",  # Other and unspecified total intra-abdominal colectomy
+        "4581",  # Laparoscopic total intra-abdominal colectomy
+        "4582",  # Open total intra-abdominal colectomy
+        "4583",  # Other and unspecified total intra-abdominal colectomy
     }
     SNOMEDCT = {
         "456004",  # Total abdominal colectomy with ileostomy (procedure)
@@ -2453,15 +2453,15 @@ class CabgSurgeries(ValueSet):
         "02134ZF",  # Bypass Coronary Artery, Four or More Arteries from Abdominal Artery, Percutaneous Endoscopic Approach
     }
     ICD9CM = {
-        "36.10",  # Aortocoronary bypass for heart revascularization, not otherwise specified
-        "36.11",  # (Aorto)coronary bypass of one coronary artery
-        "36.12",  # (Aorto)coronary bypass of two coronary arteries
-        "36.13",  # (Aorto)coronary bypass of three coronary arteries
-        "36.14",  # (Aorto)coronary bypass of four or more coronary arteries
-        "36.15",  # Single internal mammary-coronary artery bypass
-        "36.16",  # Double internal mammary-coronary artery bypass
-        "36.17",  # Abdominal-coronary artery bypass
-        "36.19",  # Other bypass anastomosis for heart revascularization
+        "3610",  # Aortocoronary bypass for heart revascularization, not otherwise specified
+        "3611",  # (Aorto)coronary bypass of one coronary artery
+        "3612",  # (Aorto)coronary bypass of two coronary arteries
+        "3613",  # (Aorto)coronary bypass of three coronary arteries
+        "3614",  # (Aorto)coronary bypass of four or more coronary arteries
+        "3615",  # Single internal mammary-coronary artery bypass
+        "3616",  # Double internal mammary-coronary artery bypass
+        "3617",  # Abdominal-coronary artery bypass
+        "3619",  # Other bypass anastomosis for heart revascularization
     }
     SNOMEDCT = {
         "3546002",  # Aortocoronary artery bypass graft with saphenous vein graft (procedure)
@@ -3575,21 +3575,21 @@ class CarotidIntervention(ValueSet):
         "B318YZZ",  # Fluoroscopy of Bilateral Internal Carotid Arteries using Other Contrast
     }
     ICD9CM = {
-        "00.61",  # Percutaneous angioplasty of extracranial vessel(s)
-        "00.62",  # Percutaneous angioplasty of intracranial vessel(s)
-        "00.63",  # Percutaneous insertion of carotid artery stent(s)
-        "00.64",  # Percutaneous insertion of other extracranial artery stent(s)
-        "00.65",  # Percutaneous insertion of intracranial vascular stent(s)
-        "38.02",  # Incision of vessel, other vessels of head and neck
-        "38.12",  # Endarterectomy, other vessels of head and neck
-        "38.22",  # Percutaneous angioscopy
-        "38.30",  # Resection of vessel with anastomosis, unspecified site
-        "38.31",  # Resection of vessel with anastomosis, intracranial vessels
-        "38.32",  # Resection of vessel with anastomosis, other vessels of head and neck
-        "38.42",  # Resection of vessel with replacement, other vessels of head and neck
-        "39.22",  # Aorta-subclavian-carotid bypass
-        "39.28",  # Extracranial-intracranial (EC-IC) vascular bypass
-        "88.41",  # Arteriography of cerebral arteries
+        "0061",  # Percutaneous angioplasty of extracranial vessel(s)
+        "0062",  # Percutaneous angioplasty of intracranial vessel(s)
+        "0063",  # Percutaneous insertion of carotid artery stent(s)
+        "0064",  # Percutaneous insertion of other extracranial artery stent(s)
+        "0065",  # Percutaneous insertion of intracranial vascular stent(s)
+        "3802",  # Incision of vessel, other vessels of head and neck
+        "3812",  # Endarterectomy, other vessels of head and neck
+        "3822",  # Percutaneous angioscopy
+        "3830",  # Resection of vessel with anastomosis, unspecified site
+        "3831",  # Resection of vessel with anastomosis, intracranial vessels
+        "3832",  # Resection of vessel with anastomosis, other vessels of head and neck
+        "3842",  # Resection of vessel with replacement, other vessels of head and neck
+        "3922",  # Aorta-subclavian-carotid bypass
+        "3928",  # Extracranial-intracranial (EC-IC) vascular bypass
+        "8841",  # Arteriography of cerebral arteries
     }
     SNOMEDCT = {
         "9339002",  # Perfusion of carotid artery (procedure)

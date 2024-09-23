@@ -501,7 +501,7 @@ class DietaryRecommendations(ValueSet):
         "S9470",  # Nutritional counseling, dietitian visit
     }
     ICD10CM = {
-        "Z71.3",  # Dietary counseling and surveillance
+        "Z713",  # Dietary counseling and surveillance
     }
     SNOMEDCT = {
         "11816003",  # Diet education (procedure)
@@ -1241,8 +1241,8 @@ class FollowUpForAboveNormalBmi(ValueSet):
         "S9470",  # Nutritional counseling, dietitian visit
     }
     ICD10CM = {
-        "Z71.3",  # Dietary counseling and surveillance
-        "Z71.82",  # Exercise counseling
+        "Z713",  # Dietary counseling and surveillance
+        "Z7182",  # Exercise counseling
     }
     SNOMEDCT = {
         "304549008",  # Giving encouragement to exercise (procedure)
@@ -1297,7 +1297,7 @@ class FollowUpForBelowNormalBmi(ValueSet):
         "S9470",  # Nutritional counseling, dietitian visit
     }
     ICD10CM = {
-        "Z71.3",  # Dietary counseling and surveillance
+        "Z713",  # Dietary counseling and surveillance
     }
     SNOMEDCT = {
         "386464006",  # Prescribed diet education (procedure)

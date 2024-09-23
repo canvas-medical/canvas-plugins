@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Type
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.utils.helpers import alphanum_only
 from canvas_sdk.value_set.constants import SYSTEM_CODE_URI_MAPPING
 
 if TYPE_CHECKING:
@@ -53,6 +52,5 @@ class ValueSetLookupQuerySet(models.QuerySet):
         ]
         q_filter = Q()
         for system, codes in uri_codes:
-            alphanum_codes = [alphanum_only(code) for code in codes]
-            q_filter |= Q(codings__system=system, codings__code__in=alphanum_codes)
+            q_filter |= Q(codings__system=system, codings__code__in=codes)
         return self.filter(q_filter).distinct()

@@ -817,7 +817,7 @@ class PalliativeCareEncounter(ValueSet):
         "4901000124101",  # Palliative care education (procedure)
     }
     ICD10CM = {
-        "Z51.5",  # Encounter for palliative care
+        "Z515",  # Encounter for palliative care
     }
 
 

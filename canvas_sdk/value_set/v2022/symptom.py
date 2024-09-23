@@ -20,19 +20,19 @@ class FrailtySymptom(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2021-05-06"
 
     ICD10CM = {
-        "R26.0",  # Ataxic gait
-        "R26.1",  # Paralytic gait
-        "R26.2",  # Difficulty in walking, not elsewhere classified
-        "R26.89",  # Other abnormalities of gait and mobility
-        "R26.9",  # Unspecified abnormalities of gait and mobility
-        "R41.81",  # Age-related cognitive decline
-        "R53.1",  # Weakness
-        "R53.81",  # Other malaise
-        "R53.83",  # Other fatigue
+        "R260",  # Ataxic gait
+        "R261",  # Paralytic gait
+        "R262",  # Difficulty in walking, not elsewhere classified
+        "R2689",  # Other abnormalities of gait and mobility
+        "R269",  # Unspecified abnormalities of gait and mobility
+        "R4181",  # Age-related cognitive decline
+        "R531",  # Weakness
+        "R5381",  # Other malaise
+        "R5383",  # Other fatigue
         "R54",  # Age-related physical debility
-        "R62.7",  # Adult failure to thrive
-        "R63.4",  # Abnormal weight loss
-        "R63.6",  # Underweight
+        "R627",  # Adult failure to thrive
+        "R634",  # Abnormal weight loss
+        "R636",  # Underweight
         "R64",  # Cachexia
     }
     SNOMEDCT = {
