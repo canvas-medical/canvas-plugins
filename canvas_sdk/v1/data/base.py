@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING, Type
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.value_set.constants import SYSTEM_CODE_URI_MAPPING
-
 if TYPE_CHECKING:
     from canvas_sdk.value_set.value_set import ValueSet
 
@@ -23,9 +21,7 @@ class CommittableModelManager(models.Manager):
 
 
 class ValueSetLookupQuerySet(models.QuerySet):
-    def in_value_set(
-        self, value_set: Type["ValueSet"], code_system_mapping: dict[str, str] | None = None
-    ) -> models.QuerySet:
+    def find(self, value_set: Type["ValueSet"]) -> models.QuerySet:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -33,22 +29,20 @@ class ValueSetLookupQuerySet(models.QuerySet):
 
         from canvas_sdk.v1.data.condition import Condition
         from canvas_sdk.value_set.v2022.condition import MorbidObesity
-        morbid_obesity_conditions = Condition.objects.in_value_set(MorbidObesity)
+        morbid_obesity_conditions = Condition.objects.find(MorbidObesity)
 
         This method can also be chained like so:
 
-        Condition.objects.in_value_set(MorbidObesity).in_value_set(AnaphylacticReactionToCommonBakersYeast)
+        Condition.objects.find(MorbidObesity).find(AnaphylacticReactionToCommonBakersYeast)
 
         A code/system mapping dictionary can be optionally passed to define value_set codes and URI values
         so that plugin authors can use custom value sets.
         """
-
-        if not code_system_mapping:
-            code_system_mapping = SYSTEM_CODE_URI_MAPPING
+        values_dict = value_set.values
         uri_codes = [
-            (i[1], getattr(value_set, i[0]))
-            for i in code_system_mapping.items()
-            if hasattr(value_set, i[0])
+            (i[1], values_dict[i[0]])
+            for i in value_set.CODE_SYSTEM_MAPPING.items()
+            if i[0] in values_dict
         ]
         q_filter = Q()
         for system, codes in uri_codes:

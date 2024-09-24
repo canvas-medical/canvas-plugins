@@ -2,7 +2,6 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.value_set.constants import SYSTEM_CODE_URI_MAPPING
 
 
 class ConditionQuerySet(ValueSetLookupQuerySet):
