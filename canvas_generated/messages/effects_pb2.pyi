@@ -73,6 +73,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_PERFORM_COMMAND: _ClassVar[EffectType]
     COMMIT_PERFORM_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_PERFORM_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    EDIT_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    DELETE_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    COMMIT_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_INSTRUCT_COMMAND: _ClassVar[EffectType]
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
@@ -143,6 +148,11 @@ EDIT_PERFORM_COMMAND: EffectType
 DELETE_PERFORM_COMMAND: EffectType
 COMMIT_PERFORM_COMMAND: EffectType
 ENTER_IN_ERROR_PERFORM_COMMAND: EffectType
+ORIGINATE_INSTRUCT_COMMAND: EffectType
+EDIT_INSTRUCT_COMMAND: EffectType
+DELETE_INSTRUCT_COMMAND: EffectType
+COMMIT_INSTRUCT_COMMAND: EffectType
+ENTER_IN_ERROR_INSTRUCT_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
