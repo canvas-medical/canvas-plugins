@@ -523,6 +523,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     VITALS_COMMAND__PRE_EXECUTE_ACTION: _ClassVar[EventType]
     VITALS_COMMAND__POST_EXECUTE_ACTION: _ClassVar[EventType]
     PATIENT_CHART__CONDITIONS: _ClassVar[EventType]
+    CLAIM__CONDITIONS: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1037,6 +1038,7 @@ VITALS_COMMAND__POST_ENTER_IN_ERROR: EventType
 VITALS_COMMAND__PRE_EXECUTE_ACTION: EventType
 VITALS_COMMAND__POST_EXECUTE_ACTION: EventType
 PATIENT_CHART__CONDITIONS: EventType
+CLAIM__CONDITIONS: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context")
