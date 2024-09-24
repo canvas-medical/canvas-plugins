@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager
@@ -16,10 +17,10 @@ class AllergyIntolerance(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    # created
-    # modified
-    # originator_id
-    # editors
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    originator_id = models.BigIntegerField()
+    editors = ArrayField(models.IntegerField())
     deleted = models.BooleanField()
     committer_id = models.BigIntegerField()
     entered_in_error_id = models.BigIntegerField()
@@ -29,17 +30,17 @@ class AllergyIntolerance(models.Model):
         db_column="patient_id",
         related_name="allergy_intolerances",
     )
-    # note_id
-    # allergy_intolerance_type
-    # category
-    # status
-    # severity
+    note_id = models.BigIntegerField()
+    allergy_intolerance_type = models.CharField()
+    category = models.IntegerField()
+    status = models.CharField()
+    severity = models.CharField()
     onset_date = models.DateField()
-    # onset_date_original_input
-    last_occurence = models.DateField()
-    # last_occurence_original_input
+    onset_date_original_input = models.CharField()
+    last_occurrence = models.DateField()
+    last_occurrence_original_input = models.CharField()
     recorded_date = models.DateTimeField()
-    # narrative
+    narrative = models.CharField()
 
 
 class AllergyIntoleranceCoding(models.Model):
