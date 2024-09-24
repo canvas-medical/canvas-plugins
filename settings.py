@@ -28,7 +28,7 @@ CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": CANVAS_SDK_DB_NAME,
         "USER": CANVAS_SDK_DB_USERNAME,
         "PASSWORD": CANVAS_SDK_DB_PASSWORD,

@@ -54,8 +54,7 @@ ipython = "^8.21.0"
 jsonschema = "^4.21.1"
 keyring = "*"
 protobuf = "^4.25.3"
-psycopg2 = {markers = "platform_machine == 'aarch64'", version = "^2.9.9"} # https://github.com/canvas-medical/canvas/pull/13880
-psycopg2-binary = {markers = "platform_machine != 'aarch64'", version = "^2.9.9"}
+psycopg = {extras = ["binary"], version = "^3.2.2"}
 pydantic = "^2.6.1"
 pyjwt = "2.4.0"
 python = ">=3.11,<3.13"
