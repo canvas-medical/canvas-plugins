@@ -10,5 +10,5 @@ class CommittableModelManager(models.Manager):
         # The committer_id IS set, and the entered_in_error_id IS NOT set
         return self.filter(committer_id__isnull=False, entered_in_error_id__isnull=True)
 
-    def for_patient_id(self, patient_id: str) -> "models.QuerySet":
+    def for_patient(self, patient_id: str) -> "models.QuerySet":
         return self.filter(patient__id=patient_id)
