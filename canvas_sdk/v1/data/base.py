@@ -34,9 +34,6 @@ class ValueSetLookupQuerySet(models.QuerySet):
         This method can also be chained like so:
 
         Condition.objects.find(MorbidObesity).find(AnaphylacticReactionToCommonBakersYeast)
-
-        A code/system mapping dictionary can be optionally passed to define value_set codes and URI values
-        so that plugin authors can use custom value sets.
         """
         values_dict = value_set.values
         uri_codes = [
