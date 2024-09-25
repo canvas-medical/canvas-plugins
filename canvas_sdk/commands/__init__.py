@@ -5,6 +5,7 @@ from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
 )
 from canvas_sdk.commands.commands.instruct import InstructCommand
+from canvas_sdk.commands.commands.lab_order import LabOrderCommand
 from canvas_sdk.commands.commands.medication_statement import MedicationStatementCommand
 from canvas_sdk.commands.commands.perform import PerformCommand
 from canvas_sdk.commands.commands.plan import PlanCommand
@@ -20,6 +21,7 @@ __all__ = (
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "InstructCommand",
+    "LabOrderCommand",
     "MedicationStatementCommand",
     "PerformCommand",
     "PlanCommand",
