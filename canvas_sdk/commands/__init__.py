@@ -1,3 +1,4 @@
+from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
@@ -17,6 +18,7 @@ from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 
 __all__ = (
+    "AllergyCommand",
     "AssessCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
