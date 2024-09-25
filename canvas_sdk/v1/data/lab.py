@@ -50,7 +50,7 @@ class LabReview(models.Model):
 
     objects = CommittableModelManager()
 
-    # id = models.UUIDField() # TODO - add externally_exposable_id in home-app
+    id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
@@ -71,7 +71,7 @@ class LabValue(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labvalue_001"
 
-    # id = models.UUIDField() # TODO - add externally_exposable_id in home-app
+    id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
