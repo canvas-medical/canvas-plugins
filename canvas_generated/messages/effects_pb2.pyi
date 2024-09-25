@@ -68,10 +68,21 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
     COMMIT_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_UPDATE_GOAL_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_PERFORM_COMMAND: _ClassVar[EffectType]
+    EDIT_PERFORM_COMMAND: _ClassVar[EffectType]
+    DELETE_PERFORM_COMMAND: _ClassVar[EffectType]
+    COMMIT_PERFORM_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_PERFORM_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    EDIT_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    DELETE_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    COMMIT_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_INSTRUCT_COMMAND: _ClassVar[EffectType]
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
+    ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -133,10 +144,21 @@ EDIT_UPDATE_GOAL_COMMAND: EffectType
 DELETE_UPDATE_GOAL_COMMAND: EffectType
 COMMIT_UPDATE_GOAL_COMMAND: EffectType
 ENTER_IN_ERROR_UPDATE_GOAL_COMMAND: EffectType
+ORIGINATE_PERFORM_COMMAND: EffectType
+EDIT_PERFORM_COMMAND: EffectType
+DELETE_PERFORM_COMMAND: EffectType
+COMMIT_PERFORM_COMMAND: EffectType
+ENTER_IN_ERROR_PERFORM_COMMAND: EffectType
+ORIGINATE_INSTRUCT_COMMAND: EffectType
+EDIT_INSTRUCT_COMMAND: EffectType
+DELETE_INSTRUCT_COMMAND: EffectType
+COMMIT_INSTRUCT_COMMAND: EffectType
+ENTER_IN_ERROR_INSTRUCT_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
+ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name")
