@@ -94,4 +94,4 @@ class LabValueCoding(models.Model):
     value = models.ForeignKey(LabValue, on_delete=models.DO_NOTHING, related_name="codings")
     code = models.CharField()
     name = models.CharField()
-    # there is no system in the database; these are all assumed to be LOINC codes
+    system = models.CharField()
