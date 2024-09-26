@@ -20,7 +20,6 @@ class AllergyIntolerance(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    editors = ArrayField(models.IntegerField())
     deleted = models.BooleanField()
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
