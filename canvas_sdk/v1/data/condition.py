@@ -2,13 +2,18 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
+from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ConditionQuerySet(ValueSetLookupQuerySet):
+    """ConditionQuerySet."""
+
     pass
 
 
 class Condition(models.Model):
+    """Condition."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -21,12 +26,14 @@ class Condition(models.Model):
     onset_date = models.DateField()
     resolution_date = models.DateField()
     deleted = models.BooleanField()
-    entered_in_error_id = models.BigIntegerField()
-    committer_id = models.BigIntegerField()
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="conditions")
 
 
 class ConditionCoding(models.Model):
+    """ConditionCoding."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"

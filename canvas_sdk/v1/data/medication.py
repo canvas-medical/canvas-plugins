@@ -2,13 +2,18 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
+from canvas_sdk.v1.data.user import CanvasUser
 
 
 class MedicationQuerySet(ValueSetLookupQuerySet):
+    """MedicationQuerySet."""
+
     pass
 
 
 class Medication(models.Model):
+    """Medication."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -20,8 +25,8 @@ class Medication(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="medications")
     deleted = models.BooleanField()
-    entered_in_error_id = models.BigIntegerField()
-    committer_id = models.BigIntegerField()
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     status = models.CharField()
     start_date = models.DateField()
     end_date = models.DateField()
@@ -33,6 +38,8 @@ class Medication(models.Model):
 
 
 class MedicationCoding(models.Model):
+    """MedicationCoding."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
