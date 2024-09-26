@@ -81,6 +81,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
+    ADD_OR_UPDATE_PROTOCOL_CARD: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
@@ -157,6 +158,7 @@ ENTER_IN_ERROR_INSTRUCT_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
+ADD_OR_UPDATE_PROTOCOL_CARD: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
 

@@ -1,5 +1,5 @@
 import decimal
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Generator
 
 import pytest
@@ -339,7 +339,7 @@ def command_type_map() -> dict[str, type]:
         "TextField": str,
         "ChoiceField": str,
         "DateField": datetime,
-        "ApproximateDateField": datetime,
+        "ApproximateDateField": date,
         "IntegerField": int,
         "DecimalField": decimal.Decimal,
     }
