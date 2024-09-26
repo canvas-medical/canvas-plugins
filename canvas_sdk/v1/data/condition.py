@@ -23,9 +23,7 @@ class Condition(models.Model):
     deleted = models.BooleanField()
     entered_in_error_id = models.BigIntegerField()
     committer_id = models.BigIntegerField()
-    patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, db_column="patient_id", related_name="conditions"
-    )
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="conditions")
 
 
 class ConditionCoding(models.Model):
@@ -40,6 +38,4 @@ class ConditionCoding(models.Model):
     code = models.CharField()
     display = models.CharField()
     user_selected = models.BooleanField()
-    condition = models.ForeignKey(
-        Condition, on_delete=models.DO_NOTHING, db_column="condition_dbid", related_name="codings"
-    )
+    condition = models.ForeignKey(Condition, on_delete=models.DO_NOTHING, related_name="codings")
