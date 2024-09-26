@@ -1,7 +1,11 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
+
+
+class ConditionQuerySet(ValueSetLookupQuerySet):
+    pass
 
 
 class Condition(models.Model):
@@ -10,7 +14,7 @@ class Condition(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_condition_001"
 
-    objects = CommittableModelManager()
+    objects = CommittableModelManager.from_queryset(ConditionQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
