@@ -1,18 +1,13 @@
 import importlib.metadata
-import json
-import random
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Optional
 
-import grpc
 import typer
 
 from canvas_cli.apps import plugin
+from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.utils.context import context
-from canvas_generated.messages.events_pb2 import Event as PluginRunnerEvent
-from canvas_generated.messages.events_pb2 import EventType as PluginRunnerEventType
-from canvas_generated.services.plugin_runner_pb2_grpc import PluginRunnerStub
 
 APP_NAME = "canvas_cli"
 
@@ -28,6 +23,9 @@ app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
 app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
+app.command(
+    short_help="Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
+)(emit)
 
 # Our current version
 __version__ = importlib.metadata.version("canvas")
@@ -57,37 +55,6 @@ def get_or_create_config_file() -> Path:
             file.write("{}")
 
     return config_path
-
-
-@app.command()
-def emit(
-    event_fixture: str,
-    plugin_runner_port: Annotated[
-        str, typer.Option(help="Port of your locally running plugin runner")
-    ] = "50051",
-) -> None:
-    """
-    Grab an event from a fixture file and send it your locally running plugin-runner process.
-    Any resultant effects will be printed.
-
-    Valid fixture files are newline-delimited JSON, with each containing the keys `EventType`, `target`, and `context`. Some fixture files are included in the canvas-plugins repo.
-    """
-    # Grab a random event from the fixture file ndjson
-    lines = Path(event_fixture).read_text().splitlines()
-    myline = random.choice(lines)
-    event_data = json.loads(myline)
-    event = PluginRunnerEvent(
-        type=PluginRunnerEventType.Value(event_data["EventType"]),
-        target=event_data["target"],
-        context=event_data["context"],
-    )
-    with grpc.insecure_channel(f"localhost:{plugin_runner_port}") as channel:
-        stub = PluginRunnerStub(channel)
-        responses = stub.HandleEvent(event)
-
-        for response in responses:
-            for effect in response.effects:
-                print(effect)
 
 
 @app.callback()
