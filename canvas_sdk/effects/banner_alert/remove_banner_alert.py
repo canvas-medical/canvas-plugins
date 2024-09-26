@@ -10,9 +10,10 @@ class RemoveBannerAlert(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.REMOVE_BANNER_ALERT
+        apply_required_fields = ("patient_id", "key")
 
-    patient_id: str
-    key: str
+    patient_id: str | None = None
+    key: str | None = None
 
     @property
     def effect_payload(self) -> dict[str, Any]:

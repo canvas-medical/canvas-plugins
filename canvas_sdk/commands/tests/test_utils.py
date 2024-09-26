@@ -171,6 +171,7 @@ def raises_none_error_for_effect_method(
     missing_fields = [field for field in method_required_fields if getattr(cmd, field) is None]
     num_errs = len(missing_fields)
     assert f"{num_errs} validation error{'s' if num_errs > 1 else ''} for {cmd_name}" in e_msg
+
     for f in missing_fields:
         assert (
             f"Field '{f}' is required to {method.replace('_', ' ')} {cmd_name_article} {cmd_name} [type=missing, input_value=None, input_type=NoneType]"
