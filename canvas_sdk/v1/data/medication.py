@@ -14,9 +14,7 @@ class Medication(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, db_column="patient_id", related_name="medications"
-    )
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="medications")
     deleted = models.BooleanField()
     entered_in_error_id = models.BigIntegerField()
     committer_id = models.BigIntegerField()
@@ -42,11 +40,4 @@ class MedicationCoding(models.Model):
     code = models.CharField()
     display = models.CharField()
     user_selected = models.BooleanField()
-    medication = models.ForeignKey(
-        "Medication",
-        on_delete=models.DO_NOTHING,
-        db_column="medication_dbid",
-        to_field="dbid",
-        related_name="codings",
-        related_query_name="codings",
-    )
+    medication = models.ForeignKey(Medication, on_delete=models.DO_NOTHING, related_name="codings")

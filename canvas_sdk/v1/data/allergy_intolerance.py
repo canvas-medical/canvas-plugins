@@ -27,7 +27,6 @@ class AllergyIntolerance(models.Model):
     patient = models.ForeignKey(
         Patient,
         on_delete=models.DO_NOTHING,
-        db_column="patient_id",
         related_name="allergy_intolerances",
     )
     note_id = models.BigIntegerField()
@@ -60,6 +59,5 @@ class AllergyIntoleranceCoding(models.Model):
     allergy_intolerance = models.ForeignKey(
         AllergyIntolerance,
         on_delete=models.DO_NOTHING,
-        db_column="allergy_intolerance_dbid",
         related_name="codings",
     )
