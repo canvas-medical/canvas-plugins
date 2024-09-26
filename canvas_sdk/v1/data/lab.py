@@ -24,7 +24,6 @@ class LabReport(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="lab_reports")
     transmission_type = models.CharField()
     for_test_only = models.BooleanField()
-    report_data_payload_cache = models.JSONField()
     external_id = models.CharField()
     version = models.IntegerField()
     requisition_number = models.CharField()
