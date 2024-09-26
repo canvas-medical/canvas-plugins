@@ -77,9 +77,6 @@ class Questionnaire(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnaire_001"
 
-    # TODO: Needs a custom manager
-    # objects = CommittableModelManager()
-
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
