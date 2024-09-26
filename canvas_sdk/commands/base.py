@@ -4,39 +4,25 @@ from enum import EnumType
 from typing import Literal, get_args
 
 from canvas_sdk.base import Model
+from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(Model):
     class Meta:
         key = ""
-        originate_required_fields = (
-            "user_id",
-            "note_uuid",
-        )
-        edit_required_fields = (
-            "user_id",
-            "command_uuid",
-        )
-        delete_required_fields = (
-            "user_id",
-            "command_uuid",
-        )
-        commit_required_fields = (
-            "user_id",
-            "command_uuid",
-        )
-        enter_in_error_required_fields = (
-            "user_id",
-            "command_uuid",
-        )
+        originate_required_fields = ("note_uuid",)
+        edit_required_fields = ("command_uuid",)
+        delete_required_fields = ("command_uuid",)
+        commit_required_fields = ("command_uuid",)
+        enter_in_error_required_fields = ("command_uuid",)
 
     def constantized_key(self) -> str:
         return re.sub(r"(?<!^)(?=[A-Z])", "_", self.Meta.key).upper()
 
     note_uuid: str | None = None
     command_uuid: str | None = None
-    user_id: int | None = None
 
     def _get_effect_method_required_fields(
         self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
@@ -50,6 +36,11 @@ class _BaseCommand(Model):
     @property
     def values(self) -> dict:
         return {}
+
+    @property
+    def coding_filter(self) -> Coding | None:
+        """The coding filter used for command insertion in protocol cards."""
+        return None
 
     @classmethod
     def _get_property_choices(cls, name: str, schema: dict) -> list[dict] | None:
@@ -74,9 +65,9 @@ class _BaseCommand(Model):
     @classmethod
     def command_schema(cls) -> dict:
         """The schema of the command."""
-        base_properties = {"note_uuid", "command_uuid", "user_id"}
+        base_properties = {"note_uuid", "command_uuid"}
         schema = cls.model_json_schema()
-        required_fields: tuple = getattr(cls.Meta, "originate_required_fields", tuple())
+        required_fields: tuple = getattr(cls.Meta, "commit_required_fields", tuple())
         return {
             definition.get("commands_api_name", name): {
                 "required": name in required_fields,
@@ -94,7 +85,6 @@ class _BaseCommand(Model):
             type=EffectType.Value(f"ORIGINATE_{self.constantized_key()}_COMMAND"),
             payload=json.dumps(
                 {
-                    "user": self.user_id,
                     "note": self.note_uuid,
                     "data": self.values,
                 }
@@ -107,7 +97,6 @@ class _BaseCommand(Model):
         return {
             "type": f"EDIT_{self.constantized_key()}_COMMAND",
             "payload": {
-                "user": self.user_id,
                 "command": self.command_uuid,
                 "data": self.values,
             },
@@ -118,7 +107,7 @@ class _BaseCommand(Model):
         self._validate_before_effect("delete")
         return {
             "type": f"DELETE_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid, "user": self.user_id},
+            "payload": {"command": self.command_uuid},
         }
 
     def commit(self) -> Effect:
@@ -126,7 +115,7 @@ class _BaseCommand(Model):
         self._validate_before_effect("commit")
         return {
             "type": f"COMMIT_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid, "user": self.user_id},
+            "payload": {"command": self.command_uuid},
         }
 
     def enter_in_error(self) -> Effect:
@@ -134,5 +123,12 @@ class _BaseCommand(Model):
         self._validate_before_effect("enter_in_error")
         return {
             "type": f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid, "user": self.user_id},
+            "payload": {"command": self.command_uuid},
         }
+
+    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+        """Returns a command recommendation to be inserted via Protocol Card."""
+        if button is None:
+            button = self.constantized_key().lower().replace("_", " ")
+        command = self.Meta.key.lower()
+        return Recommendation(title=title, button=button, command=command, context=self.values)

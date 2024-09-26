@@ -1,9 +1,11 @@
 import decimal
-from datetime import datetime
+from datetime import date, datetime
+from typing import Any, Generator
 
 import pytest
 import requests
 from pydantic import ValidationError
+from typer.testing import CliRunner
 
 import settings
 from canvas_sdk.commands import (
@@ -19,14 +21,22 @@ from canvas_sdk.commands import (
     StopMedicationCommand,
     UpdateGoalCommand,
 )
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.commands.tests.test_utils import (
     MaskedValue,
+    clean_up_files_and_plugins,
     fake,
     get_field_type,
+    get_original_note_body_commands,
+    install_plugin,
     raises_none_error_for_effect_method,
     raises_wrong_type_error,
+    trigger_plugin_event,
+    write_protocol_code,
 )
+
+runner = CliRunner()
 
 
 @pytest.mark.parametrize(
@@ -50,7 +60,7 @@ from canvas_sdk.commands.tests.test_utils import (
         ),
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
-        (PlanCommand, ("narrative", "user_id", "command_uuid")),
+        (PlanCommand, ("narrative", "command_uuid")),
         (
             PrescribeCommand,
             (
@@ -82,19 +92,7 @@ from canvas_sdk.commands.tests.test_utils import (
     ],
 )
 def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-        | UpdateGoalCommand
-    ),
+    Command: _BaseCommand,
     fields_to_test: tuple[str],
 ) -> None:
     for field in fields_to_test:
@@ -109,29 +107,22 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     [
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 5, "note_uuid": 1},
+            {"narrative": "yo", "note_uuid": 1},
             "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
-            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             PlanCommand,
-            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": 5},
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": 5},
             "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
-            {"narrative": "yo", "user_id": 5, "note_uuid": "5", "command_uuid": "5"},
-        ),
-        (
-            PlanCommand,
-            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": "5"},
-            "1 validation error for PlanCommand\nuser_id\n  Input should be a valid integer [type=int_type",
-            {"narrative": "yo", "note_uuid": "5", "command_uuid": "4", "user_id": 5},
+            {"narrative": "yo", "note_uuid": "5", "command_uuid": "5"},
         ),
         (
             ReasonForVisitCommand,
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1, "structured": True},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000", "structured": True},
             "1 validation error for ReasonForVisitCommand\n  Structured RFV should have a coding",
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "structured": False,
             },
         ),
@@ -139,71 +130,64 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Field required [type=missing",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": 1, "system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": None, "system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"system": "y"},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.code\n  Field required [type=missing",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": 1},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": None},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             ReasonForVisitCommand,
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
-                "user_id": 1,
                 "coding": {"code": "x", "system": "y", "display": 1},
             },
             "1 validation error for ReasonForVisitCommand\ncoding.display\n  Input should be a valid string [type=string_type",
-            {"note_uuid": "00000000-0000-0000-0000-000000000000", "user_id": 1},
+            {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
     ],
 )
@@ -251,7 +235,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
         ),
         (HistoryOfPresentIllnessCommand, ("narrative",)),
         (MedicationStatementCommand, ("fdb_code", "sig")),
-        (PlanCommand, ("narrative", "user_id", "command_uuid", "note_uuid")),
+        (PlanCommand, ("narrative", "command_uuid", "note_uuid")),
         (
             PrescribeCommand,
             (
@@ -284,19 +268,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-        | UpdateGoalCommand
-    ),
+    Command: _BaseCommand,
     fields_to_test: tuple[str],
 ) -> None:
     schema = Command.model_json_schema()
@@ -340,8 +312,8 @@ def token() -> MaskedValue:
     )
 
 
-@pytest.fixture
-def note_uuid(token: MaskedValue) -> str:
+@pytest.fixture(scope="session")
+def new_note(token: MaskedValue) -> dict:
     headers = {
         "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
@@ -354,10 +326,9 @@ def note_uuid(token: MaskedValue) -> str:
         "note_type_version": 1,
         "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
     }
-    note = requests.post(
+    return requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/", headers=headers, json=data
     ).json()
-    return note["externallyExposableId"]
 
 
 @pytest.fixture
@@ -368,49 +339,41 @@ def command_type_map() -> dict[str, type]:
         "TextField": str,
         "ChoiceField": str,
         "DateField": datetime,
-        "ApproximateDateField": datetime,
+        "ApproximateDateField": date,
         "IntegerField": int,
         "DecimalField": decimal.Decimal,
     }
 
 
+# For reuse with the protocol code
+COMMANDS = [
+    AssessCommand,
+    DiagnoseCommand,
+    GoalCommand,
+    HistoryOfPresentIllnessCommand,
+    MedicationStatementCommand,
+    PlanCommand,
+    PrescribeCommand,
+    QuestionnaireCommand,
+    ReasonForVisitCommand,
+    StopMedicationCommand,
+    UpdateGoalCommand,
+]
+
+
 @pytest.mark.integtest
 @pytest.mark.parametrize(
     "Command",
-    [
-        (AssessCommand),
-        (DiagnoseCommand),
-        (GoalCommand),
-        (HistoryOfPresentIllnessCommand),
-        (MedicationStatementCommand),
-        (PlanCommand),
-        (PrescribeCommand),
-        (QuestionnaireCommand),
-        (ReasonForVisitCommand),
-        (StopMedicationCommand),
-        (UpdateGoalCommand),
-    ],
+    COMMANDS,
 )
 def test_command_schema_matches_command_api(
     token: MaskedValue,
     command_type_map: dict[str, str],
-    note_uuid: str,
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-        | UpdateGoalCommand
-    ),
+    new_note: dict,
+    Command: _BaseCommand,
 ) -> None:
     # first create the command in the new note
-    data = {"noteKey": note_uuid, "schemaKey": Command.Meta.key}
+    data = {"noteKey": new_note["externallyExposableId"], "schemaKey": Command.Meta.key}
     headers = {"Authorization": f"Bearer {token.value}"}
     url = f"{settings.INTEGRATION_TEST_URL}/core/api/v1/commands/"
     command_resp = requests.post(url, headers=headers, data=data).json()
@@ -456,3 +419,32 @@ def test_command_schema_matches_command_api(
         assert len(expected_field["choices"]) == len(choices)
         for choice in choices:
             assert choice["value"] in expected_field["choices"]
+
+
+@pytest.fixture(scope="session")
+def plugin_name() -> str:
+    return f"commands{datetime.now().timestamp()}".replace(".", "")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def write_and_install_protocol_and_clean_up(
+    plugin_name: str, token: MaskedValue, new_note: dict
+) -> Generator[Any, Any, Any]:
+    write_protocol_code(new_note["externallyExposableId"], plugin_name, COMMANDS)
+    install_plugin(plugin_name, token)
+
+    yield
+
+    clean_up_files_and_plugins(plugin_name, token)
+
+
+@pytest.mark.integtest
+def test_protocol_that_inserts_every_command(token: MaskedValue, new_note: dict) -> None:
+    trigger_plugin_event(token)
+
+    commands_in_body = get_original_note_body_commands(new_note["id"], token)
+    command_keys = [c.Meta.key for c in COMMANDS]
+
+    assert len(command_keys) == len(commands_in_body)
+    for i, command_key in enumerate(command_keys):
+        assert commands_in_body[i] == command_key

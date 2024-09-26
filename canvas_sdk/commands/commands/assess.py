@@ -10,7 +10,7 @@ class AssessCommand(_BaseCommand):
 
     class Meta:
         key = "assess"
-        originate_required_fields = ("condition_id",)
+        commit_required_fields = ("condition_id",)
 
     class Status(Enum):
         IMPROVED = "improved"

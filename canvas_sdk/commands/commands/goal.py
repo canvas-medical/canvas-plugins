@@ -9,7 +9,7 @@ class GoalCommand(_BaseCommand):
 
     class Meta:
         key = "goal"
-        originate_required_fields = ("goal_statement", "start_date")
+        commit_required_fields = ("goal_statement", "start_date")
 
     class Priority(Enum):
         HIGH = "high-priority"
@@ -27,8 +27,8 @@ class GoalCommand(_BaseCommand):
         NO_PROGRESS = "no-progress"
         NOT_ATTAINABLE = "not-attainable"
 
-    goal_statement: str | None = None
-    start_date: datetime | None = None
+    goal_statement: str = ""
+    start_date: datetime = datetime.now()
     due_date: datetime | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None

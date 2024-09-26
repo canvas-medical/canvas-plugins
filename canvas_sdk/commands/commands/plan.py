@@ -6,9 +6,9 @@ class PlanCommand(_BaseCommand):
 
     class Meta:
         key = "plan"
-        originate_required_fields = ("narrative",)
+        commit_required_fields = ("narrative",)
 
-    narrative: str | None = None
+    narrative: str = ""
 
     @property
     def values(self) -> dict:
