@@ -19,6 +19,7 @@ from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.task import TaskCommand
+from canvas_sdk.commands.commands.update_diagnosis import UpdateDiagnosisCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
 
@@ -42,6 +43,7 @@ __all__ = (
     "RemoveAllergyCommand",
     "StopMedicationCommand",
     "TaskCommand",
+    "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand",
 )
