@@ -83,6 +83,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
+    OPEN_URL_IN_NEW_WINDOW: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -159,6 +160,7 @@ UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
+OPEN_URL_IN_NEW_WINDOW: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name")
