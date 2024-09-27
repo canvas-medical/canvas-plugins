@@ -101,6 +101,7 @@ enum EffectType {
 
   ANNOTATE_CLAIM_CONDITION_RESULTS = 300;
 
+  SHOW_PATIENT_CHART_SUMMARY_SECTIONS = 400;
 }
 
 message Effect {
