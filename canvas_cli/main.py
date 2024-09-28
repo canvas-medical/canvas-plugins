@@ -7,6 +7,7 @@ import typer
 from canvas_cli.apps import plugin
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
+from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
 
 APP_NAME = "canvas_cli"
@@ -26,6 +27,8 @@ app.command(short_help="Listen and print log streams from a Canvas instance")(lo
 app.command(
     short_help="Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
 )(emit)
+app.command(short_help="Run the specified plugins for local development.")(run_plugins)
+app.command(short_help="Run the specified plugin for local development.")(run_plugin)
 
 # Our current version
 __version__ = importlib.metadata.version("canvas")
