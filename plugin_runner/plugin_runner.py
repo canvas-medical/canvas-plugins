@@ -107,7 +107,9 @@ class PluginRunner(PluginRunnerServicer):
                     delta=compute_duration,
                 )
             except Exception as e:
-                log.error(traceback.format_exception(e))
+                for error_line_with_newlines in traceback.format_exception(e):
+                    for error_line in error_line_with_newlines.split("\n"):
+                        log.error(error_line)
                 continue
 
             effect_list += effects
