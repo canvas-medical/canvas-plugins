@@ -40,6 +40,7 @@ packages = [
   {include = "canvas_generated"},
   {include = "canvas_sdk"},
   {include = "logger"},
+  {include = "plugin_runner"},
   {include = "settings.py"}
 ]
 readme = "README.md"
@@ -69,6 +70,7 @@ typing-extensions = "~4.8"
 websocket-client = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
+black = "^24.8.0"
 grpcio-tools = "^1.60.1"
 pre-commit = "*"
 pytest = "*"
@@ -76,7 +78,6 @@ pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
 types-requests = "*"
-black = "^24.8.0"
 
 [tool.poetry.scripts]
 canvas = "canvas_cli.main:app"
