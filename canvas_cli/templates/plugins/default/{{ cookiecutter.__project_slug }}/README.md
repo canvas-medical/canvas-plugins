@@ -1,4 +1,3 @@
-{% for _ in cookiecutter.__project_slug %}={% endfor %}
 {{ cookiecutter.__project_slug }}
 {% for _ in cookiecutter.__project_slug %}={% endfor %}
 
