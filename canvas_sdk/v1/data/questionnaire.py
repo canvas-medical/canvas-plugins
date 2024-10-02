@@ -41,7 +41,7 @@ class ResponseOption(models.Model):
     code_description = models.CharField()
     value = models.CharField()
     response_option_set = models.ForeignKey(
-        ResponseOptionSet, on_delete=models.CASCADE, related_name="options"
+        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="options"
     )
     ordering = models.IntegerField()
 
@@ -61,7 +61,7 @@ class Question(models.Model):
     status = models.CharField()
     name = models.CharField()
     response_option_set = models.ForeignKey(
-        ResponseOptionSet, on_delete=models.CASCADE, related_name="questions"
+        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="questions"
     )
     acknowledge_only = models.BooleanField()
     show_prologue = models.BooleanField()
@@ -95,10 +95,28 @@ class Questionnaire(models.Model):
     code_system = models.CharField()
     code = models.CharField()
     search_tags = models.CharField()
-    # TODO: Need to bring over questionnaire question map?
-    # questions = models.ManyToManyField(Question, through="QuestionnaireQuestionMap")
+    questions = models.ManyToManyField(Question, through="QuestionnaireQuestionMap")
     use_in_shx = models.BooleanField()
     carry_forward = models.TextField()
+
+
+class QuestionnaireQuestionMap(models.Model):
+    """QuestionnaireQuestionMap."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_questionnairequestionmap_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    status = models.CharField()
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING)
+    question = models.ForeignKey(Question, on_delete=models.DO_NOTHING)
+
+    def __str__(self) -> str:
+        return f"{self.questionnaire.name} ({self.question.name})"
 
 
 class Interview(models.Model):
@@ -124,10 +142,10 @@ class Interview(models.Model):
     name = models.CharField()
     language_id = models.BigIntegerField()
     use_case_in_charting = models.CharField()
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="interviews")
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="interviews")
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
-    # TODO: Need to bring over interview quesiton map?
+    # TODO: Need to bring over interview question map?
     # questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
     # data = models.JSONField()
     progress_status = models.CharField()
@@ -148,16 +166,16 @@ class InterviewQuestionResponse(models.Model):
     modified = models.DateTimeField()
     status = models.CharField()
     interview = models.ForeignKey(
-        Interview, on_delete=models.CASCADE, related_name="interview_responses"
+        Interview, on_delete=models.DO_NOTHING, related_name="interview_responses"
     )
     questionnaire = models.ForeignKey(
-        Questionnaire, on_delete=models.CASCADE, related_name="interview_responses"
+        Questionnaire, on_delete=models.DO_NOTHING, related_name="interview_responses"
     )
     question = models.ForeignKey(
-        Question, on_delete=models.CASCADE, related_name="interview_responses"
+        Question, on_delete=models.DO_NOTHING, related_name="interview_responses"
     )
     response_option = models.ForeignKey(
-        ResponseOption, on_delete=models.CASCADE, related_name="interview_responses"
+        ResponseOption, on_delete=models.DO_NOTHING, related_name="interview_responses"
     )
     response_option_value = models.TextField()
     questionnaire_state = models.TextField()
