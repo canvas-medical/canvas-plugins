@@ -115,9 +115,6 @@ class QuestionnaireQuestionMap(models.Model):
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING)
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING)
 
-    def __str__(self) -> str:
-        return f"{self.questionnaire.name} ({self.question.name})"
-
 
 class Interview(models.Model):
     """Interview."""
@@ -145,12 +142,28 @@ class Interview(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="interviews")
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
-    # TODO: Need to bring over interview question map?
-    # questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
+    # TODO: The questionnaires attribute doesn't appear on an instance for some reason. Why?
+    questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
     # data = models.JSONField()
     progress_status = models.CharField()
     created = models.DateTimeField()
     modified = models.DateTimeField()
+
+
+class InterviewQuestionnaireMap(models.Model):
+    """InterviewQuestionnaireMap."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_interviewquestionnairemap_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    status = models.CharField()
+    interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING)
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
 
 
 class InterviewQuestionResponse(models.Model):
