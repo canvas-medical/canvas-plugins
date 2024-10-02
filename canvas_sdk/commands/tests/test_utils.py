@@ -26,6 +26,7 @@ from canvas_sdk.commands import (
     QuestionnaireCommand,
     ReasonForVisitCommand,
     StopMedicationCommand,
+    UpdateGoalCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
@@ -266,4 +267,52 @@ def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
     requests.delete(
         plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
         headers={"Authorization": f"Bearer {token.value}"},
+    )
+
+
+# For reuse with the protocol code
+COMMANDS = [
+    AssessCommand,
+    DiagnoseCommand,
+    GoalCommand,
+    HistoryOfPresentIllnessCommand,
+    MedicationStatementCommand,
+    PlanCommand,
+    PrescribeCommand,
+    QuestionnaireCommand,
+    ReasonForVisitCommand,
+    StopMedicationCommand,
+    UpdateGoalCommand,
+]
+
+
+def create_new_note(token: MaskedValue) -> dict:
+    headers = {
+        "Authorization": f"Bearer {token.value}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    data = {
+        "patient": 1,
+        "provider": 1,
+        "note_type": "office",
+        "note_type_version": 1,
+        "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
+    }
+    return requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/api/Note/", headers=headers, json=data
+    ).json()
+
+
+def get_token() -> MaskedValue:
+    return MaskedValue(
+        requests.post(
+            f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+                "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+            },
+        ).json()["access_token"]
     )

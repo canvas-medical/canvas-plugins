@@ -43,6 +43,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.protocols",
         "canvas_sdk.utils",
         "canvas_sdk.v1",
+        "canvas_sdk.value_set",
         "canvas_sdk.views",
         "contextlib",
         "datetime",
