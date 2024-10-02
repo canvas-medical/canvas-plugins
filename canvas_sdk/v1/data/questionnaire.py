@@ -142,7 +142,6 @@ class Interview(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="interviews")
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
-    # TODO: The questionnaires attribute doesn't appear on an instance for some reason. Why?
     questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
     # data = models.JSONField()
     progress_status = models.CharField()
