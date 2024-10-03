@@ -1,7 +1,7 @@
 from django.db import models
 
 from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.user import CanvasUser
 
 
@@ -76,6 +76,8 @@ class Questionnaire(models.Model):
         managed = False
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnaire_001"
+
+    objects = models.Manager.from_queryset(ValueSetLookupQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
