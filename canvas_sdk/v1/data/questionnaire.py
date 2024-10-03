@@ -82,9 +82,6 @@ class Questionnaire(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     status = models.CharField()
-    # graph_header
-    # graph_nodes
-    # graph_edges
     name = models.CharField()
     expected_completion_time = models.FloatField()
     can_originate_in_charting = models.BooleanField()
@@ -132,10 +129,6 @@ class Interview(models.Model):
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     status = models.CharField()
-    # graph_header
-    # graph_nodes
-    # graph_edges
-    # skipped_questions
     name = models.CharField()
     language_id = models.BigIntegerField()
     use_case_in_charting = models.CharField()
@@ -143,7 +136,6 @@ class Interview(models.Model):
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
-    # data = models.JSONField()
     progress_status = models.CharField()
     created = models.DateTimeField()
     modified = models.DateTimeField()
