@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
@@ -14,7 +14,7 @@ class AllergyIntolerance(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_allergyintolerance_001"
 
-    objects = CommittableModelManager()
+    objects = CommittableModelManager().from_queryset(ValueSetLookupQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
