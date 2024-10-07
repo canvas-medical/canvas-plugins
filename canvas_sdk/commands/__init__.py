@@ -1,5 +1,6 @@
 from canvas_sdk.commands.commands.assess import AssessCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
+from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
 from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
@@ -18,6 +19,7 @@ from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 __all__ = (
     "AssessCommand",
     "DiagnoseCommand",
+    "FamilyHistoryCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "InstructCommand",
