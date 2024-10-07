@@ -9,6 +9,7 @@ from canvas_sdk.commands.commands.history_present_illness import (
 from canvas_sdk.commands.commands.instruct import InstructCommand
 from canvas_sdk.commands.commands.lab_order import LabOrderCommand
 from canvas_sdk.commands.commands.medication_statement import MedicationStatementCommand
+from canvas_sdk.commands.commands.past_surgical_history import PastSurgicalHistoryCommand
 from canvas_sdk.commands.commands.perform import PerformCommand
 from canvas_sdk.commands.commands.plan import PlanCommand
 from canvas_sdk.commands.commands.prescribe import PrescribeCommand
@@ -28,6 +29,7 @@ __all__ = (
     "InstructCommand",
     "LabOrderCommand",
     "MedicationStatementCommand",
+    "PastSurgicalHistoryCommand",
     "PerformCommand",
     "PlanCommand",
     "PrescribeCommand",
