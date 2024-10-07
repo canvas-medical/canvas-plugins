@@ -61,6 +61,7 @@ manifest_schema = {
                 "properties": {
                     "class": {"type": "string"},
                     "description": {"type": "string"},
+                    "meta": {"type": "object"},
                     "data_access": {
                         "type": "object",
                         "properties": {
