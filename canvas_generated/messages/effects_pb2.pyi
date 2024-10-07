@@ -111,6 +111,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
     COMMIT_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
+    ADD_OR_UPDATE_PROTOCOL_CARD: _ClassVar[EffectType]
     ORIGINATE_TASK_COMMAND: _ClassVar[EffectType]
     EDIT_TASK_COMMAND: _ClassVar[EffectType]
     DELETE_TASK_COMMAND: _ClassVar[EffectType]
@@ -123,6 +124,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENTER_IN_ERROR_REFILL_COMMAND: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
+    SHOW_PATIENT_CHART_SUMMARY_SECTIONS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -227,6 +229,7 @@ EDIT_MEDICAL_HISTORY_COMMAND: EffectType
 DELETE_MEDICAL_HISTORY_COMMAND: EffectType
 COMMIT_MEDICAL_HISTORY_COMMAND: EffectType
 ENTER_IN_ERROR_MEDICAL_HISTORY_COMMAND: EffectType
+ADD_OR_UPDATE_PROTOCOL_CARD: EffectType
 ORIGINATE_TASK_COMMAND: EffectType
 EDIT_TASK_COMMAND: EffectType
 DELETE_TASK_COMMAND: EffectType
@@ -239,6 +242,7 @@ COMMIT_REFILL_COMMAND: EffectType
 ENTER_IN_ERROR_REFILL_COMMAND: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
+SHOW_PATIENT_CHART_SUMMARY_SECTIONS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name")
