@@ -1,9 +1,12 @@
-from typing import Container
+from collections.abc import Container
 
 from django.db import models
 
 from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    CommittableModelManager,
+    ValueSetLookupByNameQuerySet,
+)
 from canvas_sdk.v1.data.user import CanvasUser
 
 
@@ -71,13 +74,13 @@ class Question(models.Model):
     code = models.CharField()
 
 
-class QuestionnaireValueSetLookupQuerySet(ValueSetLookupQuerySet):
+class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
+    """QuerySet class for Questionaire ValueSet lookups."""
+
     @staticmethod
     def q_kwargs(system: str, codes: Container[str]) -> dict[str, str | Container[str]]:
-        return {
-            "code_system": system,
-            "code__in": codes,
-        }
+        """The code system and code values for a Questionnaire are just attributes on the model."""
+        return {"code_system": system, "code__in": codes}
 
 
 class Questionnaire(models.Model):
