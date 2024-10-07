@@ -47,14 +47,16 @@ version = "0.2.5"
 [tool.poetry.dependencies]
 cookiecutter = "*"
 cron-converter = "^1.2.1"
+django = "^5.1.1"
 gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
 jsonschema = "^4.21.1"
-pyjwt = "2.4.0"
 keyring = "*"
 protobuf = "^4.25.3"
+psycopg = {extras = ["binary"], version = "^3.2.2"}
 pydantic = "^2.6.1"
+pyjwt = "2.4.0"
 python = ">=3.11,<3.13"
 python-dotenv = "^1.0.1"
 redis = "^5.0.4"
@@ -62,6 +64,7 @@ requests = "*"
 restrictedpython = "^7.1"
 statsd = "^4.0.1"
 typer = {extras = ["all"], version = "*"}
+typing-extensions = "~4.8"
 websocket-client = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
