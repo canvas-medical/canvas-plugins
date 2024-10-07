@@ -1,3 +1,4 @@
+from collections.abc import Container
 from typing import TYPE_CHECKING, Type
 
 from django.db import models
@@ -50,5 +51,12 @@ class ValueSetLookupQuerySet(models.QuerySet):
         ]
         q_filter = Q()
         for system, codes in uri_codes:
-            q_filter |= Q(codings__system=system, codings__code__in=codes)
+            q_filter |= Q(**self.q_kwargs(system, codes))
         return self.filter(q_filter).distinct()
+
+    @staticmethod
+    def q_kwargs(system: str, codes: Container[str]) -> dict[str, str | Container[str]]:
+        """
+        This method can be overridden if a Q object with different filtering options is needed.
+        """
+        return {"codings__system": system, "codings__code__in": codes}
