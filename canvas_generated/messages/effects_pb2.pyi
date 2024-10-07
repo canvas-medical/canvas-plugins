@@ -78,6 +78,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_INSTRUCT_COMMAND: _ClassVar[EffectType]
     COMMIT_INSTRUCT_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_INSTRUCT_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_LAB_ORDER_COMMAND: _ClassVar[EffectType]
+    EDIT_LAB_ORDER_COMMAND: _ClassVar[EffectType]
+    DELETE_LAB_ORDER_COMMAND: _ClassVar[EffectType]
+    COMMIT_LAB_ORDER_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_LAB_ORDER_COMMAND: _ClassVar[EffectType]
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
@@ -156,6 +161,11 @@ EDIT_INSTRUCT_COMMAND: EffectType
 DELETE_INSTRUCT_COMMAND: EffectType
 COMMIT_INSTRUCT_COMMAND: EffectType
 ENTER_IN_ERROR_INSTRUCT_COMMAND: EffectType
+ORIGINATE_LAB_ORDER_COMMAND: EffectType
+EDIT_LAB_ORDER_COMMAND: EffectType
+DELETE_LAB_ORDER_COMMAND: EffectType
+COMMIT_LAB_ORDER_COMMAND: EffectType
+ENTER_IN_ERROR_LAB_ORDER_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
