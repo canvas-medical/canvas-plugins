@@ -1,3 +1,5 @@
+from typing import Container
+
 from django.db import models
 
 from canvas_sdk.v1.data import Patient
@@ -69,6 +71,15 @@ class Question(models.Model):
     code = models.CharField()
 
 
+class QuestionnaireValueSetLookupQuerySet(ValueSetLookupQuerySet):
+    @staticmethod
+    def q_kwargs(system: str, codes: Container[str]) -> dict[str, str | Container[str]]:
+        return {
+            "code_system": system,
+            "code__in": codes,
+        }
+
+
 class Questionnaire(models.Model):
     """Questionnaire."""
 
@@ -77,7 +88,7 @@ class Questionnaire(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnaire_001"
 
-    objects = models.Manager.from_queryset(ValueSetLookupQuerySet)()
+    objects = models.Manager.from_queryset(QuestionnaireValueSetLookupQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
