@@ -6,12 +6,14 @@ from typing import Any, Generator
 
 import pytest
 import requests
+from pydantic import ValidationError
 from typer.testing import CliRunner
 
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
 from canvas_sdk.commands.tests.test_utils import MaskedValue
+from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
 
 runner = CliRunner()
 
@@ -154,3 +156,69 @@ def test_protocol_that_adds_banner_alert(
     assert patient_banner["intent"] == "info"
     assert patient_banner["href"] is None
     assert patient_banner["status"] == "active"
+
+
+@pytest.mark.parametrize(
+    "Effect,params,expected_payload",
+    [
+        (
+            AddBannerAlert,
+            {
+                "patient_id": "uuid",
+                "key": "test-key",
+                "narrative": "hellooo",
+                "placement": [AddBannerAlert.Placement.APPOINTMENT_CARD],
+                "intent": AddBannerAlert.Intent.INFO,
+            },
+            '{"patient": "uuid", "key": "test-key", "data": {"narrative": "hellooo", "placement": ["appointment_card"], "intent": "info", "href": null}}',
+        ),
+        (
+            RemoveBannerAlert,
+            {"patient_id": "uuid", "key": "testeroo"},
+            '{"patient": "uuid", "key": "testeroo"}',
+        ),
+    ],
+)
+def test_banner_alert_apply_method_succeeds_with_all_required_fields(
+    Effect: AddBannerAlert | RemoveBannerAlert, params: dict, expected_payload: str
+) -> None:
+    b = Effect()
+    for k, v in params.items():
+        setattr(b, k, v)
+    applied = b.apply()
+    assert applied.payload == expected_payload
+
+
+@pytest.mark.parametrize(
+    "Effect,expected_err_msgs",
+    [
+        (
+            AddBannerAlert,
+            [
+                "5 validation errors for AddBannerAlert",
+                "Field 'patient_id' is required to apply an AddBannerAlert [type=missing",
+                "Field 'key' is required to apply an AddBannerAlert [type=missing",
+                "Field 'narrative' is required to apply an AddBannerAlert [type=missing",
+                "Field 'placement' is required to apply an AddBannerAlert [type=missing",
+                "Field 'intent' is required to apply an AddBannerAlert [type=missing",
+            ],
+        ),
+        (
+            RemoveBannerAlert,
+            [
+                "2 validation errors for RemoveBannerAlert",
+                "Field 'patient_id' is required to apply a RemoveBannerAlert [type=missing",
+                "Field 'key' is required to apply a RemoveBannerAlert [type=missing",
+            ],
+        ),
+    ],
+)
+def test_banner_alert_apply_method_raises_error_without_required_fields(
+    Effect: AddBannerAlert | RemoveBannerAlert, expected_err_msgs: str
+) -> None:
+    b = Effect()
+    with pytest.raises(ValidationError) as e:
+        b.apply()
+    err_msg = repr(e.value)
+    for expected in expected_err_msgs:
+        assert expected in err_msg
