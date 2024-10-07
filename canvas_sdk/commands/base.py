@@ -1,7 +1,8 @@
 import json
 import re
 from enum import EnumType
-from typing import Literal, get_args
+from types import NoneType, UnionType
+from typing import Literal, get_args, get_origin, Union
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
@@ -53,9 +54,15 @@ class _BaseCommand(Model):
     @classmethod
     def _get_property_type(cls, name: str) -> type:
         annotation = cls.model_fields[name].annotation
-        if annotation_args := get_args(annotation):
-            # if its a union, take the first one (which is not None)
-            annotation = annotation_args[0]
+        origin = get_origin(annotation)
+
+        # Handle Union types
+        if origin is UnionType or origin is Union:
+            annotation_args = get_args(annotation)
+            # Filter out NoneType and take the first valid type
+            annotation = next(
+                (arg for arg in annotation_args if arg is not NoneType), annotation_args[0]
+            )
 
         if type(annotation) is EnumType:
             return str
