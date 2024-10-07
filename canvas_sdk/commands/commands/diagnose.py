@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from pydantic import Field
 
@@ -16,7 +16,7 @@ class DiagnoseCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "diagnose"}
     )
     background: str | None = None
-    approximate_date_of_onset: datetime | None = None
+    approximate_date_of_onset: date | None = None
     today_assessment: str | None = None
 
     @property

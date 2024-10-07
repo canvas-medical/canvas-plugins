@@ -13,6 +13,7 @@ class AddBannerAlert(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.ADD_BANNER_ALERT
+        apply_required_fields = ("patient_id", "key", "narrative", "placement", "intent")
 
     class Placement(Enum):
         CHART = "chart"
@@ -26,11 +27,11 @@ class AddBannerAlert(_BaseEffect):
         WARNING = "warning"
         ALERT = "alert"
 
-    patient_id: str
-    key: str
-    narrative: str = Field(max_length=90)
-    placement: list[Placement] = Field(min_length=1)
-    intent: Intent
+    patient_id: str | None = None
+    key: str | None = None
+    narrative: str | None = Field(max_length=90, default=None)
+    placement: list[Placement] | None = Field(min_length=1, default=None)
+    intent: Intent | None = None
     href: str | None = None
 
     @property
@@ -38,8 +39,8 @@ class AddBannerAlert(_BaseEffect):
         """The BannerAlert's values."""
         return {
             "narrative": self.narrative,
-            "placement": [p.value for p in self.placement],
-            "intent": self.intent.value,
+            "placement": [p.value for p in self.placement] if self.placement else None,
+            "intent": self.intent.value if self.intent else None,
             "href": self.href,
         }
 
