@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -75,11 +76,10 @@ def _get_protocols_with_new_cqm_properties(
     protocol_classes: List[dict[str, Any]]
 ) -> List[dict[str, Any]] | None:
     """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
-    cwd = os.getcwd().split("/")[-1]
 
     def get_new_meta_properties(protocol_class: dict[str, str]) -> dict[str, str]:
         mod, classname = protocol_class["class"].split(":")
-        module = importlib.import_module(f"{cwd}.{mod}")
+        module = importlib.import_module(mod)
         _class = getattr(module, classname)
         if not hasattr(_class, "_meta") or _class._meta() == protocol_class.get("meta"):
             return {}
@@ -332,6 +332,7 @@ def validate_manifest(
     try:
         manifest_json = json.loads(manifest.read_text())
 
+        sys.path.append(str(plugin_name.parent.absolute()))
         if new_protocols := _get_protocols_with_new_cqm_properties(
             manifest_json.get("components", {}).get("protocols", [])
         ):

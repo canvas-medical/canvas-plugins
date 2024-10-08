@@ -1,5 +1,7 @@
 import shutil
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Generator
 
 import pytest
 import typer
@@ -35,36 +37,47 @@ def test_validate_package_valid_file(tmp_path: Path) -> None:
     assert result == package_path
 
 
-def test_canvas_init() -> None:
+@pytest.fixture(scope="session")
+def init_plugin_name() -> str:
+    """The plugin name to be used for the canvas cli init test"""
+    return f"testing_init-{datetime.now().timestamp()}".replace(".", "")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
+    yield
+    if Path(f"./{init_plugin_name}").exists():
+        shutil.rmtree(Path(f"./{init_plugin_name}"))
+
+
+def test_canvas_init(init_plugin_name: str) -> None:
     """Tests that the CLI successfully creates a plugin with init."""
-    result = runner.invoke(app, "init", input="testing_init")
+    result = runner.invoke(app, "init", input=init_plugin_name)
     assert result.exit_code == 0
 
     # plugin directory exists
-    plugin = Path("./testing_init")
+    plugin = Path(f"./{init_plugin_name}")
     assert plugin.exists()
     assert plugin.is_dir()
 
     # manifest file exists
-    manifest = Path("./testing_init/CANVAS_MANIFEST.json")
+    manifest = Path(f"./{init_plugin_name}/CANVAS_MANIFEST.json")
     assert manifest.exists()
     assert manifest.is_file()
-    manifest_result = runner.invoke(app, "validate-manifest testing_init")
+    manifest_result = runner.invoke(app, f"validate-manifest {init_plugin_name}")
     assert manifest_result.exit_code == 0
 
     # readme file exists
-    readme = Path("./testing_init/README.md")
+    readme = Path(f"./{init_plugin_name}/README.md")
     assert readme.exists()
     assert readme.is_file()
 
     # protocols dir exists
-    protocols = Path("./testing_init/protocols")
+    protocols = Path(f"./{init_plugin_name}/protocols")
     assert protocols.exists()
     assert protocols.is_dir()
 
     # protocol file exists in protocols dir
-    protocol = Path("./testing_init/protocols/my_protocol.py")
+    protocol = Path(f"./{init_plugin_name}/protocols/my_protocol.py")
     assert protocol.exists()
     assert protocol.is_file()
-
-    shutil.rmtree(plugin)
