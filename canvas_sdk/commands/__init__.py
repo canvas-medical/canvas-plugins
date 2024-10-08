@@ -21,6 +21,7 @@ from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
+from canvas_sdk.commands.commands.vitals import VitalsCommand
 
 __all__ = (
     "AllergyCommand",
@@ -44,4 +45,5 @@ __all__ = (
     "StopMedicationCommand",
     "TaskCommand",
     "UpdateGoalCommand",
+    "VitalsCommand",
 )
