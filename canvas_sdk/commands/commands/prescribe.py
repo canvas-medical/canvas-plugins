@@ -6,22 +6,7 @@ from typing import TypeVar
 from pydantic import Field, conlist
 
 from canvas_sdk.commands.base import _BaseCommand
-
-
-@dataclass
-class ClinicalQuantity:
-    representative_ndc: str
-    ncpdp_quantity_qualifier_code: str
-
-    def as_dict(self) -> dict:
-        """Return the ClinicalQuantity as a dictionary."""
-        return {
-            "representative_ndc": self.representative_ndc,
-            "ncpdp_quantity_qualifier_code": self.ncpdp_quantity_qualifier_code,
-        }
-
-
-ClinicalQuantityType = TypeVar("ClinicalQuantityType", bound=ClinicalQuantity)
+from canvas_sdk.commands.constants import ClinicalQuantity
 
 
 class PrescribeCommand(_BaseCommand):
@@ -50,7 +35,7 @@ class PrescribeCommand(_BaseCommand):
     sig: str = ""
     days_supply: int | None = None
     quantity_to_dispense: Decimal | float | int | None = None
-    type_to_dispense: ClinicalQuantityType | None = None
+    type_to_dispense: ClinicalQuantity | None = None
     refills: int | None = None
     substitutions: Substitutions | None = None
     pharmacy: str | None = None
@@ -70,7 +55,7 @@ class PrescribeCommand(_BaseCommand):
             "quantity_to_dispense": (
                 str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
             ),
-            "type_to_dispense": self.type_to_dispense.as_dict() if self.type_to_dispense else None,
+            "type_to_dispense": self.type_to_dispense if self.type_to_dispense else None,
             "refills": self.refills,
             "substitutions": self.substitutions.value if self.substitutions else None,
             "pharmacy": self.pharmacy,
