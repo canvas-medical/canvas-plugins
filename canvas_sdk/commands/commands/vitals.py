@@ -38,31 +38,18 @@ class VitalsCommand(BaseCommand):
         REGULARLY_IRREGULAR = 2
 
     height: conint(ge=10, le=108) | None = None
-
     weight_lbs: conint(ge=1, le=1500) | None = None
-
     weight_oz: int | None = None
-
     waist_circumference: conint(ge=20, le=200) | None = None
-
     body_temperature: conint(ge=85, le=107) | None = None
-
     body_temperature_site: BodyTemperatureSite | None = None
-
     blood_pressure_systole: conint(ge=30, le=305) | None = None
-
     blood_pressure_diastole: conint(ge=20, le=180) | None = None
-
     blood_pressure_position_and_site: BloodPressureSite | None = None
-
     pulse: conint(ge=30, le=250) | None = None
-
-    pulse_rhythm: Optional[PulseRhythm] = None
-
+    pulse_rhythm: PulseRhythm | None = None
     respiration_rate: conint(ge=6, le=60) | None = None
-
     oxygen_saturation: conint(ge=60, le=100) | None = None
-
     note: constr(max_length=150) | None = None
 
     @property

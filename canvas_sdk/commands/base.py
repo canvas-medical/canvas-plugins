@@ -1,10 +1,13 @@
 import json
 import re
 from enum import EnumType
-from typing import Literal, get_args
+from types import NoneType, UnionType
+from typing import Literal, get_args, get_origin, Union
 
 from canvas_sdk.base import Model
+from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(Model):
@@ -35,6 +38,11 @@ class _BaseCommand(Model):
     def values(self) -> dict:
         return {}
 
+    @property
+    def coding_filter(self) -> Coding | None:
+        """The coding filter used for command insertion in protocol cards."""
+        return None
+
     @classmethod
     def _get_property_choices(cls, name: str, schema: dict) -> list[dict] | None:
         definition = schema.get("properties", {}).get(name, {})
@@ -46,9 +54,15 @@ class _BaseCommand(Model):
     @classmethod
     def _get_property_type(cls, name: str) -> type:
         annotation = cls.model_fields[name].annotation
-        if annotation_args := get_args(annotation):
-            # if its a union, take the first one (which is not None)
-            annotation = annotation_args[0]
+        origin = get_origin(annotation)
+
+        # Handle Union types
+        if origin is UnionType or origin is Union:
+            annotation_args = get_args(annotation)
+            # Filter out NoneType and take the first valid type
+            annotation = next(
+                (arg for arg in annotation_args if arg is not NoneType), annotation_args[0]
+            )
 
         if type(annotation) is EnumType:
             return str
@@ -118,3 +132,10 @@ class _BaseCommand(Model):
             "type": f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
             "payload": {"command": self.command_uuid},
         }
+
+    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+        """Returns a command recommendation to be inserted via Protocol Card."""
+        if button is None:
+            button = self.constantized_key().lower().replace("_", " ")
+        command = self.Meta.key.lower()
+        return Recommendation(title=title, button=button, command=command, context=self.values)
