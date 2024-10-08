@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 from datetime import date
-from enum import Enum
-from typing import TypeVar
+from enum import Enum, StrEnum
+
+from typing_extensions import TypedDict, NotRequired
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
 
-class AssigneeType(Enum):
+class AssigneeType(StrEnum):
     """The type of assigner for a Task command."""
 
     ROLE = "role"
@@ -15,19 +15,11 @@ class AssigneeType(Enum):
     STAFF = "staff"
 
 
-@dataclass
-class TaskAssigner:
+class TaskAssigner(TypedDict):
     """A class for managing an assign for a Task command."""
 
     to: AssigneeType
-    id: int | None = None
-
-    def as_dict(self) -> dict:
-        """Return the TaskAssigner as a dictionary."""
-        return {"type": self.to.value, "id": self.id}
-
-
-TaskAssignerType = TypeVar("TaskAssignerType", bound=TaskAssigner)
+    id: NotRequired[int]
 
 
 class TaskCommand(BaseCommand):
@@ -41,7 +33,7 @@ class TaskCommand(BaseCommand):
         )
 
     title: str = ""
-    assign_to: TaskAssignerType | None = None
+    assign_to: TaskAssigner | None = None
     due_date: date | None = None
     comment: str | None = None
     labels: list[str] | None = None
@@ -52,7 +44,7 @@ class TaskCommand(BaseCommand):
         """The Task command's field values."""
         return {
             "title": self.title,
-            "assign_to": self.assign_to.as_dict() if self.assign_to else None,
+            "assign_to": self.assign_to,
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "comment": self.comment,
             "labels": self.labels,
