@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from canvas_sdk.utils.db import get_database_url
+from canvas_sdk.utils.db import get_database_dict_from_url
 
 load_dotenv()
 
@@ -29,7 +29,7 @@ CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 
 if os.getenv("DATABASE_URL"):
-    database_dict = get_database_url()
+    database_dict = get_database_dict_from_url()
 else:
     database_dict = {
         "ENGINE": "django.db.backends.postgresql",

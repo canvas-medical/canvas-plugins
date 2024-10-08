@@ -3,7 +3,7 @@ from typing import Any
 from urllib import parse
 
 
-def get_database_url() -> dict[str, Any]:
+def get_database_dict_from_url() -> dict[str, Any]:
     """Retrieves the database URL for the data module connection formatted for Django settings."""
     parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
     db_name = parsed_url.path[1:]
