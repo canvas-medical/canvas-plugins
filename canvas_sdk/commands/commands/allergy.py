@@ -1,7 +1,22 @@
 from datetime import date
-from enum import Enum
+from enum import Enum, IntEnum
+
+from typing_extensions import TypedDict
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+
+
+class AllergenType(IntEnum):
+    ALLERGEN_GROUP = 1
+    MEDICATION = 2
+    INGREDIENT = 6
+
+
+class Allergen(TypedDict):
+    """A TypedDict representing an allergen."""
+
+    concept_id: int
+    concept_type: AllergenType
 
 
 class AllergyCommand(BaseCommand):
@@ -16,7 +31,7 @@ class AllergyCommand(BaseCommand):
         MODERATE = "moderate"
         SEVERE = "severe"
 
-    allergy: str | None = None
+    allergy: Allergen | None = None
     severity: Severity | None = None
     narrative: str | None = None
     approximate_date: date | None = None
