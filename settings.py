@@ -2,6 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
+from canvas_sdk.utils.db import parse_database_url
+
 load_dotenv()
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
@@ -26,8 +28,10 @@ CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 
-DATABASES = {
-    "default": {
+if dburl := os.getenv("DATABASE_URL"):
+    database_dict = parse_database_url(dburl)
+else:
+    database_dict = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": CANVAS_SDK_DB_NAME,
         "USER": CANVAS_SDK_DB_USERNAME,
@@ -35,4 +39,5 @@ DATABASES = {
         "HOST": CANVAS_SDK_DB_HOST,
         "PORT": CANVAS_SDK_DB_PORT,
     }
-}
+
+DATABASES = {"default": database_dict}
