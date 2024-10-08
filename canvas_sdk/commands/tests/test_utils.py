@@ -29,7 +29,7 @@ from canvas_sdk.commands import (
     UpdateGoalCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.commands.constants import Coding
+from canvas_sdk.commands.constants import Coding, ClinicalQuantity
 
 runner = CliRunner()
 
@@ -94,8 +94,14 @@ def fake(
             num_items = random.randint(0, 5)
             item_props = field_props["anyOf"][0]["items"]
             return [fake(item_props, Command) for i in range(num_items)]
+        case "list":
+            num_items = random.randint(0, field_props.get("maxItems", 5))
+            item_props = field_props.get("items")
+            return [fake(item_props, Command) for i in range(num_items)] if item_props else []
         case "Coding":
             return Coding(system=random_string(), code=random_string(), display=random_string())
+        case "ClinicalQuantity":
+            return ClinicalQuantity(representative_ndc="ndc", ncpdp_quantity_qualifier_code="code")
     if t[0].isupper():
         return random.choice([e for e in getattr(Command, t)])
 
@@ -134,7 +140,9 @@ def raises_wrong_type_error(
     assert f"1 validation error for {Command.__name__}\n{field}" in err_msg1
     assert f"1 validation error for {Command.__name__}\n{field}" in err_msg2
 
-    field_type = "dictionary" if field_type == "Coding" else field_type
+    field_type = (
+        "dictionary" if field_type == "Coding" or field_type == "ClinicalQuantity" else field_type
+    )
     if field_type == "number":
         assert f"Input should be an instance of Decimal" in err_msg1
         assert f"Input should be an instance of Decimal" in err_msg2

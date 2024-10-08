@@ -16,6 +16,7 @@ from canvas_sdk.commands.commands.plan import PlanCommand
 from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
+from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.task import TaskCommand
@@ -38,6 +39,7 @@ __all__ = (
     "PrescribeCommand",
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
+    "RefillCommand",
     "RemoveAllergyCommand",
     "StopMedicationCommand",
     "TaskCommand",
