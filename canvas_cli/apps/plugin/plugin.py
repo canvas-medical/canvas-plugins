@@ -1,8 +1,11 @@
+import importlib
 import json
+import os
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Any, List, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -67,6 +70,30 @@ def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[st
 
     metadata = metadata_response.json()
     return metadata.get("name")
+
+
+def _get_protocols_with_new_cqm_properties(
+    protocol_classes: List[dict[str, Any]]
+) -> List[dict[str, Any]] | None:
+    """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
+
+    def get_new_meta_properties(protocol_class: dict[str, str]) -> dict[str, str]:
+        mod, classname = protocol_class["class"].split(":")
+        module = importlib.import_module(mod)
+        _class = getattr(module, classname)
+        if not hasattr(_class, "_meta") or _class._meta() == protocol_class.get("meta"):
+            return {}
+        return {"meta": _class._meta()}
+
+    has_updates = False
+    new_protocols = []
+    for p in protocol_classes:
+        m = get_new_meta_properties(p)
+        new_protocols.append(p | m)
+        if m:
+            has_updates = True
+
+    return new_protocols if has_updates else None
 
 
 def get_base_plugin_template_path() -> Path:
@@ -304,6 +331,18 @@ def validate_manifest(
 
     try:
         manifest_json = json.loads(manifest.read_text())
+
+        sys.path.append(str(plugin_name.parent.absolute()))
+        if new_protocols := _get_protocols_with_new_cqm_properties(
+            manifest_json.get("components", {}).get("protocols", [])
+        ):
+            print(
+                f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
+            )
+            manifest_json["components"]["protocols"] = new_protocols
+            manifest.write_text(json.dumps(manifest_json))
+            manifest_json = json.loads(manifest.read_text())
+
     except json.JSONDecodeError:
         print("There was a problem loading the manifest file, please ensure it's valid JSON")
         raise typer.Abort()
