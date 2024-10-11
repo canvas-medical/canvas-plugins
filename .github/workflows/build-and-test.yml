@@ -11,12 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: ./.github/actions/install-python-and-poetry
-
-      - name: Install canvas-plugins
-        shell: bash
-        run: poetry install --no-interaction
+      - uses: ./.github/actions/install-canvas
 
       # Run Pytest unit tests via Poetry.
       - name: Run Pytest unit tests
