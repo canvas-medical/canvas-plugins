@@ -107,3 +107,14 @@ norecursedirs = [
   "static-files"
 ]
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
+
+[tool.semantic_release]
+build_command = "poetry build"
+commit_message = "chore: v{version}\n\nSee the changelog for changes."
+commit_version_number = true
+match = "main"
+version_source = "tag"
+version_toml = [
+  "pyproject.toml:tool.poetry.version"
+]
+tag_format = "{version}"
