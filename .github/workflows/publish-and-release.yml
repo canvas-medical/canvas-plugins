@@ -3,16 +3,14 @@ name: Semantic Release
 on:
   workflow_dispatch:
     inputs:
-      publish-pypi:
-        description: 'Publish to PyPI'
-        required: false
-        default: 'true'
-        type: boolean
       dry-run:
         description: 'Dry run'
         required: false
         default: 'false'
         type: boolean
+
+permissions:
+  id-token: write
 
 jobs:
   build-and-test:
@@ -45,11 +43,10 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.publish-pypi == 'true' && inputs.dry-run == 'false'
+        if: ${{ !inputs.dry-run }}
 
       - name: Publish package distributions to GitHub Releases
-        uses: python-semantic-release/upload-to-gh-release@main
-        if: inputs.dry-run == 'false'
         with:
-          github_token: ${{ secrets.PROJECT_AND_REPO_PAT }}
-          tag: ${{ steps.release.outputs.tag }}
+          GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
+        run: |
+          poetry run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
