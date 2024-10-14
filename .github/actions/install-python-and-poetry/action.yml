@@ -5,7 +5,7 @@ inputs:
   POETRY_VERSION:
     description: "Poetry version to install"
     required: false
-    default: "1.7.1"
+    default: "1.8.3"
   PYTHON_VERSION:
     description: "Version range or exact version of Python or PyPy to use, using SemVer's version range syntax. Reads from .python-version if unset."
     required: false
@@ -28,7 +28,7 @@ runs:
       # This prevents the workflow from installing Poetry every time, which can be slow.
     - name: Cache poetry install
       id: cache-poetry
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.local
         key: poetry-${{inputs.POETRY_VERSION}}
