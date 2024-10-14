@@ -3,12 +3,12 @@ name: Semantic Release
 on:
   workflow_dispatch:
     inputs:
-      publish_pypi:
+      publish-pypi:
         description: 'Publish to PyPI'
         required: false
         default: 'true'
         type: boolean
-      dry_run:
+      dry-run:
         description: 'Dry run'
         required: false
         default: 'false'
@@ -29,7 +29,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PROJECT_AND_REPO_PAT }}
-      - uses: ./.github/actions/install-python-and-poetry@main
+      - uses: ./.github/actions/install-python-and-poetry
       - uses: ./.github/actions/install-canvas
 
       - name: Python Semantic Release
@@ -41,20 +41,15 @@ jobs:
         run: |
           git config --global user.name "$GIT_COMMITTER_NAME"
           git config --global user.email "$GIT_COMMITTER_EMAIL"
-          poetry run semantic-release --strict -vv $([ "${{ inputs.dry_run }}" == "true" ] && echo "--noop") version
+          poetry run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") version
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.publish_pypi == 'true' && inputs.dry_run == 'false'
-        permissions:
-          id-token: write
-        environment:
-          name: pypi
-          url: https://pypi.org/p/canvas
+        if: inputs.publish-pypi == 'true' && inputs.dry-run == 'false'
 
       - name: Publish package distributions to GitHub Releases
         uses: python-semantic-release/upload-to-gh-release@main
-        if: inputs.dry_run == 'false'
+        if: inputs.dry-run == 'false'
         with:
           github_token: ${{ secrets.PROJECT_AND_REPO_PAT }}
           tag: ${{ steps.release.outputs.tag }}
