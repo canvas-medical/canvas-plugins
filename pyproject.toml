@@ -42,7 +42,7 @@ packages = [
   {include = "logger"}
 ]
 readme = "README.md"
-version = "0.2.5"
+version = "0.2.10"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
