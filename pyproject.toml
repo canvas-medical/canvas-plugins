@@ -40,7 +40,7 @@ packages = [
   {include = "canvas_generated"},
   {include = "canvas_sdk"},
   {include = "logger"},
-  {include = "settings"}
+  {include = "settings.py"}
 ]
 readme = "README.md"
 version = "0.2.10"
