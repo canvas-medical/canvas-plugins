@@ -46,7 +46,7 @@ jobs:
         if: ${{ !inputs.dry-run }}
 
       - name: Publish package distributions to GitHub Releases
-        with:
+        env:
           GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
         run: |
           poetry run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
