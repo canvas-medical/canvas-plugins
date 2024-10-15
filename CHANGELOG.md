@@ -2,6 +2,27 @@
 
 
 
+## v0.2.11 (2024-10-15)
+
+### Chore
+
+* chore: fix semantic release workflow (#134) ([`97a5069`](https://github.com/canvas-medical/canvas-plugins/commit/97a5069d8eeda5c8f455c531feb5c1a40e4fb487))
+
+* chore(docs): add CONTRIBUTING.md and CODE_OF_CONDUCT.md (#132)
+
+chore(docs): add CONTRIBUTING and CODE_OF_CONDUCT ([`365751b`](https://github.com/canvas-medical/canvas-plugins/commit/365751b186d8d20454cf059b749f9ebdcd3ebd56))
+
+* chore: fix semantic-release publish (#129) ([`8a24339`](https://github.com/canvas-medical/canvas-plugins/commit/8a24339455bb58246c78d2670b02465207991a4f))
+
+### Fix
+
+* fix: fix settings error in canvas-cli (#133)
+
+* Adds settings to pyproject.toml.
+
+* Adds .py extension to settings in pyproject.toml. ([`52e4438`](https://github.com/canvas-medical/canvas-plugins/commit/52e4438d57627b2e397ab2b2085e0a5579741f55))
+
+
 ## v0.2.10 (2024-10-14)
 
 ### Chore
