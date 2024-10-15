@@ -39,7 +39,8 @@ packages = [
   {include = "canvas_cli"},
   {include = "canvas_generated"},
   {include = "canvas_sdk"},
-  {include = "logger"}
+  {include = "logger"},
+  {include = "settings"}
 ]
 readme = "README.md"
 version = "0.2.10"
