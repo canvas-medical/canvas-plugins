@@ -65,7 +65,7 @@ class _CanvasGQLClient:
         self,
         gql_query: str,
         variables: dict[str, Any] | None = None,
-        extra_args: dict[str, Any] | None = None
+        extra_args: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if variables is None:
             query_variables = {}

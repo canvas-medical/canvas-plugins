@@ -23,13 +23,13 @@ class Model(BaseModel):
         },
     )
 
-    def _get_effect_method_required_fields(self, method: str) -> tuple[str] | tuple:
+    def _get_effect_method_required_fields(self, method: Any) -> tuple:
         return getattr(self.Meta, f"{method}_required_fields", tuple())
 
     def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
         return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})
 
-    def _get_error_details(self, method: str) -> list[InitErrorDetails]:
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         required_fields = self._get_effect_method_required_fields(method)
         class_name = self.__repr_name__()
         class_name_article = "an" if class_name.startswith(("A", "E", "I", "O", "U")) else "a"

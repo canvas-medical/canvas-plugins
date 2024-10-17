@@ -6,6 +6,8 @@ from canvas_sdk.v1.data.user import CanvasUser
 
 
 class LabReport(models.Model):
+    """A class representing a lab report."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -38,6 +40,8 @@ class LabReport(models.Model):
 
 
 class LabReview(models.Model):
+    """A class representing a lab review."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -61,6 +65,8 @@ class LabReview(models.Model):
 
 
 class LabValue(models.Model):
+    """A class representing a lab value."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -82,6 +88,8 @@ class LabValue(models.Model):
 
 
 class LabValueCoding(models.Model):
+    """A class representing a lab value coding."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"

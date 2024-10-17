@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -105,7 +107,7 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
     ],
 )
 def test_add_recommendations(
-    init_params: dict[str, str], rec1_params: dict[str, str], rec2_params: dict[str, str]
+    init_params: dict[str, str], rec1_params: dict[Any, Any], rec2_params: dict[str, str]
 ) -> None:
     p = ProtocolCard(**init_params)
     p.add_recommendation(**rec1_params)

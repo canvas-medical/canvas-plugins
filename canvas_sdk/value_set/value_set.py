@@ -1,8 +1,10 @@
 from collections import defaultdict
-from typing import Dict, Union
+from typing import Dict, Union, cast
 
 
 class CodeConstants:
+    """A class representing different code systems and their URLs."""
+
     CPT = "CPT"
     HCPCSLEVELII = "HCPCSLEVELII"
     CVX = "CVX"
@@ -32,6 +34,8 @@ class CodeConstants:
 
 
 class CodeConstantsURLMapping:
+    """A class that maps code systems to their URLs."""
+
     CODE_SYSTEM_MAPPING = {
         CodeConstants.CPT: CodeConstants.URL_CPT,
         CodeConstants.HCPCSLEVELII: CodeConstants.URL_HCPCSLEVELII,
@@ -50,6 +54,8 @@ class CodeConstantsURLMapping:
 
 
 class CombinedValueSet(CodeConstantsURLMapping):
+    """A class representing a combination of two value sets."""
+
     def __init__(
         self,
         value_set_1: Union["ValueSet", "CombinedValueSet"],
@@ -59,7 +65,8 @@ class CombinedValueSet(CodeConstantsURLMapping):
         self.value_set_2 = value_set_2
 
     @property
-    def values(self):
+    def values(self) -> Dict[str, set]:
+        """A property that returns the combined values from both value sets."""
         values: Dict[str, set] = defaultdict(set)
 
         for vs in [self.value_set_1, self.value_set_2]:
@@ -71,21 +78,29 @@ class CombinedValueSet(CodeConstantsURLMapping):
         return values
 
     def __or__(self, value_set: Union["ValueSet", "CombinedValueSet"]) -> "CombinedValueSet":
+        """Implements the `|` (or) operator to combine value sets."""
         return CombinedValueSet(self, value_set)
 
 
 class ValueSystems(type):
+    """A metaclass for defining a ValueSet."""
+
     @property
     def values(cls) -> dict[str, set]:
+        """A property that returns a dictionary of code systems and their associated values."""
         return {
             system: getattr(cls, system)
-            for system in cls.CODE_SYSTEM_MAPPING.keys()
+            for system in cast(ValueSet, cls).CODE_SYSTEM_MAPPING.keys()
             if hasattr(cls, system)
         }
 
-    def __or__(self, value_set: Union["ValueSet", "CombinedValueSet"]) -> CombinedValueSet:
-        return CombinedValueSet(self, value_set)
+    def __or__(self, value_set: Union["ValueSet", "CombinedValueSet"]) -> CombinedValueSet:  # type: ignore[override]
+        """Implements the `|` (or) operator."""
+        return CombinedValueSet(cast(ValueSet, self), value_set)
 
 
 class ValueSet(CodeConstantsURLMapping, metaclass=ValueSystems):
+    """The Base class for a ValueSet."""
+
+    values: dict[str, set]
     pass

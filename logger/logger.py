@@ -1,20 +1,26 @@
 import logging
 import os
+from typing import Any
 
 from pubsub.pubsub import Publisher
 
 
 class PubSubLogHandler(logging.Handler):
+    """Custom logging handler that publishes logs to a pub/sub channel."""
+
     def __init__(self) -> None:
         self.publisher = Publisher()
         logging.Handler.__init__(self=self)
 
-    def emit(self, record) -> None:
+    def emit(self, record: Any) -> None:
+        """Publishes the log message to the pub/sub channel."""
         message = self.format(record)
         self.publisher.publish(message)
 
 
 class PluginLogger:
+    """A custom logger for plugins."""
+
     def __init__(self) -> None:
         self.logger = logging.getLogger("plugin_runner_logger")
         self.logger.setLevel(logging.INFO)
@@ -32,17 +38,22 @@ class PluginLogger:
             pubsub_handler.setFormatter(formatter)
             self.logger.addHandler(pubsub_handler)
 
-    def debug(self, message) -> None:
+    def debug(self, message: Any) -> None:
+        """Logs a debug message."""
         self.logger.debug(message)
 
-    def info(self, message) -> None:
+    def info(self, message: Any) -> None:
+        """Logs an info message."""
         self.logger.info(message)
 
-    def warning(self, message) -> None:
+    def warning(self, message: Any) -> None:
+        """Logs a warning message."""
         self.logger.warning(message)
 
-    def error(self, message) -> None:
+    def error(self, message: Any) -> None:
+        """Logs an error message."""
         self.logger.error(message)
 
-    def critical(self, message) -> None:
+    def critical(self, message: Any) -> None:
+        """Logs a critical message."""
         self.logger.critical(message)
