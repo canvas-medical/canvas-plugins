@@ -1,6 +1,10 @@
 default_language_version:
   python: python3.11
-
+exclude: |
+  (?x)(
+    CHANGELOG.md|
+    canvas_sdk/value_set/v2022/
+  )
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
@@ -99,10 +103,15 @@ repos:
       - id: check-yaml
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.12.0
     hooks:
       - id: mypy
-        exclude: "canvas_generated/|canvas_cli/templates/"
+        exclude: |
+          (?x)(
+              canvas_generated/|
+              canvas_cli/templates/
+          )
+
         # https://github.com/python-poetry/poetry/issues/7184
         entry: |
           bash -c "
@@ -110,4 +119,3 @@ repos:
             && poetry install --no-ansi \
             && exec poetry run mypy --show-traceback $@
           "
-        args: ["--install-types"]

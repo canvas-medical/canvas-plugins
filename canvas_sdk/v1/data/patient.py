@@ -4,6 +4,8 @@ from django.db import models
 
 
 class Patient(models.Model):
+    """A class representing a patient."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -46,4 +48,5 @@ class Patient(models.Model):
 
     @classmethod
     def find(cls, id: str) -> Self:
+        """Find a patient by id."""
         return cls.objects.get(id=id)

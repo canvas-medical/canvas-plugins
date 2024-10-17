@@ -22,7 +22,8 @@ except FileNotFoundError:
     CLIENT_ID = "non-unique"
 
 
-def get_client():
+def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
+    """Return a Redis client and pubsub object."""
     client = redis.Redis.from_url(REDIS_ENDPOINT)
     pubsub = client.pubsub()
 
@@ -30,6 +31,7 @@ def get_client():
 
 
 def publish_message(message: dict) -> None:
+    """Publish a message to the pubsub channel."""
     client, _ = get_client()
 
     message_with_id = {**message, "client_id": CLIENT_ID}
@@ -38,7 +40,8 @@ def publish_message(message: dict) -> None:
     client.close()
 
 
-def main():
+def main() -> None:
+    """Listen for messages on the pubsub channel and restart the plugin-runner."""
     print("plugin-synchronizer: starting")
 
     _, pubsub = get_client()

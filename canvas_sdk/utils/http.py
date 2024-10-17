@@ -1,6 +1,6 @@
 import time
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Mapping, TypeVar
 
 import requests
 import statsd
@@ -34,8 +34,12 @@ class Http:
         return _decorator(fn) if fn else _decorator
 
     @measure_time
-    def get(self, url: str, headers: dict = {}) -> requests.Response:
+    def get(
+        self, url: str, headers: Mapping[str, str | bytes | None] | None = None
+    ) -> requests.Response:
         """Sends a GET request."""
+        if headers is None:
+            headers = {}
         return self.session.get(url, headers=headers)
 
     @measure_time
@@ -44,7 +48,7 @@ class Http:
         url: str,
         json: dict | None = None,
         data: dict | str | list | bytes | None = None,
-        headers: dict = {},
+        headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a POST request."""
         return self.session.post(url, json=json, data=data, headers=headers)
@@ -55,7 +59,7 @@ class Http:
         url: str,
         json: dict | None = None,
         data: dict | str | list | bytes | None = None,
-        headers: dict = {},
+        headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PUT request."""
         return self.session.put(url, json=json, data=data, headers=headers)
@@ -66,7 +70,7 @@ class Http:
         url: str,
         json: dict | None = None,
         data: dict | str | list | bytes | None = None,
-        headers: dict = {},
+        headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PATCH request."""
         return self.session.patch(url, json=json, data=data, headers=headers)

@@ -2,7 +2,8 @@ from time import time
 from typing import Any
 
 
-def get_duration_ms(start_time: time) -> int:
+def get_duration_ms(start_time: float) -> int:
+    """Get the duration in milliseconds since the given start time."""
     return int((time() - start_time) * 1000)
 
 
