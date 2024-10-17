@@ -2,7 +2,7 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Literal, get_args, get_origin, Union
+from typing import Any, Literal, Tuple, Union, get_args, get_origin
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
@@ -27,7 +27,7 @@ class _BaseCommand(Model):
 
     def _get_effect_method_required_fields(
         self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> tuple[str]:
+    ) -> tuple:
         base_required_fields: tuple = getattr(
             _BaseCommand.Meta, f"{method}_required_fields", tuple()
         )

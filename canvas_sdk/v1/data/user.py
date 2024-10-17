@@ -2,6 +2,8 @@ from django.db import models
 
 
 class CanvasUser(models.Model):
+    """A class representing a Canvas User."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"

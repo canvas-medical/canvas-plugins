@@ -1557,7 +1557,7 @@ class AudiologyVisit(ValueSet):
 
 class MedicalDisabilityExam(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for work related or medical disability examinations
+    **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for work related or medical disability examinations.
 
     **Data Element Scope:** This value set may use a model element related to Encounter.
 

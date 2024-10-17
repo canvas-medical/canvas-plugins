@@ -71,7 +71,7 @@ ALLOWED_MODULES = frozenset(
 )
 
 
-def _is_known_module(name):
+def _is_known_module(name: str) -> bool:
     return any(name.startswith(m) for m in ALLOWED_MODULES)
 
 
@@ -81,13 +81,13 @@ def _safe_import(name: str, *args: Any, **kwargs: Any) -> Any:
     return __import__(name, *args, **kwargs)
 
 
-def _unrestricted(_ob: Any, *args: Any, **kwargs) -> Any:
+def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
     return _ob
 
 
-def _apply(_ob, *args, **kwargs):
-    """Call the bound method with args, support calling super().__init__()"""
+def _apply(_ob: Any, *args: Any, **kwargs: Any) -> Any:
+    """Call the bound method with args, support calling super().__init__()."""
     return _ob(*args, **kwargs)
 
 
@@ -104,7 +104,7 @@ class Sandbox:
             """Allow type annotations."""
             return node
 
-        def check_import_names(self, node):
+        def check_import_names(self, node: ast.ImportFrom) -> ast.AST:
             """Check the names being imported.
 
             This is a protection against rebinding dunder names like
@@ -121,13 +121,15 @@ class Sandbox:
 
             return self.node_contents_visit(node)
 
-        def check_name(self, node, name, allow_magic_methods=False):
-            """Override to turn errors into warnings for leading underscores"""
+        def check_name(
+            self, node: ast.ImportFrom, name: str | None, allow_magic_methods: bool = False
+        ) -> None:
             """Check names if they are allowed.
 
             If ``allow_magic_methods is True`` names in `ALLOWED_FUNC_NAMES`
             are additionally allowed although their names start with `_`.
 
+            Override to turn errors into warnings for leading underscores.
             """
             if name is None:
                 return
@@ -152,8 +154,7 @@ class Sandbox:
             elif name in FORBIDDEN_FUNC_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
 
-        def visit_Attribute(self, node):
-            """Override to turn errors into warnings for leading underscores"""
+        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
             """Checks and mutates attribute access/assignment.
 
             'a.b' becomes '_getattr_(a, "b")'
@@ -161,6 +162,8 @@ class Sandbox:
             'del a.b' becomes 'del _write_(a).b'
 
             The _write_ function should return a security proxy.
+
+            Override to turn errors into warnings for leading underscores.
             """
             if node.attr.startswith("_") and node.attr != "_":
                 self.warn(
