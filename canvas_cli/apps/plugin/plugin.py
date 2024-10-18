@@ -1,7 +1,5 @@
-import importlib
+import ast
 import json
-import os
-import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -72,28 +70,62 @@ def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[st
     return metadata.get("name")
 
 
+def _get_meta_class(text: str, classname: str) -> ast.ClassDef | None:
+    tree = ast.parse(text)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == classname:
+            class_def = node
+            for b in class_def.body:
+                if isinstance(b, ast.ClassDef) and b.name == "Meta":
+                    return b
+    return None
+
+
+def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
+    meta: dict[str, str] = {}
+
+    if not protocol_path.exists():
+        return meta
+
+    meta_class = _get_meta_class(protocol_path.read_text(), classname)
+    if not meta_class:
+        return meta
+
+    for meta_b in meta_class.body:
+        if not isinstance(meta_b, ast.Assign):
+            continue
+        target_id = next((t.id for t in meta_b.targets if isinstance(t, ast.Name)), None)
+        if not target_id:
+            continue
+        if isinstance(meta_b.value, ast.Constant):
+            value = meta_b.value.value
+        elif isinstance(meta_b.value, ast.List):
+            value = [e.value for e in meta_b.value.elts]
+        else:
+            value = None
+        meta[target_id] = value
+
+    return meta
+
+
 def _get_protocols_with_new_cqm_properties(
-    protocol_classes: List[dict[str, Any]]
+    protocol_classes: List[dict[str, Any]], plugin: Path
 ) -> List[dict[str, Any]] | None:
     """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
-
-    def get_new_meta_properties(protocol_class: dict[str, str]) -> dict[str, str]:
-        mod, classname = protocol_class["class"].split(":")
-        module = importlib.import_module(mod)
-        _class = getattr(module, classname)
-        if not hasattr(_class, "_meta") or _class._meta() == protocol_class.get("meta"):
-            return {}
-        return {"meta": _class._meta()}
-
     has_updates = False
-    new_protocols = []
+    protocol_props = []
     for p in protocol_classes:
-        m = get_new_meta_properties(p)
-        new_protocols.append(p | m)
-        if m:
+        mod, classname = p["class"].split(":")
+        mod = mod.replace(f"{plugin.name}.", "").replace(".", "/") + ".py"
+        p_path: Path = plugin / mod
+        meta = _get_meta_properties(p_path, classname)
+        if meta and meta != p.get("meta"):
             has_updates = True
+            protocol_props.append(p | {"meta": meta})
+        else:
+            protocol_props.append(p)
 
-    return new_protocols if has_updates else None
+    return protocol_props if has_updates else None
 
 
 def get_base_plugin_template_path() -> Path:
@@ -331,11 +363,8 @@ def validate_manifest(
 
     try:
         manifest_json = json.loads(manifest.read_text())
-
-        sys.path.append(str(plugin_name.parent.absolute()))
-        if new_protocols := _get_protocols_with_new_cqm_properties(
-            manifest_json.get("components", {}).get("protocols", [])
-        ):
+        protocols = manifest_json.get("components", {}).get("protocols", [])
+        if new_protocols := _get_protocols_with_new_cqm_properties(protocols, plugin_name):
             print(
                 f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
             )
