@@ -47,3 +47,6 @@ class Patient(models.Model):
     @classmethod
     def find(cls, id: str) -> Self:
         return cls.objects.get(id=id)
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
