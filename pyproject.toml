@@ -41,6 +41,7 @@ packages = [
   {include = "canvas_sdk"},
   {include = "logger"},
   {include = "plugin_runner"},
+  {include = "pubsub"},
   {include = "settings.py"}
 ]
 readme = "README.md"
@@ -115,8 +116,8 @@ build_command = "poetry build"
 commit_message = "chore: v{version}\n\nSee the changelog for changes."
 commit_version_number = true
 match = "main"
+tag_format = "{version}"
 version_source = "tag"
 version_toml = [
   "pyproject.toml:tool.poetry.version"
 ]
-tag_format = "{version}"
