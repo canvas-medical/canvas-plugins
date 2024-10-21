@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
         exclude_types:
@@ -30,7 +30,7 @@ repos:
           )$
 
   - repo: https://github.com/python-poetry/poetry
-    rev: 1.6.0
+    rev: 1.8.0
     hooks:
       - id: poetry-check
         files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
@@ -46,21 +46,21 @@ repos:
         additional_dependencies: [tomli]
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         name: isort (python)
         exclude: *generated
 
   - repo: https://github.com/psf/black
-    rev: 23.9.1
+    rev: 24.10.0
     hooks:
       - id: black
         args: ["--config=pyproject.toml"]
         exclude: *generated
 
   - repo: https://github.com/rtts/djhtml
-    rev: 3.0.6
+    rev: 3.0.7
     hooks:
       - id: djhtml
         # Indent only HTML files in template directories
@@ -68,13 +68,13 @@ repos:
         args: ["--tabwidth=2"]
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.5
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         args: ["-x", "-e", "SC1091"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: name-tests-test
         args: ["--django"]
@@ -99,7 +99,7 @@ repos:
       - id: check-yaml
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.12.1
     hooks:
       - id: mypy
         exclude: "canvas_generated/|canvas_cli/templates/"
