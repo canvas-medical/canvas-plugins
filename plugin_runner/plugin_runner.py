@@ -27,10 +27,9 @@ from canvas_sdk.events import Event, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
-
-from .authentication import token_for_plugin
-from .plugin_synchronizer import publish_message
-from .sandbox import Sandbox
+from plugin_runner.authentication import token_for_plugin
+from plugin_runner.plugin_synchronizer import publish_message
+from plugin_runner.sandbox import Sandbox
 
 ENV = os.getenv("ENV", "development")
 
