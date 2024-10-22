@@ -1,13 +1,17 @@
+from typing import Any
+
 from pydantic_core import ValidationError
 
 from canvas_sdk.base import Model
 
 
 class DataModel(Model):
+    """Base class for data models."""
+
     class Meta:
         update_required_fields = ("id",)
 
-    def model_dump_json_nested(self, *args, **kwargs) -> str:
+    def model_dump_json_nested(self, *args: Any, **kwargs: Any) -> str:
         """
         Returns the model's json representation nested in a {"data": {..}} key.
         """

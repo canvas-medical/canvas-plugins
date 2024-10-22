@@ -75,8 +75,8 @@ class PluginRunner(PluginRunnerServicer):
             protocol_class = plugin["class"]
             base_plugin_name = plugin_name.split(":")[0]
 
-            secrets = plugin.get('secrets', {})
-            secrets['graphql_jwt'] = token_for_plugin(plugin_name=plugin_name, audience='home')
+            secrets = plugin.get("secrets", {})
+            secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
 
             try:
                 protocol = protocol_class(request, secrets)

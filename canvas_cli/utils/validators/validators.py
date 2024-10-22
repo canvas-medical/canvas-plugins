@@ -7,7 +7,7 @@ from canvas_cli.utils.validators.manifest_schema import manifest_schema
 
 def get_default_host(host: str | None) -> str | None:
     """Return context's default host if the host param is null."""
-    return host or context.default_host  # type: ignore
+    return host or context.default_host
 
 
 def validate_manifest_file(manifest_json: dict) -> None:

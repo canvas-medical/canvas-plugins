@@ -69,14 +69,17 @@ typing-extensions = "~4.8"
 websocket-client = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
+black = "^24.8.0"
 grpcio-tools = "^1.60.1"
+mypy = "*"
 pre-commit = "*"
 pytest = "*"
 pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
+types-protobuf = "*"
+types-redis = "*"
 types-requests = "*"
-black = "^24.8.0"
 
 [tool.poetry.scripts]
 canvas = "canvas_cli.main:app"
@@ -114,8 +117,8 @@ build_command = "poetry build"
 commit_message = "chore: v{version}\n\nSee the changelog for changes."
 commit_version_number = true
 match = "main"
+tag_format = "{version}"
 version_source = "tag"
 version_toml = [
   "pyproject.toml:tool.poetry.version"
 ]
-tag_format = "{version}"

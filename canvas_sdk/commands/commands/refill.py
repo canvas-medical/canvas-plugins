@@ -2,6 +2,7 @@ from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 
 
 class RefillCommand(PrescribeCommand):
+    """A class for managing a Refill command within a specific note."""
 
     class Meta:
         key = "refill"

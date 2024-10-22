@@ -29,7 +29,7 @@ from canvas_sdk.commands import (
     UpdateGoalCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.commands.constants import Coding, ClinicalQuantity
+from canvas_sdk.commands.constants import ClinicalQuantity, Coding
 
 runner = CliRunner()
 
@@ -188,7 +188,9 @@ def raises_none_error_for_effect_method(
         )
 
 
-def write_protocol_code(note_uuid: str, plugin_name: str, commands: list[_BaseCommand]) -> None:
+def write_protocol_code(
+    note_uuid: str, plugin_name: str, commands: list[type[_BaseCommand]]
+) -> None:
     imports = ", ".join([c.__name__ for c in commands])
     effects = ", ".join([f"{c.__name__}(note_uuid='{note_uuid}').originate()" for c in commands])
 
