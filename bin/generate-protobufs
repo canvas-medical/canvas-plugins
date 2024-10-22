@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e
+
+# Default input and output paths, run from root
+input_dir="protobufs/"
+output_dir="./"
+
+# Parse arguments for input and output paths
+while getopts i:o: flag
+do
+    case "${flag}" in
+        i) input_dir=${OPTARG};;
+        o) output_dir=${OPTARG};;
+        *) exit 1;;
+    esac
+done
+
+echo "Generating Python code from Protobufs in \"${input_dir}\" to \"${output_dir}\"..."
+
+python \
+  -m grpc_tools.protoc \
+  -I="${input_dir}" \
+  --python_out="${output_dir}" \
+  --pyi_out="${output_dir}" \
+  --grpc_python_out="${output_dir}" \
+  "${input_dir}"canvas_generated/**/*.proto || exit 1
+
+echo "Done!"

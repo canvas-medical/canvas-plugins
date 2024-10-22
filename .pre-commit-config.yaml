@@ -119,3 +119,11 @@ repos:
             && poetry install --no-ansi \
             && exec poetry run mypy --show-traceback $@
           "
+
+  - repo: local
+    hooks:
+      - id: check-protobufs-definitions
+        name: Check Protobufs Definitions
+        entry: poetry run ./bin/generate-protobufs
+        language: system
+        pass_filenames: false
