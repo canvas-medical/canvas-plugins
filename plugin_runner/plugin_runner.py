@@ -84,7 +84,12 @@ class PluginRunner(PluginRunnerServicer):
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [
-                    Effect(type=effect.type, payload=effect.payload, plugin_name=base_plugin_name)
+                    Effect(
+                        type=effect.type,
+                        payload=effect.payload,
+                        plugin_name=base_plugin_name,
+                        protocol_classname=protocol.__class__.__name__,
+                    )
                     for effect in _effects
                 ]
                 compute_duration = get_duration_ms(compute_start_time)
