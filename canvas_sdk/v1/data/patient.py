@@ -1,5 +1,6 @@
 from typing import Self
 
+import arrow
 from django.db import models
 
 
@@ -50,3 +51,19 @@ class Patient(models.Model):
     def find(cls, id: str) -> Self:
         """Find a patient by id."""
         return cls.objects.get(id=id)
+
+    def age_at(self, time: arrow.Arrow) -> float:
+        age = 0
+        birth_date = arrow.get(self.birth_date)
+        if birth_date.date() < time.date():
+            age = time.datetime.year - birth_date.datetime.year
+            if time.datetime.month < birth_date.datetime.month or (
+                time.datetime.month == birth_date.datetime.month
+                and time.datetime.day < birth_date.datetime.day
+            ):
+                age -= 1
+
+            current_year = birth_date.shift(years=age)
+            next_year = birth_date.shift(years=age + 1)
+            age += (time.date() - current_year.date()) / (next_year.date() - current_year.date())
+        return age
