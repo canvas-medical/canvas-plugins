@@ -7,6 +7,8 @@ from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
 
 class AllergenType(IntEnum):
+    """An enum representing the type of allergen."""
+
     ALLERGEN_GROUP = 1
     MEDICATION = 2
     INGREDIENT = 6

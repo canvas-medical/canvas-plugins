@@ -30,6 +30,17 @@ jobs:
       - uses: ./.github/actions/install-python-and-poetry
       - uses: ./.github/actions/install-canvas
 
+      - name: Install pipx
+        run: pip install pipx
+        shell: bash
+
+      - name: Test the distribution
+        run: |
+          poetry build
+          pipx install dist/*.whl
+          canvas --version
+        shell: bash
+
       - name: Python Semantic Release
         id: release
         env:

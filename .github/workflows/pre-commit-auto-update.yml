@@ -6,8 +6,22 @@ on:
 
 jobs:
   pre-commit-auto-update:
-    uses: ./.github/workflows/pre-commit-auto-update-base.yml
-    with:
-      PR_TITLE: "chore: auto-update pre-commit hooks"
-      PR_TEAM_REVIEWERS: sdk-team
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit autoupdate
+        run: pre-commit autoupdate
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.PROJECT_AND_REPO_PAT }}
+          branch: chore/pre-commit-auto-update
+          title: "chore: auto-update pre-commit hooks"
+          commit-message: "auto-update pre-commit hooks"
+          body: |
+            Update pre-commit hooks to latest version

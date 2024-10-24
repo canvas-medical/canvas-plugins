@@ -15,9 +15,7 @@ def token_for_plugin(
     plugin_name: str,
     audience: str,
     issuer: str = "plugin-runner",
-    jwt_signing_key: str = cast(
-        str, os.getenv("PLUGIN_RUNNER_SIGNING_KEY", INSECURE_DEFAULT_SIGNING_KEY)
-    ),
+    jwt_signing_key: str = cast(str, os.getenv("PLUGIN_RUNNER_SIGNING_KEY", INSECURE_DEFAULT_SIGNING_KEY)),
     expiration_minutes: int = ONE_DAY_IN_MINUTES,
     extra_kwargs: dict | None = None,
 ) -> str:

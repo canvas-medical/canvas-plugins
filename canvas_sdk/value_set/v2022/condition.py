@@ -8101,7 +8101,7 @@ class KidneyFailure(ValueSet):
 
 class Proteinuria(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  proteinuria
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  proteinuria.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis.
 
@@ -33137,7 +33137,7 @@ class StableAndUnstableAngina(ValueSet):
 
 class StatinAssociatedMuscleSymptoms(ValueSet):
     """
-    **Clinical Focus:**
+    **Clinical Focus:** The purpose of this value set is to represent diagnoses of muscle-related symptoms associated with statin use.
 
     **Data Element Scope:**
 

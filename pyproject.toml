@@ -73,11 +73,14 @@ websocket-client = "^1.7.0"
 [tool.poetry.group.dev.dependencies]
 black = "^24.8.0"
 grpcio-tools = "^1.60.1"
+mypy = "*"
 pre-commit = "*"
 pytest = "*"
 pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
+types-protobuf = "*"
+types-redis = "*"
 types-requests = "*"
 
 [tool.poetry.scripts]

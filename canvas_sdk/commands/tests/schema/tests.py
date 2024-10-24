@@ -7,7 +7,7 @@ import requests
 
 import settings
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.commands.constants import Coding, ClinicalQuantity
+from canvas_sdk.commands.constants import ClinicalQuantity, Coding
 from canvas_sdk.commands.tests.test_utils import (
     COMMANDS,
     MaskedValue,
