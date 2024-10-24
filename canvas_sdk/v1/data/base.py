@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Q
 
 if TYPE_CHECKING:
+    from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -45,3 +46,19 @@ class ValueSetLookupQuerySet(models.QuerySet):
         for system, codes in uri_codes:
             q_filter |= Q(codings__system=system, codings__code__in=codes)
         return self.filter(q_filter).distinct()
+
+
+class TimeframeLookupQuerySet(models.QuerySet):
+    @property
+    def timeframe_filter_field(self):
+        return "note__datetime_of_service"
+
+    def within(self, timeframe: "Timeframe") -> models.QuerySet:
+        return self.filter(
+            **{
+                f"{self.timeframe_filter_field}__range": (
+                    timeframe.start.datetime,
+                    timeframe.end.datetime,
+                )
+            }
+        )
