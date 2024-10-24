@@ -275,13 +275,13 @@ ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
 SHOW_PATIENT_CHART_SUMMARY_SECTIONS: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "protocol_classname")
+    __slots__ = ("type", "payload", "plugin_name", "classname")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
-    PROTOCOL_CLASSNAME_FIELD_NUMBER: _ClassVar[int]
+    CLASSNAME_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
-    protocol_classname: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., protocol_classname: _Optional[str] = ...) -> None: ...
+    classname: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ...) -> None: ...
