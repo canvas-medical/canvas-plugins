@@ -1,0 +1,31 @@
+# See the documentation for details:
+#   -> https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 25
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 25
+    groups:
+      production-patches:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+      development-patches:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+      development-minors:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+      development-majors:
+        dependency-type: "development"
+        update-types:
+          - "major"
