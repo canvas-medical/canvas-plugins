@@ -59,6 +59,7 @@ ALLOWED_MODULES = frozenset(
         "operator",
         "pickletools",
         "random",
+        "rapidfuzz",
         "re",
         "requests",
         "string",

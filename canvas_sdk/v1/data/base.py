@@ -1,5 +1,5 @@
 from collections.abc import Container
-from typing import TYPE_CHECKING, Type, cast
+from typing import TYPE_CHECKING, Self, Type, cast
 
 from django.db import models
 from django.db.models import Q
@@ -11,25 +11,28 @@ if TYPE_CHECKING:
 class CommittableModelManager(models.Manager):
     """A manager for commands that can be committed."""
 
-    def get_queryset(self) -> "models.QuerySet":
+    def get_queryset(self) -> "CommittableQuerySet":
         """Return a queryset that filters out deleted objects."""
         # TODO: Should we just filter these out at the view level?
-        return super().get_queryset().filter(deleted=False)
+        return CommittableQuerySet(self.model, using=self._db).filter(deleted=False)
 
-    def committed(self) -> "models.QuerySet":
+
+class CommittableQuerySet(models.QuerySet):
+    """A queryset for committable objects."""
+
+    def committed(self) -> "Self":
         """Return a queryset that filters for objects that have been committed."""
-        # The committer_id IS set, and the entered_in_error_id IS NOT set
         return self.filter(committer_id__isnull=False, entered_in_error_id__isnull=True)
 
-    def for_patient(self, patient_id: str) -> "models.QuerySet":
+    def for_patient(self, patient_id: str) -> "Self":
         """Return a queryset that filters objects for a specific patient."""
         return self.filter(patient__id=patient_id)
 
 
-class ValueSetLookupQuerySet(models.QuerySet):
+class ValueSetLookupQuerySet(CommittableQuerySet):
     """A QuerySet that can filter objects based on a ValueSet."""
 
-    def find(self, value_set: Type["ValueSet"]) -> models.QuerySet:
+    def find(self, value_set: Type["ValueSet"]) -> "Self":
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
