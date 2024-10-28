@@ -45,7 +45,7 @@ class ValueSetLookupQuerySet(models.QuerySet):
         """
         q_filter = Q()
         for system, codes in self.codings(value_set):
-            q_filter |= Q(**self.q_kwargs(system, codes))
+            q_filter |= self.q_object(system, codes)
         return self.filter(q_filter).distinct()
 
     @staticmethod
@@ -62,11 +62,11 @@ class ValueSetLookupQuerySet(models.QuerySet):
         )
 
     @staticmethod
-    def q_kwargs(system: str, codes: Container[str]) -> dict[str, str | Container[str]]:
+    def q_object(system: str, codes: Container[str]) -> Q:
         """
         This method can be overridden if a Q object with different filtering options is needed.
         """
-        return {"codings__system": system, "codings__code__in": codes}
+        return Q(codings__system=system, codings_code_in=codes)
 
 
 class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
