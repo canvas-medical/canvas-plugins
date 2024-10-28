@@ -14,6 +14,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         description: str = ""
         information: str = ""
         references: list[str] = []
+        source_attributes: dict[str, str]
         types: list[str] = []
         authors: list[str] = []
         show_in_chart: bool = True

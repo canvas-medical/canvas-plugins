@@ -101,6 +101,10 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
             value = meta_b.value.value
         elif isinstance(meta_b.value, ast.List):
             value = [e.value for e in meta_b.value.elts]
+        elif isinstance(meta_b.value, ast.Dict):
+            keys = meta_b.value.keys
+            values = meta_b.value.values
+            value = {k.value: values[i].value for i, k in enumerate(keys)}
         else:
             value = None
         meta[target_id] = value
