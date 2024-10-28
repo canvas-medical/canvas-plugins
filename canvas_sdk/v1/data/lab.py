@@ -3,16 +3,17 @@ from django.db import models
 from canvas_sdk.v1.data.base import CommittableModelManager
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.staff import Staff
+
+# from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.user import CanvasUser
 
 
-class TransmissionType:
-    FAX = "F"
-    HL7 = "H"
-    MANUAL = "M"
+class TransmissionType(models.TextChoices):
+    """Choices for transmission types."""
 
-    CHOICES = {FAX: "fax", HL7: "hl7", MANUAL: "manual"}
+    FAX = "F", "fax"
+    HL7 = "H", "hl7"
+    MANUAL = "M", "manual"
 
 
 class LabReport(models.Model):
@@ -123,36 +124,29 @@ class LabValueCoding(models.Model):
 
 
 class LabOrder(models.Model):
-    class SpecimenCollectionType:
-        ON_LOCATION = "L"
-        PATIENT_SERVICE_CENTER = "P"
-        OTHER = "O"
+    """A class representing a lab order."""
 
-        CHOICES = {
-            ON_LOCATION: "on location",
-            PATIENT_SERVICE_CENTER: "patient service center",
-            OTHER: "other",
-        }
+    class SpecimenCollectionType(models.TextChoices):
+        """Choices for specimen collection types."""
 
-    class CourtesyCopyType:
-        ACCOUNT = "A"
-        FAX = "F"
-        PATIENT = "P"
+        ON_LOCATION = "L", "on location"
+        PATIENT_SERVICE_CENTER = "P", "patient service center"
+        OTHER = "O", "other"
 
-        CHOICES = {ACCOUNT: "account", FAX: "fax", PATIENT: "patient"}
+    class CourtesyCopyType(models.TextChoices):
+        """Choices for courtesy copy types."""
 
-    class ManualProcessingStatus:
-        MANUAL_PROCESSING_STATUS_NEEDS_REVIEW = "NEEDS_REVIEW"
-        MANUAL_PROCESSING_STATUS_IN_PROGRESS = "IN_PROGRESS"
-        MANUAL_PROCESSING_STATUS_PROCESSED = "PROCESSED"
-        MANUAL_PROCESSING_STATUS_FLAGGED = "FLAGGED"
+        ACCOUNT = "A", "account"
+        FAX = "F", "fax"
+        PATIENT = "P", "patient"
 
-        CHOICES = {
-            MANUAL_PROCESSING_STATUS_NEEDS_REVIEW: "Needs Review",
-            MANUAL_PROCESSING_STATUS_IN_PROGRESS: "In Progress",
-            MANUAL_PROCESSING_STATUS_PROCESSED: "Processed",
-            MANUAL_PROCESSING_STATUS_FLAGGED: "Flagged",
-        }
+    class ManualProcessingStatus(models.TextChoices):
+        """Choices for manual processing statuses."""
+
+        MANUAL_PROCESSING_STATUS_NEEDS_REVIEW = "NEEDS_REVIEW", "Needs Review"
+        MANUAL_PROCESSING_STATUS_IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        MANUAL_PROCESSING_STATUS_PROCESSED = "PROCESSED", "Processed"
+        MANUAL_PROCESSING_STATUS_FLAGGED = "FLAGGED", "Flagged"
 
     class Meta:
         managed = False
@@ -176,33 +170,30 @@ class LabOrder(models.Model):
     is_patient_bill = models.BooleanField(null=True)
     date_ordered = models.DateTimeField()
     fasting_status = models.BooleanField(null=True)
-    specimen_collection_type = models.CharField(choices=SpecimenCollectionType.CHOICES, null=True)
-    transmission_type = models.CharField(choices=TransmissionType.CHOICES, null=True)
-    courtesy_copy_type = models.CharField(choices=CourtesyCopyType.CHOICES, null=True)
+    specimen_collection_type = models.CharField(choices=SpecimenCollectionType, null=True)
+    transmission_type = models.CharField(choices=TransmissionType, null=True)
+    courtesy_copy_type = models.CharField(choices=CourtesyCopyType, null=True)
     courtesy_copy_number = models.CharField()
     courtesy_copy_text = models.CharField()
     # TODO - uncomment when Staff model is added
     # ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
     parent_order = models.ForeignKey("LabOrder", on_delete=models.DO_NOTHING, null=True)
     healthgorilla_id = models.CharField()
-    manual_processing_status = models.CharField(choices=ManualProcessingStatus.CHOICES)
+    manual_processing_status = models.CharField(choices=ManualProcessingStatus)
     manual_processing_comment = models.CharField()
     labcorp_abn_url = models.URLField()
 
 
 class LabOrderReason(models.Model):
-    class LabReasonMode:
-        MONITOR = "MO"
-        INVESTIGATE = "IN"
-        SCREEN_FOR = "SF"
-        UNKNOWN = "UNK"
+    """A class representing a lab order reason."""
 
-        CHOICES = {
-            MONITOR: "monitor",
-            INVESTIGATE: "investigate",
-            SCREEN_FOR: "screen for",
-            UNKNOWN: "unknown",
-        }
+    class LabReasonMode(models.TextChoices):
+        """Choices for lab order reasons."""
+
+        MONITOR = "MO", "monitor"
+        INVESTIGATE = "IN", "investigate"
+        SCREEN_FOR = "SF", "screen for"
+        UNKNOWN = "UNK", "unknown"
 
     class Meta:
         managed = False
@@ -217,10 +208,12 @@ class LabOrderReason(models.Model):
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     order = models.ForeignKey(LabOrder, on_delete=models.DO_NOTHING, related_name="reasons")
-    mode = models.CharField(max_length=30, choices=LabReasonMode.CHOICES)
+    mode = models.CharField(max_length=30, choices=LabReasonMode)
 
 
 class LabOrderReasonCondition(models.Model):
+    """A class representing a lab order reason's condition."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -241,28 +234,20 @@ class LabOrderReasonCondition(models.Model):
 
 
 class LabTest(models.Model):
-    class LabTestOrderStatus:
-        NEW = "NE"
-        STAGED_FOR_REQUISITION = "SR"
-        SENDING = "SE"
-        SENDING_FAILED = "SF"
-        PROCESSING = "PR"
-        PROCESSING_FAILED = "PF"
-        RECEIVED = "RE"
-        REVIEWED = "RV"
-        INACTIVE = "IN"
+    """A class representing a lab test."""
 
-        CHOICES = {
-            NEW: "new",
-            STAGED_FOR_REQUISITION: "staged for requisition",
-            SENDING: "sending",
-            SENDING_FAILED: "sending failed",
-            PROCESSING: "processing",
-            PROCESSING_FAILED: "processing failed",
-            RECEIVED: "received",
-            INACTIVE: "inactive",
-            REVIEWED: "reviewed",
-        }
+    class LabTestOrderStatus(models.TextChoices):
+        """Choicees for lab test order statuses."""
+
+        NEW = "NE", "new"
+        STAGED_FOR_REQUISITION = "SR", "staged for requisition"
+        SENDING = "SE", "sending"
+        SENDING_FAILED = "SF", "sending failed"
+        PROCESSING = "PR", "processing"
+        PROCESSING_FAILED = "PF", "processing failed"
+        RECEIVED = "RE", "received"
+        REVIEWED = "RV", "reviewed"
+        INACTIVE = "IN", "inactive"
 
     class Meta:
         managed = False
@@ -273,7 +258,7 @@ class LabTest(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     ontology_test_name = models.CharField(max_length=512, blank=True, default="")
     ontology_test_code = models.CharField(max_length=512, blank=True, default="")
-    status = models.CharField(max_length=30, choices=LabTestOrderStatus.CHOICES)
+    status = models.CharField(max_length=30, choices=LabTestOrderStatus)
     report = models.ForeignKey(
         LabReport, on_delete=models.DO_NOTHING, null=True, related_name="tests"
     )
