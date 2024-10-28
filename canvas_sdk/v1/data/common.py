@@ -2,12 +2,16 @@ from django.db import models
 
 
 class DocumentReviewMode(models.TextChoices):
+    """Choices for document reviews."""
+
     REVIEW_REQUIRED = "RR", "Review required"
     ALREADY_REVIEWED_OFFLINE = "AR", "Already reviewed offline"
     REVIEW_NOT_REQUIRED = "RN", "Review not required"
 
 
 class OrderStatus(models.TextChoices):
+    """Choices for Order statuses."""
+
     PROPOSED = "proposed", "Proposed"
     DRAFT = "draft", "Draft"
     PLANNED = "planned", "Planned"
@@ -25,6 +29,8 @@ class OrderStatus(models.TextChoices):
 
 
 class ReviewPatientCommunicationMethod(models.TextChoices):
+    """Choices for patient communication regarding reviews."""
+
     DELEGATED_CALL_CAN_LEAVE_MESSAGE = "DM", "delegate call, can leave message"
     DELEGATED_CALL_NEED_ANSWER = "DA", "delegate call, need patient to answer"
     DELEGATED_LETTER = "DL", "delegate letter"
@@ -34,5 +40,7 @@ class ReviewPatientCommunicationMethod(models.TextChoices):
 
 
 class ReviewStatus(models.TextChoices):
+    """Status choices for reviews."""
+
     STATUS_REVIEWING = "reviewing", "reviewing"
     STATUS_REVIEWED = "reviewed", "reviewed"

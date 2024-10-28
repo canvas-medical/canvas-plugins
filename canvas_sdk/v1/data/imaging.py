@@ -11,6 +11,8 @@ from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ImagingOrder(models.Model):
+    """Model to read ImagingOrder data."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -41,6 +43,8 @@ class ImagingOrder(models.Model):
 
 
 class ImagingReview(models.Model):
+    """Model to read ImagingReview data."""
+
     class Meta:
         managed = False
         app_label = "canvas_sdk"
@@ -67,6 +71,8 @@ class ImagingReview(models.Model):
 
 
 class ImagingReport(models.Model):
+    """Model to read ImagingReport data."""
+
     class ImagingReportSource(models.TextChoices):
         RADIOLOGY_FROM_PATIENT = "RADIOLOGY_PATIENT", "Radiology Report From Patient"
         VERBAL_FROM_PATIENT = "VERBAL_PATIENT", "Verbal Report From Patient"
