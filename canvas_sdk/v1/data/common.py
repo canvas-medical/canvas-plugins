@@ -1,72 +1,38 @@
-class DocumentReviewMode:
-    REVIEW_REQUIRED = "RR"
-    ALREADY_REVIEWED_OFFLINE = "AR"
-    REVIEW_NOT_REQUIRED = "RN"
-
-    CHOICES = {
-        REVIEW_REQUIRED: "Review required",
-        ALREADY_REVIEWED_OFFLINE: "Already reviewed offline",
-        REVIEW_NOT_REQUIRED: "Review not required",
-    }
+from django.db import models
 
 
-class OrderStatus:
-    PROPOSED = "proposed"
-    DRAFT = "draft"
-    PLANNED = "planned"
-    REQUESTED = "requested"
-    RECEIVED = "received"
-    ACCEPTED = "accepted"
-    IN_PROGRESS = "in-progress"
-    REVIEW = "review"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    SUSPENDED = "suspended"
-    REJECTED = "rejected"
-    FAILED = "failed"
-    ENTERED_IN_ERROR = "EIE"
-
-    CHOICES = {
-        PROPOSED: "Proposed",
-        DRAFT: "Draft",
-        PLANNED: "Planned",
-        REQUESTED: "Requested",
-        RECEIVED: "Received",
-        ACCEPTED: "Accepted",
-        IN_PROGRESS: "In-progress",
-        REVIEW: "Review",
-        COMPLETED: "Completed",
-        CANCELLED: "Cancelled",
-        SUSPENDED: "Suspended",
-        REJECTED: "Rejected",
-        FAILED: "Failed",
-        ENTERED_IN_ERROR: "Entered in Error",
-    }
+class DocumentReviewMode(models.TextChoices):
+    REVIEW_REQUIRED = "RR", "Review required"
+    ALREADY_REVIEWED_OFFLINE = "AR", "Already reviewed offline"
+    REVIEW_NOT_REQUIRED = "RN", "Review not required"
 
 
-class ReviewPatientCommunicationMethod:
-    DELEGATED_CALL_CAN_LEAVE_MESSAGE = "DM"
-    DELEGATED_CALL_NEED_ANSWER = "DA"
-    DELEGATED_LETTER = "DL"
-    DO_NOT_COMMUNICATE = "DC"
-    ALREADY_LEFT_MESSAGE = "AM"
-    ALREADY_REVIEWED_WITH_PATIENT = "AR"
+class OrderStatus(models.TextChoices):
+    PROPOSED = "proposed", "Proposed"
+    DRAFT = "draft", "Draft"
+    PLANNED = "planned", "Planned"
+    REQUESTED = "requested", "Requested"
+    RECEIVED = "received", "Received"
+    ACCEPTED = "accepted", "Accepted"
+    IN_PROGRESS = "in-progress", "In-progress"
+    REVIEW = "review", "Review"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    SUSPENDED = "suspended", "Suspended"
+    REJECTED = "rejected", "Rejected"
+    FAILED = "failed", "Failed"
+    ENTERED_IN_ERROR = "EIE", "Entered in Error"
 
-    CHOICES = {
-        DELEGATED_CALL_CAN_LEAVE_MESSAGE: "delegate call, can leave message",
-        DELEGATED_CALL_NEED_ANSWER: "delegate call, need patient to answer",
-        DELEGATED_LETTER: "delegate letter",
-        DO_NOT_COMMUNICATE: "do not communicate",
-        ALREADY_LEFT_MESSAGE: "already left message",
-        ALREADY_REVIEWED_WITH_PATIENT: "already reviewed with patient",
-    }
+
+class ReviewPatientCommunicationMethod(models.TextChoices):
+    DELEGATED_CALL_CAN_LEAVE_MESSAGE = "DM", "delegate call, can leave message"
+    DELEGATED_CALL_NEED_ANSWER = "DA", "delegate call, need patient to answer"
+    DELEGATED_LETTER = "DL", "delegate letter"
+    DO_NOT_COMMUNICATE = "DC", "do not communicate"
+    ALREADY_LEFT_MESSAGE = "AM", "already left message"
+    ALREADY_REVIEWED_WITH_PATIENT = "AR", "already reviewed with patient"
 
 
-class ReviewStatus:
-    STATUS_REVIEWING = "reviewing"
-    STATUS_REVIEWED = "reviewed"
-
-    CHOICES = {
-        STATUS_REVIEWING: "reviewing",
-        STATUS_REVIEWING: "reviewed",
-    }
+class ReviewStatus(models.TextChoices):
+    STATUS_REVIEWING = "reviewing", "reviewing"
+    STATUS_REVIEWED = "reviewed", "reviewed"

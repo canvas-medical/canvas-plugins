@@ -32,7 +32,7 @@ class ImagingOrder(models.Model):
     # imaging_center = models.ForeignKey(ServiceProvider, related_name="imaging_orders", null=True, on_delete=models.DO_NOTHING)
     note_to_radiologist = models.CharField()
     internal_comment = models.CharField()
-    status = models.CharField(choices=OrderStatus.CHOICES)
+    status = models.CharField(choices=OrderStatus)
     date_time_ordered = models.DateTimeField()
     priority = models.CharField()
     # TODO - uncomment when Staff model is complete
@@ -60,23 +60,17 @@ class ImagingReview(models.Model):
     internal_comment = models.CharField()
     message_to_patient = models.CharField()
     is_released_to_patient = models.BooleanField()
-    status = models.CharField(choices=ReviewStatus.CHOICES)
+    status = models.CharField(choices=ReviewStatus)
     patient = models.ForeignKey(
         Patient, on_delete=models.DO_NOTHING, related_name="imaging_reviews"
     )
 
 
 class ImagingReport(models.Model):
-    class ImagingReportSource:
-        RADIOLOGY_FROM_PATIENT = "RADIOLOGY_PATIENT"
-        VERBAL_FROM_PATIENT = "VERBAL_PATIENT"
-        DIRECTLY_REPORT = "DIRECTLY_RADIOLOGY"
-
-        CHOICES = {
-            RADIOLOGY_FROM_PATIENT: "Radiology Report From Patient",
-            VERBAL_FROM_PATIENT: "Verbal Report From Patient",
-            DIRECTLY_REPORT: "Directly Radiology Report",
-        }
+    class ImagingReportSource(models.TextChoices):
+        RADIOLOGY_FROM_PATIENT = "RADIOLOGY_PATIENT", "Radiology Report From Patient"
+        VERBAL_FROM_PATIENT = "VERBAL_PATIENT", "Verbal Report From Patient"
+        DIRECTLY_REPORT = "DIRECTLY_RADIOLOGY", "Directly Radiology Report"
 
     class Meta:
         managed = False
@@ -87,7 +81,7 @@ class ImagingReport(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    review_mode = models.CharField(choices=DocumentReviewMode.CHOICES)
+    review_mode = models.CharField(choices=DocumentReviewMode)
     junked = models.BooleanField()
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
@@ -95,7 +89,7 @@ class ImagingReport(models.Model):
         Patient, on_delete=models.DO_NOTHING, related_name="imaging_results"
     )
     order = models.ForeignKey(ImagingOrder, on_delete=models.DO_NOTHING, null=True)
-    source = models.CharField(choices=ImagingReportSource.CHOICES)
+    source = models.CharField(choices=ImagingReportSource)
     name = models.CharField()
     result_date = models.DateField()
     original_date = models.DateField()
