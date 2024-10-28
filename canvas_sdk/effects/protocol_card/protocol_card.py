@@ -50,6 +50,7 @@ class ProtocolCard(_BaseEffect):
     narrative: str = ""
     recommendations: list[Recommendation] = []
     status: Status = Status.DUE  # type: ignore
+    feedback_enabled: bool = False
 
     @property
     def values(self) -> dict[str, Any]:
@@ -61,6 +62,7 @@ class ProtocolCard(_BaseEffect):
                 rec.values | {"key": i} for i, rec in enumerate(self.recommendations)
             ],
             "status": self.status.value,
+            "feedback_enabled": self.feedback_enabled,
         }
 
     @property
