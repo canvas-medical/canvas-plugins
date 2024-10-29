@@ -27,6 +27,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
 )
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventResponse, EventType
+from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
 
@@ -80,11 +81,21 @@ class PluginRunner(PluginRunnerServicer):
 
             try:
                 protocol = protocol_class(request, secrets)
+                classname = (
+                    protocol.__class__.__name__
+                    if isinstance(protocol, ClinicalQualityMeasure)
+                    else None
+                )
 
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [
-                    Effect(type=effect.type, payload=effect.payload, plugin_name=base_plugin_name)
+                    Effect(
+                        type=effect.type,
+                        payload=effect.payload,
+                        plugin_name=base_plugin_name,
+                        classname=classname,
+                    )
                     for effect in _effects
                 ]
                 compute_duration = get_duration_ms(compute_start_time)
