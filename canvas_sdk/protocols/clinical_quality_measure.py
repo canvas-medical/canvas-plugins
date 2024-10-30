@@ -46,9 +46,14 @@ class ClinicalQualityMeasure(BaseProtocol):
 
     @property
     def timeframe(self) -> Timeframe:
-        """The default Timeframe (self.timeframe) for all protocols. This defaults to
-        have a start of 1 year ago and an end time of the current time. Plugin authors
-        can override this if a different timeframe is desired.
+        """The default Timeframe (self.timeframe) for all protocols.
+        This defaults to have a start of 1 year ago and an end time of the current time.
+        Plugin authors can override this if a different timeframe is desired.
         """
         end = arrow.utcnow()
         return Timeframe(start=end.shift(years=-1), end=end)
+
+    @property
+    def now(self) -> arrow.Arrow:
+        """A convenience method for returning the current datetime."""
+        return arrow.utcnow()
