@@ -64,6 +64,7 @@ class ProtocolCard(_BaseEffect):
             ],
             "status": self.status.value,
             "feedback_enabled": self.feedback_enabled,
+            "due_in": self.due_in,
         }
 
     @property
