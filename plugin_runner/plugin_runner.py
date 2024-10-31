@@ -264,7 +264,7 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
         for plugin_path in plugin_paths:
             # when we import plugins we'll use the module name directly so we need to add the plugin
             # directory to the path
-            path_to_append = f"./{plugin_path.parent}"
+            path_to_append = pathlib.Path(".") / plugin_path.parent
             sys.path.append(path_to_append)
     else:
         candidates = os.listdir(PLUGIN_DIRECTORY)
