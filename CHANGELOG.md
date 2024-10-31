@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.3.1 (2024-10-31)
+
+### Bug Fixes
+
+* fix: valueSet query (#175) ([`3b4d7b5`](https://github.com/canvas-medical/canvas-plugins/commit/3b4d7b53c6a385ebd862d15cf8a3b8b0a7af0d36))
+
+### Chores
+
+* chore: local development improvements (#102)
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com> ([`ca4458e`](https://github.com/canvas-medical/canvas-plugins/commit/ca4458e59ee51abf638facb8eb9ff231be0efa18))
+
+* chore: fix test distribution step on semantic release gh action (#173) ([`6ee6b0c`](https://github.com/canvas-medical/canvas-plugins/commit/6ee6b0c715b771072a9a81b91bc7cc7f7bcb16e7))
+
+
 ## v0.3.0 (2024-10-29)
 
 ### Bug Fixes
