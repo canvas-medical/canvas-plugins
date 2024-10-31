@@ -50,7 +50,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         This defaults to have a start of 1 year ago and an end time of the current time.
         Plugin authors can override this if a different timeframe is desired.
         """
-        end = arrow.utcnow()
+        end = self.now
         return Timeframe(start=end.shift(years=-1), end=end)
 
     @property
