@@ -40,6 +40,8 @@ packages = [
   {include = "canvas_generated"},
   {include = "canvas_sdk"},
   {include = "logger"},
+  {include = "plugin_runner"},
+  {include = "pubsub"},
   {include = "settings.py"}
 ]
 readme = "README.md"

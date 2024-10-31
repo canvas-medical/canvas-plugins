@@ -81,6 +81,10 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PROTOCOL_OVERRIDE_DELETED: _ClassVar[EventType]
     TASK_COMMENT_UPDATED: _ClassVar[EventType]
     TASK_COMMENT_DELETED: _ClassVar[EventType]
+    DEVICE_CREATED: _ClassVar[EventType]
+    DEVICE_UPDATED: _ClassVar[EventType]
+    OBSERVATION_CREATED: _ClassVar[EventType]
+    OBSERVATION_UPDATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -628,6 +632,10 @@ PROTOCOL_OVERRIDE_UPDATED: EventType
 PROTOCOL_OVERRIDE_DELETED: EventType
 TASK_COMMENT_UPDATED: EventType
 TASK_COMMENT_DELETED: EventType
+DEVICE_CREATED: EventType
+DEVICE_UPDATED: EventType
+OBSERVATION_CREATED: EventType
+OBSERVATION_UPDATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
