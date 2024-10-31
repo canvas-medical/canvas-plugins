@@ -10,7 +10,7 @@ class Device(models.Model):
     class Meta:
         managed = False
         app_label = "canvas_sdk"
-        db_table = "canvas_sdk_data_commands_command_001"
+        db_table = "canvas_sdk_data_api_device_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
