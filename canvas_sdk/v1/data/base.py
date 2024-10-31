@@ -66,7 +66,7 @@ class ValueSetLookupQuerySet(models.QuerySet):
         """
         This method can be overridden if a Q object with different filtering options is needed.
         """
-        return Q(codings__system=system, codings_code_in=codes)
+        return Q(codings__system=system, codings__code__in=codes)
 
 
 class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
