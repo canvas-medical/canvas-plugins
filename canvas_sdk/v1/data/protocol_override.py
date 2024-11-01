@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from canvas_sdk.v1.data.base import CommittableModelManager
 from canvas_sdk.v1.data.patient import Patient
@@ -9,16 +8,16 @@ from canvas_sdk.v1.data.user import CanvasUser
 class IntervalUnit(models.TextChoices):
     """ProtocolOverride cycle IntervalUnit."""
 
-    DAYS = "days", _("days")
-    MONTHS = "months", _("months")
-    YEARS = "years", _("years")
+    DAYS = "days", "days"
+    MONTHS = "months", "months"
+    YEARS = "years", "years"
 
 
 class Status(models.TextChoices):
     """ProtocolOverride Status."""
 
-    ACTIVE = "active", _("active")
-    INACTIVE = "inactive", _("inactive")
+    ACTIVE = "active", "active"
+    INACTIVE = "inactive", "inactive"
 
 
 class ProtocolOverride(models.Model):
