@@ -8,6 +8,8 @@ from canvas_sdk.v1.data.user import CanvasUser
 
 
 class NoteType(models.Model):
+    """NoteType."""
+
     class NoteTypeCategories:
         MESSAGE = "message"
         LETTER = "letter"
@@ -161,6 +163,8 @@ class NoteType(models.Model):
 
 
 class Note(models.Model):
+    """Note."""
+
     class NoteType:
         MESSAGE = "message"
         LETTER = "letter"

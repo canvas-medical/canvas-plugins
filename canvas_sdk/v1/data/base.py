@@ -93,12 +93,17 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
             ),
         )
 
+
 class TimeframeLookupQuerySet(models.QuerySet):
+    """A class that adds queryset functionality to filter using timeframes."""
+
     @property
-    def timeframe_filter_field(self):
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on. Can be overridden for different models."""
         return "note__datetime_of_service"
 
     def within(self, timeframe: "Timeframe") -> models.QuerySet:
+        """A method to filter a queryset for datetimes within a timeframe."""
         return self.filter(
             **{
                 f"{self.timeframe_filter_field}__range": (

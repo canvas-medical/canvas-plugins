@@ -12,16 +12,21 @@ if TYPE_CHECKING:
 
 
 class BillingLineItemQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySet):
+    """A class that adds functionality to filter BillingLineItem objects."""
+
     def find(self, value_set: Type["ValueSet"]) -> models.QuerySet:
         """
-        This method is overridden to use for BillingLineItem CPT codes. The codes are saved as
-        string values in the BillingLineItem.cpt field, which differs from other coding models.
+        This method is overridden to use for BillingLineItem CPT codes.
+        The codes are saved as string values in the BillingLineItem.cpt field,
+        which differs from other coding models.
         """
         values_dict = value_set.values
         return self.filter(cpt__in=values_dict.get(CodeConstants.HCPCS, []))
 
 
 class BillingLineItem(models.Model):
+    """BillingLineItem."""
+
     class BillingLineItemStatus:
         ACTIVE = "active"
         REMOVED = "removed"
