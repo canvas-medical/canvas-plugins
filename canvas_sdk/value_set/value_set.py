@@ -1,8 +1,5 @@
 from collections import defaultdict
-from collections.abc import Container
 from typing import Dict, Union, cast
-
-from django.db.models import Q
 
 
 class CodeConstants:
@@ -106,13 +103,3 @@ class ValueSet(CodeConstantsURLMapping, metaclass=ValueSystems):
     """The Base class for a ValueSet."""
 
     values: dict[str, set]
-
-    @staticmethod
-    def q_object(system: str, codes: Container[str]) -> Q:
-        """
-        Provide the Django Q object for the ValueSet query.
-
-        This method can be overridden if a Q object with different filtering options is needed for a
-        particular ValueSet.
-        """
-        return Q(codings__system=system, codings__code__in=codes)

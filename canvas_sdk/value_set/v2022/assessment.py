@@ -1,18 +1,7 @@
-from typing import Container
-
-from django.db.models import Q
-
 from ..value_set import ValueSet
 
 
-class AssessmentValueSet(ValueSet):
-    @staticmethod
-    def q_object(system: str, codes: Container[str]) -> Q:
-        """The code system and code values for a Questionnaire are just attributes on the model."""
-        return Q(code_system=system, code__in=codes)
-
-
-class TobaccoUseScreening(AssessmentValueSet):
+class TobaccoUseScreening(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments to screen for tobacco use.
 
@@ -38,7 +27,7 @@ class TobaccoUseScreening(AssessmentValueSet):
     }
 
 
-class FallsScreening(AssessmentValueSet):
+class FallsScreening(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments using a falls screening tool.
 
@@ -64,7 +53,7 @@ class FallsScreening(AssessmentValueSet):
     }
 
 
-class StandardizedToolsForAssessmentOfCognition(AssessmentValueSet):
+class StandardizedToolsForAssessmentOfCognition(ValueSet):
     """
         **Clinical Focus:** The purpose of this value set is to define concepts for assessments representing total score results for standardized tools used for the evaluation of cognition.
 
@@ -103,7 +92,7 @@ class StandardizedToolsForAssessmentOfCognition(AssessmentValueSet):
     }
 
 
-class SexuallyActive(AssessmentValueSet):
+class SexuallyActive(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments to indicate vaginal intercourse.
 
@@ -126,7 +115,7 @@ class SexuallyActive(AssessmentValueSet):
     }
 
 
-class StandardizedPainAssessmentTool(AssessmentValueSet):
+class StandardizedPainAssessmentTool(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments using pain-focused tools or instruments to quantify pain intensity.
 
@@ -153,7 +142,7 @@ class StandardizedPainAssessmentTool(AssessmentValueSet):
     }
 
 
-class Phq9AndPhq9MTools(AssessmentValueSet):
+class Phq9AndPhq9MTools(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for the assessments of PHQ 9 and PHQ 9M resulting in a completed depression assessment scores for adults and adolescents.
 
@@ -177,7 +166,7 @@ class Phq9AndPhq9MTools(AssessmentValueSet):
     }
 
 
-class AverageNumberOfDrinksPerDrinkingDay(AssessmentValueSet):
+class AverageNumberOfDrinksPerDrinkingDay(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments measuring the number of alcoholic drinks per drinking day.
 
@@ -200,7 +189,7 @@ class AverageNumberOfDrinksPerDrinkingDay(AssessmentValueSet):
     }
 
 
-class HistoryOfHipFractureInParent(AssessmentValueSet):
+class HistoryOfHipFractureInParent(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for H145 assessments of a family history of hip fracture in a parent.
 

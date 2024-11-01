@@ -1,4 +1,7 @@
+from collections.abc import Container
+
 from django.db import models
+from django.db.models import Q
 
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.base import (
@@ -72,6 +75,15 @@ class Question(models.Model):
     code = models.CharField()
 
 
+class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
+    """QuerySet class for Questionaire ValueSet lookups."""
+
+    @staticmethod
+    def q_object(system: str, codes: Container[str]) -> Q:
+        """The code system and code values for a Questionnaire are just attributes on the model."""
+        return Q(code_system=system, code__in=codes)
+
+
 class Questionnaire(models.Model):
     """Questionnaire."""
 
@@ -80,7 +92,7 @@ class Questionnaire(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnaire_001"
 
-    objects = models.Manager.from_queryset(ValueSetLookupByNameQuerySet)()
+    objects = models.Manager.from_queryset(QuestionnaireValueSetLookupQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
