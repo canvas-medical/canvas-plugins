@@ -27,11 +27,9 @@ class BillingLineItemQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySet):
 class BillingLineItem(models.Model):
     """BillingLineItem."""
 
-    class BillingLineItemStatus:
-        ACTIVE = "active"
-        REMOVED = "removed"
-
-        CHOICES = {ACTIVE: "Active", REMOVED: "Removed"}
+    class BillingLineItemStatus(models.TextChoices):
+        ACTIVE = "active", "Active"
+        REMOVED = "removed", "Removed"
 
     class Meta:
         managed = False
@@ -55,4 +53,4 @@ class BillingLineItem(models.Model):
     units = models.IntegerField()
     command_type = models.CharField()
     command_id = models.IntegerField()
-    status = models.CharField(choices=BillingLineItemStatus.CHOICES)
+    status = models.CharField(choices=BillingLineItemStatus)
