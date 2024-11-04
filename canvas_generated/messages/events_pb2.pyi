@@ -560,6 +560,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_CHART__CONDITIONS: _ClassVar[EventType]
     PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION: _ClassVar[EventType]
     CLAIM__CONDITIONS: _ClassVar[EventType]
+    PLUGIN_CREATED: _ClassVar[EventType]
+    PLUGIN_UPDATED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1111,6 +1113,8 @@ VITALS_COMMAND__POST_EXECUTE_ACTION: EventType
 PATIENT_CHART__CONDITIONS: EventType
 PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION: EventType
 CLAIM__CONDITIONS: EventType
+PLUGIN_CREATED: EventType
+PLUGIN_UPDATED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context")
