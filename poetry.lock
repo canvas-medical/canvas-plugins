@@ -592,6 +592,21 @@ files = [
 ]
 
 [[package]]
+name = "configparser"
+version = "7.1.0"
+description = "Updated configparser from stdlib for earlier Pythons."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "configparser-7.1.0-py3-none-any.whl", hash = "sha256:98e374573c4e10e92399651e3ba1c47a438526d633c44ee96143dec26dad4299"},
+    {file = "configparser-7.1.0.tar.gz", hash = "sha256:eb82646c892dbdf773dae19c633044d163c3129971ae09b49410a303b8e0a5f7"},
+]
+
+[package.extras]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+test = ["pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "types-backports"]
+
+[[package]]
 name = "cookiecutter"
 version = "2.6.0"
 description = "A command-line utility that creates projects from project templates, e.g. creating a Python package project from a Python package project template."
@@ -772,6 +787,21 @@ files = [
 
 [package.dependencies]
 setuptools_scm = "*"
+
+[[package]]
+name = "env-tools"
+version = "2.2.0"
+description = "Tools for using .env files in Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "env-tools-2.2.0.tar.gz", hash = "sha256:036e2b14218e71be921ec6328bc057d202fa42f25ee96d95ab15d1912014fd41"},
+    {file = "env_tools-2.2.0-py2.py3-none-any.whl", hash = "sha256:3fc368c6bed89c53dc00ef80b7742cf4510d572f4a7bd5f6f481d859e5ac6a9c"},
+]
+
+[package.dependencies]
+six = ">=1.2.0"
+tini = ">=3.0.1"
 
 [[package]]
 name = "executing"
@@ -2189,6 +2219,24 @@ pluggy = ">=1.5,<2"
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
 
 [[package]]
+name = "pytest-asyncio"
+version = "0.24.0"
+description = "Pytest support for asyncio"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest_asyncio-0.24.0-py3-none-any.whl", hash = "sha256:a811296ed596b69bf0b6f3dc40f83bcaf341b155a269052d82efa2b25ac7037b"},
+    {file = "pytest_asyncio-0.24.0.tar.gz", hash = "sha256:d081d828e576d85f875399194281e92bf8a68d60d72d1a2faf2feddb6c46b276"},
+]
+
+[package.dependencies]
+pytest = ">=8.2,<9"
+
+[package.extras]
+docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
+testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)"]
+
+[[package]]
 name = "pytest-mock"
 version = "3.14.0"
 description = "Thin-wrapper around the mock package for easier use with pytest"
@@ -2750,6 +2798,21 @@ files = [
 ]
 
 [[package]]
+name = "tini"
+version = "3.0.1"
+description = "Read simple .ini/configuration files."
+optional = false
+python-versions = "*"
+files = [
+    {file = "tini-3.0.1-py2.py3-none-any.whl", hash = "sha256:8062be51e6766c15ec402579fff422d8c2fb46bdb3f0b22bd009f32d8dd79c81"},
+    {file = "tini-3.0.1.tar.gz", hash = "sha256:f856780a90e7a3cdf3aaea56cb8c176fc5f4f8e1d126362cb88ca104f835d99f"},
+]
+
+[package.dependencies]
+configparser = ">=3.5.0b2"
+six = ">=1.9.0"
+
+[[package]]
 name = "tomlkit"
 version = "0.12.3"
 description = "Style preserving TOML library"
@@ -3125,4 +3188,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "7a5aacbc31ae23578a2de07fe54ed17e7ce6a75e973e0a58f4695747b03ee390"
+content-hash = "bb8fd414387d12fc6ebac38ca8a4cb6bcb66a791a069a4d193fcfcca52359ce3"

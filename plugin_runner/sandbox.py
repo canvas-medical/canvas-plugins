@@ -75,12 +75,6 @@ def _is_known_module(name: str) -> bool:
     return any(name.startswith(m) for m in ALLOWED_MODULES)
 
 
-def _safe_import(name: str, *args: Any, **kwargs: Any) -> Any:
-    if not _is_known_module(name):
-        raise ImportError(f"{name!r} is not an allowed import.")
-    return __import__(name, *args, **kwargs)
-
-
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
     return _ob
@@ -96,6 +90,7 @@ class Sandbox:
 
     source_code: str
     namespace: str
+    module_name: str | None
 
     class Transformer(RestrictingNodeTransformer):
         """A node transformer for customizing the sandbox compiler."""
@@ -204,11 +199,19 @@ class Sandbox:
                 # Impossible Case only ctx Load, Store and Del are defined in ast.
                 raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
 
-    def __init__(self, source_code: str, namespace: str | None = None) -> None:
+    def __init__(
+        self, source_code: str, namespace: str | None = None, module_name: str | None = None
+    ) -> None:
         if source_code is None:
             raise TypeError("source_code may not be None")
+        self.module_name = module_name
         self.namespace = namespace or "protocols"
         self.source_code = source_code
+
+    @cached_property
+    def package_name(self) -> str | None:
+        """Return the root package name."""
+        return self.module_name.split(".")[0] if self.module_name else None
 
     @cached_property
     def scope(self) -> dict[str, Any]:
@@ -217,7 +220,7 @@ class Sandbox:
             "__builtins__": {
                 **safe_builtins.copy(),
                 **utility_builtins.copy(),
-                "__import__": _safe_import,
+                "__import__": self._safe_import,
                 "classmethod": builtins.classmethod,
                 "staticmethod": builtins.staticmethod,
                 "any": builtins.any,
@@ -262,6 +265,16 @@ class Sandbox:
     def warnings(self) -> tuple[str, ...]:
         """Return warnings encountered when compiling the source code."""
         return cast(tuple[str, ...], self.compile_result.warnings)
+
+    def _is_known_module(self, name: str) -> bool:
+        return _is_known_module(name) or (
+            self.package_name and name.split(".")[0] == self.package_name
+        )
+
+    def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        if not (self._is_known_module(name)):
+            raise ImportError(f"{name!r} is not an allowed import.")
+        return __import__(name, *args, **kwargs)
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""

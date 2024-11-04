@@ -60,6 +60,7 @@ cookiecutter = "*"
 cron-converter = "^1.2.1"
 django = "^5.1.1"
 django-stubs = {extras = ["compatible-mypy"], version = "^5.1.1"}
+env-tools = "^2.2.0"
 gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
@@ -85,6 +86,7 @@ grpcio-tools = "^1.60.1"
 mypy = "*"
 pre-commit = "*"
 pytest = "*"
+pytest-asyncio = "^0.24.0"
 pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
@@ -108,6 +110,7 @@ convention = "google"
 
 [tool.pytest.ini_options]
 addopts = "--durations=10"
+asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
   'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
