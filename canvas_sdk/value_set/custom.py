@@ -13,6 +13,7 @@ class Hcc005v1AnnualWellnessVisit(ValueSet):
         "99387",
         "99397",
     }
+<<<<<<< HEAD
 
 
 class DysrhythmiaClassConditionSuspect(ValueSet):
@@ -50,3 +51,5 @@ class Antiarrhythmics(ValueSet):
         "564460", "565068", "565069", "573523", "583982", "583982", "583985", "583985", "590326",
         "590375", "590376", "591479", "592349", "592421", "594710", "594714"
     }
+=======
+>>>>>>> 6c2acae (feat: adds functionality for the hcc annual wellness visit protocol to be a plugin (#177))
