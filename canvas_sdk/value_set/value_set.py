@@ -8,6 +8,7 @@ class CodeConstants:
     """A class representing different code systems and their URLs."""
 
     CPT = "CPT"
+    HCPCS = "HCPCS"
     HCPCSLEVELII = "HCPCSLEVELII"
     CVX = "CVX"
     LOINC = "LOINC"
@@ -22,6 +23,7 @@ class CodeConstants:
     NDC = "NDC"
 
     URL_CPT = "http://www.ama-assn.org/go/cpt"
+    URL_HCPCS = "http://www.cms.gov/medicare/coding/medhcpcsgeninfo"
     URL_HCPCSLEVELII = "https://coder.aapc.com/hcpcs-codes"
     URL_CVX = "http://hl7.org/fhir/sid/cvx"
     URL_LOINC = "http://loinc.org"
@@ -40,6 +42,7 @@ class CodeConstantsURLMappingMixin:
 
     CODE_SYSTEM_MAPPING = {
         CodeConstants.CPT: CodeConstants.URL_CPT,
+        CodeConstants.HCPCS: CodeConstants.URL_HCPCS,
         CodeConstants.HCPCSLEVELII: CodeConstants.URL_HCPCSLEVELII,
         CodeConstants.CVX: CodeConstants.URL_CVX,
         CodeConstants.LOINC: CodeConstants.URL_LOINC,

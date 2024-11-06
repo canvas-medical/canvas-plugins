@@ -1,6 +1,9 @@
 from typing import Any
 
+import arrow
+
 from canvas_sdk.protocols.base import BaseProtocol
+from canvas_sdk.protocols.timeframe import Timeframe
 
 
 class ClinicalQualityMeasure(BaseProtocol):
@@ -41,3 +44,17 @@ class ClinicalQualityMeasure(BaseProtocol):
         External key used to identify the protocol.
         """
         return cls.__name__
+
+    @property
+    def timeframe(self) -> Timeframe:
+        """The default Timeframe (self.timeframe) for all protocols.
+        This defaults to have a start of 1 year ago and an end time of the current time.
+        Plugin authors can override this if a different timeframe is desired.
+        """
+        end = self.now
+        return Timeframe(start=end.shift(years=-1), end=end)
+
+    @property
+    def now(self) -> arrow.Arrow:
+        """A convenience method for returning the current datetime."""
+        return arrow.utcnow()
