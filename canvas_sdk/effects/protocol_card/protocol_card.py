@@ -51,6 +51,7 @@ class ProtocolCard(_BaseEffect):
     recommendations: list[Recommendation] = []
     status: Status = Status.DUE
     feedback_enabled: bool = False
+    due_in: int = -1
 
     @property
     def values(self) -> dict[str, Any]:
@@ -63,6 +64,7 @@ class ProtocolCard(_BaseEffect):
             ],
             "status": self.status.value,
             "feedback_enabled": self.feedback_enabled,
+            "due_in": self.due_in,
         }
 
     @property

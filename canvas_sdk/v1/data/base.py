@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q
 
 if TYPE_CHECKING:
+    from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -90,4 +91,24 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
                 for i in value_set.CODE_SYSTEM_MAPPING.items()
                 if i[0] in values_dict
             ),
+        )
+
+
+class TimeframeLookupQuerySet(models.QuerySet):
+    """A class that adds queryset functionality to filter using timeframes."""
+
+    @property
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on. Can be overridden for different models."""
+        return "note__datetime_of_service"
+
+    def within(self, timeframe: "Timeframe") -> models.QuerySet:
+        """A method to filter a queryset for datetimes within a timeframe."""
+        return self.filter(
+            **{
+                f"{self.timeframe_filter_field}__range": (
+                    timeframe.start.datetime,
+                    timeframe.end.datetime,
+                )
+            }
         )
