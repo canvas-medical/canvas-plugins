@@ -35,7 +35,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         super().__init__(*args, **kwargs)
 
     def __init__(self, *args: Any, **kwargs: Any):
-        self.patient_id: str | None = None
+        self._patient_id: str | None = None
         super().__init__(*args, **kwargs)
 
     @classmethod
