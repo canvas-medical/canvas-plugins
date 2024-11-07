@@ -48,6 +48,7 @@ ALLOWED_MODULES = frozenset(
         "contextlib",
         "datetime",
         "dateutil",
+        "django.db.models",
         "enum",
         "functools",
         "hashlib",
