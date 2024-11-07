@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import (
     CommittableModelManager,
@@ -7,6 +8,16 @@ from canvas_sdk.v1.data.base import (
 )
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
+
+
+class ClinicalStatus(TextChoices):
+    """Condition clinical status."""
+
+    ACTIVE = "active", "active"
+    RELAPSE = "relapse", "relapse"
+    REMISSION = "remission", "remission"
+    RESOLVED = "resolved", "resolved"
+    INVESTIGATIVE = "investigative", "investigative"
 
 
 class ConditionQuerySet(ValueSetLookupQuerySet):
@@ -29,6 +40,7 @@ class Condition(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     onset_date = models.DateField()
     resolution_date = models.DateField()
+    clinical_status = models.CharField(choices=ClinicalStatus.choices)
     deleted = models.BooleanField()
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
