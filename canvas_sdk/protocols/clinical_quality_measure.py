@@ -31,7 +31,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         is_predictive: bool = False
 
     def __init__(self, *args: Any, **kwargs: Any):
-        self.patient_id: str | None = None
+        self._patient_id: str | None = None
         super().__init__(*args, **kwargs)
 
     @classmethod
@@ -69,9 +69,9 @@ class ClinicalQualityMeasure(BaseProtocol):
 
     # TODO: This approach should be considered against the alternative of just including the patient
     #  ID in the event context, given that so many events will be patient-centric.
-    def set_patient_id(self) -> None:
+    def patient_id_from_target(self) -> str:
         """
-        Set the patient ID based on the event target.
+        Get and return the patient ID from an event target.
 
         This method will attempt to obtain the patient ID from the event target for supported event
         types. It stores the patient ID on a member variable so that it can be referenced without
@@ -86,13 +86,18 @@ class ClinicalQualityMeasure(BaseProtocol):
                 .get(id=self.event.target)[0],
             )
 
-        # TODO: Add cases for ProtocolOverride
-        match self.event.type:
-            case EventType.CONDITION_CREATED | EventType.CONDITION_UPDATED:
-                self.patient_id = patient_id(Condition)
-            case EventType.MEDICATION_LIST_ITEM_CREATED | EventType.MEDICATION_LIST_ITEM_UPDATED:
-                self.patient_id = patient_id(Medication)
-            case _:
-                raise AssertionError(
-                    f"Event type {self.event.type} not supported by 'patient_id_from_event'"
-                )
+        if not self._patient_id:
+            # TODO: Add cases for ProtocolOverride
+            match self.event.type:
+                case EventType.CONDITION_CREATED | EventType.CONDITION_UPDATED:
+                    self._patient_id = patient_id(Condition)
+                case (
+                    EventType.MEDICATION_LIST_ITEM_CREATED | EventType.MEDICATION_LIST_ITEM_UPDATED
+                ):
+                    self._patient_id = patient_id(Medication)
+                case _:
+                    raise AssertionError(
+                        f"Event type {self.event.type} not supported by 'patient_id_from_event'"
+                    )
+
+        return self._patient_id
