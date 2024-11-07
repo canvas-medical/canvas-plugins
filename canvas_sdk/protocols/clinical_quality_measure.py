@@ -1,9 +1,13 @@
-from typing import Any
+from typing import Any, cast
 
 import arrow
+from django.db.models import Model
 
+from canvas_sdk.events import EventType
 from canvas_sdk.protocols.base import BaseProtocol
 from canvas_sdk.protocols.timeframe import Timeframe
+from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.medication import Medication
 
 
 class ClinicalQualityMeasure(BaseProtocol):
@@ -25,6 +29,10 @@ class ClinicalQualityMeasure(BaseProtocol):
         can_be_snoozed: bool = True
         is_abstract: bool = False
         is_predictive: bool = False
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.patient_id: str | None = None
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def _meta(cls) -> dict[str, Any]:
@@ -58,3 +66,33 @@ class ClinicalQualityMeasure(BaseProtocol):
     def now(self) -> arrow.Arrow:
         """A convenience method for returning the current datetime."""
         return arrow.utcnow()
+
+    # TODO: This approach should be considered against the alternative of just including the patient
+    #  ID in the event context, given that so many events will be patient-centric.
+    def set_patient_id(self) -> None:
+        """
+        Set the patient ID based on the event target.
+
+        This method will attempt to obtain the patient ID from the event target for supported event
+        types. It stores the patient ID on a member variable so that it can be referenced without
+        incurring more SQL queries.
+        """
+
+        def patient_id(model: type[Model]) -> str:
+            return cast(
+                str,
+                model.objects.select_related("patient")
+                .values_list("patient__id")
+                .get(id=self.event.target)[0],
+            )
+
+        # TODO: Add cases for ProtocolOverride
+        match self.event.type:
+            case EventType.CONDITION_CREATED | EventType.CONDITION_UPDATED:
+                self.patient_id = patient_id(Condition)
+            case EventType.MEDICATION_LIST_ITEM_CREATED | EventType.MEDICATION_LIST_ITEM_UPDATED:
+                self.patient_id = patient_id(Medication)
+            case _:
+                raise AssertionError(
+                    f"Event type {self.event.type} not supported by 'patient_id_from_event'"
+                )
