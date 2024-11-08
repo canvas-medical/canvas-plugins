@@ -6,6 +6,7 @@ from typing import Any, Generator
 
 import pytest
 import requests
+from django.core.exceptions import ImproperlyConfigured
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
@@ -49,10 +50,14 @@ def plugin_name() -> str:
     return f"addbanneralert{datetime.now().timestamp()}".replace(".", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def write_and_install_protocol_and_clean_up(
     first_patient_id: str, plugin_name: str, token: MaskedValue
 ) -> Generator[Any, Any, Any]:
+
+    if not settings.INTEGRATION_TEST_URL:
+        raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
+
     # write the protocol
     with chdir(Path("./custom-plugins")):
         runner.invoke(app, "init", input=plugin_name)
@@ -122,7 +127,10 @@ class Protocol(BaseProtocol):
 
 @pytest.mark.integtest
 def test_protocol_that_adds_banner_alert(
-    token: MaskedValue, plugin_name: str, first_patient_id: str
+    write_and_install_protocol_and_clean_up: None,
+    token: MaskedValue,
+    plugin_name: str,
+    first_patient_id: str,
 ) -> None:
     # trigger the event
     requests.post(
@@ -180,7 +188,7 @@ def test_protocol_that_adds_banner_alert(
     ],
 )
 def test_banner_alert_apply_method_succeeds_with_all_required_fields(
-    Effect: AddBannerAlert | RemoveBannerAlert, params: dict, expected_payload: str
+    Effect: type[AddBannerAlert] | type[RemoveBannerAlert], params: dict, expected_payload: str
 ) -> None:
     b = Effect()
     for k, v in params.items():
@@ -214,7 +222,7 @@ def test_banner_alert_apply_method_succeeds_with_all_required_fields(
     ],
 )
 def test_banner_alert_apply_method_raises_error_without_required_fields(
-    Effect: AddBannerAlert | RemoveBannerAlert, expected_err_msgs: str
+    Effect: type[AddBannerAlert] | type[RemoveBannerAlert], expected_err_msgs: str
 ) -> None:
     b = Effect()
     with pytest.raises(ValidationError) as e:

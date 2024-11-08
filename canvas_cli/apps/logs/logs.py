@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, cast
 from urllib.parse import urlparse
 
 import typer
@@ -8,7 +8,7 @@ import websocket
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 
 
-def _on_message(ws: websocket.WebSocketApp, message: str) -> None:
+def _on_message(ws: websocket.WebSocket, message: str) -> None:
     message_to_print = message
     try:
         message_json = json.loads(message)
@@ -18,15 +18,15 @@ def _on_message(ws: websocket.WebSocketApp, message: str) -> None:
     print(message_to_print)
 
 
-def _on_error(ws: websocket.WebSocketApp, error: str) -> None:
+def _on_error(ws: websocket.WebSocket, error: str) -> None:
     print(f"Error: {error}")
 
 
-def _on_close(ws: websocket.WebSocketApp, close_status_code: str, close_msg: str) -> None:
+def _on_close(ws: websocket.WebSocket, close_status_code: str, close_msg: str) -> None:
     print(f"Connection closed with status code {close_status_code}: {close_msg}")
 
 
-def _on_open(ws: websocket.WebSocketApp) -> None:
+def _on_open(ws: websocket.WebSocket) -> None:
     print("Connected to the logging service")
 
 
@@ -43,7 +43,7 @@ def logs(
 
     # Resolve the instance name from the Canvas host URL (e.g., extract
     # 'example' from 'https://example.canvasmedical.com/')
-    hostname = urlparse(host).hostname
+    hostname = cast(str, urlparse(host).hostname)
     instance = hostname.removesuffix(".canvasmedical.com")
 
     print(

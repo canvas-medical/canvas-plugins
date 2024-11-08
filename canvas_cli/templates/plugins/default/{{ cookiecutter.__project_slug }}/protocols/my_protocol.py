@@ -17,7 +17,7 @@ class Protocol(BaseProtocol):
 
     NARRATIVE_STRING = "I was inserted from my plugin's protocol."
 
-    def compute(self):
+    def compute(self) -> list[Effect]:
         """
         This method gets called when an event of the type RESPONDS_TO is fired.
         """

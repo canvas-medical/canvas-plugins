@@ -79,7 +79,7 @@ runner = CliRunner()
     ],
 )
 def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
-    Command: _BaseCommand,
+    Command: type[_BaseCommand],
     fields_to_test: tuple[str],
 ) -> None:
     for field in fields_to_test:
@@ -179,7 +179,7 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     ],
 )
 def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
-    Command: PlanCommand | ReasonForVisitCommand,
+    Command: type[PlanCommand] | type[ReasonForVisitCommand],
     err_kwargs: dict,
     err_msg: str,
     valid_kwargs: dict,
@@ -255,7 +255,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     ],
 )
 def test_command_allows_kwarg_with_correct_type(
-    Command: _BaseCommand,
+    Command: type[_BaseCommand],
     fields_to_test: tuple[str],
 ) -> None:
     schema = Command.model_json_schema()
