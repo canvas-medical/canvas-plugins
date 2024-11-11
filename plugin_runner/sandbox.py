@@ -113,7 +113,7 @@ class Sandbox:
             => 'from _a import x' is ok, because '_a' is not added to the scope.
             """
             for name in node.names:
-                if "*" in name.name and not _is_known_module(node.module):
+                if "*" in name.name and node.module and not _is_known_module(node.module):
                     self.error(node, '"*" imports are not allowed.')
                 self.check_name(node, name.name)
                 if name.asname:

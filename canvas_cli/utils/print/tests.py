@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -10,9 +11,7 @@ from canvas_cli.utils.print import print
 @pytest.mark.parametrize(
     "message", ["a simple message", ["an array", "of messages"], {"one": "test"}]
 )
-def test_print_json_outputs_valid_json(
-    message: str | list[str] | dict | None, capfd: pytest.CaptureFixture[str]
-) -> None:
+def test_print_json_outputs_valid_json(message: Any, capfd: pytest.CaptureFixture[str]) -> None:
     """Test the output of print is always valid json."""
     print.json(message)
     output, _ = capfd.readouterr()

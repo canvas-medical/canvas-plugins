@@ -1,11 +1,10 @@
-import pytest
-
 from canvas_sdk.value_set.v2022.condition import (
     DisordersOfTheImmuneSystem,
     EncephalopathyDueToChildhoodVaccination,
     Rhabdomyolysis,
     StableAndUnstableAngina,
 )
+from canvas_sdk.value_set.value_set import CombinedValueSet
 
 
 def test_value_set_class_values_property() -> None:
@@ -15,7 +14,9 @@ def test_value_set_class_values_property() -> None:
 
 
 def test_value_set_class_pipe_operator_with_two_value_sets() -> None:
-    combined_value_set = DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
+    combined_value_set: CombinedValueSet = (
+        DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
+    )
 
     both_classes_icd_10_codes = DisordersOfTheImmuneSystem.ICD10CM.union(
         EncephalopathyDueToChildhoodVaccination.ICD10CM
@@ -29,7 +30,7 @@ def test_value_set_class_pipe_operator_with_two_value_sets() -> None:
 
 
 def test_value_set_class_pipe_operator_with_three_value_sets() -> None:
-    combined_value_set = (
+    combined_value_set: CombinedValueSet = (
         DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination | Rhabdomyolysis
     )
 
@@ -45,8 +46,10 @@ def test_value_set_class_pipe_operator_with_three_value_sets() -> None:
 
 
 def test_value_set_class_pipe_operator_with_two_combined_value_sets() -> None:
-    combined_value_set_1 = DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
-    combined_value_set_2 = Rhabdomyolysis | StableAndUnstableAngina
+    combined_value_set_1: CombinedValueSet = (
+        DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
+    )
+    combined_value_set_2: CombinedValueSet = Rhabdomyolysis | StableAndUnstableAngina
 
     combined_value_set = combined_value_set_1 | combined_value_set_2
 

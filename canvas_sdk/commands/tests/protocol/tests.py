@@ -31,10 +31,10 @@ def plugin_name() -> str:
     return f"commands{datetime.now().timestamp()}".replace(".", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def write_and_install_protocol_and_clean_up(
     plugin_name: str, token: MaskedValue, new_note: dict
-) -> Generator[Any, Any, Any]:
+) -> Generator[None, None, None]:
     write_protocol_code(new_note["externallyExposableId"], plugin_name, COMMANDS)
     install_plugin(plugin_name, token)
 
@@ -44,7 +44,9 @@ def write_and_install_protocol_and_clean_up(
 
 
 @pytest.mark.integtest
-def test_protocol_that_inserts_every_command(token: MaskedValue, new_note: dict) -> None:
+def test_protocol_that_inserts_every_command(
+    write_and_install_protocol_and_clean_up: None, token: MaskedValue, new_note: dict
+) -> None:
     trigger_plugin_event(token)
 
     commands_in_body = get_original_note_body_commands(new_note["id"], token)

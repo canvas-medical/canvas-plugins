@@ -43,7 +43,7 @@ def emit(
     myline = random.choice(lines)
     event_data = json.loads(myline)
     event = PluginRunnerEvent(
-        type=PluginRunnerEventType.Value(event_data["EventType"]),
+        type=event_data["EventType"],
         target=event_data["target"],
         context=event_data["context"],
     )

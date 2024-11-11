@@ -9,7 +9,7 @@ import time
 import traceback
 from collections import defaultdict
 from types import FrameType
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional, TypedDict, cast
 
 import grpc
 import statsd
@@ -54,6 +54,49 @@ LOADED_PLUGINS: dict = {}
 EVENT_PROTOCOL_MAP: dict = {}
 
 
+class DataAccess(TypedDict):
+    """DataAccess."""
+
+    event: str
+    read: list[str]
+    write: list[str]
+
+
+Protocol = TypedDict(
+    "Protocol",
+    {
+        "class": str,
+        "data_access": DataAccess,
+    },
+)
+
+
+class Components(TypedDict):
+    """Components."""
+
+    protocols: list[Protocol]
+    commands: list[dict]
+    content: list[dict]
+    effects: list[dict]
+    views: list[dict]
+
+
+class PluginManifest(TypedDict):
+    """PluginManifest."""
+
+    sdk_version: str
+    plugin_version: str
+    name: str
+    description: str
+    components: Components
+    secrets: list[dict]
+    tags: dict[str, str]
+    references: list[str]
+    license: str
+    diagram: bool
+    readme: str
+
+
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -63,7 +106,9 @@ class PluginRunner(PluginRunnerServicer):
 
     sandbox: Sandbox
 
-    async def HandleEvent(self, request: Event, context: Any) -> EventResponse:
+    async def HandleEvent(
+        self, request: Event, context: Any
+    ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
         event_name = EventType.Name(request.type)
@@ -129,7 +174,7 @@ class PluginRunner(PluginRunnerServicer):
 
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
-    ) -> ReloadPluginsResponse:
+    ) -> AsyncGenerator[ReloadPluginsResponse, None]:
         """This is invoked when we need to reload plugins."""
         try:
             load_plugins()
@@ -166,13 +211,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     log.info(f"Loading {path}")
 
     manifest_file = path / MANIFEST_FILE_NAME
-    manifest_json = manifest_file.read_text()
+    manifest_json_str = manifest_file.read_text()
 
     # the name is the folder name underneath the plugins directory
     name = path.name
 
     try:
-        manifest_json = json.loads(manifest_json)
+        manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {e}')
         return
@@ -265,7 +310,7 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             # when we import plugins we'll use the module name directly so we need to add the plugin
             # directory to the path
             path_to_append = pathlib.Path(".") / plugin_path.parent
-            sys.path.append(path_to_append)
+            sys.path.append(path_to_append.as_posix())
     else:
         candidates = os.listdir(PLUGIN_DIRECTORY)
 
