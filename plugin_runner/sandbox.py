@@ -267,8 +267,9 @@ class Sandbox:
         return cast(tuple[str, ...], self.compile_result.warnings)
 
     def _is_known_module(self, name: str) -> bool:
-        return _is_known_module(name) or (
-            self.package_name and name.split(".")[0] == self.package_name
+        return bool(
+            _is_known_module(name)
+            or (self.package_name and name.split(".")[0] == self.package_name)
         )
 
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
