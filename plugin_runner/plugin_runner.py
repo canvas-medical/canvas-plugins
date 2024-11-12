@@ -111,8 +111,14 @@ class PluginRunner(PluginRunnerServicer):
     ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
-        event_name = EventType.Name(request.type)
+        event_type = request.type
+        event_name = EventType.Name(event_type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
+
+        if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
+            plugin_name = request.target
+            # filter only for the plugin(s) that were created/updated
+            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
 
