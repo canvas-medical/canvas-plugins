@@ -37,7 +37,7 @@ class LabReport(models.Model):
     patient = models.ForeignKey(
         Patient, on_delete=models.DO_NOTHING, related_name="lab_reports", null=True
     )
-    transmission_type = models.CharField(choices=TransmissionType.CHOICES)
+    transmission_type = models.CharField(choices=TransmissionType)
     for_test_only = models.BooleanField()
     external_id = models.CharField()
     version = models.IntegerField()
