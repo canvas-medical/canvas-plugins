@@ -5,6 +5,9 @@ requires = ["poetry-core"]
 [tool.black]
 line-length = 100
 
+[tool.django-stubs]
+django_settings_module = "settings"
+
 [tool.isort]
 profile = "black"
 
@@ -16,14 +19,19 @@ disallow_untyped_calls = true
 disallow_untyped_decorators = false
 disallow_untyped_defs = true
 error_summary = true
-follow_imports = "skip"
+exclude = [
+  "canvas_generated/"
+]
+follow_imports = "normal"
 follow_imports_for_stubs = true
 ignore_missing_imports = true
 no_implicit_optional = true
+plugins = ["mypy_django_plugin.main", "pydantic.mypy"]
 pretty = true
 show_error_context = true
 strict_equality = true
 strict_optional = true
+untyped_calls_exclude = ["canvas_generated", "redis"] # https://github.com/python/typeshed/issues/10592
 warn_no_return = true
 warn_redundant_casts = true
 warn_return_any = false
@@ -40,15 +48,18 @@ packages = [
   {include = "canvas_generated"},
   {include = "canvas_sdk"},
   {include = "logger"},
+  {include = "plugin_runner"},
+  {include = "pubsub"},
   {include = "settings.py"}
 ]
 readme = "README.md"
-version = "0.2.11"
+version = "0.3.1"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
 cron-converter = "^1.2.1"
 django = "^5.1.1"
+django-stubs = {extras = ["compatible-mypy"], version = "^5.1.1"}
 gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
@@ -78,7 +89,6 @@ pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
 types-protobuf = "*"
-types-redis = "*"
 types-requests = "*"
 
 [tool.poetry.scripts]
@@ -87,6 +97,10 @@ canvas = "canvas_cli.main:app"
 [[tool.poetry.source]]
 name = "PyPI"
 priority = "primary"
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
 
 [tool.pydocstyle]
 add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
@@ -99,7 +113,7 @@ filterwarnings = [
   'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
 ]
 markers = [
-  'integration: mark a test as being an integration test with external dependencies'
+  'integtest: mark a test as being an integration test with external dependencies'
 ]
 norecursedirs = [
   ".git",

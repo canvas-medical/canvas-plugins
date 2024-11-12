@@ -3,7 +3,7 @@ import json
 import tarfile
 import tempfile
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
@@ -50,7 +50,7 @@ def _build_package(package: Path) -> Path:
         return Path(file.name)
 
 
-def _get_name_from_metadata(host: str, token: str, package: Path) -> Optional[str]:
+def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
     """Extract metadata from a provided package and return the package name if it exists in the metadata."""
     try:
         metadata_response = requests.post(
@@ -100,7 +100,14 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
         if isinstance(meta_b.value, ast.Constant):
             value = meta_b.value.value
         elif isinstance(meta_b.value, ast.List):
-            value = [e.value for e in meta_b.value.elts]
+            value = [cast(ast.Constant, e).value for e in meta_b.value.elts]
+        elif isinstance(meta_b.value, ast.Dict):
+            keys = meta_b.value.keys
+            values = meta_b.value.values
+            value = {
+                cast(ast.Constant, k).value: cast(ast.Constant, values[i]).value
+                for i, k in enumerate(keys)
+            }
         else:
             value = None
         meta[target_id] = value
@@ -189,9 +196,10 @@ def install(
 
     # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
-    elif r.status_code == requests.codes.bad_request:
-        plugin_name = _get_name_from_metadata(host, token, built_package_path)
-        update(plugin_name, built_package_path, is_enabled=True, host=host)
+    elif r.status_code == requests.codes.bad_request and (
+        package_name := _get_name_from_metadata(host, token, built_package_path)
+    ):
+        update(package_name, built_package_path, is_enabled=True, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)

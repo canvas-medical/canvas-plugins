@@ -1,10 +1,109 @@
 # CHANGELOG
 
 
+## v0.3.1 (2024-10-31)
+
+### Bug Fixes
+
+* fix: valueSet query (#175) ([`3b4d7b5`](https://github.com/canvas-medical/canvas-plugins/commit/3b4d7b53c6a385ebd862d15cf8a3b8b0a7af0d36))
+
+### Chores
+
+* chore: local development improvements (#102)
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com> ([`ca4458e`](https://github.com/canvas-medical/canvas-plugins/commit/ca4458e59ee51abf638facb8eb9ff231be0efa18))
+
+* chore: fix test distribution step on semantic release gh action (#173) ([`6ee6b0c`](https://github.com/canvas-medical/canvas-plugins/commit/6ee6b0c715b771072a9a81b91bc7cc7f7bcb16e7))
+
+
+## v0.3.0 (2024-10-29)
+
+### Bug Fixes
+
+* fix: pull out meta properties of CQM protocols without importing file (#140) ([`1402f8e`](https://github.com/canvas-medical/canvas-plugins/commit/1402f8ea35107dbc0900dd6aad48cb5a0ac9aebd))
+
+### Chores
+
+* chore: bump keyring from 25.4.1 to 25.5.0 (#170) ([`c7ca11d`](https://github.com/canvas-medical/canvas-plugins/commit/c7ca11d5d262a2a1b4b9808ef0fef834b3523fd7))
+
+* chore: bump grpcio-tools from 1.62.0 to 1.62.3 in the development-minors group (#168) ([`755f741`](https://github.com/canvas-medical/canvas-plugins/commit/755f741562b2bde3e69df44f85aeee1b90bd4290))
+
+* chore: bump grpcio from 1.67.0 to 1.67.1 in the production-patches group (#172) ([`22c5bc3`](https://github.com/canvas-medical/canvas-plugins/commit/22c5bc33ac21b77e7b0854abeb5f2cc2dcb12ace))
+
+* chore: bump pydantic from 2.6.1 to 2.9.2 (#164) ([`14d4be1`](https://github.com/canvas-medical/canvas-plugins/commit/14d4be1ee7f4051eb7f7bb19bee15d5a7402674d))
+
+* chore: bump keyring from 24.3.0 to 25.4.1 (#157) ([`23327a5`](https://github.com/canvas-medical/canvas-plugins/commit/23327a5cab5621e9471aa1f2f0871946e8a44921))
+
+* chore: bump grpcio from 1.62.0 to 1.67.0 (#165) ([`030048d`](https://github.com/canvas-medical/canvas-plugins/commit/030048df188566822e2ce0f6de4ea0e354aec0ce))
+
+* chore: bump pyjwt from 2.4.0 to 2.9.0 (#167) ([`594dc74`](https://github.com/canvas-medical/canvas-plugins/commit/594dc74ca88244307a6e43230ad9a75ec57dfc43))
+
+* chore: bump ipython from 8.21.0 to 8.29.0 (#159) ([`54d2651`](https://github.com/canvas-medical/canvas-plugins/commit/54d265186e2cc679fdbc240dd7405964c594673c))
+
+* chore: auto-update pre-commit hooks (#146) ([`b0bfb46`](https://github.com/canvas-medical/canvas-plugins/commit/b0bfb46a14d5133894310641618fa3f97b45064e))
+
+* chore: bump typer from 0.9.0 to 0.12.5 (#162) ([`cb6af5c`](https://github.com/canvas-medical/canvas-plugins/commit/cb6af5c3a76a1326388604edd62e82186a0ee888))
+
+* chore: bump restrictedpython from 7.3 to 7.4 (#166) ([`1acb504`](https://github.com/canvas-medical/canvas-plugins/commit/1acb504469b0c6ae99f3ae3d2f41eacefeb3a80a))
+
+* chore: bump redis from 5.0.4 to 5.2.0 (#161) ([`fe40619`](https://github.com/canvas-medical/canvas-plugins/commit/fe4061918e49173a7aecb8a7312f7f39e064005c))
+
+* chore: bump typing-extensions from 4.8.0 to 4.12.2 (#158) ([`47c4add`](https://github.com/canvas-medical/canvas-plugins/commit/47c4add0920124dabbdddff43bbb253cd15281d2))
+
+* chore: bump protobuf from 4.25.3 to 4.25.5 (#156) ([`85e23dd`](https://github.com/canvas-medical/canvas-plugins/commit/85e23dd61247ad1db45b82f4a8db48ddbabeae87))
+
+* chore: bump jsonschema from 4.21.1 to 4.23.0 (#163) ([`5be8644`](https://github.com/canvas-medical/canvas-plugins/commit/5be8644a9a0befbcc7806be5b424164b51f366ad))
+
+* chore: bump websocket-client from 1.7.0 to 1.8.0 (#160) ([`28b4389`](https://github.com/canvas-medical/canvas-plugins/commit/28b43891394312fd92af84d86e49f1a2095708a3))
+
+* chore: bump the development-minors group with 8 updates (#154) ([`24b4d9a`](https://github.com/canvas-medical/canvas-plugins/commit/24b4d9aaee3209e60266caf973e2ac6a28369f09))
+
+* chore: bump peter-evans/create-pull-request from 4 to 7 (#151) ([`47e6c8f`](https://github.com/canvas-medical/canvas-plugins/commit/47e6c8f96cb535f0aa81fd976a108e02d7c8182b))
+
+* chore: bump the production-patches group with 3 updates (#153) ([`9f3e69a`](https://github.com/canvas-medical/canvas-plugins/commit/9f3e69a79e46672a65830af3f0adac2703dc1191))
+
+* chore: bump pre-commit/action from 3.0.0 to 3.0.1 (#152) ([`3bd3919`](https://github.com/canvas-medical/canvas-plugins/commit/3bd39191efcab214634fbb5b06440d45ff63c8cb))
+
+* chore: bump pre-commit from 3.6.2 to 4.0.1 in the development-majors group (#155) ([`6eb777b`](https://github.com/canvas-medical/canvas-plugins/commit/6eb777b695edd79f291a763d5466a7b22316cf07))
+
+* chore: add dependabot config (#150) ([`f8841fd`](https://github.com/canvas-medical/canvas-plugins/commit/f8841fdcae718da368a588c9630fa9844318aa5f))
+
+* chore: enhance release process by installing and executing the distribution (#143) ([`2d2352d`](https://github.com/canvas-medical/canvas-plugins/commit/2d2352d7354599a6bad15a7820a8c1d217144a6a))
+
+* chore: auto-update pre-commit hooks (#142) ([`d4aff18`](https://github.com/canvas-medical/canvas-plugins/commit/d4aff18587a8802f0bd5fcf0f431586a533fd9f9))
+
+* chore: clean up pre-commit-update workflow (#141) ([`2ab0694`](https://github.com/canvas-medical/canvas-plugins/commit/2ab0694215d6463e3e556dd76ae4f2dbc50e597f))
+
+* chore: improve generate-protobufs script (#135) ([`61597ab`](https://github.com/canvas-medical/canvas-plugins/commit/61597abea8cf16248c422657cbfa6632a056b396))
+
+* chore: fix pre-commit errors (#138) ([`1da3f33`](https://github.com/canvas-medical/canvas-plugins/commit/1da3f33adda53f73ec114075f1c581218f8e24ea))
+
+* chore(ci): fix pre-commit on CI (#136) ([`ec6b4b3`](https://github.com/canvas-medical/canvas-plugins/commit/ec6b4b3849582bdfcfea9cb605d894b62c9d1bf7))
+
+### Features
+
+* feat: add SDK Questionnaire and Interview models (#104) ([`ba8b556`](https://github.com/canvas-medical/canvas-plugins/commit/ba8b556ee1b36a173ab07ddd4d705d5b131c6fc7))
+
+* feat: add more event types (#139) ([`ffc9c25`](https://github.com/canvas-medical/canvas-plugins/commit/ffc9c255181da5a95a0bd4e1535c988e40e39761))
+
+* feat: add protocol classname to effects and include in plugin_runner event handler (#145) ([`517cadb`](https://github.com/canvas-medical/canvas-plugins/commit/517cadb18fc09ded585b74975edc74283acb7040))
+
+* feat: add feedback_enabled property to protocol card effect (#148) ([`5dd7d96`](https://github.com/canvas-medical/canvas-plugins/commit/5dd7d963fd36a627c6072c8ead83e76eaa8ad950))
+
+* feat: clipboard command events (#147) ([`eaf339a`](https://github.com/canvas-medical/canvas-plugins/commit/eaf339a1656978b04c16e4453d96c77c9ca868df))
+
 
 ## v0.2.11 (2024-10-15)
 
-### Chore
+### Bug Fixes
+
+* fix: fix settings error in canvas-cli (#133)
+
+* Adds settings to pyproject.toml.
+
+* Adds .py extension to settings in pyproject.toml. ([`52e4438`](https://github.com/canvas-medical/canvas-plugins/commit/52e4438d57627b2e397ab2b2085e0a5579741f55))
+
+### Chores
 
 * chore: fix semantic release workflow (#134) ([`97a5069`](https://github.com/canvas-medical/canvas-plugins/commit/97a5069d8eeda5c8f455c531feb5c1a40e4fb487))
 
@@ -14,18 +113,14 @@ chore(docs): add CONTRIBUTING and CODE_OF_CONDUCT ([`365751b`](https://github.co
 
 * chore: fix semantic-release publish (#129) ([`8a24339`](https://github.com/canvas-medical/canvas-plugins/commit/8a24339455bb58246c78d2670b02465207991a4f))
 
-### Fix
-
-* fix: fix settings error in canvas-cli (#133)
-
-* Adds settings to pyproject.toml.
-
-* Adds .py extension to settings in pyproject.toml. ([`52e4438`](https://github.com/canvas-medical/canvas-plugins/commit/52e4438d57627b2e397ab2b2085e0a5579741f55))
-
 
 ## v0.2.10 (2024-10-14)
 
-### Chore
+### Bug Fixes
+
+* fix: improvements to the TaskCommand definition ([`1dbc4ee`](https://github.com/canvas-medical/canvas-plugins/commit/1dbc4eec4b0a58f264035f55c296054cbb7638e8))
+
+### Chores
 
 * chore: fix semantic release (#128) ([`d4bbcc7`](https://github.com/canvas-medical/canvas-plugins/commit/d4bbcc737f08cd528b09a71a23cc6deabc427d66))
 
@@ -45,16 +140,12 @@ updated-dependencies:
   dependency-type: direct:production
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`ad5ccea`](https://github.com/canvas-medical/canvas-plugins/commit/ad5ccead18b238d809a4d9082d4ae4a14a439956))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`ad5ccea`](https://github.com/canvas-medical/canvas-plugins/commit/ad5ccead18b238d809a4d9082d4ae4a14a439956))
 
 * chore: add pull request title validator (#126) ([`194bf0b`](https://github.com/canvas-medical/canvas-plugins/commit/194bf0b56c5c036de853ed149a702eecf7ec3af5))
 
 * chore(ci): improve build and test workflow (#125) ([`5c15020`](https://github.com/canvas-medical/canvas-plugins/commit/5c1502037c1448f700657091c21e92513270a6eb))
-
-### Fix
-
-* fix: improvements to the TaskCommand definition ([`1dbc4ee`](https://github.com/canvas-medical/canvas-plugins/commit/1dbc4eec4b0a58f264035f55c296054cbb7638e8))
 
 ### Unknown
 
@@ -67,9 +158,9 @@ Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.githu
 fix: improvements to the TaskCommand definition ([`bca6801`](https://github.com/canvas-medical/canvas-plugins/commit/bca68016b777e11316809345bee19991b93c8279))
 
 
-## v0.2.9 (2024-10-09)
+## v0.2.9 (2024-10-08)
 
-### Fix
+### Bug Fixes
 
 * fix: improve AllergyCommand definition ([`049c16d`](https://github.com/canvas-medical/canvas-plugins/commit/049c16dc00aba1c13726855c42f6de0797c2e49f))
 
@@ -97,7 +188,7 @@ fix: improve AllergyCommand definition ([`63b975f`](https://github.com/canvas-me
 
 feat: add CloseGoal command SDK definition ([`e2b8ad8`](https://github.com/canvas-medical/canvas-plugins/commit/e2b8ad8a685f64cf6ba2afed4e68132a0ca63acb))
 
-* Merge branch &#39;main&#39; into feat/koala-1925-close-goal
+* Merge branch 'main' into feat/koala-1925-close-goal
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`2e202d5`](https://github.com/canvas-medical/canvas-plugins/commit/2e202d5fa475197a42cf7974500ec3915d0b46c6))
@@ -106,7 +197,7 @@ feat: add CloseGoal command SDK definition ([`e2b8ad8`](https://github.com/canva
 
 feat: add UpdateDiagnosis command SDK definition ([`fc00b73`](https://github.com/canvas-medical/canvas-plugins/commit/fc00b736e93fcd790858ba154490ad4f0a680422))
 
-* Merge branch &#39;main&#39; into feat/koala-1924-change-diagnosis
+* Merge branch 'main' into feat/koala-1924-change-diagnosis
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`7fc80d4`](https://github.com/canvas-medical/canvas-plugins/commit/7fc80d4a4e441b69438b96c1243c7ded75a4cb11))
@@ -117,7 +208,7 @@ feat: add Vitals command SDK definition ([`0217f94`](https://github.com/canvas-m
 
 * small improvements ([`ded0021`](https://github.com/canvas-medical/canvas-plugins/commit/ded0021128b55ca8926f3e7c4b1b3e75e8dfac55))
 
-* Merge branch &#39;main&#39; into feat/koala-1923-vitals
+* Merge branch 'main' into feat/koala-1923-vitals
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`681a6a3`](https://github.com/canvas-medical/canvas-plugins/commit/681a6a352a502ea5c632a646f85f862525e1e290))
@@ -128,7 +219,7 @@ feat: add Refill command SDK definition ([`b08107b`](https://github.com/canvas-m
 
 * fix tests ([`d669649`](https://github.com/canvas-medical/canvas-plugins/commit/d669649e6ce31fdd35d5d191f5e9735adcf23343))
 
-* Merge branch &#39;main&#39; into feat/koala-1922-refill
+* Merge branch 'main' into feat/koala-1922-refill
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`272c6f4`](https://github.com/canvas-medical/canvas-plugins/commit/272c6f4b622b28ce5ab2918c9d86fd1f3654679a))
@@ -137,7 +228,7 @@ feat: add Refill command SDK definition ([`b08107b`](https://github.com/canvas-m
 
 feat: add Task command SDK definition ([`e484d58`](https://github.com/canvas-medical/canvas-plugins/commit/e484d585d0b253d10b89c8256e73d3638d0df49e))
 
-* Merge branch &#39;main&#39; into feat/koala-1921-task
+* Merge branch 'main' into feat/koala-1921-task
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py
@@ -148,7 +239,7 @@ feat: add Task command SDK definition ([`e484d58`](https://github.com/canvas-med
 
 feat: add MedicationHistory command SDK definition ([`e38bee7`](https://github.com/canvas-medical/canvas-plugins/commit/e38bee74c4543f9f11d7828a137a1116c407df1d))
 
-* Merge branch &#39;main&#39; into feat/koala-1917-medical-history
+* Merge branch 'main' into feat/koala-1917-medical-history
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py
@@ -158,7 +249,7 @@ feat: add MedicationHistory command SDK definition ([`e38bee7`](https://github.c
 
 feat: add PastSurgicalHistory command SDK definition ([`e65477e`](https://github.com/canvas-medical/canvas-plugins/commit/e65477e831eeb4d76606c712e16e6225366ea0f2))
 
-* Merge branch &#39;main&#39; into feat/koala-1916-surgical-history
+* Merge branch 'main' into feat/koala-1916-surgical-history
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`34d5b0d`](https://github.com/canvas-medical/canvas-plugins/commit/34d5b0de6f1263872918146d2959f56149b89731))
@@ -167,7 +258,7 @@ feat: add PastSurgicalHistory command SDK definition ([`e65477e`](https://github
 
 feat: add RemoveAllergy command SDK definition ([`2c1c339`](https://github.com/canvas-medical/canvas-plugins/commit/2c1c33939e0828e3d2176e6b3a3743e2f5bfb0ec))
 
-* Merge branch &#39;main&#39; into feat/koala-1915-remove-allergy
+* Merge branch 'main' into feat/koala-1915-remove-allergy
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`ea9f2a2`](https://github.com/canvas-medical/canvas-plugins/commit/ea9f2a216cd4a5dbe9d021dc9f4c11d4c0268662))
@@ -176,7 +267,7 @@ feat: add RemoveAllergy command SDK definition ([`2c1c339`](https://github.com/c
 
 feat: add Allergy command SDK definition ([`e8f9ca1`](https://github.com/canvas-medical/canvas-plugins/commit/e8f9ca163d32efb6d2fff46024fb00ee0690a653))
 
-* Merge branch &#39;main&#39; into feat/koala-1914-allergy
+* Merge branch 'main' into feat/koala-1914-allergy
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`be29b10`](https://github.com/canvas-medical/canvas-plugins/commit/be29b10d42582d6e915bb8f37165a9a407c241dd))
@@ -185,7 +276,7 @@ feat: add Allergy command SDK definition ([`e8f9ca1`](https://github.com/canvas-
 
 feat: add FamilyHistory command SDK definition ([`282a9df`](https://github.com/canvas-medical/canvas-plugins/commit/282a9df222e839a4211c4cfb34aa64bb75531a26))
 
-* Merge branch &#39;main&#39; into feat/koala-1913-family-history
+* Merge branch 'main' into feat/koala-1913-family-history
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`2a148ab`](https://github.com/canvas-medical/canvas-plugins/commit/2a148ab4b5402a04806509b2297fb8ff6bc4f8fe))
@@ -194,13 +285,13 @@ feat: add FamilyHistory command SDK definition ([`282a9df`](https://github.com/c
 
 feat: add LabOrder command SDK definition ([`6503060`](https://github.com/canvas-medical/canvas-plugins/commit/650306049d437cabeb8771515cfde58d07be901b))
 
-* Merge branch &#39;main&#39; into feat/koala-1909-lab-order
+* Merge branch 'main' into feat/koala-1909-lab-order
 
 # Conflicts:
 #	canvas_generated/messages/effects_pb2.py ([`84ec9b3`](https://github.com/canvas-medical/canvas-plugins/commit/84ec9b3835a74174ad2722d8aa4f745995ee675c))
 
 
-## v0.2.8 (2024-10-03)
+## v0.2.8 (2024-10-02)
 
 ### Unknown
 
@@ -213,17 +304,9 @@ Adds value_set module to allowed imports. ([`511717c`](https://github.com/canvas
 * Adds value_set module to allowed imports. ([`61123d1`](https://github.com/canvas-medical/canvas-plugins/commit/61123d17d94c7794967a77949ed65cb1c8808bcb))
 
 
-## v0.2.7 (2024-09-28)
+## v0.2.7 (2024-09-27)
 
-### Feature
-
-* feat: add CloseGoal command SDK definition ([`f99b86d`](https://github.com/canvas-medical/canvas-plugins/commit/f99b86d78498dcf16d04861d6674094b943c8165))
-
-* feat: add UpdateDiagnosis command SDK definition ([`f751d07`](https://github.com/canvas-medical/canvas-plugins/commit/f751d074a4758a704c3de2ee4ba69470daf18f0b))
-
-* feat: add Vitals command SDK definition ([`ad56f11`](https://github.com/canvas-medical/canvas-plugins/commit/ad56f1193d58e73b9cf5aef81e9c5787b8879a8e))
-
-* feat: add Refill command SDK definition ([`36b3e1e`](https://github.com/canvas-medical/canvas-plugins/commit/36b3e1e6c259562fa66e9e3ddfdc1c138a087e75))
+### Features
 
 * feat: add patient_chart_summary_configuration effect and new event to configure patient chart summary (#94)
 
@@ -240,15 +323,23 @@ Updates poetry.lock file. ([`eeaafcd`](https://github.com/canvas-medical/canvas-
 * Updates poetry.lock file. ([`f74c1d3`](https://github.com/canvas-medical/canvas-plugins/commit/f74c1d37f2e8d7a5ecf0c9b4c647da890dcac5b8))
 
 
-## v0.2.6 (2024-09-27)
+## v0.2.6 (2024-09-26)
 
-### Chore
+### Chores
 
 * chore: update protobufs ([`549adaa`](https://github.com/canvas-medical/canvas-plugins/commit/549adaaef8a466e41d7be8e470ef1b9d015b0df9))
 
 * chore: add black ad dev dependency ([`4799bae`](https://github.com/canvas-medical/canvas-plugins/commit/4799bae667f2e99f1c557050781d86a491797c7f))
 
-### Feature
+### Features
+
+* feat: add CloseGoal command SDK definition ([`f99b86d`](https://github.com/canvas-medical/canvas-plugins/commit/f99b86d78498dcf16d04861d6674094b943c8165))
+
+* feat: add UpdateDiagnosis command SDK definition ([`f751d07`](https://github.com/canvas-medical/canvas-plugins/commit/f751d074a4758a704c3de2ee4ba69470daf18f0b))
+
+* feat: add Vitals command SDK definition ([`ad56f11`](https://github.com/canvas-medical/canvas-plugins/commit/ad56f1193d58e73b9cf5aef81e9c5787b8879a8e))
+
+* feat: add Refill command SDK definition ([`36b3e1e`](https://github.com/canvas-medical/canvas-plugins/commit/36b3e1e6c259562fa66e9e3ddfdc1c138a087e75))
 
 * feat: add Task command SDK definition ([`4944078`](https://github.com/canvas-medical/canvas-plugins/commit/49440781416d56c8769b2e83ce78bd616e6b6f1a))
 
@@ -274,23 +365,7 @@ Updates poetry.lock file. ([`eeaafcd`](https://github.com/canvas-medical/canvas-
 
 Add the django ORM and the first 5 models ([`565a076`](https://github.com/canvas-medical/canvas-plugins/commit/565a07615512eb2852bbeb63cd37f3576c158fbd))
 
-* Merge branch &#39;main&#39; into ad/data-module-orm ([`c7818bb`](https://github.com/canvas-medical/canvas-plugins/commit/c7818bb80e2749d87e80e4148733dacf7dba966f))
-
-* Changes for consistency ([`42282d8`](https://github.com/canvas-medical/canvas-plugins/commit/42282d8f86f689a886f7abe4e5605e635d33c698))
-
-* Merge pull request #95 from canvas-medical/csande/KOALA-1903-allergies-data-module
-
-SDK AllergyIntolerance model ([`87607eb`](https://github.com/canvas-medical/canvas-plugins/commit/87607eb842999f13c9ebdb04834cb552146501a5))
-
-* Merge pull request #93 from canvas-medical/feature/jw-koala-1843
-
-Adds LabReport, LabValue and related models. ([`6f3fb21`](https://github.com/canvas-medical/canvas-plugins/commit/6f3fb2196d1258166a548bb31575e6909da06ffe))
-
-* Removes report_data_payload_cache from LabReport model. ([`4c21d6f`](https://github.com/canvas-medical/canvas-plugins/commit/4c21d6f4383bb50eb6ec5fe8079b7339cb2ede30))
-
-* Merge pull request #91 from canvas-medical/feature/jw-valuesets-plugins
-
-Adds value set data and filtering ([`593f0a2`](https://github.com/canvas-medical/canvas-plugins/commit/593f0a27366742a907e6c55e55f1088660c47347))
+* Merge branch 'main' into ad/data-module-orm ([`c7818bb`](https://github.com/canvas-medical/canvas-plugins/commit/c7818bb80e2749d87e80e4148733dacf7dba966f))
 
 * Make banner alert effects have all optional params and validate on apply (#89)
 
@@ -298,7 +373,29 @@ make banner alert effects have optional params and validate on apply ([`cace864`
 
 * Create ProtocolCard Effect (#88) ([`a7b1175`](https://github.com/canvas-medical/canvas-plugins/commit/a7b11758a97f2df985df564389fe25ecb5bd3a05))
 
+* Create CODEOWNERS ([`4f634fa`](https://github.com/canvas-medical/canvas-plugins/commit/4f634fa4528bbd86310f5386f6cb0e3097003c51))
+
+* Changes for consistency ([`42282d8`](https://github.com/canvas-medical/canvas-plugins/commit/42282d8f86f689a886f7abe4e5605e635d33c698))
+
+* Merge pull request #95 from canvas-medical/csande/KOALA-1903-allergies-data-module
+
+SDK AllergyIntolerance model ([`87607eb`](https://github.com/canvas-medical/canvas-plugins/commit/87607eb842999f13c9ebdb04834cb552146501a5))
+
 * A few changes for consistency ([`69d9525`](https://github.com/canvas-medical/canvas-plugins/commit/69d952546913a9ecba564afe0653132d6d38b6af))
+
+* Updated poetry.lock ([`bc7e256`](https://github.com/canvas-medical/canvas-plugins/commit/bc7e256cad6f0b929b310c044b4ab8288b236e48))
+
+* Merge branch 'ad/data-module-orm' into csande/KOALA-1903-allergies-data-module ([`02e8dd9`](https://github.com/canvas-medical/canvas-plugins/commit/02e8dd92ba98be617c278ab019d577e8296339db))
+
+* Added more fields ([`e09cba1`](https://github.com/canvas-medical/canvas-plugins/commit/e09cba1f215771c433a34647d8510e005009f635))
+
+* SDK AllergyIntolerance model ([`00795be`](https://github.com/canvas-medical/canvas-plugins/commit/00795befdfcb40b7ce857c35e0a65cb9f7e64e99))
+
+* Merge pull request #93 from canvas-medical/feature/jw-koala-1843
+
+Adds LabReport, LabValue and related models. ([`6f3fb21`](https://github.com/canvas-medical/canvas-plugins/commit/6f3fb2196d1258166a548bb31575e6909da06ffe))
+
+* Removes report_data_payload_cache from LabReport model. ([`4c21d6f`](https://github.com/canvas-medical/canvas-plugins/commit/4c21d6f4383bb50eb6ec5fe8079b7339cb2ede30))
 
 * Changes database view name for CanvasUser. ([`38aed42`](https://github.com/canvas-medical/canvas-plugins/commit/38aed42b59e0b43d6512d87c61e41f781d32208b))
 
@@ -308,37 +405,33 @@ make banner alert effects have optional params and validate on apply ([`cace864`
 
 * Adds id fields to LabValue and LabReview. ([`dd35b7f`](https://github.com/canvas-medical/canvas-plugins/commit/dd35b7f276c8146e4f850699aecd48e2b604283d))
 
-* Create CODEOWNERS ([`4f634fa`](https://github.com/canvas-medical/canvas-plugins/commit/4f634fa4528bbd86310f5386f6cb0e3097003c51))
+* Adds LabReport, LabValue and related models. ([`fa94895`](https://github.com/canvas-medical/canvas-plugins/commit/fa94895912db5901a1519ce2c394e43f417b7276))
 
-* Merge pull request #92 from canvas-medical/feat/koala-1984-originate-perform
+* Merge pull request #91 from canvas-medical/feature/jw-valuesets-plugins
 
-feat: add Perform and Instruct Command SDK definitions ([`c58ed01`](https://github.com/canvas-medical/canvas-plugins/commit/c58ed0107d272337c44af8c8248200a9edc0ae4b))
+Adds value set data and filtering ([`593f0a2`](https://github.com/canvas-medical/canvas-plugins/commit/593f0a27366742a907e6c55e55f1088660c47347))
 
 * Removes outdated comment. ([`5a9d791`](https://github.com/canvas-medical/canvas-plugins/commit/5a9d791379374fd7e3d7cbf8537386d0946df874))
 
 * Adds pipe functionality and tests. ([`0ac4e61`](https://github.com/canvas-medical/canvas-plugins/commit/0ac4e61797f97ab0ba14e9e755cf9b460ea34dc5))
 
-* Updated poetry.lock ([`bc7e256`](https://github.com/canvas-medical/canvas-plugins/commit/bc7e256cad6f0b929b310c044b4ab8288b236e48))
+* Removes periods from ValueSet data and removes alphanum helper. ([`a4c3f6a`](https://github.com/canvas-medical/canvas-plugins/commit/a4c3f6acfd1731d700d5df7df291be0eeb0559af))
 
-* Merge branch &#39;ad/data-module-orm&#39; into csande/KOALA-1903-allergies-data-module ([`02e8dd9`](https://github.com/canvas-medical/canvas-plugins/commit/02e8dd92ba98be617c278ab019d577e8296339db))
+* Adds value set data and filtering. ([`9734af2`](https://github.com/canvas-medical/canvas-plugins/commit/9734af29097541fe92873e870a82a84d523f7904))
 
 * Upgraded psycopg ([`cd9ff1d`](https://github.com/canvas-medical/canvas-plugins/commit/cd9ff1da94e50e068885cc7c6cada83dcfb644d2))
 
 * Method name change ([`31b322b`](https://github.com/canvas-medical/canvas-plugins/commit/31b322bb5058385b1adb259b6d0117a74adc7a64))
 
-* Added more fields ([`e09cba1`](https://github.com/canvas-medical/canvas-plugins/commit/e09cba1f215771c433a34647d8510e005009f635))
+* Add the django ORM and the first 5 models ([`0cb70a8`](https://github.com/canvas-medical/canvas-plugins/commit/0cb70a8d921c574c54f6d5d0d80af3db9203cf0e))
 
-* Removes periods from ValueSet data and removes alphanum helper. ([`a4c3f6a`](https://github.com/canvas-medical/canvas-plugins/commit/a4c3f6acfd1731d700d5df7df291be0eeb0559af))
+* Merge pull request #92 from canvas-medical/feat/koala-1984-originate-perform
 
-* SDK AllergyIntolerance model ([`00795be`](https://github.com/canvas-medical/canvas-plugins/commit/00795befdfcb40b7ce857c35e0a65cb9f7e64e99))
+feat: add Perform and Instruct Command SDK definitions ([`c58ed01`](https://github.com/canvas-medical/canvas-plugins/commit/c58ed0107d272337c44af8c8248200a9edc0ae4b))
 
 * add events and effect to add claim condition annotation (#86) ([`3d93b4e`](https://github.com/canvas-medical/canvas-plugins/commit/3d93b4ea94845c12cd9d697b0b5967d43322eda0))
 
-* Adds LabReport, LabValue and related models. ([`fa94895`](https://github.com/canvas-medical/canvas-plugins/commit/fa94895912db5901a1519ce2c394e43f417b7276))
-
 * enable all know command events including pre-search (#90) ([`d89db40`](https://github.com/canvas-medical/canvas-plugins/commit/d89db40ae87166c8828a9b3aae272b1497d78953))
-
-* Adds value set data and filtering. ([`9734af2`](https://github.com/canvas-medical/canvas-plugins/commit/9734af29097541fe92873e870a82a84d523f7904))
 
 * Bump cryptography from 42.0.4 to 43.0.1 (#83)
 
@@ -352,19 +445,17 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`46e9d25`](https://github.com/canvas-medical/canvas-plugins/commit/46e9d255cbba43c675929c3dcb46dfff5874b57f))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`46e9d25`](https://github.com/canvas-medical/canvas-plugins/commit/46e9d255cbba43c675929c3dcb46dfff5874b57f))
 
 * Integration tests (#78)
 
 This PR creates integration tests against the plugin-testing repo. ([`7964ccf`](https://github.com/canvas-medical/canvas-plugins/commit/7964ccfdce637f09116a5f7de30ca1520eb21d92))
 
-* Add the django ORM and the first 5 models ([`0cb70a8`](https://github.com/canvas-medical/canvas-plugins/commit/0cb70a8d921c574c54f6d5d0d80af3db9203cf0e))
-
 * update version for publish ([`7e8f796`](https://github.com/canvas-medical/canvas-plugins/commit/7e8f7961dd75a06f3caf93e6e7c0190e75418bdf))
 
 
-## v0.2.5 (2024-09-10)
+## v0.2.5 (2024-09-09)
 
 ### Unknown
 
@@ -372,7 +463,7 @@ This PR creates integration tests against the plugin-testing repo. ([`7964ccf`](
 
 Remove Data Access Layer ([`9b62f64`](https://github.com/canvas-medical/canvas-plugins/commit/9b62f6400de7801c2167d55345b596b625fdaeda))
 
-* Merge branch &#39;main&#39; into csande/KOALA-1034-remove-dal ([`8cfe238`](https://github.com/canvas-medical/canvas-plugins/commit/8cfe238a2889191ee5c4222a1b415e3e955809f0))
+* Merge branch 'main' into csande/KOALA-1034-remove-dal ([`8cfe238`](https://github.com/canvas-medical/canvas-plugins/commit/8cfe238a2889191ee5c4222a1b415e3e955809f0))
 
 * Merge pull request #85 from canvas-medical/feat/annotate_conditions
 
@@ -381,7 +472,7 @@ Add new PATIENT_CHART__CONDITIONS events and ANNOTATE_PATIENT_CHART_CONDITION_RE
 * Add new PATIENT_CHART__CONDITIONS events and ANNOTATE_PATIENT_CHART_CONDITION_RESULTS effect ([`97d7477`](https://github.com/canvas-medical/canvas-plugins/commit/97d7477e3165cb6058c951551ccc4413f9008fe0))
 
 
-## v0.2.4 (2024-09-05)
+## v0.2.4 (2024-09-04)
 
 ### Unknown
 
@@ -390,7 +481,7 @@ Add new PATIENT_CHART__CONDITIONS events and ANNOTATE_PATIENT_CHART_CONDITION_RE
 Adds GraphQL data client ([`db15859`](https://github.com/canvas-medical/canvas-plugins/commit/db158590fac3cfc90824b7388695a38f523dbb4d))
 
 
-## v0.2.3 (2024-09-05)
+## v0.2.3 (2024-09-04)
 
 ### Unknown
 
@@ -407,16 +498,16 @@ Adds GraphQL data client ([`db15859`](https://github.com/canvas-medical/canvas-p
 * Update settings.py ([`b396a29`](https://github.com/canvas-medical/canvas-plugins/commit/b396a29ae9077bb751f1eb1d60a7348f3641fc14))
 
 
-## v0.2.2 (2024-09-04)
+## v0.2.2 (2024-09-03)
 
 ### Unknown
 
-* update example and use default since it won&#39;t change ([`afbf9be`](https://github.com/canvas-medical/canvas-plugins/commit/afbf9bebb6984190141406d2f44d61ce0b910a97))
+* update example and use default since it won't change ([`afbf9be`](https://github.com/canvas-medical/canvas-plugins/commit/afbf9bebb6984190141406d2f44d61ce0b910a97))
 
 * remove unused code ([`2a223ac`](https://github.com/canvas-medical/canvas-plugins/commit/2a223ac733784b63ba18a305916ce2b9c3996e2a))
 
 
-## v0.2.1 (2024-09-04)
+## v0.2.0 (2024-09-03)
 
 ### Unknown
 
@@ -438,13 +529,13 @@ Adds GraphQL data client ([`db15859`](https://github.com/canvas-medical/canvas-p
 
 * Adds GQL_CLIENT to BaseHandler. ([`b02470f`](https://github.com/canvas-medical/canvas-plugins/commit/b02470f3b676667c70b6649948206b3fc1324fa1))
 
-* Remove Data Access Layer ([`b7f57d8`](https://github.com/canvas-medical/canvas-plugins/commit/b7f57d8c3196319df20307fa59c4e2f536a8e199))
-
 * Addresses items from code review. ([`9234061`](https://github.com/canvas-medical/canvas-plugins/commit/923406148d678b51f98c8d4620b9845a76b434f5))
 
 * Changes back env variable for original DAL. ([`904b0d1`](https://github.com/canvas-medical/canvas-plugins/commit/904b0d17302ed8737b6d6a3a8366652b17a16b83))
 
 * Adds GraphQL data client. ([`3759f66`](https://github.com/canvas-medical/canvas-plugins/commit/3759f663f8f9a1e7b09e5bc353a1316f6dda9b6a))
+
+* Remove Data Access Layer ([`b7f57d8`](https://github.com/canvas-medical/canvas-plugins/commit/b7f57d8c3196319df20307fa59c4e2f536a8e199))
 
 * Merge pull request #80 from canvas-medical/csande/add-missing-protobuf-dependency
 
@@ -463,7 +554,7 @@ Renamed DAL target environment variable ([`0bef4d4`](https://github.com/canvas-m
 * Renamed DAL target environment variable ([`7e87b3e`](https://github.com/canvas-medical/canvas-plugins/commit/7e87b3eea1bcf7047b4d0aef72c3ff1b761a5a81))
 
 
-## v0.1.15 (2024-07-26)
+## v0.1.15 (2024-07-25)
 
 ### Unknown
 
@@ -482,8 +573,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`3b6c59c`](https://github.com/canvas-medical/canvas-plugins/commit/3b6c59cdc92e7c56299649ea0de748651c3d96a6))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`3b6c59c`](https://github.com/canvas-medical/canvas-plugins/commit/3b6c59cdc92e7c56299649ea0de748651c3d96a6))
 
 * Bump urllib3 from 2.2.1 to 2.2.2 (#59)
 
@@ -498,8 +589,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`12de79e`](https://github.com/canvas-medical/canvas-plugins/commit/12de79e5ecaf9589bae5d075cab31c9442d6867e))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`12de79e`](https://github.com/canvas-medical/canvas-plugins/commit/12de79e5ecaf9589bae5d075cab31c9442d6867e))
 
 * Bump requests from 2.31.0 to 2.32.2 (#56)
 
@@ -514,8 +605,8 @@ updated-dependencies:
   dependency-type: direct:production
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`0be07b6`](https://github.com/canvas-medical/canvas-plugins/commit/0be07b651cb5f8730a412e30913923af9dcf5d61))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`0be07b6`](https://github.com/canvas-medical/canvas-plugins/commit/0be07b651cb5f8730a412e30913923af9dcf5d61))
 
 * Bump jinja2 from 3.1.3 to 3.1.4 (#35)
 
@@ -530,8 +621,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`9aab6c7`](https://github.com/canvas-medical/canvas-plugins/commit/9aab6c767b730adfbb08c77eb0e8f1438185eaf5))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`9aab6c7`](https://github.com/canvas-medical/canvas-plugins/commit/9aab6c767b730adfbb08c77eb0e8f1438185eaf5))
 
 * Bump zipp from 3.17.0 to 3.19.1 (#66)
 
@@ -546,8 +637,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`0cc8c1e`](https://github.com/canvas-medical/canvas-plugins/commit/0cc8c1e0dd70765e1bb62b7d546c4a825f840c4b))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`0cc8c1e`](https://github.com/canvas-medical/canvas-plugins/commit/0cc8c1e0dd70765e1bb62b7d546c4a825f840c4b))
 
 * Bump setuptools from 69.1.0 to 70.0.0 (#71)
 
@@ -562,8 +653,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`a5ee78d`](https://github.com/canvas-medical/canvas-plugins/commit/a5ee78de5928e607bba62f05788069c952299bf0))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`a5ee78d`](https://github.com/canvas-medical/canvas-plugins/commit/a5ee78de5928e607bba62f05788069c952299bf0))
 
 * Merge pull request #72 from canvas-medical/csande/KOALA-1546-dal-grpc-client
 
@@ -581,10 +672,10 @@ Data Access Layer ([`c736e57`](https://github.com/canvas-medical/canvas-plugins/
 
 * Improve handling of optional fields; parse birth date correctly ([`f0534c6`](https://github.com/canvas-medical/canvas-plugins/commit/f0534c60bd62e353c3567fed84f78e57d1ad78ab))
 
-* Merge branch &#39;main&#39; into csande/KOALA-1546-dal-grpc-client ([`5d76b56`](https://github.com/canvas-medical/canvas-plugins/commit/5d76b56e550d9a3bb45e948504340ed067b18d32))
+* Merge branch 'main' into csande/KOALA-1546-dal-grpc-client ([`5d76b56`](https://github.com/canvas-medical/canvas-plugins/commit/5d76b56e550d9a3bb45e948504340ed067b18d32))
 
 
-## v0.1.14 (2024-07-18)
+## v0.1.14 (2024-07-17)
 
 ### Unknown
 
@@ -608,8 +699,6 @@ Add support for periodic tasks with cron schedules ([`b9973da`](https://github.c
 
 Task Creation, Update and Comment Additions ([`df815ae`](https://github.com/canvas-medical/canvas-plugins/commit/df815aeec042e373d32dbca9ce855849ec31d4cb))
 
-* Added DAL client and Patient get classmethod ([`2cad95c`](https://github.com/canvas-medical/canvas-plugins/commit/2cad95ccd341a9dca751a6c98eb0b61f69d8016c))
-
 * Fixes required fields logic. ([`83b3881`](https://github.com/canvas-medical/canvas-plugins/commit/83b3881ef3d37a6ad5ae756e9fb68b5383e4e2d2))
 
 * Removes Optional annotations. ([`09aadf1`](https://github.com/canvas-medical/canvas-plugins/commit/09aadf101950d2ddda4a7a4d1d88a89f410bb5ef))
@@ -620,13 +709,19 @@ Task Creation, Update and Comment Additions ([`df815ae`](https://github.com/canv
 
 IDE fixes ([`04df953`](https://github.com/canvas-medical/canvas-plugins/commit/04df9533d72bf4b712bf3e2968a0ef95cbdacc4e))
 
+* Added imports for commented-out code in the protocol templae ([`1b2dd1c`](https://github.com/canvas-medical/canvas-plugins/commit/1b2dd1cc990f8a51ca24419bbb1477cfa439aff8))
+
+* added some additional directories in the pyproject file to be included when the package is built ([`730ebd1`](https://github.com/canvas-medical/canvas-plugins/commit/730ebd10047ba7d042f456ff4b08c248f69fe4d7))
+
 * Merge pull request #69 from canvas-medical/ad/prepend-hostname-to-log
 
 Prepend the hostname to log lines if the hostname is defined in the env ([`5947d84`](https://github.com/canvas-medical/canvas-plugins/commit/5947d84d5e216532446422cc179b381c8e08ba7a))
 
-* Added imports for commented-out code in the protocol templae ([`1b2dd1c`](https://github.com/canvas-medical/canvas-plugins/commit/1b2dd1cc990f8a51ca24419bbb1477cfa439aff8))
+* Change a class name to be more descriptive ([`acfe982`](https://github.com/canvas-medical/canvas-plugins/commit/acfe9826c299f7f0ef8bd63a38c83930901e0db8))
 
-* added some additional directories in the pyproject file to be included when the package is built ([`730ebd1`](https://github.com/canvas-medical/canvas-plugins/commit/730ebd10047ba7d042f456ff4b08c248f69fe4d7))
+* Obfuscate a testing secret from logs ([`274a10e`](https://github.com/canvas-medical/canvas-plugins/commit/274a10e0c77fa1898f37b847feff2f44653b2644))
+
+* Prepend the hostname to log lines if the hostname is defined in the env ([`0e3cb01`](https://github.com/canvas-medical/canvas-plugins/commit/0e3cb019ff5f67277a9e548a640d695a78616529))
 
 * Merge pull request #73 from canvas-medical/ad/prevent-boot-looping
 
@@ -640,20 +735,16 @@ considerably. It is extremely important to prevent the process from
 crashing on load, as circus will immediately attempt to resurrect it,
 causing a bootloop. ([`aa3379b`](https://github.com/canvas-medical/canvas-plugins/commit/aa3379bb785b0659341666ccd89ffbd721ffac16))
 
-* Change a class name to be more descriptive ([`acfe982`](https://github.com/canvas-medical/canvas-plugins/commit/acfe9826c299f7f0ef8bd63a38c83930901e0db8))
-
-* Obfuscate a testing secret from logs ([`274a10e`](https://github.com/canvas-medical/canvas-plugins/commit/274a10e0c77fa1898f37b847feff2f44653b2644))
-
-* Prepend the hostname to log lines if the hostname is defined in the env ([`0e3cb01`](https://github.com/canvas-medical/canvas-plugins/commit/0e3cb019ff5f67277a9e548a640d695a78616529))
-
 * Validate command classes on demand, with specific validation for each type of effect (#68) ([`264f8b2`](https://github.com/canvas-medical/canvas-plugins/commit/264f8b231eb56c13162c76a53c18922974bc2b8b))
 
 * Create enable and disable cli methods (#70) ([`68170c8`](https://github.com/canvas-medical/canvas-plugins/commit/68170c8aaad59a833f4249af85d9b922317fc16a))
 
+* Added DAL client and Patient get classmethod ([`2cad95c`](https://github.com/canvas-medical/canvas-plugins/commit/2cad95ccd341a9dca751a6c98eb0b61f69d8016c))
+
 * Added gRPC genereated code for the Data Access Layer ([`206cda5`](https://github.com/canvas-medical/canvas-plugins/commit/206cda55642b52866b410b8285d64887e6b33be2))
 
 
-## v0.1.13 (2024-07-04)
+## v0.1.13 (2024-07-03)
 
 ### Unknown
 
@@ -679,7 +770,7 @@ Add many command origination events. ([`2a3ecb5`](https://github.com/canvas-medi
 
 * Use note uuid instead of note id. Not sure I like the attribute rename, but we must use the uuid over the int id. ([`6db8146`](https://github.com/canvas-medical/canvas-plugins/commit/6db81467da40839e5d581929183a9073d6a6daf9))
 
-* Add many more command events. This won&#39;t have an effect until we write the interpreters, however. ([`fe4991e`](https://github.com/canvas-medical/canvas-plugins/commit/fe4991e03f69b619f8a13dd61264e2ba1540a0d2))
+* Add many more command events. This won't have an effect until we write the interpreters, however. ([`fe4991e`](https://github.com/canvas-medical/canvas-plugins/commit/fe4991e03f69b619f8a13dd61264e2ba1540a0d2))
 
 * Merge pull request #61 from canvas-medical/michela/koala-1465-banner-alerts
 
@@ -718,7 +809,7 @@ Rename generated module to canvas_generated ([`d8a83c8`](https://github.com/canv
 * Rename generated module to canvas_generated to avoid conflicts with other modules people may have installed ([`54ff62a`](https://github.com/canvas-medical/canvas-plugins/commit/54ff62adc4070db71e44d6043bf708b20e3cf5db))
 
 
-## v0.1.12 (2024-06-18)
+## v0.1.12 (2024-06-17)
 
 ### Unknown
 
@@ -750,7 +841,7 @@ Regenerates protobuf files. ([`e2a4afc`](https://github.com/canvas-medical/canva
 * Add post search events for refactored commands (#53) ([`3083d5c`](https://github.com/canvas-medical/canvas-plugins/commit/3083d5cf9262397b604b3a4e8513521f9a99a522))
 
 
-## v0.1.10 (2024-06-01)
+## v0.1.10 (2024-05-31)
 
 ### Unknown
 
@@ -778,8 +869,10 @@ Fixes from feedback during live demo ([`bcd247b`](https://github.com/canvas-medi
 
 Run Protocol compute method in a threadpool to avoid blocking the main event loop ([`6ebf1da`](https://github.com/canvas-medical/canvas-plugins/commit/6ebf1daf1ec1683ee8f2f985b0614f76b0b10d34))
 
+* Run Protocol compute method in a threadpool to avoid blocking the main event loop ([`aa320f4`](https://github.com/canvas-medical/canvas-plugins/commit/aa320f4e12800be7d969a746569e20f3f8276767))
 
-## v0.1.9 (2024-06-01)
+
+## v0.1.9 (2024-05-31)
 
 ### Unknown
 
@@ -789,12 +882,10 @@ Fix protocol initialization issues ([`5861e65`](https://github.com/canvas-medica
 
 * Set target on protocol initialization and be permissive if there is no provided context. ([`ebed450`](https://github.com/canvas-medical/canvas-plugins/commit/ebed45020a129fea07ce1f89491853783dcf2c94))
 
-* Run Protocol compute method in a threadpool to avoid blocking the main event loop ([`aa320f4`](https://github.com/canvas-medical/canvas-plugins/commit/aa320f4e12800be7d969a746569e20f3f8276767))
-
 * add back .gitkeep ([`a7bf010`](https://github.com/canvas-medical/canvas-plugins/commit/a7bf0103a49152637c66efb6cbbfacfd0c626bbc))
 
 
-## v0.1.7 (2024-05-18)
+## v0.1.7 (2024-05-17)
 
 ### Unknown
 
@@ -815,7 +906,7 @@ Removes ADD_PLAN_COMMAND from examples. ([`f1fe305`](https://github.com/canvas-m
 Fixes log statement. ([`dfae13d`](https://github.com/canvas-medical/canvas-plugins/commit/dfae13de8833eed0fa08587dea50f5a3f625f73a))
 
 
-## v0.0.7 (2024-05-17)
+## v0.0.7 (2024-05-16)
 
 ### Unknown
 
@@ -830,7 +921,7 @@ Updated .gitignore ([`df686dc`](https://github.com/canvas-medical/canvas-plugins
 * Updated .gitignore ([`cb566e2`](https://github.com/canvas-medical/canvas-plugins/commit/cb566e278433050f0f4853c5eb23ecd855d28f87))
 
 
-## v0.0.6 (2024-05-15)
+## v0.0.6 (2024-05-14)
 
 ### Unknown
 
@@ -839,6 +930,8 @@ Updated .gitignore ([`df686dc`](https://github.com/canvas-medical/canvas-plugins
 * Merge pull request #45 from canvas-medical/jw-log-changes
 
 Changes log statements. ([`0ebaf51`](https://github.com/canvas-medical/canvas-plugins/commit/0ebaf51a0a17e37c97c72ed6209c9b5747028077))
+
+* Changes log statements. ([`b1043ff`](https://github.com/canvas-medical/canvas-plugins/commit/b1043ff0c8b1bcfa61b21a12b30090b324689292))
 
 * Merge pull request #46 from canvas-medical/jw-cookiecutter-change
 
@@ -850,11 +943,11 @@ Changes cookiecutter class to use colon. ([`eff7661`](https://github.com/canvas-
 
 * allow specifying subdomain or URL, fix possibly null hostname ([`2e969ee`](https://github.com/canvas-medical/canvas-plugins/commit/2e969eee5905b123f1200cbb7f57f99a5e64c14c))
 
-* Changes log statements. ([`b1043ff`](https://github.com/canvas-medical/canvas-plugins/commit/b1043ff0c8b1bcfa61b21a12b30090b324689292))
-
 * Merge pull request #42 from canvas-medical/michela/auth-scope
 
 Add plugin scope to oauth token request. and tests ([`bec6c7c`](https://github.com/canvas-medical/canvas-plugins/commit/bec6c7c11cb6a87cb0caa1321731e6766065db5b))
+
+* add scope and tests ([`f0243bb`](https://github.com/canvas-medical/canvas-plugins/commit/f0243bbb1739d716d9a9419caf97b68f7dbe67c7))
 
 * Merge pull request #43 from canvas-medical/ad/plugin-init-updates
 
@@ -873,10 +966,8 @@ Simplify plugin init ([`8e8b635`](https://github.com/canvas-medical/canvas-plugi
 
 * Add example secrets declaration in test plugin CANVAS_MANIFEST.json ([`c7f3a5e`](https://github.com/canvas-medical/canvas-plugins/commit/c7f3a5eb4b1abd34f581bf4bb6944474af480f13))
 
-* add scope and tests ([`f0243bb`](https://github.com/canvas-medical/canvas-plugins/commit/f0243bbb1739d716d9a9419caf97b68f7dbe67c7))
 
-
-## v0.0.5 (2024-05-14)
+## v0.0.5 (2024-05-13)
 
 ### Unknown
 
@@ -887,13 +978,15 @@ This directory is really important and needs to be here. ([`b2b79a7`](https://gi
 * This directory is really important and needs to be here. ([`744fa06`](https://github.com/canvas-medical/canvas-plugins/commit/744fa0635f6cf3624acea2d2ecb72e32860df4ad))
 
 
-## v0.0.4 (2024-05-14)
+## v0.0.4 (2024-05-13)
 
 ### Unknown
 
 * Merge pull request #40 from canvas-medical/michela/auth-documentation-and-http-cleanup
 
 Clean up some http code+tests, and add auth setup documentation ([`684ea0f`](https://github.com/canvas-medical/canvas-plugins/commit/684ea0f8ff83c10245363dcc45b442dd00621023))
+
+* clean up some http code and tests, and also add help text and documentation for auth setup ([`6b69a61`](https://github.com/canvas-medical/canvas-plugins/commit/6b69a61c8fa9d86597b00a73757ac4a31a9bdf78))
 
 * Merge pull request #37 from canvas-medical/jw-koala-1336
 
@@ -927,17 +1020,15 @@ Load plugin secrets if present ([`1aa11a4`](https://github.com/canvas-medical/ca
 
 * Fix mutable-default-arguments bug ([`42bf7f0`](https://github.com/canvas-medical/canvas-plugins/commit/42bf7f09f96a3f4c58aa60fa6cb1aee885f8459c))
 
-* clean up some http code and tests, and also add help text and documentation for auth setup ([`6b69a61`](https://github.com/canvas-medical/canvas-plugins/commit/6b69a61c8fa9d86597b00a73757ac4a31a9bdf78))
+* Add back a test plugin, but in a location it won't be loaded by accident. ([`26d8326`](https://github.com/canvas-medical/canvas-plugins/commit/26d832620134b0b8688cf29e534fda15b082777b))
+
+* Look for a secrets json file, load it if it exists, and initialize plugins with applicable secrets. ([`fe38865`](https://github.com/canvas-medical/canvas-plugins/commit/fe388657accc952315202b6ea618df224433f656))
+
+* Now that we can install plugins, we don't need to ship these with the runner. Also, since we're getting close to launch, we want to make sure these test plugins don't actually end up running somewhere. ([`c685920`](https://github.com/canvas-medical/canvas-plugins/commit/c685920e2a2783b3ec368d2bb52603c68f604dc0))
 
 * Build out http helper class (#36)
 
 An abstraction on the requests library ([`b4bc617`](https://github.com/canvas-medical/canvas-plugins/commit/b4bc6174275872043e6dbd4ec8c7642a294747ad))
-
-* Add back a test plugin, but in a location it won&#39;t be loaded by accident. ([`26d8326`](https://github.com/canvas-medical/canvas-plugins/commit/26d832620134b0b8688cf29e534fda15b082777b))
-
-* Look for a secrets json file, load it if it exists, and initialize plugins with applicable secrets. ([`fe38865`](https://github.com/canvas-medical/canvas-plugins/commit/fe388657accc952315202b6ea618df224433f656))
-
-* Now that we can install plugins, we don&#39;t need to ship these with the runner. Also, since we&#39;re getting close to launch, we want to make sure these test plugins don&#39;t actually end up running somewhere. ([`c685920`](https://github.com/canvas-medical/canvas-plugins/commit/c685920e2a2783b3ec368d2bb52603c68f604dc0))
 
 * Merge pull request #38 from canvas-medical/ad/plugin-secrets
 
@@ -996,8 +1087,8 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
-Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`df0333b`](https://github.com/canvas-medical/canvas-plugins/commit/df0333b8461692b21fdcc2da2052aa44f2a71987))
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> ([`df0333b`](https://github.com/canvas-medical/canvas-plugins/commit/df0333b8461692b21fdcc2da2052aa44f2a71987))
 
 * Merge pull request #25 from canvas-medical/feature/jw-koala-1243
 
@@ -1038,7 +1129,7 @@ Adds a BaseProtocol for inheritance ([`4355976`](https://github.com/canvas-medic
 * Create UpdateGoal command (#19) ([`c8ae599`](https://github.com/canvas-medical/canvas-plugins/commit/c8ae599203ad272457ce26a3546e7751522bd9dd))
 
 
-## v0.0.3 (2024-04-04)
+## v0.0.3 (2024-04-03)
 
 ### Unknown
 
@@ -1048,11 +1139,23 @@ Adds a BaseProtocol for inheritance ([`4355976`](https://github.com/canvas-medic
 
 Write integration test for command schemas ([`0ad960e`](https://github.com/canvas-medical/canvas-plugins/commit/0ad960e4193225e8a2a868ae80acad0c4865b159))
 
+* refactor tests to be more developer friendly ([`7ea4a24`](https://github.com/canvas-medical/canvas-plugins/commit/7ea4a249262e3fbfad1c3952f709a1ac93056593))
+
+* scope token fixture to the session and add env variables ([`024ec2e`](https://github.com/canvas-medical/canvas-plugins/commit/024ec2e3b3ba625c631aaf580a38a9518cf72ba8))
+
+* create the command within the test ([`0391ef4`](https://github.com/canvas-medical/canvas-plugins/commit/0391ef42d675aabf1a5a45ef0b4fdc308b368da8))
+
+* update integration test to autogenerate types on our end ([`363ddd2`](https://github.com/canvas-medical/canvas-plugins/commit/363ddd217689d9e405af9d76173af6f2adbca290))
+
+* update integration test to autogenerate types on our end ([`7db3f88`](https://github.com/canvas-medical/canvas-plugins/commit/7db3f88e0923787491c99c162e788e6ef5c31ba3))
+
+* fix conflicts ([`ecb80bf`](https://github.com/canvas-medical/canvas-plugins/commit/ecb80bf69e348c3b625cbd37996e3ab401b21ce3))
+
 * Merge pull request #22 from canvas-medical/ad/medication-statement-command-autocomplete
 
 Support command autocomplete manipulation ([`d698bae`](https://github.com/canvas-medical/canvas-plugins/commit/d698bae2407069da266997f30c8cd50f5678d212))
 
-* If we don&#39;t mark this global we&#39;re only adding to a local variable. ([`28af410`](https://github.com/canvas-medical/canvas-plugins/commit/28af41066dacc7341e9d86a4dbc67e7b66a250b4))
+* If we don't mark this global we're only adding to a local variable. ([`28af410`](https://github.com/canvas-medical/canvas-plugins/commit/28af41066dacc7341e9d86a4dbc67e7b66a250b4))
 
 * Return the accumulated list of effects ([`c1bd603`](https://github.com/canvas-medical/canvas-plugins/commit/c1bd603a864cf085a64f460de029dfd3c90e74b2))
 
@@ -1076,17 +1179,25 @@ Support command autocomplete manipulation ([`d698bae`](https://github.com/canvas
 
 * move custom plugins for dev ([`415d704`](https://github.com/canvas-medical/canvas-plugins/commit/415d704b09ce215a67bb96fe8d20e0cbb96d6b16))
 
-* refactor tests to be more developer friendly ([`7ea4a24`](https://github.com/canvas-medical/canvas-plugins/commit/7ea4a249262e3fbfad1c3952f709a1ac93056593))
+* WIP ([`8952c94`](https://github.com/canvas-medical/canvas-plugins/commit/8952c948e917bc9b389b52b4eff41090bf8e25b3))
 
-* scope token fixture to the session and add env variables ([`024ec2e`](https://github.com/canvas-medical/canvas-plugins/commit/024ec2e3b3ba625c631aaf580a38a9518cf72ba8))
+* WIP debugging code ([`2eead49`](https://github.com/canvas-medical/canvas-plugins/commit/2eead49300c6877bdee298464d457d7d5f64a016))
 
-* create the command within the test ([`0391ef4`](https://github.com/canvas-medical/canvas-plugins/commit/0391ef42d675aabf1a5a45ef0b4fdc308b368da8))
+* WIP for module reloading ([`7169891`](https://github.com/canvas-medical/canvas-plugins/commit/716989160e61c40dd6ee6f6d4605480a2e2cdbf6))
 
-* update integration test to autogenerate types on our end ([`363ddd2`](https://github.com/canvas-medical/canvas-plugins/commit/363ddd217689d9e405af9d76173af6f2adbca290))
+* WIP reloading fix. ([`d193a4e`](https://github.com/canvas-medical/canvas-plugins/commit/d193a4e76fedc247789186901b297bf56f495df7))
 
-* update integration test to autogenerate types on our end ([`7db3f88`](https://github.com/canvas-medical/canvas-plugins/commit/7db3f88e0923787491c99c162e788e6ef5c31ba3))
+* WIP effects and reloading. ([`33c2e2b`](https://github.com/canvas-medical/canvas-plugins/commit/33c2e2b71ca181f97f4fbd0e4b12442c35f197e1))
 
-* fix conflicts ([`ecb80bf`](https://github.com/canvas-medical/canvas-plugins/commit/ecb80bf69e348c3b625cbd37996e3ab401b21ce3))
+* Fixes plugin structure and installation issues. ([`612cacd`](https://github.com/canvas-medical/canvas-plugins/commit/612cacd24c63ad24842f903fd0f51904b57074af))
+
+* Changes effect type. ([`82c948f`](https://github.com/canvas-medical/canvas-plugins/commit/82c948fbf59c422c3a6cd6ab527a1b6f8c652949))
+
+* more WIP ([`216935c`](https://github.com/canvas-medical/canvas-plugins/commit/216935c84e714018ba5092969a99b680f8074c96))
+
+* add simple module reloading ([`ea2d42a`](https://github.com/canvas-medical/canvas-plugins/commit/ea2d42a0fbe1b7cafdb9478086a1521b35481b8e))
+
+* WIP for plugin reloading ([`caab056`](https://github.com/canvas-medical/canvas-plugins/commit/caab056024a1e7c3eeac91c0f425b07e529b04a7))
 
 * Create Command effects and BannerAlert effects
 
@@ -1098,23 +1209,9 @@ Create Command effects and BannerAlert effects ([`89804a1`](https://github.com/c
 
 * feedback from demo ([`496c0c7`](https://github.com/canvas-medical/canvas-plugins/commit/496c0c7bf272fbffaf86b555fb3e9ebcf96043a9))
 
-* WIP ([`8952c94`](https://github.com/canvas-medical/canvas-plugins/commit/8952c948e917bc9b389b52b4eff41090bf8e25b3))
-
-* WIP debugging code ([`2eead49`](https://github.com/canvas-medical/canvas-plugins/commit/2eead49300c6877bdee298464d457d7d5f64a016))
-
-* WIP for module reloading ([`7169891`](https://github.com/canvas-medical/canvas-plugins/commit/716989160e61c40dd6ee6f6d4605480a2e2cdbf6))
-
-* WIP reloading fix. ([`d193a4e`](https://github.com/canvas-medical/canvas-plugins/commit/d193a4e76fedc247789186901b297bf56f495df7))
-
 * also create banner alert effect ([`f36f71e`](https://github.com/canvas-medical/canvas-plugins/commit/f36f71e6888a9b3830a2d6ceba2764b6051461fa))
 
 * create effect return values from command classes ([`c14ccad`](https://github.com/canvas-medical/canvas-plugins/commit/c14ccadbd4a9e696bd5e4f9bd8ed4f6450ca574f))
-
-* WIP effects and reloading. ([`33c2e2b`](https://github.com/canvas-medical/canvas-plugins/commit/33c2e2b71ca181f97f4fbd0e4b12442c35f197e1))
-
-* Fixes plugin structure and installation issues. ([`612cacd`](https://github.com/canvas-medical/canvas-plugins/commit/612cacd24c63ad24842f903fd0f51904b57074af))
-
-* Changes effect type. ([`82c948f`](https://github.com/canvas-medical/canvas-plugins/commit/82c948fbf59c422c3a6cd6ab527a1b6f8c652949))
 
 * Fix gh actions
 
@@ -1130,12 +1227,6 @@ This PR fixes the gh actions. I gave up trying to figure out how to give this re
 
 * use custom gh action instead of referencing workflows repo ([`ddddc2a`](https://github.com/canvas-medical/canvas-plugins/commit/ddddc2adb4466049f7071927298d5b388ee44700))
 
-* more WIP ([`216935c`](https://github.com/canvas-medical/canvas-plugins/commit/216935c84e714018ba5092969a99b680f8074c96))
-
-* add simple module reloading ([`ea2d42a`](https://github.com/canvas-medical/canvas-plugins/commit/ea2d42a0fbe1b7cafdb9478086a1521b35481b8e))
-
-* WIP for plugin reloading ([`caab056`](https://github.com/canvas-medical/canvas-plugins/commit/caab056024a1e7c3eeac91c0f425b07e529b04a7))
-
 * Merge pull request #13 from canvas-medical/feature/jw-koala-1117-canvas-plugins
 
 Adds command-specific events ([`b5910bf`](https://github.com/canvas-medical/canvas-plugins/commit/b5910bf96daa816b686e92c015c8e5ebad024fec))
@@ -1143,6 +1234,14 @@ Adds command-specific events ([`b5910bf`](https://github.com/canvas-medical/canv
 * Adds to messages. ([`73f16a7`](https://github.com/canvas-medical/canvas-plugins/commit/73f16a7a396786b54e24a6ef728f1f33137e16e5))
 
 * Adds ASSESS_COMMAND__CONDITION_SELECTED event type. ([`d9cb3a8`](https://github.com/canvas-medical/canvas-plugins/commit/d9cb3a80f5b7f0bc588e44fb3a2a799574eab044))
+
+* Changes events to be non-command specific. ([`ba8cbae`](https://github.com/canvas-medical/canvas-plugins/commit/ba8cbae538eed623c6ef82b789e0ca02c8861ded))
+
+* Adds comment. ([`3423bf5`](https://github.com/canvas-medical/canvas-plugins/commit/3423bf5e674babe6205b7ce6c177158f6ce0f272))
+
+* Adds more command types to proto messages. ([`14f3344`](https://github.com/canvas-medical/canvas-plugins/commit/14f3344e12f572a19a1fb12247e9314df8a31431))
+
+* Adds Plan command events. ([`993f4ff`](https://github.com/canvas-medical/canvas-plugins/commit/993f4ffc797ee5690eabf7fd5f5fb61f0feb4d95))
 
 * Create opinionated folder structure on canvas plugin init
 
@@ -1152,17 +1251,9 @@ This PR creates a clean, easy directory structure when the user does a canvas pl
 
 * Create manifest schema and validator
 
-This PR creates the schema and validation tools for Canvas Manifest files. There is a new cli command canvas plugin validate-manifest &lt;package_name&gt; which checks the manifest file to ensure it follows the schema. ([`d4287ec`](https://github.com/canvas-medical/canvas-plugins/commit/d4287ec9c06caa6a2fe5b093f21cf9ba601df1e9))
+This PR creates the schema and validation tools for Canvas Manifest files. There is a new cli command canvas plugin validate-manifest <package_name> which checks the manifest file to ensure it follows the schema. ([`d4287ec`](https://github.com/canvas-medical/canvas-plugins/commit/d4287ec9c06caa6a2fe5b093f21cf9ba601df1e9))
 
 * check for jsondecodeerrors and rename to validate-manifest ([`4b84787`](https://github.com/canvas-medical/canvas-plugins/commit/4b8478715cb7e73c08583d191bdba997c83ac4e1))
-
-* Changes events to be non-command specific. ([`ba8cbae`](https://github.com/canvas-medical/canvas-plugins/commit/ba8cbae538eed623c6ef82b789e0ca02c8861ded))
-
-* Adds comment. ([`3423bf5`](https://github.com/canvas-medical/canvas-plugins/commit/3423bf5e674babe6205b7ce6c177158f6ce0f272))
-
-* Adds more command types to proto messages. ([`14f3344`](https://github.com/canvas-medical/canvas-plugins/commit/14f3344e12f572a19a1fb12247e9314df8a31431))
-
-* Adds Plan command events. ([`993f4ff`](https://github.com/canvas-medical/canvas-plugins/commit/993f4ffc797ee5690eabf7fd5f5fb61f0feb4d95))
 
 * try again to fix gh workflow ([`0aaefed`](https://github.com/canvas-medical/canvas-plugins/commit/0aaefed3d0ddd154a9435fdfda4046386e21a7dd))
 
@@ -1176,48 +1267,6 @@ This PR creates the schema and validation tools for Canvas Manifest files. There
 
 Bump cryptography from 42.0.2 to 42.0.4 ([`5f1f4cf`](https://github.com/canvas-medical/canvas-plugins/commit/5f1f4cfffe8b4bbb9a64865bc9a0d97d8115fc49))
 
-* Add more commands: Questionnaire, ReasonForVisit, StopMedication
-
-Add more commands: Questionnaire, ReasonForVisit, StopMedication ([`292d554`](https://github.com/canvas-medical/canvas-plugins/commit/292d554c584492fac08ddc5749b027d30534aa29))
-
-* some more cleanup ([`55bab42`](https://github.com/canvas-medical/canvas-plugins/commit/55bab42f01c494e6c053cc5528c8d4d3943e3311))
-
-
-## v0.0.2 (2024-02-24)
-
-### Unknown
-
-* Merge pull request #11 from canvas-medical/ad/change-runner-listening-address
-
-Change the plugin runner to listen on 127.0.0.1 instead of [::] ([`2cdb4fb`](https://github.com/canvas-medical/canvas-plugins/commit/2cdb4fb532ac26b7757fcc71495bf7358f8a7fe6))
-
-* Change the plugin runner to listen on 127.0.0.1 instead of [::] ([`ae6567b`](https://github.com/canvas-medical/canvas-plugins/commit/ae6567beb4f47093b8d4c67bdad5c5175f4fda9b))
-
-* clean up basecommand ([`6924bda`](https://github.com/canvas-medical/canvas-plugins/commit/6924bda6d637ea631ec5b9d5486f32cfb44b01ae))
-
-* use typing_extensions instead of typing for TypedDict ([`4cc1ea4`](https://github.com/canvas-medical/canvas-plugins/commit/4cc1ea444c24439edc6ee1217549075a86aacd6d))
-
-* create stop medication command ([`8e22cda`](https://github.com/canvas-medical/canvas-plugins/commit/8e22cda0ee2d6d61d16fa46ca3967b633c0855eb))
-
-* create reasonforvisit ([`18b22fd`](https://github.com/canvas-medical/canvas-plugins/commit/18b22fde970dd42ddb2e83e44422709f4327d48d))
-
-* create questionnaire ([`e76a40c`](https://github.com/canvas-medical/canvas-plugins/commit/e76a40c5f3952a86cbf56614752387c62bd4aac0))
-
-
-## v0.0.1 (2024-02-22)
-
-### Unknown
-
-* Merge pull request #7 from canvas-medical/ad/add-plugin-runner-process
-
-Add the plugin runner process ([`56ac4f5`](https://github.com/canvas-medical/canvas-plugins/commit/56ac4f5044169a82ce666b3a5903dcfc40fa9946))
-
-* Ensure the generated classes are clearly marked as such via directory structure ([`c56f5fb`](https://github.com/canvas-medical/canvas-plugins/commit/c56f5fb0a547c4f8510f983afaf924e1ec4c4561))
-
-* First pass at the protocol runner process. ([`dd6f9e3`](https://github.com/canvas-medical/canvas-plugins/commit/dd6f9e34092a75e13303c5e5b7e994588f3f42fb))
-
-* Add vim swapfiles to the gitignore ([`3a85ef9`](https://github.com/canvas-medical/canvas-plugins/commit/3a85ef99d645f7e246d149dfd631830758a83498))
-
 * Bump cryptography from 42.0.2 to 42.0.4
 
 Bumps [cryptography](https://github.com/pyca/cryptography) from 42.0.2 to 42.0.4.
@@ -1230,7 +1279,49 @@ updated-dependencies:
   dependency-type: indirect
 ...
 
-Signed-off-by: dependabot[bot] &lt;support@github.com&gt; ([`959705f`](https://github.com/canvas-medical/canvas-plugins/commit/959705ffc9bec35e8efdf463f2142d863ecf9b1d))
+Signed-off-by: dependabot[bot] <support@github.com> ([`959705f`](https://github.com/canvas-medical/canvas-plugins/commit/959705ffc9bec35e8efdf463f2142d863ecf9b1d))
+
+* Add more commands: Questionnaire, ReasonForVisit, StopMedication
+
+Add more commands: Questionnaire, ReasonForVisit, StopMedication ([`292d554`](https://github.com/canvas-medical/canvas-plugins/commit/292d554c584492fac08ddc5749b027d30534aa29))
+
+* some more cleanup ([`55bab42`](https://github.com/canvas-medical/canvas-plugins/commit/55bab42f01c494e6c053cc5528c8d4d3943e3311))
+
+* clean up basecommand ([`6924bda`](https://github.com/canvas-medical/canvas-plugins/commit/6924bda6d637ea631ec5b9d5486f32cfb44b01ae))
+
+* use typing_extensions instead of typing for TypedDict ([`4cc1ea4`](https://github.com/canvas-medical/canvas-plugins/commit/4cc1ea444c24439edc6ee1217549075a86aacd6d))
+
+* create stop medication command ([`8e22cda`](https://github.com/canvas-medical/canvas-plugins/commit/8e22cda0ee2d6d61d16fa46ca3967b633c0855eb))
+
+* create reasonforvisit ([`18b22fd`](https://github.com/canvas-medical/canvas-plugins/commit/18b22fde970dd42ddb2e83e44422709f4327d48d))
+
+* create questionnaire ([`e76a40c`](https://github.com/canvas-medical/canvas-plugins/commit/e76a40c5f3952a86cbf56614752387c62bd4aac0))
+
+
+## v0.0.2 (2024-02-23)
+
+### Unknown
+
+* Merge pull request #11 from canvas-medical/ad/change-runner-listening-address
+
+Change the plugin runner to listen on 127.0.0.1 instead of [::] ([`2cdb4fb`](https://github.com/canvas-medical/canvas-plugins/commit/2cdb4fb532ac26b7757fcc71495bf7358f8a7fe6))
+
+* Change the plugin runner to listen on 127.0.0.1 instead of [::] ([`ae6567b`](https://github.com/canvas-medical/canvas-plugins/commit/ae6567beb4f47093b8d4c67bdad5c5175f4fda9b))
+
+
+## v0.0.1 (2024-02-21)
+
+### Unknown
+
+* Merge pull request #7 from canvas-medical/ad/add-plugin-runner-process
+
+Add the plugin runner process ([`56ac4f5`](https://github.com/canvas-medical/canvas-plugins/commit/56ac4f5044169a82ce666b3a5903dcfc40fa9946))
+
+* Ensure the generated classes are clearly marked as such via directory structure ([`c56f5fb`](https://github.com/canvas-medical/canvas-plugins/commit/c56f5fb0a547c4f8510f983afaf924e1ec4c4561))
+
+* First pass at the protocol runner process. ([`dd6f9e3`](https://github.com/canvas-medical/canvas-plugins/commit/dd6f9e34092a75e13303c5e5b7e994588f3f42fb))
+
+* Add vim swapfiles to the gitignore ([`3a85ef9`](https://github.com/canvas-medical/canvas-plugins/commit/3a85ef99d645f7e246d149dfd631830758a83498))
 
 * Create more commands: Assess, Diagnose, Goal, HPI, MedicationStatement
 

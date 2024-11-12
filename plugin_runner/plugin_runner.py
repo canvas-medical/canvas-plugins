@@ -9,13 +9,10 @@ import time
 import traceback
 from collections import defaultdict
 from types import FrameType
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional, TypedDict, cast
 
 import grpc
 import statsd
-from authentication import token_for_plugin
-from plugin_synchronizer import publish_message
-from sandbox import Sandbox
 
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginsRequest,
@@ -27,8 +24,12 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
 )
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventResponse, EventType
+from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
+from plugin_runner.authentication import token_for_plugin
+from plugin_runner.plugin_synchronizer import publish_message
+from plugin_runner.sandbox import Sandbox
 
 ENV = os.getenv("ENV", "development")
 
@@ -53,6 +54,49 @@ LOADED_PLUGINS: dict = {}
 EVENT_PROTOCOL_MAP: dict = {}
 
 
+class DataAccess(TypedDict):
+    """DataAccess."""
+
+    event: str
+    read: list[str]
+    write: list[str]
+
+
+Protocol = TypedDict(
+    "Protocol",
+    {
+        "class": str,
+        "data_access": DataAccess,
+    },
+)
+
+
+class Components(TypedDict):
+    """Components."""
+
+    protocols: list[Protocol]
+    commands: list[dict]
+    content: list[dict]
+    effects: list[dict]
+    views: list[dict]
+
+
+class PluginManifest(TypedDict):
+    """PluginManifest."""
+
+    sdk_version: str
+    plugin_version: str
+    name: str
+    description: str
+    components: Components
+    secrets: list[dict]
+    tags: dict[str, str]
+    references: list[str]
+    license: str
+    diagram: bool
+    readme: str
+
+
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -62,11 +106,19 @@ class PluginRunner(PluginRunnerServicer):
 
     sandbox: Sandbox
 
-    async def HandleEvent(self, request: Event, context: Any) -> EventResponse:
+    async def HandleEvent(
+        self, request: Event, context: Any
+    ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
-        event_name = EventType.Name(request.type)
+        event_type = request.type
+        event_name = EventType.Name(event_type)
         relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
+
+        if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
+            plugin_name = request.target
+            # filter only for the plugin(s) that were created/updated
+            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
 
@@ -80,11 +132,21 @@ class PluginRunner(PluginRunnerServicer):
 
             try:
                 protocol = protocol_class(request, secrets)
+                classname = (
+                    protocol.__class__.__name__
+                    if isinstance(protocol, ClinicalQualityMeasure)
+                    else None
+                )
 
                 compute_start_time = time.time()
                 _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
                 effects = [
-                    Effect(type=effect.type, payload=effect.payload, plugin_name=base_plugin_name)
+                    Effect(
+                        type=effect.type,
+                        payload=effect.payload,
+                        plugin_name=base_plugin_name,
+                        classname=classname,
+                    )
                     for effect in _effects
                 ]
                 compute_duration = get_duration_ms(compute_start_time)
@@ -96,7 +158,9 @@ class PluginRunner(PluginRunnerServicer):
                     delta=compute_duration,
                 )
             except Exception as e:
-                log.error(traceback.format_exception(e))
+                for error_line_with_newlines in traceback.format_exception(e):
+                    for error_line in error_line_with_newlines.split("\n"):
+                        log.error(error_line)
                 continue
 
             effect_list += effects
@@ -116,7 +180,7 @@ class PluginRunner(PluginRunnerServicer):
 
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
-    ) -> ReloadPluginsResponse:
+    ) -> AsyncGenerator[ReloadPluginsResponse, None]:
         """This is invoked when we need to reload plugins."""
         try:
             load_plugins()
@@ -153,13 +217,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     log.info(f"Loading {path}")
 
     manifest_file = path / MANIFEST_FILE_NAME
-    manifest_json = manifest_file.read_text()
+    manifest_json_str = manifest_file.read_text()
 
     # the name is the folder name underneath the plugins directory
     name = path.name
 
     try:
-        manifest_json = json.loads(manifest_json)
+        manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {e}')
         return
@@ -237,17 +301,27 @@ def refresh_event_type_map() -> None:
                 log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
-def load_plugins() -> None:
+def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     """Load the plugins."""
     # first mark each plugin as inactive since we want to remove it from
     # LOADED_PLUGINS if it no longer exists on disk
     for plugin in LOADED_PLUGINS.values():
         plugin["active"] = False
 
-    candidates = os.listdir(PLUGIN_DIRECTORY)
+    if specified_plugin_paths is not None:
+        # convert to Paths
+        plugin_paths = [pathlib.Path(name) for name in specified_plugin_paths]
 
-    # convert to Paths
-    plugin_paths = [pathlib.Path(os.path.join(PLUGIN_DIRECTORY, name)) for name in candidates]
+        for plugin_path in plugin_paths:
+            # when we import plugins we'll use the module name directly so we need to add the plugin
+            # directory to the path
+            path_to_append = pathlib.Path(".") / plugin_path.parent
+            sys.path.append(path_to_append.as_posix())
+    else:
+        candidates = os.listdir(PLUGIN_DIRECTORY)
+
+        # convert to Paths
+        plugin_paths = [pathlib.Path(os.path.join(PLUGIN_DIRECTORY, name)) for name in candidates]
 
     # get all directories under the plugin directory
     plugin_paths = [path for path in plugin_paths if path.is_dir()]
@@ -270,7 +344,7 @@ def load_plugins() -> None:
 _cleanup_coroutines = []
 
 
-async def serve() -> None:
+async def serve(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server."""
     port = "50051"
 
@@ -281,7 +355,7 @@ async def serve() -> None:
 
     log.info(f"Starting server, listening on port {port}")
 
-    load_plugins()
+    load_plugins(specified_plugin_paths)
 
     await server.start()
 
@@ -294,7 +368,8 @@ async def serve() -> None:
     await server.wait_for_termination()
 
 
-if __name__ == "__main__":
+def run_server(specified_plugin_paths: list[str] | None = None) -> None:
+    """Run the server."""
     loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
@@ -302,9 +377,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGHUP, handle_hup_cb)
 
     try:
-        loop.run_until_complete(serve())
+        loop.run_until_complete(serve(specified_plugin_paths))
     except KeyboardInterrupt:
         pass
     finally:
         loop.run_until_complete(*_cleanup_coroutines)
         loop.close()
+
+
+if __name__ == "__main__":
+    run_server()

@@ -54,7 +54,7 @@ class _CanvasGQLClient:
 
     def __init__(self) -> None:
         self.client = Client(
-            transport=AIOHTTPTransport(url=cast(str, GRAPHQL_ENDPOINT)),
+            transport=AIOHTTPTransport(url=GRAPHQL_ENDPOINT),
             # TODO: follow the documentation in the link below to specify a
             # cached copy of the schema
             # https://gql.readthedocs.io/en/stable/usage/validation.html#using-a-provided-schema

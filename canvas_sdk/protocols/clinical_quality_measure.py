@@ -14,12 +14,14 @@ class ClinicalQualityMeasure(BaseProtocol):
         description: str = ""
         information: str = ""
         references: list[str] = []
+        source_attributes: dict[str, str]
         types: list[str] = []
         authors: list[str] = []
         show_in_chart: bool = True
         show_in_population: bool = True
         can_be_snoozed: bool = True
         is_abstract: bool = False
+        is_predictive: bool = False
 
     @classmethod
     def _meta(cls) -> dict[str, Any]:

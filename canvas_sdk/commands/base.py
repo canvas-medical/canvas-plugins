@@ -2,7 +2,7 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Literal, Tuple, Union, get_args, get_origin
+from typing import Any, Literal, Tuple, Union, cast, get_args, get_origin
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
@@ -25,9 +25,7 @@ class _BaseCommand(Model):
     note_uuid: str | None = None
     command_uuid: str | None = None
 
-    def _get_effect_method_required_fields(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> tuple:
+    def _get_effect_method_required_fields(self, method: str) -> tuple:
         base_required_fields: tuple = getattr(
             _BaseCommand.Meta, f"{method}_required_fields", tuple()
         )
@@ -52,7 +50,7 @@ class _BaseCommand(Model):
         return schema.get("$defs", {}).get(choice_key, {}).get("enum")
 
     @classmethod
-    def _get_property_type(cls, name: str) -> type:
+    def _get_property_type(cls, name: str) -> type | None:
         annotation = cls.model_fields[name].annotation
         origin = get_origin(annotation)
 
@@ -89,7 +87,7 @@ class _BaseCommand(Model):
         """Originate a new command in the note body."""
         self._validate_before_effect("originate")
         return Effect(
-            type=EffectType.Value(f"ORIGINATE_{self.constantized_key()}_COMMAND"),
+            type=f"ORIGINATE_{self.constantized_key()}_COMMAND",
             payload=json.dumps(
                 {
                     "note": self.note_uuid,
@@ -101,37 +99,39 @@ class _BaseCommand(Model):
     def edit(self) -> Effect:
         """Edit the command."""
         self._validate_before_effect("edit")
-        return {
-            "type": f"EDIT_{self.constantized_key()}_COMMAND",
-            "payload": {
-                "command": self.command_uuid,
-                "data": self.values,
-            },
-        }
+        return Effect(
+            type=f"EDIT_{self.constantized_key()}_COMMAND",
+            payload=json.dumps(
+                {
+                    "command": self.command_uuid,
+                    "data": self.values,
+                }
+            ),
+        )
 
     def delete(self) -> Effect:
         """Delete the command."""
         self._validate_before_effect("delete")
-        return {
-            "type": f"DELETE_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid},
-        }
+        return Effect(
+            type=f"DELETE_{self.constantized_key()}_COMMAND",
+            payload=json.dumps({"command": self.command_uuid}),
+        )
 
     def commit(self) -> Effect:
         """Commit the command."""
         self._validate_before_effect("commit")
-        return {
-            "type": f"COMMIT_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid},
-        }
+        return Effect(
+            type=f"COMMIT_{self.constantized_key()}_COMMAND",
+            payload=json.dumps({"command": self.command_uuid}),
+        )
 
     def enter_in_error(self) -> Effect:
         """Mark the command as entered-in-error."""
         self._validate_before_effect("enter_in_error")
-        return {
-            "type": f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
-            "payload": {"command": self.command_uuid},
-        }
+        return Effect(
+            type=f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
+            payload=json.dumps({"command": self.command_uuid}),
+        )
 
     def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
         """Returns a command recommendation to be inserted via Protocol Card."""

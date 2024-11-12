@@ -1,7 +1,7 @@
 import functools
 import json
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, cast
 
 import typer
 
@@ -60,7 +60,7 @@ class CLIContext:
                 with open(self._config_file_path, "w") as f:
                     json.dump(self._config_file, f)
 
-            return wrapper
+            return cast(F, wrapper)
 
         return _decorator(fn) if fn else _decorator
 

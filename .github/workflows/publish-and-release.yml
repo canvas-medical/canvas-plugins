@@ -39,6 +39,7 @@ jobs:
           poetry build
           pipx install dist/*.whl
           canvas --version
+          rm -rf dist/
         shell: bash
 
       - name: Python Semantic Release

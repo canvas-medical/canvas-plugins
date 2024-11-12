@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Generator
 
 import pytest
 import typer
@@ -35,7 +36,7 @@ class CLIContextTestHelper(CLIContext):
 
 
 @pytest.fixture
-def config_file(tmp_path: Path) -> Path:
+def config_file(tmp_path: Path) -> Generator[Path, None, None]:
     """Fixture that yields an empty config file and cleans up after itself."""
     config_file = tmp_path / "mock_config.json"
     yield config_file
@@ -51,7 +52,7 @@ def valid_mock_config_file(config_file: Path) -> Path:
     with open(config_file, "w") as f:
         json.dump(mock_config, f)
 
-    yield config_file
+    return config_file
 
 
 @pytest.fixture
@@ -59,7 +60,7 @@ def invalid_json_mock_config_file(config_file: Path) -> Path:
     """Fixture that yields an invalid config file."""
     config_file.write_text("Absolutely invalid JSON")
 
-    yield config_file
+    return config_file
 
 
 @pytest.fixture
@@ -71,7 +72,7 @@ def invalid_properties_mock_config_file(config_file: Path) -> Path:
     with open(config_file, "w") as f:
         json.dump(mock_config, f)
 
-    yield config_file
+    return config_file
 
 
 def test_valid_load_from_file(valid_mock_config_file: Path) -> None:

@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Type
+from collections.abc import Container
+from typing import TYPE_CHECKING, Type, cast
 
 from django.db import models
 from django.db.models import Q
@@ -42,13 +43,51 @@ class ValueSetLookupQuerySet(models.QuerySet):
 
         Condition.objects.find(MorbidObesity).find(AnaphylacticReactionToCommonBakersYeast)
         """
-        values_dict = value_set.values
-        uri_codes = [
-            (i[1], values_dict[i[0]])
-            for i in value_set.CODE_SYSTEM_MAPPING.items()
-            if i[0] in values_dict
-        ]
         q_filter = Q()
-        for system, codes in uri_codes:
-            q_filter |= Q(codings__system=system, codings__code__in=codes)
+        for system, codes in self.codings(value_set):
+            q_filter |= self.q_object(system, codes)
         return self.filter(q_filter).distinct()
+
+    @staticmethod
+    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+        """Provide a sequence of tuples where each tuple is a code system URL and a set of codes."""
+        values_dict = value_set.values
+        return cast(
+            tuple[tuple[str, set[str]]],
+            tuple(
+                (i[1], values_dict[i[0]])
+                for i in value_set.CODE_SYSTEM_MAPPING.items()
+                if i[0] in values_dict
+            ),
+        )
+
+    @staticmethod
+    def q_object(system: str, codes: Container[str]) -> Q:
+        """
+        This method can be overridden if a Q object with different filtering options is needed.
+        """
+        return Q(codings__system=system, codings__code__in=codes)
+
+
+class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
+    """
+    QuerySet for ValueSet lookups using code system name rather than URL.
+
+    Some models, like Questionnaire, store the code system by name (e.g. "LOINC") rather than by the
+    url (e.g. "http://loinc.org"). This subclass accommodates these models.
+    """
+
+    @staticmethod
+    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+        """
+        Provide a sequence of tuples where each tuple is a code system name and a set of codes.
+        """
+        values_dict = value_set.values
+        return cast(
+            tuple[tuple[str, set[str]]],
+            tuple(
+                (i[0], values_dict[i[0]])
+                for i in value_set.CODE_SYSTEM_MAPPING.items()
+                if i[0] in values_dict
+            ),
+        )
