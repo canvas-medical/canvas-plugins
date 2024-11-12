@@ -34,10 +34,6 @@ class ClinicalQualityMeasure(BaseProtocol):
         self._patient_id: str | None = None
         super().__init__(*args, **kwargs)
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        self._patient_id: str | None = None
-        super().__init__(*args, **kwargs)
-
     @classmethod
     def _meta(cls) -> dict[str, Any]:
         """
