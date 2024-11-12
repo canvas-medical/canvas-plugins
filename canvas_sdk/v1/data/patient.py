@@ -71,3 +71,5 @@ class Patient(models.Model):
             next_year = birth_date.shift(years=age + 1)
             age += (time.date() - current_year.date()) / (next_year.date() - current_year.date())
         return age
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
