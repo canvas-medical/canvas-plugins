@@ -53,4 +53,4 @@ class BillingLineItem(models.Model):
     units = models.IntegerField()
     command_type = models.CharField()
     command_id = models.IntegerField()
-    status = models.CharField(choices=BillingLineItemStatus)
+    status = models.CharField(choices=BillingLineItemStatus.choices)
