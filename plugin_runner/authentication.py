@@ -23,7 +23,7 @@ def token_for_plugin(
     if not extra_kwargs:
         extra_kwargs = {}
 
-    if jwt_signing_key == "":
+    if not jwt_signing_key:
         log.warning(
             "Using an insecure JWT signing key for GraphQL access. Set the PLUGIN_RUNNER_SIGNING_KEY environment variable to avoid this message."
         )
