@@ -31,3 +31,22 @@ class DetectedIssue(models.Model):
     issue_identifier = models.CharField()
     issue_identifier_system = models.CharField()
     detail = models.TextField()
+
+
+class DetectedIssueEvidence(models.Model):
+    """DetectedIssueEvidence."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_detectedissueevidence_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    system = models.CharField()
+    version = models.CharField()
+    code = models.CharField()
+    display = models.CharField()
+    user_selected = models.BooleanField()
+    detected_issue = models.ForeignKey(
+        DetectedIssue, on_delete=models.DO_NOTHING, related_name="evidence"
+    )
