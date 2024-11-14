@@ -21,7 +21,9 @@ class DetectedIssue(models.Model):
     originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="devices")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="detected_issues"
+    )
     code = models.CharField()
     status = models.CharField()
     severity = models.CharField()
