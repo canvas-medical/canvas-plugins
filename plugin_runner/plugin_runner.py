@@ -262,11 +262,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
+        results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
         return
-
-    results = sandbox_from_package(path)
 
     for protocol in protocols:
         # TODO add class colon validation to existing schema validation
