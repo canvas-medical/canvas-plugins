@@ -13,7 +13,6 @@ class Hcc005v1AnnualWellnessVisit(ValueSet):
         "99387",
         "99397",
     }
-<<<<<<< HEAD
 
 
 class DysrhythmiaClassConditionSuspect(ValueSet):
@@ -983,5 +982,3 @@ class DiabetesOtherClassConditionSuspect(ValueSet):
         "L98498",
         "L98499",
     }
-=======
->>>>>>> 6c2acae (feat: adds functionality for the hcc annual wellness visit protocol to be a plugin (#177))
