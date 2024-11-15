@@ -87,49 +87,6 @@ class PluginManifest(TypedDict):
     readme: str
 
 
-class DataAccess(TypedDict):
-    """DataAccess."""
-
-    event: str
-    read: list[str]
-    write: list[str]
-
-
-Protocol = TypedDict(
-    "Protocol",
-    {
-        "class": str,
-        "data_access": DataAccess,
-    },
-)
-
-
-class Components(TypedDict):
-    """Components."""
-
-    protocols: list[Protocol]
-    commands: list[dict]
-    content: list[dict]
-    effects: list[dict]
-    views: list[dict]
-
-
-class PluginManifest(TypedDict):
-    """PluginManifest."""
-
-    sdk_version: str
-    plugin_version: str
-    name: str
-    description: str
-    components: Components
-    secrets: list[dict]
-    tags: dict[str, str]
-    references: list[str]
-    license: str
-    diagram: bool
-    readme: str
-
-
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
