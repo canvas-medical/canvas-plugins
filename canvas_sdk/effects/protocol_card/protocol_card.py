@@ -49,7 +49,7 @@ class ProtocolCard(_BaseEffect):
     title: str = ""
     narrative: str = ""
     recommendations: list[Recommendation] = []
-    status: Status = Status.DUE  # type: ignore
+    status: Status = Status.DUE
     feedback_enabled: bool = False
 
     @property

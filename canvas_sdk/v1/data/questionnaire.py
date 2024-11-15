@@ -109,7 +109,7 @@ class Questionnaire(models.Model):
     code_system = models.CharField()
     code = models.CharField()
     search_tags = models.CharField()
-    questions = models.ManyToManyField(Question, through="QuestionnaireQuestionMap")
+    questions = models.ManyToManyField(Question, through="canvas_sdk.QuestionnaireQuestionMap")  # type: ignore[misc, var-annotated]
     use_in_shx = models.BooleanField()
     carry_forward = models.TextField()
 
@@ -152,7 +152,9 @@ class Interview(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="interviews")
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
-    questionnaires = models.ManyToManyField(Questionnaire, through="InterviewQuestionnaireMap")
+    questionnaires = models.ManyToManyField(  # type: ignore[var-annotated]
+        Questionnaire, through="canvas_sdk.InterviewQuestionnaireMap"  # type: ignore[misc]
+    )
     progress_status = models.CharField()
     created = models.DateTimeField()
     modified = models.DateTimeField()

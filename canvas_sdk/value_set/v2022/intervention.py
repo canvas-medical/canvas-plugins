@@ -1,30 +1,6 @@
 from ..value_set import ValueSet
 
 
-class HospiceCareAmbulatory(ValueSet):
-    """
-    **Clinical Focus:** The purpose of this value set is to represent concepts of interventions to identify patients receiving hospice care outside of a hospital or long term care facility.
-
-    **Data Element Scope:** This value set may use a model element related to Procedure or Intervention.
-
-    **Inclusion Criteria:** Includes concepts that represent a procedure or intervention for hospice care.
-
-    **Exclusion Criteria:** Excludes concepts that represent palliative care or comfort measures.
-
-    ** Used in:** CMS90v11, CMS134v10, CMS165v10, CMS146v10, CMS124v10, CMS139v10, CMS154v10, CMS56v10, CMS74v11, CMS75v10, CMS137v10, CMS136v11, CMS128v10, CMS122v10, CMS153v10, CMS66v10, CMS130v10, CMS155v10, CMS127v10, CMS117v10, CMS131v10, CMS156v10, CMS125v10
-    """
-
-    VALUE_SET_NAME = "Hospice care ambulatory"
-    OID = "2.16.840.1.113762.1.4.1108.15"
-    DEFINITION_VERSION = "20170504"
-    EXPANSION_VERSION = "eCQM Update 2021-05-06"
-
-    SNOMEDCT = {
-        "385763009",  # Hospice care (regime/therapy)
-        "385765002",  # Hospice care management (procedure)
-    }
-
-
 class PalliativeCareIntervention(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for palliative care interventions.

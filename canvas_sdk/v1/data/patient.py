@@ -49,4 +49,7 @@ class Patient(models.Model):
     @classmethod
     def find(cls, id: str) -> Self:
         """Find a patient by id."""
-        return cls.objects.get(id=id)
+        return cls._default_manager.get(id=id)
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"

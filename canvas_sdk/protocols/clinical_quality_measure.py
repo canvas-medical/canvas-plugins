@@ -21,6 +21,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         show_in_population: bool = True
         can_be_snoozed: bool = True
         is_abstract: bool = False
+        is_predictive: bool = False
 
     @classmethod
     def _meta(cls) -> dict[str, Any]:

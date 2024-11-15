@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v0.4.0 (2024-11-12)
+
+### Chores
+
+* chore: improve mypy configuration and fix the resulting errors (#187) ([`44071f1`](https://github.com/canvas-medical/canvas-plugins/commit/44071f13f069027d1d1fdadc932fe167010591ac))
+
+* chore: bump the development-patches group across 1 directory with 2 updates (#182) ([`babb355`](https://github.com/canvas-medical/canvas-plugins/commit/babb3556ef487fb546319e526fca519ea6c6dbd8))
+
+* chore: bump django from 5.1.2 to 5.1.3 in the production-patches group (#179) ([`163540a`](https://github.com/canvas-medical/canvas-plugins/commit/163540a7b833e52f5fa50a17f595fda1e1adaa63))
+
+### Code Style
+
+* style: use pathlib to construct a path (#176) ([`12e7c49`](https://github.com/canvas-medical/canvas-plugins/commit/12e7c49a04d25bf8767f856b53c1506870992349))
+
+### Features
+
+* feat: adds more lab related models (#130)
+
+Signed-off-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com>
+Co-authored-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com> ([`6177e00`](https://github.com/canvas-medical/canvas-plugins/commit/6177e00a32f24e314c80aa6223249a341a745835))
+
+* feat: adds imaging models (#137) ([`84c63e2`](https://github.com/canvas-medical/canvas-plugins/commit/84c63e2cb1225f1c481ea7b59d5fb2963afba08b))
+
+* feat: add plugin_created and plugin_updated events (#178) ([`efd45e2`](https://github.com/canvas-medical/canvas-plugins/commit/efd45e281e6d63ba0c8865e92e5521186df476b3))
+
+* feat: add is_predictive property to cqm class meta (#181) ([`9ff3117`](https://github.com/canvas-medical/canvas-plugins/commit/9ff3117a0758d17d7381e39721dcbdbc7ea12f12))
+
+
 ## v0.3.1 (2024-10-31)
 
 ### Bug Fixes

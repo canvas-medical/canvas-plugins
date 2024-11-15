@@ -1,6 +1,6 @@
 import time
 from functools import wraps
-from typing import Any, Callable, Mapping, TypeVar
+from typing import Any, Callable, Mapping, TypeVar, cast
 
 import requests
 import statsd
@@ -28,7 +28,7 @@ class Http:
             self.statsd_client.timing(f"http_{fn.__name__}", timing)
             return result
 
-        return wrapper
+        return cast(F, wrapper)
 
     @measure_time
     def get(

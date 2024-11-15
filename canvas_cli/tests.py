@@ -2,11 +2,12 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, cast
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 from typer.testing import CliRunner
 
 import settings
@@ -23,11 +24,16 @@ def plugin_name() -> str:
     return f"cli-{datetime.now().timestamp()}".replace(".", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
-def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator[Any, Any, Any]:
+@pytest.fixture(scope="session")
+def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator[None, None, None]:
     """Creates the necessary config file for auth before performing cli tests."""
 
-    host = urlparse(settings.INTEGRATION_TEST_URL).hostname.replace(".canvasmedical.com", "")
+    if not settings.INTEGRATION_TEST_URL:
+        raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
+
+    host = cast(str, urlparse(settings.INTEGRATION_TEST_URL).hostname).replace(
+        ".canvasmedical.com", ""
+    )
     client_id = settings.INTEGRATION_TEST_CLIENT_ID
     client_secret = settings.INTEGRATION_TEST_CLIENT_SECRET
 
@@ -162,9 +168,9 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
     )
 
 
+@pytest.mark.integtest
 @patch("keyring.get_password")
 @patch("keyring.set_password")
-@pytest.mark.integtest
 @pytest.mark.parametrize(
     "step",
     [
@@ -183,6 +189,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     mock_get_password: MagicMock,
     mock_set_password: MagicMock,
     plugin_name: str,
+    create_or_update_config_auth_file_for_testing: None,
     step: Callable,
 ) -> None:
     """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin"""

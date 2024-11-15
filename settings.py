@@ -1,10 +1,17 @@
 import os
+import sys
 
 from dotenv import load_dotenv
+from env_tools import env_to_bool
 
 from canvas_sdk.utils.db import get_database_dict_from_url
 
 load_dotenv()
+
+ENV = os.getenv("ENV", "development")
+IS_PRODUCTION = ENV == "production"
+IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
+
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
@@ -41,3 +48,19 @@ else:
     }
 
 DATABASES = {"default": database_dict}
+
+
+PLUGIN_RUNNER_SIGNING_KEY = os.getenv("PLUGIN_RUNNER_SIGNING_KEY", "")
+
+PLUGIN_DIRECTORY = os.getenv(
+    "PLUGIN_DIRECTORY",
+    (
+        "/plugin-runner/custom-plugins"
+        if IS_PRODUCTION
+        else "./plugin_runner/tests/data/plugins" if IS_TESTING else "./custom-plugins"
+    ),
+)
+
+MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
+
+SECRETS_FILE_NAME = "SECRETS.json"

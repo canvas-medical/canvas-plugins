@@ -23,7 +23,7 @@ class Printer:
         Printer.json(message=message, success=success, status_code=response.status_code)
 
     @staticmethod
-    def json(message: str | list[str] | dict | None, success: bool = True, **kwargs: Any) -> None:
+    def json(message: str | None, success: bool = True, **kwargs: Any) -> None:
         """Print a message in json format regardless of the input."""
         status = {"success": success}
         if message:

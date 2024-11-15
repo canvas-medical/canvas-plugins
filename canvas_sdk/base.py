@@ -31,7 +31,8 @@ class Model(BaseModel):
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         required_fields = self._get_effect_method_required_fields(method)
-        class_name = self.__repr_name__()
+        class_name = self.__repr_name__()  # type: ignore[misc]
+
         class_name_article = "an" if class_name.startswith(("A", "E", "I", "O", "U")) else "a"
         return [
             self._create_error_detail(

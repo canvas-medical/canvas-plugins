@@ -1,15 +1,15 @@
 import asyncio
-import importlib.util
 import json
 import os
 import pathlib
+import pkgutil
 import signal
 import sys
 import time
 import traceback
 from collections import defaultdict
 from types import FrameType
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional, TypedDict
 
 import grpc
 import statsd
@@ -30,17 +30,7 @@ from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.plugin_synchronizer import publish_message
 from plugin_runner.sandbox import Sandbox
-
-ENV = os.getenv("ENV", "development")
-
-IS_PRODUCTION = ENV == "production"
-
-MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
-
-SECRETS_FILE_NAME = "SECRETS.json"
-
-# specify a local plugin directory for development
-PLUGIN_DIRECTORY = "/plugin-runner/custom-plugins" if IS_PRODUCTION else "./custom-plugins"
+from settings import MANIFEST_FILE_NAME, PLUGIN_DIRECTORY, SECRETS_FILE_NAME
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
@@ -51,7 +41,50 @@ sys.path.append(PLUGIN_DIRECTORY)
 LOADED_PLUGINS: dict = {}
 
 # a global dictionary of events to protocol class names
-EVENT_PROTOCOL_MAP: dict = {}
+EVENT_PROTOCOL_MAP: dict[str, list] = defaultdict(list)
+
+
+class DataAccess(TypedDict):
+    """DataAccess."""
+
+    event: str
+    read: list[str]
+    write: list[str]
+
+
+Protocol = TypedDict(
+    "Protocol",
+    {
+        "class": str,
+        "data_access": DataAccess,
+    },
+)
+
+
+class Components(TypedDict):
+    """Components."""
+
+    protocols: list[Protocol]
+    commands: list[dict]
+    content: list[dict]
+    effects: list[dict]
+    views: list[dict]
+
+
+class PluginManifest(TypedDict):
+    """PluginManifest."""
+
+    sdk_version: str
+    plugin_version: str
+    name: str
+    description: str
+    components: Components
+    secrets: list[dict]
+    tags: dict[str, str]
+    references: list[str]
+    license: str
+    diagram: bool
+    readme: str
 
 
 class PluginRunner(PluginRunnerServicer):
@@ -63,11 +96,19 @@ class PluginRunner(PluginRunnerServicer):
 
     sandbox: Sandbox
 
-    async def HandleEvent(self, request: Event, context: Any) -> EventResponse:
+    async def HandleEvent(
+        self, request: Event, context: Any
+    ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
-        event_name = EventType.Name(request.type)
-        relevant_plugins = EVENT_PROTOCOL_MAP.get(event_name, [])
+        event_type = request.type
+        event_name = EventType.Name(event_type)
+        relevant_plugins = EVENT_PROTOCOL_MAP[event_name]
+
+        if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
+            plugin_name = request.target
+            # filter only for the plugin(s) that were created/updated
+            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
 
@@ -129,7 +170,7 @@ class PluginRunner(PluginRunnerServicer):
 
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
-    ) -> ReloadPluginsResponse:
+    ) -> AsyncGenerator[ReloadPluginsResponse, None]:
         """This is invoked when we need to reload plugins."""
         try:
             load_plugins()
@@ -146,18 +187,50 @@ def handle_hup_cb(_signum: int, _frame: Optional[FrameType]) -> None:
     load_plugins()
 
 
-def sandbox_from_module_name(module_name: str) -> Any:
+def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str]:
+    """Find all modules in the specified package path."""
+    modules: list[str] = []
+
+    for file_finder, module_name, is_pkg in pkgutil.iter_modules(
+        [base_path.as_posix()],
+    ):
+        if is_pkg:
+            modules = modules + find_modules(
+                base_path / module_name,
+                prefix=f"{prefix}.{module_name}" if prefix else module_name,
+            )
+        else:
+            modules.append(f"{prefix}.{module_name}" if prefix else module_name)
+
+    return modules
+
+
+def sandbox_from_package(package_path: pathlib.Path) -> dict[str, Any]:
     """Sandbox the code execution."""
-    spec = importlib.util.find_spec(module_name)
+    package_name = package_path.name
+    available_modules = find_modules(package_path)
+    sandboxes = {}
 
-    if not spec or not spec.origin:
-        raise Exception(f'Could not load plugin "{module_name}"')
+    for module_name in available_modules:
+        result = sandbox_from_module(package_path, module_name)
+        full_module_name = f"{package_name}.{module_name}"
+        sandboxes[full_module_name] = result
 
-    origin = pathlib.Path(spec.origin)
-    source_code = origin.read_text()
+    return sandboxes
 
-    sandbox = Sandbox(source_code)
 
+def sandbox_from_module(package_path: pathlib.Path, module_name: str) -> Any:
+    """Sandbox the code execution."""
+    module_path = package_path / str(module_name.replace(".", "/") + ".py")
+
+    if not module_path.exists():
+        raise ModuleNotFoundError(f'Could not load module "{module_name}"')
+
+    source_code = module_path.read_text()
+
+    full_module_name = f"{package_path.name}.{module_name}"
+
+    sandbox = Sandbox(source_code, module_name=full_module_name)
     return sandbox.execute()
 
 
@@ -166,13 +239,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     log.info(f"Loading {path}")
 
     manifest_file = path / MANIFEST_FILE_NAME
-    manifest_json = manifest_file.read_text()
+    manifest_json_str = manifest_file.read_text()
 
     # the name is the folder name underneath the plugins directory
     name = path.name
 
     try:
-        manifest_json = json.loads(manifest_json)
+        manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {e}')
         return
@@ -189,6 +262,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
     # TODO add existing schema validation from Michela here
     try:
         protocols = manifest_json["components"]["protocols"]
+        results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
         return
@@ -207,7 +281,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading plugin '{name_and_class}'")
 
-                result = sandbox_from_module_name(protocol_module)
+                result = results[protocol_module]
 
                 LOADED_PLUGINS[name_and_class]["active"] = True
 
@@ -217,7 +291,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             else:
                 log.info(f"Loading plugin '{name_and_class}'")
 
-                result = sandbox_from_module_name(protocol_module)
+                result = results[protocol_module]
 
                 LOADED_PLUGINS[name_and_class] = {
                     "active": True,
@@ -234,8 +308,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
 def refresh_event_type_map() -> None:
     """Ensure the event subscriptions are up to date."""
-    global EVENT_PROTOCOL_MAP
-    EVENT_PROTOCOL_MAP = defaultdict(list)
+    EVENT_PROTOCOL_MAP.clear()
 
     for name, plugin in LOADED_PLUGINS.items():
         if hasattr(plugin["class"], "RESPONDS_TO"):
@@ -265,7 +338,7 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             # when we import plugins we'll use the module name directly so we need to add the plugin
             # directory to the path
             path_to_append = pathlib.Path(".") / plugin_path.parent
-            sys.path.append(path_to_append)
+            sys.path.append(path_to_append.as_posix())
     else:
         candidates = os.listdir(PLUGIN_DIRECTORY)
 

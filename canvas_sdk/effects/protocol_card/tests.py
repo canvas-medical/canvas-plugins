@@ -107,7 +107,7 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
     ],
 )
 def test_add_recommendations(
-    init_params: dict[str, str], rec1_params: dict[Any, Any], rec2_params: dict[str, str]
+    init_params: dict[Any, Any], rec1_params: dict[Any, Any], rec2_params: dict[Any, Any]
 ) -> None:
     p = ProtocolCard(**init_params)
     p.add_recommendation(**rec1_params)
@@ -156,7 +156,7 @@ def test_add_recommendations(
     ],
 )
 def test_add_recommendations_from_commands(
-    Command: _BaseCommand, init_params: dict[str, str]
+    Command: type[_BaseCommand], init_params: dict[str, str]
 ) -> None:
     cmd = Command(**init_params)
     p = ProtocolCard(patient_id="uuid", key="commands")

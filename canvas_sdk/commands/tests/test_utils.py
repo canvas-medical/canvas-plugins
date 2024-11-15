@@ -5,7 +5,7 @@ from contextlib import chdir
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import requests
@@ -63,21 +63,7 @@ def random_string() -> str:
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
 
-def fake(
-    field_props: dict,
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-    ),
-) -> Any:
+def fake(field_props: dict, Command: type[_BaseCommand]) -> Any:
     t = get_field_type(field_props)
     match t:
         case "string":
@@ -107,18 +93,7 @@ def fake(
 
 
 def raises_wrong_type_error(
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-    ),
+    Command: type[_BaseCommand],
     field: str,
 ) -> None:
     field_props = Command.model_json_schema()["properties"][field]
@@ -155,18 +130,7 @@ def raises_wrong_type_error(
 
 
 def raises_none_error_for_effect_method(
-    Command: (
-        AssessCommand
-        | DiagnoseCommand
-        | GoalCommand
-        | HistoryOfPresentIllnessCommand
-        | MedicationStatementCommand
-        | PlanCommand
-        | PrescribeCommand
-        | QuestionnaireCommand
-        | ReasonForVisitCommand
-        | StopMedicationCommand
-    ),
+    Command: type[_BaseCommand],
     method: str,
 ) -> None:
     cmd_name = Command.__name__
@@ -214,7 +178,7 @@ class Protocol(BaseProtocol):
 
 def install_plugin(plugin_name: str, token: MaskedValue) -> None:
     requests.post(
-        plugin_url(settings.INTEGRATION_TEST_URL),
+        plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
         data={"is_enabled": True},
         files={"package": open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb")},
         headers={"Authorization": f"Bearer {token.value}"},
@@ -267,7 +231,7 @@ def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
 
     # disable
     requests.patch(
-        plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
+        plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_name),
         data={"is_enabled": False},
         headers={
             "Authorization": f"Bearer {token.value}",
@@ -275,13 +239,13 @@ def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
     )
     # delete
     requests.delete(
-        plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
+        plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_name),
         headers={"Authorization": f"Bearer {token.value}"},
     )
 
 
 # For reuse with the protocol code
-COMMANDS = [
+COMMANDS: list[type[_BaseCommand]] = [
     AssessCommand,
     DiagnoseCommand,
     GoalCommand,
