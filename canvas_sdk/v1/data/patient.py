@@ -57,7 +57,7 @@ class Patient(models.Model):
 
     def age_at(self, time: arrow.Arrow) -> float:
         """Given a datetime, returns what the patient's age would be at that datetime."""
-        age = 0
+        age = float(0)
         birth_date = arrow.get(self.birth_date)
         if birth_date.date() < time.date():
             age = time.datetime.year - birth_date.datetime.year
