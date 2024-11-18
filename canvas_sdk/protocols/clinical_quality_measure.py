@@ -1,5 +1,7 @@
 from typing import Any
 
+import arrow
+
 from canvas_sdk.protocols.base import BaseProtocol
 
 
@@ -22,6 +24,10 @@ class ClinicalQualityMeasure(BaseProtocol):
         can_be_snoozed: bool = True
         is_abstract: bool = False
         is_predictive: bool = False
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.now = arrow.utcnow()  # TODO now should be local time
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def _meta(cls) -> dict[str, Any]:
