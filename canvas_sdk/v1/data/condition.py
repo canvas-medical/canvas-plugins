@@ -5,10 +5,14 @@ from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
 
-class ConditionQuerySet(ValueSetLookupQuerySet):
-    """ConditionQuerySet."""
+class ClinicalStatus(models.TextChoices):
+    """ClinicalStatus."""
 
-    pass
+    ACTIVE = "active", "active"
+    RELAPSE = "relapse", "relapse"
+    REMISSION = "remission", "remission"
+    RESOLVED = "resolved", "resolved"
+    INVESTIGATIVE = "investigative", "investigative"
 
 
 class Condition(models.Model):
@@ -19,16 +23,17 @@ class Condition(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_condition_001"
 
-    objects = CommittableModelManager.from_queryset(ConditionQuerySet)()
+    objects = CommittableModelManager.from_queryset(ValueSetLookupQuerySet)()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    onset_date = models.DateField()
-    resolution_date = models.DateField()
     deleted = models.BooleanField()
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="conditions")
+    onset_date = models.DateField()
+    resolution_date = models.DateField()
+    clinical_status = models.CharField(choices=ClinicalStatus.choices)
 
 
 class ConditionCoding(models.Model):

@@ -1,6 +1,18 @@
 from typing import Self
 
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.db.models import TextChoices
+
+
+class SexAtBirth(TextChoices):
+    """SexAtBirth."""
+
+    FEMALE = "F", "female"
+    MALE = "M", "male"
+    OTHER = "O", "other"
+    UNKNOWN = "UNK", "unknown"
+    BLANK = "", ""
 
 
 class Patient(models.Model):
@@ -16,7 +28,7 @@ class Patient(models.Model):
     first_name = models.CharField()
     last_name = models.CharField()
     birth_date = models.DateField()
-    sex_at_birth = models.CharField()
+    sex_at_birth = models.CharField(choices=SexAtBirth.choices)
     created = models.DateTimeField()
     modified = models.DateTimeField()
     prefix = models.CharField()
@@ -29,6 +41,7 @@ class Patient(models.Model):
     gender_identity_term = models.CharField()
     gender_identity_code = models.CharField()
     preferred_pronouns = models.CharField()
+    biological_race_codes = ArrayField(models.CharField())
     last_known_timezone = models.CharField()
     mrn = models.CharField()
     active = models.BooleanField()
