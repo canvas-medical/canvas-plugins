@@ -1,4 +1,3 @@
-from canvas_sdk.value_set.v2022.condition import KidneyFailure as v2022KidneyFailure
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -272,31 +271,4 @@ class HypertensiveChronicKidneyDisease(ValueSet):
         "81363003",
         "86234004",
         "90493000",
-    }
-
-
-class KidneyFailure(v2022KidneyFailure):
-    """Added N1830-N1832 per MRHS request."""
-
-    OID = "2.16.840.1.113883.3.464.1003.109.12.1028"
-    VALUE_SET_NAME = "Kidney Failure"
-    EXPANSION_VERSION = "eCQM Update 2019-05-10 with a few additions"
-
-    ICD10CM = {
-        "N170",
-        "N171",
-        "N172",
-        "N178",
-        "N179",
-        "N181",
-        "N182",
-        "N183",
-        "N184",
-        "N185",
-        "N186",
-        "N189",
-        "N19",
-        "N1830",
-        "N1831",
-        "N1832",
     }
