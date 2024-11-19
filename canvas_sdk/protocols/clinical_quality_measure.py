@@ -32,6 +32,7 @@ class ClinicalQualityMeasure(BaseProtocol):
 
     def __init__(self, *args: Any, **kwargs: Any):
         self._patient_id: str | None = None
+        self.now = arrow.utcnow()
         super().__init__(*args, **kwargs)
 
     @classmethod
@@ -61,11 +62,6 @@ class ClinicalQualityMeasure(BaseProtocol):
         """
         end = self.now
         return Timeframe(start=end.shift(years=-1), end=end)
-
-    @property
-    def now(self) -> arrow.Arrow:
-        """A convenience method for returning the current datetime."""
-        return arrow.utcnow()
 
     # TODO: This approach should be considered against the alternative of just including the patient
     #  ID in the event context, given that so many events will be patient-centric.
