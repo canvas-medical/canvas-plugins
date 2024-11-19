@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Type
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import TimeframeLookupQuerySet, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import ValueSetTimeframeLookupQuerySet
 from canvas_sdk.v1.data.note import Note
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.value_set.value_set import CodeConstants
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from canvas_sdk.value_set.value_set import ValueSet
 
 
-class BillingLineItemQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySet):
+class BillingLineItemQuerySet(ValueSetTimeframeLookupQuerySet):
     """A class that adds functionality to filter BillingLineItem objects."""
 
     def find(self, value_set: Type["ValueSet"]) -> models.QuerySet:

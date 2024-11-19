@@ -103,7 +103,7 @@ class ValueSet(CodeConstantsURLMappingMixin, metaclass=ValueSystems):
     """The Base class for a ValueSet."""
 
     @classproperty
-    def values(cls) -> dict[str, set]:
+    def values(cls) -> dict[str, set[str]]:
         """A property that returns a dictionary of code systems and their associated values."""
         return {
             system: getattr(cls, system)

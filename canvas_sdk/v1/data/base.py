@@ -1,5 +1,10 @@
+from abc import abstractmethod
 from collections.abc import Container
+<<<<<<< HEAD
 from typing import TYPE_CHECKING, Self, Type, cast
+=======
+from typing import TYPE_CHECKING, Any, Dict, Protocol, Type, cast
+>>>>>>> 829cecf (Changes inherited queryset classes to mixins and adds mypy/typing protocols.)
 
 from django.db import models
 from django.db.models import Q
@@ -30,8 +35,43 @@ class CommittableQuerySet(models.QuerySet):
         return self.filter(patient__id=patient_id)
 
 
+<<<<<<< HEAD
 class ValueSetLookupQuerySet(CommittableQuerySet):
     """A QuerySet that can filter objects based on a ValueSet."""
+=======
+class BaseQuerySet(models.QuerySet):
+    """A base QuerySet inherited from Django's model.Queryset."""
+
+    pass
+
+
+class QuerySetProtocol(Protocol):
+    """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
+
+    def filter(self, *args: Any, **kwargs: Any) -> models.QuerySet[Any]:
+        """Django's models.QuerySet filter method."""
+        ...
+
+
+class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
+    """A typing protocol for use in mixins using value set lookup methods."""
+
+    @staticmethod
+    @abstractmethod
+    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+        """A protocol method for defining codings."""
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def q_object(system: str, codes: Container[str]) -> Q:
+        """A protocol method for defining Q objects for value set lookups."""
+        ...
+
+
+class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
+    """A QuerySet mixin that can filter objects based on a ValueSet."""
+>>>>>>> 829cecf (Changes inherited queryset classes to mixins and adds mypy/typing protocols.)
 
     def find(self, value_set: Type["ValueSet"]) -> "Self":
         """
@@ -55,7 +95,7 @@ class ValueSetLookupQuerySet(CommittableQuerySet):
     @staticmethod
     def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """Provide a sequence of tuples where each tuple is a code system URL and a set of codes."""
-        values_dict = value_set.values
+        values_dict = cast(Dict, value_set.values)
         return cast(
             tuple[tuple[str, set[str]]],
             tuple(
@@ -73,7 +113,7 @@ class ValueSetLookupQuerySet(CommittableQuerySet):
         return Q(codings__system=system, codings__code__in=codes)
 
 
-class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
+class ValueSetLookupByNameQuerySetMixin(ValueSetLookupQuerySetMixin):
     """
     QuerySet for ValueSet lookups using code system name rather than URL.
 
@@ -86,7 +126,7 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
         """
         Provide a sequence of tuples where each tuple is a code system name and a set of codes.
         """
-        values_dict = value_set.values
+        values_dict = cast(Dict, value_set.values)
         return cast(
             tuple[tuple[str, set[str]]],
             tuple(
@@ -97,7 +137,18 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
         )
 
 
-class TimeframeLookupQuerySet(models.QuerySet):
+class TimeframeLookupQuerySetProtocol(QuerySetProtocol):
+    """A typing protocol for use in TimeframeLookupQuerySetMixin."""
+
+    @property
+    @abstractmethod
+    def timeframe_filter_field(self) -> str:
+        """A protocol method for timeframe_filter_field."""
+
+    ...
+
+
+class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
     """A class that adds queryset functionality to filter using timeframes."""
 
     @property
@@ -115,3 +166,21 @@ class TimeframeLookupQuerySet(models.QuerySet):
                 )
             }
         )
+
+
+class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
+    """A class that includes methods for looking up value sets."""
+
+    pass
+
+
+class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMixin):
+    """A class that includes methods for looking up value sets by name."""
+
+    pass
+
+
+class ValueSetTimeframeLookupQuerySet(ValueSetLookupByNameQuerySet, TimeframeLookupQuerySetMixin):
+    """A class that includes methods for looking up value sets and using timeframes."""
+
+    pass
