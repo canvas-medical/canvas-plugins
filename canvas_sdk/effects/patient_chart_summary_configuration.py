@@ -25,6 +25,7 @@ class PatientChartSummaryConfiguration(_BaseEffect):
         IMMUNIZATIONS = "immunizations"
         SURGICAL_HISTORY = "surgical_history"
         FAMILY_HISTORY = "family_history"
+        CODING_GAPS = "coding_gaps"
 
     sections: list[Section] = Field(min_length=1)
 
