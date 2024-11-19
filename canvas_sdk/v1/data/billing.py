@@ -24,12 +24,15 @@ class BillingLineItemQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySet):
         return self.filter(cpt__in=values_dict.get(CodeConstants.HCPCS, []))
 
 
+class BillingLineItemStatus(models.TextChoices):
+    """Billing line item status."""
+
+    ACTIVE = "active", "Active"
+    REMOVED = "removed", "Removed"
+
+
 class BillingLineItem(models.Model):
     """BillingLineItem."""
-
-    class BillingLineItemStatus(models.TextChoices):
-        ACTIVE = "active", "Active"
-        REMOVED = "removed", "Removed"
 
     class Meta:
         managed = False
