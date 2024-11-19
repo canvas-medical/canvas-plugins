@@ -178,12 +178,28 @@ def test_protocol_that_adds_banner_alert(
                 "placement": [AddBannerAlert.Placement.APPOINTMENT_CARD],
                 "intent": AddBannerAlert.Intent.INFO,
             },
-            '{"patient": "uuid", "key": "test-key", "data": {"narrative": "hellooo", "placement": ["appointment_card"], "intent": "info", "href": null}}',
+            '{"patient": "uuid", "patient_filter": null, "key": "test-key", "data": {"narrative": "hellooo", "placement": ["appointment_card"], "intent": "info", "href": null}}',
+        ),
+        (
+            AddBannerAlert,
+            {
+                "patient_filter": {"active": True},
+                "key": "test-key",
+                "narrative": "hellooo",
+                "placement": [AddBannerAlert.Placement.APPOINTMENT_CARD],
+                "intent": AddBannerAlert.Intent.INFO,
+            },
+            '{"patient": null, "patient_filter": {"active": true}, "key": "test-key", "data": {"narrative": "hellooo", "placement": ["appointment_card"], "intent": "info", "href": null}}',
         ),
         (
             RemoveBannerAlert,
             {"patient_id": "uuid", "key": "testeroo"},
-            '{"patient": "uuid", "key": "testeroo"}',
+            '{"patient": "uuid", "patient_filter": null, "key": "testeroo"}',
+        ),
+        (
+            RemoveBannerAlert,
+            {"patient_filter": {"active": True}, "key": "testeroo"},
+            '{"patient": null, "patient_filter": {"active": true}, "key": "testeroo"}',
         ),
     ],
 )
@@ -204,7 +220,7 @@ def test_banner_alert_apply_method_succeeds_with_all_required_fields(
             AddBannerAlert,
             [
                 "5 validation errors for AddBannerAlert",
-                "Field 'patient_id' is required to apply an AddBannerAlert [type=missing",
+                "Field 'patient_id' or 'patient_filter' is required to apply an AddBannerAlert [type=missing",
                 "Field 'key' is required to apply an AddBannerAlert [type=missing",
                 "Field 'narrative' is required to apply an AddBannerAlert [type=missing",
                 "Field 'placement' is required to apply an AddBannerAlert [type=missing",
@@ -215,7 +231,7 @@ def test_banner_alert_apply_method_succeeds_with_all_required_fields(
             RemoveBannerAlert,
             [
                 "2 validation errors for RemoveBannerAlert",
-                "Field 'patient_id' is required to apply a RemoveBannerAlert [type=missing",
+                "Field 'patient_id' or 'patient_filter' is required to apply a RemoveBannerAlert [type=missing",
                 "Field 'key' is required to apply a RemoveBannerAlert [type=missing",
             ],
         ),

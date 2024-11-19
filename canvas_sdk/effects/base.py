@@ -10,6 +10,8 @@ class _BaseEffect(Model):
     A Canvas Effect that changes user behavior or autonomously performs activities on behalf of users.
     """
 
+    patient_filter: dict | None = None
+
     class Meta:
         effect_type = EffectType.UNKNOWN_EFFECT
 

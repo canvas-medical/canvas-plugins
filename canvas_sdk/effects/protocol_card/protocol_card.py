@@ -42,7 +42,7 @@ class ProtocolCard(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
-        apply_required_fields = ("patient_id", "key")
+        apply_required_fields = ("patient_id|patient_filter", "key")
 
     patient_id: str | None = None
     key: str | None = None
@@ -68,7 +68,12 @@ class ProtocolCard(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
-        return {"patient": self.patient_id, "key": self.key, "data": self.values}
+        return {
+            "patient": self.patient_id,
+            "patient_filter": self.patient_filter,
+            "key": self.key,
+            "data": self.values,
+        }
 
     def add_recommendation(
         self,

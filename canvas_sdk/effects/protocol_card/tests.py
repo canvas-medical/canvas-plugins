@@ -25,7 +25,7 @@ def test_apply_method_succeeds_with_patient_id_and_key() -> None:
     applied = p.apply()
     assert (
         applied.payload
-        == '{"patient": "uuid", "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due", "feedback_enabled": false}}'
+        == '{"patient": "uuid", "patient_filter": null, "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due", "feedback_enabled": false}}'
     )
 
 
@@ -38,7 +38,7 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
 
     assert "2 validation errors for ProtocolCard" in err_msg
     assert (
-        "Field 'patient_id' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
+        "Field 'patient_id' or 'patient_filter' is required to apply a ProtocolCard [type=missing, input_value=None, input_type=NoneType]"
         in err_msg
     )
     assert (

@@ -34,15 +34,18 @@ class Model(BaseModel):
         class_name = self.__repr_name__()  # type: ignore[misc]
 
         class_name_article = "an" if class_name.startswith(("A", "E", "I", "O", "U")) else "a"
-        return [
-            self._create_error_detail(
-                "missing",
-                f"Field '{field}' is required to {method.replace('_', ' ')} {class_name_article} {class_name}",
-                v,
-            )
-            for field in required_fields
-            if (v := getattr(self, field)) is None
-        ]
+
+        error_details = []
+        for field in required_fields:
+            fields = field.split("|")
+            if not all(getattr(self, f) is None for f in fields):
+                continue
+            field_description = " or ".join([f"'{f}'" for f in fields])
+            message = f"Field {field_description} is required to {method.replace('_', ' ')} {class_name_article} {class_name}"
+            error = self._create_error_detail("missing", message, None)
+            error_details.append(error)
+
+        return error_details
 
     def _validate_before_effect(self, method: str) -> None:
         self.model_validate(self)

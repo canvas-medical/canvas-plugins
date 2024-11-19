@@ -13,7 +13,13 @@ class AddBannerAlert(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.ADD_BANNER_ALERT
-        apply_required_fields = ("patient_id", "key", "narrative", "placement", "intent")
+        apply_required_fields = (
+            "patient_id|patient_filter",
+            "key",
+            "narrative",
+            "placement",
+            "intent",
+        )
 
     class Placement(Enum):
         CHART = "chart"
@@ -47,4 +53,9 @@ class AddBannerAlert(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
-        return {"patient": self.patient_id, "key": self.key, "data": self.values}
+        return {
+            "patient": self.patient_id,
+            "patient_filter": self.patient_filter,
+            "key": self.key,
+            "data": self.values,
+        }
