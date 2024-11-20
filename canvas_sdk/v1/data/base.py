@@ -60,13 +60,13 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
     @abstractmethod
     def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """A protocol method for defining codings."""
-        ...
+        raise NotImplementedError
 
     @staticmethod
     @abstractmethod
     def q_object(system: str, codes: Container[str]) -> Q:
         """A protocol method for defining Q objects for value set lookups."""
-        ...
+        raise NotImplementedError
 
 
 class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
@@ -144,8 +144,7 @@ class TimeframeLookupQuerySetProtocol(QuerySetProtocol):
     @abstractmethod
     def timeframe_filter_field(self) -> str:
         """A protocol method for timeframe_filter_field."""
-
-    ...
+        raise NotImplementedError
 
 
 class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
