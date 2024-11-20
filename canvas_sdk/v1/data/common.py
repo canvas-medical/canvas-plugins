@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
@@ -44,3 +45,54 @@ class ReviewStatus(models.TextChoices):
 
     STATUS_REVIEWING = "reviewing", "reviewing"
     STATUS_REVIEWED = "reviewed", "reviewed"
+
+
+class PersonSex(models.TextChoices):
+    """Status choices for individual sex."""
+
+    SEX_FEMALE = "F", "female"
+    SEX_MALE = "M", "male"
+    SEX_OTHER = "O", "other"
+    SEX_UNKNOWN = "UNK", "unknown"
+    SEX_BLANK = "", ""
+
+
+class TaxIDType(models.TextChoices):
+    EIN = "E", "EIN text"
+    SSN = "S", "SSN"
+
+
+class ColorEnum(models.TextChoices):
+    RED = "red", "Red"
+    ORANGE = "orange", "Orange"
+    YELLOW = "yellow", "Yellow"
+    OLIVE = "olive", "Olive"
+    GREEN = "green", "Green"
+    TEAL = "teal", "Teal"
+    BLUE = "blue", "Blue"
+    VIOLET = "violet", "Violet"
+    PURPLE = "purple", "Purple"
+    PINK = "pink", "Pink"
+    BROWN = "brown", "Brown"
+    GREY = "grey", "Grey"
+    BLACK = "black", "Black"
+
+
+class Origin(models.TextChoices):
+    REFERAL = ("REF_CMD", "Referral command")
+    COMPLETING_IMAGE_ORDERS = ("CMP_IMG_ORD", "Completing image orders")
+    IMAGING_REPORT_REVIEW = ("IMG_REP_REV", "Imaging report review")
+    LAB_RESULTS_REVIEW = ("LAB_RES_REV", "Lab results review")
+    CONSULT_REPORT_REVIEW = ("CON_REP_REV", "Consult report review")
+    UNCATEGORIZED_DOCUMENT_REPORT_REVIEW = (
+        "UNC_DOC_REP_REV",
+        "Uncategorized document report review",
+    )
+    ASSIGNED_NOTE_PHONE_CALL_FOR_REVIEW = ("ASN_NOT_PHN_REV", "Assigned note/phone call for review")
+    POPULATION_HEALTH_OUTREACH = ("POP_HLT_OUT", "Population health outreach")
+    COMPLETING_LAB_ORDERS = ("CMP_LAB_ORD", "Completing lab orders")
+    CHART_PDF = ("CHT_PDF", "Chart PDF")
+    EXPIRED_CLAIM_SNOOZED = ("EXP_CLM_SNO", "Expired claim snoozed")
+    FLAGGED_POSTING_REVIEW = ("FLG_PST_REV", "Flagged posting review")
+    BATCH_PATIENT_STATEMENTS = ("BAT_PTN_STA", "Batch patient statements")
+    INCOMPLETE_COVERAGE = ("INC_COV", "Incomplete Coverage")

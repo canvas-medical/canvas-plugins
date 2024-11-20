@@ -80,6 +80,7 @@ statsd = "^4.0.1"
 typer = {extras = ["all"], version = "*"}
 typing-extensions = ">=4.8,<4.13"
 websocket-client = "^1.7.0"
+django-timezone-utils = "^0.15.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.8.0"
