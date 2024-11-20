@@ -179,7 +179,7 @@ class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMix
     pass
 
 
-class ValueSetTimeframeLookupQuerySet(ValueSetLookupByNameQuerySet, TimeframeLookupQuerySetMixin):
+class ValueSetTimeframeLookupQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySetMixin):
     """A class that includes methods for looking up value sets and using timeframes."""
 
     pass
