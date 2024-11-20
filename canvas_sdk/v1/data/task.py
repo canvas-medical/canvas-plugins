@@ -7,25 +7,30 @@ from canvas_sdk.v1.data.staff import Staff
 
 
 class TaskType(models.TextChoices):
+    """Choices for task types."""
+
     TASK = "Task", "Task"
     REMINDER = "Reminder", "Reminder"
 
 
 class EventType(models.TextChoices):
+    """Choices for event types."""
+
     EVENT_CHART_OPEN = "Chart Open", "Chart Open"
 
 
 class TaskStatus(models.TextChoices):
+    """Choices for task statuses."""
+
     COMPLETED = "COMPLETED", "Completed"
     CLOSED = "CLOSED", "Closed"
     OPEN = "OPEN", "Open"
 
 
 class TaskLabelModule(models.TextChoices):
-    CLAIMS = (
-        "claims",
-        "Claims",
-    )
+    """Choices for task label modules."""
+
+    CLAIMS = "claims", "Claims"
     TASKS = "tasks", "Tasks"
 
 
@@ -57,6 +62,7 @@ class Task(models.Model):
 
 
 class TaskComment(models.Model):
+    """TaskComment."""
 
     class Meta:
         managed = False

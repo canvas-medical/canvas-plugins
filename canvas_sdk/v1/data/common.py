@@ -58,11 +58,15 @@ class PersonSex(models.TextChoices):
 
 
 class TaxIDType(models.TextChoices):
+    """Choices for Tax IDs."""
+
     EIN = "E", "EIN text"
     SSN = "S", "SSN"
 
 
 class ColorEnum(models.TextChoices):
+    """Choices for colors."""
+
     RED = "red", "Red"
     ORANGE = "orange", "Orange"
     YELLOW = "yellow", "Yellow"
@@ -79,6 +83,8 @@ class ColorEnum(models.TextChoices):
 
 
 class Origin(models.TextChoices):
+    """Choices for origins."""
+
     REFERAL = ("REF_CMD", "Referral command")
     COMPLETING_IMAGE_ORDERS = ("CMP_IMG_ORD", "Completing image orders")
     IMAGING_REPORT_REVIEW = ("IMG_REP_REV", "Imaging report review")
