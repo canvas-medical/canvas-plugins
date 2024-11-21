@@ -52,7 +52,9 @@ class Task(models.Model):
     )
     # TODO - uncomment when Team model is created
     # team = models.ForeignKey(Team, related_name="tasks", null=True, on_delete=models.DO_NOTHING)
-    patient = models.ForeignKey(Patient, blank=True, null=True, on_delete=models.DO_NOTHING)
+    patient = models.ForeignKey(
+        Patient, blank=True, null=True, on_delete=models.DO_NOTHING, related_name="tasks"
+    )
     task_type = models.CharField(choices=TaskType.choices)
     tag = models.CharField()
     title = models.CharField()
