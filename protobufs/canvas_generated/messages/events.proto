@@ -92,6 +92,9 @@ enum EventType {
   DETECTED_ISSUE_CREATED = 84;
   DETECTED_ISSUE_UPDATED = 85;
 
+  TASK_CLOSED = 86;
+  TASK_COMPLETED = 87;
+
   // General Command Events
 
   PRE_COMMAND_ORIGINATE = 100;

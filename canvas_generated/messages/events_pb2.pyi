@@ -87,6 +87,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     OBSERVATION_UPDATED: _ClassVar[EventType]
     DETECTED_ISSUE_CREATED: _ClassVar[EventType]
     DETECTED_ISSUE_UPDATED: _ClassVar[EventType]
+    TASK_CLOSED: _ClassVar[EventType]
+    TASK_COMPLETED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -694,6 +696,8 @@ OBSERVATION_CREATED: EventType
 OBSERVATION_UPDATED: EventType
 DETECTED_ISSUE_CREATED: EventType
 DETECTED_ISSUE_UPDATED: EventType
+TASK_CLOSED: EventType
+TASK_COMPLETED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
