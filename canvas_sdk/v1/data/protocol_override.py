@@ -40,7 +40,7 @@ class ProtocolOverride(models.Model):
     patient = models.ForeignKey(
         Patient,
         on_delete=models.DO_NOTHING,
-        related_name="allergy_intolerances",
+        related_name="protocol_overrides",
     )
     protocol_key = models.CharField()
     is_adjustment = models.BooleanField()
