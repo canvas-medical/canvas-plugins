@@ -83,7 +83,7 @@ class _BaseCommand(Model):
             if name not in base_properties
         }
 
-    def originate(self) -> Effect:
+    def originate(self, line_number: int = -1) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("originate")
         return Effect(
@@ -92,6 +92,7 @@ class _BaseCommand(Model):
                 {
                     "note": self.note_uuid,
                     "data": self.values,
+                    "line_number": line_number,
                 }
             ),
         )
