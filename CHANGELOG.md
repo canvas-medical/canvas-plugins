@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v0.6.0 (2024-11-21)
+
+### Bug Fixes
+
+- Related name for ProtocolOverride
+  ([#201](https://github.com/canvas-medical/canvas-plugins/pull/201),
+  [`53fd89b`](https://github.com/canvas-medical/canvas-plugins/commit/53fd89b9759845a07f1af65f9dac39c0d0f917fd))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+### Features
+
+- Add line_number option when originating command
+  ([#171](https://github.com/canvas-medical/canvas-plugins/pull/171),
+  [`791d446`](https://github.com/canvas-medical/canvas-plugins/commit/791d4462fe3fdfa41b8b1f6254c12f3c90f613a8))
+
+- Add patient_filter to base effect's payload
+  ([#192](https://github.com/canvas-medical/canvas-plugins/pull/192),
+  [`1757447`](https://github.com/canvas-medical/canvas-plugins/commit/1757447b864e910f0567b8607546fa49c1afd858))
+
+
 ## v0.5.0 (2024-11-19)
 
 ### Bug Fixes
