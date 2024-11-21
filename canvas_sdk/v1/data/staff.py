@@ -14,6 +14,9 @@ class Staff(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_staff_001"
 
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
     id = models.CharField(max_length=32, db_column="key")
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     created = models.DateTimeField()
