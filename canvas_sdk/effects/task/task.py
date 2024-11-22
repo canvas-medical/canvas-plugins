@@ -6,6 +6,8 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
 class TaskStatus(Enum):
+    """TaskStatus."""
+
     COMPLETED = "COMPLETED"
     CLOSED = "CLOSED"
     OPEN = "OPEN"
