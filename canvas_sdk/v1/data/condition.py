@@ -19,6 +19,12 @@ class ClinicalStatus(models.TextChoices):
     INVESTIGATIVE = "investigative", "investigative"
 
 
+class ConditionQuerySet(ValueSetLookupQuerySet):
+    """ConditionQuerySet."""
+
+    pass
+
+
 class Condition(models.Model):
     """Condition."""
 
