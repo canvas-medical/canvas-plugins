@@ -90,7 +90,7 @@ class TaskLabel(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")
+    tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
     position = models.IntegerField()
     color = models.CharField(choices=ColorEnum.choices)
     task_association = ArrayField(models.CharField(choices=Origin.choices))
