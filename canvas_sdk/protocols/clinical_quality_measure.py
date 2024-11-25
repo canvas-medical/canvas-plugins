@@ -77,7 +77,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         def patient_id(model: type[Model]) -> str:
             return cast(
                 str,
-                model.objects.select_related("patient")
+                model._default_manager.select_related("patient")
                 .values_list("patient__id")
                 .get(id=self.event.target)[0],
             )
