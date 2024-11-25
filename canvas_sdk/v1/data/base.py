@@ -1,10 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Container
-<<<<<<< HEAD
-from typing import TYPE_CHECKING, Self, Type, cast
-=======
 from typing import TYPE_CHECKING, Any, Dict, Protocol, Type, cast
->>>>>>> 829cecf (Changes inherited queryset classes to mixins and adds mypy/typing protocols.)
 
 from django.db import models
 from django.db.models import Q
@@ -35,10 +31,6 @@ class CommittableQuerySet(models.QuerySet):
         return self.filter(patient__id=patient_id)
 
 
-<<<<<<< HEAD
-class ValueSetLookupQuerySet(CommittableQuerySet):
-    """A QuerySet that can filter objects based on a ValueSet."""
-=======
 class BaseQuerySet(models.QuerySet):
     """A base QuerySet inherited from Django's model.Queryset."""
 
@@ -71,7 +63,6 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
 
 class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
     """A QuerySet mixin that can filter objects based on a ValueSet."""
->>>>>>> 829cecf (Changes inherited queryset classes to mixins and adds mypy/typing protocols.)
 
     def find(self, value_set: Type["ValueSet"]) -> "Self":
         """
