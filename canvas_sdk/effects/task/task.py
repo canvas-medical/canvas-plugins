@@ -32,7 +32,6 @@ class AddTask(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The values for Task addition."""
-
         return {
             "patient": {"id": self.patient_id},
             "due": self.due.isoformat() if self.due else None,
@@ -84,7 +83,7 @@ class UpdateTask(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a task comment."""
-        value_dict = {}
+        value_dict: dict[str, Any] = {}
         # Only add the fields that have been explicitly set on the model (exclude_unset=True).
         # Oherwise, the effect interpreter will set values to null based on their defaults.
         set_fields = self.model_dump(exclude_unset=True)
