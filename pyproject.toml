@@ -62,7 +62,6 @@ django = "^5.1.1"
 django-stubs = {extras = ["compatible-mypy"], version = "^5.1.1"}
 django-timezone-utils = "^0.15.0"
 env-tools = "^2.3.0"
-gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
 ipython = "^8.21.0"
 jsonschema = "^4.21.1"
