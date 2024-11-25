@@ -1,4 +1,4 @@
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models

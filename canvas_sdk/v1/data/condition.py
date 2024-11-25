@@ -1,6 +1,10 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    CommittableModelManager,
+    CommittableQuerySet,
+    ValueSetLookupQuerySet,
+)
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
@@ -23,7 +27,7 @@ class Condition(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_condition_001"
 
-    objects = CommittableModelManager.from_queryset(ValueSetLookupQuerySet)()
+    objects = ConditionQuerySet.as_manager()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
