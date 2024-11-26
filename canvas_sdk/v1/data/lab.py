@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.patient import Patient
 
@@ -86,6 +86,8 @@ class LabValue(models.Model):
         managed = False
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labvalue_001"
+
+    objects = ValueSetLookupQuerySet.as_manager()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
