@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.7.1 (2024-11-26)
+
+### Bug Fixes
+
+- Fixes inheritance issue ([#210](https://github.com/canvas-medical/canvas-plugins/pull/210),
+  [`d5d0ac1`](https://github.com/canvas-medical/canvas-plugins/commit/d5d0ac15301e78a3004471dd47a8e409b26b7361))
+
+
 ## v0.7.0 (2024-11-26)
 
 ### Chores
