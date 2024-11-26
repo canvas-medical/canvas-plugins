@@ -1,11 +1,7 @@
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import (
-    CommittableModelManager,
-    CommittableQuerySet,
-    ValueSetLookupQuerySet,
-)
+from canvas_sdk.v1.data.base import ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
