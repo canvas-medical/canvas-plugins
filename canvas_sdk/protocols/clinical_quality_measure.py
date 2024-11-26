@@ -54,6 +54,19 @@ class ClinicalQualityMeasure(BaseProtocol):
         """
         return cls.__name__
 
+    @staticmethod
+    def relative_float(value: str) -> float:
+        """Relative float method (better explanation needed here)."""
+        try:
+            sigma = 0.0
+            if value[0] == "<" and value[1] != "=":
+                sigma = -1e-6
+            elif value[0] == ">" and value[1] != "=":
+                sigma = +1e-6
+            return float(value.strip("<≤=≥>")) + sigma
+        except (ValueError, IndexError):
+            return 0
+
     @property
     def timeframe(self) -> Timeframe:
         """The default Timeframe (self.timeframe) for all protocols.
