@@ -158,13 +158,13 @@ class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
         )
 
 
-class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
+class ValueSetLookupQuerySet(CommittableQuerySet, ValueSetLookupQuerySetMixin):
     """A class that includes methods for looking up value sets."""
 
     pass
 
 
-class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMixin):
+class ValueSetLookupByNameQuerySet(CommittableQuerySet, ValueSetLookupByNameQuerySetMixin):
     """A class that includes methods for looking up value sets by name."""
 
     pass
