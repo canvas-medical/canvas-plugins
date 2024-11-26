@@ -1,10 +1,12 @@
+from abc import abstractmethod
 from collections.abc import Container
-from typing import TYPE_CHECKING, Self, Type, cast
+from typing import TYPE_CHECKING, Any, Protocol, Self, Type, cast
 
 from django.db import models
 from django.db.models import Q
 
 if TYPE_CHECKING:
+    from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -29,10 +31,40 @@ class CommittableQuerySet(models.QuerySet):
         return self.filter(patient__id=patient_id)
 
 
-class ValueSetLookupQuerySet(CommittableQuerySet):
-    """A QuerySet that can filter objects based on a ValueSet."""
+class BaseQuerySet(models.QuerySet):
+    """A base QuerySet inherited from Django's model.Queryset."""
 
-    def find(self, value_set: Type["ValueSet"]) -> "Self":
+    pass
+
+
+class QuerySetProtocol(Protocol):
+    """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
+
+    def filter(self, *args: Any, **kwargs: Any) -> models.QuerySet[Any]:
+        """Django's models.QuerySet filter method."""
+        ...
+
+
+class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
+    """A typing protocol for use in mixins using value set lookup methods."""
+
+    @staticmethod
+    @abstractmethod
+    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+        """A protocol method for defining codings."""
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def q_object(system: str, codes: Container[str]) -> Q:
+        """A protocol method for defining Q objects for value set lookups."""
+        raise NotImplementedError
+
+
+class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
+    """A QuerySet mixin that can filter objects based on a ValueSet."""
+
+    def find(self, value_set: Type["ValueSet"]) -> models.QuerySet[Any]:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -54,7 +86,7 @@ class ValueSetLookupQuerySet(CommittableQuerySet):
     @staticmethod
     def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """Provide a sequence of tuples where each tuple is a code system URL and a set of codes."""
-        values_dict = value_set.values
+        values_dict = cast(dict, value_set.values)
         return cast(
             tuple[tuple[str, set[str]]],
             tuple(
@@ -72,7 +104,7 @@ class ValueSetLookupQuerySet(CommittableQuerySet):
         return Q(codings__system=system, codings__code__in=codes)
 
 
-class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
+class ValueSetLookupByNameQuerySetMixin(ValueSetLookupQuerySetMixin):
     """
     QuerySet for ValueSet lookups using code system name rather than URL.
 
@@ -85,7 +117,7 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
         """
         Provide a sequence of tuples where each tuple is a code system name and a set of codes.
         """
-        values_dict = value_set.values
+        values_dict = cast(dict, value_set.values)
         return cast(
             tuple[tuple[str, set[str]]],
             tuple(
@@ -94,3 +126,51 @@ class ValueSetLookupByNameQuerySet(ValueSetLookupQuerySet):
                 if i[0] in values_dict
             ),
         )
+
+
+class TimeframeLookupQuerySetProtocol(QuerySetProtocol):
+    """A typing protocol for use in TimeframeLookupQuerySetMixin."""
+
+    @property
+    @abstractmethod
+    def timeframe_filter_field(self) -> str:
+        """A protocol method for timeframe_filter_field."""
+        raise NotImplementedError
+
+
+class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
+    """A class that adds queryset functionality to filter using timeframes."""
+
+    @property
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on. Can be overridden for different models."""
+        return "note__datetime_of_service"
+
+    def within(self, timeframe: "Timeframe") -> models.QuerySet:
+        """A method to filter a queryset for datetimes within a timeframe."""
+        return self.filter(
+            **{
+                f"{self.timeframe_filter_field}__range": (
+                    timeframe.start.datetime,
+                    timeframe.end.datetime,
+                )
+            }
+        )
+
+
+class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
+    """A class that includes methods for looking up value sets."""
+
+    pass
+
+
+class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMixin):
+    """A class that includes methods for looking up value sets by name."""
+
+    pass
+
+
+class ValueSetTimeframeLookupQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySetMixin):
+    """A class that includes methods for looking up value sets and using timeframes."""
+
+    pass

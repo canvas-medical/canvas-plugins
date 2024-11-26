@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Self
 
+import arrow
 from django.db import models
 
 
@@ -53,3 +54,20 @@ class Patient(models.Model):
 
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    def age_at(self, time: arrow.Arrow) -> float:
+        """Given a datetime, returns what the patient's age would be at that datetime."""
+        age = float(0)
+        birth_date = arrow.get(self.birth_date)
+        if birth_date.date() < time.date():
+            age = time.datetime.year - birth_date.datetime.year
+            if time.datetime.month < birth_date.datetime.month or (
+                time.datetime.month == birth_date.datetime.month
+                and time.datetime.day < birth_date.datetime.day
+            ):
+                age -= 1
+
+            current_year = birth_date.shift(years=age)
+            next_year = birth_date.shift(years=age + 1)
+            age += (time.date() - current_year.date()) / (next_year.date() - current_year.date())
+        return age
