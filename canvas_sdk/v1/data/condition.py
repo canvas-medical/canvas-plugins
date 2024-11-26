@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import (
     CommittableModelManager,
@@ -9,8 +10,8 @@ from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
 
-class ClinicalStatus(models.TextChoices):
-    """ClinicalStatus."""
+class ClinicalStatus(TextChoices):
+    """Condition clinical status."""
 
     ACTIVE = "active", "active"
     RELAPSE = "relapse", "relapse"

@@ -1,8 +1,16 @@
 from django.db import models
+from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
+
+
+class Status(TextChoices):
+    """Medication status."""
+
+    ACTIVE = "active", "active"
+    INACTIVE = "inactive", "inactive"
 
 
 class MedicationQuerySet(ValueSetLookupQuerySet):
@@ -27,9 +35,9 @@ class Medication(models.Model):
     deleted = models.BooleanField()
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    status = models.CharField()
-    start_date = models.DateField()
-    end_date = models.DateField()
+    status = models.CharField(choices=Status.choices)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
     quantity_qualifier_description = models.CharField()
     clinical_quantity_description = models.CharField()
     potency_unit_code = models.CharField()

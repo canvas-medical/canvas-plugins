@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.7.0 (2024-11-26)
+
+### Chores
+
+- Update env-tools to support Python 3.12+
+  ([#207](https://github.com/canvas-medical/canvas-plugins/pull/207),
+  [`b3578ca`](https://github.com/canvas-medical/canvas-plugins/commit/b3578ca882a53f0ed1e94f2f15b9c20621ddcfcc))
+
+### Features
+
+- Moves task effects ([#208](https://github.com/canvas-medical/canvas-plugins/pull/208),
+  [`ea80d80`](https://github.com/canvas-medical/canvas-plugins/commit/ea80d804a36b0aab5249cf42670b2d773236b1aa))
+
+- Adds TASK_CLOSED and TASK_COMPLETED events
+  ([#205](https://github.com/canvas-medical/canvas-plugins/pull/205),
+  [`062786a`](https://github.com/canvas-medical/canvas-plugins/commit/062786aaa498b8cc9f5b4e4bd17c39d4d31bb039))
+
+- Plugins functionality for protocol conversions
+  ([#183](https://github.com/canvas-medical/canvas-plugins/pull/183),
+  [`69e95c8`](https://github.com/canvas-medical/canvas-plugins/commit/69e95c8894c051f06a9fd60e05704cbf24edf48a))
+
+Signed-off-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com> Co-authored-by:
+  Christopher Sande <christopher.sande@canvasmedical.com> Co-authored-by: José Magalhães
+  <jose.magalhaes@canvasmedical.com> Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+  Co-authored-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com>
+
+- Add models for task, task labels, task comments and staff
+  ([#202](https://github.com/canvas-medical/canvas-plugins/pull/202),
+  [`0fc5590`](https://github.com/canvas-medical/canvas-plugins/commit/0fc55901111d770bad6de5d1f6bdc160c33d7b5c))
+
+
 ## v0.6.0 (2024-11-21)
 
 ### Bug Fixes
