@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Container
-from typing import TYPE_CHECKING, Any, Protocol, Self, cast
+from typing import TYPE_CHECKING, Any, Generic, Protocol, Type, TypeVar, cast
 
 from django.db import models
 from django.db.models import Q
@@ -8,6 +8,9 @@ from django.db.models import Q
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
+
+
+CustomQuerySet = TypeVar("CustomQuerySet", bound=models.QuerySet)
 
 
 class CommittableModelManager(models.Manager):
@@ -19,18 +22,6 @@ class CommittableModelManager(models.Manager):
         return CommittableQuerySet(self.model, using=self._db).filter(deleted=False)
 
 
-class CommittableQuerySet(models.QuerySet):
-    """A queryset for committable objects."""
-
-    def committed(self) -> "Self":
-        """Return a queryset that filters for objects that have been committed."""
-        return self.filter(committer_id__isnull=False, entered_in_error_id__isnull=True)
-
-    def for_patient(self, patient_id: str) -> "Self":
-        """Return a queryset that filters objects for a specific patient."""
-        return self.filter(patient__id=patient_id)
-
-
 class BaseQuerySet(models.QuerySet):
     """A base QuerySet inherited from Django's model.Queryset."""
 
@@ -40,7 +31,7 @@ class BaseQuerySet(models.QuerySet):
 class QuerySetProtocol(Protocol):
     """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
 
-    def filter(self, *args: Any, **kwargs: Any) -> models.QuerySet[Any]:
+    def filter(self, *args: Any, **kwargs: Any) -> Any:
         """Django's models.QuerySet filter method."""
         ...
 
@@ -61,10 +52,26 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
         raise NotImplementedError
 
 
-class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
+class CommittableQuerySetMixin(QuerySetProtocol, Generic[CustomQuerySet]):
+    """A queryset for committable objects."""
+
+    def committed(self) -> CustomQuerySet:
+        """Return a queryset that filters for objects that have been committed."""
+        return self.filter(committer_id__isnull=False, entered_in_error_id__isnull=True)
+
+
+class PatientAssetQuerySetMixin(QuerySetProtocol, Generic[CustomQuerySet]):
+    """A queryset for patient assets."""
+
+    def for_patient(self, patient_id: str) -> CustomQuerySet:
+        """Return a queryset that filters objects for a specific patient."""
+        return self.filter(patient__id=patient_id)
+
+
+class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol, Generic[CustomQuerySet]):
     """A QuerySet mixin that can filter objects based on a ValueSet."""
 
-    def find(self, value_set: type["ValueSet"]) -> models.QuerySet[Any]:
+    def find(self, value_set: Type["ValueSet"]) -> CustomQuerySet:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -158,7 +165,13 @@ class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
         )
 
 
-class ValueSetLookupQuerySet(CommittableQuerySet, ValueSetLookupQuerySetMixin):
+class CommittableQuerySet(BaseQuerySet, CommittableQuerySetMixin):
+    """A queryset for committable objects."""
+
+    pass
+
+
+class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
     """A class that includes methods for looking up value sets."""
 
     pass
