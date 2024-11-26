@@ -60,6 +60,7 @@ cookiecutter = "*"
 cron-converter = "^1.2.1"
 django = "^5.1.1"
 django-stubs = {extras = ["compatible-mypy"], version = "^5.1.1"}
+django-timezone-utils = "^0.15.0"
 env-tools = "^2.3.0"
 gql = {extras = ["all"], version = "^3.5.0"}
 grpcio = "^1.60.1"
