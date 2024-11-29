@@ -2,11 +2,11 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Literal, Tuple, Union, cast, get_args, get_origin
+from typing import Union, get_args, get_origin
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
 
 

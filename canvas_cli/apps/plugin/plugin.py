@@ -146,7 +146,7 @@ def init() -> None:
     try:
         project_dir = cookiecutter(str(template))
     except OutputDirExistsException:
-        raise typer.BadParameter(f"The supplied directory already exists")
+        raise typer.BadParameter("The supplied directory already exists")
 
     print(f"Project created in {project_dir}")
 

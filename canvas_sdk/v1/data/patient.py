@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 import arrow
 from django.db import models

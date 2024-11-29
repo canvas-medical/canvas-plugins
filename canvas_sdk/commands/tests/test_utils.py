@@ -126,8 +126,8 @@ def raises_wrong_type_error(
         "dictionary" if field_type == "Coding" or field_type == "ClinicalQuantity" else field_type
     )
     if field_type == "number":
-        assert f"Input should be an instance of Decimal" in err_msg1
-        assert f"Input should be an instance of Decimal" in err_msg2
+        assert "Input should be an instance of Decimal" in err_msg1
+        assert "Input should be an instance of Decimal" in err_msg2
     elif field_type[0].isupper():
         assert f"Input should be an instance of {Command.__name__}.{field_type}" in err_msg1
         assert f"Input should be an instance of {Command.__name__}.{field_type}" in err_msg2

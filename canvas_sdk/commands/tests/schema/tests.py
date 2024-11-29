@@ -94,7 +94,7 @@ def test_command_schema_matches_command_api(
             # this condition initially created for Prescribe.indications,
             # but could apply to other AutocompleteField fields that are lists
             # making the assumption here that if the field ends in 's' (like indications), it is a list
-            assert get_origin(expected_type) == list
+            assert get_origin(expected_type) is list
 
         else:
             assert expected_type == actual_type
