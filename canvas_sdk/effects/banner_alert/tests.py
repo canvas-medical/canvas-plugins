@@ -66,26 +66,27 @@ def write_and_install_protocol_and_clean_up(
     with chdir(Path("./custom-plugins")):
         runner.invoke(app, "init", input=plugin_name)
 
-    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
-        protocol.write(
-            f"""from canvas_sdk.effects.banner_alert import AddBannerAlert
-    from canvas_sdk.events import EventType
-    from canvas_sdk.protocols import BaseProtocol
+    protocol_code = f"""
+from canvas_sdk.effects.banner_alert import AddBannerAlert
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
 
-    class Protocol(BaseProtocol):
-        RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
-        def compute(self):
-            return [
-                AddBannerAlert(
-                    patient_id="{first_patient_id}",
-                    key="{plugin_name}",
-                    narrative="this is a test",
-                    placement=[AddBannerAlert.Placement.CHART],
-                    intent=AddBannerAlert.Intent.INFO,
-                ).apply()
-            ]
-    """
-        )
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
+    def compute(self):
+        return [
+            AddBannerAlert(
+                patient_id="{first_patient_id}",
+                key="{plugin_name}",
+                narrative="this is a test",
+                placement=[AddBannerAlert.Placement.CHART],
+                intent=AddBannerAlert.Intent.INFO,
+            ).apply()
+        ]
+"""
+
+    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
         # install the plugin

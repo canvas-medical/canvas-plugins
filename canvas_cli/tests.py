@@ -76,21 +76,23 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 def write_plugin(plugin_name: str) -> Generator[Any, Any, Any]:
     """Writes a plugin to the file system."""
     runner.invoke(app, "init", input=plugin_name)
+
+    protocol_code = """
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
+from logger import log
+
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+    NARRATIVE_STRING = "I was inserted from my plugin's protocol."
+
+    def compute(self):
+        log.info(self.NARRATIVE_STRING)
+        return []
+"""
+
     with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
-        p = """
-    from canvas_sdk.events import EventType
-    from canvas_sdk.protocols import BaseProtocol
-    from logger import log
-
-    class Protocol(BaseProtocol):
-        RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-        NARRATIVE_STRING = "I was inserted from my plugin's protocol."
-
-        def compute(self):
-            log.info(self.NARRATIVE_STRING)
-            return []
-    """
-        protocol.write(p)
+        protocol.write(protocol_code)
 
     yield
 
