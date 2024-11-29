@@ -57,7 +57,9 @@ PLUGIN_DIRECTORY = os.getenv(
     (
         "/plugin-runner/custom-plugins"
         if IS_PRODUCTION
-        else "./plugin_runner/tests/data/plugins" if IS_TESTING else "./custom-plugins"
+        else "./plugin_runner/tests/data/plugins"
+        if IS_TESTING
+        else "./custom-plugins"
     ),
 )
 

@@ -153,7 +153,8 @@ class Interview(models.Model):
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(  # type: ignore[var-annotated]
-        Questionnaire, through="canvas_sdk.InterviewQuestionnaireMap"  # type: ignore[misc]
+        Questionnaire,
+        through="canvas_sdk.InterviewQuestionnaireMap",  # type: ignore[misc]
     )
     progress_status = models.CharField()
     created = models.DateTimeField()

@@ -33,7 +33,7 @@ def _on_open(ws: websocket.WebSocket) -> None:
 def logs(
     host: Optional[str] = typer.Option(
         callback=get_default_host, help="Canvas instance to connect to", default=None
-    )
+    ),
 ) -> None:
     """Listens and prints log streams from the instance."""
     if not host:

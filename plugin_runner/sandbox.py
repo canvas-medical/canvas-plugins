@@ -141,8 +141,9 @@ class Sandbox:
             ):
                 self.warn(
                     node,
-                    '"{name}" is an invalid variable name because it '
-                    'starts with "_"'.format(name=name),
+                    '"{name}" is an invalid variable name because it ' 'starts with "_"'.format(
+                        name=name
+                    ),
                 )
             elif name.endswith("__roles__"):
                 self.error(
@@ -166,8 +167,9 @@ class Sandbox:
             if node.attr.startswith("_") and node.attr != "_":
                 self.warn(
                     node,
-                    '"{name}" is an invalid attribute name because it starts '
-                    'with "_".'.format(name=node.attr),
+                    '"{name}" is an invalid attribute name because it starts ' 'with "_".'.format(
+                        name=node.attr
+                    ),
                 )
 
             if node.attr.endswith("__roles__"):

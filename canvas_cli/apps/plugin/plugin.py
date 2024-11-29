@@ -320,7 +320,7 @@ def list(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
-    )
+    ),
 ) -> None:
     """List all plugins from a Canvas instance."""
     if not host:
