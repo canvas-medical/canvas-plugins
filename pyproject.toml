@@ -2,14 +2,8 @@
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
-[tool.black]
-line-length = 100
-
 [tool.django-stubs]
 django_settings_module = "settings"
-
-[tool.isort]
-profile = "black"
 
 [tool.mypy]
 check_untyped_defs = true
@@ -104,10 +98,6 @@ priority = "primary"
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
-
-[tool.pydocstyle]
-add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
-convention = "google"
 
 [tool.pytest.ini_options]
 addopts = "--durations=10"
