@@ -120,7 +120,7 @@ class CLIContext:
                 success=False,
                 path=str(file),
             )
-            raise typer.Abort()
+            raise typer.Abort() from None
 
         self._config_file_path = file
 

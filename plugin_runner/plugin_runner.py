@@ -192,7 +192,7 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     """Find all modules in the specified package path."""
     modules: list[str] = []
 
-    for file_finder, module_name, is_pkg in pkgutil.iter_modules(
+    for _, module_name, is_pkg in pkgutil.iter_modules(
         [base_path.as_posix()],
     ):
         if is_pkg:

@@ -61,7 +61,7 @@ def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if metadata_response.status_code != requests.codes.ok:
         print(f"Status code {metadata_response.status_code}: {metadata_response.text}")
@@ -147,7 +147,7 @@ def init() -> None:
     try:
         project_dir = cookiecutter(str(template))
     except OutputDirExistsException:
-        raise typer.BadParameter("The supplied directory already exists")
+        raise typer.BadParameter("The supplied directory already exists") from None
 
     print(f"Project created in {project_dir}")
 
@@ -190,7 +190,7 @@ def install(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.created:
         print(f"Plugin {plugin_name} successfully installed!")
@@ -233,7 +233,7 @@ def uninstall(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.no_content:
         print(f"Plugin {name} successfully uninstalled!")
@@ -270,7 +270,7 @@ def enable(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.ok:
         print(f"Plugin {name} successfully enabled!")
@@ -307,7 +307,7 @@ def disable(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.ok:
         print(f"Plugin {name} successfully disabled!")
@@ -338,7 +338,7 @@ def list(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
         plugins = r.json().get("results", [])
@@ -383,7 +383,7 @@ def validate_manifest(
 
     except json.JSONDecodeError:
         print("There was a problem loading the manifest file, please ensure it's valid JSON")
-        raise typer.Abort()
+        raise typer.Abort() from None
 
     validate_manifest_file(manifest_json)
 
@@ -429,7 +429,7 @@ def update(
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
         print("Plugin successfully updated!")

@@ -62,4 +62,4 @@ def logs(
         ws.run_forever()
 
     except KeyboardInterrupt:
-        raise typer.Exit(0)
+        raise typer.Exit(0) from None
