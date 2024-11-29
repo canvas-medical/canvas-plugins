@@ -1,8 +1,9 @@
 import shutil
+from collections.abc import Generator
 from contextlib import chdir
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import requests

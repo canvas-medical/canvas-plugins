@@ -1,7 +1,8 @@
 import shutil
+from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import typer

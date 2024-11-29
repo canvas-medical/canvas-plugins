@@ -1,7 +1,8 @@
 import functools
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import typer
 

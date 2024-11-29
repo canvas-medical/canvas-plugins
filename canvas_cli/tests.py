@@ -1,8 +1,9 @@
 import os
 import shutil
+from collections.abc import Callable, Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Generator, cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
@@ -44,7 +45,7 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
     temp_path = path.parent / "temp_credentials.ini"
 
-    original_content = open(path, "r").read()
+    original_content = open(path).read()
     open(path, "w").writelines(
         [
             f"[{host}]\n",
@@ -56,7 +57,7 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
     yield
 
-    with open(temp_path, "r") as temp:
+    with open(temp_path) as temp:
         original_content = temp.read()
         with open(path, "w") as f:
             f.write(original_content)

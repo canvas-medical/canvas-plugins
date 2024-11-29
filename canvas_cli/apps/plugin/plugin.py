@@ -2,8 +2,9 @@ import ast
 import json
 import tarfile
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import requests
@@ -116,8 +117,8 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
 
 
 def _get_protocols_with_new_cqm_properties(
-    protocol_classes: List[dict[str, Any]], plugin: Path
-) -> List[dict[str, Any]] | None:
+    protocol_classes: Iterable[dict[str, Any]], plugin: Path
+) -> Iterable[dict[str, Any]] | None:
     """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
     has_updates = False
     protocol_props = []
@@ -153,7 +154,7 @@ def init() -> None:
 
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
@@ -207,7 +208,7 @@ def install(
 
 def uninstall(
     name: str = typer.Argument(..., help="Plugin name to uninstall"),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
@@ -243,7 +244,7 @@ def uninstall(
 
 def enable(
     name: str = typer.Argument(..., help="Plugin name to enable"),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
@@ -280,7 +281,7 @@ def enable(
 
 def disable(
     name: str = typer.Argument(..., help="Plugin name to disable"),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
@@ -316,7 +317,7 @@ def disable(
 
 
 def list(
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
@@ -391,14 +392,14 @@ def validate_manifest(
 
 def update(
     name: str = typer.Argument(..., help="Plugin name to update"),
-    package: Optional[Path] = typer.Option(
+    package: Path | None = typer.Option(
         help="Path to a wheel or sdist file containing the python package to install",
         default=None,
     ),
-    is_enabled: Optional[bool] = typer.Option(
+    is_enabled: bool | None = typer.Option(
         None, "--enable/--disable", show_default=False, help="Enable/disable the plugin"
     ),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,

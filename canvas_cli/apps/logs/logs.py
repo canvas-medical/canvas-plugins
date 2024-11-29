@@ -1,5 +1,5 @@
 import json
-from typing import Optional, cast
+from typing import cast
 from urllib.parse import urlparse
 
 import typer
@@ -31,7 +31,7 @@ def _on_open(ws: websocket.WebSocket) -> None:
 
 
 def logs(
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         callback=get_default_host, help="Canvas instance to connect to", default=None
     ),
 ) -> None:
