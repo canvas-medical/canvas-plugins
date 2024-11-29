@@ -95,7 +95,7 @@ def fake(field_props: dict, Command: type[_BaseCommand]) -> Any:
         case "ClinicalQuantity":
             return ClinicalQuantity(representative_ndc="ndc", ncpdp_quantity_qualifier_code="code")
     if t[0].isupper():
-        return random.choice([e for e in getattr(Command, t)])
+        return random.choice(list(getattr(Command, t)))
 
 
 def raises_wrong_type_error(
