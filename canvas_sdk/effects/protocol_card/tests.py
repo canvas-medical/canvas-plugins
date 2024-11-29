@@ -21,6 +21,7 @@ from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 
 
 def test_apply_method_succeeds_with_patient_id_and_key() -> None:
+    """Test that the apply method succeeds with all required fields."""
     p = ProtocolCard(patient_id="uuid", key="something-unique")
     applied = p.apply()
     assert (
@@ -30,6 +31,7 @@ def test_apply_method_succeeds_with_patient_id_and_key() -> None:
 
 
 def test_apply_method_raises_error_without_patient_id_and_key() -> None:
+    """Test that the apply method raises an error when missing required fields."""
     p = ProtocolCard()
 
     with pytest.raises(ValidationError) as e:
@@ -109,6 +111,7 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
 def test_add_recommendations(
     init_params: dict[Any, Any], rec1_params: dict[Any, Any], rec2_params: dict[Any, Any]
 ) -> None:
+    """Test that the add_recommendation method adds recommendations to the ProtocolCard."""
     p = ProtocolCard(**init_params)
     p.add_recommendation(**rec1_params)
     p.recommendations.append(Recommendation(**rec2_params))
@@ -158,6 +161,7 @@ def test_add_recommendations(
 def test_add_recommendations_from_commands(
     Command: type[_BaseCommand], init_params: dict[str, str]
 ) -> None:
+    """Test that the add_recommendation method adds recommendations from commands to the ProtocolCard."""
     cmd = Command(**init_params)
     p = ProtocolCard(patient_id="uuid", key="commands")
     p.recommendations.append(cmd.recommend())

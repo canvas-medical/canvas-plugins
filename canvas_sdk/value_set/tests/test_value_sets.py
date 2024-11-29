@@ -8,12 +8,14 @@ from canvas_sdk.value_set.value_set import CombinedValueSet
 
 
 def test_value_set_class_values_property() -> None:
+    """Test that the value_set returns the correct values."""
     value_set = DisordersOfTheImmuneSystem
     assert value_set.values["ICD10CM"] == DisordersOfTheImmuneSystem.ICD10CM
     assert value_set.values["SNOMEDCT"] == DisordersOfTheImmuneSystem.SNOMEDCT
 
 
 def test_value_set_class_pipe_operator_with_two_value_sets() -> None:
+    """Test that the pipe operator returns the correct values."""
     combined_value_set: CombinedValueSet = (
         DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
     )
@@ -30,6 +32,7 @@ def test_value_set_class_pipe_operator_with_two_value_sets() -> None:
 
 
 def test_value_set_class_pipe_operator_with_three_value_sets() -> None:
+    """Test that the pipe operator returns the correct values with multiple operands."""
     combined_value_set: CombinedValueSet = (
         DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination | Rhabdomyolysis
     )
@@ -46,6 +49,7 @@ def test_value_set_class_pipe_operator_with_three_value_sets() -> None:
 
 
 def test_value_set_class_pipe_operator_with_two_combined_value_sets() -> None:
+    """Test that the pipe operator returns the correct values with two combined value_sets."""
     combined_value_set_1: CombinedValueSet = (
         DisordersOfTheImmuneSystem | EncephalopathyDueToChildhoodVaccination
     )

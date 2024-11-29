@@ -2,7 +2,8 @@ from ..value_set import ValueSet
 
 
 class Ethnicity(ValueSet):
-    """
+    """Ethnicity value set.
+
     **Clinical Focus:**
 
     **Data Element Scope:**
@@ -26,7 +27,8 @@ class Ethnicity(ValueSet):
 
 
 class OncAdministrativeSex(ValueSet):
-    """
+    """ONC Administrative Sex value set.
+
     **Clinical Focus:** Gender identity restricted to only Male and Female used in administrative situations requiring a restriction to these two categories.
 
     **Data Element Scope:** Gender
@@ -50,7 +52,8 @@ class OncAdministrativeSex(ValueSet):
 
 
 class Payer(ValueSet):
-    """
+    """Payer value set.
+
     **Clinical Focus:** Categories of types of health care payor entities as defined by the US Public Health Data Consortium SOP code system
 
     **Data Element Scope:** @code in CCDA r2.1 template Planned Coverage [act: identifier urn:oid:2.16.840.1.113883.10.20.22.4.129 (open)] DYNAMIC
@@ -234,7 +237,8 @@ class Payer(ValueSet):
 
 
 class Race(ValueSet):
-    """
+    """Race value set.
+
     **Clinical Focus:**
 
     **Data Element Scope:**
@@ -262,7 +266,8 @@ class Race(ValueSet):
 
 
 class Female(ValueSet):
-    """
+    """Female Gender value set.
+
     **Clinical Focus:** Concepts that represent Female when assessing quality measures
 
     **Data Element Scope:** Gender
@@ -285,7 +290,8 @@ class Female(ValueSet):
 
 
 class White(ValueSet):
-    """
+    """White Race value set.
+
     **Clinical Focus:** The purpose of this value set is to represent concepts for the patient characteristic of white race.
 
     **Data Element Scope:** This value set may use a model element related to Race.

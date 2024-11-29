@@ -35,6 +35,8 @@ runner = CliRunner()
 
 
 class MaskedValue:
+    """A class to mask sensitive values in tests."""
+
     def __init__(self, value: str) -> None:
         self.value = value
 
@@ -46,6 +48,7 @@ class MaskedValue:
 
 
 def get_field_type_unformatted(field_props: dict[str, Any]) -> str:
+    """Get the unformatted field type from the field properties."""
     if t := field_props.get("type"):
         return field_props.get("format") or t
 
@@ -56,14 +59,17 @@ def get_field_type_unformatted(field_props: dict[str, Any]) -> str:
 
 
 def get_field_type(field_props: dict) -> str:
+    """Get the field type from the field properties."""
     return get_field_type_unformatted(field_props).replace("-", "").replace("array", "list")
 
 
 def random_string() -> str:
+    """Generate a random string."""
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
 
 def fake(field_props: dict, Command: type[_BaseCommand]) -> Any:
+    """Generate a fake value for a field."""
     t = get_field_type(field_props)
     match t:
         case "string":
@@ -96,6 +102,7 @@ def raises_wrong_type_error(
     Command: type[_BaseCommand],
     field: str,
 ) -> None:
+    """Test that the correct error is raised when the wrong type is passed to a field."""
     field_props = Command.model_json_schema()["properties"][field]
     field_type = get_field_type(field_props)
     wrong_field_type = "integer" if field_type == "string" else "string"
@@ -133,6 +140,7 @@ def raises_none_error_for_effect_method(
     Command: type[_BaseCommand],
     method: str,
 ) -> None:
+    """Test that the correct error is raised when a required field is None for an effect method."""
     cmd_name = Command.__name__
     cmd_name_article = "an" if cmd_name.startswith(("A", "E", "I", "O", "U")) else "a"
 
@@ -155,6 +163,7 @@ def raises_none_error_for_effect_method(
 def write_protocol_code(
     note_uuid: str, plugin_name: str, commands: list[type[_BaseCommand]]
 ) -> None:
+    """Test that the protocol code is written correctly."""
     imports = ", ".join([c.__name__ for c in commands])
     effects = ", ".join([f"{c.__name__}(note_uuid='{note_uuid}').originate()" for c in commands])
 
@@ -177,6 +186,7 @@ class Protocol(BaseProtocol):
 
 
 def install_plugin(plugin_name: str, token: MaskedValue) -> None:
+    """Install a plugin."""
     requests.post(
         plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
         data={"is_enabled": True},
@@ -186,6 +196,7 @@ def install_plugin(plugin_name: str, token: MaskedValue) -> None:
 
 
 def trigger_plugin_event(token: MaskedValue) -> None:
+    """Trigger a plugin event."""
     requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/",
         headers={
@@ -204,6 +215,7 @@ def trigger_plugin_event(token: MaskedValue) -> None:
 
 
 def get_original_note_body_commands(new_note_id: int, token: MaskedValue) -> list[str]:
+    """Get the commands from the original note body."""
     original_note = requests.get(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/{new_note_id}",
         headers={
@@ -225,6 +237,7 @@ def get_original_note_body_commands(new_note_id: int, token: MaskedValue) -> lis
 
 
 def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
+    """Clean up the files and plugins."""
     # clean up
     if Path(f"./custom-plugins/{plugin_name}").exists():
         shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
@@ -261,6 +274,7 @@ COMMANDS: list[type[_BaseCommand]] = [
 
 
 def create_new_note(token: MaskedValue) -> dict:
+    """Create a new note."""
     headers = {
         "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
@@ -279,6 +293,7 @@ def create_new_note(token: MaskedValue) -> dict:
 
 
 def get_token() -> MaskedValue:
+    """Get a valid token."""
     return MaskedValue(
         requests.post(
             f"{settings.INTEGRATION_TEST_URL}/auth/token/",

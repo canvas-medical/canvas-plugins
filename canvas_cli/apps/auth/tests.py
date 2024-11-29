@@ -8,6 +8,8 @@ from canvas_cli.apps.auth import get_or_request_api_token
 
 @pytest.fixture
 def valid_token_response() -> Any:
+    """Returns a valid token response."""
+
     class TokenResponse:
         status_code = 200
 
@@ -19,6 +21,8 @@ def valid_token_response() -> Any:
 
 @pytest.fixture
 def error_token_response() -> Any:
+    """Returns an error token response."""
+
     class TokenResponse:
         status_code = 500
 
@@ -27,6 +31,8 @@ def error_token_response() -> Any:
 
 @pytest.fixture
 def expired_token_response() -> Any:
+    """Returns an expired token response."""
+
     class TokenResponse:
         status_code = 200
 
@@ -45,6 +51,7 @@ def test_get_or_request_api_token_uses_stored_token(
     mock_get_password: MagicMock,
     valid_token_response: Any,
 ) -> None:
+    """Test that get_or_request_api_token uses a stored token if it is valid."""
     mock_is_token_valid.return_value = True
     mock_get_password.return_value = "a-stored-valid-token"
     mock_post.return_value = valid_token_response
@@ -66,6 +73,7 @@ def test_get_or_request_api_token_requests_token_if_none_stored(
     mock_set_password: MagicMock,
     valid_token_response: Any,
 ) -> None:
+    """Test that get_or_request_api_token requests a new token if none is stored."""
     mock_client_credentials.return_value = "client_id=id&client_secret=secret"
     mock_get_password.return_value = None
     mock_post.return_value = valid_token_response
@@ -95,6 +103,7 @@ def test_get_or_request_api_token_raises_exception_if_error_token_response(
     mock_get_password: MagicMock,
     error_token_response: Any,
 ) -> None:
+    """Test that get_or_request_api_token raises an exception if an error token response is received."""
     mock_client_credentials.return_value = "client_id=id&client_secret=secret"
     mock_get_password.return_value = None
     mock_post.return_value = error_token_response
@@ -123,6 +132,7 @@ def test_get_or_request_api_token_raises_exception_if_expired_token(
     mock_get_password: MagicMock,
     expired_token_response: Any,
 ) -> None:
+    """Test that get_or_request_api_token raises an exception if an expired token is received."""
     mock_client_credentials.return_value = "client_id=id&client_secret=secret"
     mock_get_password.return_value = None
     mock_post.return_value = expired_token_response

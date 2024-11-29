@@ -5,6 +5,7 @@ from canvas_cli.utils.validators import validate_manifest_file
 
 @pytest.fixture
 def protocol_manifest_example() -> dict:
+    """Return a valid protocol manifest example."""
     return {
         "sdk_version": "0.3.1",
         "plugin_version": "1.0.1",
@@ -32,5 +33,5 @@ def protocol_manifest_example() -> dict:
 
 
 def test_manifest_file_schema(protocol_manifest_example: dict) -> None:
-    """Test that no exception raised when a valid manifest file is validated"""
+    """Test that no exception raised when a valid manifest file is validated."""
     validate_manifest_file(protocol_manifest_example)

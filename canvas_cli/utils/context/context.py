@@ -12,6 +12,7 @@ F = TypeVar("F", bound=Callable)
 
 class CLIContext:
     """Class that handles configuration across the CLI.
+
     Includes methods for:
     * Loading a JSON file with configuration keys into memory.
     * Making a property transient (default, value is not persisted) or persistent (via decorators)

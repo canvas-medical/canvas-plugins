@@ -1563,7 +1563,8 @@ class PeritonealDialysis(ValueSet):
 
 
 class ProceduresUsedToIndicateSexualActivity(ValueSet):
-    """
+    """Procedures Used to Indicate Sexual Activity Value Set.
+
     **Clinical Focus:** The purpose of this value set is to represent procedures indicating history of sexual activity
 
     **Data Element Scope:** This value set may use a model element related to Procedure.
@@ -2514,7 +2515,8 @@ class CabgSurgeries(ValueSet):
 
 
 class Cabg_PciProcedure(ValueSet):
-    """
+    """CABG, PCI Procedure Value Set.
+
     **Clinical Focus:** CABG and PCI procedures
 
     **Data Element Scope:** CABG and PCI procedures

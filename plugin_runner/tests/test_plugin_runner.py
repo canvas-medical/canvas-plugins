@@ -179,7 +179,6 @@ async def test_reload_plugins_event_handler_successfully_loads_plugins(
     setup_test_plugin: Path, plugin_runner: PluginRunner
 ) -> None:
     """Test ReloadPlugins Event handler successfully loads plugins."""
-
     with patch("plugin_runner.plugin_runner.publish_message", MagicMock()) as mock_publish_message:
         request = ReloadPluginsRequest()
 
