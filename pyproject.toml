@@ -132,6 +132,20 @@ norecursedirs = [
 ]
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
+[tool.ruff]
+exclude = [
+  "canvas_generated/"
+]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = ["D100", "D104", "D105", "D106", "D107", "D200", "D205", "D212", "E501"]
+select = ["D", "E", "I"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.semantic_release]
 build_command = "poetry build"
 commit_message = "chore: v{version}\n\nSee the changelog for changes."
