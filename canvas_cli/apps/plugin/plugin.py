@@ -54,11 +54,12 @@ def _build_package(package: Path) -> Path:
 def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
     """Extract metadata from a provided package and return the package name if it exists in the metadata."""
     try:
-        metadata_response = requests.post(
-            plugin_url(host, "extract-metadata"),
-            headers={"Authorization": f"Bearer {token}"},
-            files={"package": open(package, "rb")},
-        )
+        with open(package) as package_file:
+            metadata_response = requests.post(
+                plugin_url(host, "extract-metadata"),
+                headers={"Authorization": f"Bearer {token}"},
+                files={"package": package_file},
+            )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
         raise typer.Exit(1) from None
@@ -182,12 +183,13 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
-        r = requests.post(
-            url,
-            data={"is_enabled": True},
-            files={"package": open(built_package_path, "rb")},
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        with open(built_package_path, "rb") as package:
+            r = requests.post(
+                url,
+                data={"is_enabled": True},
+                files={"package": package},
+                headers={"Authorization": f"Bearer {token}"},
+            )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
         raise typer.Exit(1) from None
@@ -392,7 +394,7 @@ def validate_manifest(
 
 def update(
     name: str = typer.Argument(..., help="Plugin name to update"),
-    package: Path | None = typer.Option(
+    package_path: Path | None = typer.Option(
         help="Path to a wheel or sdist file containing the python package to install",
         default=None,
     ),
@@ -409,24 +411,33 @@ def update(
     if not host:
         raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
-    if package:
-        validate_package(package)
+    if package_path:
+        validate_package(package_path)
 
     token = get_or_request_api_token(host)
 
-    print(f"Updating plugin {name} from {host} with {is_enabled=}, {package=}")
-
-    binary_package = {"package": open(package, "rb")} if package else None
+    print(f"Updating plugin {name} from {host} with {is_enabled=}, {package_path=}")
 
     url = plugin_url(host, name)
 
     try:
-        r = requests.patch(
-            url,
-            data={"is_enabled": is_enabled} if is_enabled is not None else {},
-            files=binary_package,
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        data = {"is_enabled": is_enabled} if is_enabled is not None else {}
+        headers = {"Authorization": f"Bearer {token}"}
+
+        if package_path:
+            with open(package_path, "rb") as package:
+                r = requests.patch(
+                    url,
+                    data=data,
+                    headers=headers,
+                    files={"package": package},
+                )
+        else:
+            r = requests.patch(
+                url,
+                data=data,
+                headers=headers,
+            )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
         raise typer.Exit(1) from None

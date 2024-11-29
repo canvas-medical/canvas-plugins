@@ -45,15 +45,23 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
     temp_path = path.parent / "temp_credentials.ini"
 
-    original_content = open(path).read()
-    open(path, "w").writelines(
-        [
-            f"[{host}]\n",
-            f"client_id={client_id}\n",
-            f"client_secret={client_secret}\n",
-        ]
-    )
-    open(temp_path, "a").write(original_content)
+    # Read the original content
+    with open(path) as original_file:
+        original_content = original_file.read()
+
+    # Write new content to the original file
+    with open(path, "w") as original_file:
+        original_file.writelines(
+            [
+                f"[{host}]\n",
+                f"client_id={client_id}\n",
+                f"client_secret={client_secret}\n",
+            ]
+        )
+
+    # Append original content to the temp file
+    with open(temp_path, "a") as temp_file:
+        temp_file.write(original_content)
 
     yield
 
@@ -68,22 +76,21 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 def write_plugin(plugin_name: str) -> Generator[Any, Any, Any]:
     """Writes a plugin to the file system."""
     runner.invoke(app, "init", input=plugin_name)
-    protocol = open(f"./{plugin_name}/protocols/my_protocol.py", "w")
-    p = """
-from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
-from logger import log
+    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        p = """
+    from canvas_sdk.events import EventType
+    from canvas_sdk.protocols import BaseProtocol
+    from logger import log
 
-class Protocol(BaseProtocol):
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-    NARRATIVE_STRING = "I was inserted from my plugin's protocol."
+    class Protocol(BaseProtocol):
+        RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+        NARRATIVE_STRING = "I was inserted from my plugin's protocol."
 
-    def compute(self):
-        log.info(self.NARRATIVE_STRING)
-        return []
-"""
-    protocol.write(p)
-    protocol.close()
+        def compute(self):
+            log.info(self.NARRATIVE_STRING)
+            return []
+    """
+        protocol.write(p)
 
     yield
 

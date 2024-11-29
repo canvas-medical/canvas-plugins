@@ -120,17 +120,17 @@ def test_add_recommendations(
         "narrative": init_params["narrative"],
         "recommendations": [
             {
-                "title": rec1_params.get("title", None),
-                "button": rec1_params.get("button", None),
-                "href": rec1_params.get("href", None),
+                "title": rec1_params.get("title"),
+                "button": rec1_params.get("button"),
+                "href": rec1_params.get("href"),
                 "command": {"type": rec1_params["command"]} if "command" in rec1_params else {},
                 "context": rec1_params.get("context", {}),
                 "key": 0,
             },
             {
-                "title": rec2_params.get("title", None),
-                "button": rec2_params.get("button", None),
-                "href": rec2_params.get("href", None),
+                "title": rec2_params.get("title"),
+                "button": rec2_params.get("button"),
+                "href": rec2_params.get("href"),
                 "command": {"type": rec2_params["command"]} if "command" in rec2_params else {},
                 "context": rec2_params.get("context", {}),
                 "key": 1,

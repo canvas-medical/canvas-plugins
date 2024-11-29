@@ -66,35 +66,35 @@ def write_and_install_protocol_and_clean_up(
     with chdir(Path("./custom-plugins")):
         runner.invoke(app, "init", input=plugin_name)
 
-    protocol = open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w")
-    protocol.write(
-        f"""from canvas_sdk.effects.banner_alert import AddBannerAlert
-from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        protocol.write(
+            f"""from canvas_sdk.effects.banner_alert import AddBannerAlert
+    from canvas_sdk.events import EventType
+    from canvas_sdk.protocols import BaseProtocol
 
-class Protocol(BaseProtocol):
-    RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
-    def compute(self):
-        return [
-            AddBannerAlert(
-                patient_id="{first_patient_id}",
-                key="{plugin_name}",
-                narrative="this is a test",
-                placement=[AddBannerAlert.Placement.CHART],
-                intent=AddBannerAlert.Intent.INFO,
-            ).apply()
-        ]
-"""
-    )
-    protocol.close()
+    class Protocol(BaseProtocol):
+        RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
+        def compute(self):
+            return [
+                AddBannerAlert(
+                    patient_id="{first_patient_id}",
+                    key="{plugin_name}",
+                    narrative="this is a test",
+                    placement=[AddBannerAlert.Placement.CHART],
+                    intent=AddBannerAlert.Intent.INFO,
+                ).apply()
+            ]
+    """
+        )
 
-    # install the plugin
-    requests.post(
-        plugin_url(settings.INTEGRATION_TEST_URL),
-        data={"is_enabled": True},
-        files={"package": open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb")},
-        headers={"Authorization": f"Bearer {token.value}"},
-    )
+    with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+        # install the plugin
+        requests.post(
+            plugin_url(settings.INTEGRATION_TEST_URL),
+            data={"is_enabled": True},
+            files={"package": package},
+            headers={"Authorization": f"Bearer {token.value}"},
+        )
 
     yield
 
