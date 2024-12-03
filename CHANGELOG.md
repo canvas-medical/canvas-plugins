@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.8.0 (2024-12-03)
+
+### Features
+
+- Add POST_COMMAND_INSERTED_INTO_NOTE event
+  ([#222](https://github.com/canvas-medical/canvas-plugins/pull/222),
+  [`da964eb`](https://github.com/canvas-medical/canvas-plugins/commit/da964eb3982d5d06f016534e0352597fa777bc02))
+
+
 ## v0.7.1 (2024-11-26)
 
 ### Bug Fixes
