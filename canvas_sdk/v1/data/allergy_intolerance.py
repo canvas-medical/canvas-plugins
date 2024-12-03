@@ -1,4 +1,3 @@
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet

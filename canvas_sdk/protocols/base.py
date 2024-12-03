@@ -1,5 +1,3 @@
-from typing import Any
-
 from canvas_sdk.handlers.base import BaseHandler
 
 

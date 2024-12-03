@@ -24,7 +24,7 @@ class ReasonForVisitCommand(_BaseCommand):
         if self.structured and not self.coding:
             errors.append(
                 self._create_error_detail(
-                    "value", f"Structured RFV should have a coding.", self.coding
+                    "value", "Structured RFV should have a coding.", self.coding
                 )
             )
         return errors

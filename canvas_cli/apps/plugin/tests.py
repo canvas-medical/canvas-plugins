@@ -1,7 +1,8 @@
 import shutil
+from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import typer
@@ -39,12 +40,13 @@ def test_validate_package_valid_file(tmp_path: Path) -> None:
 
 @pytest.fixture(scope="session")
 def init_plugin_name() -> str:
-    """The plugin name to be used for the canvas cli init test"""
+    """The plugin name to be used for the canvas cli init test."""
     return f"testing_init-{datetime.now().timestamp()}".replace(".", "")
 
 
 @pytest.fixture(autouse=True, scope="session")
 def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
+    """Cleans up the plugin directory after the test."""
     yield
     if Path(f"./{init_plugin_name}").exists():
         shutil.rmtree(Path(f"./{init_plugin_name}"))

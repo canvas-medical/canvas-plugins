@@ -107,6 +107,6 @@ class ValueSet(CodeConstantsURLMappingMixin, metaclass=ValueSystems):
         """A property that returns a dictionary of code systems and their associated values."""
         return {
             system: getattr(cls, system)
-            for system in cls.CODE_SYSTEM_MAPPING.keys()
+            for system in cls.CODE_SYSTEM_MAPPING
             if hasattr(cls, system)
         }

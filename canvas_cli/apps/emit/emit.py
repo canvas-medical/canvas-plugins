@@ -7,7 +7,6 @@ import grpc
 import typer
 
 from canvas_generated.messages.events_pb2 import Event as PluginRunnerEvent
-from canvas_generated.messages.events_pb2 import EventType as PluginRunnerEventType
 from canvas_generated.services.plugin_runner_pb2_grpc import PluginRunnerStub
 
 

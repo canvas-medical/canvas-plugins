@@ -42,25 +42,13 @@ repos:
         args: [--no-update]
         files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
 
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        exclude: "generated/|tests.py"
-        additional_dependencies: [tomli]
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.1
     hooks:
-      - id: isort
-        name: isort (python)
-        exclude: *generated
-
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
-    hooks:
-      - id: black
-        args: ["--config=pyproject.toml"]
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
         exclude: *generated
 
   - repo: https://github.com/rtts/djhtml

@@ -1,7 +1,8 @@
 from datetime import date
-from enum import Enum, StrEnum
+from enum import StrEnum
+from typing import NotRequired
 
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import TypedDict
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 

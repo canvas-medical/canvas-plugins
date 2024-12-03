@@ -88,7 +88,8 @@ class ClinicalQualityMeasure(BaseProtocol):
                 case EventType.CONDITION_CREATED | EventType.CONDITION_UPDATED:
                     self._patient_id = patient_id(Condition)
                 case (
-                    EventType.MEDICATION_LIST_ITEM_CREATED | EventType.MEDICATION_LIST_ITEM_UPDATED
+                    EventType.MEDICATION_LIST_ITEM_CREATED
+                    | EventType.MEDICATION_LIST_ITEM_UPDATED
                 ):
                     self._patient_id = patient_id(Medication)
                 case _:

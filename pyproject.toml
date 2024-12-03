@@ -2,14 +2,8 @@
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
-[tool.black]
-line-length = 100
-
 [tool.django-stubs]
 django_settings_module = "settings"
-
-[tool.isort]
-profile = "black"
 
 [tool.mypy]
 check_untyped_defs = true
@@ -82,7 +76,6 @@ typing-extensions = ">=4.8,<4.13"
 websocket-client = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.8.0"
 grpcio-tools = "^1.60.1"
 mypy = "*"
 pre-commit = "*"
@@ -91,6 +84,7 @@ pytest-asyncio = "^0.24.0"
 pytest-mock = "*"
 python-semantic-release = "*"
 requests-mock = "*"
+ruff = "^0.8.0"
 types-protobuf = "*"
 types-requests = "*"
 
@@ -104,10 +98,6 @@ priority = "primary"
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
-
-[tool.pydocstyle]
-add_ignore = "D100,D104,D105,D106,D107,D200,D203,D205,D212,D400"
-convention = "google"
 
 [tool.pytest.ini_options]
 addopts = "--durations=10"
@@ -130,6 +120,33 @@ norecursedirs = [
   "static-files"
 ]
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
+
+[tool.ruff]
+exclude = [
+  "canvas_generated/"
+]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = ["D100", "D104", "D105", "D106", "D107", "D200", "D205", "D212", "E501"]
+select = [
+  "B", # flake8-bugbear
+  "C4", # flake8-comprehensions
+  "D", # pydocstyle
+  "E", # pycodestyle errors
+  "F", # Pyflakes
+  "I", # isort
+  "SIM", # flake8-simplify
+  "UP", # pyupgrade
+  "W" # pycodestyle warnings
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.semantic_release]
 build_command = "poetry build"

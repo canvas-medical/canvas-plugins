@@ -18,7 +18,7 @@ def test_print_json_outputs_valid_json(message: Any, capfd: pytest.CaptureFixtur
     try:
         json.loads(output)
     except ValueError as exc:
-        assert False, f"{output} is not valid json: {exc}"
+        assert AssertionError(f"{output} is not valid json: {exc}")
 
 
 def test_print_json_outputs_kwargs(capfd: pytest.CaptureFixture[str]) -> None:
@@ -33,7 +33,7 @@ def test_print_json_outputs_kwargs(capfd: pytest.CaptureFixture[str]) -> None:
         assert json_dict.get("a_dict") == {"one": 2}
 
     except ValueError as exc:
-        assert False, f"{output} is not valid json: {exc}"
+        assert AssertionError(f"{output} is not valid json: {exc}")
 
 
 def test_print_overrides_default(capfd: pytest.CaptureFixture[str]) -> None:

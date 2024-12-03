@@ -1,7 +1,5 @@
-from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import TypeVar
 
 from pydantic import Field, conlist
 
@@ -29,7 +27,9 @@ class PrescribeCommand(_BaseCommand):
         NOT_ALLOWED = "not_allowed"
 
     fdb_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "prescribe"})
-    icd10_codes: conlist(str, max_length=2) = Field([], json_schema_extra={"commands_api_name": "indications"})  # type: ignore[valid-type]
+    icd10_codes: conlist(str, max_length=2) = Field(  # type: ignore[valid-type]
+        [], json_schema_extra={"commands_api_name": "indications"}
+    )
     sig: str = ""
     days_supply: int | None = None
     quantity_to_dispense: Decimal | float | int | None = None

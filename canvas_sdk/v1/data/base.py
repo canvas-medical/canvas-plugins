@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Container
-from typing import TYPE_CHECKING, Any, Protocol, Self, Type, cast
+from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.db import models
 from django.db.models import Q
@@ -50,7 +50,7 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
 
     @staticmethod
     @abstractmethod
-    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """A protocol method for defining codings."""
         raise NotImplementedError
 
@@ -64,7 +64,7 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
 class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
     """A QuerySet mixin that can filter objects based on a ValueSet."""
 
-    def find(self, value_set: Type["ValueSet"]) -> models.QuerySet[Any]:
+    def find(self, value_set: type["ValueSet"]) -> models.QuerySet[Any]:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -84,7 +84,7 @@ class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
         return self.filter(q_filter).distinct()
 
     @staticmethod
-    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """Provide a sequence of tuples where each tuple is a code system URL and a set of codes."""
         values_dict = cast(dict, value_set.values)
         return cast(
@@ -113,7 +113,7 @@ class ValueSetLookupByNameQuerySetMixin(ValueSetLookupQuerySetMixin):
     """
 
     @staticmethod
-    def codings(value_set: Type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
         """
         Provide a sequence of tuples where each tuple is a code system name and a set of codes.
         """

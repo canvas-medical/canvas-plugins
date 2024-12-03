@@ -18,16 +18,19 @@ from canvas_sdk.commands.tests.test_utils import (
 
 @pytest.fixture(scope="session")
 def token() -> MaskedValue:
+    """Get a valid token."""
     return get_token()
 
 
 @pytest.fixture(scope="session")
 def new_note(token: MaskedValue) -> dict:
+    """Create a new note."""
     return create_new_note(token)
 
 
 @pytest.fixture
 def command_type_map() -> dict[str, type]:
+    """Map of command field types to their corresponding Python types."""
     return {
         "AutocompleteField": str,
         "MultiLineTextField": str,
@@ -51,6 +54,7 @@ def test_command_schema_matches_command_api(
     new_note: dict,
     Command: _BaseCommand,
 ) -> None:
+    """Test that the command schema matches the command API."""
     # first create the command in the new note
     data = {"noteKey": new_note["externallyExposableId"], "schemaKey": Command.Meta.key}
     headers = {"Authorization": f"Bearer {token.value}"}
@@ -90,7 +94,7 @@ def test_command_schema_matches_command_api(
             # this condition initially created for Prescribe.indications,
             # but could apply to other AutocompleteField fields that are lists
             # making the assumption here that if the field ends in 's' (like indications), it is a list
-            assert get_origin(expected_type) == list
+            assert get_origin(expected_type) is list
 
         else:
             assert expected_type == actual_type
