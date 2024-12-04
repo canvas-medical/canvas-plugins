@@ -1,5 +1,6 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import Appointment
+from .assessment import Assessment
 from .billing import BillingLineItem
 from .command import Command
 from .condition import Condition, ConditionCoding
@@ -47,6 +48,7 @@ __all__ = [
     "Appointment",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "Assessment",
     "BillingLineItem",
     "CanvasUser",
     "Command",
@@ -58,6 +60,7 @@ __all__ = [
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
+    "Interview",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
