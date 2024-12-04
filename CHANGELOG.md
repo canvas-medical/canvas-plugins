@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.8.1 (2024-12-04)
+
+### Bug Fixes
+
+- Update dependencies for Python 3.12 support
+  ([#226](https://github.com/canvas-medical/canvas-plugins/pull/226),
+  [`42b795e`](https://github.com/canvas-medical/canvas-plugins/commit/42b795e80e64e50efaf6470160d89da06cb1fb68))
+
+### Chores
+
+- Update dependencies for Python 3.12 support
+  ([#226](https://github.com/canvas-medical/canvas-plugins/pull/226),
+  [`d637bc6`](https://github.com/canvas-medical/canvas-plugins/commit/d637bc661e576ba550f57e76a9428fc8456b0522))
+
+- Auto-update pre-commit hooks ([#200](https://github.com/canvas-medical/canvas-plugins/pull/200),
+  [`c422a3f`](https://github.com/canvas-medical/canvas-plugins/commit/c422a3fda7f5bda5c1623c97f1afd40ef793596c))
+
+- Consolidate linters and formatter into Ruff for improved performance and simplicity
+  ([#216](https://github.com/canvas-medical/canvas-plugins/pull/216),
+  [`15d2809`](https://github.com/canvas-medical/canvas-plugins/commit/15d2809339da704976213cbe448e7221120422de))
+
+
 ## v0.8.0 (2024-12-03)
 
 ### Features
