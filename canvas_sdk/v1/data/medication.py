@@ -1,7 +1,14 @@
+from typing import cast
+
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    BaseModelManager,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    ValueSetLookupQuerySet,
+)
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
@@ -13,10 +20,13 @@ class Status(TextChoices):
     INACTIVE = "inactive", "inactive"
 
 
-class MedicationQuerySet(ValueSetLookupQuerySet):
+class MedicationQuerySet(ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
     """MedicationQuerySet."""
 
     pass
+
+
+MedicationManager = BaseModelManager.from_queryset(MedicationQuerySet)
 
 
 class Medication(models.Model):
@@ -27,7 +37,7 @@ class Medication(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_medication_001"
 
-    objects = CommittableModelManager.from_queryset(MedicationQuerySet)()
+    objects = cast(MedicationQuerySet, MedicationManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
