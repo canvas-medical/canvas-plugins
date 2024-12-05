@@ -1,6 +1,13 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import (
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+)
 
 
 class IntervalUnit(models.TextChoices):
@@ -18,6 +25,15 @@ class Status(models.TextChoices):
     INACTIVE = "inactive", "inactive"
 
 
+class ProtocolOverrideQuerySet(BaseQuerySet, ForPatientQuerySetMixin, CommittableQuerySetMixin):
+    """ProtocolOverrideQuerySet."""
+
+    pass
+
+
+ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
+
+
 class ProtocolOverride(models.Model):
     """ProtocolOverride."""
 
@@ -25,7 +41,7 @@ class ProtocolOverride(models.Model):
         managed = False
         db_table = "canvas_sdk_data_api_protocoloverride_001"
 
-    objects = CommittableModelManager()
+    objects = cast(ProtocolOverrideQuerySet, ProtocolOverrideManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)

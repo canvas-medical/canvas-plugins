@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class BillingLineItemQuerySet(ValueSetTimeframeLookupQuerySet):
     """A class that adds functionality to filter BillingLineItem objects."""
 
-    def find(self, value_set: type["ValueSet"]) -> models.QuerySet:
+    def find(self, value_set: type["ValueSet"]) -> Self:
         """
         This method is overridden to use for BillingLineItem CPT codes.
         The codes are saved as string values in the BillingLineItem.cpt field,
