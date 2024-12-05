@@ -34,13 +34,13 @@ class Condition(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    onset_date = models.DateField()
-    resolution_date = models.DateField()
-    clinical_status = models.CharField(choices=ClinicalStatus.choices)
     deleted = models.BooleanField()
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="conditions")
+    onset_date = models.DateField()
+    resolution_date = models.DateField()
+    clinical_status = models.CharField(choices=ClinicalStatus.choices)
 
 
 class ConditionCoding(models.Model):
