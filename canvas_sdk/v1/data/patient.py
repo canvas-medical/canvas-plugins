@@ -1,7 +1,7 @@
 from typing import Self
 
-from django.contrib.postgres.fields import ArrayField
 import arrow
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
