@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Container
-from typing import TYPE_CHECKING, Any, Generic, Protocol, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.db import models
 from django.db.models import Q
@@ -10,16 +10,12 @@ if TYPE_CHECKING:
     from canvas_sdk.value_set.value_set import ValueSet
 
 
-CustomQuerySet = TypeVar("CustomQuerySet", bound=models.QuerySet)
+class BaseModelManager(models.Manager):
+    """A base manager for models."""
 
-
-class CommittableModelManager(models.Manager):
-    """A manager for commands that can be committed."""
-
-    def get_queryset(self) -> "CommittableQuerySet":
+    def get_queryset(self) -> models.QuerySet:
         """Return a queryset that filters out deleted objects."""
-        # TODO: Should we just filter these out at the view level?
-        return CommittableQuerySet(self.model, using=self._db).filter(deleted=False)
+        return self.filter(deleted=False)
 
 
 class BaseQuerySet(models.QuerySet):
@@ -31,8 +27,12 @@ class BaseQuerySet(models.QuerySet):
 class QuerySetProtocol(Protocol):
     """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
 
-    def filter(self, *args: Any, **kwargs: Any) -> Any:
+    def filter(self, *args: Any, **kwargs: Any) -> Self:
         """Django's models.QuerySet filter method."""
+        ...
+
+    def distinct(self) -> Self:
+        """Django's models.QuerySet distinct method."""
         ...
 
 
@@ -52,26 +52,26 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
         raise NotImplementedError
 
 
-class CommittableQuerySetMixin(QuerySetProtocol, Generic[CustomQuerySet]):
+class CommittableQuerySetMixin(QuerySetProtocol):
     """A queryset for committable objects."""
 
-    def committed(self) -> CustomQuerySet:
+    def committed(self) -> Self:
         """Return a queryset that filters for objects that have been committed."""
         return self.filter(committer_id__isnull=False, entered_in_error_id__isnull=True)
 
 
-class PatientAssetQuerySetMixin(QuerySetProtocol, Generic[CustomQuerySet]):
+class ForPatientQuerySetMixin(QuerySetProtocol):
     """A queryset for patient assets."""
 
-    def for_patient(self, patient_id: str) -> CustomQuerySet:
+    def for_patient(self, patient_id: str) -> Self:
         """Return a queryset that filters objects for a specific patient."""
         return self.filter(patient__id=patient_id)
 
 
-class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol, Generic[CustomQuerySet]):
+class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
     """A QuerySet mixin that can filter objects based on a ValueSet."""
 
-    def find(self, value_set: Type["ValueSet"]) -> CustomQuerySet:
+    def find(self, value_set: type["ValueSet"]) -> Self:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -153,7 +153,7 @@ class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
         """Returns the field that should be filtered on. Can be overridden for different models."""
         return "note__datetime_of_service"
 
-    def within(self, timeframe: "Timeframe") -> models.QuerySet:
+    def within(self, timeframe: "Timeframe") -> Self:
         """A method to filter a queryset for datetimes within a timeframe."""
         return self.filter(
             **{
