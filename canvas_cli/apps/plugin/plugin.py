@@ -54,7 +54,7 @@ def _build_package(package: Path) -> Path:
 def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
     """Extract metadata from a provided package and return the package name if it exists in the metadata."""
     try:
-        with open(package) as package_file:
+        with open(package, "rb") as package_file:
             metadata_response = requests.post(
                 plugin_url(host, "extract-metadata"),
                 headers={"Authorization": f"Bearer {token}"},
