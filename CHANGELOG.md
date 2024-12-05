@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.8.2 (2024-12-05)
+
+### Bug Fixes
+
+- Plugin uploading was trying to use UTF-8
+  ([`c4d641f`](https://github.com/canvas-medical/canvas-plugins/commit/c4d641f647801f64a8e9009e47a9842614dc4715))
+
+
 ## v0.8.1 (2024-12-04)
 
 ### Bug Fixes
