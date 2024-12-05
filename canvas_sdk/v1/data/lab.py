@@ -1,15 +1,27 @@
+from typing import cast
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
-    CommittableModelManager,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
     TimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.patient import Patient
-
-# from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.user import CanvasUser
+
+
+class LabReportQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+    """A queryset for lab reports."""
+
+    pass
+
+
+LabReportManager = BaseModelManager.from_queryset(LabReportQuerySet)
 
 
 class TransmissionType(models.TextChoices):
@@ -28,7 +40,7 @@ class LabReport(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labreport_001"
 
-    objects = CommittableModelManager()
+    objects = cast(LabReportQuerySet, LabReportManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
@@ -58,6 +70,15 @@ class LabReport(models.Model):
     deleted = models.BooleanField()
 
 
+class LabReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+    """A queryset for lab reviews."""
+
+    pass
+
+
+LabReviewManager = BaseModelManager.from_queryset(LabReviewQuerySet)
+
+
 class LabReview(models.Model):
     """A class representing a lab review."""
 
@@ -66,7 +87,7 @@ class LabReview(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labreview_001"
 
-    objects = CommittableModelManager()
+    objects = cast(LabReviewQuerySet, LabReviewManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
