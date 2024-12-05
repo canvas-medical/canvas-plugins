@@ -2,11 +2,11 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Literal, Tuple, Union, cast, get_args, get_origin
+from typing import Union, get_args, get_origin
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
 
 
@@ -26,9 +26,7 @@ class _BaseCommand(Model):
     command_uuid: str | None = None
 
     def _get_effect_method_required_fields(self, method: str) -> tuple:
-        base_required_fields: tuple = getattr(
-            _BaseCommand.Meta, f"{method}_required_fields", tuple()
-        )
+        base_required_fields: tuple = getattr(_BaseCommand.Meta, f"{method}_required_fields", ())
         command_required_fields = super()._get_effect_method_required_fields(method)
         return tuple(set(base_required_fields) | set(command_required_fields))
 
@@ -72,7 +70,7 @@ class _BaseCommand(Model):
         """The schema of the command."""
         base_properties = {"note_uuid", "command_uuid"}
         schema = cls.model_json_schema()
-        required_fields: tuple = getattr(cls.Meta, "commit_required_fields", tuple())
+        required_fields: tuple = getattr(cls.Meta, "commit_required_fields", ())
         return {
             definition.get("commands_api_name", name): {
                 "required": name in required_fields,

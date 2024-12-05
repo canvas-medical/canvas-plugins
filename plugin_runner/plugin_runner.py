@@ -8,8 +8,9 @@ import sys
 import time
 import traceback
 from collections import defaultdict
+from collections.abc import AsyncGenerator
 from types import FrameType
-from typing import Any, AsyncGenerator, Optional, TypedDict
+from typing import Any, TypedDict
 
 import grpc
 import statsd
@@ -181,7 +182,7 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
-def handle_hup_cb(_signum: int, _frame: Optional[FrameType]) -> None:
+def handle_hup_cb(_signum: int, _frame: FrameType | None) -> None:
     """handle_hup_cb."""
     log.info("Received SIGHUP, reloading plugins...")
     load_plugins()
@@ -191,7 +192,7 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     """Find all modules in the specified package path."""
     modules: list[str] = []
 
-    for file_finder, module_name, is_pkg in pkgutil.iter_modules(
+    for _, module_name, is_pkg in pkgutil.iter_modules(
         [base_path.as_posix()],
     ):
         if is_pkg:

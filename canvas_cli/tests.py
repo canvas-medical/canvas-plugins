@@ -1,8 +1,9 @@
 import os
 import shutil
+from collections.abc import Callable, Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Generator, cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
@@ -20,14 +21,13 @@ runner = CliRunner()
 
 @pytest.fixture(scope="session")
 def plugin_name() -> str:
-    """The plugin name to be used for the canvas cli test"""
+    """The plugin name to be used for the canvas cli test."""
     return f"cli-{datetime.now().timestamp()}".replace(".", "")
 
 
 @pytest.fixture(scope="session")
 def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator[None, None, None]:
     """Creates the necessary config file for auth before performing cli tests."""
-
     if not settings.INTEGRATION_TEST_URL:
         raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
 
@@ -45,19 +45,27 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
     temp_path = path.parent / "temp_credentials.ini"
 
-    original_content = open(path, "r").read()
-    open(path, "w").writelines(
-        [
-            f"[{host}]\n",
-            f"client_id={client_id}\n",
-            f"client_secret={client_secret}\n",
-        ]
-    )
-    open(temp_path, "a").write(original_content)
+    # Read the original content
+    with open(path) as original_file:
+        original_content = original_file.read()
+
+    # Write new content to the original file
+    with open(path, "w") as original_file:
+        original_file.writelines(
+            [
+                f"[{host}]\n",
+                f"client_id={client_id}\n",
+                f"client_secret={client_secret}\n",
+            ]
+        )
+
+    # Append original content to the temp file
+    with open(temp_path, "a") as temp_file:
+        temp_file.write(original_content)
 
     yield
 
-    with open(temp_path, "r") as temp:
+    with open(temp_path) as temp:
         original_content = temp.read()
         with open(path, "w") as f:
             f.write(original_content)
@@ -66,9 +74,10 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
 @pytest.fixture(autouse=True, scope="session")
 def write_plugin(plugin_name: str) -> Generator[Any, Any, Any]:
+    """Writes a plugin to the file system."""
     runner.invoke(app, "init", input=plugin_name)
-    protocol = open(f"./{plugin_name}/protocols/my_protocol.py", "w")
-    p = """
+
+    protocol_code = """
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from logger import log
@@ -81,8 +90,9 @@ class Protocol(BaseProtocol):
         log.info(self.NARRATIVE_STRING)
         return []
 """
-    protocol.write(p)
-    protocol.close()
+
+    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        protocol.write(protocol_code)
 
     yield
 
@@ -91,12 +101,12 @@ class Protocol(BaseProtocol):
 
 
 def list_empty_plugins(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 1 - list all plugins"""
+    """Step 1 - list all plugins."""
     return ("list", 0, [], [f"{plugin_name}"])
 
 
 def install_new_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 2 - install a new plugin"""
+    """Step 2 - install a new plugin."""
     return (
         f"install {plugin_name}",
         0,
@@ -111,12 +121,12 @@ def install_new_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]
 
 
 def list_newly_installed_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 3 - list all plugins, including newly installed one"""
+    """Step 3 - list all plugins, including newly installed one."""
     return ("list", 0, [f"{plugin_name}@0.0.1	enabled"], [])
 
 
 def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 4 - disable plugin"""
+    """Step 4 - disable plugin."""
     return (
         f"disable {plugin_name}",
         0,
@@ -126,12 +136,12 @@ def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
 
 
 def list_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 5 - list disabled plugin"""
+    """Step 5 - list disabled plugin."""
     return ("list", 0, [f"{plugin_name}@0.0.1	disabled"], [])
 
 
 def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 6 - enable the disabled plugin"""
+    """Step 6 - enable the disabled plugin."""
     return (
         f"enable {plugin_name}",
         0,
@@ -141,7 +151,7 @@ def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
 
 
 def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 7 - try to uninstall the enabled plugin"""
+    """Step 7 - try to uninstall the enabled plugin."""
     return (
         f"uninstall {plugin_name}",
         1,
@@ -154,7 +164,7 @@ def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], lis
 
 
 def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 8 - disable and then uninstall the plugin"""
+    """Step 8 - disable and then uninstall the plugin."""
     runner.invoke(app, f"disable {plugin_name}")
 
     return (
@@ -192,7 +202,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     create_or_update_config_auth_file_for_testing: None,
     step: Callable,
 ) -> None:
-    """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin"""
+    """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin."""
     mock_get_password.return_value = None
     mock_set_password.return_value = None
 

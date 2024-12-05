@@ -1,7 +1,8 @@
 import functools
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import typer
 
@@ -12,6 +13,7 @@ F = TypeVar("F", bound=Callable)
 
 class CLIContext:
     """Class that handles configuration across the CLI.
+
     Includes methods for:
     * Loading a JSON file with configuration keys into memory.
     * Making a property transient (default, value is not persisted) or persistent (via decorators)
@@ -118,7 +120,7 @@ class CLIContext:
                 success=False,
                 path=str(file),
             )
-            raise typer.Abort()
+            raise typer.Abort() from None
 
         self._config_file_path = file
 

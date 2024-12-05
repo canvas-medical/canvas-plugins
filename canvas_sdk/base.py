@@ -24,7 +24,7 @@ class Model(BaseModel):
     )
 
     def _get_effect_method_required_fields(self, method: Any) -> tuple:
-        return getattr(self.Meta, f"{method}_required_fields", tuple())
+        return getattr(self.Meta, f"{method}_required_fields", ())
 
     def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
         return InitErrorDetails({"type": PydanticCustomError(type, message), "input": value})

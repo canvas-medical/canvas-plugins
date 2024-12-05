@@ -1,6 +1,5 @@
 import importlib.metadata
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -62,7 +61,7 @@ def get_or_create_config_file() -> Path:
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
 ) -> None:

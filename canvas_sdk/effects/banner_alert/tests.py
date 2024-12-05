@@ -1,8 +1,9 @@
 import shutil
+from collections.abc import Generator
 from contextlib import chdir
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import requests
@@ -21,6 +22,7 @@ runner = CliRunner()
 
 @pytest.fixture(scope="session")
 def token() -> MaskedValue:
+    """Get a valid token."""
     return MaskedValue(
         requests.post(
             f"{settings.INTEGRATION_TEST_URL}/auth/token/",
@@ -36,6 +38,7 @@ def token() -> MaskedValue:
 
 @pytest.fixture(scope="session")
 def first_patient_id(token: MaskedValue) -> dict:
+    """Get the first patient id."""
     headers = {
         "Authorization": f"Bearer {token.value}",
         "Content-Type": "application/json",
@@ -47,6 +50,7 @@ def first_patient_id(token: MaskedValue) -> dict:
 
 @pytest.fixture(scope="session")
 def plugin_name() -> str:
+    """Get the plugin name to be used."""
     return f"addbanneralert{datetime.now().timestamp()}".replace(".", "")
 
 
@@ -54,7 +58,7 @@ def plugin_name() -> str:
 def write_and_install_protocol_and_clean_up(
     first_patient_id: str, plugin_name: str, token: MaskedValue
 ) -> Generator[Any, Any, Any]:
-
+    """Write the protocol code, install the plugin, and clean up after the test."""
     if not settings.INTEGRATION_TEST_URL:
         raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
 
@@ -62,9 +66,8 @@ def write_and_install_protocol_and_clean_up(
     with chdir(Path("./custom-plugins")):
         runner.invoke(app, "init", input=plugin_name)
 
-    protocol = open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w")
-    protocol.write(
-        f"""from canvas_sdk.effects.banner_alert import AddBannerAlert
+    protocol_code = f"""
+from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 
@@ -81,16 +84,18 @@ class Protocol(BaseProtocol):
             ).apply()
         ]
 """
-    )
-    protocol.close()
 
-    # install the plugin
-    requests.post(
-        plugin_url(settings.INTEGRATION_TEST_URL),
-        data={"is_enabled": True},
-        files={"package": open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb")},
-        headers={"Authorization": f"Bearer {token.value}"},
-    )
+    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        protocol.write(protocol_code)
+
+    with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+        # install the plugin
+        requests.post(
+            plugin_url(settings.INTEGRATION_TEST_URL),
+            data={"is_enabled": True},
+            files={"package": package},
+            headers={"Authorization": f"Bearer {token.value}"},
+        )
 
     yield
 
@@ -132,6 +137,7 @@ def test_protocol_that_adds_banner_alert(
     plugin_name: str,
     first_patient_id: str,
 ) -> None:
+    """Test that the protocol adds a banner alert."""
     # trigger the event
     requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/",
@@ -206,6 +212,7 @@ def test_protocol_that_adds_banner_alert(
 def test_banner_alert_apply_method_succeeds_with_all_required_fields(
     Effect: type[AddBannerAlert] | type[RemoveBannerAlert], params: dict, expected_payload: str
 ) -> None:
+    """Test that the apply method succeeds with all required fields."""
     b = Effect()
     for k, v in params.items():
         setattr(b, k, v)
@@ -240,6 +247,7 @@ def test_banner_alert_apply_method_succeeds_with_all_required_fields(
 def test_banner_alert_apply_method_raises_error_without_required_fields(
     Effect: type[AddBannerAlert] | type[RemoveBannerAlert], expected_err_msgs: str
 ) -> None:
+    """Test that the apply method raises an error when missing required fields."""
     b = Effect()
     with pytest.raises(ValidationError) as e:
         b.apply()

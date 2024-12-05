@@ -1,6 +1,53 @@
 # CHANGELOG
 
 
+## v0.8.2 (2024-12-05)
+
+### Bug Fixes
+
+- Plugin uploading was trying to use UTF-8
+  ([`c4d641f`](https://github.com/canvas-medical/canvas-plugins/commit/c4d641f647801f64a8e9009e47a9842614dc4715))
+
+
+## v0.8.1 (2024-12-04)
+
+### Bug Fixes
+
+- Update dependencies for Python 3.12 support
+  ([#226](https://github.com/canvas-medical/canvas-plugins/pull/226),
+  [`42b795e`](https://github.com/canvas-medical/canvas-plugins/commit/42b795e80e64e50efaf6470160d89da06cb1fb68))
+
+### Chores
+
+- Update dependencies for Python 3.12 support
+  ([#226](https://github.com/canvas-medical/canvas-plugins/pull/226),
+  [`d637bc6`](https://github.com/canvas-medical/canvas-plugins/commit/d637bc661e576ba550f57e76a9428fc8456b0522))
+
+- Auto-update pre-commit hooks ([#200](https://github.com/canvas-medical/canvas-plugins/pull/200),
+  [`c422a3f`](https://github.com/canvas-medical/canvas-plugins/commit/c422a3fda7f5bda5c1623c97f1afd40ef793596c))
+
+- Consolidate linters and formatter into Ruff for improved performance and simplicity
+  ([#216](https://github.com/canvas-medical/canvas-plugins/pull/216),
+  [`15d2809`](https://github.com/canvas-medical/canvas-plugins/commit/15d2809339da704976213cbe448e7221120422de))
+
+
+## v0.8.0 (2024-12-03)
+
+### Features
+
+- Add POST_COMMAND_INSERTED_INTO_NOTE event
+  ([#222](https://github.com/canvas-medical/canvas-plugins/pull/222),
+  [`da964eb`](https://github.com/canvas-medical/canvas-plugins/commit/da964eb3982d5d06f016534e0352597fa777bc02))
+
+
+## v0.7.1 (2024-11-26)
+
+### Bug Fixes
+
+- Fixes inheritance issue ([#210](https://github.com/canvas-medical/canvas-plugins/pull/210),
+  [`d5d0ac1`](https://github.com/canvas-medical/canvas-plugins/commit/d5d0ac15301e78a3004471dd47a8e409b26b7361))
+
+
 ## v0.7.0 (2024-11-26)
 
 ### Chores

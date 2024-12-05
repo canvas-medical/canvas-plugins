@@ -1,7 +1,7 @@
 import json
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 import typer

@@ -82,6 +82,7 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
     Command: type[_BaseCommand],
     fields_to_test: tuple[str],
 ) -> None:
+    """Test that Command raises a generic error when a kwarg is given an incorrect type."""
     for field in fields_to_test:
         raises_wrong_type_error(Command, field)
 
@@ -184,6 +185,7 @@ def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     err_msg: str,
     valid_kwargs: dict,
 ) -> None:
+    """Test that Command raises a specific error when a kwarg is given an incorrect type."""
     with pytest.raises(ValidationError) as e1:
         cmd = Command(**err_kwargs)
         cmd.originate()
@@ -258,6 +260,7 @@ def test_command_allows_kwarg_with_correct_type(
     Command: type[_BaseCommand],
     fields_to_test: tuple[str],
 ) -> None:
+    """Test that Command allows a kwarg with the correct type."""
     schema = Command.model_json_schema()
 
     for field in fields_to_test:

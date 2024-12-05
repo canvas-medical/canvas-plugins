@@ -141,13 +141,12 @@ class Sandbox:
             ):
                 self.warn(
                     node,
-                    '"{name}" is an invalid variable name because it '
-                    'starts with "_"'.format(name=name),
+                    f'"{name}" is an invalid variable name because it ' 'starts with "_"',
                 )
             elif name.endswith("__roles__"):
                 self.error(
                     node,
-                    '"%s" is an invalid variable name because ' 'it ends with "__roles__".' % name,
+                    f'"{name}" is an invalid variable name because ' 'it ends with "__roles__".',
                 )
             elif name in FORBIDDEN_FUNC_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
@@ -166,15 +165,14 @@ class Sandbox:
             if node.attr.startswith("_") and node.attr != "_":
                 self.warn(
                     node,
-                    '"{name}" is an invalid attribute name because it starts '
-                    'with "_".'.format(name=node.attr),
+                    f'"{node.attr}" is an invalid attribute name because it starts ' 'with "_".',
                 )
 
             if node.attr.endswith("__roles__"):
                 self.error(
                     node,
-                    '"{name}" is an invalid attribute name because it ends '
-                    'with "__roles__".'.format(name=node.attr),
+                    f'"{node.attr}" is an invalid attribute name because it ends '
+                    'with "__roles__".',
                 )
 
             if isinstance(node.ctx, ast.Load):
@@ -188,7 +186,7 @@ class Sandbox:
                 copy_locations(new_node, node)
                 return new_node
 
-            elif isinstance(node.ctx, (ast.Store, ast.Del)):
+            elif isinstance(node.ctx, ast.Store | ast.Del):
                 node = self.node_contents_visit(node)
                 new_value = ast.Call(
                     func=ast.Name("_write_", ast.Load()), args=[node.value], keywords=[]
