@@ -1,7 +1,15 @@
+from typing import cast
+
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
+)
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
@@ -16,10 +24,18 @@ class ClinicalStatus(TextChoices):
     INVESTIGATIVE = "investigative", "investigative"
 
 
-class ConditionQuerySet(ValueSetLookupQuerySet):
+class ConditionQuerySet(
+    BaseQuerySet,
+    ValueSetLookupQuerySetMixin,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+):
     """ConditionQuerySet."""
 
     pass
+
+
+ConditionManager = BaseModelManager.from_queryset(ConditionQuerySet)
 
 
 class Condition(models.Model):
@@ -30,7 +46,7 @@ class Condition(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_condition_001"
 
-    objects = ConditionQuerySet.as_manager()
+    objects = cast(ConditionQuerySet, ConditionManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
