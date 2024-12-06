@@ -15,6 +15,7 @@ from typing import Any, TypedDict
 import grpc
 import statsd
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginsRequest,
     ReloadPluginsResponse,
@@ -140,6 +141,9 @@ class PluginRunner(PluginRunnerServicer):
                     )
                     for effect in _effects
                 ]
+
+                request = apply_effects_to_context(effects, request)
+
                 compute_duration = get_duration_ms(compute_start_time)
 
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
@@ -180,6 +184,32 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
+
+
+def apply_effects_to_context(effects: list[Effect], event: Event) -> Event:
+    """Applies AUTOCOMPLETE_SEARCH_RESULTS effects to the event context.
+    If we are dealing with a search event, we need to update the context with the search results.
+    """
+    event_name = EventType.Name(event.type)
+
+    # Skip if the event is not a search event
+    if not event_name.endswith("__PRE_SEARCH") and not event_name.endswith("__POST_SEARCH"):
+        return event
+
+    try:
+        context = json.loads(event.context)
+    except ValueError:
+        context = {}
+
+    for effect in effects:
+        if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS:
+            context["results"] = json.loads(effect.payload)
+            # Stop processing effects if we've found a AUTOCOMPLETE_SEARCH_RESULTS
+            break
+
+    event.context = json.dumps(context)
+
+    return event
 
 
 def handle_hup_cb(_signum: int, _frame: FrameType | None) -> None:
