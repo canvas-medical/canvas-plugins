@@ -1,13 +1,18 @@
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import arrow
-from django.db.models import Model
 
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols.base import BaseProtocol
 from canvas_sdk.protocols.timeframe import Timeframe
+from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.lab import LabOrder, LabReport
 from canvas_sdk.v1.data.medication import Medication
+from canvas_sdk.v1.data.protocol_override import ProtocolOverride
+
+if TYPE_CHECKING:
+    from django.db.models import Model
 
 
 class ClinicalQualityMeasure(BaseProtocol):
@@ -54,6 +59,19 @@ class ClinicalQualityMeasure(BaseProtocol):
         """
         return cls.__name__
 
+    @staticmethod
+    def relative_float(value: str) -> float:
+        """Relative float method (better explanation needed here)."""
+        try:
+            sigma = 0.0
+            if value[0] == "<" and value[1] != "=":
+                sigma = -1e-6
+            elif value[0] == ">" and value[1] != "=":
+                sigma = +1e-6
+            return float(value.strip("<≤=≥>")) + sigma
+        except (ValueError, IndexError):
+            return 0
+
     @property
     def timeframe(self) -> Timeframe:
         """The default Timeframe (self.timeframe) for all protocols.
@@ -74,27 +92,41 @@ class ClinicalQualityMeasure(BaseProtocol):
         incurring more SQL queries.
         """
 
-        def patient_id(model: type[Model]) -> str:
-            return cast(
-                str,
-                model._default_manager.select_related("patient")
-                .values_list("patient__id")
-                .get(id=self.event.target)[0],
-            )
+        def patient_id(model: "type[Model]") -> str:
+            if model == Patient:
+                return self.target
+            else:
+                return cast(
+                    str,
+                    model._default_manager.select_related("patient")
+                    .values_list("patient__id")
+                    .get(id=self.event.target)[0],
+                )
+
+        models = {
+            EventType.CONDITION_ASSESSED: Condition,
+            EventType.CONDITION_CREATED: Condition,
+            EventType.CONDITION_RESOLVED: Condition,
+            EventType.CONDITION_UPDATED: Condition,
+            EventType.LAB_ORDER_CREATED: LabOrder,
+            EventType.LAB_ORDER_UPDATED: LabOrder,
+            EventType.LAB_REPORT_CREATED: LabReport,
+            EventType.LAB_REPORT_UPDATED: LabReport,
+            EventType.MEDICATION_LIST_ITEM_CREATED: Medication,
+            EventType.MEDICATION_LIST_ITEM_UPDATED: Medication,
+            EventType.PATIENT_CREATED: Patient,
+            EventType.PATIENT_UPDATED: Patient,
+            EventType.PROTOCOL_OVERRIDE_CREATED: ProtocolOverride,
+            EventType.PROTOCOL_OVERRIDE_DELETED: ProtocolOverride,
+            EventType.PROTOCOL_OVERRIDE_UPDATED: ProtocolOverride,
+        }
 
         if not self._patient_id:
-            # TODO: Add cases for ProtocolOverride
-            match self.event.type:
-                case EventType.CONDITION_CREATED | EventType.CONDITION_UPDATED:
-                    self._patient_id = patient_id(Condition)
-                case (
-                    EventType.MEDICATION_LIST_ITEM_CREATED
-                    | EventType.MEDICATION_LIST_ITEM_UPDATED
-                ):
-                    self._patient_id = patient_id(Medication)
-                case _:
-                    raise AssertionError(
-                        f"Event type {self.event.type} not supported by 'patient_id_from_event'"
-                    )
+            try:
+                self._patient_id = patient_id(models[self.event.type])
+            except KeyError as error:
+                raise ValueError(
+                    f"Event type {self.event.type} not supported by 'patient_id_from_event'"
+                ) from error
 
         return self._patient_id

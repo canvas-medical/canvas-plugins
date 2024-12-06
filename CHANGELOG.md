@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.9.0 (2024-12-05)
+
+### Features
+
+- Requirements for CKD CQM plugin
+  ([#194](https://github.com/canvas-medical/canvas-plugins/pull/194),
+  [`ed64c73`](https://github.com/canvas-medical/canvas-plugins/commit/ed64c73a6e54c4e0939cae60bf35e96212518395))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.8.2 (2024-12-05)
+
+### Bug Fixes
+
+- Plugin uploading was trying to use UTF-8
+  ([`c4d641f`](https://github.com/canvas-medical/canvas-plugins/commit/c4d641f647801f64a8e9009e47a9842614dc4715))
+
+
 ## v0.8.1 (2024-12-04)
 
 ### Bug Fixes

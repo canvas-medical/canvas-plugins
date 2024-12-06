@@ -1,6 +1,10 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager
+from canvas_sdk.v1.data.base import (
+    CommittableModelManager,
+    TimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySet,
+)
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.patient import Patient
 
@@ -79,6 +83,21 @@ class LabReview(models.Model):
     patient_communication_method = models.CharField()
 
 
+class LabValueTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
+    """A class that adds queryset functionality to filter using timeframes."""
+
+    @property
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on. Can be overridden for different models."""
+        return "report__original_date"
+
+
+class LabValueQuerySet(ValueSetLookupQuerySet, LabValueTimeframeLookupQuerySetMixin):
+    """LabValueQuerySet."""
+
+    pass
+
+
 class LabValue(models.Model):
     """A class representing a lab value."""
 
@@ -86,6 +105,8 @@ class LabValue(models.Model):
         managed = False
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labvalue_001"
+
+    objects = LabValueQuerySet.as_manager()
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)

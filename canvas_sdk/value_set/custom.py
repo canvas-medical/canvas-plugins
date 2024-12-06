@@ -181,6 +181,89 @@ class Antiarrhythmics(ValueSet):
     }
 
 
+class LabReportCreatinine(ValueSet):
+    """LabReportCreatinine."""
+
+    VALUE_SET_NAME = "Lab Report Creatinine"
+    EXPANSION_VERSION = "CanvasHCC Update 2018-10-04"
+
+    LOINC = {
+        "2160-0",
+    }
+
+
+class HypertensiveChronicKidneyDisease(ValueSet):
+    """
+    **Clinical Focus:** This value set contains concepts that represent hypertensive kidney disease.
+
+    **Data Element Scope:** This value set may use the Quality Data Model (QDM) category related to Diagnosis.
+
+    **Inclusion Criteria:** Includes only relevant concepts associated with hypertensive kidney disease.
+
+    **Exclusion Criteria:** No exclusions.
+    """
+
+    OID = "2.16.840.1.113883.3.464.1003.109.12.1017"
+    VALUE_SET_NAME = "Hypertensive Chronic Kidney Disease"
+    EXPANSION_VERSION = "eCQM Update 2020-05-07"
+
+    ICD10CM = {"I120", "I129", "I130", "I1310", "I1311", "I132", "I150", "I151"}
+
+    ICD9CM = {
+        "40301",
+        "40310",
+        "40311",
+        "40390",
+        "40391",
+        "40400",
+        "40401",
+        "40402",
+        "40403",
+        "40410",
+        "40411",
+        "40412",
+        "40413",
+        "40490",
+        "40491",
+        "40492",
+        "40493",
+    }
+
+    SNOMEDCT = {
+        "111438007",
+        "123799005",
+        "123800009",
+        "14973001",
+        "193003",
+        "194774006",
+        "194783001",
+        "19769006",
+        "23130000",
+        "28119000",
+        "285831000119108",
+        "285841000119104",
+        "286371000119107",
+        "32916005",
+        "38481006",
+        "39018007",
+        "397748008",
+        "427889009",
+        "428575007",
+        "473392002",
+        "49220004",
+        "57684003",
+        "62240004",
+        "65443008",
+        "66052004",
+        "66610008",
+        "73410007",
+        "78544004",
+        "81363003",
+        "86234004",
+        "90493000",
+    }
+
+
 class DiabetesWithoutComplication(ValueSet):
     """Diabetes Without Complication."""
 
