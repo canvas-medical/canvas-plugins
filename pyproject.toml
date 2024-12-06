@@ -71,7 +71,7 @@ redis = "^5.0.4"
 requests = "*"
 restrictedpython = "^7.1"
 statsd = "^4.0.1"
-typer = {extras = ["all"], version = "*"}
+typer = {version = "*"}
 typing-extensions = ">=4.8,<4.13"
 websocket-client = "^1.7.0"
 
