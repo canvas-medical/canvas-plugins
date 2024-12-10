@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.10.0 (2024-12-10)
+
+### Bug Fixes
+
+- Remove a warning that happens at install time
+  ([#232](https://github.com/canvas-medical/canvas-plugins/pull/232),
+  [`331eaa4`](https://github.com/canvas-medical/canvas-plugins/commit/331eaa494e67ebddb5ab61ee3f63546c4986045c))
+
+### Features
+
+- Add patient profile section event and effect
+  ([#212](https://github.com/canvas-medical/canvas-plugins/pull/212),
+  [`f784d8f`](https://github.com/canvas-medical/canvas-plugins/commit/f784d8fa69244142685f2420bc3f6d0416bdd3e8))
+
+- Add events and effects for preferred pharmacies search
+  ([#220](https://github.com/canvas-medical/canvas-plugins/pull/220),
+  [`f9c41b8`](https://github.com/canvas-medical/canvas-plugins/commit/f9c41b84421896afab79d08f1176abdddca305b7))
+
+
 ## v0.9.0 (2024-12-05)
 
 ### Features
