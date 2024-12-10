@@ -197,11 +197,12 @@ def install(
     if r.status_code == requests.codes.created:
         print(f"Plugin {plugin_name} successfully installed!")
 
-    # If we got a bad_request, means there's a duplicate plugin and install can't handle that.
+    # If we got a conflict, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
-    elif r.status_code == requests.codes.bad_request and (
+    elif r.status_code == requests.codes.conflict and (
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
+        print(f"Plugin {package_name} already exists, updating instead...")
         update(package_name, built_package_path, is_enabled=True, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
