@@ -42,4 +42,4 @@ class BaseHandler:
     )
     def target(self) -> str:
         """The context of the event."""
-        return self.event.target["id"]
+        return self.event.target.id
