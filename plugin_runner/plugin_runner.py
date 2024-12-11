@@ -109,7 +109,7 @@ class PluginRunner(PluginRunnerServicer):
         relevant_plugins = EVENT_PROTOCOL_MAP[event_name]
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
-            plugin_name = event.target["id"]
+            plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
