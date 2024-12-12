@@ -1,6 +1,5 @@
 import ast
 import json
-import os
 import tarfile
 import tempfile
 from collections.abc import Iterable
@@ -42,19 +41,19 @@ def validate_package(package: Path) -> Path:
 
 def _build_package(package: Path) -> Path:
     """Runs `poetry build` on `package` and returns the built archive, ignoring symlinks, hidden folders, and hidden files."""
+    package = package.resolve()
+
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
         with tarfile.open(file.name, "w:gz") as tar:
-            for root, dirs, files in os.walk(package):
-                dirs[:] = [d for d in dirs if not d.startswith(".")]
-                files = [f for f in files if not f.startswith(".")]
-                for name in dirs + files:
-                    full_path = Path(root) / name
-                    if not os.path.islink(full_path):
-                        tar.add(full_path, arcname=full_path.relative_to(package))
+            for root in package.rglob("*"):
+                # Skip hidden files and directories (starting with '.') and symlinks
+                if any(part.startswith(".") for part in root.parts) or root.is_symlink():
+                    continue
 
+                tar.add(root, arcname=root.relative_to(package))
         return Path(file.name)
 
 
