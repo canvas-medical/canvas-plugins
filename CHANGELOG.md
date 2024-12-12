@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.10.1 (2024-12-12)
+
+### Bug Fixes
+
+- Typeddict import on patient configuration effect
+  ([#249](https://github.com/canvas-medical/canvas-plugins/pull/249),
+  [`d0069b8`](https://github.com/canvas-medical/canvas-plugins/commit/d0069b868894e9016644d28649dec5a1f34664be))
+
+
 ## v0.10.0 (2024-12-10)
 
 ### Bug Fixes
