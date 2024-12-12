@@ -26,8 +26,8 @@ class TargetType:
 class Event:
     """An event that occurs in the Canvas environment."""
 
+    name: str
     type: EventType
-    initial_context: dict[str, Any]
     context: dict[str, Any]
     target: TargetType
 
@@ -45,11 +45,6 @@ class Event:
             context = {}
 
         self.type = event_request.type
-        self.initial_context = context
+        self.name = EventType.Name(self.type)
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
-
-    @property
-    def name(self) -> str:
-        """The name of the event."""
-        return EventType.Name(self.type)
