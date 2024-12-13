@@ -142,6 +142,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_PATIENT_CHART_SUMMARY_SECTIONS: _ClassVar[EffectType]
     SHOW_PATIENT_PROFILE_SECTIONS: _ClassVar[EffectType]
     PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH_RESULTS: _ClassVar[EffectType]
+    SHOW_ACTION_BUTTON: _ClassVar[EffectType]
+    ON_ACTION_BUTTON_CLICKED: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -277,6 +279,8 @@ ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
 SHOW_PATIENT_CHART_SUMMARY_SECTIONS: EffectType
 SHOW_PATIENT_PROFILE_SECTIONS: EffectType
 PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH_RESULTS: EffectType
+SHOW_ACTION_BUTTON: EffectType
+ON_ACTION_BUTTON_CLICKED: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname")
