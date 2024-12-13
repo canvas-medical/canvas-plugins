@@ -143,7 +143,7 @@ class Interview(models.Model):
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     status = models.CharField()
     name = models.CharField()
