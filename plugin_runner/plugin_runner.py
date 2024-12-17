@@ -191,11 +191,11 @@ class PluginRunner(PluginRunnerServicer):
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
     """Validates the effects based on predefined rules."""
-    autocomplete_effects = [
-        effect for effect in effects if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS
-    ]
+    autocomplete_effects_count = sum(
+        1 for effect in effects if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS
+    )
 
-    if len(autocomplete_effects) > 1:
+    if autocomplete_effects_count > 1:
         log.warning("Only one AUTOCOMPLETE_SEARCH_RESULTS effect is allowed.")
         return []
 
