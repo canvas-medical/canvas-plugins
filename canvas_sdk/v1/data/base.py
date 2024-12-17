@@ -177,7 +177,7 @@ class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
     pass
 
 
-class ValueSetLookupByNameQuerySet(CommittableQuerySet, ValueSetLookupByNameQuerySetMixin):
+class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMixin):
     """A class that includes methods for looking up value sets by name."""
 
     pass
