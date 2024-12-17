@@ -190,16 +190,21 @@ class PluginRunner(PluginRunnerServicer):
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
-    """Validates the effects based on predefined rules."""
-    autocomplete_effects_count = sum(
-        1 for effect in effects if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS
-    )
+    """Validates the effects based on predefined rules.
+    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all non-search-related effects.
+    """
+    seen_autocomplete = False
+    validated_effects = []
 
-    if autocomplete_effects_count > 1:
-        log.warning("Only one AUTOCOMPLETE_SEARCH_RESULTS effect is allowed.")
-        return []
+    for effect in effects:
+        if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS:
+            if seen_autocomplete:
+                log.warning("Discarding additional AUTOCOMPLETE_SEARCH_RESULTS effect.")
+                continue
+            seen_autocomplete = True
+        validated_effects.append(effect)
 
-    return effects
+    return validated_effects
 
 
 def apply_effects_to_context(effects: list[Effect], event: Event) -> Event:
