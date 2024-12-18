@@ -1,4 +1,5 @@
 import importlib.metadata
+from abc import ABC
 from typing import Any
 
 import deprecation
