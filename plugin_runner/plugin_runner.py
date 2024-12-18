@@ -15,6 +15,7 @@ from typing import Any, TypedDict
 import grpc
 import statsd
 
+from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginsRequest,
     ReloadPluginsResponse,
@@ -24,7 +25,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from canvas_sdk.effects import Effect
-from canvas_sdk.events import Event, EventResponse, EventType
+from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
@@ -98,16 +99,17 @@ class PluginRunner(PluginRunnerServicer):
     sandbox: Sandbox
 
     async def HandleEvent(
-        self, request: Event, context: Any
+        self, request: EventRequest, context: Any
     ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
-        event_type = request.type
-        event_name = EventType.Name(event_type)
+        event = Event(request)
+        event_type = event.type
+        event_name = event.name
         relevant_plugins = EVENT_PROTOCOL_MAP[event_name]
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
-            plugin_name = request.target
+            plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
@@ -122,7 +124,7 @@ class PluginRunner(PluginRunnerServicer):
             secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
 
             try:
-                protocol = protocol_class(request, secrets)
+                protocol = protocol_class(event, secrets)
                 classname = (
                     protocol.__class__.__name__
                     if isinstance(protocol, ClinicalQualityMeasure)
@@ -140,6 +142,11 @@ class PluginRunner(PluginRunnerServicer):
                     )
                     for effect in _effects
                 ]
+
+                effects = validate_effects(effects)
+
+                apply_effects_to_context(effects, event=event)
+
                 compute_duration = get_duration_ms(compute_start_time)
 
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
@@ -180,6 +187,43 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
+
+
+def validate_effects(effects: list[Effect]) -> list[Effect]:
+    """Validates the effects based on predefined rules.
+    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all non-search-related effects.
+    """
+    seen_autocomplete = False
+    validated_effects = []
+
+    for effect in effects:
+        if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS:
+            if seen_autocomplete:
+                log.warning("Discarding additional AUTOCOMPLETE_SEARCH_RESULTS effect.")
+                continue
+            seen_autocomplete = True
+        validated_effects.append(effect)
+
+    return validated_effects
+
+
+def apply_effects_to_context(effects: list[Effect], event: Event) -> Event:
+    """Applies AUTOCOMPLETE_SEARCH_RESULTS effects to the event context.
+    If we are dealing with a search event, we need to update the context with the search results.
+    """
+    event_name = event.name
+
+    # Skip if the event is not a search event
+    if not event_name.endswith("__PRE_SEARCH") and not event_name.endswith("__POST_SEARCH"):
+        return event
+
+    for effect in effects:
+        if effect.type == EffectType.AUTOCOMPLETE_SEARCH_RESULTS:
+            event.context["results"] = json.loads(effect.payload)
+            # Stop processing effects if we've found a AUTOCOMPLETE_SEARCH_RESULTS
+            break
+
+    return event
 
 
 def handle_hup_cb(_signum: int, _frame: FrameType | None) -> None:

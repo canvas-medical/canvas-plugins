@@ -1,3 +1,6 @@
-from canvas_generated.messages.events_pb2 import Event, EventResponse, EventType
+from canvas_generated.messages.events_pb2 import Event as EventRequest
+from canvas_generated.messages.events_pb2 import EventResponse, EventType
 
-__all__ = ("Event", "EventResponse", "EventType")
+from .base import Event
+
+__all__ = ("EventRequest", "EventResponse", "EventType", "Event")

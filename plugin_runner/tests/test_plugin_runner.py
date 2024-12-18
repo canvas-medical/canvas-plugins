@@ -7,7 +7,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
-from canvas_sdk.events import Event, EventType
+from canvas_sdk.events import EventRequest, EventType
 from plugin_runner.plugin_runner import (
     EVENT_PROTOCOL_MAP,
     LOADED_PLUGINS,
@@ -91,7 +91,7 @@ async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin
 
     result = [
         response
-        async for response in plugin_runner.HandleEvent(Event(type=EventType.UNKNOWN), None)
+        async for response in plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None)
     ]
 
     assert len(result) == 1
@@ -160,7 +160,7 @@ async def test_handle_plugin_event_returns_expected_result(
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
     load_plugins()
 
-    event = Event(type=EventType.UNKNOWN)
+    event = EventRequest(type=EventType.UNKNOWN)
 
     result = []
     async for response in plugin_runner.HandleEvent(event, None):
