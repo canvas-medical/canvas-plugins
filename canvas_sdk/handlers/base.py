@@ -2,14 +2,19 @@ import importlib.metadata
 from typing import Any
 
 import deprecation
+import json
+from abc import ABC
+from typing import TYPE_CHECKING, Any
 
 from canvas_sdk.events import Event
 
 version = importlib.metadata.version("canvas")
 
 
-class BaseHandler:
-    """The class that all handlers inherit from."""
+class BaseHandler(ABC):
+    """
+    The class that all handlers inherit from.
+    """
 
     secrets: dict[str, Any]
     event: Event

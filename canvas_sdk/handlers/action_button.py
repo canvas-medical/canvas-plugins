@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from enum import StrEnum
 
 from canvas_sdk.effects import Effect
@@ -23,6 +24,7 @@ class ActionButton(BaseHandler):
     BUTTON_KEY: str = ""
     BUTTON_LOCATION: ButtonLocation | None = None
 
+    @abstractmethod
     def handle(self) -> list[Effect]:
         """Method to handle button click."""
         raise NotImplementedError("Implement to handle button click")
