@@ -1,7 +1,10 @@
+from typing import cast
+
 from canvas_sdk.value_set.value_set import ValueSet
 
 
 class HCCConditions(ValueSet):
+    """HCC Conditions."""
 
     VALUE_SET_NAME = "HCC Conditions"
     EXPANSION_VERSION = "CanvasHCC Update 18-10-23"
@@ -9231,7 +9234,7 @@ class HCCConditions(ValueSet):
         "Z89619",
     }
 
-    LABELS = {
+    LABELS: dict[str, dict[str, str | float]] = {
         "B20": {
             "HCC": "HIV/AIDS",
             "ICD10": "Human immunodeficiency virus [HIV] disease",
@@ -55345,19 +55348,22 @@ class HCCConditions(ValueSet):
     }
 
     @staticmethod
-    def label_hdcc_for(idc10) -> str:
-        if idc10 in HCCConditions.LABELS:
-            return HCCConditions.LABELS[idc10]["HCC"]
+    def label_hdcc_for(icd10: str) -> str:
+        """Retrieve an HCC label for an ICD10 code."""
+        if icd10 in HCCConditions.LABELS:
+            return cast(str, HCCConditions.LABELS[icd10]["HCC"])
         return ""
 
     @staticmethod
-    def label_idc10_for(idc10) -> str:
-        if idc10 in HCCConditions.LABELS:
-            return HCCConditions.LABELS[idc10]["ICD10"]
+    def label_icd10_for(icd10: str) -> str:
+        """Retrieve an ICD10 label for an ICD10 code."""
+        if icd10 in HCCConditions.LABELS:
+            return cast(str, HCCConditions.LABELS[icd10]["ICD10"])
         return ""
 
     @staticmethod
-    def raf_for(idc10) -> float:
-        if idc10 in HCCConditions.LABELS:
-            return HCCConditions.LABELS[idc10]["CommunityRAF"]
+    def raf_for(icd10: str) -> float:
+        """Retrieve a Community RAF value for an ICD10 code."""
+        if icd10 in HCCConditions.LABELS:
+            return cast(float, HCCConditions.LABELS[icd10]["CommunityRAF"])
         return 0
