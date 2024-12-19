@@ -14,6 +14,7 @@ manifest_schema = {
                 "content": {"$ref": "#/$defs/component"},
                 "effects": {"$ref": "#/$defs/component"},
                 "views": {"$ref": "#/$defs/component"},
+                "applications": {"$ref": "#/$defs/applications"},
             },
             "additionalProperties": False,
             "minProperties": 1,
@@ -76,6 +77,20 @@ manifest_schema = {
                 "required": ["class", "description", "data_access"],
                 "additionalProperties": False,
             },
-        }
+        },
+        "applications": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "class": {"type": "string"},
+                    "description": {"type": "string"},
+                    "icon": {"type": "string"},
+                    "scope": {"type": "string", "enum": ["patient_specific", "global"]},
+                },
+                "required": ["class", "icon", "scope"],
+                "additionalProperties": False,
+            },
+        },
     },
 }

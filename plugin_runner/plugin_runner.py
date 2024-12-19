@@ -62,6 +62,17 @@ Protocol = TypedDict(
 )
 
 
+ApplicationConfig = TypedDict(
+    "ApplicationConfig",
+    {
+        "class": str,
+        "description": str,
+        "icon": str,
+        "scope": str,
+    },
+)
+
+
 class Components(TypedDict):
     """Components."""
 
@@ -70,6 +81,7 @@ class Components(TypedDict):
     content: list[dict]
     effects: list[dict]
     views: list[dict]
+    applications: list[ApplicationConfig]
 
 
 class PluginManifest(TypedDict):
@@ -110,6 +122,10 @@ class PluginRunner(PluginRunnerServicer):
             plugin_name = request.target
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+
+        if event_type in [EventType.APPLICATION__ON_OPEN]:
+            identifier = request.target
+            relevant_plugins = [p for p in relevant_plugins if p == identifier]
 
         effect_list = []
 
@@ -262,7 +278,9 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
     # TODO add existing schema validation from Michela here
     try:
-        protocols = manifest_json["components"]["protocols"]
+        protocols = manifest_json["components"]["protocols"] + manifest_json["components"].get(
+            "applications", []
+        )
         results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
