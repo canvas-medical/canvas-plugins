@@ -2,6 +2,8 @@ from django.db import models
 
 
 class AssessmentStatus(models.TextChoices):
+    """AssessmentStatus."""
+
     STATUS_IMPROVING = "improved", "Improved"
     STATUS_STABLE = "stable", "Unchanged"
     STATUS_DETERIORATING = "deteriorated", "Deteriorated"
