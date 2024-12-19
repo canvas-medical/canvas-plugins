@@ -42,8 +42,8 @@ sys.path.append(PLUGIN_DIRECTORY)
 # TODO: create typings here for the subkeys
 LOADED_PLUGINS: dict = {}
 
-# a global dictionary of events to protocol class names
-EVENT_PROTOCOL_MAP: dict[str, list] = defaultdict(list)
+# a global dictionary of events to handler class names
+EVENT_HANDLER_MAP: dict[str, list] = defaultdict(list)
 
 
 class DataAccess(TypedDict):
@@ -63,6 +63,17 @@ Protocol = TypedDict(
 )
 
 
+ApplicationConfig = TypedDict(
+    "ApplicationConfig",
+    {
+        "class": str,
+        "description": str,
+        "icon": str,
+        "scope": str,
+    },
+)
+
+
 class Components(TypedDict):
     """Components."""
 
@@ -71,6 +82,7 @@ class Components(TypedDict):
     content: list[dict]
     effects: list[dict]
     views: list[dict]
+    applications: list[ApplicationConfig]
 
 
 class PluginManifest(TypedDict):
@@ -106,7 +118,7 @@ class PluginRunner(PluginRunnerServicer):
         event = Event(request)
         event_type = event.type
         event_name = event.name
-        relevant_plugins = EVENT_PROTOCOL_MAP[event_name]
+        relevant_plugins = EVENT_HANDLER_MAP[event_name]
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
@@ -117,22 +129,22 @@ class PluginRunner(PluginRunnerServicer):
 
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
-            protocol_class = plugin["class"]
+            handler_class = plugin["class"]
             base_plugin_name = plugin_name.split(":")[0]
 
             secrets = plugin.get("secrets", {})
             secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
 
             try:
-                protocol = protocol_class(event, secrets)
+                handler = handler_class(request, secrets)
                 classname = (
-                    protocol.__class__.__name__
-                    if isinstance(protocol, ClinicalQualityMeasure)
+                    handler.__class__.__name__
+                    if isinstance(handler, ClinicalQualityMeasure)
                     else None
                 )
 
                 compute_start_time = time.time()
-                _effects = await asyncio.get_running_loop().run_in_executor(None, protocol.compute)
+                _effects = await asyncio.get_running_loop().run_in_executor(None, handler.compute)
                 effects = [
                     Effect(
                         type=effect.type,
@@ -165,7 +177,7 @@ class PluginRunner(PluginRunnerServicer):
 
         event_duration = get_duration_ms(event_start_time)
 
-        # Don't log anything if a protocol didn't actually run.
+        # Don't log anything if a plugin handler didn't actually run.
         if relevant_plugins:
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
             statsd_tags = tags_to_line_protocol({"event": event_name})
@@ -275,7 +287,7 @@ def sandbox_from_module(package_path: pathlib.Path, module_name: str) -> Any:
 
     full_module_name = f"{package_path.name}.{module_name}"
 
-    sandbox = Sandbox(source_code, module_name=full_module_name)
+    sandbox = Sandbox(source_code, namespace=full_module_name)
     return sandbox.execute()
 
 
@@ -306,43 +318,45 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
     # TODO add existing schema validation from Michela here
     try:
-        protocols = manifest_json["components"]["protocols"]
+        handlers = manifest_json["components"]["protocols"] + manifest_json["components"].get(
+            "applications", []
+        )
         results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
         return
 
-    for protocol in protocols:
+    for handler in handlers:
         # TODO add class colon validation to existing schema validation
         # TODO when we encounter an exception here, disable the plugin in response
         try:
-            protocol_module, protocol_class = protocol["class"].split(":")
-            name_and_class = f"{name}:{protocol_module}:{protocol_class}"
+            handler_module, handler_class = handler["class"].split(":")
+            name_and_class = f"{name}:{handler_module}:{handler_class}"
         except ValueError:
-            log.error(f"Unable to parse class for plugin '{name}': '{protocol['class']}'")
+            log.error(f"Unable to parse class for plugin '{name}': '{handler['class']}'")
             continue
 
         try:
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading plugin '{name_and_class}'")
 
-                result = results[protocol_module]
+                result = results[handler_module]
 
                 LOADED_PLUGINS[name_and_class]["active"] = True
 
-                LOADED_PLUGINS[name_and_class]["class"] = result[protocol_class]
+                LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
             else:
                 log.info(f"Loading plugin '{name_and_class}'")
 
-                result = results[protocol_module]
+                result = results[handler_module]
 
                 LOADED_PLUGINS[name_and_class] = {
                     "active": True,
-                    "class": result[protocol_class],
+                    "class": result[handler_class],
                     "sandbox": result,
-                    "protocol": protocol,
+                    "handler": handler,
                     "secrets": secrets_json,
                 }
         except Exception as err:
@@ -353,17 +367,17 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
 def refresh_event_type_map() -> None:
     """Ensure the event subscriptions are up to date."""
-    EVENT_PROTOCOL_MAP.clear()
+    EVENT_HANDLER_MAP.clear()
 
     for name, plugin in LOADED_PLUGINS.items():
         if hasattr(plugin["class"], "RESPONDS_TO"):
             responds_to = plugin["class"].RESPONDS_TO
 
             if isinstance(responds_to, str):
-                EVENT_PROTOCOL_MAP[responds_to].append(name)
+                EVENT_HANDLER_MAP[responds_to].append(name)
             elif isinstance(responds_to, list):
                 for event in responds_to:
-                    EVENT_PROTOCOL_MAP[event].append(name)
+                    EVENT_HANDLER_MAP[event].append(name)
             else:
                 log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 

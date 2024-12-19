@@ -145,6 +145,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEND_SURESCRIPTS_ELIGIBILITY_REQUEST: _ClassVar[EffectType]
     SEND_SURESCRIPTS_MEDICATION_HISTORY_REQUEST: _ClassVar[EffectType]
     SEND_SURESCRIPTS_BENEFITS_REQUEST: _ClassVar[EffectType]
+    LAUNCH_MODAL: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -283,6 +284,7 @@ PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH_RESULTS: EffectType
 SEND_SURESCRIPTS_ELIGIBILITY_REQUEST: EffectType
 SEND_SURESCRIPTS_MEDICATION_HISTORY_REQUEST: EffectType
 SEND_SURESCRIPTS_BENEFITS_REQUEST: EffectType
+LAUNCH_MODAL: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname")
