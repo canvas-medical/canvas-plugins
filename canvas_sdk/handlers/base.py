@@ -1,18 +1,17 @@
 import importlib.metadata
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any
 
 import deprecation
 
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event
 
 version = importlib.metadata.version("canvas")
 
 
 class BaseHandler(ABC):
-    """
-    The class that all handlers inherit from.
-    """
+    """The class that all handlers inherit from."""
 
     secrets: dict[str, Any]
     event: Event
@@ -46,3 +45,8 @@ class BaseHandler(ABC):
     def target(self) -> str:
         """The target id of the event."""
         return self.event.target.id
+
+    @abstractmethod
+    def compute(self) -> list[Effect]:
+        """Compute the effects to be applied."""
+        ...
