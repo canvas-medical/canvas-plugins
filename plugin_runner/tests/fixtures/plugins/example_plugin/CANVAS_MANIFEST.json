@@ -1,29 +1,35 @@
 {
-    "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
-    "name": "example_plugin",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
-    "components": {
-        "protocols": [
-            {
-                "class": "example_plugin.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz...",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
-            }
-        ],
-        "commands": [],
-        "content": [],
-        "effects": [],
-        "views": []
-    },
-    "secrets": [],
-    "tags": {},
-    "references": [],
-    "license": "",
-    "diagram": false,
-    "readme": "./README.md"
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.1",
+  "name": "example_plugin",
+  "description": "Edit the description in CANVAS_MANIFEST.json",
+  "components": {
+    "apps": [
+      {
+        "class": "example_plugin.apps:App",
+        "description": "An app that does xyz..."
+      }
+    ],
+    "protocols": [
+      {
+        "class": "example_plugin.protocols.my_protocol:Protocol",
+        "description": "A protocol that does xyz...",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
 }
