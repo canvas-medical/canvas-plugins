@@ -1,11 +1,14 @@
 import json
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
+
+from canvas_generated.messages.effects_pb2 import Effect
 
 if TYPE_CHECKING:
     from canvas_generated.messages.events_pb2 import Event
 
 
-class BaseHandler:
+class BaseHandler(ABC):
     """
     The class that all handlers inherit from.
     """
@@ -27,3 +30,8 @@ class BaseHandler:
 
         self.target = event.target
         self.secrets = secrets or {}
+
+    @abstractmethod
+    def compute(self) -> list[Effect]:
+        """Compute the effects to be applied."""
+        ...

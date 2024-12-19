@@ -999,6 +999,9 @@ enum EventType {
 
   PLUGIN_CREATED = 102000;
   PLUGIN_UPDATED = 102001;
+
+  APPLICATION__ON_OPEN = 103000;
+
 }
 
 message Event {
