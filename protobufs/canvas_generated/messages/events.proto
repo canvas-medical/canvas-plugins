@@ -1008,6 +1008,7 @@ message Event {
   // }
   string target = 2;
   string context = 3;
+  string target_type = 4;
 }
 
 message EventResponse {
