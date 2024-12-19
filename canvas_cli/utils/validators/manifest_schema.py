@@ -9,6 +9,7 @@ manifest_schema = {
         "components": {
             "type": "object",
             "properties": {
+                "apps": {"$ref": "#/$defs/apps"},
                 "commands": {"$ref": "#/$defs/component"},
                 "protocols": {"$ref": "#/$defs/component"},
                 "content": {"$ref": "#/$defs/component"},
@@ -27,7 +28,9 @@ manifest_schema = {
                 },
                 "interaction_modes_and_utilization": {
                     "type": "array",
-                    "items": {"enum": ["supply_policies", "demand_policies", "auto_followup"]},
+                    "items": {
+                        "enum": ["supply_policies", "demand_policies", "auto_followup"]
+                    },
                 },
                 "diagnostic_range_and_inputs": {"type": "array", "items": {"enum": []}},
                 "pricing_and_payments": {"type": "array", "items": {"enum": []}},
@@ -76,6 +79,18 @@ manifest_schema = {
                 "required": ["class", "description", "data_access"],
                 "additionalProperties": False,
             },
-        }
+        },
+        "app": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "class": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+                "required": ["class", "description"],
+                "additionalProperties": False,
+            },
+        },
     },
 }

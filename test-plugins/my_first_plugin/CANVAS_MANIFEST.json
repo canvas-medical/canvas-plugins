@@ -1,31 +1,40 @@
 {
-    "sdk_version": "0.1.4",
-    "plugin_version": "0.1.1",
-    "name": "my_first_plugin",
-    "description": "A plugin to interact with a Canvas Instance",
-    "components": {
-        "protocols": [
-            {
-                "class": "my_first_plugin.protocols.protocol:Protocol",
-                "description": "A protocol that does xyz...",
-                "data_access": {
-                    "event": "ASSESS_COMMAND__CONDITION_SELECTED",
-                    "read": [
-                        "conditions"
-                    ],
-                    "write": [
-                        "commands"
-                    ]
-                }
-            }
-        ],
-        "commands": [],
-        "content": [],
-        "effects": [],
-        "views": []
-    },
-    "tags": [],
-    "secrets": ["WEBHOOK_URL", "WEBHOOK_API_KEY"],
-    "license": "NONE",
-    "readme": "NONE"
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.1.1",
+  "name": "my_first_plugin",
+  "description": "A plugin to interact with a Canvas Instance",
+  "components": {
+    "apps": [
+      {
+        "class": "my_first_plugin.apps:App",
+        "description": "An app that does xyz..."
+      }
+    ],
+    "protocols": [
+      {
+        "class": "my_first_plugin.protocols.protocol:Protocol",
+        "description": "A protocol that does xyz...",
+        "data_access": {
+          "event": "ASSESS_COMMAND__CONDITION_SELECTED",
+          "read": [
+            "conditions"
+          ],
+          "write": [
+            "commands"
+          ]
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "tags": [],
+  "secrets": [
+    "WEBHOOK_URL",
+    "WEBHOOK_API_KEY"
+  ],
+  "license": "NONE",
+  "readme": "NONE"
 }
