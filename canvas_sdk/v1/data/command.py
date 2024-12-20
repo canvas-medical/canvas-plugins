@@ -21,7 +21,7 @@ class Command(models.Model):
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
     state = models.CharField()
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING)
-    note_id = models.BigIntegerField()
+    note = models.ForeignKey("Note", on_delete=models.DO_NOTHING, related_name="commands")
     schema_key = models.TextField()
     data = models.JSONField()
     origination_source = models.CharField()
