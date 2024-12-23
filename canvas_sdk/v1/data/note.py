@@ -140,7 +140,7 @@ class Note(models.Model):
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING)
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="notes")
     # provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="notes")
     note_type = models.CharField(choices=NoteTypes.choices, null=True)
     note_type_version = models.ForeignKey(
