@@ -1,6 +1,59 @@
 # CHANGELOG
 
 
+## v0.10.2 (2024-12-21)
+
+### Bug Fixes
+
+- Upgrade Python to 3.12 to match GitHub's runners
+  ([`9d42b25`](https://github.com/canvas-medical/canvas-plugins/commit/9d42b25d5b8e85d3bf430702b2896f866f535d2f))
+
+- Improve error handling for canvas_cli install
+  ([#267](https://github.com/canvas-medical/canvas-plugins/pull/267),
+  [`7b8caf6`](https://github.com/canvas-medical/canvas-plugins/commit/7b8caf63c3308eeff1d0a7b3fdd5eba2e00e380a))
+
+- Improve error handling for canvas_cli install command
+  ([#241](https://github.com/canvas-medical/canvas-plugins/pull/241),
+  [`2c3c749`](https://github.com/canvas-medical/canvas-plugins/commit/2c3c749d4d68fb7e4a01d8a9a857c28519d513ad))
+
+- Ignore hidden folders, hidden files and symlinks when building a plugin package
+  ([#242](https://github.com/canvas-medical/canvas-plugins/pull/242),
+  [`cbd96fa`](https://github.com/canvas-medical/canvas-plugins/commit/cbd96fa024f126fe99f93a528d590c8eae71c401))
+
+### Chores
+
+- Bump protobuf from 4.25.5 to 5.29.1
+  ([#228](https://github.com/canvas-medical/canvas-plugins/pull/228),
+  [`3b5c69b`](https://github.com/canvas-medical/canvas-plugins/commit/3b5c69bf4b5a6ed00b8e5733cf520eedb4be4cd7))
+
+- Bump ipython from 8.29.0 to 8.30.0
+  ([#255](https://github.com/canvas-medical/canvas-plugins/pull/255),
+  [`5dbdc3d`](https://github.com/canvas-medical/canvas-plugins/commit/5dbdc3dbb05481ac53832197a78745e782de831b))
+
+- Bump typer from 0.13.1 to 0.15.1
+  ([#256](https://github.com/canvas-medical/canvas-plugins/pull/256),
+  [`561a226`](https://github.com/canvas-medical/canvas-plugins/commit/561a226b0e8bb7cf989ce1c23aa8245aeda09ecf))
+
+- Bump the development-minors group with 3 updates
+  ([#254](https://github.com/canvas-medical/canvas-plugins/pull/254),
+  [`55ea34b`](https://github.com/canvas-medical/canvas-plugins/commit/55ea34bb599a44f3cb237d8da4d8061750f5abff))
+
+- Bump the development-patches group with 2 updates
+  ([#253](https://github.com/canvas-medical/canvas-plugins/pull/253),
+  [`7d0cc70`](https://github.com/canvas-medical/canvas-plugins/commit/7d0cc70122d182cc2f2ac63145e6a13f30b81c7e))
+
+- Auto-update pre-commit hooks ([#231](https://github.com/canvas-medical/canvas-plugins/pull/231),
+  [`ffc2a76`](https://github.com/canvas-medical/canvas-plugins/commit/ffc2a761d48e3d87dca9677719635cc5f36ae68a))
+
+- Bump pydantic from 2.9.2 to 2.10.3
+  ([#227](https://github.com/canvas-medical/canvas-plugins/pull/227),
+  [`1ecb6e2`](https://github.com/canvas-medical/canvas-plugins/commit/1ecb6e2dcb0169d63aaafe272758bb6280f59ee3))
+
+- Bump the production-patches group across 1 directory with 4 updates
+  ([#235](https://github.com/canvas-medical/canvas-plugins/pull/235),
+  [`768baf5`](https://github.com/canvas-medical/canvas-plugins/commit/768baf53567d786b86f5c8cd24fa4d46280fa70c))
+
+
 ## v0.10.1 (2024-12-12)
 
 ### Bug Fixes
