@@ -18,11 +18,17 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v4
+      id: python-setup
+      uses: actions/setup-python@v5
       with:
         python-version: ${{inputs.PYTHON_VERSION}}
         python-version-file: ".python-version"
         check-latest: ${{inputs.CHECK_LATEST}}
+
+    - name: Set Python version in the environment
+      run: |
+        echo "PYTHON_VERSION=${{ steps.python-setup.outputs.python-version }}" >> $GITHUB_ENV
+      shell: bash
 
       # Cache the installation of Poetry itself.
       # This prevents the workflow from installing Poetry every time, which can be slow.
@@ -31,7 +37,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.local
-        key: poetry-${{inputs.POETRY_VERSION}}
+        key: ${{runner.os}}-py${{steps.python-setup.outputs.python-version}}-poetry-${{inputs.POETRY_VERSION}}
 
     # Install Poetry, make sure the .venv is in the project, so it's easily cached.
     - name: Install poetry
