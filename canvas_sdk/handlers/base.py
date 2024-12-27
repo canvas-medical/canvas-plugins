@@ -1,11 +1,12 @@
 import json
+from abc import ABC
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from canvas_generated.messages.events_pb2 import Event
 
 
-class BaseHandler:
+class BaseHandler(ABC):
     """
     The class that all handlers inherit from.
     """
