@@ -9,9 +9,14 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [ 3.11, 3.12 ]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/install-python-and-poetry
+        with:
+          PYTHON_VERSION: ${{ matrix.version }}
       - uses: ./.github/actions/install-canvas
 
       # Run Pytest unit tests via Poetry.
@@ -24,8 +29,21 @@ jobs:
 
       # Run Pytest integration tests via Poetry.
       - name: Run Pytest integration tests
+        if: matrix.version == '3.12'
         env:
           INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
         run: poetry run pytest -m "integtest" --ff --verbosity 2
+
+      - name: Install pipx
+        run: pip install pipx
+        shell: bash
+
+      - name: Test the distribution
+        run: |
+          poetry build
+          pipx install dist/*.whl
+          canvas --version
+          rm -rf dist/
+        shell: bash
