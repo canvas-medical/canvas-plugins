@@ -100,7 +100,7 @@ print("Hello, Sandbox!")
 
 def test_sandbox_module_name_imports_within_package() -> None:
     """Test that modules within the same package can be imported."""
-    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, module_name="os.a")
+    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, namespace="os.a")
     result = sandbox_module_a.execute()
 
     assert "os" in result
@@ -108,6 +108,6 @@ def test_sandbox_module_name_imports_within_package() -> None:
 
 def test_sandbox_denies_module_name_import_outside_package() -> None:
     """Test that modules outside the root package cannot be imported."""
-    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, module_name="module.a")
+    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, namespace="module.a")
     with pytest.raises(ImportError, match="os' is not an allowed import."):
         sandbox_module_a.execute()
