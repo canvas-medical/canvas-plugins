@@ -9,7 +9,7 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
 from canvas_sdk.events import EventRequest, EventType
 from plugin_runner.plugin_runner import (
-    EVENT_PROTOCOL_MAP,
+    EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
     PluginRunner,
     load_plugins,
@@ -144,10 +144,10 @@ def test_remove_plugin_should_be_removed_from_loaded_plugins(setup_test_plugin: 
 @pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
 def test_load_plugins_should_refresh_event_protocol_map(setup_test_plugin: Path) -> None:
     """Test that the event protocol map is refreshed when loading plugins."""
-    assert EVENT_PROTOCOL_MAP == {}
+    assert EVENT_HANDLER_MAP == {}
     load_plugins()
-    assert EventType.Name(EventType.UNKNOWN) in EVENT_PROTOCOL_MAP
-    assert EVENT_PROTOCOL_MAP[EventType.Name(EventType.UNKNOWN)] == [
+    assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
+    assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
         "example_plugin:example_plugin.protocols.my_protocol:Protocol"
     ]
 
