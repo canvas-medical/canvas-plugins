@@ -318,9 +318,9 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
 
     # TODO add existing schema validation from Michela here
     try:
-        handlers = manifest_json["components"]["protocols"] + manifest_json["components"].get(
-            "applications", []
-        )
+        handlers = manifest_json["components"].get("protocols", []) + manifest_json[
+            "components"
+        ].get("applications", [])
         results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
