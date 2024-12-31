@@ -20,5 +20,5 @@ class LaunchModelEffect(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """The PatientChartSummaryConfiguration's values."""
+        """The LaunchModelEffect values."""
         return {"url": self.url, "target": self.target.value}
