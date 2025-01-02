@@ -23,13 +23,15 @@ class Protocol(BaseProtocol):
         # `self.event` is the event object that caused this method to be
         # called.
         #
-        # `self.target` is an identifier for the object that is the subject of
+        # `self.event.target.id` is an identifier for the object that is the subject of
         # the event. In this case, it would be the identifier of the assess
         # command. If this was a patient create event, it would be the
         # identifier of the patient. If this was a task update event, it would
         # be the identifier of the task. Etc, etc.
+        # If the targeted model is already supported by the SDK,
+        # you can retrieve the instance using `self.event.target.instance`
         #
-        # `self.context` is a python dictionary of additional data that was
+        # `self.event.context` is a python dictionary of additional data that was
         # given with the event. The information given here depends on the
         # event type.
         #

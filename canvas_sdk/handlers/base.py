@@ -1,29 +1,45 @@
-import json
-from typing import TYPE_CHECKING, Any
+import importlib.metadata
+from typing import Any
 
-if TYPE_CHECKING:
-    from canvas_generated.messages.events_pb2 import Event
+import deprecation
+
+from canvas_sdk.events import Event
+
+version = importlib.metadata.version("canvas")
 
 
 class BaseHandler:
-    """
-    The class that all handlers inherit from.
-    """
+    """The class that all handlers inherit from."""
 
     secrets: dict[str, Any]
-    target: str
+    event: Event
 
     def __init__(
         self,
-        event: "Event",
+        event: Event,
         secrets: dict[str, Any] | None = None,
     ) -> None:
         self.event = event
-
-        try:
-            self.context = json.loads(event.context)
-        except ValueError:
-            self.context = {}
-
-        self.target = event.target
         self.secrets = secrets or {}
+
+    @property
+    @deprecation.deprecated(
+        deprecated_in="0.11.0",
+        removed_in="1.0.0",
+        current_version=version,
+        details="Use 'event.context' directly instead",
+    )
+    def context(self) -> dict[str, Any]:
+        """The context of the event."""
+        return self.event.context
+
+    @property
+    @deprecation.deprecated(
+        deprecated_in="0.11.0",
+        removed_in="1.0.0",
+        current_version=version,
+        details="Use 'event.target['id']' directly instead",
+    )
+    def target(self) -> str:
+        """The target id of the event."""
+        return self.event.target.id

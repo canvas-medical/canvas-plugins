@@ -1301,14 +1301,16 @@ PLUGIN_CREATED: EventType
 PLUGIN_UPDATED: EventType
 
 class Event(_message.Message):
-    __slots__ = ("type", "target", "context")
+    __slots__ = ("type", "target", "context", "target_type")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TARGET_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    TARGET_TYPE_FIELD_NUMBER: _ClassVar[int]
     type: EventType
     target: str
     context: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
+    target_type: str
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")
