@@ -7,6 +7,8 @@ from subprocess import STDOUT, CalledProcessError, check_output
 
 import redis
 
+from plugin_runner.plugin_installer import install_plugins
+
 APP_NAME = os.getenv("APP_NAME")
 
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
@@ -62,17 +64,13 @@ def main() -> None:
         if "action" not in data or "client_id" not in data:
             return
 
-        # Don't respond to our own messages
-        if data["client_id"] == CLIENT_ID:
-            return
-
         if data["action"] == "restart":
             # Run the plugin installer process
             try:
                 print("plugin-synchronizer: installing plugins")
-                check_output(["./manage.py", "install_plugins_v2"], cwd="/app", stderr=STDOUT)
+                install_plugins()
             except CalledProcessError as e:
-                print("plugin-synchronizer: `./manage.py install_plugins_v2` failed:", e)
+                print("plugin-synchronizer: `install_plugins` failed:", e)
 
             try:
                 print("plugin-synchronizer: sending SIGHUP to plugin-runner")
