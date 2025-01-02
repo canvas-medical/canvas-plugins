@@ -1,14 +1,26 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    BaseModelManager,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    ValueSetLookupQuerySet,
+)
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.user import CanvasUser
 
 
-class ObservationQuerySet(ValueSetLookupQuerySet):
+class ObservationQuerySet(
+    ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin
+):
     """ObservationQuerySet."""
 
     pass
+
+
+ObservationManager = BaseModelManager.from_queryset(ObservationQuerySet)
 
 
 class Observation(models.Model):
@@ -19,7 +31,7 @@ class Observation(models.Model):
         app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observation_001"
 
-    objects = CommittableModelManager.from_queryset(ObservationQuerySet)()
+    objects = cast(ObservationQuerySet, ObservationManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
