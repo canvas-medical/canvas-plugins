@@ -217,6 +217,9 @@ def install(
 
 def uninstall(
     name: str = typer.Argument(..., help="Plugin name to uninstall"),
+    force: bool = typer.Option(
+        False, "--force", help="Force uninstallation of the plugin", show_default=False
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -239,6 +242,7 @@ def uninstall(
             headers={
                 "Authorization": f"Bearer {token}",
             },
+            params={"force": str(force)},
         )
     except requests.exceptions.RequestException:
         print(f"Failed to connect to {host}")
