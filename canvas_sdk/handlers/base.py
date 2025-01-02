@@ -41,5 +41,5 @@ class BaseHandler:
         details="Use 'event.target['id']' directly instead",
     )
     def target(self) -> str:
-        """The context of the event."""
+        """The target id of the event."""
         return self.event.target.id
