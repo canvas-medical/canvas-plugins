@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.11.1 (2025-01-02)
+
+### Bug Fixes
+
+- Deprecation warning message for BaseHandler event target
+  ([#295](https://github.com/canvas-medical/canvas-plugins/pull/295),
+  [`f20a790`](https://github.com/canvas-medical/canvas-plugins/commit/f20a7902952cd8d60ed6fdf9d75803d70b116ac4))
+
+
 ## v0.11.0 (2025-01-02)
 
 ### Chores
