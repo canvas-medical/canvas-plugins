@@ -38,7 +38,7 @@ class BaseHandler:
         deprecated_in="0.11.0",
         removed_in="1.0.0",
         current_version=version,
-        details="Use 'event.target['id']' directly instead",
+        details="Use 'event.target.id' directly instead",
     )
     def target(self) -> str:
         """The target id of the event."""
