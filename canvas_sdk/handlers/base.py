@@ -24,7 +24,7 @@ class BaseHandler:
 
     @property
     @deprecation.deprecated(
-        deprecated_in="0.10.0",
+        deprecated_in="0.11.0",
         removed_in="1.0.0",
         current_version=version,
         details="Use 'event.context' directly instead",
@@ -35,7 +35,7 @@ class BaseHandler:
 
     @property
     @deprecation.deprecated(
-        deprecated_in="0.10.0",
+        deprecated_in="0.11.0",
         removed_in="1.0.0",
         current_version=version,
         details="Use 'event.target['id']' directly instead",
