@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "{{ cookiecutter.__project_slug }}",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "applications": [
+            {
+                "class": "{{ cookiecutter.__project_slug }}.applications.my_application:MyApplication",
+                "name": "My Application",
+                "description": "An Application that does xyz...",
+                "scope": "global",
+                "icon": "assets/python-logo.png",
+                "origins": []
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
