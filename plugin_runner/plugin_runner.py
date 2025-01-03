@@ -136,7 +136,7 @@ class PluginRunner(PluginRunnerServicer):
             secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
 
             try:
-                handler = handler_class(request, secrets)
+                handler = handler_class(event, secrets)
                 classname = (
                     handler.__class__.__name__
                     if isinstance(handler, ClinicalQualityMeasure)
