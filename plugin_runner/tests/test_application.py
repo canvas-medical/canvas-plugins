@@ -2,7 +2,7 @@ import pytest
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModelEffect
-from canvas_sdk.events import Event, EventType
+from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.application import Application
 
 
@@ -23,7 +23,8 @@ def app_instance(event: Event) -> TestApplication:
 
 def test_compute_event_not_targeted() -> None:
     """Test that compute filters out events not targeted for the app."""
-    event = Event(type=EventType.APPLICATION__ON_OPEN, target="some_identifier")
+    request = EventRequest(type=EventType.APPLICATION__ON_OPEN, target="some_identifier")
+    event = Event(request)
     app = TestApplication(event)
 
     result = app.compute()
@@ -33,10 +34,11 @@ def test_compute_event_not_targeted() -> None:
 
 def test_compute_event_targeted() -> None:
     """Test that compute processes events targeted for the app."""
-    event = Event(
+    request = EventRequest(
         type=EventType.APPLICATION__ON_OPEN,
         target=f"{TestApplication.__module__}:{TestApplication.__qualname__}",
     )
+    event = Event(request)
     app = TestApplication(event)
     result = app.compute()
 
@@ -47,10 +49,11 @@ def test_compute_event_targeted() -> None:
 def test_identifier_property() -> None:
     """Test the identifier property of the Application class."""
     expected_identifier = f"{TestApplication.__module__}:{TestApplication.__qualname__}"
-    event = Event(
+    request = EventRequest(
         type=EventType.APPLICATION__ON_OPEN,
         target=f"{TestApplication.__module__}:{TestApplication.__qualname__}",
     )
+    event = Event(request)
     app = TestApplication(event)
 
     assert app.identifier == expected_identifier, "The identifier property is incorrect"
@@ -59,4 +62,4 @@ def test_identifier_property() -> None:
 def test_abstract_method_on_open() -> None:
     """Test that the abstract method on_open must be implemented."""
     with pytest.raises(TypeError):
-        Application(Event(type=EventType.UNKNOWN))  # type: ignore[abstract]
+        Application(Event(EventRequest(type=EventType.UNKNOWN)))  # type: ignore[abstract]
