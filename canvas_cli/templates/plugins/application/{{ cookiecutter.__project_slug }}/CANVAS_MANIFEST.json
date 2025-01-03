@@ -10,7 +10,8 @@
                 "name": "My Application",
                 "description": "An Application that does xyz...",
                 "scope": "global",
-                "icon": "assets/python-logo.png"
+                "icon": "assets/python-logo.png",
+                "origins": []
             }
         ],
         "commands": [],
