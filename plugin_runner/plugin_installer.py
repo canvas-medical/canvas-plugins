@@ -98,14 +98,14 @@ def enabled_plugins() -> dict[str, dict[str, str | dict[str, str]]]:
 def download_plugin(plugin_package: str) -> Path:
     """Download the plugin package from the S3 bucket."""
     s3 = boto3.client("s3")
-    temp_dir = tempfile.TemporaryDirectory()
-    prefix_dir = os.path.join(temp_dir.name, UPLOAD_TO_PREFIX)
-    os.mkdir(prefix_dir)  # create an intermediate directory reflecting the prefix
-    with open(os.path.join(temp_dir.name, plugin_package), "wb") as download_file:
+    temp_dir = tempfile.mkdtemp()
+    prefix_dir = Path(temp_dir) / UPLOAD_TO_PREFIX
+    prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
+    with open(Path(temp_dir) / plugin_package, "wb") as download_file:
         s3.download_fileobj(
             "canvas-client-media", f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}", download_file
         )
-    return Path(os.path.join(temp_dir.name, plugin_package))
+    return Path(temp_dir) / plugin_package
 
 
 def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]) -> None:
@@ -113,7 +113,7 @@ def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]
     try:
         print(f"Installing plugin '{plugin_name}'")
 
-        plugin_installation_path = Path(os.path.join(settings.PLUGIN_DIRECTORY, plugin_name))
+        plugin_installation_path = Path(settings.PLUGIN_DIRECTORY) / plugin_name
 
         # if plugin exists, first uninstall it
         if plugin_installation_path.exists():
@@ -156,7 +156,7 @@ def install_plugin_secrets(plugin_name: str, secrets: dict[str, str]) -> None:
     """Write the plugin's secrets to disk in the package's directory."""
     print(f"Writing plugin secrets for '{plugin_name}'")
 
-    secrets_path = os.path.join(settings.PLUGIN_DIRECTORY, plugin_name, settings.SECRETS_FILE_NAME)
+    secrets_path = Path(settings.PLUGIN_DIRECTORY) / plugin_name / settings.SECRETS_FILE_NAME
 
     # Did the plugin ship a secrets.json? TOO BAD, IT'S GONE NOW.
     if Path(secrets_path).exists():
@@ -178,7 +178,7 @@ def disable_plugin(plugin_name: str) -> None:
 
 def uninstall_plugin(plugin_name: str) -> None:
     """Remove the plugin from the filesystem."""
-    plugin_path = Path(os.path.join(settings.PLUGIN_DIRECTORY, plugin_name))
+    plugin_path = Path(settings.PLUGIN_DIRECTORY) / plugin_name
 
     if plugin_path.exists():
         shutil.rmtree(plugin_path)

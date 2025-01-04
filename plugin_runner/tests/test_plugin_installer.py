@@ -3,16 +3,18 @@ import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from pytest_mock import MockerFixture
 
-from plugin_runner.plugin_installer import install_plugins, uninstall_plugin
+import settings
+from plugin_runner.plugin_installer import download_plugin, install_plugins, uninstall_plugin
 
 
 def _create_tarball(name: str) -> Path:
     # Create a temporary tarball file
-    temp_dir = tempfile.tempdir
-    tarball_path = Path(f"{temp_dir}/{name}.tar.gz")
+    temp_dir = tempfile.mkdtemp()
+    tarball_path = Path(temp_dir) / f"{name}.tar.gz"
 
     # Add some files to the tarball
     with tarfile.open(tarball_path, "w:gz") as tar:
@@ -27,7 +29,7 @@ def _create_tarball(name: str) -> Path:
 
 def _create_zip_archive(name: str) -> Path:
     # Create a temporary zip file
-    temp_dir = tempfile.tempdir
+    temp_dir = tempfile.mkdtemp()
     zip_path = Path(f"{temp_dir}/{name}.zip")
 
     # Add some files to the zip archive
@@ -115,3 +117,17 @@ def test_plugin_installation_from_zip_archive(mocker: MockerFixture) -> None:
     uninstall_plugin("plugin2")
     assert not Path("plugin_runner/tests/data/plugins/plugin1").exists()
     assert not Path("plugin_runner/tests/data/plugins/plugin2").exists()
+
+
+def test_download(mocker: MockerFixture):
+    """Test that the plugin package can be written to disk, mocking out S3."""
+    mock_s3_client = MagicMock()
+    mocker.patch("boto3.client", return_value=mock_s3_client)
+
+    plugin_package = "plugins/plugin1.tar.gz"
+    result = download_plugin(plugin_package)
+
+    mock_s3_client.download_fileobj.assert_called_once_with(
+        "canvas-client-media", f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}", mocker.ANY
+    )
+    assert result.exists()

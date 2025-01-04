@@ -11,7 +11,7 @@ load_dotenv()
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
-CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "undefined")
+CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
