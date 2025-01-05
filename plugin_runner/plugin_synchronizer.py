@@ -45,6 +45,11 @@ def publish_message(message: dict) -> None:
 def main() -> None:
     """Listen for messages on the pubsub channel and restart the plugin-runner."""
     print("plugin-synchronizer: starting")
+    try:
+        print("plugin-synchronizer: installing plugins after web container start")
+        install_plugins()
+    except CalledProcessError as e:
+        print("plugin-synchronizer: `install_plugins` failed:", e)
 
     _, pubsub = get_client()
 
@@ -67,7 +72,7 @@ def main() -> None:
         if data["action"] == "restart":
             # Run the plugin installer process
             try:
-                print("plugin-synchronizer: installing plugins")
+                print("plugin-synchronizer: installing plugins after receiving restart message")
                 install_plugins()
             except CalledProcessError as e:
                 print("plugin-synchronizer: `install_plugins` failed:", e)

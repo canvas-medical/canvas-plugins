@@ -8,7 +8,12 @@ from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
 
 import settings
-from plugin_runner.plugin_installer import download_plugin, install_plugins, uninstall_plugin
+from plugin_runner.plugin_installer import (
+    _extract_rows_to_dict,
+    download_plugin,
+    install_plugins,
+    uninstall_plugin,
+)
 
 
 def _create_tarball(name: str) -> Path:
@@ -41,6 +46,43 @@ def _create_zip_archive(name: str) -> Path:
 
     # Return a Path handle to the zip archive
     return zip_path
+
+
+def test_extract_rows_to_dict() -> None:
+    """Test that database rows can be extracted to a dictionary with secrets appropriately attributed to plugin."""
+    rows = [
+        {
+            "name": "plugin1",
+            "version": "1.0",
+            "package": "package1",
+            "key": "key1",
+            "value": "value1",
+        },
+        {
+            "name": "plugin1",
+            "version": "1.0",
+            "package": "package1",
+            "key": "key2",
+            "value": "value2",
+        },
+        {"name": "plugin2", "version": "2.0", "package": "package2", "key": None, "value": None},
+    ]
+
+    expected_output = {
+        "plugin1": {
+            "version": "1.0",
+            "package": "package1",
+            "secrets": {"key1": "value1", "key2": "value2"},
+        },
+        "plugin2": {
+            "version": "2.0",
+            "package": "package2",
+            "secrets": {},
+        },
+    }
+
+    result = _extract_rows_to_dict(rows)
+    assert result == expected_output
 
 
 def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
@@ -119,7 +161,7 @@ def test_plugin_installation_from_zip_archive(mocker: MockerFixture) -> None:
     assert not Path("plugin_runner/tests/data/plugins/plugin2").exists()
 
 
-def test_download(mocker: MockerFixture):
+def test_download(mocker: MockerFixture) -> None:
     """Test that the plugin package can be written to disk, mocking out S3."""
     mock_s3_client = MagicMock()
     mocker.patch("boto3.client", return_value=mock_s3_client)

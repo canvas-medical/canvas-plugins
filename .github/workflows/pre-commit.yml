@@ -24,6 +24,8 @@ jobs:
       - uses: ./.github/actions/install-canvas
 
       - name: Run the pre-commit hooks
+        env:
+          CUSTOMER_IDENTIFIER: "ci-pre-commit"
         uses: pre-commit/action@v3.0.1
         with:
           extra_args: >-

@@ -11,6 +11,7 @@ from urllib import parse
 import boto3
 import psycopg
 from psycopg import Connection
+from psycopg.rows import dict_row
 
 import settings
 
@@ -54,8 +55,8 @@ def get_database_dict_from_env() -> dict[str, Any]:
         "dbname": "home-app",
         "user": os.getenv("DB_USERNAME", "app"),
         "password": os.getenv("DB_PASSWORD", "app"),
-        "host": os.getenv("DB_HOST", "home-app-db"),
-        "port": os.getenv("DB_PORT", "5432"),
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": os.getenv("DB_PORT", "5435"),
     }
 
 
@@ -74,24 +75,28 @@ def enabled_plugins() -> dict[str, dict[str, str | dict[str, str]]]:
     """Returns a dictionary of enabled plugins and their attributes."""
     conn = open_database_connection()
 
-    plugins = {}
-
-    with conn.cursor() as cursor:
+    with conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
             "select name, package, version, key, value from plugin_io_plugin p "
-            "join plugin_io_pluginsecret s on p.id = s.plugin_id where is_enabled"
+            "left join plugin_io_pluginsecret s on p.id = s.plugin_id where is_enabled"
         )
         rows = cursor.fetchall()
-        for row in rows:
-            if row["name"] not in plugins:
-                plugins[row["name"]] = {
-                    "version": row["version"],
-                    "package": row["package"],
-                    "secrets": {row["key"]: row["value"]},
-                }
-            else:
-                plugins[row["name"]]["secrets"][row["key"]] = row["value"]
+        plugins = _extract_rows_to_dict(rows)
 
+    return plugins
+
+
+def _extract_rows_to_dict(rows: list[dict[str, Any]]) -> dict[str, dict[str, str | dict[str, str]]]:
+    plugins = {}
+    for row in rows:
+        if row["name"] not in plugins:
+            plugins[row["name"]] = {
+                "version": row["version"],
+                "package": row["package"],
+                "secrets": {row["key"]: row["value"]} if row["key"] else {},
+            }
+        else:
+            plugins[row["name"]]["secrets"][row["key"]] = row["value"]
     return plugins
 
 
@@ -172,6 +177,8 @@ def disable_plugin(plugin_name: str) -> None:
     conn.cursor().execute(
         "update plugin_io_plugin set is_enabled = false where name = %s", (plugin_name,)
     )
+    conn.commit()
+    conn.close()
 
     uninstall_plugin(plugin_name)
 
