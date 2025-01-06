@@ -86,7 +86,7 @@ def enabled_plugins() -> dict[str, dict[str, str | dict[str, str]]]:
     return plugins
 
 
-def _extract_rows_to_dict(rows: list[dict[str, Any]]) -> dict[str, dict[str, str | dict[str, str]]]:
+def _extract_rows_to_dict(rows: list) -> dict[str, dict[str, str | dict[str, str]]]:
     plugins = {}
     for row in rows:
         if row["name"] not in plugins:
@@ -124,10 +124,10 @@ def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]
         if plugin_installation_path.exists():
             uninstall_plugin(plugin_name)
 
-        plugin_file_path = download_plugin(attributes["package"])
+        plugin_file_path = download_plugin(attributes["package"])  # type: ignore
         extract_plugin(plugin_file_path, plugin_installation_path)
 
-        install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
+        install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])  # type: ignore
     except Exception as ex:
         print(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
         raise PluginInstallationError() from ex
