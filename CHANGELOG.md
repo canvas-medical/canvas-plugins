@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.12.0 (2025-01-06)
+
+### Features
+
+- Add note action buttons events and effects
+  ([#258](https://github.com/canvas-medical/canvas-plugins/pull/258),
+  [`54b8008`](https://github.com/canvas-medical/canvas-plugins/commit/54b800842a495475b5f86af78fb8552d2a469ee8))
+
+- Add ROS, SA and physical Exam commands and Practice Location and Org to data module
+  ([#257](https://github.com/canvas-medical/canvas-plugins/pull/257),
+  [`8e75918`](https://github.com/canvas-medical/canvas-plugins/commit/8e759187861d6860a18de17baf24c0a6caded19d))
+
+Co-authored-by: Joe Wilson <joe.wilson@canvasmedical.com>
+
+- Events and effects for patient portal intake forms
+  ([#277](https://github.com/canvas-medical/canvas-plugins/pull/277),
+  [`4f68da8`](https://github.com/canvas-medical/canvas-plugins/commit/4f68da8d6a4393ec5f9d9264a83e8e03214a4ed9))
+
+
 ## v0.11.1 (2025-01-02)
 
 ### Bug Fixes
