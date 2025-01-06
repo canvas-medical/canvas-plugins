@@ -2,6 +2,7 @@ from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
 from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
+from canvas_sdk.commands.commands.exam import PhysicalExamCommand
 from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
 from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.commands.commands.history_present_illness import (
@@ -21,7 +22,9 @@ from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
+from canvas_sdk.commands.commands.review_of_systems import ReviewOfSystemsCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
+from canvas_sdk.commands.commands.structured_assessment import StructuredAssessmentCommand
 from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.commands.update_diagnosis import UpdateDiagnosisCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
@@ -43,11 +46,14 @@ __all__ = (
     "PerformCommand",
     "PlanCommand",
     "PrescribeCommand",
+    "PhysicalExamCommand",
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
+    "ReviewOfSystemsCommand",
     "StopMedicationCommand",
+    "StructuredAssessmentCommand",
     "TaskCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
