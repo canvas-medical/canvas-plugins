@@ -1,5 +1,5 @@
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.launch_modal import LaunchModelEffect
+from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.handlers.application import Application
 
 
@@ -9,4 +9,4 @@ class MyApplication(Application):
     def on_open(self) -> Effect:
         """Handle the on_open event."""
         # Implement this method to handle the application on_open event.
-        return LaunchModelEffect(url="", target=LaunchModelEffect.TargetType.DEFAULT_MODAL).apply()
+        return LaunchModalEffect(url="", target=LaunchModalEffect.TargetType.DEFAULT_MODAL).apply()

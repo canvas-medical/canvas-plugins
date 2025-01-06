@@ -4,7 +4,7 @@ from typing import Any
 from canvas_sdk.effects import EffectType, _BaseEffect
 
 
-class LaunchModelEffect(_BaseEffect):
+class LaunchModalEffect(_BaseEffect):
     """An Effect that will launch a modal."""
 
     class Meta:
@@ -20,5 +20,5 @@ class LaunchModelEffect(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """The LaunchModelEffect values."""
+        """The LaunchModalEffect values."""
         return {"url": self.url, "target": self.target.value}

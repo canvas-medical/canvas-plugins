@@ -1,7 +1,7 @@
 import pytest
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.launch_modal import LaunchModelEffect
+from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.application import Application
 
@@ -11,7 +11,7 @@ class TestApplication(Application):
 
     def on_open(self) -> Effect:
         """Handle the application open event by returning a mock effect."""
-        return LaunchModelEffect(url="https://example.com").apply()
+        return LaunchModalEffect(url="https://example.com").apply()
 
 
 @pytest.fixture
