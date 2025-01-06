@@ -197,6 +197,7 @@ enum EffectType {
 
   SHOW_ACTION_BUTTON = 1000;
 
+  PATIENT_PORTAL__INTAKE_FORM_RESULTS = 2000;
 }
 
 message Effect {
