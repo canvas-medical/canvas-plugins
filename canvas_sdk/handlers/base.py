@@ -1,4 +1,5 @@
 import importlib.metadata
+from abc import ABC
 from typing import Any
 
 import deprecation
@@ -8,8 +9,10 @@ from canvas_sdk.events import Event
 version = importlib.metadata.version("canvas")
 
 
-class BaseHandler:
-    """The class that all handlers inherit from."""
+class BaseHandler(ABC):
+    """
+    The class that all handlers inherit from.
+    """
 
     secrets: dict[str, Any]
     event: Event
