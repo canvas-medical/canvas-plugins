@@ -3,9 +3,6 @@ from abc import ABC
 from typing import Any
 
 import deprecation
-import json
-from abc import ABC
-from typing import TYPE_CHECKING, Any
 
 from canvas_sdk.events import Event
 
