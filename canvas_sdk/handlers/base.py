@@ -49,4 +49,4 @@ class BaseHandler(ABC):
     @abstractmethod
     def compute(self) -> list[Effect]:
         """Compute the effects to be applied."""
-        ...
+        pass
