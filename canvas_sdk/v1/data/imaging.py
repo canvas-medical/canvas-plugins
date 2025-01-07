@@ -22,23 +22,25 @@ class ImagingOrder(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="imaging_orders")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+    )
     # TODO - uncomment when Note model is complete
-    #  note = models.ForeigneKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_orders")
+    #  note = models.ForeigneKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     imaging = models.CharField()
     # TODO - uncomment when ServiceProvider model is complete
-    # imaging_center = models.ForeignKey(ServiceProvider, related_name="imaging_orders", null=True, on_delete=models.DO_NOTHING)
+    # imaging_center = models.ForeignKey(ServiceProvider, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     note_to_radiologist = models.CharField()
     internal_comment = models.CharField()
     status = models.CharField(choices=OrderStatus)
     date_time_ordered = models.DateTimeField()
     priority = models.CharField()
     # TODO - uncomment when Staff model is complete
-    # ordering_provider = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="imaging_orders", null=True)
+    # ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     delegated = models.BooleanField(default=False)
 
 
@@ -54,19 +56,19 @@ class ImagingReview(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     patient_communication_method = models.CharField(choices=ReviewPatientCommunicationMethod)
     # TODO  - uncomment when Note model is complete
-    # note = models.ForeignKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_reviews")
+    # note = models.ForeignKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True)
     internal_comment = models.CharField()
     message_to_patient = models.CharField()
     is_released_to_patient = models.BooleanField()
     status = models.CharField(choices=ReviewStatus)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="imaging_reviews"
+        Patient, on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True
     )
 
 
@@ -92,11 +94,11 @@ class ImagingReport(models.Model):
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="imaging_results"
+        Patient, on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )
     order = models.ForeignKey(ImagingOrder, on_delete=models.DO_NOTHING, null=True)
     source = models.CharField(choices=ImagingReportSource)
     name = models.CharField()
     result_date = models.DateField()
     original_date = models.DateField()
-    review = models.ForeignKey(ImagingReview, null=True, on_delete=models.DO_NOTHING)
+    review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)

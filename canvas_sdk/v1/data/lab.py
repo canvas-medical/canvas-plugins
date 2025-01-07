@@ -47,12 +47,12 @@ class LabReport(models.Model):
     version = models.IntegerField()
     requisition_number = models.CharField()
     review = models.ForeignKey(
-        "LabReview", related_name="reports", on_delete=models.DO_NOTHING, null=True
+        "LabReview", on_delete=models.DO_NOTHING, related_name="reports", null=True
     )
     original_date = models.DateTimeField()
     date_performed = models.DateTimeField()
     custom_document_name = models.CharField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
@@ -72,14 +72,16 @@ class LabReview(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     internal_comment = models.TextField()
     message_to_patient = models.CharField()
     status = models.CharField()
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="lab_reviews")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="lab_reviews", null=True
+    )
     patient_communication_method = models.CharField()
 
 
@@ -113,7 +115,7 @@ class LabValue(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     report = models.ForeignKey(
-        "LabReport", related_name="values", on_delete=models.DO_NOTHING, null=True
+        "LabReport", on_delete=models.DO_NOTHING, related_name="values", null=True
     )
     value = models.TextField()
     units = models.CharField()
@@ -178,14 +180,16 @@ class LabOrder(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="lab_orders")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
+    )
     ontology_lab_partner = models.CharField()
     # TODO - uncomment when the Note model is finished
-    # note = models.ForeignKey("Note", on_delete=models.DO_NOTHING)
+    # note = models.ForeignKey("Note", on_delete=models.DO_NOTHING, null=True)
     comment = models.CharField()
     requisition_number = models.CharField()
     is_patient_bill = models.BooleanField(null=True)
@@ -224,11 +228,13 @@ class LabOrderReason(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    order = models.ForeignKey(LabOrder, on_delete=models.DO_NOTHING, related_name="reasons")
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    order = models.ForeignKey(
+        LabOrder, on_delete=models.DO_NOTHING, related_name="reasons", null=True
+    )
     mode = models.CharField(max_length=30, choices=LabReasonMode)
 
 
@@ -281,7 +287,7 @@ class LabTest(models.Model):
     ontology_test_code = models.CharField(max_length=512, blank=True, default="")
     status = models.CharField(max_length=30, choices=LabTestOrderStatus)
     report = models.ForeignKey(
-        LabReport, on_delete=models.DO_NOTHING, null=True, related_name="tests"
+        LabReport, on_delete=models.DO_NOTHING, related_name="tests", null=True
     )
     aoe_code = models.CharField(max_length=10, default="")
     procedure_class = models.CharField(max_length=10, default="")

@@ -46,14 +46,16 @@ class Task(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    creator = models.ForeignKey(Staff, related_name="creator_tasks", on_delete=models.DO_NOTHING)
+    creator = models.ForeignKey(
+        Staff, on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
+    )
     assignee = models.ForeignKey(
-        Staff, related_name="assignee_tasks", null=True, on_delete=models.DO_NOTHING
+        Staff, on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
     )
     # TODO - uncomment when Team model is created
-    # team = models.ForeignKey(Team, related_name="tasks", null=True, on_delete=models.DO_NOTHING)
+    # team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, related_name="tasks", null=True)
     patient = models.ForeignKey(
-        Patient, blank=True, null=True, on_delete=models.DO_NOTHING, related_name="tasks"
+        Patient, on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
     task_type = models.CharField(choices=TaskType.choices)
     tag = models.CharField()
@@ -75,8 +77,10 @@ class TaskComment(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    creator = models.ForeignKey(Staff, related_name="comments", on_delete=models.DO_NOTHING)
-    task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, related_name="comments")
+    creator = models.ForeignKey(
+        Staff, on_delete=models.DO_NOTHING, related_name="comments", null=True
+    )
+    task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, related_name="comments", null=True)
     body = models.TextField()
 
 
@@ -108,5 +112,5 @@ class TaskTaskLabel(models.Model):
         db_table = "canvas_sdk_data_api_tasktasklabel_001"
 
     dbid = models.BigIntegerField(primary_key=True)
-    task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING)
-    task = models.ForeignKey(Task, on_delete=models.DO_NOTHING)
+    task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING, null=True)
+    task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
