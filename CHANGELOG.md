@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.13.0 (2025-01-07)
+
+### Features
+
+- Install applications via plugins
+  ([#275](https://github.com/canvas-medical/canvas-plugins/pull/275),
+  [`d0a5f59`](https://github.com/canvas-medical/canvas-plugins/commit/d0a5f59643785732f3f9dae5b2982fa1244604e5))
+
+
 ## v0.12.0 (2025-01-06)
 
 ### Features

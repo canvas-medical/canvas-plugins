@@ -47,7 +47,7 @@ packages = [
   {include = "settings.py"}
 ]
 readme = "README.md"
-version = "0.12.0"
+version = "0.13.0"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
