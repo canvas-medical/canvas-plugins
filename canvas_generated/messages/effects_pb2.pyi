@@ -162,6 +162,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENTER_IN_ERROR_STRUCTURED_ASSESSMENT_COMMAND: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     PATIENT_PORTAL__INTAKE_FORM_RESULTS: _ClassVar[EffectType]
+    LAUNCH_MODAL: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -317,6 +318,7 @@ COMMIT_STRUCTURED_ASSESSMENT_COMMAND: EffectType
 ENTER_IN_ERROR_STRUCTURED_ASSESSMENT_COMMAND: EffectType
 SHOW_ACTION_BUTTON: EffectType
 PATIENT_PORTAL__INTAKE_FORM_RESULTS: EffectType
+LAUNCH_MODAL: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname")

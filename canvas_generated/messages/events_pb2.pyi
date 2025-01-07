@@ -657,6 +657,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CLAIM__CONDITIONS: _ClassVar[EventType]
     PLUGIN_CREATED: _ClassVar[EventType]
     PLUGIN_UPDATED: _ClassVar[EventType]
+    APPLICATION__ON_OPEN: _ClassVar[EventType]
     PATIENT_PORTAL__GET_INTAKE_FORMS: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
@@ -1306,6 +1307,7 @@ PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH: EventType
 CLAIM__CONDITIONS: EventType
 PLUGIN_CREATED: EventType
 PLUGIN_UPDATED: EventType
+APPLICATION__ON_OPEN: EventType
 PATIENT_PORTAL__GET_INTAKE_FORMS: EventType
 
 class Event(_message.Message):

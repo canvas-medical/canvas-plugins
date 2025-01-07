@@ -93,7 +93,6 @@ class Sandbox:
 
     source_code: str
     namespace: str
-    module_name: str | None
 
     class Transformer(RestrictingNodeTransformer):
         """A node transformer for customizing the sandbox compiler."""
@@ -200,19 +199,16 @@ class Sandbox:
                 # Impossible Case only ctx Load, Store and Del are defined in ast.
                 raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
 
-    def __init__(
-        self, source_code: str, namespace: str | None = None, module_name: str | None = None
-    ) -> None:
+    def __init__(self, source_code: str, namespace: str | None = None) -> None:
         if source_code is None:
             raise TypeError("source_code may not be None")
-        self.module_name = module_name
         self.namespace = namespace or "protocols"
         self.source_code = source_code
 
     @cached_property
     def package_name(self) -> str | None:
         """Return the root package name."""
-        return self.module_name.split(".")[0] if self.module_name else None
+        return self.namespace.split(".")[0] if self.namespace else None
 
     @cached_property
     def scope(self) -> dict[str, Any]:

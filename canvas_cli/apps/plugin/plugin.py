@@ -143,14 +143,23 @@ def _get_protocols_with_new_cqm_properties(
     return protocol_props if has_updates else None
 
 
-def get_base_plugin_template_path() -> Path:
+def get_base_plugin_template_path(plugin_type: str) -> Path:
     """Return context's base_plugin_template_path, so it can be used as a Typer default."""
-    return context.plugin_template_dir / context.default_plugin_template_name
+    match plugin_type:
+        case "application":
+            return context.plugin_template_dir / "application"
+        case _:
+            return context.plugin_template_dir / context.default_plugin_template_name
 
 
-def init() -> None:
+def init(
+    plugin_type: str = typer.Argument(
+        "protocol",
+        help="The type of plugin to create. Options are 'application' or 'protocol'.",
+    ),
+) -> None:
     """Create a new plugin."""
-    template = get_base_plugin_template_path()
+    template = get_base_plugin_template_path(plugin_type)
     try:
         project_dir = cookiecutter(str(template))
     except OutputDirExistsException:
