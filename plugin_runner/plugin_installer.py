@@ -7,7 +7,7 @@ import zipfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 from urllib import parse
 
 import boto3
@@ -16,26 +16,11 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 import settings
+from canvas_sdk.exceptions import InvalidPluginFormat, PluginInstallationError
 
 Archive = zipfile.ZipFile | tarfile.TarFile
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
 UPLOAD_TO_PREFIX = "plugins"
-
-
-class PluginError(Exception):
-    """An exception raised for plugin-related errors."""
-
-
-class PluginValidationError(PluginError):
-    """An exception raised when a plugin package is not valid."""
-
-
-class InvalidPluginFormat(PluginValidationError):
-    """An exception raised when the plugin file format is not supported."""
-
-
-class PluginInstallationError(PluginError):
-    """An exception raised when a plugin fails to install."""
 
 
 def get_database_dict_from_url() -> dict[str, Any]:
@@ -73,7 +58,15 @@ def open_database_connection() -> Connection:
     return conn
 
 
-def enabled_plugins() -> dict[str, dict[str, str | dict[str, str]]]:
+class PluginAttributes(TypedDict):
+    """Attributes of a plugin."""
+
+    version: str
+    package: str
+    secrets: dict[str, str]
+
+
+def enabled_plugins() -> dict[str, PluginAttributes]:
     """Returns a dictionary of enabled plugins and their attributes."""
     conn = open_database_connection()
 
@@ -88,15 +81,15 @@ def enabled_plugins() -> dict[str, dict[str, str | dict[str, str]]]:
     return plugins
 
 
-def _extract_rows_to_dict(rows: list) -> dict[str, dict[str, str | dict[str, str]]]:
+def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
     plugins = {}
     for row in rows:
         if row["name"] not in plugins:
-            plugins[row["name"]] = {
-                "version": row["version"],
-                "package": row["package"],
-                "secrets": {row["key"]: row["value"]} if row["key"] else {},
-            }
+            plugins[row["name"]] = PluginAttributes(
+                version=row["version"],
+                package=row["package"],
+                secrets={row["key"]: row["value"]} if row["key"] else {},
+            )
         else:
             plugins[row["name"]]["secrets"][row["key"]] = row["value"]
     return plugins
@@ -119,7 +112,7 @@ def download_plugin(plugin_package: str) -> Generator:
         yield download_path
 
 
-def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]) -> None:
+def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
         print(f"Installing plugin '{plugin_name}'")
@@ -130,10 +123,10 @@ def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]
         if plugin_installation_path.exists():
             uninstall_plugin(plugin_name)
 
-        with download_plugin(attributes["package"]) as plugin_file_path:  # type: ignore
+        with download_plugin(attributes["package"]) as plugin_file_path:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
-        install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])  # type: ignore
+        install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as ex:
         print(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
         raise PluginInstallationError() from ex

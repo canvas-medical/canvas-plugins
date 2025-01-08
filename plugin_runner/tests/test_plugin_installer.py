@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 
 import settings
 from plugin_runner.plugin_installer import (
+    PluginAttributes,
     _extract_rows_to_dict,
     download_plugin,
     install_plugins,
@@ -88,16 +89,12 @@ def test_extract_rows_to_dict() -> None:
 def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
     """Test that plugins can be installed from tarballs."""
     mock_plugins = {
-        "plugin1": {
-            "version": "1.0",
-            "package": "plugins/plugin1.tar.gz",
-            "secrets": {"key1": "value1"},
-        },
-        "plugin2": {
-            "version": "2.0",
-            "package": "plugins/plugin2.tar.gz",
-            "secrets": {"key2": "value2"},
-        },
+        "plugin1": PluginAttributes(
+            version="1.0", package="plugins/plugin1.tar.gz", secrets={"key1": "value1"}
+        ),
+        "plugin2": PluginAttributes(
+            version="1.0", package="plugins/plugin2.tar", secrets={"key2": "value2"}
+        ),
     }
 
     tarball_1 = _create_tarball("plugin1")
