@@ -39,8 +39,9 @@ class DetectedIssueEvidence(models.Model):
     class Meta:
         managed = False
         app_label = "canvas_sdk"
-        db_table = "canvas_sdk_data_api_detectedissueevidence_001"
+        db_table = "canvas_sdk_data_api_detectedissueevidence_002"
 
+    id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     system = models.CharField()
     version = models.CharField()
