@@ -25,3 +25,5 @@ class Command(models.Model):
     schema_key = models.TextField()
     data = models.JSONField()
     origination_source = models.CharField()
+    anchor_object_type = models.CharField()
+    anchor_object_dbid = models.BigIntegerField()
