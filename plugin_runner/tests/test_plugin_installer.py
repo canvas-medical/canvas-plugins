@@ -167,9 +167,9 @@ def test_download(mocker: MockerFixture) -> None:
     mocker.patch("boto3.client", return_value=mock_s3_client)
 
     plugin_package = "plugins/plugin1.tar.gz"
-    result = download_plugin(plugin_package)
+    with download_plugin(plugin_package) as plugin_path:
+        assert plugin_path.exists()
 
     mock_s3_client.download_fileobj.assert_called_once_with(
         "canvas-client-media", f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}", mocker.ANY
     )
-    assert result.exists()

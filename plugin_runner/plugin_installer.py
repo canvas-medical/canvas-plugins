@@ -4,6 +4,8 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 from urllib import parse
@@ -100,17 +102,21 @@ def _extract_rows_to_dict(rows: list) -> dict[str, dict[str, str | dict[str, str
     return plugins
 
 
-def download_plugin(plugin_package: str) -> Path:
+@contextmanager
+def download_plugin(plugin_package: str) -> Generator:
     """Download the plugin package from the S3 bucket."""
     s3 = boto3.client("s3")
-    temp_dir = tempfile.mkdtemp()
-    prefix_dir = Path(temp_dir) / UPLOAD_TO_PREFIX
-    prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
-    with open(Path(temp_dir) / plugin_package, "wb") as download_file:
-        s3.download_fileobj(
-            "canvas-client-media", f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}", download_file
-        )
-    return Path(temp_dir) / plugin_package
+    with tempfile.TemporaryDirectory() as temp_dir:
+        prefix_dir = Path(temp_dir) / UPLOAD_TO_PREFIX
+        prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
+        download_path = Path(temp_dir) / plugin_package
+        with open(download_path, "wb") as download_file:
+            s3.download_fileobj(
+                "canvas-client-media",
+                f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}",
+                download_file,
+            )
+        yield download_path
 
 
 def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]) -> None:
@@ -124,8 +130,8 @@ def install_plugin(plugin_name: str, attributes: dict[str, str | dict[str, str]]
         if plugin_installation_path.exists():
             uninstall_plugin(plugin_name)
 
-        plugin_file_path = download_plugin(attributes["package"])  # type: ignore
-        extract_plugin(plugin_file_path, plugin_installation_path)
+        with download_plugin(attributes["package"]) as plugin_file_path:  # type: ignore
+            extract_plugin(plugin_file_path, plugin_installation_path)
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])  # type: ignore
     except Exception as ex:
