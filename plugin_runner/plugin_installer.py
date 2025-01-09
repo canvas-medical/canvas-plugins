@@ -16,7 +16,7 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 import settings
-from canvas_sdk.exceptions import InvalidPluginFormat, PluginInstallationError
+from plugin_runner.exceptions import InvalidPluginFormat, PluginInstallationError
 
 Archive = zipfile.ZipFile | tarfile.TarFile
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
