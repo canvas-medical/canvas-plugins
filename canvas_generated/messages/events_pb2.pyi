@@ -659,6 +659,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PLUGIN_UPDATED: _ClassVar[EventType]
     APPLICATION__ON_OPEN: _ClassVar[EventType]
     PATIENT_PORTAL__GET_INTAKE_FORMS: _ClassVar[EventType]
+    PATIENT_PORTAL__CANCEL_APPOINTMENT: _ClassVar[EventType]
+    PATIENT_PORTAL__RESCHEDULE_APPOINTMENT: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1309,6 +1311,8 @@ PLUGIN_CREATED: EventType
 PLUGIN_UPDATED: EventType
 APPLICATION__ON_OPEN: EventType
 PATIENT_PORTAL__GET_INTAKE_FORMS: EventType
+PATIENT_PORTAL__CANCEL_APPOINTMENT: EventType
+PATIENT_PORTAL__RESCHEDULE_APPOINTMENT: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type")
