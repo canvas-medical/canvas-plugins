@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.db import models
 
 from canvas_sdk.v1.data.patient import Patient
@@ -25,4 +26,15 @@ class Command(models.Model):
     schema_key = models.TextField()
     data = models.JSONField()
     origination_source = models.CharField()
+    anchor_object_type = models.CharField()
     anchor_object_dbid = models.BigIntegerField()
+
+    @property
+    def anchor_object(self) -> models.Model | None:
+        """
+        Use the anchor_object_type and anchor_object_dbid to get the anchor object for the command.
+        """
+        # TODO: Is the anchor object type enough here, or do we need a mapping? The home-app model
+        #  names might not exactly match the plugins model names.
+        anchor_model = apps.get_model(app_label="canvas_sdk", model_name=self.anchor_object_type)
+        return anchor_model.objects.get(dbid=self.anchor_object_dbid)
