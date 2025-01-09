@@ -35,15 +35,13 @@ class ActionButton(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """Method to compute the effects."""
-        if self.BUTTON_LOCATION is None:
-            return []
-
         if self.event.type in (
             EventType.SHOW_NOTE_HEADER_BUTTON,
             EventType.SHOW_NOTE_FOOTER_BUTTON,
         ):
             if (
-                self.event.context["location"].lower() == self.BUTTON_LOCATION.value
+                self.BUTTON_LOCATION
+                and self.context["location"].lower() == self.BUTTON_LOCATION.value
                 and self.visible()
             ):
                 return [ShowButtonEffect(key=self.BUTTON_KEY, title=self.BUTTON_TITLE).apply()]

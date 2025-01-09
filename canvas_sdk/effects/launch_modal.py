@@ -15,10 +15,11 @@ class LaunchModalEffect(_BaseEffect):
         NEW_WINDOW = "new_window"
         RIGHT_CHART_PANE = "right_chart_pane"
 
-    url: str
+    url: str | None = None
+    content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
 
     @property
     def values(self) -> dict[str, Any]:
         """The LaunchModalEffect values."""
-        return {"url": self.url, "target": self.target.value}
+        return {"url": self.url, "content": self.content, "target": self.target.value}
