@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.13.1 (2025-01-09)
+
+### Bug Fixes
+
+- Force build
+  ([`8907f28`](https://github.com/canvas-medical/canvas-plugins/commit/8907f289712522f17d200f38f89390346a4cf58a))
+
+### Refactoring
+
+- A new implementation of the plugin installer that runs in the plugin
+  ([#283](https://github.com/canvas-medical/canvas-plugins/pull/283),
+  [`219f54e`](https://github.com/canvas-medical/canvas-plugins/commit/219f54e55a986627ddb92471c290facd3836dac9))
+
+Co-authored-by: semantic-release <semantic-release>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.13.0 (2025-01-07)
 
 ### Features
