@@ -36,12 +36,14 @@ def get_database_dict_from_url() -> dict[str, Any]:
 
 def get_database_dict_from_env() -> dict[str, Any]:
     """Creates a psycopg ready dictionary from the environment variables."""
+    APP_NAME = os.getenv("APP_NAME")
+
     return {
-        "dbname": "home-app",
+        "dbname": APP_NAME,
         "user": os.getenv("DB_USERNAME", "app"),
         "password": os.getenv("DB_PASSWORD", "app"),
-        "host": os.getenv("DB_HOST", "localhost"),
-        "port": os.getenv("DB_PORT", "5435"),
+        "host": os.getenv("DB_HOST", f"{APP_NAME}-db"),
+        "port": os.getenv("DB_PORT", "5432"),
     }
 
 
