@@ -22,6 +22,7 @@ jobs:
       # Run Pytest unit tests via Poetry.
       - name: Run Pytest unit tests
         env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
           INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
@@ -31,6 +32,7 @@ jobs:
       - name: Run Pytest integration tests
         if: matrix.version == '3.12'
         env:
+          CUSTOMER_IDENTIFIER: "ci-integration-tests"
           INTEGRATION_TEST_URL: "https://plugin-testing.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
@@ -41,6 +43,8 @@ jobs:
         shell: bash
 
       - name: Test the distribution
+        env:
+          CUSTOMER_IDENTIFIER: "ci-distribution"
         run: |
           poetry build
           pipx install dist/*.whl

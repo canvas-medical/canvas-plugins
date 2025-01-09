@@ -2,16 +2,18 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from env_tools import env_to_bool
+from env_tools import env_to_bool, get_enforcement_context
 
 from canvas_sdk.utils.db import get_database_dict_from_url
+
+require_env, enforce_required_envs = get_enforcement_context()
 
 load_dotenv()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
-
+CUSTOMER_IDENTIFIER = require_env("CUSTOMER_IDENTIFIER")
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
@@ -66,3 +68,4 @@ PLUGIN_DIRECTORY = os.getenv(
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
+enforce_required_envs()
