@@ -3,7 +3,6 @@ import os
 import shutil
 import tarfile
 import tempfile
-import zipfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -18,7 +17,6 @@ from psycopg.rows import dict_row
 import settings
 from plugin_runner.exceptions import InvalidPluginFormat, PluginInstallationError
 
-Archive = zipfile.ZipFile | tarfile.TarFile
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
 UPLOAD_TO_PREFIX = "plugins"
 
@@ -134,13 +132,10 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
 def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> None:
     """Extract plugin in `file` to the given `path`."""
-    archive: Archive | None = None
+    archive: tarfile.TarFile | None = None
 
     try:
-        if zipfile.is_zipfile(plugin_file_path):
-            archive = zipfile.ZipFile(plugin_file_path)
-            archive.extractall(plugin_installation_path)
-        elif tarfile.is_tarfile(plugin_file_path):
+        if tarfile.is_tarfile(plugin_file_path):
             try:
                 with open(plugin_file_path, "rb") as file:
                     archive = tarfile.TarFile.open(fileobj=file)
