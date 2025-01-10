@@ -35,12 +35,10 @@ class ProtocolOverride(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient,
-        on_delete=models.DO_NOTHING,
-        related_name="protocol_overrides",
+        Patient, on_delete=models.DO_NOTHING, related_name="protocol_overrides", null=True
     )
     protocol_key = models.CharField()
     is_adjustment = models.BooleanField()

@@ -65,7 +65,7 @@ class PracticeLocation(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     organization = models.ForeignKey(
-        "Organization", on_delete=models.DO_NOTHING, related_name="practice_locations"
+        "Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
     )
     place_of_service_code = models.CharField(choices=PracticeLocationPOS.choices)
     full_name = models.CharField()
@@ -96,7 +96,7 @@ class PracticeLocationSetting(models.Model):
 
     dbid = models.BigIntegerField(primary_key=True)
     practice_location = models.ForeignKey(
-        PracticeLocation, on_delete=models.DO_NOTHING, related_name="settings"
+        PracticeLocation, on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
     name = models.CharField()
     value = models.JSONField()

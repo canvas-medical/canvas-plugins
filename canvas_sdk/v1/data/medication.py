@@ -31,10 +31,12 @@ class Medication(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="medications")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="medications", null=True
+    )
     deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     status = models.CharField(choices=Status.choices)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
@@ -59,4 +61,6 @@ class MedicationCoding(models.Model):
     code = models.CharField()
     display = models.CharField()
     user_selected = models.BooleanField()
-    medication = models.ForeignKey(Medication, on_delete=models.DO_NOTHING, related_name="codings")
+    medication = models.ForeignKey(
+        Medication, on_delete=models.DO_NOTHING, related_name="codings", null=True
+    )

@@ -18,11 +18,11 @@ class DetectedIssue(models.Model):
     modified = models.DateTimeField()
     identified = models.DateTimeField()
     deleted = models.BooleanField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="detected_issues"
+        Patient, on_delete=models.DO_NOTHING, related_name="detected_issues", null=True
     )
     code = models.CharField()
     status = models.CharField()
@@ -48,5 +48,8 @@ class DetectedIssueEvidence(models.Model):
     display = models.CharField()
     user_selected = models.BooleanField()
     detected_issue = models.ForeignKey(
-        DetectedIssue, on_delete=models.DO_NOTHING, related_name="evidence"
+        DetectedIssue,
+        on_delete=models.DO_NOTHING,
+        related_name="evidence",
+        null=True,
     )

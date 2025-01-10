@@ -47,7 +47,7 @@ class ResponseOption(models.Model):
     code_description = models.CharField()
     value = models.CharField()
     response_option_set = models.ForeignKey(
-        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="options"
+        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="options", null=True
     )
     ordering = models.IntegerField()
 
@@ -67,7 +67,7 @@ class Question(models.Model):
     status = models.CharField()
     name = models.CharField()
     response_option_set = models.ForeignKey(
-        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="questions"
+        ResponseOptionSet, on_delete=models.DO_NOTHING, related_name="questions", null=True
     )
     acknowledge_only = models.BooleanField()
     show_prologue = models.BooleanField()
@@ -126,8 +126,8 @@ class QuestionnaireQuestionMap(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     status = models.CharField()
-    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING)
-    question = models.ForeignKey(Question, on_delete=models.DO_NOTHING)
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, null=True)
+    question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, null=True)
 
 
 class Interview(models.Model):
@@ -144,12 +144,14 @@ class Interview(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     status = models.CharField()
     name = models.CharField()
     language_id = models.BigIntegerField()
     use_case_in_charting = models.CharField()
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="interviews")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="interviews", null=True
+    )
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(  # type: ignore[var-annotated]
@@ -173,8 +175,8 @@ class InterviewQuestionnaireMap(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     status = models.CharField()
-    interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING)
-    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE)
+    interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING, null=True)
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, null=True)
 
 
 class InterviewQuestionResponse(models.Model):
@@ -190,16 +192,16 @@ class InterviewQuestionResponse(models.Model):
     modified = models.DateTimeField()
     status = models.CharField()
     interview = models.ForeignKey(
-        Interview, on_delete=models.DO_NOTHING, related_name="interview_responses"
+        Interview, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True
     )
     questionnaire = models.ForeignKey(
-        Questionnaire, on_delete=models.DO_NOTHING, related_name="interview_responses"
+        Questionnaire, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True
     )
     question = models.ForeignKey(
-        Question, on_delete=models.DO_NOTHING, related_name="interview_responses"
+        Question, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True
     )
     response_option = models.ForeignKey(
-        ResponseOption, on_delete=models.DO_NOTHING, related_name="interview_responses"
+        ResponseOption, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True
     )
     response_option_value = models.TextField()
     questionnaire_state = models.TextField()

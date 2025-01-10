@@ -54,12 +54,12 @@ class Staff(models.Model):
     tax_id_type = models.CharField(choices=TaxIDType.choices)
     spi_number = models.CharField()
     # TODO - uncomment when Language is developed
-    # language = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_speakers")
-    # language_secondary = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers")
+    # language = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
+    # language_secondary = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
     personal_meeting_room_link = models.URLField(null=True)
     state = models.JSONField()
-    user = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     schedule_column_ordering = models.IntegerField()
     default_supervising_provider = models.ForeignKey(
-        "Staff", on_delete=models.DO_NOTHING, null=True, related_name="supervising_team"
+        "Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )

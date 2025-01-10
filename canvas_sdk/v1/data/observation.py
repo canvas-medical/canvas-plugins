@@ -25,13 +25,15 @@ class Observation(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="observations")
+    patient = models.ForeignKey(
+        Patient, on_delete=models.DO_NOTHING, related_name="observations", null=True
+    )
     is_member_of = models.ForeignKey(
-        "self", on_delete=models.DO_NOTHING, null=True, related_name="members"
+        "self", on_delete=models.DO_NOTHING, related_name="members", null=True
     )
     category = models.CharField()
     units = models.TextField()
@@ -56,7 +58,7 @@ class ObservationCoding(models.Model):
     display = models.CharField()
     user_selected = models.BooleanField()
     observation = models.ForeignKey(
-        Observation, on_delete=models.DO_NOTHING, related_name="codings"
+        Observation, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
 
 
@@ -72,7 +74,7 @@ class ObservationComponent(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     observation = models.ForeignKey(
-        Observation, on_delete=models.DO_NOTHING, related_name="components"
+        Observation, on_delete=models.DO_NOTHING, related_name="components", null=True
     )
     value_quantity = models.TextField()
     value_quantity_unit = models.TextField()
@@ -94,7 +96,7 @@ class ObservationComponentCoding(models.Model):
     display = models.CharField()
     user_selected = models.BooleanField()
     observation_component = models.ForeignKey(
-        ObservationComponent, on_delete=models.DO_NOTHING, related_name="codings"
+        ObservationComponent, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
 
 
@@ -113,5 +115,5 @@ class ObservationValueCoding(models.Model):
     display = models.CharField()
     user_selected = models.BooleanField()
     observation = models.ForeignKey(
-        Observation, on_delete=models.DO_NOTHING, related_name="value_codings"
+        Observation, on_delete=models.DO_NOTHING, related_name="value_codings", null=True
     )

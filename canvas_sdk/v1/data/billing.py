@@ -46,9 +46,11 @@ class BillingLineItem(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    note = models.ForeignKey(Note, on_delete=models.DO_NOTHING, related_name="billing_line_items")
+    note = models.ForeignKey(
+        Note, on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
+    )
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="billing_line_items"
+        Patient, on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
     )
     cpt = models.CharField()
     charge = models.DecimalField()
