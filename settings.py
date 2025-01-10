@@ -2,24 +2,24 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from env_tools import env_to_bool, get_enforcement_context
+from env_tools import env_to_bool
 
 from canvas_sdk.utils.db import get_database_dict_from_url
-
-require_env, enforce_required_envs = get_enforcement_context()
 
 load_dotenv()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
-CUSTOMER_IDENTIFIER = require_env("CUSTOMER_IDENTIFIER")
+CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
 INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
-GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
+GRAPHQL_ENDPOINT = os.getenv(
+    "GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql"
+)
 
 INSTALLED_APPS = ["canvas_sdk"]
 
@@ -59,13 +59,10 @@ PLUGIN_DIRECTORY = os.getenv(
     (
         "/plugin-runner/custom-plugins"
         if IS_PRODUCTION
-        else "./plugin_runner/tests/data/plugins"
-        if IS_TESTING
-        else "./custom-plugins"
+        else "./plugin_runner/tests/data/plugins" if IS_TESTING else "./custom-plugins"
     ),
 )
 
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
-enforce_required_envs()
