@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.13.2 (2025-01-10)
+
+### Bug Fixes
+
+- Provide a default for CUSTOMER_IDENTIFIER
+  ([#312](https://github.com/canvas-medical/canvas-plugins/pull/312),
+  [`7d713c3`](https://github.com/canvas-medical/canvas-plugins/commit/7d713c36892c91237ba4a9fd863253b84a1980a3))
+
+
 ## v0.13.1 (2025-01-09)
 
 ### Bug Fixes
