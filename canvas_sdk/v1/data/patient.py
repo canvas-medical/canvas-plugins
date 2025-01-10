@@ -5,6 +5,15 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
+from canvas_sdk.v1.data.common import (
+    AddressState,
+    AddressType,
+    AddressUse,
+    ContactPointState,
+    ContactPointSystem,
+    ContactPointUse,
+)
+
 
 class SexAtBirth(TextChoices):
     """SexAtBirth."""
@@ -83,3 +92,53 @@ class Patient(models.Model):
             next_year = birth_date.shift(years=age + 1)
             age += (time.date() - current_year.date()) / (next_year.date() - current_year.date())
         return age
+
+
+class PatientContactPoint(models.Model):
+    """A class representing a patient contact point."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_patientcontactpoint_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    system = models.CharField(choices=ContactPointSystem.choices)
+    value = models.CharField()
+    use = models.CharField(choices=ContactPointUse.choices)
+    use_notes = models.CharField()
+    rank = models.IntegerField()
+    state = models.CharField(choices=ContactPointState.choices)
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="telecom")
+    has_consent = models.BooleanField()
+    last_verified = models.DateTimeField
+    verification_token = models.CharField()
+    opted_out = models.BooleanField()
+
+
+class PatientAddress(models.Model):
+    """A class representing a patient address."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_patientaddress_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    line1 = models.CharField()
+    line2 = models.CharField()
+    city = models.CharField()
+    district = models.CharField()
+    state_code = models.CharField()
+    postal_code = models.CharField()
+    use = models.CharField(choices=AddressUse.choices)
+    type = models.CharField(choices=AddressType.choices)
+    longitude = models.FloatField(null=True, default=None, blank=True)
+    latitude = models.FloatField(null=True, default=None, blank=True)
+    start = models.DateField(null=True, blank=True)
+    end = models.DateField(null=True, blank=True)
+    country = models.CharField(max_length=255)
+    state = models.CharField(choices=AddressState.choices)
+    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING)

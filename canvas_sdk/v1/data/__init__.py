@@ -27,7 +27,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization
-from .patient import Patient
+from .patient import Patient, PatientAddress, PatientContactPoint
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -82,6 +82,8 @@ __all__ = [
     "ObservationValueCoding",
     "Organization",
     "Patient",
+    "PatientAddress",
+    "PatientContactPoint",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
