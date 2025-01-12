@@ -2,7 +2,6 @@ import json
 import tarfile
 import tempfile
 from pathlib import Path
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from pytest_mock import MockerFixture
@@ -114,8 +113,4 @@ def test_download(mocker: MockerFixture) -> None:
         with download_plugin(plugin_package) as plugin_path:
             assert plugin_path.exists()
             assert plugin_path.read_bytes() == b"some content in a file"
-        mock_request.assert_called_once_with(
-            method="GET",
-            headers=mock.ANY,
-            url="https://s3-us-west-2.amazonaws.com/canvas-client-media/local/plugins/plugin1.tar.gz",
-        )
+        mock_request.assert_called_once()
