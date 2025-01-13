@@ -1,5 +1,7 @@
 from enum import StrEnum
-from typing import Any
+from typing import Any, Self
+
+from pydantic import model_validator
 
 from canvas_sdk.effects import EffectType, _BaseEffect
 
@@ -23,3 +25,11 @@ class LaunchModalEffect(_BaseEffect):
     def values(self) -> dict[str, Any]:
         """The LaunchModalEffect values."""
         return {"url": self.url, "content": self.content, "target": self.target.value}
+
+    @model_validator(mode="after")
+    def check_mutually_exclusive_fields(self) -> Self:
+        """Check that url and content are mutually exclusive."""
+        if self.url is not None and self.content is not None:
+            raise ValueError("'url' and 'content' are mutually exclusive")
+
+        return self
