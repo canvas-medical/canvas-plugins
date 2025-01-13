@@ -6,8 +6,6 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ImagingOrder(models.Model):
@@ -15,32 +13,31 @@ class ImagingOrder(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_imagingorder_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
     # TODO - uncomment when Note model is complete
     #  note = models.ForeigneKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     imaging = models.CharField()
     # TODO - uncomment when ServiceProvider model is complete
-    # imaging_center = models.ForeignKey(ServiceProvider, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    # imaging_center = models.ForeignKey('v1.ServiceProvider', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     note_to_radiologist = models.CharField()
     internal_comment = models.CharField()
     status = models.CharField(choices=OrderStatus)
     date_time_ordered = models.DateTimeField()
     priority = models.CharField()
     # TODO - uncomment when Staff model is complete
-    # ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    # ordering_provider = models.ForeignKey('v1.Staff', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     delegated = models.BooleanField(default=False)
 
 
@@ -49,26 +46,25 @@ class ImagingReview(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_imagingreview_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient_communication_method = models.CharField(choices=ReviewPatientCommunicationMethod)
     # TODO  - uncomment when Note model is complete
-    # note = models.ForeignKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True)
+    # note = models.ForeignKey('v1.Note', on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True)
     internal_comment = models.CharField()
     message_to_patient = models.CharField()
     is_released_to_patient = models.BooleanField()
     status = models.CharField(choices=ReviewStatus)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True
     )
 
 
@@ -82,7 +78,6 @@ class ImagingReport(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_imagingreport_001"
 
     id = models.UUIDField()
@@ -94,7 +89,7 @@ class ImagingReport(models.Model):
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )
     order = models.ForeignKey(ImagingOrder, on_delete=models.DO_NOTHING, null=True)
     source = models.CharField(choices=ImagingReportSource)

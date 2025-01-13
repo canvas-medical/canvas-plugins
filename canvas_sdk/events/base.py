@@ -33,9 +33,7 @@ class Event:
 
     def __init__(self, event_request: EventRequest) -> None:
         try:
-            target_model = apps.get_model(
-                app_label="canvas_sdk", model_name=event_request.target_type
-            )
+            target_model = apps.get_model(app_label="v1", model_name=event_request.target_type)
         except LookupError:
             target_model = None
 

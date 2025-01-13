@@ -1,15 +1,11 @@
 from django.db import models
 
-from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.user import CanvasUser
-
 
 class DetectedIssue(models.Model):
     """DetectedIssue."""
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_detectedissue_001"
 
     id = models.UUIDField()
@@ -18,11 +14,11 @@ class DetectedIssue(models.Model):
     modified = models.DateTimeField()
     identified = models.DateTimeField()
     deleted = models.BooleanField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="detected_issues", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="detected_issues", null=True
     )
     code = models.CharField()
     status = models.CharField()
@@ -38,7 +34,6 @@ class DetectedIssueEvidence(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_detectedissueevidence_001"
 
     dbid = models.BigIntegerField(primary_key=True)

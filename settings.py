@@ -19,7 +19,9 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 
-INSTALLED_APPS = ["canvas_sdk"]
+INSTALLED_APPS = [
+    "canvas_sdk.v1.apps.CanvasSdkV1Config",
+]
 
 SECRET_KEY = os.getenv(
     "SECRET_KEY",

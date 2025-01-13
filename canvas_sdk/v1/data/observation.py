@@ -1,8 +1,6 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ObservationQuerySet(ValueSetLookupQuerySet):
@@ -16,7 +14,6 @@ class Observation(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observation_001"
 
     objects = CommittableModelManager.from_queryset(ObservationQuerySet)()
@@ -25,12 +22,12 @@ class Observation(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="observations", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="observations", null=True
     )
     is_member_of = models.ForeignKey(
         "self", on_delete=models.DO_NOTHING, related_name="members", null=True
@@ -48,7 +45,6 @@ class ObservationCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observationcoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -67,7 +63,6 @@ class ObservationComponent(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observationcomponent_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -86,7 +81,6 @@ class ObservationComponentCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observationcomponentcoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -105,7 +99,6 @@ class ObservationValueCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_observationvaluecoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)
