@@ -21,7 +21,6 @@ class Patient(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_patient_001"
 
     id = models.CharField(max_length=32, db_column="key")

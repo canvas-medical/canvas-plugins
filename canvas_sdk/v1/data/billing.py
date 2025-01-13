@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING
 from django.db import models
 
 from canvas_sdk.v1.data.base import ValueSetTimeframeLookupQuerySet
-from canvas_sdk.v1.data.note import Note
-from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.value_set.value_set import CodeConstants
 
 if TYPE_CHECKING:
@@ -36,7 +34,6 @@ class BillingLineItem(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_billinglineitem_001"
 
     # objects = BillingLineItemQuerySet.as_manager()
@@ -47,10 +44,10 @@ class BillingLineItem(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     note = models.ForeignKey(
-        Note, on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
     )
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
     )
     cpt = models.CharField()
     charge = models.DecimalField()

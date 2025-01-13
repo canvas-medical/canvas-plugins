@@ -5,11 +5,6 @@ from canvas_sdk.v1.data.base import (
     TimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySet,
 )
-from canvas_sdk.v1.data.condition import Condition
-from canvas_sdk.v1.data.patient import Patient
-
-# from canvas_sdk.v1.data.staff import Staff
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class TransmissionType(models.TextChoices):
@@ -25,7 +20,6 @@ class LabReport(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labreport_001"
 
     objects = CommittableModelManager()
@@ -39,7 +33,7 @@ class LabReport(models.Model):
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="lab_reports", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_reports", null=True
     )
     transmission_type = models.CharField(choices=TransmissionType)
     for_test_only = models.BooleanField()
@@ -52,9 +46,9 @@ class LabReport(models.Model):
     original_date = models.DateTimeField()
     date_performed = models.DateTimeField()
     custom_document_name = models.CharField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
 
 
@@ -63,7 +57,6 @@ class LabReview(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labreview_001"
 
     objects = CommittableModelManager()
@@ -72,15 +65,15 @@ class LabReview(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     internal_comment = models.TextField()
     message_to_patient = models.CharField()
     status = models.CharField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="lab_reviews", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_reviews", null=True
     )
     patient_communication_method = models.CharField()
 
@@ -105,7 +98,6 @@ class LabValue(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labvalue_001"
 
     objects = LabValueQuerySet.as_manager()
@@ -132,7 +124,6 @@ class LabValueCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labvaluecoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -173,19 +164,18 @@ class LabOrder(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_laborder_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
     )
     ontology_lab_partner = models.CharField()
     # TODO - uncomment when the Note model is finished
@@ -222,16 +212,15 @@ class LabOrderReason(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_laborderreason_001"
 
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     order = models.ForeignKey(
         LabOrder, on_delete=models.DO_NOTHING, related_name="reasons", null=True
     )
@@ -243,7 +232,6 @@ class LabOrderReasonCondition(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_laborderreasoncondition_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -253,7 +241,7 @@ class LabOrderReasonCondition(models.Model):
         LabOrderReason, on_delete=models.DO_NOTHING, related_name="reason_conditions", null=True
     )
     condition = models.ForeignKey(
-        Condition,
+        "v1.Condition",
         on_delete=models.DO_NOTHING,
         related_name="lab_order_reason_conditions",
         null=True,
@@ -278,7 +266,6 @@ class LabTest(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_labtest_001"
 
     id = models.UUIDField()

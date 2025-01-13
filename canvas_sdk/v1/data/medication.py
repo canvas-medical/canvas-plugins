@@ -2,8 +2,6 @@ from django.db import models
 from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class Status(TextChoices):
@@ -24,7 +22,6 @@ class Medication(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_medication_001"
 
     objects = CommittableModelManager.from_queryset(MedicationQuerySet)()
@@ -32,11 +29,11 @@ class Medication(models.Model):
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="medications", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="medications", null=True
     )
     deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     status = models.CharField(choices=Status.choices)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
@@ -52,7 +49,6 @@ class MedicationCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_medicationcoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)
