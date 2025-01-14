@@ -2,6 +2,8 @@ from django.db import models
 
 
 class CareTeamMembershipStatus(models.TextChoices):
+    """CareTeamMembershipStatus."""
+
     PROPOSED = "proposed", "Proposed"
     ACTIVE = "active", "Active"
     SUSPENDED = "suspended", "Suspended"
