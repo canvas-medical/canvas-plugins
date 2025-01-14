@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.13.3 (2025-01-14)
+
+### Bug Fixes
+
+- Send sighup after installing when synchronizer boots, remove load com…
+  ([#324](https://github.com/canvas-medical/canvas-plugins/pull/324),
+  [`bd82819`](https://github.com/canvas-medical/canvas-plugins/commit/bd82819f31d2948a85ba7ee8e6dab4d1021b02ba))
+
+- Set null=True for all ForeignKey fields
+  ([#301](https://github.com/canvas-medical/canvas-plugins/pull/301),
+  [`5c4be8f`](https://github.com/canvas-medical/canvas-plugins/commit/5c4be8fea7ddf859c5bcb91d7ac709928153c7e2))
+
+
 ## v0.13.2 (2025-01-10)
 
 ### Bug Fixes

@@ -47,7 +47,7 @@ packages = [
   {include = "settings.py"}
 ]
 readme = "README.md"
-version = "0.13.2"
+version = "0.13.3"
 
 [tool.poetry.dependencies]
 boto3 = "^1.35.88"
