@@ -2,9 +2,10 @@ from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import Appointment
 from .assessment import Assessment
 from .billing import BillingLineItem
-from .command import Command
 from .care_team import CareTeamMembership, CareTeamRole
+from .command import Command
 from .condition import Condition, ConditionCoding
+from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -57,6 +58,7 @@ __all__ = [
     "Command",
     "Condition",
     "ConditionCoding",
+    "Coverage",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -101,4 +103,7 @@ __all__ = [
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "Transactor",
+    "TransactorAddress",
+    "TransactorPhone",
 ]
