@@ -3,6 +3,7 @@ from .appointment import Appointment
 from .assessment import Assessment
 from .billing import BillingLineItem
 from .command import Command
+from .care_team import CareTeamMembership, CareTeamRole
 from .condition import Condition, ConditionCoding
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
@@ -27,7 +28,7 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization
-from .patient import Patient, PatientAddress, PatientContactPoint
+from .patient import Patient, PatientAddress, PatientContactPoint, PatientExternalIdentifier
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -51,6 +52,8 @@ __all__ = [
     "Assessment",
     "BillingLineItem",
     "CanvasUser",
+    "CareTeamMembership",
+    "CareTeamRole",
     "Command",
     "Condition",
     "ConditionCoding",
@@ -84,6 +87,7 @@ __all__ = [
     "Patient",
     "PatientAddress",
     "PatientContactPoint",
+    "PatientExternalIdentifier",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",

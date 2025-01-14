@@ -142,3 +142,32 @@ class PatientAddress(models.Model):
     country = models.CharField(max_length=255)
     state = models.CharField(choices=AddressState.choices)
     patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING)
+
+    def __str__(self) -> str:
+        return f"id={self.id}"
+
+
+class PatientExternalIdentifier(models.Model):
+    """A class representing a patient external identifier."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_patientexternalidentifier_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    patient = models.ForeignKey(
+        "Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING
+    )
+    use = models.CharField()
+    identifier_type = models.CharField()
+    system = models.CharField()
+    value = models.CharField()
+    issued_date = models.DateField()
+    expiration_date = models.DateField()
+
+    def __str__(self) -> str:
+        return f"id={self.id}"
