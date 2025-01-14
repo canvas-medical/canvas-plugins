@@ -69,7 +69,7 @@ def main() -> None:
         data = pickle.loads(message.get("data", pickle.dumps({})))
 
         if "action" not in data or "client_id" not in data:
-            return
+            continue
 
         if data["action"] == "restart":
             # Run the plugin installer process
