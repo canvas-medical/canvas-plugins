@@ -1,6 +1,7 @@
 from .billing import BillingLineItem
 from .care_team import CareTeamMembership, CareTeamRole
 from .condition import Condition, ConditionCoding
+from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .medication import Medication, MedicationCoding
 from .organization import Organization
 from .patient import Patient, PatientAddress, PatientContactPoint, PatientExternalIdentifier
@@ -14,6 +15,7 @@ __all__ = (
     "CareTeamRole",
     "Condition",
     "ConditionCoding",
+    "Coverage",
     "Medication",
     "MedicationCoding",
     "Organization",
@@ -26,4 +28,7 @@ __all__ = (
     "Task",
     "TaskComment",
     "TaskLabel",
+    "Transactor",
+    "TransactorAddress",
+    "TransactorPhone",
 )
