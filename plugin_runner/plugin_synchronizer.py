@@ -48,6 +48,8 @@ def main() -> None:
     try:
         print("plugin-synchronizer: installing plugins after web container start")
         install_plugins()
+        print("plugin-synchronizer: sending SIGHUP to plugin-runner")
+        check_output(["circusctl", "signal", "plugin-runner", "1"], cwd="/app", stderr=STDOUT)
     except CalledProcessError as e:
         print("plugin-synchronizer: `install_plugins` failed:", e)
 
