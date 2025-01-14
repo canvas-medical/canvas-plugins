@@ -1,7 +1,10 @@
 import ast
 import builtins
+import importlib
+import sys
 from _ast import AnnAssign
 from functools import cached_property
+from pathlib import Path
 from typing import Any, cast
 
 from RestrictedPython import (
@@ -86,6 +89,20 @@ def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
 def _apply(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Call the bound method with args, support calling super().__init__()."""
     return _ob(*args, **kwargs)
+
+
+def _find_folder_in_path(file_path: Path, target_folder_name: str) -> Path | None:
+    """Recursively search for a folder with the specified name in the hierarchy of the given file path."""
+    file_path = file_path.resolve()
+
+    if file_path.name == target_folder_name:
+        return file_path
+
+    # If we've reached the root of the file system, return None
+    if file_path.parent == file_path:
+        return None
+
+    return _find_folder_in_path(file_path.parent, target_folder_name)
 
 
 class Sandbox:
@@ -199,16 +216,23 @@ class Sandbox:
                 # Impossible Case only ctx Load, Store and Del are defined in ast.
                 raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
 
-    def __init__(self, source_code: str, namespace: str | None = None) -> None:
+    def __init__(self, source_code: str | Path, namespace: str | None = None) -> None:
         if source_code is None:
             raise TypeError("source_code may not be None")
-        self.namespace = namespace or "protocols"
-        self.source_code = source_code
 
-    @cached_property
-    def package_name(self) -> str | None:
-        """Return the root package name."""
-        return self.namespace.split(".")[0] if self.namespace else None
+        self.namespace = namespace or "protocols"
+        self.package_name = self.namespace.split(".")[0]
+
+        if isinstance(source_code, Path):
+            if not source_code.exists():
+                raise FileNotFoundError(f"File not found: {source_code}")
+            self.source_code = source_code.read_text()
+            module_path = _find_folder_in_path(source_code, self.package_name)
+            self.base_path = module_path.parent if module_path else None
+            self._evaluated_modules: dict[str, bool] = {}
+        else:
+            self.source_code = source_code
+            self.base_path = None
 
     @cached_property
     def scope(self) -> dict[str, Any]:
@@ -266,12 +290,27 @@ class Sandbox:
     def _is_known_module(self, name: str) -> bool:
         return bool(
             _is_known_module(name)
-            or (self.package_name and name.split(".")[0] == self.package_name)
+            or (self.package_name and name.split(".")[0] == self.package_name and self.base_path)
         )
+
+    def _evaluate_module(self, name: str) -> None:
+        """Evaluate the given module in the sandbox.
+        If the module to import belongs to the same package as the current module, evaluate it inside a sandbox.
+        """
+        if name.startswith(self.package_name) and name not in self._evaluated_modules:
+            code = Path(cast(Path, self.base_path) / f"{name.replace('.', '/')}.py").read_text()
+            Sandbox(code, namespace=name).execute()
+            self._evaluated_modules[name] = True
+            if sys.modules.get(name):
+                # if the module was already imported, reload it to make sure the latest version is used
+                importlib.reload(sys.modules[name])
 
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
         if not (self._is_known_module(name)):
             raise ImportError(f"{name!r} is not an allowed import.")
+
+        self._evaluate_module(name)
+
         return __import__(name, *args, **kwargs)
 
     def execute(self) -> dict:
