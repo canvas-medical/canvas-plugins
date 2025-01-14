@@ -1,4 +1,4 @@
-from typing import Self
+from typing import TYPE_CHECKING, Any, Self
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -14,6 +14,9 @@ from canvas_sdk.v1.data.common import (
     ContactPointUse,
 )
 
+if TYPE_CHECKING:
+    from django_stubs_ext.db.models.manager import RelatedManager
+
 
 class SexAtBirth(TextChoices):
     """SexAtBirth."""
@@ -23,6 +26,16 @@ class SexAtBirth(TextChoices):
     OTHER = "O", "other"
     UNKNOWN = "UNK", "unknown"
     BLANK = "", ""
+
+
+class PatientSettingConstants:
+    """PatientSettingConstants."""
+
+    LAB = "lab"
+    PHARMACY = "pharmacy"
+    IMAGING_CENTER = "imagingCenter"
+    CONTACT_METHOD = "contactMethod"
+    PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
 
 class Patient(models.Model):
@@ -68,6 +81,8 @@ class Patient(models.Model):
     default_location_id = models.BigIntegerField()
     default_provider_id = models.BigIntegerField()
 
+    settings: "RelatedManager[PatientSetting]"
+
     @classmethod
     def find(cls, id: str) -> Self:
         """Find a patient by id."""
@@ -92,6 +107,24 @@ class Patient(models.Model):
             next_year = birth_date.shift(years=age + 1)
             age += (time.date() - current_year.date()) / (next_year.date() - current_year.date())
         return age
+
+    def get_setting(self, name: str) -> Any:
+        """Returns a patient setting value by name."""
+        try:
+            return self.settings.get(name=name).value
+        except PatientSetting.DoesNotExist:
+            return None
+
+    @property
+    def preferred_pharmacy(self) -> dict[str, str] | None:
+        """Returns the patient's preferred pharmacy."""
+        pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or {}
+        if isinstance(pharmacy_setting, list):
+            for pharmacy in pharmacy_setting:
+                if pharmacy.get("default", False):
+                    return pharmacy
+            return None
+        return pharmacy_setting
 
 
 class PatientContactPoint(models.Model):
@@ -171,3 +204,19 @@ class PatientExternalIdentifier(models.Model):
 
     def __str__(self) -> str:
         return f"id={self.id}"
+
+
+class PatientSetting(models.Model):
+    """PatientSetting."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_api_patientsetting_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    patient = models.ForeignKey("Patient", on_delete=models.DO_NOTHING, related_name="settings")
+    name = models.CharField()
+    value = models.JSONField()
