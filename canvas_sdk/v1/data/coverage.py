@@ -11,26 +11,24 @@ from canvas_sdk.v1.data.common import (
 )
 
 
-class CoverageRank(models.TextChoices):
-    PRIMARY = 1, "Primary"
-    SECONDARY = 2, "Secondary"
-    TERTIARY = 3, "Tertiary"
-    QUATERNARY = 4, "Quaternary"
-    QUINARY = 5, "Quinary"
-
-
 class CoverageStacks(models.TextChoices):
+    """CoverageStacks."""
+
     IN_USE = "IN_USE", "In use"
     OTHER = "OTHER", "Other"
     REMOVED = "REMOVED", "Removed"
 
 
 class CoverageState(models.TextChoices):
+    """CoverageState."""
+
     ACTIVE = "active", "Active"
     DELETED = "deleted", "Deleted"
 
 
 class CoverageType(models.TextChoices):
+    """CoverageType."""
+
     COMMERCIAL = "commercial", "Commercial"
     WORKERS_COMP = "workerscomp", "Workers Comp"
     BCBS = "bcbs", "Blue Cross Blue Shield"
@@ -73,6 +71,8 @@ class CoverageRelationshipCode(models.TextChoices):
 
 
 class TransactorCoverageType(models.TextChoices):
+    """TransactorCoverageType."""
+
     ANNU = "ANNU", "annuity policy"
     AUTOPOL = "AUTOPOL", "automobile"
     CHAR = "CHAR", "charity program"
@@ -129,6 +129,8 @@ class TransactorCoverageType(models.TextChoices):
 
 
 class TransactorType(models.TextChoices):
+    """TransactorType."""
+
     COMMERCIAL = "commercial", "Commercial"
     WORKERS_COMP = "workerscomp", "Workers Comp"
     TRICARE = "champus", "Tricare/Champus"
@@ -173,29 +175,32 @@ class Coverage(models.Model):
     employer = models.CharField()
     coverage_start_date = models.DateField()
     coverage_end_date = models.DateField()
-    coverage_rank = models.IntegerField(choices=CoverageRank.choices)
+    coverage_rank = models.IntegerField()
     state = models.CharField(choices=CoverageState.choices)
     plan_type = models.CharField(choices=CoverageType.choices)
     coverage_type = models.CharField(choices=CoverageType.choices)
-
-    # Make Transactor address and phone models
     issuer_address = models.ForeignKey(
         "TransactorAddress",
         on_delete=models.DO_NOTHING,
         related_name="coverages",
         null=True,
     )
-    # issuer_phone = models.ForeignKey(
-    #     "TransactorPhone",
-    #     on_delete=models.DO_NOTHING,
-    #     related_name="coverages",
-    #     null=True
-    # )
+    issuer_phone = models.ForeignKey(
+        "TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
+    )
     comments = models.TextField()
     stack = models.CharField(choices=CoverageStacks.choices)
 
 
 class Transactor(models.Model):
+    """Transactor."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_quality_and_revenue_transactor_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
     payer_id = models.CharField()
     name = models.CharField()
     type = models.CharField()
@@ -218,10 +223,6 @@ class Transactor(models.Model):
     active = models.BooleanField()
     use_provider_for_eligibility = models.BooleanField()
 
-    related_transactors = models.ManyToManyField(
-        "Transactor", verbose_name="Accept remittances from", symmetrical=True
-    )
-
     use_for_submission = models.ForeignKey(
         "Transactor",
         on_delete=models.DO_NOTHING,
@@ -233,6 +234,13 @@ class Transactor(models.Model):
 
 
 class TransactorAddress(models.Model):
+    """TransactorAddress."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_quality_and_revenue_transactoraddress_001"
+
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
@@ -257,6 +265,17 @@ class TransactorAddress(models.Model):
 
 
 class TransactorPhone(models.Model):
+    """TransactorPhone."""
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_quality_and_revenue_transactorphone_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
     system = models.CharField(choices=ContactPointSystem.choices)
     value = models.CharField()
     use = models.CharField(choices=ContactPointUse.choices)
