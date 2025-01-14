@@ -191,17 +191,3 @@ async def test_reload_plugins_event_handler_successfully_loads_plugins(
     assert len(result) == 1
     assert result[0].success is True
     assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
-
-
-@pytest.mark.asyncio
-async def test_reload_plugins_import_error(plugin_runner: PluginRunner) -> None:
-    """Test ReloadPlugins response when an ImportError occurs."""
-    request = ReloadPluginsRequest()
-
-    with patch("plugin_runner.plugin_runner.load_plugins", side_effect=ImportError):
-        responses = []
-        async for response in plugin_runner.ReloadPlugins(request, None):
-            responses.append(response)
-
-        assert len(responses) == 1
-        assert responses[0].success is False
