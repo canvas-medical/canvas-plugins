@@ -178,7 +178,7 @@ class Coverage(models.Model):
     coverage_rank = models.IntegerField()
     state = models.CharField(choices=CoverageState.choices)
     plan_type = models.CharField(choices=CoverageType.choices)
-    coverage_type = models.CharField(choices=CoverageType.choices)
+    coverage_type = models.CharField(choices=TransactorCoverageType.choices)
     issuer_address = models.ForeignKey(
         "TransactorAddress",
         on_delete=models.DO_NOTHING,
@@ -190,6 +190,9 @@ class Coverage(models.Model):
     )
     comments = models.TextField()
     stack = models.CharField(choices=CoverageStacks.choices)
+
+    def __str__(self) -> str:
+        return f"id={self.id}"
 
 
 class Transactor(models.Model):
@@ -263,6 +266,9 @@ class TransactorAddress(models.Model):
         "Transactor", on_delete=models.DO_NOTHING, related_name="addresses"
     )
 
+    def __str__(self) -> str:
+        return f"id={self.id}"
+
 
 class TransactorPhone(models.Model):
     """TransactorPhone."""
@@ -283,3 +289,6 @@ class TransactorPhone(models.Model):
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
     transactor = models.ForeignKey("Transactor", on_delete=models.DO_NOTHING, related_name="phones")
+
+    def __str__(self) -> str:
+        return f"id={self.id}"
