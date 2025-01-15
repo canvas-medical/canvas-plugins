@@ -11,8 +11,8 @@ from canvas_sdk.v1.data.common import (
 )
 
 
-class CoverageStacks(models.TextChoices):
-    """CoverageStacks."""
+class CoverageStack(models.TextChoices):
+    """CoverageStack."""
 
     IN_USE = "IN_USE", "In use"
     OTHER = "OTHER", "Other"
@@ -189,7 +189,7 @@ class Coverage(models.Model):
         "TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
     comments = models.TextField()
-    stack = models.CharField(choices=CoverageStacks.choices)
+    stack = models.CharField(choices=CoverageStack.choices)
 
     def __str__(self) -> str:
         return f"id={self.id}"
