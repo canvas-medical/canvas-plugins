@@ -57,7 +57,6 @@ class PracticeLocation(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_practicelocation_001"
 
     id = models.UUIDField()
@@ -65,7 +64,7 @@ class PracticeLocation(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     organization = models.ForeignKey(
-        "Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
+        "v1.Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
     )
     place_of_service_code = models.CharField(choices=PracticeLocationPOS.choices)
     full_name = models.CharField()
@@ -91,12 +90,11 @@ class PracticeLocationSetting(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_practicelocationsetting_001"
 
     dbid = models.BigIntegerField(primary_key=True)
     practice_location = models.ForeignKey(
-        PracticeLocation, on_delete=models.DO_NOTHING, related_name="settings", null=True
+        "v1.PracticeLocation", on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
     name = models.CharField()
     value = models.JSONField()

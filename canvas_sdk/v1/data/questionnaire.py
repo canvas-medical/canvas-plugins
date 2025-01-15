@@ -3,12 +3,10 @@ from collections.abc import Container
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.base import (
     CommittableModelManager,
     ValueSetLookupByNameQuerySet,
 )
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ResponseOptionSet(models.Model):
@@ -16,7 +14,6 @@ class ResponseOptionSet(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_responseoptionset_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -35,7 +32,6 @@ class ResponseOption(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_responseoption_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -57,7 +53,6 @@ class Question(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_question_001"
 
     id = models.UUIDField()
@@ -89,7 +84,6 @@ class Questionnaire(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnaire_001"
 
     objects = models.Manager.from_queryset(QuestionnaireValueSetLookupQuerySet)()
@@ -109,7 +103,7 @@ class Questionnaire(models.Model):
     code_system = models.CharField()
     code = models.CharField()
     search_tags = models.CharField()
-    questions = models.ManyToManyField(Question, through="canvas_sdk.QuestionnaireQuestionMap")  # type: ignore[misc, var-annotated]
+    questions = models.ManyToManyField(Question, through="v1.QuestionnaireQuestionMap")  # type: ignore[misc, var-annotated]
     use_in_shx = models.BooleanField()
     carry_forward = models.TextField()
 
@@ -119,7 +113,6 @@ class QuestionnaireQuestionMap(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_questionnairequestionmap_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -135,7 +128,6 @@ class Interview(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_interview_001"
 
     objects = CommittableModelManager()
@@ -143,20 +135,20 @@ class Interview(models.Model):
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     status = models.CharField()
     name = models.CharField()
     language_id = models.BigIntegerField()
     use_case_in_charting = models.CharField()
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="interviews", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="interviews", null=True
     )
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(  # type: ignore[var-annotated]
         Questionnaire,
-        through="canvas_sdk.InterviewQuestionnaireMap",  # type: ignore[misc]
+        through="v1.InterviewQuestionnaireMap",  # type: ignore[misc]
     )
     progress_status = models.CharField()
     created = models.DateTimeField()
@@ -168,7 +160,6 @@ class InterviewQuestionnaireMap(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_interviewquestionnairemap_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -184,7 +175,6 @@ class InterviewQuestionResponse(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_interviewquestionresponse_001"
 
     dbid = models.BigIntegerField(primary_key=True)

@@ -2,8 +2,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.common import ColorEnum, Origin
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.staff import Staff
 
 
 class TaskType(models.TextChoices):
@@ -39,7 +37,6 @@ class Task(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_task_001"
 
     id = models.UUIDField()
@@ -47,15 +44,15 @@ class Task(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     creator = models.ForeignKey(
-        Staff, on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
     )
     assignee = models.ForeignKey(
-        Staff, on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
     )
     # TODO - uncomment when Team model is created
-    # team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, related_name="tasks", null=True)
+    # team = models.ForeignKey('v1.Team', on_delete=models.DO_NOTHING, related_name="tasks", null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
     task_type = models.CharField(choices=TaskType.choices)
     tag = models.CharField()
@@ -70,7 +67,6 @@ class TaskComment(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_taskcomment_001"
 
     id = models.UUIDField()
@@ -78,7 +74,7 @@ class TaskComment(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     creator = models.ForeignKey(
-        Staff, on_delete=models.DO_NOTHING, related_name="comments", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="comments", null=True
     )
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, related_name="comments", null=True)
     body = models.TextField()
@@ -89,7 +85,6 @@ class TaskLabel(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_tasklabel_001"
 
     id = models.UUIDField()
@@ -108,7 +103,6 @@ class TaskTaskLabel(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_tasktasklabel_001"
 
     dbid = models.BigIntegerField(primary_key=True)
