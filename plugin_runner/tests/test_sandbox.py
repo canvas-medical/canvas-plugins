@@ -14,6 +14,11 @@ import os
 result = os.listdir('.')
 """
 
+CODE_WITH_PLUGIN_RUNNER_SETTING_IMPORT = """
+import settings
+result = settings.AWS_SECRET_ACCESS_KEY
+"""
+
 CODE_WITH_ALLOWED_IMPORT = """
 import json
 result = json.dumps({"key": "value"})
@@ -39,7 +44,14 @@ def test_valid_code_execution() -> None:
 def test_disallowed_import() -> None:
     """Test that restricted imports are not allowed."""
     sandbox = Sandbox(CODE_WITH_RESTRICTED_IMPORT)
-    with pytest.raises(ImportError, match="os' is not an allowed import."):
+    with pytest.raises(ImportError, match="'os' is not an allowed import."):
+        sandbox.execute()
+
+
+def test_plugin_runner_settings_import() -> None:
+    """Test that imports of plugin runner settings are not allowed."""
+    sandbox = Sandbox(CODE_WITH_PLUGIN_RUNNER_SETTING_IMPORT)
+    with pytest.raises(ImportError, match="'settings' is not an allowed import."):
         sandbox.execute()
 
 
