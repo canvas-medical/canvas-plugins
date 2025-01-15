@@ -9,4 +9,7 @@ class MyApplication(Application):
     def on_open(self) -> Effect:
         """Handle the on_open event."""
         # Implement this method to handle the application on_open event.
-        return LaunchModalEffect(url="", target=LaunchModalEffect.TargetType.DEFAULT_MODAL).apply()
+        return LaunchModalEffect(
+            url="https://www.canvasmedical.com/extensions",
+            target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
+        ).apply()
