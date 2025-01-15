@@ -2,11 +2,10 @@ import json
 import tarfile
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from pytest_mock import MockerFixture
 
-import settings
 from plugin_runner.plugin_installer import (
     PluginAttributes,
     _extract_rows_to_dict,
@@ -106,13 +105,12 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
 
 def test_download(mocker: MockerFixture) -> None:
     """Test that the plugin package can be written to disk, mocking out S3."""
-    mock_s3_client = MagicMock()
-    mocker.patch("boto3.client", return_value=mock_s3_client)
-
-    plugin_package = "plugins/plugin1.tar.gz"
-    with download_plugin(plugin_package) as plugin_path:
-        assert plugin_path.exists()
-
-    mock_s3_client.download_fileobj.assert_called_once_with(
-        "canvas-client-media", f"{settings.CUSTOMER_IDENTIFIER}/{plugin_package}", mocker.ANY
-    )
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"some content in a file"
+    with patch("requests.request", return_value=mock_response) as mock_request:
+        plugin_package = "plugins/plugin1.tar.gz"
+        with download_plugin(plugin_package) as plugin_path:
+            assert plugin_path.exists()
+            assert plugin_path.read_bytes() == b"some content in a file"
+        mock_request.assert_called_once()

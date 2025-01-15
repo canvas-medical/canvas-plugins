@@ -193,7 +193,6 @@ class PluginRunner(PluginRunnerServicer):
     ) -> AsyncGenerator[ReloadPluginsResponse, None]:
         """This is invoked when we need to reload plugins."""
         try:
-            load_plugins()
             publish_message({"action": "restart"})
         except ImportError:
             yield ReloadPluginsResponse(success=False)
