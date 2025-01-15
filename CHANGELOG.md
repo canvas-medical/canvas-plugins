@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.14.0 (2025-01-15)
+
+### Bug Fixes
+
+- Remove boto3 ([#314](https://github.com/canvas-medical/canvas-plugins/pull/314),
+  [`a0abdec`](https://github.com/canvas-medical/canvas-plugins/commit/a0abdec96efbf779bf2831d53d5bdf5f0222e287))
+
+### Features
+
+- Added new CreateQuestionnaireResult effect type
+  ([#250](https://github.com/canvas-medical/canvas-plugins/pull/250),
+  [`5a1b5bb`](https://github.com/canvas-medical/canvas-plugins/commit/5a1b5bb66705d0ba0918def2578cd47ab1dcf60f))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.13.3 (2025-01-14)
 
 ### Bug Fixes
