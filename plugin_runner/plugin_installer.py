@@ -104,7 +104,7 @@ def download_plugin(plugin_package: str) -> Generator:
     bucket = settings.MEDIA_S3_BUCKET_NAME
     customer_identifier = settings.CUSTOMER_IDENTIFIER
     path = f"/{bucket}/{customer_identifier}/{plugin_package}"
-    payload = b"This is the data"
+    payload = b"This is required for the AWS headers because it is part of the signature"
     pre_auth_headers: dict[str, str] = {}
     query: dict[str, str] = {}
     headers = aws_sig_v4_headers(
