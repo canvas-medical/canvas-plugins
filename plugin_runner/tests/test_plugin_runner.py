@@ -18,7 +18,7 @@ from plugin_runner.plugin_runner import (
 
 
 @pytest.fixture
-def setup_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, None]:
+def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, None]:
     """Copies a specified plugin from the fixtures directory to the data directory
     and removes it after the test.
 
@@ -52,6 +52,17 @@ def setup_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, N
 
 
 @pytest.fixture
+def load_test_plugins() -> Generator[None, None, None]:
+    """Manages the lifecycle of test plugins by loading and unloading them."""
+    try:
+        load_plugins()
+        yield
+    finally:
+        LOADED_PLUGINS.clear()
+        EVENT_HANDLER_MAP.clear()
+
+
+@pytest.fixture
 def plugin_runner() -> PluginRunner:
     """Fixture to initialize PluginRunner with mocks."""
     runner = PluginRunner()
@@ -59,11 +70,9 @@ def plugin_runner() -> PluginRunner:
     return runner
 
 
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugins_with_valid_plugin(setup_test_plugin: Path) -> None:
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test loading plugins with a valid plugin."""
-    load_plugins()
-
     assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
     assert (
         LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
@@ -72,12 +81,11 @@ def test_load_plugins_with_valid_plugin(setup_test_plugin: Path) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("setup_test_plugin", ["test_module_imports_plugin"], indirect=True)
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
 async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_package(
-    setup_test_plugin: Path, plugin_runner: PluginRunner
+    install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
-    load_plugins()
     assert (
         "test_module_imports_plugin:test_module_imports_plugin.protocols.my_protocol:Protocol"
         in LOADED_PLUGINS
@@ -102,7 +110,7 @@ async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin
 
 
 @pytest.mark.parametrize(
-    "setup_test_plugin",
+    "install_test_plugin",
     [
         "test_module_imports_outside_plugin_v1",
         "test_module_imports_outside_plugin_v2",
@@ -111,17 +119,16 @@ async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin
     indirect=True,
 )
 def test_load_plugins_with_plugin_that_imports_other_modules_outside_plugin_package(
-    setup_test_plugin: Path,
+    install_test_plugin: Path,
 ) -> None:
     """Test loading plugins with an invalid plugin that imports other modules outside the current plugin package."""
     with pytest.raises(ImportError, match="is not an allowed import"):
-        sandbox_from_package(setup_test_plugin)
+        sandbox_from_package(install_test_plugin)
 
 
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
-def test_reload_plugin(setup_test_plugin: Path) -> None:
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test reloading a plugin."""
-    load_plugins()
     load_plugins()
 
     assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
@@ -131,18 +138,22 @@ def test_reload_plugin(setup_test_plugin: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
-def test_remove_plugin_should_be_removed_from_loaded_plugins(setup_test_plugin: Path) -> None:
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_remove_plugin_should_be_removed_from_loaded_plugins(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
     """Test removing a plugin."""
-    load_plugins()
     assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
-    shutil.rmtree(setup_test_plugin)
+    shutil.rmtree(install_test_plugin)
     load_plugins()
     assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
 
 
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
-def test_load_plugins_should_refresh_event_protocol_map(setup_test_plugin: Path) -> None:
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+@pytest.mark.parametrize("load_test_plugins", [None], indirect=True)
+def test_load_plugins_should_refresh_event_protocol_map(
+    load_test_plugins: None, install_test_plugin: Path
+) -> None:
     """Test that the event protocol map is refreshed when loading plugins."""
     assert EVENT_HANDLER_MAP == {}
     load_plugins()
@@ -153,13 +164,11 @@ def test_load_plugins_should_refresh_event_protocol_map(setup_test_plugin: Path)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 async def test_handle_plugin_event_returns_expected_result(
-    setup_test_plugin: Path, plugin_runner: PluginRunner
+    install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
 ) -> None:
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
-    load_plugins()
-
     event = EventRequest(type=EventType.UNKNOWN)
 
     result = []
@@ -174,11 +183,11 @@ async def test_handle_plugin_event_returns_expected_result(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
-async def test_reload_plugins_event_handler_successfully_loads_plugins(
-    setup_test_plugin: Path, plugin_runner: PluginRunner
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+async def test_reload_plugins_event_handler_successfully_publishes_message(
+    install_test_plugin: Path, plugin_runner: PluginRunner
 ) -> None:
-    """Test ReloadPlugins Event handler successfully loads plugins."""
+    """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
     with patch("plugin_runner.plugin_runner.publish_message", MagicMock()) as mock_publish_message:
         request = ReloadPluginsRequest()
 
@@ -190,4 +199,3 @@ async def test_reload_plugins_event_handler_successfully_loads_plugins(
 
     assert len(result) == 1
     assert result[0].success is True
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
