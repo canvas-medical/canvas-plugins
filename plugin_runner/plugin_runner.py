@@ -292,7 +292,7 @@ async def synchronize_plugins() -> None:
     install_plugins()
     load_plugins()
     client, pubsub = get_client()
-    pubsub.psubscribe(settings.CHANNEL_NAME)
+    await pubsub.psubscribe(settings.CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
     while True:
         message = await pubsub.get_message(ignore_subscribe_messages=True)
@@ -321,7 +321,7 @@ async def synchronize_plugins() -> None:
                 except Exception as e:
                     print("plugin-synchronizer: `install_plugins` failed:", e)
 
-    client.close()
+    await client.close()
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
