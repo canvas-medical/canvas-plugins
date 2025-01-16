@@ -288,6 +288,9 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
 
 async def synchronize_plugins() -> None:
     """Listen for messages on the pubsub channel asynchronously."""
+    log.info("Initial load from the synchronizer")
+    install_plugins()
+    load_plugins()
     client, pubsub = get_client()
     pubsub.psubscribe(settings.CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
@@ -480,8 +483,8 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-        #        loop.run_until_complete(asyncio.gather(serve(specified_plugin_paths), synchronize_plugins()))
-        loop.run_until_complete(serve(specified_plugin_paths))
+#        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve(specified_plugin_paths)))
+        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve()))
     except KeyboardInterrupt:
         pass
     finally:
