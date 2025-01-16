@@ -12,12 +12,21 @@ ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
+APP_NAME = os.getenv("APP_NAME")
+
+try:
+    # Aptible stores a unique identifier in this file
+    with open("/proc/sys/kernel/hostname", "r") as file:
+        HOST_IDENTIFIER = file.read().strip()
+except FileNotFoundError:
+    HOST_IDENTIFIER = "local"
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
 INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
+REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
 
 INSTALLED_APPS = [
     "canvas_sdk.v1",
@@ -68,7 +77,8 @@ PLUGIN_DIRECTORY = os.getenv(
         else "./custom-plugins"
     ),
 )
-
+PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
+CHANNEL_NAME = f"{CUSTOMER_IDENTIFIER}:{PLUGINS_PUBSUB_CHANNEL}"
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"

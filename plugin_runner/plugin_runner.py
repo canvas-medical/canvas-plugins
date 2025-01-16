@@ -2,19 +2,20 @@ import asyncio
 import json
 import os
 import pathlib
+import pickle
 import pkgutil
-import signal
 import sys
 import time
 import traceback
 from collections import defaultdict
 from collections.abc import AsyncGenerator
-from types import FrameType
 from typing import Any, TypedDict
 
 import grpc
+import redis
 import statsd
 
+import settings
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginsRequest,
@@ -30,7 +31,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.plugin_synchronizer import publish_message
+from plugin_runner.plugin_installer import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import MANIFEST_FILE_NAME, PLUGIN_DIRECTORY, SECRETS_FILE_NAME
 
@@ -193,7 +194,7 @@ class PluginRunner(PluginRunnerServicer):
     ) -> AsyncGenerator[ReloadPluginsResponse, None]:
         """This is invoked when we need to reload plugins."""
         try:
-            publish_message({"action": "restart"})
+            publish_message(message={"action": "reload"})
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
@@ -237,12 +238,6 @@ def apply_effects_to_context(effects: list[Effect], event: Event) -> Event:
     return event
 
 
-def handle_hup_cb(_signum: int, _frame: FrameType | None) -> None:
-    """handle_hup_cb."""
-    log.info("Received SIGHUP, reloading plugins...")
-    load_plugins()
-
-
 def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str]:
     """Find all modules in the specified package path."""
     modules: list[str] = []
@@ -271,6 +266,52 @@ def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
     sandbox = Sandbox(module_path, namespace=module_name)
 
     return sandbox.execute()
+
+
+def publish_message(message: dict) -> None:
+    """Publish a message to the pubsub channel."""
+    client, _ = get_client()
+
+    client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
+    client.close()
+
+
+def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
+    """Return an async Redis client and pubsub object."""
+    client = redis.Redis.from_url(settings.REDIS_ENDPOINT)
+    pubsub = client.pubsub()
+
+    return client, pubsub
+
+
+async def synchronize_plugins() -> None:
+    """Listen for messages on the pubsub channel asynchronously."""
+    client, pubsub = get_client()
+    pubsub.psubscribe(settings.CHANNEL_NAME)
+
+    async for message in pubsub.listen():
+        if not message:
+            continue
+
+        message_type = message.get("type", "")
+
+        if message_type != "pmessage":
+            continue
+
+        data = pickle.loads(message.get("data", pickle.dumps({})))
+
+        if "action" not in data:
+            continue
+
+        if data["action"] == "reload":
+            try:
+                log.info("plugin-synchronizer: installing plugins after receiving restart message")
+                install_plugins()
+                load_plugins()
+            except Exception as e:
+                print("plugin-synchronizer: `install_plugins` failed:", e)
+
+    client.close()
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
@@ -415,6 +456,7 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
     log.info(f"Starting server, listening on port {port}")
 
+    install_plugins()
     load_plugins(specified_plugin_paths)
 
     await server.start()
@@ -434,9 +476,8 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
 
     asyncio.set_event_loop(loop)
 
-    signal.signal(signal.SIGHUP, handle_hup_cb)
-
     try:
+        #        loop.run_until_complete(asyncio.gather(serve(specified_plugin_paths), synchronize_plugins()))
         loop.run_until_complete(serve(specified_plugin_paths))
     except KeyboardInterrupt:
         pass
