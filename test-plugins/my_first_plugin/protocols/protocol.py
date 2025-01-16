@@ -17,7 +17,7 @@ class Protocol(BaseProtocol):
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         log.info(self.NARRATIVE_STRING)
         payload = {
-            "note": {"uuid": self.context["note"]["uuid"]},
+            "note": {"uuid": self.event.context["note"]["uuid"]},
             "data": {"narrative": self.NARRATIVE_STRING},
         }
 

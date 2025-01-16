@@ -29,7 +29,7 @@ class CronTask(BaseHandler):
         """
         if not self.SCHEDULE:
             raise ValueError("You must set a SCHEDULE.")
-        datetime = arrow.get(self.target).datetime
+        datetime = arrow.get(self.event.target.id).datetime
         if datetime in Cron(self.SCHEDULE):
             return self.execute()
         return []

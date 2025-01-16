@@ -83,8 +83,19 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
     tarball_2 = _create_tarball("plugin2")
 
     mocker.patch("plugin_runner.plugin_installer.enabled_plugins", return_value=mock_plugins)
+
+    def mock_download_plugin(package: str) -> MagicMock:
+        mock_context = mocker.Mock()
+        if package == "plugins/plugin1.tar.gz":
+            mock_context.__enter__ = mocker.Mock(return_value=tarball_1)
+        elif package == "plugins/plugin2.tar":
+            mock_context.__enter__ = mocker.Mock(return_value=tarball_2)
+        mock_context.__exit__ = mocker.Mock(return_value=None)
+        return mock_context
+
     mocker.patch(
-        "plugin_runner.plugin_installer.download_plugin", side_effect=[tarball_1, tarball_2]
+        "plugin_runner.plugin_installer.download_plugin",
+        side_effect=mock_download_plugin,
     )
 
     install_plugins()

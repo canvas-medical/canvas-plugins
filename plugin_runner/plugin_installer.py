@@ -97,7 +97,7 @@ def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
 
 
 @contextmanager
-def download_plugin(plugin_package: str) -> Generator:
+def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
     """Download the plugin package from the S3 bucket."""
     method = "GET"
     host = f"s3-{settings.AWS_REGION}.amazonaws.com"

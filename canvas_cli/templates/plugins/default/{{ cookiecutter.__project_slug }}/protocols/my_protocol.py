@@ -46,7 +46,7 @@ class Protocol(BaseProtocol):
 
         # Craft a payload to be returned with the effect(s).
         payload = {
-            "note": {"uuid": self.context["note"]["uuid"]},
+            "note": {"uuid": self.event.context["note"]["uuid"]},
             "data": {"narrative": self.NARRATIVE_STRING},
         }
 

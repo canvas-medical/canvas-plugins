@@ -14,7 +14,7 @@ class Application(BaseHandler, ABC):
         """Handle the application events."""
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
-                return [self.on_open()] if self.target == self.identifier else []
+                return [self.on_open()] if self.event.target.id == self.identifier else []
             case _:
                 return []
 
