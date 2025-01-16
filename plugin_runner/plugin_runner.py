@@ -12,7 +12,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, TypedDict
 
 import grpc
-import redis
+import redis.asyncio as redis
 import statsd
 
 import settings
@@ -294,28 +294,32 @@ async def synchronize_plugins() -> None:
     client, pubsub = get_client()
     pubsub.psubscribe(settings.CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
-    async for message in pubsub.listen():
-        log.info("Received message from pubsub channel")
-        if not message:
-            continue
+    while True:
+        message = await pubsub.get_message(ignore_subscribe_messages=True)
+        if message is not None:
+            log.info("Received message from pubsub channel")
+            if not message:
+                continue
 
-        message_type = message.get("type", "")
+            message_type = message.get("type", "")
 
-        if message_type != "pmessage":
-            continue
+            if message_type != "pmessage":
+                continue
 
-        data = pickle.loads(message.get("data", pickle.dumps({})))
+            data = pickle.loads(message.get("data", pickle.dumps({})))
 
-        if "action" not in data:
-            continue
+            if "action" not in data:
+                continue
 
-        if data["action"] == "reload":
-            try:
-                log.info("plugin-synchronizer: installing plugins after receiving restart message")
-                install_plugins()
-                load_plugins()
-            except Exception as e:
-                print("plugin-synchronizer: `install_plugins` failed:", e)
+            if data["action"] == "reload":
+                try:
+                    log.info(
+                        "plugin-synchronizer: installing plugins after receiving restart message"
+                    )
+                    install_plugins()
+                    load_plugins()
+                except Exception as e:
+                    print("plugin-synchronizer: `install_plugins` failed:", e)
 
     client.close()
 
@@ -483,7 +487,7 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-#        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve(specified_plugin_paths)))
+        #        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve(specified_plugin_paths)))
         loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve()))
     except KeyboardInterrupt:
         pass
