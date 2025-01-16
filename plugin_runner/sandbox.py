@@ -216,7 +216,12 @@ class Sandbox:
                 # Impossible Case only ctx Load, Store and Del are defined in ast.
                 raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
 
-    def __init__(self, source_code: str | Path, namespace: str | None = None) -> None:
+    def __init__(
+        self,
+        source_code: str | Path,
+        namespace: str | None = None,
+        evaluated_modules: dict[str, bool] | None = None,
+    ) -> None:
         if source_code is None:
             raise TypeError("source_code may not be None")
 
@@ -227,9 +232,9 @@ class Sandbox:
             if not source_code.exists():
                 raise FileNotFoundError(f"File not found: {source_code}")
             self.source_code = source_code.read_text()
-            module_path = _find_folder_in_path(source_code, self.package_name)
-            self.base_path = module_path.parent if module_path else None
-            self._evaluated_modules: dict[str, bool] = {}
+            package_path = _find_folder_in_path(source_code, self.package_name)
+            self.base_path = package_path.parent if package_path else None
+            self._evaluated_modules: dict[str, bool] = evaluated_modules or {}
         else:
             self.source_code = source_code
             self.base_path = None
@@ -293,17 +298,62 @@ class Sandbox:
             or (self.package_name and name.split(".")[0] == self.package_name and self.base_path)
         )
 
-    def _evaluate_module(self, name: str) -> None:
+    def _get_module(self, module_name: str) -> Path:
+        """Get the module path for the given module name."""
+        module_relative_path = module_name.replace(".", "/")
+        module = Path(cast(Path, self.base_path) / f"{module_relative_path}.py")
+
+        if not module.exists():
+            module = Path(cast(Path, self.base_path) / f"{module_relative_path}/__init__.py")
+
+        return module
+
+    def _evaluate_module(self, module_name: str) -> None:
         """Evaluate the given module in the sandbox.
         If the module to import belongs to the same package as the current module, evaluate it inside a sandbox.
         """
-        if name.startswith(self.package_name) and name not in self._evaluated_modules:
-            code = Path(cast(Path, self.base_path) / f"{name.replace('.', '/')}.py").read_text()
-            Sandbox(code, namespace=name).execute()
-            self._evaluated_modules[name] = True
-            if sys.modules.get(name):
-                # if the module was already imported, reload it to make sure the latest version is used
-                importlib.reload(sys.modules[name])
+        if not module_name.startswith(self.package_name) or module_name in self._evaluated_modules:
+            return  # Skip modules outside the package or already evaluated.
+
+        module = self._get_module(module_name)
+        self._evaluate_implicit_imports(module)
+
+        # Re-check after evaluating implicit imports to avoid duplicate evaluations.
+        if module_name not in self._evaluated_modules:
+            Sandbox(
+                module, namespace=module_name, evaluated_modules=self._evaluated_modules
+            ).execute()
+            self._evaluated_modules[module_name] = True
+
+        # Reload the module if already imported to ensure the latest version is used.
+        if sys.modules.get(module_name):
+            importlib.reload(sys.modules[module_name])
+
+    def _evaluate_implicit_imports(self, module: Path) -> None:
+        """Evaluate implicit imports in the sandbox."""
+        # Determine the parent module to check for implicit imports.
+        parent = module.parent.parent if module.name == "__init__.py" else module.parent
+        base_path = cast(Path, self.base_path)
+
+        # Skip evaluation if the parent module is outside the base path or already the source code root.
+        if not parent.is_relative_to(base_path) or parent == base_path:
+            return
+
+        module_name = parent.relative_to(base_path).as_posix().replace("/", ".")
+        init_file = parent / "__init__.py"
+
+        if module_name not in self._evaluated_modules:
+            if init_file.exists():
+                # Mark as evaluated to prevent infinite recursion.
+                self._evaluated_modules[module_name] = True
+                Sandbox(
+                    init_file, namespace=module_name, evaluated_modules=self._evaluated_modules
+                ).execute()
+            else:
+                # Mark as evaluated even if no init file exists to prevent redundant checks.
+                self._evaluated_modules[module_name] = True
+
+        self._evaluate_implicit_imports(parent)
 
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
         if not (self._is_known_module(name)):

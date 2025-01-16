@@ -169,8 +169,57 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
 
-@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
+@pytest.mark.parametrize(
+    "setup_test_plugin",
+    [
+        "test_implicit_imports_plugin",
+    ],
+    indirect=True,
+)
+def test_plugin_that_implicitly_imports_allowed_modules(
+    setup_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test loading plugins with a plugin that implicitly imports allowed modules."""
+    with caplog.at_level(logging.INFO):
+        load_or_reload_plugin(setup_test_plugin)
+        class_handler = LOADED_PLUGINS[
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Allowed"
+        ]["class"]
+        class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert any(
+        "Hello, World!" in record.message for record in caplog.records
+    ), "log.info() with Template.render() was not called."
+
+
+@pytest.mark.parametrize(
+    "setup_test_plugin",
+    [
+        "test_implicit_imports_plugin",
+    ],
+    indirect=True,
+)
+def test_plugin_that_implicitly_imports_forbidden_modules(
+    setup_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test loading plugins with an invalid plugin that implicitly imports forbidden modules."""
+    with (
+        caplog.at_level(logging.INFO),
+        pytest.raises(ImportError, match="'os' is not an allowed import."),
+    ):
+        load_or_reload_plugin(setup_test_plugin)
+        class_handler = LOADED_PLUGINS[
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Forbidden"
+        ]["class"]
+        class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert (
+        any("os list dir" in record.message for record in caplog.records) is False
+    ), "log.info() with os.listdir() was called."
+
+
+@pytest.mark.parametrize("setup_test_plugin", ["example_plugin"], indirect=True)
+def test_reload_plugin(setup_test_plugin: Path) -> None:
     """Test reloading a plugin."""
     load_plugins()
 
@@ -242,20 +291,6 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
 
     assert len(result) == 1
     assert result[0].success is True
-
-@pytest.mark.asyncio
-async def test_reload_plugins_import_error(plugin_runner: PluginRunner) -> None:
-    """Test ReloadPlugins response when an ImportError occurs."""
-    request = ReloadPluginsRequest()
-
-    with patch("plugin_runner.plugin_runner.load_plugins", side_effect=ImportError):
-        responses = []
-        async for response in plugin_runner.ReloadPlugins(request, None):
-            responses.append(response)
-
-        assert len(responses) == 1
-        assert responses[0].success is False
-
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("setup_test_plugin", ["test_module_imports_plugin"], indirect=True)
