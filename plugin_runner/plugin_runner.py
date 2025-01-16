@@ -195,7 +195,7 @@ class PluginRunner(PluginRunnerServicer):
         log.info("Reloading plugins...")
         """This is invoked when we need to reload plugins."""
         try:
-            publish_message(message={"action": "reload"})
+            await publish_message(message={"action": "reload"})
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
@@ -269,13 +269,13 @@ def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
     return sandbox.execute()
 
 
-def publish_message(message: dict) -> None:
+async def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
     log.info("Publishing message to pubsub channel")
     client, _ = get_client()
 
-    client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
-    client.close()
+    await client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
+#    client.close()
 
 
 def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
@@ -289,8 +289,8 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
 async def synchronize_plugins() -> None:
     """Listen for messages on the pubsub channel asynchronously."""
     log.info("Initial load from the synchronizer")
-    install_plugins()
-    load_plugins()
+    # install_plugins()
+    # load_plugins()
     client, pubsub = get_client()
     await pubsub.psubscribe(settings.CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
