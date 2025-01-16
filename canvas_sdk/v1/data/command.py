@@ -32,5 +32,7 @@ class Command(models.Model):
         """
         # TODO: Is the anchor object type enough here, or do we need a mapping? The home-app model
         #  names might not exactly match the plugins model names.
-        anchor_model = apps.get_model(app_label="canvas_sdk", model_name=self.anchor_object_type)
+        anchor_model = apps.get_model(
+            app_label=self._meta.app_label, model_name=self.anchor_object_type
+        )
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
