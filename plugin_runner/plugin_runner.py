@@ -192,6 +192,7 @@ class PluginRunner(PluginRunnerServicer):
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
     ) -> AsyncGenerator[ReloadPluginsResponse, None]:
+        log.info("Reloading plugins...")
         """This is invoked when we need to reload plugins."""
         try:
             publish_message(message={"action": "reload"})
@@ -270,6 +271,7 @@ def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
 
 def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
+    log.info("Publishing message to pubsub channel")
     client, _ = get_client()
 
     client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
@@ -288,8 +290,9 @@ async def synchronize_plugins() -> None:
     """Listen for messages on the pubsub channel asynchronously."""
     client, pubsub = get_client()
     pubsub.psubscribe(settings.CHANNEL_NAME)
-
+    log.info("Listening for messages on pubsub channel")
     async for message in pubsub.listen():
+        log.info("Received message from pubsub channel")
         if not message:
             continue
 
