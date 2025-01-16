@@ -19,7 +19,7 @@ try:
     with open("/proc/sys/kernel/hostname", "r") as file:
         HOST_IDENTIFIER = file.read().strip()
 except FileNotFoundError:
-    HOST_IDENTIFIER = "local"
+    HOST_IDENTIFIER = "localhost"
 
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
