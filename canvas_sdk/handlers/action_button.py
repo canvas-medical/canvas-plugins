@@ -42,13 +42,16 @@ class ActionButton(BaseHandler):
             EventType.SHOW_NOTE_HEADER_BUTTON,
             EventType.SHOW_NOTE_FOOTER_BUTTON,
         ):
-            if self.context["location"].lower() == self.BUTTON_LOCATION.value and self.visible():
+            if (
+                self.event.context["location"].lower() == self.BUTTON_LOCATION.value
+                and self.visible()
+            ):
                 return [ShowButtonEffect(key=self.BUTTON_KEY, title=self.BUTTON_TITLE).apply()]
             else:
                 return []
         elif (
             self.event.type == EventType.ACTION_BUTTON_CLICKED
-            and self.context["key"] == self.BUTTON_KEY
+            and self.event.context["key"] == self.BUTTON_KEY
         ):
             return self.handle()
 

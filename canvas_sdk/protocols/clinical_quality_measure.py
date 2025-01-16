@@ -94,7 +94,7 @@ class ClinicalQualityMeasure(BaseProtocol):
 
         def patient_id(model: "type[Model]") -> str:
             if model == Patient:
-                return self.target
+                return self.event.target.id
             else:
                 return cast(
                     str,
