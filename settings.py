@@ -21,7 +21,6 @@ GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-
 
 INSTALLED_APPS = [
     "canvas_sdk.v1",
-    "canvas_sdk.v2",
 ]
 
 SECRET_KEY = os.getenv(
