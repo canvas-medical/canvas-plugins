@@ -261,32 +261,15 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     return modules
 
 
-def sandbox_from_package(package_path: pathlib.Path) -> dict[str, Any]:
+def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
     """Sandbox the code execution."""
-    package_name = package_path.name
-    available_modules = find_modules(package_path)
-    sandboxes = {}
-
-    for module_name in available_modules:
-        result = sandbox_from_module(package_path, module_name)
-        full_module_name = f"{package_name}.{module_name}"
-        sandboxes[full_module_name] = result
-
-    return sandboxes
-
-
-def sandbox_from_module(package_path: pathlib.Path, module_name: str) -> Any:
-    """Sandbox the code execution."""
-    module_path = package_path / str(module_name.replace(".", "/") + ".py")
+    module_path = base_path / str(module_name.replace(".", "/") + ".py")
 
     if not module_path.exists():
         raise ModuleNotFoundError(f'Could not load module "{module_name}"')
 
-    source_code = module_path.read_text()
+    sandbox = Sandbox(module_path, namespace=module_name)
 
-    full_module_name = f"{package_path.name}.{module_name}"
-
-    sandbox = Sandbox(source_code, namespace=full_module_name)
     return sandbox.execute()
 
 
@@ -320,7 +303,6 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         handlers = manifest_json["components"].get("protocols", []) + manifest_json[
             "components"
         ].get("applications", [])
-        results = sandbox_from_package(path)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
         return
@@ -336,10 +318,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             continue
 
         try:
+            result = sandbox_from_module(path.parent, handler_module)
+
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading plugin '{name_and_class}'")
-
-                result = results[handler_module]
 
                 LOADED_PLUGINS[name_and_class]["active"] = True
 
@@ -348,8 +330,6 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
             else:
                 log.info(f"Loading plugin '{name_and_class}'")
-
-                result = results[handler_module]
 
                 LOADED_PLUGINS[name_and_class] = {
                     "active": True,

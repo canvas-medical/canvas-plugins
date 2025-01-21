@@ -28,9 +28,9 @@ CODE_WITH_FORBIDDEN_FUNC_NAME = """
 builtins = {}
 """
 
-SOURCE_CODE_MODULE_OS = """
-import os
-result = os.listdir('.')
+SOURCE_CODE_MODULE = """
+import module.b
+result = module.b
 """
 
 
@@ -110,16 +110,8 @@ print("Hello, Sandbox!")
     assert "Hello, Sandbox!" in scope["_print"].txt, "Print output should be captured."
 
 
-def test_sandbox_module_name_imports_within_package() -> None:
-    """Test that modules within the same package can be imported."""
-    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, namespace="os.a")
-    result = sandbox_module_a.execute()
-
-    assert "os" in result
-
-
 def test_sandbox_denies_module_name_import_outside_package() -> None:
     """Test that modules outside the root package cannot be imported."""
-    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE_OS, namespace="module.a")
-    with pytest.raises(ImportError, match="os' is not an allowed import."):
+    sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE, namespace="other_module.a")
+    with pytest.raises(ImportError, match="module.b' is not an allowed import."):
         sandbox_module_a.execute()

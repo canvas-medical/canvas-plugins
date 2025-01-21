@@ -1,3 +1,4 @@
+import logging
 import shutil
 from collections.abc import Generator
 from pathlib import Path
@@ -7,13 +8,13 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
-from canvas_sdk.events import EventRequest, EventType
+from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
     LOADED_PLUGINS,
     PluginRunner,
+    load_or_reload_plugin,
     load_plugins,
-    sandbox_from_package,
 )
 
 
@@ -119,11 +120,102 @@ async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin
     indirect=True,
 )
 def test_load_plugins_with_plugin_that_imports_other_modules_outside_plugin_package(
-    install_test_plugin: Path,
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test loading plugins with an invalid plugin that imports other modules outside the current plugin package."""
-    with pytest.raises(ImportError, match="is not an allowed import"):
-        sandbox_from_package(install_test_plugin)
+    with caplog.at_level(logging.ERROR):
+        load_or_reload_plugin(install_test_plugin)
+
+    assert any(
+        "Error importing module" in record.message for record in caplog.records
+    ), "log.error() was not called with the expected message."
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin",
+    [
+        "test_module_forbidden_imports_plugin",
+    ],
+    indirect=True,
+)
+def test_load_plugins_with_plugin_that_imports_forbidden_modules(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test loading plugins with an invalid plugin that imports forbidden modules."""
+    with caplog.at_level(logging.ERROR):
+        load_or_reload_plugin(install_test_plugin)
+
+    assert any(
+        "Error importing module" in record.message for record in caplog.records
+    ), "log.error() was not called with the expected message."
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin",
+    [
+        "test_module_forbidden_imports_runtime_plugin",
+    ],
+    indirect=True,
+)
+def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
+    install_test_plugin: Path,
+) -> None:
+    """Test loading plugins with an invalid plugin that imports forbidden modules at runtime."""
+    with pytest.raises(ImportError, match="is not an allowed import."):
+        load_or_reload_plugin(install_test_plugin)
+        class_handler = LOADED_PLUGINS[
+            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.protocols.my_protocol:Protocol"
+        ]["class"]
+        class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin",
+    [
+        "test_implicit_imports_plugin",
+    ],
+    indirect=True,
+)
+def test_plugin_that_implicitly_imports_allowed_modules(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test loading plugins with a plugin that implicitly imports allowed modules."""
+    with caplog.at_level(logging.INFO):
+        load_or_reload_plugin(install_test_plugin)
+        class_handler = LOADED_PLUGINS[
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Allowed"
+        ]["class"]
+        class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert any(
+        "Hello, World!" in record.message for record in caplog.records
+    ), "log.info() with Template.render() was not called."
+
+
+@pytest.mark.parametrize(
+    "install_test_plugin",
+    [
+        "test_implicit_imports_plugin",
+    ],
+    indirect=True,
+)
+def test_plugin_that_implicitly_imports_forbidden_modules(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test loading plugins with an invalid plugin that implicitly imports forbidden modules."""
+    with (
+        caplog.at_level(logging.INFO),
+        pytest.raises(ImportError, match="'os' is not an allowed import."),
+    ):
+        load_or_reload_plugin(install_test_plugin)
+        class_handler = LOADED_PLUGINS[
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Forbidden"
+        ]["class"]
+        class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert (
+        any("os list dir" in record.message for record in caplog.records) is False
+    ), "log.info() with os.listdir() was called."
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -199,3 +291,42 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
 
     assert len(result) == 1
     assert result[0].success is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+async def test_changes_to_plugin_modules_should_be_reflected_after_reload(
+    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+) -> None:
+    """Test that changes to plugin modules are reflected after reloading the plugin."""
+    event = EventRequest(type=EventType.UNKNOWN)
+
+    result = []
+    async for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 1
+    assert result[0].effects[0].type == EffectType.LOG
+    assert result[0].effects[0].payload == "Successfully imported!"
+
+    NEW_CODE = """
+def import_me() -> str:
+    return "Successfully changed!"
+"""
+    file_path = install_test_plugin / "other_module" / "base.py"
+    file_path.write_text(NEW_CODE, encoding="utf-8")
+
+    # Reload the plugin
+    load_plugins()
+
+    result = []
+    async for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 1
+    assert result[0].effects[0].type == EffectType.LOG
+    assert result[0].effects[0].payload == "Successfully changed!"
