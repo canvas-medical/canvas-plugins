@@ -1,11 +1,6 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.patient import Patient
-
-# from canvas_sdk.v1.data.staff import Staff
-from canvas_sdk.v1.data.user import CanvasUser
-
 
 class NoteTypeCategories(models.TextChoices):
     """Note type categories."""
@@ -97,7 +92,6 @@ class NoteType(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_notetype_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -133,30 +127,29 @@ class Note(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_note_001"
 
     id = models.CharField(max_length=32)
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, null=True)
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, null=True)
     provider = models.ForeignKey(
-        "Staff", on_delete=models.DO_NOTHING, related_name="notes", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
     note_type = models.CharField(choices=NoteTypes.choices, null=True)
     note_type_version = models.ForeignKey(
-        "NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
+        "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
     title = models.TextField()
     body = models.JSONField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    last_modified_by_staff = models.ForeignKey("Staff", on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField()
     billing_note = models.TextField()
     # TODO -implement InpatientStay model
-    # inpatient_stay = models.ForeignKey("InpatientStay", on_delete=models.DO_NOTHING, null=True)
+    # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
     related_data = models.JSONField()
-    location = models.ForeignKey("PracticeLocation", on_delete=models.DO_NOTHING, null=True)
+    location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField()
     place_of_service = models.CharField()

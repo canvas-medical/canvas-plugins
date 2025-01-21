@@ -1,26 +1,22 @@
 from django.db import models
 
-from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.user import CanvasUser
-
 
 class Device(models.Model):
     """Device."""
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_device_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="devices", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="devices", null=True
     )
     note_id = models.BigIntegerField()
     deleted = models.BooleanField()

@@ -2,8 +2,6 @@ from django.db import models
 from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import ValueSetLookupQuerySet
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class ClinicalStatus(TextChoices):
@@ -27,7 +25,6 @@ class Condition(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_condition_001"
 
     objects = ConditionQuerySet.as_manager()
@@ -35,10 +32,10 @@ class Condition(models.Model):
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="conditions", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="conditions", null=True
     )
     onset_date = models.DateField()
     resolution_date = models.DateField()
@@ -50,7 +47,6 @@ class ConditionCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_conditioncoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)

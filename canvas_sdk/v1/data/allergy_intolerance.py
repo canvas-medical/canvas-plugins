@@ -1,8 +1,6 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class AllergyIntolerance(models.Model):
@@ -10,7 +8,6 @@ class AllergyIntolerance(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_allergyintolerance_001"
 
     objects = CommittableModelManager().from_queryset(ValueSetLookupQuerySet)()
@@ -20,10 +17,10 @@ class AllergyIntolerance(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient,
+        "v1.Patient",
         on_delete=models.DO_NOTHING,
         related_name="allergy_intolerances",
         null=True,
@@ -46,7 +43,6 @@ class AllergyIntoleranceCoding(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_allergyintolerancecoding_001"
 
     dbid = models.BigIntegerField(primary_key=True)

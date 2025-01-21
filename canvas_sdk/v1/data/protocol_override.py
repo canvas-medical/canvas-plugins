@@ -1,8 +1,6 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import CommittableModelManager
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class IntervalUnit(models.TextChoices):
@@ -25,7 +23,6 @@ class ProtocolOverride(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_protocoloverride_001"
 
     objects = CommittableModelManager()
@@ -35,10 +32,10 @@ class ProtocolOverride(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     deleted = models.BooleanField()
-    committer = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient, on_delete=models.DO_NOTHING, related_name="protocol_overrides", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="protocol_overrides", null=True
     )
     protocol_key = models.CharField()
     is_adjustment = models.BooleanField()

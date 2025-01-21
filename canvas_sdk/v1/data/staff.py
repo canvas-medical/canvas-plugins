@@ -3,7 +3,6 @@ from django.db import models
 from timezone_utils.fields import TimeZoneField
 
 from canvas_sdk.v1.data.common import PersonSex, TaxIDType
-from canvas_sdk.v1.data.user import CanvasUser
 
 
 class Staff(models.Model):
@@ -11,7 +10,6 @@ class Staff(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_staff_001"
 
     def __str__(self) -> str:
@@ -44,7 +42,7 @@ class Staff(models.Model):
     active = models.BooleanField()
     # TODO - uncomment when PracticeLocation field is developed
     # primary_practice_location = models.ForeignKey(
-    #     PracticeLocation, on_delete=models.DO_NOTHING, null=True
+    #     'v1.PracticeLocation', on_delete=models.DO_NOTHING, null=True
     # )
     npi_number = models.CharField()
     nadean_number = models.CharField()
@@ -54,12 +52,12 @@ class Staff(models.Model):
     tax_id_type = models.CharField(choices=TaxIDType.choices)
     spi_number = models.CharField()
     # TODO - uncomment when Language is developed
-    # language = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
-    # language_secondary = models.ForeignKey(Language, on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
+    # language = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
+    # language_secondary = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
     personal_meeting_room_link = models.URLField(null=True)
     state = models.JSONField()
-    user = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     schedule_column_ordering = models.IntegerField()
     default_supervising_provider = models.ForeignKey(
-        "Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )

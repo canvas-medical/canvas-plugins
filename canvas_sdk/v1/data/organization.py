@@ -8,7 +8,6 @@ class Organization(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_organization_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -26,4 +25,4 @@ class Organization(models.Model):
     group_npi_number = models.CharField()
     group_taxonomy_number = models.CharField()
     include_zz_qualifier = models.BooleanField()
-    main_location = models.OneToOneField("PracticeLocation", on_delete=models.DO_NOTHING)
+    main_location = models.OneToOneField("v1.PracticeLocation", on_delete=models.DO_NOTHING)
