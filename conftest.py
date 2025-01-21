@@ -4,9 +4,11 @@ from pathlib import Path
 
 import pytest
 
+from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
+
 
 @pytest.fixture
-def setup_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, None]:
+def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, None]:
     """Copies a specified plugin from the fixtures directory to the data directory
     and removes it after the test.
 
@@ -37,3 +39,14 @@ def setup_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None, N
         # Cleanup: remove data/plugins directory after the test
         if dest_plugin_path.exists():
             shutil.rmtree(dest_plugin_path)
+
+
+@pytest.fixture
+def load_test_plugins() -> Generator[None, None, None]:
+    """Manages the lifecycle of test plugins by loading and unloading them."""
+    try:
+        load_plugins()
+        yield
+    finally:
+        LOADED_PLUGINS.clear()
+        EVENT_HANDLER_MAP.clear()
