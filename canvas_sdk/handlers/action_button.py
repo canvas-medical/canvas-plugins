@@ -1,3 +1,4 @@
+import re
 from abc import abstractmethod
 from enum import StrEnum
 
@@ -5,6 +6,8 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.show_button import ShowButtonEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
+
+SHOW_BUTTON_REGEX = re.compile(r"^SHOW_(.+?)_BUTTON$")
 
 
 class ActionButton(BaseHandler):
@@ -60,8 +63,10 @@ class ActionButton(BaseHandler):
         if not self.BUTTON_LOCATION:
             return []
 
-        if self.event.name.startswith("SHOW"):
-            location = "_".join(self.event.name.split("_")[1:-1])
+        show_button_event_match = SHOW_BUTTON_REGEX.fullmatch(self.event.name)
+
+        if show_button_event_match:
+            location = show_button_event_match.group(1)
             if self.ButtonLocation[location] == self.BUTTON_LOCATION and self.visible():
                 return [ShowButtonEffect(key=self.BUTTON_KEY, title=self.BUTTON_TITLE).apply()]
         elif self.context["key"] == self.BUTTON_KEY:
