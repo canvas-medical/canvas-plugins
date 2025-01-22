@@ -34,6 +34,7 @@ from RestrictedPython.transformer import (
 #
 ALLOWED_MODULES = frozenset(
     [
+        "__future__",
         "_strptime",
         "arrow",
         "base64",
@@ -49,8 +50,10 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.value_set",
         "canvas_sdk.views",
         "contextlib",
+        "dataclasses",
         "datetime",
         "dateutil",
+        "decimal",
         "django.db.models",
         "django.utils.functional",
         "enum",
@@ -63,6 +66,7 @@ ALLOWED_MODULES = frozenset(
         "math",
         "operator",
         "pickletools",
+        "pydantic",
         "random",
         "rapidfuzz",
         "re",
@@ -136,7 +140,10 @@ class Sandbox:
             return self.node_contents_visit(node)
 
         def check_name(
-            self, node: ast.ImportFrom, name: str | None, allow_magic_methods: bool = False
+            self,
+            node: ast.ImportFrom,
+            name: str | None,
+            allow_magic_methods: bool = False,
         ) -> None:
             """Check names if they are allowed.
 
