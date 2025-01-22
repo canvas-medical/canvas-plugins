@@ -19,7 +19,6 @@ class Appointment(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_appointment_001"
 
     id = models.UUIDField()
