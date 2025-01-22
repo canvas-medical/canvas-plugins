@@ -61,7 +61,6 @@ __all__ = [
     "ImagingReport",
     "ImagingReview",
     "Interview",
-    "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
     "LabOrder",
