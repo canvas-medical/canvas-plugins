@@ -277,9 +277,6 @@ async def publish_message(message: dict) -> None:
     await client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
 
 
-#    client.close()
-
-
 def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     """Return an async Redis client and pubsub object."""
     client = redis.Redis.from_url(settings.REDIS_ENDPOINT)

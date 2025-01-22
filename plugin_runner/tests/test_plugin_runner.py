@@ -1,7 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -234,14 +234,16 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
     install_test_plugin: Path, plugin_runner: PluginRunner
 ) -> None:
     """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
-    with patch("plugin_runner.plugin_runner.publish_message", MagicMock()) as mock_publish_message:
+    with patch(
+        "plugin_runner.plugin_runner.publish_message", new_callable=AsyncMock
+    ) as mock_publish_message:
         request = ReloadPluginsRequest()
 
         result = []
         async for response in plugin_runner.ReloadPlugins(request, None):
             result.append(response)
 
-        mock_publish_message.assert_called_once_with({"action": "restart"})
+        mock_publish_message.assert_called_once_with(message={"action": "reload"})
 
     assert len(result) == 1
     assert result[0].success is True
