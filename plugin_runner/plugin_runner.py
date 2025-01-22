@@ -192,8 +192,8 @@ class PluginRunner(PluginRunnerServicer):
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
     ) -> AsyncGenerator[ReloadPluginsResponse, None]:
-        log.info("Reloading plugins...")
         """This is invoked when we need to reload plugins."""
+        log.info("Reloading plugins...")
         try:
             await publish_message(message={"action": "reload"})
         except ImportError:
@@ -275,6 +275,8 @@ async def publish_message(message: dict) -> None:
     client, _ = get_client()
 
     await client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
+
+
 #    client.close()
 
 
@@ -287,10 +289,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
 
 
 async def synchronize_plugins() -> None:
-    """Listen for messages on the pubsub channel asynchronously."""
-    log.info("Initial load from the synchronizer")
-    # install_plugins()
-    # load_plugins()
+    """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
     client, pubsub = get_client()
     await pubsub.psubscribe(settings.CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
@@ -298,8 +297,6 @@ async def synchronize_plugins() -> None:
         message = await pubsub.get_message(ignore_subscribe_messages=True)
         if message is not None:
             log.info("Received message from pubsub channel")
-            if not message:
-                continue
 
             message_type = message.get("type", "")
 
@@ -314,14 +311,12 @@ async def synchronize_plugins() -> None:
             if data["action"] == "reload":
                 try:
                     log.info(
-                        "plugin-synchronizer: installing plugins after receiving restart message"
+                        "plugin-synchronizer: installing and reloading plugins after receiving command"
                     )
                     install_plugins()
                     load_plugins()
                 except Exception as e:
                     print("plugin-synchronizer: `install_plugins` failed:", e)
-
-    await client.close()
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
@@ -487,8 +482,9 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-        #        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve(specified_plugin_paths)))
-        loop.run_until_complete(asyncio.gather(synchronize_plugins(), serve()))
+        loop.run_until_complete(
+            asyncio.gather(serve(specified_plugin_paths), synchronize_plugins())
+        )
     except KeyboardInterrupt:
         pass
     finally:
