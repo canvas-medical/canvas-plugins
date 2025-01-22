@@ -132,7 +132,6 @@ class PatientContactPoint(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_patientcontactpoint_001"
 
     id = models.UUIDField()
@@ -143,7 +142,7 @@ class PatientContactPoint(models.Model):
     use_notes = models.CharField()
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING, related_name="telecom")
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom")
     has_consent = models.BooleanField()
     last_verified = models.DateTimeField
     verification_token = models.CharField()
@@ -155,7 +154,6 @@ class PatientAddress(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_patientaddress_001"
 
     id = models.UUIDField()
@@ -174,7 +172,7 @@ class PatientAddress(models.Model):
     end = models.DateField()
     country = models.CharField()
     state = models.CharField(choices=AddressState.choices)
-    patient = models.ForeignKey(Patient, on_delete=models.DO_NOTHING)
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
 
     def __str__(self) -> str:
         return f"id={self.id}"
@@ -185,7 +183,6 @@ class PatientExternalIdentifier(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_patientexternalidentifier_001"
 
     id = models.UUIDField()
@@ -193,7 +190,7 @@ class PatientExternalIdentifier(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     patient = models.ForeignKey(
-        "Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING
+        "v1.Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING
     )
     use = models.CharField()
     identifier_type = models.CharField()
@@ -211,12 +208,11 @@ class PatientSetting(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_patientsetting_001"
 
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("Patient", on_delete=models.DO_NOTHING, related_name="settings")
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="settings")
     name = models.CharField()
     value = models.JSONField()

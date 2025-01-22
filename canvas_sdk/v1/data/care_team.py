@@ -16,7 +16,6 @@ class CareTeamRole(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_careteamrole_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -36,7 +35,6 @@ class CareTeamMembership(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_careteammembership_001"
 
     id = models.UUIDField()
@@ -44,13 +42,13 @@ class CareTeamMembership(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     patient = models.ForeignKey(
-        "Patient", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
     )
     staff = models.ForeignKey(
-        "Staff", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
     )
     role = models.ForeignKey(
-        "CareTeamRole", related_name="care_teams", on_delete=models.DO_NOTHING, null=True
+        "v1.CareTeamRole", related_name="care_teams", on_delete=models.DO_NOTHING, null=True
     )
     status = models.CharField(choices=CareTeamMembershipStatus.choices)
     lead = models.BooleanField()

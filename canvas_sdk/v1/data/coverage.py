@@ -149,23 +149,22 @@ class Coverage(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_api_coverage_001"
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("Patient", on_delete=models.DO_NOTHING, related_name="coverages")
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="coverages")
     guarantor = models.ForeignKey(
-        "Patient", on_delete=models.DO_NOTHING, related_name="dependent_coverages"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="dependent_coverages"
     )
     subscriber = models.ForeignKey(
-        "Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages"
     )
     patient_relationship_to_subscriber = models.CharField(choices=CoverageRelationshipCode.choices)
     issuer = models.ForeignKey(
-        "Transactor", on_delete=models.DO_NOTHING, related_name="coverages", null=True
+        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
     id_number = models.CharField()
     plan = models.CharField()
@@ -180,13 +179,13 @@ class Coverage(models.Model):
     plan_type = models.CharField(choices=CoverageType.choices)
     coverage_type = models.CharField(choices=TransactorCoverageType.choices)
     issuer_address = models.ForeignKey(
-        "TransactorAddress",
+        "v1.TransactorAddress",
         on_delete=models.DO_NOTHING,
         related_name="coverages",
         null=True,
     )
     issuer_phone = models.ForeignKey(
-        "TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
+        "v1.TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
     comments = models.TextField()
     stack = models.CharField(choices=CoverageStack.choices)
@@ -200,7 +199,6 @@ class Transactor(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_quality_and_revenue_transactor_001"
 
     dbid = models.BigIntegerField(primary_key=True)
@@ -227,7 +225,7 @@ class Transactor(models.Model):
     use_provider_for_eligibility = models.BooleanField()
 
     use_for_submission = models.ForeignKey(
-        "Transactor",
+        "v1.Transactor",
         on_delete=models.DO_NOTHING,
         null=True,
         related_name="used_for_submission_by",
@@ -241,7 +239,6 @@ class TransactorAddress(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_quality_and_revenue_transactoraddress_001"
 
     id = models.UUIDField()
@@ -263,7 +260,7 @@ class TransactorAddress(models.Model):
     country = models.CharField(max_length=255)
     state = models.CharField(choices=AddressState.choices)
     transactor = models.ForeignKey(
-        "Transactor", on_delete=models.DO_NOTHING, related_name="addresses"
+        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="addresses"
     )
 
     def __str__(self) -> str:
@@ -275,7 +272,6 @@ class TransactorPhone(models.Model):
 
     class Meta:
         managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_quality_and_revenue_transactorphone_001"
 
     id = models.UUIDField()
@@ -288,7 +284,9 @@ class TransactorPhone(models.Model):
     use_notes = models.CharField()
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
-    transactor = models.ForeignKey("Transactor", on_delete=models.DO_NOTHING, related_name="phones")
+    transactor = models.ForeignKey(
+        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="phones"
+    )
 
     def __str__(self) -> str:
         return f"id={self.id}"
