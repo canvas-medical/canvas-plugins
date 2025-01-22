@@ -1,11 +1,5 @@
 from django.db import models
 
-from canvas_sdk.v1.data import PracticeLocation
-from canvas_sdk.v1.data.note import Note, NoteType
-from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.staff import Staff
-from canvas_sdk.v1.data.user import CanvasUser
-
 
 class AppointmentProgressStatus(models.TextChoices):
     """AppointmentProgressStatus."""
@@ -30,9 +24,9 @@ class Appointment(models.Model):
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
-    entered_in_error = models.ForeignKey(CanvasUser, on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
-        Patient,
+        "v1.Patient",
         on_delete=models.DO_NOTHING,
         related_name="appointments",
         null=True,
@@ -43,14 +37,14 @@ class Appointment(models.Model):
         related_name="appointment_rescheduled_to",
         null=True,
     )
-    provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
+    provider = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     start_time = models.DateTimeField()
     duration_minutes = models.IntegerField()
     comment = models.TextField(null=True)
-    note = models.ForeignKey(Note, on_delete=models.DO_NOTHING, null=True)
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, null=True)
 
     note_type = models.ForeignKey(
-        NoteType, on_delete=models.DO_NOTHING, related_name="appointments", null=True
+        "v1.NoteType", on_delete=models.DO_NOTHING, related_name="appointments", null=True
     )
 
     status = models.CharField(
@@ -59,5 +53,5 @@ class Appointment(models.Model):
     )
     meeting_link = models.URLField(null=True, blank=True)
     telehealth_instructions_sent = models.BooleanField()
-    location = models.ForeignKey(PracticeLocation, on_delete=models.DO_NOTHING, null=True)
+    location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
