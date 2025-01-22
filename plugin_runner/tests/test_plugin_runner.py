@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import pickle
 import shutil
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,6 +16,7 @@ from plugin_runner.plugin_runner import (
     PluginRunner,
     load_or_reload_plugin,
     load_plugins,
+    synchronize_plugins,
 )
 
 
@@ -247,6 +250,37 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
 
     assert len(result) == 1
     assert result[0].success is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+async def test_synchronize_plugins_calls_install_and_load_plugins(
+    install_test_plugin: Path, plugin_runner: PluginRunner
+) -> None:
+    """Test that synchronize_plugins calls install_plugins and load_plugins."""
+    with (
+        patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
+        patch(
+            "plugin_runner.plugin_runner.install_plugins", new_callable=AsyncMock
+        ) as mock_install_plugins,
+        patch(
+            "plugin_runner.plugin_runner.load_plugins", new_callable=AsyncMock
+        ) as mock_load_plugins,
+    ):
+        mock_client = AsyncMock()
+        mock_pubsub = AsyncMock()
+        mock_get_client.return_value = (mock_client, mock_pubsub)
+        mock_pubsub.get_message.return_value = {
+            "type": "pmessage",
+            "data": pickle.dumps({"action": "reload"}),
+        }
+
+        task = asyncio.create_task(synchronize_plugins(max_iterations=1))
+        await asyncio.sleep(0.1)  # Give some time for the coroutine to run
+        task.cancel()
+
+        mock_install_plugins.assert_called_once()
+        mock_load_plugins.assert_called_once()
 
 
 @pytest.mark.asyncio

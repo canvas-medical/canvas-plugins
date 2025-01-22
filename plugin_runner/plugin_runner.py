@@ -202,6 +202,40 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
+async def synchronize_plugins(max_iterations: int = -1) -> None:
+    """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
+    client, pubsub = get_client()
+    await pubsub.psubscribe(settings.CHANNEL_NAME)
+    log.info("Listening for messages on pubsub channel")
+    iterations: int = 0
+    while iterations < max_iterations:
+        if max_iterations > 0:  # max_iterations == -1 means infinite iterations
+            iterations += 1
+        message = await pubsub.get_message(ignore_subscribe_messages=True)
+        if message is not None:
+            log.info("Received message from pubsub channel")
+
+            message_type = message.get("type", "")
+
+            if message_type != "pmessage":
+                continue
+
+            data = pickle.loads(message.get("data", pickle.dumps({})))
+
+            if "action" not in data:
+                continue
+
+            if data["action"] == "reload":
+                try:
+                    log.info(
+                        "plugin-synchronizer: installing and reloading plugins after receiving command"
+                    )
+                    install_plugins()
+                    load_plugins()
+                except Exception as e:
+                    print("plugin-synchronizer: `install_plugins` failed:", e)
+
+
 def validate_effects(effects: list[Effect]) -> list[Effect]:
     """Validates the effects based on predefined rules.
     Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all non-search-related effects.
@@ -283,37 +317,6 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     pubsub = client.pubsub()
 
     return client, pubsub
-
-
-async def synchronize_plugins() -> None:
-    """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
-    client, pubsub = get_client()
-    await pubsub.psubscribe(settings.CHANNEL_NAME)
-    log.info("Listening for messages on pubsub channel")
-    while True:
-        message = await pubsub.get_message(ignore_subscribe_messages=True)
-        if message is not None:
-            log.info("Received message from pubsub channel")
-
-            message_type = message.get("type", "")
-
-            if message_type != "pmessage":
-                continue
-
-            data = pickle.loads(message.get("data", pickle.dumps({})))
-
-            if "action" not in data:
-                continue
-
-            if data["action"] == "reload":
-                try:
-                    log.info(
-                        "plugin-synchronizer: installing and reloading plugins after receiving command"
-                    )
-                    install_plugins()
-                    load_plugins()
-                except Exception as e:
-                    print("plugin-synchronizer: `install_plugins` failed:", e)
 
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
