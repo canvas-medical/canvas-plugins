@@ -16,7 +16,7 @@ APP_NAME = os.getenv("APP_NAME")
 
 try:
     # Aptible stores a unique identifier in this file
-    with open("/proc/sys/kernel/hostname", "r") as file:
+    with open("/proc/sys/kernel/hostname") as file:
         HOST_IDENTIFIER = file.read().strip()
 except FileNotFoundError:
     HOST_IDENTIFIER = "localhost"
