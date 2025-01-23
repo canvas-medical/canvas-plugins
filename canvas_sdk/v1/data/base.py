@@ -16,7 +16,8 @@ class CommittableModelManager(models.Manager):
     def get_queryset(self) -> "CommittableQuerySet":
         """Return a queryset that filters out deleted objects."""
         # TODO: Should we just filter these out at the view level?
-        return CommittableQuerySet(self.model, using=self._db).filter(deleted=False)
+        qs = super().get_queryset()
+        return cast("CommittableQuerySet", qs.filter(deleted=False))
 
 
 class CommittableQuerySet(models.QuerySet):
