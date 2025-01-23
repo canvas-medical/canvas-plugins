@@ -1,11 +1,11 @@
-name: "Install Python and Poetry"
-description: "Installs Python using .python-version file's version, and Poetry with the given version"
+name: "Install Python and uv"
+description: "Installs Python using .python-version file's version, and uv with the given version"
 
 inputs:
-  POETRY_VERSION:
-    description: "Poetry version to install"
+  UV_VERSION:
+    description: "uv version to install"
     required: false
-    default: "1.8.3"
+    default: "0.5.23"
   PYTHON_VERSION:
     description: "Version range or exact version of Python or PyPy to use, using SemVer's version range syntax. Reads from .python-version if unset."
     required: false
@@ -30,25 +30,17 @@ runs:
         echo "PYTHON_VERSION=${{ steps.python-setup.outputs.python-version }}" >> $GITHUB_ENV
       shell: bash
 
-      # Cache the installation of Poetry itself.
-      # This prevents the workflow from installing Poetry every time, which can be slow.
-    - name: Cache poetry install
-      id: cache-poetry
+      # Cache the installation of uv itself.
+      # This prevents the workflow from installing uv every time, which can be slow.
+    - name: Cache uv install
+      id: cache-uv
       uses: actions/cache@v4
       with:
         path: ~/.local
-        key: ${{runner.os}}-py${{steps.python-setup.outputs.python-version}}-poetry-${{inputs.POETRY_VERSION}}
+        key: ${{runner.os}}-py${{steps.python-setup.outputs.python-version}}-uv-${{inputs.UV_VERSION}}
 
-    # Install Poetry, make sure the .venv is in the project, so it's easily cached.
-    - name: Install poetry
-      if: steps.cache-poetry.outputs.cache-hit != 'true'
-      uses: snok/install-poetry@v1
+    - name: Install uv
+      if: steps.cache-uv.outputs.cache-hit != 'true'
+      uses: astral-sh/setup-uv@v5
       with:
-        version: ${{ inputs.POETRY_VERSION }}
-
-    # Create virtualenv inside the project’s root directory.
-    - name: Poetry Config
-      shell: bash
-      run: |
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
+        version: ${{ inputs.UV_VERSION }}

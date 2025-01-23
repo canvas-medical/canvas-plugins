@@ -11,15 +11,15 @@ runs:
       uses: actions/cache@v4
       with:
         path: .venv
-        key: ${{runner.os}}-py${{env.PYTHON_VERSION}}-venv-${{ hashFiles('**/poetry.lock') }}
+        key: ${{runner.os}}-py${{env.PYTHON_VERSION}}-venv-${{ hashFiles('**/uv.lock') }}
 
     # Install project dependencies (bypassing the project, because we don't want to cache the Canvas code).
     - name: Install Dependencies
-      run: poetry install --no-interaction --no-root
+      run: uv sync --no-install-workspace
       shell: bash
       if: steps.cache-deps.outputs.cache-hit != 'true'
 
     # Install the project to make sure everything works and is synced.
     - name: Install Canvas
       shell: bash
-      run: poetry install --no-interaction
+      run: uv sync
