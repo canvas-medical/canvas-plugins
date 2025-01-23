@@ -30,17 +30,8 @@ runs:
         echo "PYTHON_VERSION=${{ steps.python-setup.outputs.python-version }}" >> $GITHUB_ENV
       shell: bash
 
-      # Cache the installation of uv itself.
-      # This prevents the workflow from installing uv every time, which can be slow.
-    - name: Cache uv install
-      id: cache-uv
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: ${{runner.os}}-py${{steps.python-setup.outputs.python-version}}-uv-${{inputs.UV_VERSION}}
-
     - name: Install uv
-      if: steps.cache-uv.outputs.cache-hit != 'true'
       uses: astral-sh/setup-uv@v5
       with:
+        enable-cache: true
         version: ${{ inputs.UV_VERSION }}
