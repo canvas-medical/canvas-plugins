@@ -207,14 +207,16 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
-async def synchronize_plugins(max_iterations: int = -1) -> None:
+async def synchronize_plugins(max_iterations: None | int = None) -> None:
     """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
     client, pubsub = get_client()
     await pubsub.psubscribe(CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
     iterations: int = 0
-    while iterations < max_iterations:
-        if max_iterations > 0:  # max_iterations == -1 means infinite iterations
+    while True:
+        if max_iterations is not None:  # max_iterations == -1 means infinite iterations
+            if iterations >= max_iterations:
+                break
             iterations += 1
         message = await pubsub.get_message(ignore_subscribe_messages=True)
         if message is not None:
