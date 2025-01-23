@@ -31,7 +31,7 @@ class Appointment(models.Model):
         null=True,
     )
     appointment_rescheduled_from = models.ForeignKey(
-        "Appointment",
+        "self",
         on_delete=models.DO_NOTHING,
         related_name="appointment_rescheduled_to",
         null=True,
