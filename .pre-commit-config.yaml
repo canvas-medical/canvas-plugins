@@ -30,18 +30,8 @@ repos:
         args: [--in-place, --all]
         exclude: |
           (?x)(
-            poetry.lock
+            uv.lock
           )$
-
-  - repo: https://github.com/python-poetry/poetry
-    rev: 1.8.5
-    hooks:
-      - id: poetry-check
-        files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
-      - id: poetry-lock
-        args: [--no-update]
-        files: ^(.*/)?(poetry\.lock|pyproject\.toml)$
-
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.4
@@ -100,18 +90,17 @@ repos:
               canvas_cli/templates/
           )
 
-        # https://github.com/python-poetry/poetry/issues/7184
         entry: |
           bash -c "
-            python -m pip install --upgrade pip setuptools wheel \
-            && poetry install --no-ansi \
-            && exec poetry run mypy --show-traceback $@
+            python -m pip install --upgrade pip setuptools wheel uv \
+            && uv sync \
+            && exec uv run mypy --show-traceback $@
           "
 
   - repo: local
     hooks:
       - id: check-protobufs-definitions
         name: Check Protobufs Definitions
-        entry: poetry run ./bin/generate-protobufs
+        entry: uv run ./bin/generate-protobufs
         language: system
         pass_filenames: false
