@@ -15,7 +15,6 @@ import grpc
 import redis.asyncio as redis
 import statsd
 
-import settings
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginsRequest,
@@ -33,7 +32,13 @@ from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.plugin_installer import install_plugins
 from plugin_runner.sandbox import Sandbox
-from settings import MANIFEST_FILE_NAME, PLUGIN_DIRECTORY, SECRETS_FILE_NAME
+from settings import (
+    CHANNEL_NAME,
+    MANIFEST_FILE_NAME,
+    PLUGIN_DIRECTORY,
+    REDIS_ENDPOINT,
+    SECRETS_FILE_NAME,
+)
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
@@ -205,7 +210,7 @@ class PluginRunner(PluginRunnerServicer):
 async def synchronize_plugins(max_iterations: int = -1) -> None:
     """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
     client, pubsub = get_client()
-    await pubsub.psubscribe(settings.CHANNEL_NAME)
+    await pubsub.psubscribe(CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
     iterations: int = 0
     while iterations < max_iterations:
@@ -308,12 +313,12 @@ async def publish_message(message: dict) -> None:
     log.info("Publishing message to pubsub channel")
     client, _ = get_client()
 
-    await client.publish(settings.CHANNEL_NAME, pickle.dumps(message))
+    await client.publish(CHANNEL_NAME, pickle.dumps(message))
 
 
 def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     """Return an async Redis client and pubsub object."""
-    client = redis.Redis.from_url(settings.REDIS_ENDPOINT)
+    client = redis.Redis.from_url(REDIS_ENDPOINT)
     pubsub = client.pubsub()
 
     return client, pubsub
