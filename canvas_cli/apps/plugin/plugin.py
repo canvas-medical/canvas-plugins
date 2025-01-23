@@ -50,10 +50,7 @@ def _build_package(package: Path) -> Path:
         with tarfile.open(file.name, "w:gz") as tar:
             for root in package.rglob("*"):
                 # Skip hidden files and directories (starting with '.') and symlinks
-                if (
-                    any(part.startswith(".") for part in root.parts)
-                    or root.is_symlink()
-                ):
+                if any(part.startswith(".") for part in root.parts) or root.is_symlink():
                     continue
 
                 tar.add(root, arcname=root.relative_to(package))
@@ -105,9 +102,7 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
     for meta_b in meta_class.body:
         if not isinstance(meta_b, ast.Assign):
             continue
-        target_id = next(
-            (t.id for t in meta_b.targets if isinstance(t, ast.Name)), None
-        )
+        target_id = next((t.id for t in meta_b.targets if isinstance(t, ast.Name)), None)
         if not target_id:
             continue
         if isinstance(meta_b.value, ast.Constant):
@@ -183,9 +178,7 @@ def install(
 ) -> None:
     """Install a plugin into a Canvas instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or add one to the configuration file"
-        )
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     token = get_or_request_api_token(host)
 
@@ -196,9 +189,7 @@ def install(
         validate_manifest(plugin_name)
         built_package_path = _build_package(plugin_name)
     else:
-        raise typer.BadParameter(
-            f"Plugin '{plugin_name}' needs to be a valid directory"
-        )
+        raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
     print(f"Installing plugin: {built_package_path} into {host}")
 
@@ -243,9 +234,7 @@ def uninstall(
 ) -> None:
     """Uninstall a plugin from a Canvas instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or or add one to the configuration file"
-        )
+        raise typer.BadParameter("Please specify a host or or add one to the configuration file")
 
     url = plugin_url(host, name)
 
@@ -281,9 +270,7 @@ def enable(
 ) -> None:
     """Enable a plugin from a Canvas instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or or add one to the configuration file"
-        )
+        raise typer.BadParameter("Please specify a host or or add one to the configuration file")
 
     url = plugin_url(host, name)
 
@@ -320,9 +307,7 @@ def disable(
 ) -> None:
     """Disable a plugin from a Canvas instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or or add one to the configuration file"
-        )
+        raise typer.BadParameter("Please specify a host or or add one to the configuration file")
 
     url = plugin_url(host, name)
 
@@ -358,9 +343,7 @@ def list(
 ) -> None:
     """List all plugins from a Canvas instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or add one to the configuration file"
-        )
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
 
     url = plugin_url(host)
 
@@ -396,9 +379,7 @@ def validate_manifest(
         raise typer.BadParameter(f"Plugin {plugin_name} does not exist")
 
     if not plugin_name.is_dir():
-        raise typer.BadParameter(
-            f"Plugin {plugin_name} is not a directory, nothing to validate"
-        )
+        raise typer.BadParameter(f"Plugin {plugin_name} is not a directory, nothing to validate")
 
     manifest = plugin_name / "CANVAS_MANIFEST.json"
 
@@ -410,9 +391,7 @@ def validate_manifest(
     try:
         manifest_json = json.loads(manifest.read_text())
         protocols = manifest_json.get("components", {}).get("protocols", [])
-        if new_protocols := _get_protocols_with_new_cqm_properties(
-            protocols, plugin_name
-        ):
+        if new_protocols := _get_protocols_with_new_cqm_properties(protocols, plugin_name):
             print(
                 f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
             )
@@ -421,9 +400,7 @@ def validate_manifest(
             manifest_json = json.loads(manifest.read_text())
 
     except json.JSONDecodeError:
-        print(
-            "There was a problem loading the manifest file, please ensure it's valid JSON"
-        )
+        print("There was a problem loading the manifest file, please ensure it's valid JSON")
         raise typer.Abort() from None
 
     validate_manifest_file(manifest_json)
@@ -448,9 +425,7 @@ def update(
 ) -> None:
     """Updates a plugin from an instance."""
     if not host:
-        raise typer.BadParameter(
-            "Please specify a host or set a default via the `auth` command"
-        )
+        raise typer.BadParameter("Please specify a host or set a default via the `auth` command")
 
     if package_path:
         validate_package(package_path)
