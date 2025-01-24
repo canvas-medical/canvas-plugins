@@ -23,6 +23,7 @@ class AddTask(_BaseEffect):
         apply_required_fields = ("title",)
 
     assignee_id: str | None = None
+    team_id: str | None = None
     patient_id: str | None = None
     title: str | None = None
     due: datetime | None = None
@@ -36,6 +37,7 @@ class AddTask(_BaseEffect):
             "patient": {"id": self.patient_id},
             "due": self.due.isoformat() if self.due else None,
             "assignee": {"id": self.assignee_id},
+            "team": {"id": self.team_id},
             "title": self.title,
             "status": self.status.value,
             "labels": self.labels,
@@ -74,6 +76,7 @@ class UpdateTask(_BaseEffect):
 
     id: str | None = None
     assignee_id: str | None = None
+    team_id: str | None = None
     patient_id: str | None = None
     title: str | None = None
     due: datetime | None = None
