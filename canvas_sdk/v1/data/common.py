@@ -104,7 +104,7 @@ class Origin(models.TextChoices):
 
 
 class ContactPointSystem(models.TextChoices):
-    """ContactPointSytem."""
+    """ContactPointSystem."""
 
     PHONE = "phone", "phone"
     FAX = "fax", "fax"
