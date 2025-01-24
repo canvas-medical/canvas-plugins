@@ -42,10 +42,10 @@ class CareTeamMembership(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="care_team_memberships", null=True
     )
     staff = models.ForeignKey(
-        "v1.Staff", on_delete=models.DO_NOTHING, related_name="care_team_memberships"
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="care_team_memberships", null=True
     )
     role = models.ForeignKey(
         "v1.CareTeamRole", related_name="care_teams", on_delete=models.DO_NOTHING, null=True

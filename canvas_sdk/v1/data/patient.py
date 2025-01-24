@@ -142,7 +142,9 @@ class PatientContactPoint(models.Model):
     use_notes = models.CharField()
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom")
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom", null=True
+    )
     has_consent = models.BooleanField()
     last_verified = models.DateTimeField
     verification_token = models.CharField()
@@ -172,7 +174,9 @@ class PatientAddress(models.Model):
     end = models.DateField()
     country = models.CharField()
     state = models.CharField(choices=AddressState.choices)
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="addresses", null=True
+    )
 
     def __str__(self) -> str:
         return f"id={self.id}"
@@ -190,7 +194,7 @@ class PatientExternalIdentifier(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     patient = models.ForeignKey(
-        "v1.Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING
+        "v1.Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING, null=True
     )
     use = models.CharField()
     identifier_type = models.CharField()
@@ -213,6 +217,8 @@ class PatientSetting(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="settings")
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="settings", null=True
+    )
     name = models.CharField()
     value = models.JSONField()

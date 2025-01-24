@@ -155,12 +155,14 @@ class Coverage(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="coverages")
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="coverages", null=True
+    )
     guarantor = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="dependent_coverages"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="dependent_coverages", null=True
     )
     subscriber = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages"
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages", null=True
     )
     patient_relationship_to_subscriber = models.CharField(choices=CoverageRelationshipCode.choices)
     issuer = models.ForeignKey(
@@ -260,7 +262,7 @@ class TransactorAddress(models.Model):
     country = models.CharField(max_length=255)
     state = models.CharField(choices=AddressState.choices)
     transactor = models.ForeignKey(
-        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="addresses"
+        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="addresses", null=True
     )
 
     def __str__(self) -> str:
@@ -285,7 +287,7 @@ class TransactorPhone(models.Model):
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
     transactor = models.ForeignKey(
-        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="phones"
+        "v1.Transactor", on_delete=models.DO_NOTHING, related_name="phones", null=True
     )
 
     def __str__(self) -> str:
