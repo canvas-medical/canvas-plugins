@@ -232,9 +232,8 @@ async def test_handle_plugin_event_returns_expected_result(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 async def test_reload_plugins_event_handler_successfully_publishes_message(
-    install_test_plugin: Path, plugin_runner: PluginRunner
+    plugin_runner: PluginRunner,
 ) -> None:
     """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
     with patch(
@@ -253,10 +252,7 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
-async def test_synchronize_plugins_calls_install_and_load_plugins(
-    install_test_plugin: Path, plugin_runner: PluginRunner
-) -> None:
+async def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
     """Test that synchronize_plugins calls install_plugins and load_plugins."""
     with (
         patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
