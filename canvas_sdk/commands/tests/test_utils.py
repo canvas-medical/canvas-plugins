@@ -1,14 +1,17 @@
 import random
 import shutil
 import string
+import threading
 from contextlib import chdir
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import pytest
 import requests
+import websocket
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
@@ -187,6 +190,11 @@ class Protocol(BaseProtocol):
 def install_plugin(plugin_name: str, token: MaskedValue) -> None:
     """Install a plugin."""
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+        message_received_event = wait_for_log(
+            cast(str, settings.INTEGRATION_TEST_URL),
+            token.value,
+            f"Loading plugin '{plugin_name}",
+        )
         response = requests.post(
             plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
             data={"is_enabled": True},
@@ -194,6 +202,8 @@ def install_plugin(plugin_name: str, token: MaskedValue) -> None:
             headers={"Authorization": f"Bearer {token.value}"},
         )
         response.raise_for_status()
+
+        message_received_event.wait(timeout=5.0)
 
 
 def trigger_plugin_event(token: MaskedValue) -> None:
@@ -316,3 +326,40 @@ def get_token() -> MaskedValue:
     response.raise_for_status()
 
     return MaskedValue(response.json()["access_token"])
+
+
+def wait_for_log(host: str, token: str, message: str) -> threading.Event:
+    """Wait for a specific log message."""
+    hostname = cast(str, urlparse(host).hostname)
+    instance = hostname.removesuffix(".canvasmedical.com")
+
+    websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token}"
+
+    connected_event = threading.Event()
+    message_received_event = threading.Event()
+
+    def _on_message(ws: websocket.WebSocket, received_message: str) -> None:
+        try:
+            if "Log stream connected" in received_message:
+                connected_event.set()
+            if message.lower() in received_message.lower():
+                message_received_event.set()
+                ws.close()
+        except Exception as ex:
+            print(f"Error processing message: {ex}")
+
+    def _on_error(ws: websocket.WebSocket, error: str) -> None:
+        print(f"WebSocket error: {error}")
+
+    ws = websocket.WebSocketApp(
+        websocket_uri,
+        on_message=_on_message,
+        on_error=_on_error,
+    )
+
+    thread = threading.Thread(target=ws.run_forever)
+    thread.start()
+
+    connected_event.wait(timeout=5.0)
+
+    return message_received_event
