@@ -15,7 +15,7 @@ class BaseModelManager(models.Manager):
 
     def get_queryset(self) -> models.QuerySet:
         """Return a queryset that filters out deleted objects."""
-        return self.filter(deleted=False)
+        return super().get_queryset().filter(deleted=False)
 
 
 class BaseQuerySet(models.QuerySet):
