@@ -1,0 +1,72 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "name": { "type": "string" },
+        "use_case_in_charting": {
+            "type": "string",
+            "enum": ["QUES", "SA", "EXAM", "ROS"]
+        },
+        "code_system": {
+            "type": "string",
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+        },
+        "code": { "type": "string" },
+        "can_originate_in_charting": { "type": "boolean" },
+        "search_tags":{ "type": "string", "description": "Testing" },
+        "scoring_code_system": {
+            "type": "string",
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+        },
+        "scoring_code": { "type": "string" },
+        "content": { "type": "string" },
+        "prologue": { "type": "string" },
+        "use_in_shx": { "type": "boolean" },
+        "expected_completion_time": { "type": "number" },
+        "questions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": { "type": "string" },
+                    "code_system": {
+                        "type": "string",
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"]
+                    },
+                    "code": { "type": "string" },
+                    "code_description": { "type": "string" },
+                    "content": { "type": "string" },
+                    "responses_code_system": {
+                        "type": "string",
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+                    },
+                    "responses_type": {
+                        "type": "string",
+                        "enum": ["SING", "MULT", "TXT"]
+                    },
+                    "use_in_shx": { "type": "boolean" },
+                    "responses": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "name": { "type": "string" },
+                                "code": { "type": "string" },
+                                "code_description": { "type": "string" },
+                                "value": { "type": "string" }
+                            },
+                            "required": ["name", "code"]
+                        }
+                    }
+                },
+                "required": ["name", "code_system", "code", "responses"]
+            }
+        }
+    },
+    "required": ["name", "use_case_in_charting", "code_system", "code", "questions", "expected_completion_time"]
+}

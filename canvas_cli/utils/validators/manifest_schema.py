@@ -16,6 +16,7 @@ manifest_schema = {
                 "effects": {"$ref": "#/$defs/component"},
                 "views": {"$ref": "#/$defs/component"},
                 "applications": {"$ref": "#/$defs/applications"},
+                "questionnaires": {"$ref": "#/$defs/questionnaires"},
             },
             "additionalProperties": False,
             "minProperties": 1,
@@ -98,6 +99,17 @@ manifest_schema = {
                     "scope": {"type": "string", "enum": ["patient_specific", "global"]},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
+                "additionalProperties": False,
+            },
+        },
+        "questionnaires": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "template": {"type": "string"},
+                },
+                "required": ["template"],
                 "additionalProperties": False,
             },
         },
