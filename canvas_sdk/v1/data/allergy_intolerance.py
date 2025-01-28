@@ -1,6 +1,26 @@
+from typing import cast
+
 from django.db import models
 
-from canvas_sdk.v1.data.base import CommittableModelManager, ValueSetLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    BaseModelManager,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    ValueSetLookupQuerySet,
+)
+
+
+class AllergyIntoleranceQuerySet(
+    ValueSetLookupQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+):
+    """AllergyIntoleranceQuerySet."""
+
+    pass
+
+
+AllergyIntoleranceManager = BaseModelManager.from_queryset(AllergyIntoleranceQuerySet)
 
 
 class AllergyIntolerance(models.Model):
@@ -10,7 +30,7 @@ class AllergyIntolerance(models.Model):
         managed = False
         db_table = "canvas_sdk_data_api_allergyintolerance_001"
 
-    objects = CommittableModelManager().from_queryset(ValueSetLookupQuerySet)()
+    objects = cast(AllergyIntoleranceQuerySet, AllergyIntoleranceManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
