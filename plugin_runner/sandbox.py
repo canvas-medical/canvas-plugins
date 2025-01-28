@@ -46,6 +46,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.handlers",
         "canvas_sdk.protocols",
         "canvas_sdk.utils",
+        "canvas_sdk.templates",
         "canvas_sdk.v1",
         "canvas_sdk.value_set",
         "canvas_sdk.views",
@@ -79,6 +80,14 @@ ALLOWED_MODULES = frozenset(
         "uuid",
     ]
 )
+
+
+##
+# FORBIDDEN_ASSIGNMENTS
+#
+# The names in this list are forbidden to be assigned to in a sandboxed runtime.
+#
+FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
 
 
 def _is_known_module(name: str) -> bool:
@@ -173,6 +182,24 @@ class Sandbox:
                 )
             elif name in FORBIDDEN_FUNC_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
+
+        def visit_Assign(self, node: ast.Assign) -> ast.AST:
+            """Check for forbidden assignments."""
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in FORBIDDEN_ASSIGNMENTS:
+                    self.error(node, f"Assignments to '{target.id}' are not allowed.")
+                elif isinstance(target, ast.Tuple | ast.List):
+                    self.check_for_name_in_iterable(target)
+
+            return super().visit_Assign(node)
+
+        def check_for_name_in_iterable(self, iterable_node: ast.Tuple | ast.List) -> None:
+            """Check if any element of an iterable is a forbidden assignment."""
+            for elt in iterable_node.elts:
+                if isinstance(elt, ast.Name) and elt.id in FORBIDDEN_ASSIGNMENTS:
+                    self.error(iterable_node, f"Assignments to '{elt.id}' are not allowed.")
+                elif isinstance(elt, ast.Tuple | ast.List):
+                    self.check_for_name_in_iterable(elt)
 
         def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
             """Checks and mutates attribute access/assignment.
@@ -272,6 +299,7 @@ class Sandbox:
             },
             "__metaclass__": type,
             "__name__": self.namespace,
+            "__is_plugin__": True,
             "_write_": _unrestricted,
             "_getiter_": _unrestricted,
             "_getitem_": default_guarded_getitem,

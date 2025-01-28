@@ -1,6 +1,6 @@
 import pytest
 
-from plugin_runner.sandbox import Sandbox
+from plugin_runner.sandbox import FORBIDDEN_ASSIGNMENTS, Sandbox
 
 # Sample code strings for testing various scenarios
 VALID_CODE = """
@@ -32,6 +32,18 @@ SOURCE_CODE_MODULE = """
 import module.b
 result = module.b
 """
+
+CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
+    code
+    for var in FORBIDDEN_ASSIGNMENTS
+    for code in [
+        f"{var} = 'test'",
+        f"test = {var} = 'test'",
+        f"test = {var} = test2 = 'test'",
+        f"(a, (b, c), (d, ({var}, f))) = (1, (2, 3), (4, (5, 6)))",
+        f"(a, (b, c), (d, [{var}, f])) = (1, (2, 3), (4, [5, 6]))",
+    ]
+]
 
 
 def test_valid_code_execution() -> None:
@@ -65,6 +77,14 @@ def test_allowed_import() -> None:
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
     sandbox = Sandbox(CODE_WITH_FORBIDDEN_FUNC_NAME)
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("code", CODE_WITH_FORBIDDEN_ASSIGNMENTS)
+def test_forbidden_assignment(code: str) -> None:
+    """Test that forbidden assignments are blocked by Transformer."""
+    sandbox = Sandbox(code)
     with pytest.raises(RuntimeError, match="Code is invalid"):
         sandbox.execute()
 
