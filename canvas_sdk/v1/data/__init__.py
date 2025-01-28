@@ -1,4 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .appointment import Appointment
 from .billing import BillingLineItem
 from .command import Command
 from .condition import Condition, ConditionCoding
@@ -43,6 +44,7 @@ from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
 __all__ = [
+    "Appointment",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "BillingLineItem",
