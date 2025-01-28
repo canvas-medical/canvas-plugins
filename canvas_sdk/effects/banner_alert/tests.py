@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
-from canvas_sdk.commands.tests.test_utils import MaskedValue
+from canvas_sdk.commands.tests.test_utils import MaskedValue, wait_for_log
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
 
 runner = CliRunner()
@@ -92,6 +92,12 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+        message_received_event = wait_for_log(
+            settings.INTEGRATION_TEST_URL,
+            token.value,
+            f"Loading plugin '{plugin_name}:{plugin_name}.protocols.my_protocol:Protocol'",
+        )
+
         # install the plugin
         response = requests.post(
             plugin_url(settings.INTEGRATION_TEST_URL),
@@ -100,6 +106,8 @@ class Protocol(BaseProtocol):
             headers={"Authorization": f"Bearer {token.value}"},
         )
         response.raise_for_status()
+
+        message_received_event.wait(timeout=5.0)
 
     yield
 
