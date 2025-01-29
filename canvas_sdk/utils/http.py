@@ -25,7 +25,7 @@ class BatchedRequest:
 
     def fn(self, session: requests.Session) -> Callable:
         """
-        Return a callable constructed from the session object, method, URL, args, and kwargs.
+        Return a callable constructed from a session object, method, URL, args, and kwargs.
 
         This callable is passed to the ThreadPoolExecutor.
         """
