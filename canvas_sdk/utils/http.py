@@ -164,7 +164,8 @@ class Http:
         """
         Execute requests in parallel.
 
-        Wait for the responses to complete, and then return a list of the responses.
+        Wait for the responses to complete, and then return a list of the responses in the same
+        ordering as the requests.
         """
         futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
