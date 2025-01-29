@@ -92,10 +92,10 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
-        message_received_event = wait_for_log(
+        message_received_event, thread, ws = wait_for_log(
             settings.INTEGRATION_TEST_URL,
             token.value,
-            f"Loading plugin '{plugin_name}:{plugin_name}.protocols.my_protocol:Protocol'",
+            f"Loading plugin '{plugin_name}",
         )
 
         # install the plugin
@@ -110,6 +110,9 @@ class Protocol(BaseProtocol):
         message_received_event.wait(timeout=5.0)
 
     yield
+
+    ws.close()
+    thread.join()
 
     # clean up
     if Path(f"./custom-plugins/{plugin_name}").exists():
