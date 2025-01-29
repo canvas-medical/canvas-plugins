@@ -213,11 +213,10 @@ async def synchronize_plugins(max_iterations: None | int = None) -> None:
     await pubsub.psubscribe(CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
     iterations: int = 0
-    while True:
-        if max_iterations is not None:  # max_iterations == -1 means infinite iterations
-            if iterations >= max_iterations:
-                break
-            iterations += 1
+    while (
+        max_iterations is None or iterations < max_iterations
+    ):  # max_iterations == -1 means infinite iterations
+        iterations += 1
         message = await pubsub.get_message(ignore_subscribe_messages=True)
         if message is not None:
             log.info("Received message from pubsub channel")
