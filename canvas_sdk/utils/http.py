@@ -39,7 +39,7 @@ class BatchedRequest:
             case "PATCH":
                 instance_method = session.patch
             case _:
-                raise RuntimeError(f"HTTP method {self._method} is not supported")
+                raise ValueError(f"HTTP method {self._method} is not supported")
 
         return functools.partial(instance_method, self._url, *self._args, **self._kwargs)
 
