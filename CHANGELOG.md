@@ -1,6 +1,62 @@
 # CHANGELOG
 
 
+## v0.16.0 (2025-01-29)
+
+### Bug Fixes
+
+- Add missing properties to note type
+  ([#374](https://github.com/canvas-medical/canvas-plugins/pull/374),
+  [`5da4d69`](https://github.com/canvas-medical/canvas-plugins/commit/5da4d6911576a180d7ac88714911e493673cf649))
+
+### Chores
+
+- Bump jinja2 from 3.1.4 to 3.1.5
+  ([#282](https://github.com/canvas-medical/canvas-plugins/pull/282),
+  [`3384f95`](https://github.com/canvas-medical/canvas-plugins/commit/3384f95830f8322f3886c4966ae8acf8feab7059))
+
+- Bump pydantic from 2.10.5 to 2.10.6 in the production-patches group
+  ([#358](https://github.com/canvas-medical/canvas-plugins/pull/358),
+  [`aad30df`](https://github.com/canvas-medical/canvas-plugins/commit/aad30df8f83ed0699dc5b7d78322d01411dd919d))
+
+- Bump restrictedpython from 7.4 to 8.0
+  ([#352](https://github.com/canvas-medical/canvas-plugins/pull/352),
+  [`08adeba`](https://github.com/canvas-medical/canvas-plugins/commit/08adeba55643f7fc351165d5d6c1528d9d58cf10))
+
+### Features
+
+- Add appointment to data module ([#348](https://github.com/canvas-medical/canvas-plugins/pull/348),
+  [`90613dc`](https://github.com/canvas-medical/canvas-plugins/commit/90613dcb1f1750845a76c2e9ec7ee7dfd9178425))
+
+- Add events and effects for book appointments form and search results
+  ([#322](https://github.com/canvas-medical/canvas-plugins/pull/322),
+  [`1d435bd`](https://github.com/canvas-medical/canvas-plugins/commit/1d435bd89108f96262f184548b1cb28240256e06))
+
+- Add mixins for CommittableQuerySet and PatientAssetQuerySet
+  ([#211](https://github.com/canvas-medical/canvas-plugins/pull/211),
+  [`4d8f609`](https://github.com/canvas-medical/canvas-plugins/commit/4d8f609074eaebbf194be180bad2f310111b1dc0))
+
+- Additional patient-centric data module models
+  ([#327](https://github.com/canvas-medical/canvas-plugins/pull/327),
+  [`38ecd1b`](https://github.com/canvas-medical/canvas-plugins/commit/38ecd1be38a3667dc4215f5177184afcf9764517))
+
+- Adds DetectedIssueEvidence events and id field
+  ([#303](https://github.com/canvas-medical/canvas-plugins/pull/303),
+  [`080006f`](https://github.com/canvas-medical/canvas-plugins/commit/080006feed68e88ec86b631c4f13b85ed2cc70a5))
+
+- Allow html to be used in LaunchModalEffect
+  ([#306](https://github.com/canvas-medical/canvas-plugins/pull/306),
+  [`5976b59`](https://github.com/canvas-medical/canvas-plugins/commit/5976b59d39887e2f78ae9bee5e34d811d4039e69))
+
+- Change the Command model to use a foreign key to Note
+  ([#278](https://github.com/canvas-medical/canvas-plugins/pull/278),
+  [`c887a8e`](https://github.com/canvas-medical/canvas-plugins/commit/c887a8e65b0605302bbdcfb57a3d54e78eaaebd2))
+
+- Initial additions for Problem List Hygiene protocol conversion
+  ([#230](https://github.com/canvas-medical/canvas-plugins/pull/230),
+  [`114fd22`](https://github.com/canvas-medical/canvas-plugins/commit/114fd22393adbb747f451480176d689295394c39))
+
+
 ## v0.15.0 (2025-01-28)
 
 ### Bug Fixes
