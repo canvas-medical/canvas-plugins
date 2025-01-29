@@ -4,7 +4,7 @@ import time
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
-from typing import Any, Literal, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar, cast
 
 import requests
 import statsd
@@ -12,36 +12,83 @@ import statsd
 F = TypeVar("F", bound=Callable)
 
 
-class BatchedRequest:
+class _BatchableRequest:
     """Representation of a request that will be executed in parallel with other requests."""
 
     def __init__(
-        self, method: Literal["GET", "POST", "PUT", "PATCH"], url: str, *args: Any, **kwargs: Any
+        self, method: Literal["GET", "POST", "PUT", "PATCH"], url: str, **kwargs: Any
     ) -> None:
         self._method = method
         self._url = url
-        self._args = args
         self._kwargs = kwargs
 
-    def fn(self, session: requests.Session) -> Callable:
+    def fn(self, client: "Http") -> Callable:
         """
-        Return a callable constructed from a session object and the method, URL, args, and kwargs.
+        Return a callable constructed from an Http object and the method, URL, and kwargs.
 
-        This callable is passed to the ThreadPoolExecutor.
+        The callable is passed to the ThreadPoolExecutor.
         """
+        instance_method: Callable
         match self._method:
             case "GET":
-                instance_method = session.get
+                instance_method = client.get
             case "POST":
-                instance_method = session.post
+                instance_method = client.post
             case "PUT":
-                instance_method = session.put
+                instance_method = client.put
             case "PATCH":
-                instance_method = session.patch
+                instance_method = client.patch
             case _:
                 raise ValueError(f"HTTP method {self._method} is not supported")
 
-        return functools.partial(instance_method, self._url, *self._args, **self._kwargs)
+        return functools.partial(instance_method, self._url, **self._kwargs)
+
+
+class BatchableRequest(Protocol):
+    """Protocol for batchable requests."""
+
+    def fn(self, client: "Http") -> Callable:
+        """
+        Return a callable that can be passed to the ThreadPoolExecutor.
+        """
+        ...
+
+
+def batch_get(
+    url: str, headers: Mapping[str, str | bytes | None] | None = None
+) -> BatchableRequest:
+    """Return a batchable GET request."""
+    return _BatchableRequest("GET", url, headers=headers)
+
+
+def batch_post(
+    url: str,
+    json: dict | None = None,
+    data: dict | str | list | bytes | None = None,
+    headers: Mapping[str, str | bytes | None] | None = None,
+) -> BatchableRequest:
+    """Return a batchable POST request."""
+    return _BatchableRequest("POST", url, json=json, data=data, headeres=headers)
+
+
+def batch_put(
+    url: str,
+    json: dict | None = None,
+    data: dict | str | list | bytes | None = None,
+    headers: Mapping[str, str | bytes | None] | None = None,
+) -> BatchableRequest:
+    """Return a batchable PUT request."""
+    return _BatchableRequest("PUT", url, json=json, data=data, headers=headers)
+
+
+def batch_patch(
+    url: str,
+    json: dict | None = None,
+    data: dict | str | list | bytes | None = None,
+    headers: Mapping[str, str | bytes | None] | None = None,
+) -> BatchableRequest:
+    """Return a batchable PATCH request."""
+    return _BatchableRequest("PATCH", url, json=json, data=data, headers=headers)
 
 
 class Http:
@@ -110,7 +157,7 @@ class Http:
 
     def batch_requests(
         self,
-        batched_requests: Iterable[BatchedRequest],
+        batch_requests: Iterable[BatchableRequest],
         max_workers: int | None = None,
         timeout: int | None = None,
     ) -> list[requests.Response]:
@@ -121,8 +168,8 @@ class Http:
         """
         futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            for request in batched_requests:
-                futures.append(executor.submit(request.fn(self.session)))
+            for request in batch_requests:
+                futures.append(executor.submit(request.fn(self)))
 
             # TODO: Is there a need to expose return_when or specify a different default value? https://docs.python.org/3.12/library/concurrent.futures.html#concurrent.futures.wait
             concurrent.futures.wait(futures, timeout=timeout)
