@@ -120,6 +120,8 @@ class NoteType(models.Model):
     deprecated_at = models.DateTimeField()
     is_patient_required = models.BooleanField()
     allow_custom_title = models.BooleanField()
+    is_scheduleable_via_patient_portal = models.BooleanField()
+    online_duration = models.IntegerField()
 
 
 class Note(models.Model):
