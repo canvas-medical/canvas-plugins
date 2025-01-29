@@ -28,20 +28,20 @@ class _BatchableRequest:
 
         The callable is passed to the ThreadPoolExecutor.
         """
-        instance_method: Callable
+        client_method: Callable
         match self._method:
             case "GET":
-                instance_method = client.get
+                client_method = client.get
             case "POST":
-                instance_method = client.post
+                client_method = client.post
             case "PUT":
-                instance_method = client.put
+                client_method = client.put
             case "PATCH":
-                instance_method = client.patch
+                client_method = client.patch
             case _:
                 raise ValueError(f"HTTP method {self._method} is not supported")
 
-        return functools.partial(instance_method, self._url, **self._kwargs)
+        return functools.partial(client_method, self._url, **self._kwargs)
 
 
 class BatchableRequest(Protocol):
