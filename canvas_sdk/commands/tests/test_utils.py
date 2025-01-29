@@ -190,11 +190,6 @@ class Protocol(BaseProtocol):
 def install_plugin(plugin_name: str, token: MaskedValue) -> None:
     """Install a plugin."""
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
-        message_received_event = wait_for_log(
-            cast(str, settings.INTEGRATION_TEST_URL),
-            token.value,
-            f"Loading plugin '{plugin_name}",
-        )
         response = requests.post(
             plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
             data={"is_enabled": True},
@@ -202,8 +197,6 @@ def install_plugin(plugin_name: str, token: MaskedValue) -> None:
             headers={"Authorization": f"Bearer {token.value}"},
         )
         response.raise_for_status()
-
-        message_received_event.wait(timeout=5.0)
 
 
 def trigger_plugin_event(token: MaskedValue) -> None:
@@ -328,7 +321,9 @@ def get_token() -> MaskedValue:
     return MaskedValue(response.json()["access_token"])
 
 
-def wait_for_log(host: str, token: str, message: str) -> threading.Event:
+def wait_for_log(
+    host: str, token: str, message: str
+) -> tuple[threading.Event, threading.Thread, websocket.WebSocketApp]:
     """Wait for a specific log message."""
     hostname = cast(str, urlparse(host).hostname)
     instance = hostname.removesuffix(".canvasmedical.com")
@@ -362,4 +357,4 @@ def wait_for_log(host: str, token: str, message: str) -> threading.Event:
 
     connected_event.wait(timeout=5.0)
 
-    return message_received_event
+    return message_received_event, thread, ws
