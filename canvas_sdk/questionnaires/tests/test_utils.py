@@ -6,7 +6,7 @@ import yaml
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventRequest, EventType
-from canvas_sdk.questionnaires import from_yaml
+from canvas_sdk.questionnaires import questionnaire_from_yaml
 from plugin_runner.plugin_runner import LOADED_PLUGINS
 from settings import PLUGIN_DIRECTORY
 
@@ -56,4 +56,4 @@ def test_from_yaml_forbidden_questionnaire(
 
 def test_from_yaml_non_plugin_caller() -> None:
     """Test that the from_yaml function returns None when called outside a plugin."""
-    assert from_yaml("questionnaires/example_questionnaire.yml") is None
+    assert questionnaire_from_yaml("questionnaires/example_questionnaire.yml") is None
