@@ -217,7 +217,7 @@ async def synchronize_plugins(max_iterations: None | int = None) -> None:
         max_iterations is None or iterations < max_iterations
     ):  # max_iterations == -1 means infinite iterations
         iterations += 1
-        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
+        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
         if message is not None:
             log.info("Received message from pubsub channel")
 
