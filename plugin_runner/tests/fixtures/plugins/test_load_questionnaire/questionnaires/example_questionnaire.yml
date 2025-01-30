@@ -9,7 +9,6 @@ scoring_code: QUES_EXAMPLE_SCORING_CODE
 content: ''
 prologue: This is an example of a structured assessment with single select, multiselect, and free text responses.
 use_in_shx: true
-expected_completion_time: 1
 questions:
   - name: "This is question #1"
     code_system: CPT

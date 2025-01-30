@@ -3,7 +3,7 @@ import json
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.questionnaires import from_yaml
+from canvas_sdk.questionnaires import questionnaire_from_yaml
 
 
 class ValidQuestionnaire(BaseProtocol):
@@ -13,7 +13,7 @@ class ValidQuestionnaire(BaseProtocol):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        config = from_yaml("questionnaires/example_questionnaire.yml")
+        config = questionnaire_from_yaml("questionnaires/example_questionnaire.yml")
         return [Effect(payload=json.dumps(config))]
 
 
@@ -24,7 +24,7 @@ class InvalidQuestionnaire(BaseProtocol):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        from_yaml("questionnaires/example_questionnaire1.yml")
+        questionnaire_from_yaml("questionnaires/example_questionnaire1.yml")
         return []
 
 
@@ -35,5 +35,5 @@ class ForbiddenQuestionnaire(BaseProtocol):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        from_yaml("../../questionnaires/example_questionnaire.yml")
+        questionnaire_from_yaml("../../questionnaires/example_questionnaire.yml")
         return []
