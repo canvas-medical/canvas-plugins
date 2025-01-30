@@ -1,44 +1,6 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[project]
-name = "canvas"
-version = "0.16.0"
-description = "SDK to customize event-driven actions in your Canvas instance"
-authors = [{ name = "Canvas Team", email = "engineering@canvasmedical.com" }]
-requires-python = ">=3.11,<3.13"
-readme = "README.md"
-license = "MIT"
-dependencies = [
-  "cookiecutter",
-  "cron-converter>=1.2.1,<2",
-  "deprecation>=2.1.0,<3",
-  "django>=5.1.1,<6",
-  "django-stubs[compatible-mypy]>=5.1.1,<6",
-  "django-timezone-utils>=0.15.0,<0.16",
-  "env-tools>=2.4.0,<3",
-  "grpcio>=1.60.1,<2",
-  "ipython>=8.21.0,<9",
-  "jsonschema>=4.21.1,<5",
-  "keyring",
-  "protobuf>=4.25.3,<5",
-  "psycopg[binary]>=3.2.2,<4",
-  "pydantic>=2.6.1,<3",
-  "pyjwt==2.10.1",
-  "python-dotenv>=1.0.1,<2",
-  "rapidfuzz>=3.10.1,<4",
-  "redis>=5.0.4,<6",
-  "requests",
-  "restrictedpython~=7.1",
-  "statsd>=4.0.1,<5",
-  "typer",
-  "typing-extensions>=4.8,<4.13",
-  "websocket-client>=1.7.0,<2"
-]
-
-[project.scripts]
-canvas = "canvas_cli.main:app"
+requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
@@ -55,15 +17,68 @@ dev = [
   "types-requests"
 ]
 
+[project]
+authors = [{email = "engineering@canvasmedical.com", name = "Canvas Team"}]
+dependencies = [
+  "cookiecutter",
+  "cron-converter>=1.2.1,<2",
+  "deprecation>=2.1.0,<3",
+  "django-stubs[compatible-mypy]>=5.1.1,<6",
+  "django-timezone-utils>=0.15.0,<0.16",
+  "django>=5.1.1,<6",
+  "env-tools>=2.4.0,<3",
+  "grpcio>=1.60.1,<2",
+  "ipython>=8.21.0,<9",
+  "jsonschema>=4.21.1,<5",
+  "keyring",
+  "protobuf>=4.25.3,<5",
+  "psycopg[binary]>=3.2.2,<4",
+  "pydantic>=2.6.1,<3",
+  "pyjwt==2.10.1",
+  "python-dotenv>=1.0.1,<2",
+  "rapidfuzz>=3.10.1,<4",
+  "redis>=5.0.4,<6",
+  "requests",
+  "restrictedpython>=8.0",
+  "statsd>=4.0.1,<5",
+  "typer",
+  "typing-extensions>=4.8,<4.13",
+  "websocket-client>=1.7.0,<2"
+]
+description = "SDK to customize event-driven actions in your Canvas instance"
+license = "MIT"
+name = "canvas"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+version = "0.16.0"
+
+[project.scripts]
+canvas = "canvas_cli.main:app"
+
 [tool.django-stubs]
 django_settings_module = "settings"
 
-[tool.uv]
+[tool.hatch.build.targets.sdist]
+include = [
+  "canvas_cli",
+  "canvas_generated",
+  "canvas_sdk",
+  "logger",
+  "plugin_runner",
+  "pubsub",
+  "settings.py"
+]
 
-[[tool.uv.index]]
-name = "PyPI"
-url = "https://pypi.org/simple/"
-default = true
+[tool.hatch.build.targets.wheel]
+include = [
+  "canvas_cli",
+  "canvas_generated",
+  "canvas_sdk",
+  "logger",
+  "plugin_runner",
+  "pubsub",
+  "settings.py"
+]
 
 [tool.mypy]
 check_untyped_defs = true
@@ -92,28 +107,6 @@ warn_redundant_casts = true
 warn_return_any = false
 warn_unreachable = true
 warn_unused_ignores = true
-
-[tool.hatch.build.targets.sdist]
-include = [
-  "canvas_cli",
-  "canvas_generated",
-  "canvas_sdk",
-  "logger",
-  "plugin_runner",
-  "pubsub",
-  "settings.py"
-]
-
-[tool.hatch.build.targets.wheel]
-include = [
-  "canvas_cli",
-  "canvas_generated",
-  "canvas_sdk",
-  "logger",
-  "plugin_runner",
-  "pubsub",
-  "settings.py"
-]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -172,3 +165,10 @@ match = "main"
 tag_format = "{version}"
 version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
+
+[tool.uv]
+
+[[tool.uv.index]]
+default = true
+name = "PyPI"
+url = "https://pypi.org/simple/"
