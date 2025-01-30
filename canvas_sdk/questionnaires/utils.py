@@ -1,7 +1,10 @@
+import functools
+import json
 from pathlib import Path
 from typing import Any, TypedDict
 
 import yaml
+from jsonschema import validate
 
 from canvas_sdk.utils.plugins import plugin_only
 
@@ -43,7 +46,6 @@ class QuestionnaireConfig(TypedDict):
     content: str
     prologue: str
     use_in_shx: bool
-    expected_completion_time: float
     questions: list[Question]
 
 
@@ -63,6 +65,7 @@ def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | N
         FileNotFoundError: If the questionnaire file does not exist within the plugin's directory
             or if the resolved path is invalid.
         PermissionError: If the resolved path is outside the plugin's directory.
+        ValidationError: If the questionnaire file does not conform to the JSON schema.
     """
     plugin_dir = kwargs["plugin_dir"]
     questionnaire_config_path = Path(plugin_dir / questionnaire_name.lstrip("/")).resolve()
@@ -73,5 +76,16 @@ def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | N
         raise FileNotFoundError(f"Questionnaire {questionnaire_name} not found.")
 
     questionnaire_config = yaml.load(questionnaire_config_path.read_text(), Loader=yaml.SafeLoader)
+    validate(questionnaire_config, json_schema())
 
     return questionnaire_config
+
+
+@functools.cache
+def json_schema() -> dict[str, Any]:
+    """Reads the JSON schema for a Questionnaire Config."""
+    schema = json.loads(
+        (Path(__file__).resolve().parent.parent.parent / "schemas/questionnaire.json").read_text()
+    )
+
+    return schema

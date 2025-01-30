@@ -23,7 +23,6 @@
         "content": { "type": "string" },
         "prologue": { "type": "string" },
         "use_in_shx": { "type": "boolean" },
-        "expected_completion_time": { "type": "number" },
         "questions": {
             "type": "array",
             "minItems": 1,
@@ -68,5 +67,5 @@
             }
         }
     },
-    "required": ["name", "use_case_in_charting", "code_system", "code", "questions", "expected_completion_time"]
+    "required": ["name", "use_case_in_charting", "code_system", "code", "questions"]
 }
