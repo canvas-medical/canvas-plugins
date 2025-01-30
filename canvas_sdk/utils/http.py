@@ -155,6 +155,7 @@ class Http:
         """Sends a PATCH request."""
         return self.session.patch(url, json=json, data=data, headers=headers)
 
+    @measure_time
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
