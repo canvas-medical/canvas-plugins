@@ -94,6 +94,8 @@ def batch_patch(
 class Http:
     """A helper class for completing HTTP calls with metrics tracking."""
 
+    _MAX_WORKER_TIMEOUT_SECONDS = 30
+
     def __init__(self) -> None:
         self.session = requests.Session()
         self.statsd_client = statsd.StatsClient()
@@ -159,7 +161,6 @@ class Http:
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
-        max_workers: int | None = None,
         timeout: int | None = None,
     ) -> list[requests.Response]:
         """
@@ -168,9 +169,16 @@ class Http:
         Wait for the responses to complete, and then return a list of the responses in the same
         ordering as the requests.
         """
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        if timeout is None:
+            timeout = self._MAX_WORKER_TIMEOUT_SECONDS
+        elif timeout < 1 or timeout > self._MAX_WORKER_TIMEOUT_SECONDS:
+            raise ValueError(
+                f"Timeout value must be greater than 0 and less than {self._MAX_WORKER_TIMEOUT_SECONDS} seconds"
+            )
+
+        with ThreadPoolExecutor() as executor:
             futures = [executor.submit(request.fn(self)) for request in batch_requests]
 
-            # TODO: Is there a need to expose return_when or specify a different default value? https://docs.python.org/3.12/library/concurrent.futures.html#concurrent.futures.wait
             concurrent.futures.wait(futures, timeout=timeout)
+
             return [future.result() for future in futures]
