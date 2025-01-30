@@ -45,6 +45,7 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.events",
         "canvas_sdk.handlers",
         "canvas_sdk.protocols",
+        "canvas_sdk.questionnaires",
         "canvas_sdk.utils",
         "canvas_sdk.templates",
         "canvas_sdk.v1",
@@ -229,7 +230,7 @@ class Sandbox:
                 node = self.node_contents_visit(node)
                 new_node = ast.Call(
                     func=ast.Name("_getattr_", ast.Load()),
-                    args=[node.value, ast.Str(node.attr)],
+                    args=[node.value, ast.Constant(node.attr)],
                     keywords=[],
                 )
 

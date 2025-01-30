@@ -1,13 +1,15 @@
-import inspect
 from pathlib import Path
 from typing import Any
 
 from django.template import Context, Template
 
-from settings import PLUGIN_DIRECTORY
+from canvas_sdk.utils.plugins import plugin_only
 
 
-def render_to_string(template_name: str, context: dict[str, Any] | None = None) -> str | None:
+@plugin_only
+def render_to_string(
+    template_name: str, context: dict[str, Any] | None = None, **kwargs: Any
+) -> str | None:
     """Load a template and render it with the given context.
 
     Args:
@@ -15,6 +17,7 @@ def render_to_string(template_name: str, context: dict[str, Any] | None = None) 
             If the path starts with a forward slash ("/"), it will be stripped during resolution.
         context (dict[str, Any] | None): A dictionary of variables to pass to the template
             for rendering. Defaults to None, which uses an empty context.
+        kwargs (Any): Additional keyword arguments.
 
     Returns:
         str: The rendered template as a string.
@@ -23,15 +26,7 @@ def render_to_string(template_name: str, context: dict[str, Any] | None = None) 
         FileNotFoundError: If the template file does not exist within the plugin's directory
             or if the resolved path is invalid.
     """
-    plugins_dir = Path(PLUGIN_DIRECTORY).resolve()
-    current_frame = inspect.currentframe()
-    caller = current_frame.f_back if current_frame else None
-
-    if not caller or "__is_plugin__" not in caller.f_globals:
-        return None
-
-    plugin_name = caller.f_globals["__name__"].split(".")[0]
-    plugin_dir = plugins_dir / plugin_name
+    plugin_dir = kwargs["plugin_dir"]
     template_path = Path(plugin_dir / template_name.lstrip("/")).resolve()
 
     if not template_path.is_relative_to(plugin_dir):
