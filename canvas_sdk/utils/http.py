@@ -167,12 +167,9 @@ class Http:
         Wait for the responses to complete, and then return a list of the responses in the same
         ordering as the requests.
         """
-        futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            for request in batch_requests:
-                futures.append(executor.submit(request.fn(self)))
+            futures = [executor.submit(request.fn(self)) for request in batch_requests]
 
             # TODO: Is there a need to expose return_when or specify a different default value? https://docs.python.org/3.12/library/concurrent.futures.html#concurrent.futures.wait
             concurrent.futures.wait(futures, timeout=timeout)
-
-        return [future.result() for future in futures]
+            return [future.result() for future in futures]
