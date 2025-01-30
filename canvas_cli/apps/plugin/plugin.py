@@ -40,7 +40,7 @@ def validate_package(package: Path) -> Path:
 
 
 def _build_package(package: Path) -> Path:
-    """Runs `poetry build` on `package` and returns the built archive, ignoring symlinks, hidden folders, and hidden files."""
+    """Compresses `package` and returns the built archive, ignoring symlinks, hidden folders, and hidden files."""
     package = package.resolve()
 
     if not package.exists() or not package.is_dir():

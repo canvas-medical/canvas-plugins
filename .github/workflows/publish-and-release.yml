@@ -27,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PROJECT_AND_REPO_PAT }}
-      - uses: ./.github/actions/install-python-and-poetry
+      - uses: ./.github/actions/install-python-and-uv
       - uses: ./.github/actions/install-canvas
 
       - name: Python Semantic Release
@@ -39,7 +39,7 @@ jobs:
         run: |
           git config --global user.name "$GIT_COMMITTER_NAME"
           git config --global user.email "$GIT_COMMITTER_EMAIL"
-          poetry run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") version
+          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") version
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -49,4 +49,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_AND_REPO_PAT }}
         run: |
-          poetry run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
+          uv run semantic-release --strict -vv $([ "${{ inputs.dry-run }}" == "true" ] && echo "--noop") publish --tag ${{ steps.release.outputs.tag }}
