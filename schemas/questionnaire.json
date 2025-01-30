@@ -3,26 +3,38 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-        "name": { "type": "string" },
+        "name": { "type": "string", "description": "Name of the Questionnaire." },
         "use_case_in_charting": {
             "type": "string",
-            "enum": ["QUES", "SA", "EXAM", "ROS"]
+            "enum": ["QUES", "SA", "EXAM", "ROS"],
+            "description": "Specifies the use case: QUES (Questionnaire), SA (Structured Assessment), EXAM (Physical Exam), or ROS (Review of Systems)."
         },
         "code_system": {
             "type": "string",
-            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+            "description": "The coding system used for the questionnaire."
         },
-        "code": { "type": "string" },
-        "can_originate_in_charting": { "type": "boolean" },
-        "search_tags":{ "type": "string", "description": "Testing" },
+        "code": { "type": "string",
+            "description": "The assigned code for the questionnaire.",
+            "examples": ["72109-2"]
+        },
+        "can_originate_in_charting": { "type": "boolean", "description": "Specifies if the questionnaire can be initiated from charting." },
+        "search_tags":{ "type": "string", "description": "Keywords to facilitate searching for the questionnaire." },
         "scoring_code_system": {
             "type": "string",
-            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+            "description": "The coding system used for the scoring."
         },
-        "scoring_code": { "type": "string" },
-        "content": { "type": "string" },
-        "prologue": { "type": "string" },
-        "use_in_shx": { "type": "boolean" },
+        "scoring_code": { "type": "string",
+            "description": "The assigned code for scoring, if applicable."
+        },
+        "content": { "type": "string",
+            "description": "Additional content or instructions related to the questionnaire. Recommended to leave blank if not applicable."
+        },
+        "prologue": { "type": "string", "description": "Text displayed at the beginning of the questionnaire to provide context to the user." },
+        "use_in_shx": { "type": "boolean",
+            "description": "Determines if completion information should be displayed in the Social History (SHX) section."
+        },
         "questions": {
             "type": "array",
             "minItems": 1,
@@ -30,23 +42,28 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                    "name": { "type": "string" },
+                    "name": { "type": "string", "description": "Name of the Question. This is the text displayed when the command is selected." },
                     "code_system": {
                         "type": "string",
-                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"]
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
+                        "description": "The coding system used for the question."
                     },
-                    "code": { "type": "string" },
-                    "code_description": { "type": "string" },
-                    "content": { "type": "string" },
+                    "code": { "type": "string", "description": "The assigned code for the question. Codes should be unique within the same questionnaire." },
+                    "code_description": { "type": "string", "description": "A description of the assigned code." },
+                    "content": { "type": "string", "description": "The text displayed when the command is printed. Should match 'name'." },
                     "responses_code_system": {
                         "type": "string",
-                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"]
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+                        "description": "The coding system for responses."
                     },
                     "responses_type": {
                         "type": "string",
-                        "enum": ["SING", "MULT", "TXT"]
+                        "enum": ["SING", "MULT", "TXT"],
+                        "description": "Response type: SING (Single Select), MULT (Multi Select), TXT (Free Text)."
                     },
-                    "use_in_shx": { "type": "boolean" },
+                    "use_in_shx": { "type": "boolean",
+                        "description": "Determines if the response should be shown in the Social History (SHX) section."
+                    },
                     "responses": {
                         "type": "array",
                         "minItems": 1,
@@ -54,18 +71,18 @@
                             "type": "object",
                             "additionalProperties": false,
                             "properties": {
-                                "name": { "type": "string" },
-                                "code": { "type": "string" },
-                                "code_description": { "type": "string" },
-                                "value": { "type": "string" }
+                                "name": { "type": "string", "description": "For SING/MULT, this is the text that will be displayed for each response. For TXT, use 'TXT'." },
+                                "code": { "type": "string", "description": "The assigned code for the response. No response codes should be reused within the same question." },
+                                "code_description": { "type": "string", "description": "A description of the assigned code." },
+                                "value": { "type": "string", "description": "For SING/MULT, leave blank if no scoring is desired. If scoring is desired, insert the numerical value assigned." }
                             },
                             "required": ["name", "code"]
                         }
                     }
                 },
-                "required": ["name", "code_system", "code", "responses"]
+                "required": ["name", "code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
             }
         }
     },
-    "required": ["name", "use_case_in_charting", "code_system", "code", "questions"]
+    "required": ["name", "use_case_in_charting", "code_system", "code", "can_originate_in_charting", "search_tags", "questions"]
 }
