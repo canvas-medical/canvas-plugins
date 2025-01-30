@@ -1,14 +1,17 @@
 import random
 import shutil
 import string
+import threading
 from contextlib import chdir
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import pytest
 import requests
+import websocket
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
@@ -187,17 +190,18 @@ class Protocol(BaseProtocol):
 def install_plugin(plugin_name: str, token: MaskedValue) -> None:
     """Install a plugin."""
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
-        requests.post(
+        response = requests.post(
             plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
             data={"is_enabled": True},
             files={"package": package},
             headers={"Authorization": f"Bearer {token.value}"},
         )
+        response.raise_for_status()
 
 
 def trigger_plugin_event(token: MaskedValue) -> None:
     """Trigger a plugin event."""
-    requests.post(
+    response = requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/",
         headers={
             "Authorization": f"Bearer {token.value}",
@@ -212,18 +216,22 @@ def trigger_plugin_event(token: MaskedValue) -> None:
             "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
         },
     )
+    response.raise_for_status()
 
 
 def get_original_note_body_commands(new_note_id: int, token: MaskedValue) -> list[str]:
     """Get the commands from the original note body."""
-    original_note = requests.get(
+    response = requests.get(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/{new_note_id}",
         headers={
             "Authorization": f"Bearer {token.value}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         },
-    ).json()
+    )
+    response.raise_for_status()
+
+    original_note = response.json()
 
     body = original_note["body"]
     return [
@@ -243,18 +251,21 @@ def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
         shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
 
     # disable
-    requests.patch(
+    response = requests.patch(
         plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_name),
         data={"is_enabled": False},
         headers={
             "Authorization": f"Bearer {token.value}",
         },
     )
+    response.raise_for_status()
+
     # delete
-    requests.delete(
+    response = requests.delete(
         plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_name),
         headers={"Authorization": f"Bearer {token.value}"},
     )
+    response.raise_for_status()
 
 
 # For reuse with the protocol code
@@ -287,21 +298,63 @@ def create_new_note(token: MaskedValue) -> dict:
         "note_type_version": 1,
         "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
     }
-    return requests.post(
+    response = requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/", headers=headers, json=data
-    ).json()
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def get_token() -> MaskedValue:
     """Get a valid token."""
-    return MaskedValue(
-        requests.post(
-            f"{settings.INTEGRATION_TEST_URL}/auth/token/",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "grant_type": "client_credentials",
-                "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
-                "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
-            },
-        ).json()["access_token"]
+    response = requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "grant_type": "client_credentials",
+            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+        },
     )
+    response.raise_for_status()
+
+    return MaskedValue(response.json()["access_token"])
+
+
+def wait_for_log(
+    host: str, token: str, message: str
+) -> tuple[threading.Event, threading.Thread, websocket.WebSocketApp]:
+    """Wait for a specific log message."""
+    hostname = cast(str, urlparse(host).hostname)
+    instance = hostname.removesuffix(".canvasmedical.com")
+
+    websocket_uri = f"wss://logs.console.canvasmedical.com/{instance}?token={token}"
+
+    connected_event = threading.Event()
+    message_received_event = threading.Event()
+
+    def _on_message(ws: websocket.WebSocket, received_message: str) -> None:
+        try:
+            if "Log stream connected" in received_message:
+                connected_event.set()
+            if message.lower() in received_message.lower():
+                message_received_event.set()
+                ws.close()
+        except Exception as ex:
+            print(f"Error processing message: {ex}")
+
+    def _on_error(ws: websocket.WebSocket, error: str) -> None:
+        print(f"WebSocket error: {error}")
+
+    ws = websocket.WebSocketApp(
+        websocket_uri,
+        on_message=_on_message,
+        on_error=_on_error,
+    )
+
+    thread = threading.Thread(target=ws.run_forever)
+    thread.start()
+
+    connected_event.wait(timeout=5.0)
+
+    return message_received_event, thread, ws

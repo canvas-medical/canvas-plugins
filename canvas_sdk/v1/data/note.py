@@ -120,6 +120,8 @@ class NoteType(models.Model):
     deprecated_at = models.DateTimeField()
     is_patient_required = models.BooleanField()
     allow_custom_title = models.BooleanField()
+    is_scheduleable_via_patient_portal = models.BooleanField()
+    online_duration = models.IntegerField()
 
 
 class Note(models.Model):
@@ -133,7 +135,9 @@ class Note(models.Model):
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, null=True)
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="notes", null=True
+    )
     provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )

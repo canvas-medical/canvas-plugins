@@ -6,6 +6,7 @@ manifest_schema = {
         "name": {"type": "string"},
         "description": {"type": "string"},
         "secrets": {"type": "array", "items": {"type": "string"}},
+        "origins": {"$ref": "#/$defs/origins"},
         "components": {
             "type": "object",
             "properties": {
@@ -55,6 +56,13 @@ manifest_schema = {
     ],
     "additionalProperties": False,
     "$defs": {
+        "origins": {
+            "type": "object",
+            "properties": {
+                "urls": {"type": "array", "items": {"type": "string"}},
+                "scripts": {"type": "array", "items": {"type": "string"}},
+            },
+        },
         "component": {
             "type": "array",
             "items": {
@@ -88,9 +96,8 @@ manifest_schema = {
                     "description": {"type": "string", "maxLength": 256},
                     "icon": {"type": "string"},
                     "scope": {"type": "string", "enum": ["patient_specific", "global"]},
-                    "origins": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["class", "icon", "scope", "name", "description", "origins"],
+                "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
             },
         },

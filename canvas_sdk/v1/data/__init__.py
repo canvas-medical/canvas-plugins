@@ -1,7 +1,11 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .appointment import Appointment
+from .assessment import Assessment
 from .billing import BillingLineItem
+from .care_team import CareTeamMembership, CareTeamRole
 from .command import Command
 from .condition import Condition, ConditionCoding
+from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -25,7 +29,13 @@ from .observation import (
     ObservationValueCoding,
 )
 from .organization import Organization
-from .patient import Patient
+from .patient import (
+    Patient,
+    PatientAddress,
+    PatientContactPoint,
+    PatientExternalIdentifier,
+    PatientSetting,
+)
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -43,13 +53,18 @@ from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
 __all__ = [
+    "Appointment",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "Assessment",
     "BillingLineItem",
     "CanvasUser",
+    "CareTeamMembership",
+    "CareTeamRole",
     "Command",
     "Condition",
     "ConditionCoding",
+    "Coverage",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -78,6 +93,10 @@ __all__ = [
     "ObservationValueCoding",
     "Organization",
     "Patient",
+    "PatientAddress",
+    "PatientContactPoint",
+    "PatientExternalIdentifier",
+    "PatientSetting",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
@@ -91,4 +110,7 @@ __all__ = [
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "Transactor",
+    "TransactorAddress",
+    "TransactorPhone",
 ]

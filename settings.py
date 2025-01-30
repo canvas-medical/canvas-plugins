@@ -72,3 +72,13 @@ PLUGIN_DIRECTORY = os.getenv(
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
+
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": False,
+        "OPTIONS": {},
+    },
+]

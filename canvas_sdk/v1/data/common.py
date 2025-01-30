@@ -101,3 +101,56 @@ class Origin(models.TextChoices):
     FLAGGED_POSTING_REVIEW = ("FLG_PST_REV", "Flagged posting review")
     BATCH_PATIENT_STATEMENTS = ("BAT_PTN_STA", "Batch patient statements")
     INCOMPLETE_COVERAGE = ("INC_COV", "Incomplete Coverage")
+
+
+class ContactPointSystem(models.TextChoices):
+    """ContactPointSystem."""
+
+    PHONE = "phone", "phone"
+    FAX = "fax", "fax"
+    EMAIL = "email", "email"
+    PAGER = "pager", "pager"
+    OTHER = "other", "other"
+
+
+class ContactPointUse(models.TextChoices):
+    """ContactPointUse."""
+
+    HOME = "home", "Home"
+    WORK = "work", "Work"
+    TEMP = "temp", "Temp"
+    OLD = "old", "Old"
+    OTHER = "other", "Other"
+    MOBILE = "mobile", "Mobile"
+    AUTOMATION = "automation", "Automation"
+
+
+class ContactPointState(models.TextChoices):
+    """ContactPointState."""
+
+    ACTIVE = "active", "Active"
+    DELETED = "deleted", "Deleted"
+
+
+class AddressUse(models.TextChoices):
+    """AddressUse."""
+
+    HOME = "home", "Home"
+    WORK = "work", "Work"
+    TEMP = "temp", "Temp"
+    OLD = "old", "Old"
+
+
+class AddressType(models.TextChoices):
+    """AddressType."""
+
+    POSTAL = "postal", "Postal"
+    PHYSICAL = "physical", "Physical"
+    BOTH = "both", "Both"
+
+
+class AddressState(models.TextChoices):
+    """AddressState."""
+
+    ACTIVE = "active", "Active"
+    DELETED = "deleted", "Deleted"

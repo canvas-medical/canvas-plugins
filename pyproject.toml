@@ -47,7 +47,7 @@ packages = [
   {include = "settings.py"}
 ]
 readme = "README.md"
-version = "0.14.0"
+version = "0.16.0"
 
 [tool.poetry.dependencies]
 cookiecutter = "*"
@@ -70,7 +70,7 @@ python-dotenv = "^1.0.1"
 rapidfuzz = "^3.10.1"
 redis = "^5.0.4"
 requests = "*"
-restrictedpython = "^7.1"
+restrictedpython = ">=7.1,<9.0"
 statsd = "^4.0.1"
 typer = {version = "*"}
 typing-extensions = ">=4.8,<4.13"

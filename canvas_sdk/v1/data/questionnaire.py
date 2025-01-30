@@ -1,10 +1,14 @@
 from collections.abc import Container
+from typing import cast
 
 from django.db import models
 from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
-    CommittableModelManager,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
     ValueSetLookupByNameQuerySet,
 )
 
@@ -123,6 +127,15 @@ class QuestionnaireQuestionMap(models.Model):
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, null=True)
 
 
+class InterviewQuerySet(BaseQuerySet, ForPatientQuerySetMixin, CommittableQuerySetMixin):
+    """InterviewQuerySet."""
+
+    pass
+
+
+InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
+
+
 class Interview(models.Model):
     """Interview."""
 
@@ -130,7 +143,7 @@ class Interview(models.Model):
         managed = False
         db_table = "canvas_sdk_data_api_interview_001"
 
-    objects = CommittableModelManager()
+    objects = cast(InterviewQuerySet, InterviewManager())
 
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)

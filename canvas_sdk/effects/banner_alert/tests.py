@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
-from canvas_sdk.commands.tests.test_utils import MaskedValue
+from canvas_sdk.commands.tests.test_utils import MaskedValue, wait_for_log
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
 
 runner = CliRunner()
@@ -23,17 +23,18 @@ runner = CliRunner()
 @pytest.fixture(scope="session")
 def token() -> MaskedValue:
     """Get a valid token."""
-    return MaskedValue(
-        requests.post(
-            f"{settings.INTEGRATION_TEST_URL}/auth/token/",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "grant_type": "client_credentials",
-                "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
-                "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
-            },
-        ).json()["access_token"]
+    response = requests.post(
+        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "grant_type": "client_credentials",
+            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
+            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
+        },
     )
+    response.raise_for_status()
+
+    return MaskedValue(response.json()["access_token"])
 
 
 @pytest.fixture(scope="session")
@@ -44,7 +45,9 @@ def first_patient_id(token: MaskedValue) -> dict:
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-    patients = requests.get(f"{settings.INTEGRATION_TEST_URL}/api/Patient", headers=headers).json()
+    response = requests.get(f"{settings.INTEGRATION_TEST_URL}/api/Patient", headers=headers)
+    response.raise_for_status()
+    patients = response.json()
     return patients["entry"][0]["resource"]["key"]
 
 
@@ -89,41 +92,58 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+        message_received_event, thread, ws = wait_for_log(
+            settings.INTEGRATION_TEST_URL,
+            token.value,
+            f"Loading plugin '{plugin_name}",
+        )
+
         # install the plugin
-        requests.post(
+        response = requests.post(
             plugin_url(settings.INTEGRATION_TEST_URL),
             data={"is_enabled": True},
             files={"package": package},
             headers={"Authorization": f"Bearer {token.value}"},
         )
+        response.raise_for_status()
+
+        message_received_event.wait(timeout=5.0)
 
     yield
+
+    ws.close()
+    thread.join()
 
     # clean up
     if Path(f"./custom-plugins/{plugin_name}").exists():
         shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
 
     # disable
-    requests.patch(
+    response = requests.patch(
         plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
         data={"is_enabled": False},
         headers={
             "Authorization": f"Bearer {token.value}",
         },
     )
+    response.raise_for_status()
+
     # delete
-    requests.delete(
+    response = requests.delete(
         plugin_url(settings.INTEGRATION_TEST_URL, plugin_name),
         headers={"Authorization": f"Bearer {token.value}"},
     )
+    response.raise_for_status()
 
     # confirm no more banner
-    patient_banners_none = requests.get(
+    response = requests.get(
         f"{settings.INTEGRATION_TEST_URL}/api/BannerAlert/?patient__key={first_patient_id}",
         headers={
             "Authorization": f"Bearer {token.value}",
         },
-    ).json()
+    )
+    response.raise_for_status()
+    patient_banners_none = response.json()
     patient_banner = next(
         (b for b in patient_banners_none["results"] if b["key"] == plugin_name), None
     )
@@ -139,7 +159,7 @@ def test_protocol_that_adds_banner_alert(
 ) -> None:
     """Test that the protocol adds a banner alert."""
     # trigger the event
-    requests.post(
+    response = requests.post(
         f"{settings.INTEGRATION_TEST_URL}/api/Note/",
         headers={
             "Authorization": f"Bearer {token.value}",
@@ -154,13 +174,17 @@ def test_protocol_that_adds_banner_alert(
             "lastModifiedBySessionKey": "8fee3c03a525cebee1d8a6b8e63dd4dg",
         },
     )
+    response.raise_for_status()
 
-    patient_banners = requests.get(
+    response = requests.get(
         f"{settings.INTEGRATION_TEST_URL}/api/BannerAlert/?patient__key={first_patient_id}",
         headers={
             "Authorization": f"Bearer {token.value}",
         },
-    ).json()
+    )
+    response.raise_for_status()
+
+    patient_banners = response.json()
     assert patient_banners["count"] > 0
 
     patient_banner = next(b for b in patient_banners["results"] if b["key"] == plugin_name)
