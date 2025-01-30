@@ -14,13 +14,6 @@ IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] ==
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 APP_NAME = os.getenv("APP_NAME")
 
-try:
-    # Aptible stores a unique identifier in this file
-    with open("/proc/sys/kernel/hostname") as file:
-        HOST_IDENTIFIER = file.read().strip()
-except FileNotFoundError:
-    HOST_IDENTIFIER = "localhost"
-
 INTEGRATION_TEST_URL = os.getenv("INTEGRATION_TEST_URL")
 INTEGRATION_TEST_CLIENT_ID = os.getenv("INTEGRATION_TEST_CLIENT_ID")
 INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
