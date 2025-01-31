@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import os
 from typing import Any
 
+from pubsub.asyncio.pubsub import Publisher as AsyncPublisher
 from pubsub.pubsub import Publisher
 
 
@@ -10,12 +12,18 @@ class PubSubLogHandler(logging.Handler):
 
     def __init__(self) -> None:
         self.publisher = Publisher()
+        self.async_publisher = AsyncPublisher()
         logging.Handler.__init__(self=self)
 
     def emit(self, record: Any) -> None:
         """Publishes the log message to the pub/sub channel."""
         message = self.format(record)
-        self.publisher.publish(message)
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.async_publisher.publish(message))
+        except RuntimeError:
+            self.publisher.publish(message)
 
 
 class PluginLogger:
