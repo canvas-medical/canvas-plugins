@@ -7,7 +7,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 
-
+# TODO: Auth requirements on the home-app side?
 # TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
 # TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body.
