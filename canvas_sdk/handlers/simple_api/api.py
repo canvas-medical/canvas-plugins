@@ -81,9 +81,10 @@ class SimpleAPI(BaseHandler):
                 method, relative_path = attr.route
                 route = (method, f"{prefix}{relative_path}")
 
-                if route in self._routes:
-                    raise RuntimeError("")
-
+                # We have to make sure that routes are only handled by one handler, but we can't do
+                # that here given that other plugins may also implement routes. So the check for
+                # duplicate routes has to happen elsewhere, external to the plugins that inherit
+                # from this class.
                 self._routes[route] = attr
 
     def compute(self) -> list[Effect]:
