@@ -54,6 +54,7 @@ def patch(path: str) -> Callable[[RouteHandler], RouteHandler]:
 
 def _handler_decorator(method: str, path: str) -> Callable[[RouteHandler], RouteHandler]:
     def decorator(handler: RouteHandler) -> RouteHandler:
+        """Mark the handler with the HTTP method and path."""
         handler.route = (method, path)  # type: ignore[attr-defined]
 
         return handler
@@ -69,15 +70,20 @@ class SimpleAPI(BaseHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        self._routes = {}
-
         prefix = self.PREFIX if hasattr(self, "PREFIX") else ""
 
+        # Build the registry of routes so that requests can be routed to the correct handler
+        self._routes: dict[tuple[str, str], Callable] = {}
         for name in dir(self):
             attr = getattr(self, name)
             if ismethod(attr) and hasattr(attr, "route"):
-                method, path = attr.route
-                self._routes[(method, f"{prefix}{path}")] = attr
+                method, relative_path = attr.route
+                route = (method, f"{prefix}{relative_path}")
+
+                if route in self._routes:
+                    raise RuntimeError()
+
+                self._routes[route] = attr
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
