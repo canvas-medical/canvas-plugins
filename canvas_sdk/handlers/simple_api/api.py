@@ -8,11 +8,11 @@ from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 
 
-# TODO: Error handling (duplicate routes)
-# TODO: Test error conditions on install/reload
-# TODO: Request: repeated headers
-# TODO: Request: body
-# TODO: Response object
+# TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
+# TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
+# TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body.
+# TODO: Error handling for duplicate routes; test install/reload
+# TODO: Response effect; disallow returning returning multiple response effects
 class Request:
     """Request class for incoming requests to the API."""
 
@@ -20,8 +20,9 @@ class Request:
         self.headers = event.context["headers"]
         self.method = event.context["method"]
         self.path = event.context["path"]
-        self.query_string = event.context["query-string"]
+        self.query_string = event.context["query_string"]
         self.query_params = parse_qs(self.query_string)
+        self.body = event.context["body"]
 
 
 RouteHandler = Callable[[Request], list[Effect]]
@@ -81,7 +82,7 @@ class SimpleAPI(BaseHandler):
                 route = (method, f"{prefix}{relative_path}")
 
                 if route in self._routes:
-                    raise RuntimeError()
+                    raise RuntimeError("")
 
                 self._routes[route] = attr
 
