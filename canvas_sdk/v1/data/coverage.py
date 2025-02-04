@@ -46,7 +46,7 @@ class CoverageRelationshipCode(models.TextChoices):
     """CoverageRelationshipCode."""
 
     SELF = "18", "Self"
-    SPOUSE = "01" "Spouse"
+    SPOUSE = "01Spouse"
     CHILD_INSURED_HAS_FINANCIAL_RESP = "19", "Natural Child, insured has financial responsibility"
     CHILD_HAS_FINANCIAL_RESP = "43", "Natural Child, insured does not have financial responsibility"
     STEP_CHILD = "17", "Step Child"

@@ -174,12 +174,12 @@ class Sandbox:
             ):
                 self.warn(
                     node,
-                    f'"{name}" is an invalid variable name because it ' 'starts with "_"',
+                    f'"{name}" is an invalid variable name because it starts with "_"',
                 )
             elif name.endswith("__roles__"):
                 self.error(
                     node,
-                    f'"{name}" is an invalid variable name because ' 'it ends with "__roles__".',
+                    f'"{name}" is an invalid variable name because it ends with "__roles__".',
                 )
             elif name in FORBIDDEN_FUNC_NAMES:
                 self.error(node, f'"{name}" is a reserved name.')
@@ -216,14 +216,13 @@ class Sandbox:
             if node.attr.startswith("_") and node.attr != "_":
                 self.warn(
                     node,
-                    f'"{node.attr}" is an invalid attribute name because it starts ' 'with "_".',
+                    f'"{node.attr}" is an invalid attribute name because it starts with "_".',
                 )
 
             if node.attr.endswith("__roles__"):
                 self.error(
                     node,
-                    f'"{node.attr}" is an invalid attribute name because it ends '
-                    'with "__roles__".',
+                    f'"{node.attr}" is an invalid attribute name because it ends with "__roles__".',
                 )
 
             if isinstance(node.ctx, ast.Load):
