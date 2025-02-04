@@ -7,6 +7,7 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import SimpleAPIResponse
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
+from plugin_runner.exceptions import PluginError
 
 # TODO: Auth requirements on the home-app side?
 # TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
@@ -14,21 +15,6 @@ from canvas_sdk.handlers.base import BaseHandler
 # TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body (like in FHIR).
 # TODO: 404 Not Found
 # TODO: Error handling for duplicate routes; test install/reload
-# TODO: Prevent subclasses from overloading any base class methods. Example:
-# class Base:
-#     def method(self):
-#         print("This method cannot be overridden.")
-#
-#     def __init_subclass__(cls, **kwargs):
-#         super().__init_subclass__(**kwargs)
-#         if 'method' in cls.__dict__:
-#             raise TypeError(f"{cls.__name__} is not allowed to override 'method'")
-#
-# class Derived(Base):
-#     def method(self):  # This will raise TypeError at runtime
-#         print("Attempting to override.")
-#
-# d = Derived()  # TypeError: Derived is not allowed to override 'method'
 
 
 class SimpleAPIRequest:
@@ -105,6 +91,21 @@ class SimpleAPI(BaseHandler):
                 # duplicate routes has to happen elsewhere, external to the plugins that inherit
                 # from this class.
                 self._routes[route] = attr
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Prevent developer-defined route methods from clashing with base class methods."""
+        super().__init_subclass__(**kwargs)
+
+        route_handler_method_names = {
+            name
+            for name, value in cls.__dict__.items()
+            if callable(value) and hasattr(value, "route")
+        }
+        for superclass in cls.__mro__[1:]:
+            if names := route_handler_method_names.intersection(superclass.__dict__):
+                raise PluginError(
+                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base class methods: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
+                )
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
