@@ -36,7 +36,12 @@
         "commands": [],
         "content": [],
         "effects": [],
-        "views": []
+        "views": [],
+        "questionnaires": [
+          {
+            "template": "questionnaires/example_questionnaire.yml"
+          }
+        ]
     },
     "secrets": [],
     "tags": {},

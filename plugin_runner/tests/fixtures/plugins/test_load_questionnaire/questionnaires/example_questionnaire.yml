@@ -6,7 +6,6 @@ code_system: LOINC
 code: QUES_EXAMPLE_NAME
 can_originate_in_charting: true
 prologue: This is an example of a structured assessment with single select, multiselect, and free text responses.
-display_results_in_social_history_section: true
 questions:
   - content: "This is question #1"
     code_system: CPT

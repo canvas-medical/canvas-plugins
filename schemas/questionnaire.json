@@ -38,7 +38,7 @@
                     },
                     "code": { "type": "string", "description": "The assigned code for the question. Codes should be unique within the same questionnaire." },
                     "code_description": { "type": "string", "description": "A description of the assigned code." },
-                    "content": { "type": "string", "description": "The text displayed when the command is printed. Should match 'name'." },
+                    "content": { "type": "string", "description": "The text displayed when the command is printed." },
                     "responses_code_system": {
                         "type": "string",
                         "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],

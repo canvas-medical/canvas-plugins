@@ -1,10 +1,11 @@
 import functools
 import json
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any, TypedDict
 
 import yaml
-from jsonschema import validate
+from jsonschema import Draft7Validator, validators
 
 from canvas_sdk.utils.plugins import plugin_only
 
@@ -49,6 +50,36 @@ class QuestionnaireConfig(TypedDict):
     questions: list[Question]
 
 
+def extend_with_defaults(validator_class: type[Draft7Validator]) -> type[Draft7Validator]:
+    """Extend a Draft7Validator with default values for properties."""
+    validate_properties = validator_class.VALIDATORS["properties"]
+
+    def set_defaults(
+        validator: Draft7Validator,
+        properties: dict[str, Any],
+        instance: dict[str, Any],
+        schema: dict[str, Any],
+    ) -> Generator[Any, None, None]:
+        for property, subschema in properties.items():
+            if "default" in subschema:
+                instance.setdefault(property, subschema["default"])
+
+        yield from validate_properties(
+            validator,
+            properties,
+            instance,
+            schema,
+        )
+
+    return validators.extend(
+        validator_class,
+        {"properties": set_defaults},
+    )
+
+
+ExtendedDraft7Validator = extend_with_defaults(Draft7Validator)
+
+
 @plugin_only
 def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | None:
     """Load a Questionnaire configuration from a YAML file.
@@ -76,7 +107,7 @@ def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | N
         raise FileNotFoundError(f"Questionnaire {questionnaire_name} not found.")
 
     questionnaire_config = yaml.load(questionnaire_config_path.read_text(), Loader=yaml.SafeLoader)
-    validate(questionnaire_config, json_schema())
+    ExtendedDraft7Validator(json_schema()).validate(questionnaire_config)
 
     return questionnaire_config
 
