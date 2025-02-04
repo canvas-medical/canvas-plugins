@@ -1,19 +1,37 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.simple_api import SimpleAPIResponse
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 
 # TODO: Auth requirements on the home-app side?
 # TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
-# TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body.
+# TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body (like in FHIR).
+# TODO: 404 Not Found
 # TODO: Error handling for duplicate routes; test install/reload
-# TODO: Response effect; disallow returning returning multiple response effects
-class Request:
+# TODO: Prevent subclasses from overloading any base class methods. Example:
+# class Base:
+#     def method(self):
+#         print("This method cannot be overridden.")
+#
+#     def __init_subclass__(cls, **kwargs):
+#         super().__init_subclass__(**kwargs)
+#         if 'method' in cls.__dict__:
+#             raise TypeError(f"{cls.__name__} is not allowed to override 'method'")
+#
+# class Derived(Base):
+#     def method(self):  # This will raise TypeError at runtime
+#         print("Attempting to override.")
+#
+# d = Derived()  # TypeError: Derived is not allowed to override 'method'
+
+
+class SimpleAPIRequest:
     """Request class for incoming requests to the API."""
 
     def __init__(self, event: Event) -> None:
@@ -21,11 +39,12 @@ class Request:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
-        self.query_params = parse_qs(self.query_string)
         self.body = event.context["body"]
 
+        self.query_params = parse_qs(self.query_string)
 
-RouteHandler = Callable[[Request], list[Effect]]
+
+RouteHandler = Callable[[SimpleAPIRequest], SimpleAPIResponse | list[SimpleAPIResponse | Effect]]
 
 
 def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
@@ -89,10 +108,37 @@ class SimpleAPI(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
-        request = Request(self.event)
+        request = SimpleAPIRequest(self.event)
 
+        # Get the handler method
         handler = self._routes.get((request.method, request.path))
         if not handler:
             return []
 
-        return handler(request)
+        # Handle the request
+        effects = handler(request)
+        if not isinstance(effects, Iterable):
+            effects = [effects]
+
+        # Transform any API responses into effects if they aren't already effects
+        response_count = 0
+        for index, effect in enumerate(effects):
+            if isinstance(effect, SimpleAPIResponse):
+                effects[index] = effect.apply()
+            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+                response_count += 1
+
+        # TODO: What should the behavior be for non-response effects if this error condition occurs?
+        # If there is more than one response, remove the responses and return an error response
+        # instead. Allow non-response effects to pass through unaffected.
+        if response_count > 1:
+            effects = [
+                effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
+            ]
+            effects.append(
+                SimpleAPIResponse(
+                    content={"error": "Multiple responses provided"}, status_code=500
+                ).apply()
+            )
+
+        return effects

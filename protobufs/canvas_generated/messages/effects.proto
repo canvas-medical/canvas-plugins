@@ -246,6 +246,8 @@ enum EffectType {
   REMOVE_BILLING_LINE_ITEM = 2032;
 
   LAUNCH_MODAL = 3000;
+
+  SIMPLE_API_RESPONSE = 4000;
 }
 
 message Effect {

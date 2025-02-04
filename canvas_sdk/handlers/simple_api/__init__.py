@@ -1,3 +1,3 @@
-from .api import Request, SimpleAPI
+from .api import SimpleAPI, SimpleAPIRequest
 
-__all__ = ["Request", "SimpleAPI"]
+__all__ = ["SimpleAPI", "SimpleAPIRequest"]
