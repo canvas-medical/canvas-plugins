@@ -20,7 +20,7 @@ jobs:
         id: set-sha
         uses: ./.github/actions/set-sha
 
-      - uses: ./.github/actions/install-python-and-poetry
+      - uses: ./.github/actions/install-python-and-uv
       - uses: ./.github/actions/install-canvas
 
       - name: Run the pre-commit hooks

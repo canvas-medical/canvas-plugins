@@ -1,0 +1,37 @@
+name: "Install Python and uv"
+description: "Installs Python using .python-version file's version, and uv with the given version"
+
+inputs:
+  UV_VERSION:
+    description: "uv version to install"
+    required: false
+    default: "0.5.23"
+  PYTHON_VERSION:
+    description: "Version range or exact version of Python or PyPy to use, using SemVer's version range syntax. Reads from .python-version if unset."
+    required: false
+    default: ""
+  CHECK_LATEST:
+    description: "If check-latest is set to true, the action first checks if the cached version is the latest one"
+    required: false
+    default: false
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      id: python-setup
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{inputs.PYTHON_VERSION}}
+        python-version-file: ".python-version"
+        check-latest: ${{inputs.CHECK_LATEST}}
+
+    - name: Set Python version in the environment
+      run: |
+        echo "PYTHON_VERSION=${{ steps.python-setup.outputs.python-version }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        version: ${{ inputs.UV_VERSION }}
