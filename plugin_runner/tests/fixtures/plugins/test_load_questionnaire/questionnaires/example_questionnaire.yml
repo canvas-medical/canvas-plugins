@@ -1,23 +1,20 @@
+# yaml-language-server: $schema=../../../../../../schemas/questionnaire.json
+
 name: Example Name
-use_case_in_charting: QUES
+form_type: QUES
 code_system: LOINC
 code: QUES_EXAMPLE_NAME
 can_originate_in_charting: true
-search_tags: "example structured assessment single select multiselect free text 1"
-scoring_code_system: LOINC
-scoring_code: QUES_EXAMPLE_SCORING_CODE
-content: ''
 prologue: This is an example of a structured assessment with single select, multiselect, and free text responses.
-use_in_shx: true
+display_results_in_social_history_section: true
 questions:
-  - name: "This is question #1"
+  - content: "This is question #1"
     code_system: CPT
     code: H0005
     code_description: ""
-    content: "This is question #1"
     responses_code_system: INTERNAL
     responses_type: SING
-    use_in_shx: true
+    display_result_in_social_history_section: true
     responses:
       - name: "Single select response #1"
         code: QUES_EXAMPLE_NAME_Q1_A1
@@ -31,14 +28,13 @@ questions:
         code: QUES_EXAMPLE_NAME_Q1_A3
         code_description: ''
         value: "0"
-  - name: "This is question #2"
+  - content: "This is question #2"
     code_system: INTERNAL
     code: QUES_EXAMPLE_NAME_Q2
     code_description: ""
-    content: "This is question #2"
     responses_code_system: ICD-10
     responses_type: MULT
-    use_in_shx: true
+    display_result_in_social_history_section: true
     responses:
       - name: "Multi select response #1"
         code: F1910
@@ -52,14 +48,13 @@ questions:
         code: QUES_EXAMPLE_NAME_Q1_A2
         code_description: ''
         value: "0"
-  - name: "This is question #3"
+  - content: "This is question #3"
     code_system: INTERNAL
     code: QUES_EXAMPLE_NAME_Q3
     code_description: ""
-    content: "This is question #3"
     responses_code_system: INTERNAL
     responses_type: TXT
-    use_in_shx: true
+    display_result_in_social_history_section: true
     responses:
       - name: "Free text response"
         code: QUES_EXAMPLE_NAME_Q3_A1

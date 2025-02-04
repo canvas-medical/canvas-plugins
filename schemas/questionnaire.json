@@ -4,7 +4,7 @@
     "additionalProperties": false,
     "properties": {
         "name": { "type": "string", "description": "Name of the Questionnaire." },
-        "use_case_in_charting": {
+        "form_type": {
             "type": "string",
             "enum": ["QUES", "SA", "EXAM", "ROS"],
             "description": "Specifies the use case: QUES (Questionnaire), SA (Structured Assessment), EXAM (Physical Exam), or ROS (Review of Systems)."
@@ -19,21 +19,10 @@
             "examples": ["72109-2"]
         },
         "can_originate_in_charting": { "type": "boolean", "description": "Specifies if the questionnaire can be initiated from charting." },
-        "search_tags":{ "type": "string", "description": "Keywords to facilitate searching for the questionnaire." },
-        "scoring_code_system": {
-            "type": "string",
-            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
-            "description": "The coding system used for the scoring."
-        },
-        "scoring_code": { "type": "string",
-            "description": "The assigned code for scoring, if applicable."
-        },
-        "content": { "type": "string",
-            "description": "Additional content or instructions related to the questionnaire. Recommended to leave blank if not applicable."
-        },
         "prologue": { "type": "string", "description": "Text displayed at the beginning of the questionnaire to provide context to the user." },
-        "use_in_shx": { "type": "boolean",
-            "description": "Determines if completion information should be displayed in the Social History (SHX) section."
+        "display_results_in_social_history_section": { "type": "boolean",
+            "description": "Determines if completion information should be displayed in the Social History (SHX) section.",
+            "default": false
         },
         "questions": {
             "type": "array",
@@ -42,7 +31,6 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                    "name": { "type": "string", "description": "Name of the Question. This is the text displayed when the command is selected." },
                     "code_system": {
                         "type": "string",
                         "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
@@ -61,8 +49,9 @@
                         "enum": ["SING", "MULT", "TXT"],
                         "description": "Response type: SING (Single Select), MULT (Multi Select), TXT (Free Text)."
                     },
-                    "use_in_shx": { "type": "boolean",
-                        "description": "Determines if the response should be shown in the Social History (SHX) section."
+                    "display_result_in_social_history_section": { "type": "boolean",
+                        "description": "Determines if the response should be shown in the Social History (SHX) section.",
+                        "default": false
                     },
                     "responses": {
                         "type": "array",
@@ -80,9 +69,9 @@
                         }
                     }
                 },
-                "required": ["name", "code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
+                "required": ["code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
             }
         }
     },
-    "required": ["name", "use_case_in_charting", "code_system", "code", "can_originate_in_charting", "search_tags", "questions"]
+    "required": ["name", "form_type", "code_system", "code", "can_originate_in_charting", "questions"]
 }
