@@ -4,6 +4,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.constants import Coding
+from canvas_sdk.v1.data import ReasonForVisitSettingCoding
 
 
 class ReasonForVisitCommand(_BaseCommand):
@@ -13,8 +14,7 @@ class ReasonForVisitCommand(_BaseCommand):
         key = "reasonForVisit"
 
     structured: bool = False
-    # how do we make sure that coding is a valid rfv coding from their home-app?
-    coding: Coding | None = None
+    coding: Coding | str | None = None
     comment: str | None = None
 
     def _get_error_details(
@@ -27,6 +27,18 @@ class ReasonForVisitCommand(_BaseCommand):
                     "value", "Structured RFV should have a coding.", self.coding
                 )
             )
+
+        if self.coding:
+            if isinstance(self.coding, str):
+                query = {"id": self.coding}
+                error_message = f"ReasonForVisitSettingCoding with id {self.coding} does not exist."
+            else:
+                query = {"code": self.coding["code"], "system": self.coding["system"]}
+                error_message = f"ReasonForVisitSettingCoding with code {self.coding['code']} and system {self.coding['system']} does not exist."
+            try:
+                ReasonForVisitSettingCoding.objects.get(**query)
+            except ReasonForVisitSettingCoding.DoesNotExist:
+                errors.append(self._create_error_detail("value", error_message, self.coding))
         return errors
 
     @classmethod
