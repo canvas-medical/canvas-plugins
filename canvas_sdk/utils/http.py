@@ -173,7 +173,7 @@ class Http:
             timeout = self._MAX_WORKER_TIMEOUT_SECONDS
         elif timeout < 1 or timeout > self._MAX_WORKER_TIMEOUT_SECONDS:
             raise ValueError(
-                f"Timeout value must be greater than 0 and less than {self._MAX_WORKER_TIMEOUT_SECONDS} seconds"
+                f"Timeout value must be greater than 0 and less than or equal to {self._MAX_WORKER_TIMEOUT_SECONDS} seconds"
             )
 
         with ThreadPoolExecutor() as executor:
