@@ -1,7 +1,7 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import Appointment
 from .assessment import Assessment
-from .billing import BillingLineItem
+from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
 from .command import Command
 from .condition import Condition, ConditionCoding
@@ -58,6 +58,7 @@ __all__ = [
     "AllergyIntoleranceCoding",
     "Assessment",
     "BillingLineItem",
+    "BillingLineItemModifier",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
