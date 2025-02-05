@@ -2,11 +2,11 @@ import json
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.questionnaires import questionnaire_from_yaml
 
 
-class ValidQuestionnaire(BaseProtocol):
+class ValidQuestionnaire(BaseHandler):
     """You should put a helpful description of this protocol's behavior here."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
@@ -17,7 +17,7 @@ class ValidQuestionnaire(BaseProtocol):
         return [Effect(payload=json.dumps(config))]
 
 
-class InvalidQuestionnaire(BaseProtocol):
+class InvalidQuestionnaire(BaseHandler):
     """You should put a helpful description of this protocol's behavior here."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
@@ -28,7 +28,7 @@ class InvalidQuestionnaire(BaseProtocol):
         return []
 
 
-class ForbiddenQuestionnaire(BaseProtocol):
+class ForbiddenQuestionnaire(BaseHandler):
     """You should put a helpful description of this protocol's behavior here."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]

@@ -22,14 +22,13 @@ class Response(TypedDict):
 class Question(TypedDict):
     """A Question of a Questionnaire."""
 
-    name: str
     code_system: str
     code: str
     code_description: str
     content: str
     responses_code_system: str
     responses_type: str
-    use_in_shx: bool
+    display_result_in_social_history_section: bool
     responses: list[Response]
 
 
@@ -37,16 +36,12 @@ class QuestionnaireConfig(TypedDict):
     """A Questionnaire configuration."""
 
     name: str
-    use_case_in_charting: str
+    form_type: str
     code_system: str
     code: str
     can_originate_in_charting: bool
-    search_tags: str
-    scoring_code_system: str
-    scoring_code: str
-    content: str
     prologue: str
-    use_in_shx: bool
+    display_results_in_social_history_section: bool
     questions: list[Question]
 
 
