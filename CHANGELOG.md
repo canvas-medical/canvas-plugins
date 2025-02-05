@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.18.0 (2025-02-05)
+
+### Bug Fixes
+
+- Add CANCEL_PRESCRIPTION, SNOOZE_PROTOCOL, UPDATE_DIAGNOSIS command events
+  ([#386](https://github.com/canvas-medical/canvas-plugins/pull/386),
+  [`d804f2b`](https://github.com/canvas-medical/canvas-plugins/commit/d804f2b5033a9b043378870f6284a954453d5e24))
+
+### Features
+
+- Add force option when uninstalling a plugin
+  ([#276](https://github.com/canvas-medical/canvas-plugins/pull/276),
+  [`6a861c6`](https://github.com/canvas-medical/canvas-plugins/commit/6a861c64c7022cc6028b777741b6b1f23e35a546))
+
+- Added team identifier to the AddTask and UpdateTask effects
+  ([#362](https://github.com/canvas-medical/canvas-plugins/pull/362),
+  [`aaddfe8`](https://github.com/canvas-medical/canvas-plugins/commit/aaddfe8b936cf5743259ce4770dfd1f076ac54c3))
+
+- Added Team models to SDK data module
+  ([#349](https://github.com/canvas-medical/canvas-plugins/pull/349),
+  [`096ce23`](https://github.com/canvas-medical/canvas-plugins/commit/096ce2307fc2de0eb8f4db04f9708e12b2e5f24a))
+
+- Helper method on Http to execute HTTP requests in parallel
+  ([#376](https://github.com/canvas-medical/canvas-plugins/pull/376),
+  [`2317dd9`](https://github.com/canvas-medical/canvas-plugins/commit/2317dd94c6a3617d3e9c0214a22e81d602e4ee1c))
+
+Signed-off-by: Christopher Sande <csande@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
 ## v0.17.0 (2025-02-04)
 
 ### Bug Fixes
