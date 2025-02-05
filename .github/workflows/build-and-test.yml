@@ -14,21 +14,21 @@ jobs:
         version: [ 3.11, 3.12 ]
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/install-python-and-poetry
+      - uses: ./.github/actions/install-python-and-uv
         with:
           PYTHON_VERSION: ${{ matrix.version }}
       - uses: ./.github/actions/install-canvas
 
-      # Run Pytest unit tests via Poetry.
+      # Run Pytest unit tests via uv.
       - name: Run Pytest unit tests
         env:
           CUSTOMER_IDENTIFIER: "ci-unit-tests"
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: poetry run pytest -m "not integtest" --ff --verbosity 2
+        run: uv run pytest -m "not integtest" --ff --verbosity 2
 
-      # Run Pytest integration tests via Poetry.
+      # Run Pytest integration tests via uv.
       - name: Run Pytest integration tests
         if: matrix.version == '3.12'
         env:
@@ -36,7 +36,7 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: poetry run pytest -m "integtest" --ff --verbosity 2
+        run: uv run pytest -m "integtest" --ff --verbosity 2
 
       - name: Install pipx
         run: pip install pipx
@@ -46,7 +46,7 @@ jobs:
         env:
           CUSTOMER_IDENTIFIER: "ci-distribution"
         run: |
-          poetry build
+          uv build
           pipx install dist/*.whl
           canvas --version
           rm -rf dist/

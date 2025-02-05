@@ -1,7 +1,9 @@
+import asyncio
 import logging
+import pickle
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -14,6 +16,7 @@ from plugin_runner.plugin_runner import (
     PluginRunner,
     load_or_reload_plugin,
     load_plugins,
+    synchronize_plugins,
 )
 
 
@@ -229,22 +232,51 @@ async def test_handle_plugin_event_returns_expected_result(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 async def test_reload_plugins_event_handler_successfully_publishes_message(
-    install_test_plugin: Path, plugin_runner: PluginRunner
+    plugin_runner: PluginRunner,
 ) -> None:
     """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
-    with patch("plugin_runner.plugin_runner.publish_message", MagicMock()) as mock_publish_message:
+    with patch(
+        "plugin_runner.plugin_runner.publish_message", new_callable=AsyncMock
+    ) as mock_publish_message:
         request = ReloadPluginsRequest()
 
         result = []
         async for response in plugin_runner.ReloadPlugins(request, None):
             result.append(response)
 
-        mock_publish_message.assert_called_once_with({"action": "restart"})
+        mock_publish_message.assert_called_once_with(message={"action": "reload"})
 
     assert len(result) == 1
     assert result[0].success is True
+
+
+@pytest.mark.asyncio
+async def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
+    """Test that synchronize_plugins calls install_plugins and load_plugins."""
+    with (
+        patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
+        patch(
+            "plugin_runner.plugin_runner.install_plugins", new_callable=AsyncMock
+        ) as mock_install_plugins,
+        patch(
+            "plugin_runner.plugin_runner.load_plugins", new_callable=AsyncMock
+        ) as mock_load_plugins,
+    ):
+        mock_client = AsyncMock()
+        mock_pubsub = AsyncMock()
+        mock_get_client.return_value = (mock_client, mock_pubsub)
+        mock_pubsub.get_message.return_value = {
+            "type": "pmessage",
+            "data": pickle.dumps({"action": "reload"}),
+        }
+
+        task = asyncio.create_task(synchronize_plugins(max_iterations=1))
+        await asyncio.sleep(0.1)  # Give some time for the coroutine to run
+        task.cancel()
+
+        mock_install_plugins.assert_called_once()
+        mock_load_plugins.assert_called_once()
 
 
 @pytest.mark.asyncio
