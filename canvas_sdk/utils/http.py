@@ -110,7 +110,7 @@ class Http:
             result = fn(self, *args, **kwargs)
             end_time = time.time()
             timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"http_{fn.__name__}", timing)
+            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing)
             return result
 
         return cast(F, wrapper)
