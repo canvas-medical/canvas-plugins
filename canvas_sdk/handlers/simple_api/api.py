@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from collections.abc import Callable, Iterable
 from inspect import ismethod
 from typing import Any
@@ -12,9 +13,12 @@ from plugin_runner.exceptions import PluginError
 # TODO: Auth requirements on the home-app side?
 # TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
-# TODO: Do we need to handle non-JSON request and response bodies? Maybe not; we would have to Base64 encode complex data to send to gRPC anyway; a user could do the same in a JSON body (like in FHIR).
+# TODO: List return vs. single response
+# TODO: Move "apply" handling up the chain
+# TODO: See if it's possible/necessary to have the response object inherit from the base effect
 # TODO: 404 Not Found
 # TODO: Error handling for duplicate routes; test install/reload
+# TODO: Support other content types
 
 
 class SimpleAPIRequest:
@@ -104,7 +108,7 @@ class SimpleAPI(BaseHandler):
         for superclass in cls.__mro__[1:]:
             if names := route_handler_method_names.intersection(superclass.__dict__):
                 raise PluginError(
-                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base class methods: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
+                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
                 )
 
     def compute(self) -> list[Effect]:
@@ -116,6 +120,7 @@ class SimpleAPI(BaseHandler):
         if not handler:
             return []
 
+        # TODO: We don't actually have to pass the request down; it could be obtained from the event
         # Handle the request
         effects = handler(request)
         if not isinstance(effects, Iterable):
@@ -143,3 +148,33 @@ class SimpleAPI(BaseHandler):
             )
 
         return effects
+
+
+# TODO: Endpoint or route?
+class SimpleAPIRouteMeta(ABCMeta):
+    """Metaclass for the SimpleAPIRoute class."""
+
+    def __new__(cls, name: str, bases: tuple, namespace: dict, **kwargs: Any) -> type:
+        """Automatically marks the get, post, put, delete, and match methods as handler methods."""
+        for attr_name, attr_value in namespace.items():
+            if not callable(attr_value):
+                continue
+            match attr_name:
+                case "get":
+                    namespace[attr_name] = get(namespace["ROUTE"])(attr_value)
+                case "post":
+                    namespace[attr_name] = post(namespace["ROUTE"])(attr_value)
+                case "put":
+                    namespace[attr_name] = put(namespace["ROUTE"])(attr_value)
+                case "delete":
+                    namespace[attr_name] = delete(namespace["ROUTE"])(attr_value)
+                case "patch":
+                    namespace[attr_name] = patch(namespace["ROUTE"])(attr_value)
+
+        return super().__new__(cls, name, bases, namespace, **kwargs)
+
+
+class SimpleAPIRoute(SimpleAPI, metaclass=SimpleAPIRouteMeta):
+    """Base class for HTTP API routes."""
+
+    pass
