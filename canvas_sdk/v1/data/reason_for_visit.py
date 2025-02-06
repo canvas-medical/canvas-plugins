@@ -9,6 +9,8 @@ class ReasonForVisitSettingCoding(models.Model):
         managed = False
         db_table = "canvas_sdk_data_api_reasonforvisitsettingcoding_001"
 
+    objects: models.Manager["ReasonForVisitSettingCoding"]
+
     id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
 

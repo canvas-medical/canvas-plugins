@@ -35,9 +35,7 @@ class ReasonForVisitCommand(_BaseCommand):
             else:
                 query = {"code": self.coding["code"], "system": self.coding["system"]}
                 error_message = f"ReasonForVisitSettingCoding with code {self.coding['code']} and system {self.coding['system']} does not exist."
-            try:
-                ReasonForVisitSettingCoding.objects.get(**query)
-            except ReasonForVisitSettingCoding.DoesNotExist:
+            if not ReasonForVisitSettingCoding.objects.filter(**query).exists():
                 errors.append(self._create_error_detail("value", error_message, self.coding))
         return errors
 

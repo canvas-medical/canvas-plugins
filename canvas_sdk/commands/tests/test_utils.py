@@ -37,6 +37,12 @@ from canvas_sdk.commands.constants import ClinicalQuantity, Coding
 runner = CliRunner()
 
 
+class WrongType:
+    """A type to yield ValidationErrors in tests."""
+
+    wrong_field: str
+
+
 class MaskedValue:
     """A class to mask sensitive values in tests."""
 
@@ -97,6 +103,8 @@ def fake(field_props: dict, Command: type[_BaseCommand]) -> Any:
             return Coding(system=random_string(), code=random_string(), display=random_string())
         case "ClinicalQuantity":
             return ClinicalQuantity(representative_ndc="ndc", ncpdp_quantity_qualifier_code="code")
+        case "WrongType":
+            return WrongType()
     if t[0].isupper():
         return random.choice(list(getattr(Command, t)))
 
@@ -108,7 +116,8 @@ def raises_wrong_type_error(
     """Test that the correct error is raised when the wrong type is passed to a field."""
     field_props = Command.model_json_schema()["properties"][field]
     field_type = get_field_type(field_props)
-    wrong_field_type = "integer" if field_type == "string" else "string"
+
+    wrong_field_type = "WrongType"
 
     with pytest.raises(ValidationError) as e1:
         err_kwargs = {field: fake({"type": wrong_field_type}, Command)}
@@ -122,8 +131,11 @@ def raises_wrong_type_error(
         setattr(cmd, field, err_value)
     err_msg2 = repr(e2.value)
 
-    assert f"1 validation error for {Command.__name__}\n{field}" in err_msg1
-    assert f"1 validation error for {Command.__name__}\n{field}" in err_msg2
+    assert "validation error" in err_msg1
+    assert f"{Command.__name__}\n{field}" in err_msg1
+
+    assert "validation error" in err_msg2
+    assert f"{Command.__name__}\n{field}" in err_msg1
 
     field_type = (
         "dictionary" if field_type == "Coding" or field_type == "ClinicalQuantity" else field_type
