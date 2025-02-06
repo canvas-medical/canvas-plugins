@@ -1,6 +1,75 @@
 # CHANGELOG
 
 
+## v0.18.0 (2025-02-05)
+
+### Bug Fixes
+
+- Add CANCEL_PRESCRIPTION, SNOOZE_PROTOCOL, UPDATE_DIAGNOSIS command events
+  ([#386](https://github.com/canvas-medical/canvas-plugins/pull/386),
+  [`d804f2b`](https://github.com/canvas-medical/canvas-plugins/commit/d804f2b5033a9b043378870f6284a954453d5e24))
+
+### Features
+
+- Add force option when uninstalling a plugin
+  ([#276](https://github.com/canvas-medical/canvas-plugins/pull/276),
+  [`6a861c6`](https://github.com/canvas-medical/canvas-plugins/commit/6a861c64c7022cc6028b777741b6b1f23e35a546))
+
+- Added team identifier to the AddTask and UpdateTask effects
+  ([#362](https://github.com/canvas-medical/canvas-plugins/pull/362),
+  [`aaddfe8`](https://github.com/canvas-medical/canvas-plugins/commit/aaddfe8b936cf5743259ce4770dfd1f076ac54c3))
+
+- Added Team models to SDK data module
+  ([#349](https://github.com/canvas-medical/canvas-plugins/pull/349),
+  [`096ce23`](https://github.com/canvas-medical/canvas-plugins/commit/096ce2307fc2de0eb8f4db04f9708e12b2e5f24a))
+
+- Helper method on Http to execute HTTP requests in parallel
+  ([#376](https://github.com/canvas-medical/canvas-plugins/pull/376),
+  [`2317dd9`](https://github.com/canvas-medical/canvas-plugins/commit/2317dd94c6a3617d3e9c0214a22e81d602e4ee1c))
+
+Signed-off-by: Christopher Sande <csande@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.17.0 (2025-02-04)
+
+### Bug Fixes
+
+- Embed the synchronizer process within the plugin runner
+  ([#333](https://github.com/canvas-medical/canvas-plugins/pull/333),
+  [`ab576f2`](https://github.com/canvas-medical/canvas-plugins/commit/ab576f2918a3a39530afa0dc8a81bbf6cc61c7cd))
+
+### Chores
+
+- Auto-update pre-commit hooks ([#268](https://github.com/canvas-medical/canvas-plugins/pull/268),
+  [`2df702e`](https://github.com/canvas-medical/canvas-plugins/commit/2df702ec61c39437a8186564491417824d4d2e2c))
+
+- Bump ipython from 8.31.0 to 8.32.0
+  ([#385](https://github.com/canvas-medical/canvas-plugins/pull/385),
+  [`c47ab8a`](https://github.com/canvas-medical/canvas-plugins/commit/c47ab8a2e0a4f27b40eb3780949fb42a65fca3fa))
+
+- Bump pytest-asyncio from 0.25.2 to 0.25.3 in the development-patches group
+  ([#384](https://github.com/canvas-medical/canvas-plugins/pull/384),
+  [`78e3d12`](https://github.com/canvas-medical/canvas-plugins/commit/78e3d1272d9fec9947b8fa607e5f673bd77e8863))
+
+- Bump rapidfuzz from 3.11.0 to 3.12.1
+  ([#379](https://github.com/canvas-medical/canvas-plugins/pull/379),
+  [`0bc2b0a`](https://github.com/canvas-medical/canvas-plugins/commit/0bc2b0a71c14f3a4fbc169b24deea491bb97a261))
+
+- Bump the development-minors group across 1 directory with 2 updates
+  ([#383](https://github.com/canvas-medical/canvas-plugins/pull/383),
+  [`b01f109`](https://github.com/canvas-medical/canvas-plugins/commit/b01f1093cf8f9a07c57bbd99b0728a284d19cc59))
+
+- Proper fix integration tests ([#375](https://github.com/canvas-medical/canvas-plugins/pull/375),
+  [`0563dc2`](https://github.com/canvas-medical/canvas-plugins/commit/0563dc205751fe0df108d2a506ab4be38dfb8434))
+
+### Features
+
+- Migrate from poetry to uv ([#355](https://github.com/canvas-medical/canvas-plugins/pull/355),
+  [`268decd`](https://github.com/canvas-medical/canvas-plugins/commit/268decd3d1ca001afe6016a365953fe1aeb222c7))
+
+
 ## v0.16.0 (2025-01-29)
 
 ### Bug Fixes
