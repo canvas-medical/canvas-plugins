@@ -2,13 +2,12 @@ import json
 from abc import ABCMeta
 from base64 import b64decode
 from collections.abc import Callable, Iterable
-from http import HTTPStatus
 from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
-from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.simple_api import PlainTextResponse, Response
+from canvas_sdk.effects import Effect
+from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
@@ -26,11 +25,10 @@ from .types import JSON
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # TODO: Interface — request as an argument to handlers or helper on the handler
 # TODO: Discuss a durable way to get the plugin name
+# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
 
-# TODO: Handle 404s
 # TODO: See if it's possible/necessary to have the response object inherit from the base effect
 # TODO: Test the handlers with an installed plugin
-# TODO: Move duplicate response4 handling to home-app
 # TODO: Test other requests in Postman: forms, x-www-form-urlencoded
 # TODO: Header lookup may need to be case-insensitive
 # TODO: Disable prefixing for the route class
@@ -155,25 +153,9 @@ class SimpleAPI(BaseHandler):
             effects = [effects]
 
         # Transform any API responses into effects if they aren't already effects
-        response_count = 0
         for index, effect in enumerate(effects):
             if isinstance(effect, Response):
                 effects[index] = effect.apply()
-            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
-                response_count += 1
-
-        # If there is more than one response, remove the responses and return an error response
-        # instead. Allow non-response effects to pass through unaffected.
-        if response_count > 1:
-            effects = [
-                effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
-            ]
-            effects.append(
-                PlainTextResponse(
-                    "Error: Multiple responses provided",
-                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                ).apply()
-            )
 
         return effects
 
