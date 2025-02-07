@@ -25,8 +25,8 @@ from .types import JSON
 # TODO: Name for endpoint class: "Route" or "Endpoint"?
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # TODO: Interface — request as an argument to handlers or helper on the handler
+# TODO: Discuss a durable way to get the plugin name
 
-# TODO: Add plugin name to the route
 # TODO: Handle 404s
 # TODO: See if it's possible/necessary to have the response object inherit from the base effect
 # TODO: Test the handlers with an installed plugin
@@ -107,6 +107,8 @@ class SimpleAPI(BaseHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
+        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
+
         prefix = self.PREFIX if hasattr(self, "PREFIX") else ""
 
         # Build the registry of routes so that requests can be routed to the correct handler
@@ -115,7 +117,10 @@ class SimpleAPI(BaseHandler):
             attr = getattr(self, name)
             if ismethod(attr) and hasattr(attr, "route"):
                 method, relative_path = attr.route
-                route = (method, f"{prefix}{relative_path}")
+
+                # The full path for a route includes the plugin name, the prefix (if specified),
+                # and the path specified by the handler
+                route = (method, f"/{plugin_name}{prefix}{relative_path}")
 
                 self._routes[route] = attr
 
@@ -131,7 +136,8 @@ class SimpleAPI(BaseHandler):
         for superclass in cls.__mro__[1:]:
             if names := route_handler_method_names.intersection(superclass.__dict__):
                 raise PluginError(
-                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
+                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base "
+                    f"class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
                 )
 
     def compute(self) -> list[Effect]:
@@ -182,15 +188,15 @@ class SimpleAPIRouteMeta(ABCMeta):
                 continue
             match attr_name:
                 case "get":
-                    namespace[attr_name] = get(namespace["ROUTE"])(attr_value)
+                    namespace[attr_name] = get(namespace["PATH"])(attr_value)
                 case "post":
-                    namespace[attr_name] = post(namespace["ROUTE"])(attr_value)
+                    namespace[attr_name] = post(namespace["PATH"])(attr_value)
                 case "put":
-                    namespace[attr_name] = put(namespace["ROUTE"])(attr_value)
+                    namespace[attr_name] = put(namespace["PATH"])(attr_value)
                 case "delete":
-                    namespace[attr_name] = delete(namespace["ROUTE"])(attr_value)
+                    namespace[attr_name] = delete(namespace["PATH"])(attr_value)
                 case "patch":
-                    namespace[attr_name] = patch(namespace["ROUTE"])(attr_value)
+                    namespace[attr_name] = patch(namespace["PATH"])(attr_value)
 
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
