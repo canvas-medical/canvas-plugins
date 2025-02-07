@@ -1,27 +1,45 @@
+import json
 from abc import ABCMeta
+from base64 import b64decode
 from collections.abc import Callable, Iterable
+from http import HTTPStatus
 from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.simple_api import SimpleAPIResponse
+from canvas_sdk.effects.simple_api import PlainTextResponse, Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
 
-# TODO: Auth requirements on the home-app side?
-# TODO: Do we need to handle routing based on path regex (i.e. path parameters)?
+from .types import JSON
+
+# TODO: How to handle authz/authn?
+# TODO: Routing by path regex
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
-# TODO: List return vs. single response
-# TODO: Move "apply" handling up the chain
+# TODO: Discuss single response rather than list
+# TODO: Discuss moving "apply" handling up the chain and the interface ramifications
+# TODO: Are other helpers on request class?
+# TODO: Support charset in responses and text helper on request? Or only support utf-8?
+# TODO: Name for endpoint class: "Route" or "Endpoint"?
+# TODO: What should happen to other effects if the user returns two response objects from a route?
+# TODO: Interface — request as an argument to handlers or helper on the handler
+
+# TODO: Add plugin name to the route
+# TODO: Handle 404s
 # TODO: See if it's possible/necessary to have the response object inherit from the base effect
-# TODO: 404 Not Found
-# TODO: Error handling for duplicate routes; test install/reload
-# TODO: Support other content types
+# TODO: Test the handlers with an installed plugin
+# TODO: Move duplicate response4 handling to home-app
+# TODO: Test other requests in Postman: forms, x-www-form-urlencoded
+# TODO: Header lookup may need to be case-insensitive
+# TODO: Disable prefixing for the route class
+# TODO: Consider removing duplicate response handling from compute
+
+# TODO: Unit tests
 
 
-class SimpleAPIRequest:
+class Request:
     """Request class for incoming requests to the API."""
 
     def __init__(self, event: Event) -> None:
@@ -29,12 +47,21 @@ class SimpleAPIRequest:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
-        self.body = event.context["body"]
+        self.body = b64decode(event.context["body"]) if event.context["body"] is not None else None
 
         self.query_params = parse_qs(self.query_string)
+        self.content_type = self.headers.get("Content-Type")
+
+    def json(self) -> JSON:
+        """Return the response JSON."""
+        return json.loads(self.body)  # type: ignore[arg-type]
+
+    def text(self) -> str:
+        """Return the response body as plain text."""
+        return self.body.decode("utf-8")  # type: ignore[union-attr]
 
 
-RouteHandler = Callable[[SimpleAPIRequest], SimpleAPIResponse | list[SimpleAPIResponse | Effect]]
+RouteHandler = Callable[[Request], Response | list[Response | Effect]]
 
 
 def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
@@ -90,10 +117,6 @@ class SimpleAPI(BaseHandler):
                 method, relative_path = attr.route
                 route = (method, f"{prefix}{relative_path}")
 
-                # We have to make sure that routes are only handled by one handler, but we can't do
-                # that here given that other plugins may also implement routes. So the check for
-                # duplicate routes has to happen elsewhere, external to the plugins that inherit
-                # from this class.
                 self._routes[route] = attr
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -113,14 +136,13 @@ class SimpleAPI(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
-        request = SimpleAPIRequest(self.event)
+        request = Request(self.event)
 
         # Get the handler method
         handler = self._routes.get((request.method, request.path))
         if not handler:
             return []
 
-        # TODO: We don't actually have to pass the request down; it could be obtained from the event
         # Handle the request
         effects = handler(request)
         if not isinstance(effects, Iterable):
@@ -129,12 +151,11 @@ class SimpleAPI(BaseHandler):
         # Transform any API responses into effects if they aren't already effects
         response_count = 0
         for index, effect in enumerate(effects):
-            if isinstance(effect, SimpleAPIResponse):
+            if isinstance(effect, Response):
                 effects[index] = effect.apply()
             if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
                 response_count += 1
 
-        # TODO: What should the behavior be for non-response effects if this error condition occurs?
         # If there is more than one response, remove the responses and return an error response
         # instead. Allow non-response effects to pass through unaffected.
         if response_count > 1:
@@ -142,15 +163,15 @@ class SimpleAPI(BaseHandler):
                 effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
             ]
             effects.append(
-                SimpleAPIResponse(
-                    content={"error": "Multiple responses provided"}, status_code=500
+                PlainTextResponse(
+                    "Error: Multiple responses provided",
+                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 ).apply()
             )
 
         return effects
 
 
-# TODO: Endpoint or route?
 class SimpleAPIRouteMeta(ABCMeta):
     """Metaclass for the SimpleAPIRoute class."""
 
