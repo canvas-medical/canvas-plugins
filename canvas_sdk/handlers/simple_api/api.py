@@ -26,7 +26,7 @@ from .types import JSON
 # TODO: Interface — request as an argument to handlers or helper on the handler
 # TODO: Discuss a durable way to get the plugin name
 # TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
-# TODO: multipart/form-data?
+# TODO: Explicitly disallow multipart/form-data or enable it?
 
 # TODO: See if it's possible/necessary to have the response object inherit from the base effect
 # TODO: Test the handlers with an installed plugin
