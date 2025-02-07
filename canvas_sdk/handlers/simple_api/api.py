@@ -1,5 +1,5 @@
 import json
-from abc import ABCMeta
+from abc import ABC, ABCMeta, abstractmethod
 from base64 import b64decode
 from collections.abc import Callable, Iterable
 from inspect import ismethod
@@ -31,8 +31,6 @@ from .types import JSON
 # TODO: Test the handlers with an installed plugin
 # TODO: Test other requests in Postman: forms, x-www-form-urlencoded
 # TODO: Header lookup may need to be case-insensitive
-# TODO: Disable prefixing for the route class
-# TODO: Consider removing duplicate response handling from compute
 
 # TODO: Unit tests
 
@@ -97,17 +95,13 @@ def _handler_decorator(method: str, path: str) -> Callable[[RouteHandler], Route
     return decorator
 
 
-class SimpleAPI(BaseHandler):
-    """Base class for HTTP APIs."""
+class SimpleAPIBase(BaseHandler, ABC):
+    """Abstract base class for HTTP APIs."""
 
     RESPONDS_TO = EventType.Name(EventType.SIMPLE_API_REQUEST)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-
-        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
-
-        prefix = self.PREFIX if hasattr(self, "PREFIX") else ""
 
         # Build the registry of routes so that requests can be routed to the correct handler
         self._routes: dict[tuple[str, str], Callable] = {}
@@ -115,11 +109,7 @@ class SimpleAPI(BaseHandler):
             attr = getattr(self, name)
             if ismethod(attr) and hasattr(attr, "route"):
                 method, relative_path = attr.route
-
-                # The full path for a route includes the plugin name, the prefix (if specified),
-                # and the path specified by the handler
-                route = (method, f"/{plugin_name}{prefix}{relative_path}")
-
+                route = (method, self._make_route_path(relative_path))
                 self._routes[route] = attr
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -137,6 +127,11 @@ class SimpleAPI(BaseHandler):
                     f"{SimpleAPI.__name__} subclass route handler methods are overriding base "
                     f"class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
                 )
+
+    @abstractmethod
+    def _make_route_path(self, relative_path: str) -> str:
+        """Fully qualify the route path."""
+        ...
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
@@ -160,6 +155,22 @@ class SimpleAPI(BaseHandler):
         return effects
 
 
+class SimpleAPI(SimpleAPIBase):
+    """Base class for HTTP APIs."""
+
+    def _make_route_path(self, relative_path: str) -> str:
+        """
+        Fully-qualify the route path.
+
+        Concatenate the plugin name, prefix (if specified), and the relative path specified by the
+        handler.
+        """
+        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
+        prefix = self.PREFIX if hasattr(self, "PREFIX") else ""
+
+        return f"/{plugin_name}{prefix}{relative_path}"
+
+
 class SimpleAPIRouteMeta(ABCMeta):
     """Metaclass for the SimpleAPIRoute class."""
 
@@ -168,22 +179,42 @@ class SimpleAPIRouteMeta(ABCMeta):
         for attr_name, attr_value in namespace.items():
             if not callable(attr_value):
                 continue
-            match attr_name:
-                case "get":
-                    namespace[attr_name] = get(namespace["PATH"])(attr_value)
-                case "post":
-                    namespace[attr_name] = post(namespace["PATH"])(attr_value)
-                case "put":
-                    namespace[attr_name] = put(namespace["PATH"])(attr_value)
-                case "delete":
-                    namespace[attr_name] = delete(namespace["PATH"])(attr_value)
-                case "patch":
-                    namespace[attr_name] = patch(namespace["PATH"])(attr_value)
+
+            if "PATH" in namespace:
+                match attr_name:
+                    case "get":
+                        namespace[attr_name] = get(namespace["PATH"])(attr_value)
+                    case "post":
+                        namespace[attr_name] = post(namespace["PATH"])(attr_value)
+                    case "put":
+                        namespace[attr_name] = put(namespace["PATH"])(attr_value)
+                    case "delete":
+                        namespace[attr_name] = delete(namespace["PATH"])(attr_value)
+                    case "patch":
+                        namespace[attr_name] = patch(namespace["PATH"])(attr_value)
 
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
 
-class SimpleAPIRoute(SimpleAPI, metaclass=SimpleAPIRouteMeta):
+class SimpleAPIRoute(SimpleAPIBase, metaclass=SimpleAPIRouteMeta):
     """Base class for HTTP API routes."""
 
-    pass
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        if not hasattr(cls, "PATH"):
+            raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
+        if hasattr(cls, "PREFIX"):
+            raise PluginError(
+                f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
+            )
+
+        super().__init_subclass__(**kwargs)
+
+    def _make_route_path(self, relative_path: str) -> str:
+        """
+        Fully-qualify the route path.
+
+        Concatenate the plugin name, and the relative path specified by the handler.
+        """
+        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
+
+        return f"/{plugin_name}{relative_path}"
