@@ -18,14 +18,24 @@ class LaunchModalEffect(_BaseEffect):
         RIGHT_CHART_PANE = "right_chart_pane"
         RIGHT_CHART_PANE_LARGE = "right_chart_pane_large"
 
+    class Permission(StrEnum):
+        MICROPHONE = "microphone"
+        ALLOW_CROSS_ORIGIN = "allow-cross-origin"
+
     url: str | None = None
     content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
+    permissions: list[Permission] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The LaunchModalEffect values."""
-        return {"url": self.url, "content": self.content, "target": self.target.value}
+        return {
+            "url": self.url,
+            "content": self.content,
+            "target": self.target.value,
+            "permissions": self.permissions or [],
+        }
 
     @model_validator(mode="after")
     def check_mutually_exclusive_fields(self) -> Self:
