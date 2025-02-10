@@ -12,7 +12,7 @@ from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
 
-from .types import JSON
+from .types import JSON, CaseInsensitiveDict
 
 # TODO: How to handle authz/authn?
 # TODO: Routing by path regex
@@ -30,7 +30,7 @@ from .types import JSON
 
 # TODO: See if it's possible/necessary to have the response object inherit from the base effect
 # TODO: Test the handlers with an installed plugin
-# TODO: Header lookup may need to be case-insensitive
+# TODO: Consistent handling of empty string vs. None with query string and body
 
 # TODO: Unit tests
 
@@ -39,7 +39,7 @@ class Request:
     """Request class for incoming requests to the API."""
 
     def __init__(self, event: Event) -> None:
-        self.headers = event.context["headers"]
+        self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
