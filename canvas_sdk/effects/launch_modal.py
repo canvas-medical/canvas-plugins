@@ -20,7 +20,7 @@ class LaunchModalEffect(_BaseEffect):
 
     class Permission(StrEnum):
         MICROPHONE = "microphone"
-        ALLOW_CROSS_ORIGIN = "allow-cross-origin"
+        ALLOW_SAME_ORIGIN = "allow-same-origin"
 
     url: str | None = None
     content: str | None = None
