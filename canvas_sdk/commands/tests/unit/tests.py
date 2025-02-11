@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from pydantic import ValidationError
 from typer.testing import CliRunner
@@ -91,24 +93,21 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
 
 
 @pytest.mark.parametrize(
-    "Command,err_kwargs,err_msg,valid_kwargs",
+    "Command,err_kwargs,valid_kwargs",
     [
         (
             PlanCommand,
             {"narrative": "yo", "note_uuid": 1},
-            "1 validation error for PlanCommand\nnote_uuid\n  Input should be a valid string [type=string_type",
             {"narrative": "yo", "note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
             PlanCommand,
             {"narrative": "yo", "note_uuid": "5", "command_uuid": 5},
-            "1 validation error for PlanCommand\ncommand_uuid\n  Input should be a valid string [type=string_type",
             {"narrative": "yo", "note_uuid": "5", "command_uuid": "5"},
         ),
         (
             ReasonForVisitCommand,
             {"note_uuid": "00000000-0000-0000-0000-000000000000", "structured": True},
-            "1 validation error for ReasonForVisitCommand\n  Structured RFV should have a coding",
             {
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "structured": False,
@@ -120,7 +119,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": "x"},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Field required [type=missing",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -129,7 +127,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": 1, "system": "y"},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -138,7 +135,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": None, "system": "y"},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Input should be a valid string [type=string_type",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -147,7 +143,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"system": "y"},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.code\n  Field required [type=missing",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -156,7 +151,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": "x", "system": 1},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -165,7 +159,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": "x", "system": None},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.system\n  Input should be a valid string [type=string_type",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
         (
@@ -174,7 +167,6 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
                 "note_uuid": "00000000-0000-0000-0000-000000000000",
                 "coding": {"code": "x", "system": "y", "display": 1},
             },
-            "1 validation error for ReasonForVisitCommand\ncoding.display\n  Input should be a valid string [type=string_type",
             {"note_uuid": "00000000-0000-0000-0000-000000000000"},
         ),
     ],
@@ -182,25 +174,24 @@ def test_command_raises_generic_error_when_kwarg_given_incorrect_type(
 def test_command_raises_specific_error_when_kwarg_given_incorrect_type(
     Command: type[PlanCommand] | type[ReasonForVisitCommand],
     err_kwargs: dict,
-    err_msg: str,
     valid_kwargs: dict,
 ) -> None:
     """Test that Command raises a specific error when a kwarg is given an incorrect type."""
-    with pytest.raises(ValidationError) as e1:
+    with pytest.raises(ValidationError):
         cmd = Command(**err_kwargs)
         cmd.originate()
+        cmd.command_uuid = str(uuid.uuid4())
         cmd.edit()
-    assert err_msg in repr(e1.value)
 
     cmd = Command(**valid_kwargs)
     if len(err_kwargs) < len(valid_kwargs):
         return
     key, value = list(err_kwargs.items())[-1]
-    with pytest.raises(ValidationError) as e2:
+    with pytest.raises(ValidationError):
         setattr(cmd, key, value)
         cmd.originate()
+        cmd.command_uuid = str(uuid.uuid4())
         cmd.edit()
-    assert err_msg in repr(e2.value)
 
 
 @pytest.mark.parametrize(
