@@ -6,44 +6,52 @@ from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
+from requests.structures import CaseInsensitiveDict
+
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
 
-from .types import JSON, CaseInsensitiveDict
-
-# TODO: How to handle authz/authn?
-# TODO: Routing by path regex
+# TODO: Routing by path regex?
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
-# TODO: Discuss single response rather than list
 # TODO: Discuss moving "apply" handling up the chain and the interface ramifications
-# TODO: Are other helpers on request class?
+# TODO: Are other helpers needed on request class?
 # TODO: Support charset in responses and text helper on request? Or only support utf-8?
 # TODO: Name for endpoint class: "Route" or "Endpoint"?
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # TODO: Interface — request as an argument to handlers or helper on the handler
 # TODO: Discuss a durable way to get the plugin name
+# TODO: Explicitly disallow multipart/form-data, or enable it?
+# TODO: Aesthetics — plugin-like route should maybe have PATH and METHOD
+# TODO: Discuss single response rather than list
+
+# TODO: How to handle authz/authn?
+#   * Auth is mandatory; must be a default mechanism
+#   * Default auth strategy: disallow access and return 401
+#   * Auth strategies: Set some constant
+#     * custom: provide a callable
 # TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
-# TODO: Explicitly disallow multipart/form-data or enable it?
+#       The challenge is that I can't distinguish between all handlers legitimately returning nothing no handlers taking the request
+# TODO: Discuss whether the response effects should inherit from the base effects
 
-# TODO: See if it's possible/necessary to have the response object inherit from the base effect
-# TODO: Test the handlers with an installed plugin
+# TODO: Sanity check — test the handlers with an installed plugin
 # TODO: Consistent handling of empty string vs. None with query string and body
+# TODO: Get the xfail test to pass
 
-# TODO: Unit tests
+JSON = dict[str, Any] | list[Any] | int | float | str | bool
 
 
 class Request:
     """Request class for incoming requests to the API."""
 
     def __init__(self, event: Event) -> None:
-        self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self.body = b64decode(event.context["body"]) if event.context["body"] is not None else None
+        self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
 
         self.query_params = parse_qs(self.query_string)
         self.content_type = self.headers.get("Content-Type")
@@ -109,7 +117,14 @@ class SimpleAPIBase(BaseHandler, ABC):
             attr = getattr(self, name)
             if ismethod(attr) and hasattr(attr, "route"):
                 method, relative_path = attr.route
-                route = (method, self._make_route_path(relative_path))
+                plugin_name = self._plugin_name()
+
+                if plugin_name:
+                    prefix = f"/{plugin_name}{self._path_prefix()}"
+                else:
+                    prefix = self._path_prefix()
+
+                route = (method, f"{prefix}{relative_path}")
                 self._routes[route] = attr
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -128,10 +143,11 @@ class SimpleAPIBase(BaseHandler, ABC):
                     f"class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
                 )
 
+    def _plugin_name(self) -> str:
+        return self.__class__.__module__.split(".", maxsplit=1)[0]
+
     @abstractmethod
-    def _make_route_path(self, relative_path: str) -> str:
-        """Fully qualify the route path."""
-        ...
+    def _path_prefix(self) -> str: ...
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
@@ -158,17 +174,8 @@ class SimpleAPIBase(BaseHandler, ABC):
 class SimpleAPI(SimpleAPIBase):
     """Base class for HTTP APIs."""
 
-    def _make_route_path(self, relative_path: str) -> str:
-        """
-        Fully-qualify the route path.
-
-        Concatenate the plugin name, prefix (if specified), and the relative path specified by the
-        handler.
-        """
-        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
-        prefix = self.PREFIX if hasattr(self, "PREFIX") else ""
-
-        return f"/{plugin_name}{prefix}{relative_path}"
+    def _path_prefix(self) -> str:
+        return self.PREFIX if hasattr(self, "PREFIX") and self.PREFIX else ""
 
 
 class SimpleAPIRouteMeta(ABCMeta):
@@ -180,18 +187,20 @@ class SimpleAPIRouteMeta(ABCMeta):
             if not callable(attr_value):
                 continue
 
-            if "PATH" in namespace:
-                match attr_name:
-                    case "get":
-                        namespace[attr_name] = get(namespace["PATH"])(attr_value)
-                    case "post":
-                        namespace[attr_name] = post(namespace["PATH"])(attr_value)
-                    case "put":
-                        namespace[attr_name] = put(namespace["PATH"])(attr_value)
-                    case "delete":
-                        namespace[attr_name] = delete(namespace["PATH"])(attr_value)
-                    case "patch":
-                        namespace[attr_name] = patch(namespace["PATH"])(attr_value)
+            if attr_name in {"get", "post", "put", "delete", "patch"} and "PATH" not in namespace:
+                raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
+
+            match attr_name:
+                case "get":
+                    namespace[attr_name] = get(namespace["PATH"])(attr_value)
+                case "post":
+                    namespace[attr_name] = post(namespace["PATH"])(attr_value)
+                case "put":
+                    namespace[attr_name] = put(namespace["PATH"])(attr_value)
+                case "delete":
+                    namespace[attr_name] = delete(namespace["PATH"])(attr_value)
+                case "patch":
+                    namespace[attr_name] = patch(namespace["PATH"])(attr_value)
 
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
@@ -200,8 +209,6 @@ class SimpleAPIRoute(SimpleAPIBase, metaclass=SimpleAPIRouteMeta):
     """Base class for HTTP API routes."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        if not hasattr(cls, "PATH"):
-            raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
         if hasattr(cls, "PREFIX"):
             raise PluginError(
                 f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
@@ -209,12 +216,5 @@ class SimpleAPIRoute(SimpleAPIBase, metaclass=SimpleAPIRouteMeta):
 
         super().__init_subclass__(**kwargs)
 
-    def _make_route_path(self, relative_path: str) -> str:
-        """
-        Fully-qualify the route path.
-
-        Concatenate the plugin name, and the relative path specified by the handler.
-        """
-        plugin_name, *_ = self.__class__.__module__.split(".", maxsplit=1)
-
-        return f"/{plugin_name}{relative_path}"
+    def _path_prefix(self) -> str:
+        return ""
