@@ -6,7 +6,8 @@ from typing import Any
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
-from canvas_sdk.handlers.simple_api.types import JSON
+
+JSON = dict[str, Any] | list[Any] | int | float | str | bool
 
 
 class Response:
