@@ -90,10 +90,13 @@ class NoteTypes(models.TextChoices):
 class NoteType(models.Model):
     """NoteType."""
 
+    objects: models.Manager["NoteType"]
+
     class Meta:
         managed = False
         db_table = "canvas_sdk_data_api_notetype_001"
 
+    id = models.UUIDField()
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
