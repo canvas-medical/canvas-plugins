@@ -44,10 +44,16 @@ class BillingLineItem(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
+        "v1.Note",
+        on_delete=models.DO_NOTHING,
+        related_name="billing_line_items",
+        null=True,
     )
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="billing_line_items", null=True
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        related_name="billing_line_items",
+        null=True,
     )
     cpt = models.CharField()
     charge = models.DecimalField()
@@ -56,3 +62,24 @@ class BillingLineItem(models.Model):
     command_type = models.CharField()
     command_id = models.IntegerField()
     status = models.CharField(choices=BillingLineItemStatus.choices)
+
+
+class BillingLineItemModifier(models.Model):
+    """BillingLineItemModifier."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_billinglineitemmodifier_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    system = models.CharField()
+    version = models.CharField()
+    code = models.CharField()
+    display = models.CharField()
+    user_selected = models.BooleanField()
+    line_item = models.ForeignKey(
+        "v1.BillingLineItem",
+        on_delete=models.DO_NOTHING,
+        related_name="modifiers",
+        null=True,
+    )
