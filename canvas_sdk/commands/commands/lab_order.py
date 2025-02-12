@@ -58,12 +58,22 @@ class LabOrderCommand(BaseCommand):
                 tests = LabPartnerTest.objects.filter(
                     Q(order_code__in=self.tests_order_codes) | Q(id__in=self.tests_order_codes),
                     lab_partner_id=lab_partner_obj["dbid"],
-                )
+                ).values_list("id", "order_code")
+
                 if tests.count() != len(self.tests_order_codes):
+                    missing_tests = [
+                        test
+                        for test in self.tests_order_codes
+                        if not any(
+                            test == str(test_id) or test == order_code
+                            for test_id, order_code in tests
+                        )
+                    ]
+
                     errors.append(
                         self._create_error_detail(
                             "value",
-                            f"tests with order codes {self.tests_order_codes} not found",
+                            f"tests with order codes {missing_tests} not found",
                             self.tests_order_codes,
                         )
                     )
