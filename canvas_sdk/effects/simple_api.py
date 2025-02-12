@@ -7,8 +7,8 @@ from typing import Any
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 
-JSONType = dict[str, "JSONType"] | list["JSONType"] | int | float | str | bool | None
-JSON = dict[str, JSONType] | list[JSONType] | int | float | str | bool
+JSONValue = dict[str, "JSONValue"] | list["JSONValue"] | int | float | str | bool | None
+JSON = dict[str, JSONValue] | list[JSONValue] | int | float | str | bool
 
 
 class Response:
