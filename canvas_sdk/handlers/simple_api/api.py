@@ -41,8 +41,8 @@ from plugin_runner.exceptions import PluginError
 # TODO: Consistent handling of empty string vs. None with query string and body
 # TODO: Get the xfail test to pass
 
-JSONType = dict[str, "JSONType"] | list["JSONType"] | int | float | str | bool | None
-JSON = dict[str, JSONType] | list[JSONType] | int | float | str | bool
+JSONValue = dict[str, "JSONValue"] | list["JSONValue"] | int | float | str | bool | None
+JSON = dict[str, JSONValue] | list[JSONValue] | int | float | str | bool
 
 
 class Request:
