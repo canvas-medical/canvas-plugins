@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v0.19.0 (2025-02-12)
+
+### Bug Fixes
+
+- Accept UUID type for rfv coding field
+  ([#407](https://github.com/canvas-medical/canvas-plugins/pull/407),
+  [`c5bcd9e`](https://github.com/canvas-medical/canvas-plugins/commit/c5bcd9ec8e4290ddbd19343151ef72c5a27aaad2))
+
+### Features
+
+- Create BillingLineItemModifier data class
+  ([#393](https://github.com/canvas-medical/canvas-plugins/pull/393),
+  [`130e55a`](https://github.com/canvas-medical/canvas-plugins/commit/130e55ab9a4c8feb31d547b721db0f33ed96a004))
+
+- Implement reason for visit codings with validations for rfv command
+  ([#392](https://github.com/canvas-medical/canvas-plugins/pull/392),
+  [`804e59f`](https://github.com/canvas-medical/canvas-plugins/commit/804e59f7281902bc563520b3248ca6dac8ab84e7))
+
+- Install questionnaires via plugins
+  ([#369](https://github.com/canvas-medical/canvas-plugins/pull/369),
+  [`0433a3e`](https://github.com/canvas-medical/canvas-plugins/commit/0433a3eec48f404eabc76445198c634f55c5c6b9))
+
+
 ## v0.18.0 (2025-02-05)
 
 ### Bug Fixes
