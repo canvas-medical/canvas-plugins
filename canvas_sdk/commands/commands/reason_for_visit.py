@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
@@ -14,7 +15,7 @@ class ReasonForVisitCommand(_BaseCommand):
         key = "reasonForVisit"
 
     structured: bool = False
-    coding: Coding | str | None = None
+    coding: Coding | UUID | str | None = None
     comment: str | None = None
 
     def _get_error_details(
@@ -29,7 +30,7 @@ class ReasonForVisitCommand(_BaseCommand):
             )
 
         if self.coding:
-            if isinstance(self.coding, str):
+            if isinstance(self.coding, str | UUID):
                 query = {"id": self.coding}
                 error_message = f"ReasonForVisitSettingCoding with id {self.coding} does not exist."
             else:
@@ -50,4 +51,8 @@ class ReasonForVisitCommand(_BaseCommand):
     @property
     def values(self) -> dict:
         """The ReasonForVisit command's field values."""
-        return {"structured": self.structured, "coding": self.coding, "comment": self.comment}
+        return {
+            "structured": self.structured,
+            "coding": str(self.coding) if isinstance(self.coding, UUID) else self.coding,
+            "comment": self.comment,
+        }
