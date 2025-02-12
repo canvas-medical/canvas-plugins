@@ -83,9 +83,9 @@ def test_load_plugins_with_plugin_that_imports_other_modules_outside_plugin_pack
     with caplog.at_level(logging.ERROR):
         load_or_reload_plugin(install_test_plugin)
 
-    assert any(
-        "Error importing module" in record.message for record in caplog.records
-    ), "log.error() was not called with the expected message."
+    assert any("Error importing module" in record.message for record in caplog.records), (
+        "log.error() was not called with the expected message."
+    )
 
 
 @pytest.mark.parametrize(
@@ -102,9 +102,9 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules(
     with caplog.at_level(logging.ERROR):
         load_or_reload_plugin(install_test_plugin)
 
-    assert any(
-        "Error importing module" in record.message for record in caplog.records
-    ), "log.error() was not called with the expected message."
+    assert any("Error importing module" in record.message for record in caplog.records), (
+        "log.error() was not called with the expected message."
+    )
 
 
 @pytest.mark.parametrize(
@@ -144,9 +144,9 @@ def test_plugin_that_implicitly_imports_allowed_modules(
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
-    assert any(
-        "Hello, World!" in record.message for record in caplog.records
-    ), "log.info() with Template.render() was not called."
+    assert any("Hello, World!" in record.message for record in caplog.records), (
+        "log.info() with Template.render() was not called."
+    )
 
 
 @pytest.mark.parametrize(
@@ -170,9 +170,9 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
-    assert (
-        any("os list dir" in record.message for record in caplog.records) is False
-    ), "log.info() with os.listdir() was called."
+    assert any("os list dir" in record.message for record in caplog.records) is False, (
+        "log.info() with os.listdir() was called."
+    )
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)

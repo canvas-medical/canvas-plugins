@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=../../../../../../schemas/questionnaire.json
+
+name: Example Name
+form_type: QUES
+code_system: LOINC
+code: QUES_EXAMPLE_NAME
+can_originate_in_charting: true
+prologue: This is an example of a structured assessment with single select, multiselect, and free text responses.
+questions:
+  - content: "This is question #1"
+    code_system: CPT
+    code: H0005
+    code_description: ""
+    responses_code_system: INTERNAL
+    responses_type: SING
+    display_result_in_social_history_section: true
+    responses:
+      - name: "Single select response #1"
+        code: QUES_EXAMPLE_NAME_Q1_A1
+        code_description: ''
+        value: "1"
+      - name: "Single select response #2"
+        code: QUES_EXAMPLE_NAME_Q1_A2
+        code_description: ''
+        value: "0"
+      - name: "Single select response #3"
+        code: QUES_EXAMPLE_NAME_Q1_A3
+        code_description: ''
+        value: "0"
+  - content: "This is question #2"
+    code_system: INTERNAL
+    code: QUES_EXAMPLE_NAME_Q2
+    code_description: ""
+    responses_code_system: ICD-10
+    responses_type: MULT
+    display_result_in_social_history_section: true
+    responses:
+      - name: "Multi select response #1"
+        code: F1910
+        code_description: ''
+        value: "0"
+      - name: "Multi select response #2"
+        code: QUES_EXAMPLE_NAME_Q1_A1
+        code_description: ''
+        value: "2"
+      - name: "Multi select response #3"
+        code: QUES_EXAMPLE_NAME_Q1_A2
+        code_description: ''
+        value: "0"
+  - content: "This is question #3"
+    code_system: INTERNAL
+    code: QUES_EXAMPLE_NAME_Q3
+    code_description: ""
+    responses_code_system: INTERNAL
+    responses_type: TXT
+    display_result_in_social_history_section: true
+    responses:
+      - name: "Free text response"
+        code: QUES_EXAMPLE_NAME_Q3_A1
+        code_description: ''
+        value: "This is a default pre-populated free text response."
