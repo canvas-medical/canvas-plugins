@@ -35,7 +35,7 @@ class LabOrderCommand(BaseCommand):
         if self.lab_partner:
             lab_partner_obj = (
                 LabPartner.objects.filter(Q(name=self.lab_partner) | Q(id=self.lab_partner))
-                .values("id")
+                .values("id", "dbid")
                 .first()
             )
             if not lab_partner_obj:
@@ -57,7 +57,7 @@ class LabOrderCommand(BaseCommand):
             else:
                 tests = LabPartnerTest.objects.filter(
                     Q(order_code__in=self.tests_order_codes) | Q(id__in=self.tests_order_codes),
-                    lab_vendor_id=lab_partner_obj["id"],
+                    lab_partner_id=lab_partner_obj["dbid"],
                 )
                 if tests.count() != len(self.tests_order_codes):
                     errors.append(
