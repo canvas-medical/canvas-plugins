@@ -28,6 +28,7 @@ from plugin_runner.exceptions import PluginError
 # TODO: Discuss single response rather than list
 
 # TODO: How to handle authz/authn?
+#   * Risk of having a completely open endpoint — DOS?
 #   * Auth is mandatory; must be a default mechanism
 #   * Default auth strategy: disallow access and return 401
 #   * Auth strategies: Set some constant
@@ -40,7 +41,8 @@ from plugin_runner.exceptions import PluginError
 # TODO: Consistent handling of empty string vs. None with query string and body
 # TODO: Get the xfail test to pass
 
-JSON = dict[str, Any] | list[Any] | int | float | str | bool
+JSONType = dict[str, "JSONType"] | list["JSONType"] | int | float | str | bool | None
+JSON = dict[str, JSONType] | list[JSONType] | int | float | str | bool
 
 
 class Request:
