@@ -14,28 +14,50 @@ from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
 
+# TODO: Test to see if Base64 encoding is necessary
 # TODO: Routing by path regex?
+# - handle later
 # TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
+# - do not handle
 # TODO: Discuss moving "apply" handling up the chain and the interface ramifications
 # TODO: Are other helpers needed on request class?
+# - wait and see
 # TODO: Support charset in responses and text helper on request? Or only support utf-8?
+# - Assume UTF-8 for now
 # TODO: Name for endpoint class: "Route" or "Endpoint"?
+# - Go with Route for now
 # TODO: What should happen to other effects if the user returns two response objects from a route?
+# - Look into wrapping everything in a transaction and rolling back on any error
 # TODO: Interface — request as an argument to handlers or helper on the handler
+# - make request an attribute of self
 # TODO: Discuss a durable way to get the plugin name
-# TODO: Explicitly disallow multipart/form-data, or enable it?
-# TODO: Aesthetics — plugin-like route should maybe have PATH and METHOD
+# - talk to jose
+# TODO: Support multipart/form-data or not?
+# - disable for now; assume that someone will want this
 # TODO: Discuss single response rather than list
+# - only accept lists because of $$$
+# - return error for multiple responses both in plugins and home-app
 
+# TODO: Discuss whether the response effects should inherit from the base effects
+# - use this as a learning opportunity for how to create effects with (or without) pydantic
+# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
+# - implement general event filtering on handlers to solve this problem
+# - not general handling; only pre-built filtering
+# - 404s will require detection in the main event loop
 # TODO: How to handle authz/authn?
 #   * Risk of having a completely open endpoint — DOS?
 #   * Auth is mandatory; must be a default mechanism
 #   * Default auth strategy: disallow access and return 401
 #   * Auth strategies: Set some constant
 #     * custom: provide a callable
-# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
-#       The challenge is that I can't distinguish between all handlers legitimately returning nothing no handlers taking the request
-# TODO: Discuss whether the response effects should inherit from the base effects
+# - start with postman auth options
+# - bring up security concerns about having an open endpoint
+# - look into rejecting requests that do not match a plugin
+# - auth is mandatory; default response is 401
+# - require definition of auth methods on classes
+# - basic, bearer, API key, and custom for first release; digest and JWT later
+# - should be some difference between something specific and custom
+
 
 # TODO: Sanity check — test the handlers with an installed plugin
 # TODO: Consistent handling of empty string vs. None with query string and body
