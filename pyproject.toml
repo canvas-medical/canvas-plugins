@@ -158,7 +158,11 @@ extend-immutable-calls = ["typer.Argument", "typer.Option"]
 convention = "google"
 
 [tool.semantic_release]
-build_command = "uv build"
+build_command = """
+uv lock
+git add uv.lock
+uv build
+"""
 commit_message = "chore: v{version}\n\nSee the changelog for changes."
 commit_version_number = true
 match = "main"
