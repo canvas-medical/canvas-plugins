@@ -14,6 +14,7 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
+import sentry_sdk
 from asgiref.sync import sync_to_async
 from django.db import connections
 
@@ -40,7 +41,17 @@ from settings import (
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
+    SENTRY_DSN,
 )
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release="",
+        send_default_pii=True,
+        traces_sample_rate=0.0,
+        profiles_sample_rate=0.0,
+    )
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
