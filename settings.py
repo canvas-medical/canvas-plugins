@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import cast
 from urllib import parse
 
 from dotenv import load_dotenv
@@ -32,36 +33,26 @@ SECRET_KEY = os.getenv(
 # Use BigAutoField for Default Primary Key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CANVAS_SDK_DB_NAME = os.getenv("CANVAS_SDK_DB_NAME", "home-app")
-CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "app")
-CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
-CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
-CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "home-app",
+        "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE", "app"),
+        "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD", "app"),
+        "HOST": "home-app-db",
+        "PORT": "5432",
+    }
+}
 
 if os.getenv("DATABASE_URL"):
+    # Override the specified values if DATABASE_URL is set (it will always be
+    # set in production) to specify the database name, host and port specified
+    # by Aptible
     parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed_url.path[1:],
-            "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
-            "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
-            "HOST": parsed_url.hostname,
-            "PORT": parsed_url.port,
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": CANVAS_SDK_DB_NAME,
-            "USER": CANVAS_SDK_DB_USERNAME,
-            "PASSWORD": CANVAS_SDK_DB_PASSWORD,
-            "HOST": CANVAS_SDK_DB_HOST,
-            "PORT": CANVAS_SDK_DB_PORT,
-        }
-    }
+    DATABASES["default"]["NAME"] = cast(str, parsed_url.path[1:])
+    DATABASES["default"]["HOST"] = cast(str, parsed_url.hostname)
+    DATABASES["default"]["PORT"] = f"{parsed_url.port}"
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
