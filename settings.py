@@ -1,10 +1,9 @@
 import os
 import sys
+from urllib import parse
 
 from dotenv import load_dotenv
 from env_tools import env_to_bool
-
-from canvas_sdk.utils.db import get_database_dict_from_url
 
 load_dotenv()
 
@@ -40,18 +39,29 @@ CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 
 if os.getenv("DATABASE_URL"):
-    database_dict = get_database_dict_from_url()
-else:
-    database_dict = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": CANVAS_SDK_DB_NAME,
-        "USER": CANVAS_SDK_DB_USERNAME,
-        "PASSWORD": CANVAS_SDK_DB_PASSWORD,
-        "HOST": CANVAS_SDK_DB_HOST,
-        "PORT": CANVAS_SDK_DB_PORT,
-    }
+    parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
 
-DATABASES = {"default": database_dict}
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed_url.path[1:],
+            "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
+            "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
+            "HOST": parsed_url.hostname,
+            "PORT": parsed_url.port,
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": CANVAS_SDK_DB_NAME,
+            "USER": CANVAS_SDK_DB_USERNAME,
+            "PASSWORD": CANVAS_SDK_DB_PASSWORD,
+            "HOST": CANVAS_SDK_DB_HOST,
+            "PORT": CANVAS_SDK_DB_PORT,
+        }
+    }
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
