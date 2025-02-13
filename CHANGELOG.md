@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.19.1 (2025-02-13)
+
+### Bug Fixes
+
+- Refactor database code and remove from canvas_sdk.utils.db
+  ([#411](https://github.com/canvas-medical/canvas-plugins/pull/411),
+  [`28b4b0b`](https://github.com/canvas-medical/canvas-plugins/commit/28b4b0bcc09d9f548f58261b1939d619ea075d7d))
+
+
 ## v0.19.0 (2025-02-12)
 
 ### Bug Fixes
