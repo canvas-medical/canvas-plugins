@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
+import sentry_sdk
 import statsd
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -38,7 +39,17 @@ from settings import (
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
+    SENTRY_DSN,
 )
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release="",
+        send_default_pii=True,
+        traces_sample_rate=0.0,
+        profiles_sample_rate=0.0,
+    )
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
