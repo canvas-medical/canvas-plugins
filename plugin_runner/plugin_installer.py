@@ -6,7 +6,7 @@ import tempfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict, cast
 from urllib import parse
 
 import psycopg
@@ -30,41 +30,32 @@ from settings import (
 UPLOAD_TO_PREFIX = "plugins"
 
 
-def get_database_dict_from_url() -> dict[str, Any]:
-    """Creates a psycopg ready dictionary from the home-app database URL."""
-    parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
-    db_name = parsed_url.path[1:]
-    return {
-        "dbname": db_name,
-        "user": parsed_url.username,
-        "password": parsed_url.password,
-        "host": parsed_url.hostname,
-        "port": parsed_url.port,
-    }
+def open_database_connection() -> Connection:
+    """Opens a psycopg connection to the home-app database.
 
+    When running within Aptible, use the database URL, otherwise pull from
+    the environment variables.
+    """
+    if os.getenv("DATABASE_URL"):
+        parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
 
-def get_database_dict_from_env() -> dict[str, Any]:
-    """Creates a psycopg ready dictionary from the environment variables."""
+        return psycopg.connect(
+            dbname=cast(str, parsed_url.path[1:]),
+            user=cast(str, parsed_url.username),
+            password=cast(str, parsed_url.password),
+            host=cast(str, parsed_url.hostname),
+            port=parsed_url.port,
+        )
+
     APP_NAME = os.getenv("APP_NAME")
 
-    return {
-        "dbname": APP_NAME,
-        "user": os.getenv("DB_USERNAME", "app"),
-        "password": os.getenv("DB_PASSWORD", "app"),
-        "host": os.getenv("DB_HOST", f"{APP_NAME}-db"),
-        "port": os.getenv("DB_PORT", "5432"),
-    }
-
-
-def open_database_connection() -> Connection:
-    """Opens a psycopg connection to the home-app database."""
-    # When running within Aptible, use the database URL, otherwise pull from the environment variables.
-    if os.getenv("DATABASE_URL"):
-        database_dict = get_database_dict_from_url()
-    else:
-        database_dict = get_database_dict_from_env()
-    conn = psycopg.connect(**database_dict)
-    return conn
+    return psycopg.connect(
+        dbname=APP_NAME,
+        user=os.getenv("DB_USERNAME", "app"),
+        password=os.getenv("DB_PASSWORD", "app"),
+        host=os.getenv("DB_HOST", f"{APP_NAME}-db"),
+        port=os.getenv("DB_PORT", "5432"),
+    )
 
 
 class PluginAttributes(TypedDict):
