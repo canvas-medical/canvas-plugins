@@ -27,7 +27,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.plugin_installer import install_plugins
+from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
