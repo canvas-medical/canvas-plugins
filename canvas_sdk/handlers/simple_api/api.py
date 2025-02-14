@@ -1,49 +1,23 @@
 import json
 from abc import ABC, ABCMeta, abstractmethod
 from base64 import b64decode
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
+from functools import cached_property
+from http import HTTPStatus
 from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
 from requests.structures import CaseInsensitiveDict
 
-from canvas_sdk.effects import Effect
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from plugin_runner.exceptions import PluginError
 
-# TODO: Test to see if Base64 encoding is necessary
 # TODO: Routing by path regex?
-# - handle later
-# TODO: Do we need to handle repeated header names? Django concatenates; other platforms handle them as lists
-# - do not handle
-# TODO: Discuss moving "apply" handling up the chain and the interface ramifications
-# TODO: Are other helpers needed on request class?
-# - wait and see
-# TODO: Support charset in responses and text helper on request? Or only support utf-8?
-# - Assume UTF-8 for now
-# TODO: Name for endpoint class: "Route" or "Endpoint"?
-# - Go with Route for now
-# TODO: What should happen to other effects if the user returns two response objects from a route?
-# - Look into wrapping everything in a transaction and rolling back on any error
-# TODO: Interface — request as an argument to handlers or helper on the handler
-# - make request an attribute of self
-# TODO: Discuss a durable way to get the plugin name
-# - talk to jose
-# TODO: Support multipart/form-data or not?
-# - disable for now; assume that someone will want this
-# TODO: Discuss single response rather than list
-# - only accept lists because of $$$
-# - return error for multiple responses both in plugins and home-app
-
-# TODO: Discuss whether the response effects should inherit from the base effects
-# - use this as a learning opportunity for how to create effects with (or without) pydantic
-# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
-# - implement general event filtering on handlers to solve this problem
-# - not general handling; only pre-built filtering
-# - 404s will require detection in the main event loop
+# TODO: Support multipart/form-data by adding helpers to the request class
 # TODO: How to handle authz/authn?
 #   * Risk of having a completely open endpoint — DOS?
 #   * Auth is mandatory; must be a default mechanism
@@ -57,10 +31,23 @@ from plugin_runner.exceptions import PluginError
 # - require definition of auth methods on classes
 # - basic, bearer, API key, and custom for first release; digest and JWT later
 # - should be some difference between something specific and custom
+# TODO: What should happen to other effects if the user returns two response objects from a route?
+# - Look into wrapping everything in a transaction and rolling back on any error
+# - Rollback should occur if error was detected in the handler or in home-app
 
+# TODO: Discuss a durable way to get the plugin name
+# - talk to jose
+# TODO: Consistent handling of empty string vs. None with query string and body
+# TODO: HTTPMethod enum or string?kl
+
+# TODO: Discuss whether the response effects should inherit from the base effects
+# - use this as a learning opportunity for how to create effects with (or without) pydantic
+# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
+# - implement general event filtering on handlers to solve this problem
+# - not general handling; only pre-built filtering
+# - 404s will require detection in the main event loop
 
 # TODO: Sanity check — test the handlers with an installed plugin
-# TODO: Consistent handling of empty string vs. None with query string and body
 # TODO: Get the xfail test to pass
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
@@ -85,10 +72,10 @@ class Request:
 
     def text(self) -> str:
         """Return the response body as plain text."""
-        return self.body.decode("utf-8")  # type: ignore[union-attr]
+        return self.body.decode()  # type: ignore[union-attr]
 
 
-RouteHandler = Callable[[Request], Response | list[Response | Effect]]
+RouteHandler = Callable[[], Response | list[Response | Effect]]
 
 
 def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
@@ -172,24 +159,41 @@ class SimpleAPIBase(BaseHandler, ABC):
     @abstractmethod
     def _path_prefix(self) -> str: ...
 
+    @cached_property
+    def request(self) -> Request:
+        """Return the request object from the event."""
+        return Request(self.event)
+
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
-        request = Request(self.event)
-
         # Get the handler method
-        handler = self._routes.get((request.method, request.path))
+        handler = self._routes.get((self.request.method, self.request.path))
         if not handler:
             return []
 
         # Handle the request
-        effects = handler(request)
-        if not isinstance(effects, Iterable):
-            effects = [effects]
+        effects = handler()
 
         # Transform any API responses into effects if they aren't already effects
+        response_count = 0
         for index, effect in enumerate(effects):
             if isinstance(effect, Response):
                 effects[index] = effect.apply()
+            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+                response_count += 1
+
+        # If there is more than one response, remove the responses and return an error response
+        # instead. Allow non-response effects to pass through unaffected.
+        if response_count > 1:
+            effects = [
+                effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
+            ]
+            effects.append(
+                JSONResponse(
+                    {"error": "Multiple responses provided"},
+                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                ).apply()
+            )
 
         return effects
 

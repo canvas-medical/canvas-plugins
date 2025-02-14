@@ -1,3 +1,3 @@
-from .api import Request, SimpleAPI, SimpleAPIRoute
+from .api import SimpleAPI, SimpleAPIRoute
 
-__all__ = ["Request", "SimpleAPI", "SimpleAPIRoute"]
+__all__ = ["SimpleAPI", "SimpleAPIRoute"]
