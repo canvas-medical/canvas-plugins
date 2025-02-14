@@ -35,17 +35,17 @@ from plugin_runner.plugin_installer import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
+    CUSTOMER_IDENTIFIER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
-    SENTRY_DSN,
 )
 
-if SENTRY_DSN:
+if CUSTOMER_IDENTIFIER != "local":
     sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        release="",
+        dsn="https://b3e2a586fd0082d90bd64bc387db7cb9@o1318981.ingest.us.sentry.io/4508815443492864",
+        release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
         send_default_pii=True,
         traces_sample_rate=0.0,
         profiles_sample_rate=0.0,
@@ -55,9 +55,19 @@ if SENTRY_DSN:
 # directory to the path
 sys.path.append(PLUGIN_DIRECTORY)
 
+Plugin = TypedDict(
+    "Plugin",
+    {
+        "active": bool,
+        "class": Any,
+        "sandbox": Any,
+        "handler": Any,
+        "secrets": dict[str, str],
+    },
+)
+
 # a global dictionary of loaded plugins
-# TODO: create typings here for the subkeys
-LOADED_PLUGINS: dict = {}
+LOADED_PLUGINS: dict[str, Plugin] = {}
 
 # a global dictionary of events to handler class names
 EVENT_HANDLER_MAP: dict[str, list] = defaultdict(list)
