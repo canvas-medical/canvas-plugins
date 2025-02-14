@@ -63,8 +63,7 @@ from plugin_runner.exceptions import PluginError
 # TODO: Consistent handling of empty string vs. None with query string and body
 # TODO: Get the xfail test to pass
 
-JSONValue = dict[str, "JSONValue"] | list["JSONValue"] | int | float | str | bool | None
-JSON = dict[str, JSONValue] | list[JSONValue] | int | float | str | bool
+JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
 
 class Request:
@@ -164,7 +163,7 @@ class SimpleAPIBase(BaseHandler, ABC):
             if names := route_handler_method_names.intersection(superclass.__dict__):
                 raise PluginError(
                     f"{SimpleAPI.__name__} subclass route handler methods are overriding base "
-                    f"class attributes: {', '.join(f"{cls.__name__}.{name}" for name in names)}"
+                    f"class attributes: {', '.join(f'{cls.__name__}.{name}' for name in names)}"
                 )
 
     def _plugin_name(self) -> str:
