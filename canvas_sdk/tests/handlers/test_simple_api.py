@@ -20,6 +20,12 @@ from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIRoute
 from plugin_runner.exceptions import PluginError
 
+# TODO: test error: route not found
+# TODO: test error: duplicate routes in same handler (depends on 404 handling)
+# TODO: test error: no handler (depends on 404 handling)
+# TODO: test error: multiple responses (depends on 404 handling)
+
+
 REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 HEADERS = {"Canvas-Plugins-Test-Header": "test header"}
 
@@ -142,30 +148,40 @@ def test_request_routing_route(method: str) -> None:
     class Route(TestRoute):
         PATH = "/route"
 
-        def get(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": "GET"},
-            )
+        def get(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": "GET"},
+                )
+            ]
 
-        def post(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": "POST"},
-            )
+        def post(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": "POST"},
+                )
+            ]
 
-        def put(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": "PUT"},
-            )
+        def put(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": "PUT"},
+                )
+            ]
 
-        def delete(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": "DELETE"},
-            )
+        def delete(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": "DELETE"},
+                )
+            ]
 
-        def patch(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": "PATCH"},
-            )
+        def patch(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": "PATCH"},
+                )
+            ]
 
     handler = Route(make_event(method, path="/route"))
 
@@ -203,16 +219,20 @@ def test_request_routing_api(
         PREFIX = prefix
 
         @decorator("/route1")
-        def route1(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": method},
-            )
+        def route1(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": method},
+                )
+            ]
 
         @decorator("/route2")
-        def route2(self, _: Request) -> JSONResponse:
-            return JSONResponse(
-                {"method": method},
-            )
+        def route2(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {"method": method},
+                )
+            ]
 
     handler = API(make_event(method, path=f"{prefix or ''}{path}"))
 
@@ -228,16 +248,18 @@ def test_request_lifecycle() -> None:
     class Route(TestRoute):
         PATH = "/route"
 
-        def post(self, request: Request) -> JSONResponse:
-            return JSONResponse(
-                {
-                    "method": request.method,
-                    "path": request.path,
-                    "query_string": request.query_string,
-                    "body": request.json(),
-                    "headers": dict(request.headers),
-                },
-            )
+        def post(self) -> list[Response | Effect]:
+            return [
+                JSONResponse(
+                    {
+                        "method": self.request.method,
+                        "path": self.request.path,
+                        "query_string": self.request.query_string,
+                        "body": self.request.json(),
+                        "headers": dict(self.request.headers),
+                    },
+                )
+            ]
 
     handler = Route(
         make_event(
@@ -265,34 +287,6 @@ def test_request_lifecycle() -> None:
 @pytest.mark.parametrize(
     argnames="response,expected_effects",
     argvalues=[
-        (
-            lambda: JSONResponse(
-                content={"message": "JSON response"},
-                status_code=HTTPStatus.ACCEPTED,
-                headers=HEADERS,
-            ).apply(),
-            [
-                JSONResponse(
-                    content={"message": "JSON response"},
-                    status_code=HTTPStatus.ACCEPTED,
-                    headers=HEADERS,
-                ).apply()
-            ],
-        ),
-        (
-            lambda: JSONResponse(
-                content={"message": "JSON response"},
-                status_code=HTTPStatus.ACCEPTED,
-                headers=HEADERS,
-            ),
-            [
-                JSONResponse(
-                    content={"message": "JSON response"},
-                    status_code=HTTPStatus.ACCEPTED,
-                    headers=HEADERS,
-                ).apply()
-            ],
-        ),
         (
             lambda: [
                 Effect(type=EffectType.CREATE_TASK, payload="create task"),
@@ -347,8 +341,6 @@ def test_request_lifecycle() -> None:
         ),
     ],
     ids=[
-        "single effect",
-        "single response object",
         "list of effects",
         "list of effects with response object",
         "list of effects with response effect",
@@ -362,7 +354,7 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
     class Route(TestRoute):
         PATH = "/route"
 
-        def get(self, _: Request) -> Response | list[Response | Effect]:
+        def get(self) -> list[Response | Effect]:
             return response()
 
     handler = Route(make_event(method="GET", path="/route"))
@@ -426,8 +418,8 @@ def test_override_base_handler_attributes_error() -> None:
 
         class API(TestAPI):
             @api.get("/route")  # type: ignore[arg-type]
-            def compute(self, _: Request) -> Response | list[Response | Effect]:  # type: ignore[override]
-                return JSONResponse({})
+            def compute(self) -> list[Response | Effect]:  # type: ignore[override]
+                return [JSONResponse({})]
 
 
 def test_route_missing_path_error() -> None:
@@ -437,7 +429,7 @@ def test_route_missing_path_error() -> None:
     with pytest.raises(PluginError):
 
         class Route(TestRoute):
-            def get(self, _: Request) -> Response | list[Response | Effect]:
+            def get(self) -> list[Response | Effect]:
                 return []
 
 
@@ -449,11 +441,5 @@ def test_route_has_prefix_error() -> None:
             PREFIX = "/prefix"
             PATH = "/route"
 
-            def get(self, _: Request) -> Response | list[Response | Effect]:
+            def get(self) -> list[Response | Effect]:
                 return []
-
-
-# test error: route not found
-# test error: duplicate routes in same handler (depends on 404 handling)
-# test error: no handler (depends on 404 handling)
-# test error: multiple responses (depends on 404 handling)
