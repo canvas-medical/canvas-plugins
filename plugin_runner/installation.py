@@ -150,12 +150,14 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as ex:
-        log.error(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
+        log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise PluginInstallationError() from ex
 
 
 def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> None:
     """Extract plugin in `file` to the given `path`."""
+    log.info(f'Extracting plugin at "{plugin_file_path}"')
+
     archive: tarfile.TarFile | None = None
 
     try:
@@ -193,7 +195,7 @@ def disable_plugin(plugin_name: str) -> None:
     """Disable the given plugin."""
     conn = open_database_connection()
     conn.cursor().execute(
-        "update plugin_io_plugin set is_enabled = false where name = %s", (plugin_name,)
+        "UPDATE plugin_io_plugin SET is_enabled = false WHERE name = %s", (plugin_name,)
     )
     conn.commit()
     conn.close()
@@ -203,6 +205,8 @@ def disable_plugin(plugin_name: str) -> None:
 
 def uninstall_plugin(plugin_name: str) -> None:
     """Remove the plugin from the filesystem."""
+    log.info(f'Uninstalling plugin "{plugin_name}"')
+
     plugin_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
     if plugin_path.exists():
