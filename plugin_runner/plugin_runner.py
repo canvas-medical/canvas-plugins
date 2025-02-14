@@ -204,17 +204,18 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
-async def synchronize_plugins(max_iterations: None | int = None) -> None:
-    """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
+async def synchronize_plugins(run_once: bool = False) -> None:
+    """
+    Listen for messages on the pubsub channel that will indicate it is
+    necessary to reinstall and reload plugins.
+    """
     client, pubsub = get_client()
     await pubsub.psubscribe(CHANNEL_NAME)
     log.info("Listening for messages on pubsub channel")
-    iterations: int = 0
-    while (
-        max_iterations is None or iterations < max_iterations
-    ):  # max_iterations == -1 means infinite iterations
-        iterations += 1
+
+    while True:
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
+
         if message is not None:
             log.info("Received message from pubsub channel")
 
@@ -231,17 +232,22 @@ async def synchronize_plugins(max_iterations: None | int = None) -> None:
             if data["action"] == "reload":
                 try:
                     log.info(
-                        "plugin-synchronizer: installing and reloading plugins after receiving command"
+                        "synchronize_plugins: installing and reloading plugins after receiving command"
                     )
                     install_plugins()
                     load_plugins()
                 except Exception as e:
-                    log.info(f"plugin-synchronizer: `install_plugins` failed: {e}")
+                    log.info(f"synchronize_plugins: `install_plugins` failed: {e}")
+
+        if run_once:
+            break
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
     """Validates the effects based on predefined rules.
-    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all non-search-related effects.
+
+    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all
+    non-search-related effects.
     """
     seen_autocomplete = False
     validated_effects = []

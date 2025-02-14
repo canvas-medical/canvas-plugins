@@ -271,7 +271,7 @@ async def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
             "data": pickle.dumps({"action": "reload"}),
         }
 
-        task = asyncio.create_task(synchronize_plugins(max_iterations=1))
+        task = asyncio.create_task(synchronize_plugins(run_once=True))
         await asyncio.sleep(0.1)  # Give some time for the coroutine to run
         task.cancel()
 

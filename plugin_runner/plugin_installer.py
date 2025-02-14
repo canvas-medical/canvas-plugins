@@ -207,6 +207,8 @@ def uninstall_plugin(plugin_name: str) -> None:
 
 def install_plugins() -> None:
     """Install all enabled plugins."""
+    log.info("`install_plugins()` called")
+
     if Path(PLUGIN_DIRECTORY).exists():
         shutil.rmtree(PLUGIN_DIRECTORY)
 
@@ -219,7 +221,7 @@ def install_plugins() -> None:
         except PluginInstallationError:
             disable_plugin(plugin_name)
             log.error(
-                f"Installation failed for plugin '{plugin_name}', version {attributes['version']}. The plugin has been disabled"
+                f"Installation failed for plugin '{plugin_name}', version {attributes['version']}; the plugin has been disabled"
             )
             continue
 
