@@ -88,8 +88,6 @@ MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
 
-SENTRY_DSN = os.getenv("SENTRY_DSN")
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
