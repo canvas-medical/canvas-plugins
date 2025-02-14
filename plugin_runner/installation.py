@@ -73,8 +73,8 @@ def enabled_plugins() -> dict[str, PluginAttributes]:
 
     with conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
-            "select name, package, version, key, value from plugin_io_plugin p "
-            "left join plugin_io_pluginsecret s on p.id = s.plugin_id where is_enabled"
+            "SELECT name, package, version, key, value FROM plugin_io_plugin p "
+            "LEFT JOIN plugin_io_pluginsecret s ON p.id = s.plugin_id WHERE is_enabled"
         )
         rows = cursor.fetchall()
         plugins = _extract_rows_to_dict(rows)
@@ -84,6 +84,7 @@ def enabled_plugins() -> dict[str, PluginAttributes]:
 
 def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
     plugins = {}
+
     for row in rows:
         if row["name"] not in plugins:
             plugins[row["name"]] = PluginAttributes(
@@ -93,6 +94,7 @@ def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
             )
         else:
             plugins[row["name"]]["secrets"][row["key"]] = row["value"]
+
     return plugins
 
 
@@ -124,16 +126,18 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         prefix_dir = Path(temp_dir) / UPLOAD_TO_PREFIX
         prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
         download_path = Path(temp_dir) / plugin_package
+
         with open(download_path, "wb") as download_file:
             response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
             download_file.write(response.content)
+
         yield download_path
 
 
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
-        log.info(f"Installing plugin '{plugin_name}'")
+        log.info(f'Installing plugin "{plugin_name}"')
 
         plugin_installation_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
@@ -216,12 +220,13 @@ def install_plugins() -> None:
 
     for plugin_name, attributes in enabled_plugins().items():
         try:
-            log.info(f"Installing plugin '{plugin_name}', version {attributes['version']}")
+            log.info(f'Installing plugin "{plugin_name}", version {attributes["version"]}')
             install_plugin(plugin_name, attributes)
         except PluginInstallationError:
             disable_plugin(plugin_name)
             log.error(
-                f"Installation failed for plugin '{plugin_name}', version {attributes['version']}; the plugin has been disabled"
+                f'Installation failed for plugin "{plugin_name}", version {attributes["version"]};'
+                " the plugin has been disabled"
             )
             continue
 
