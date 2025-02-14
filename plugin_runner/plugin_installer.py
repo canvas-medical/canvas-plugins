@@ -14,6 +14,7 @@ import requests
 from psycopg import Connection
 from psycopg.rows import dict_row
 
+from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.exceptions import InvalidPluginFormat, PluginInstallationError
 from settings import (
@@ -132,7 +133,7 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
-        print(f"Installing plugin '{plugin_name}'")
+        log.info(f"Installing plugin '{plugin_name}'")
 
         plugin_installation_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
@@ -145,7 +146,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as ex:
-        print(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
+        log.error(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
         raise PluginInstallationError() from ex
 
 
@@ -160,10 +161,10 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
                     archive = tarfile.TarFile.open(fileobj=file)
                     archive.extractall(plugin_installation_path, filter="data")
             except tarfile.ReadError as ex:
-                print(f"Unreadable tar archive: '{plugin_file_path}'")
+                log.error(f"Unreadable tar archive: '{plugin_file_path}'")
                 raise InvalidPluginFormat from ex
         else:
-            print(f"Unsupported file format: '{plugin_file_path}'")
+            log.error(f"Unsupported file format: '{plugin_file_path}'")
             raise InvalidPluginFormat
     finally:
         if archive:
@@ -172,7 +173,7 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
 
 def install_plugin_secrets(plugin_name: str, secrets: dict[str, str]) -> None:
     """Write the plugin's secrets to disk in the package's directory."""
-    print(f"Writing plugin secrets for '{plugin_name}'")
+    log.info(f"Writing plugin secrets for '{plugin_name}'")
 
     secrets_path = Path(PLUGIN_DIRECTORY) / plugin_name / SECRETS_FILE_NAME
 
@@ -213,11 +214,11 @@ def install_plugins() -> None:
 
     for plugin_name, attributes in enabled_plugins().items():
         try:
-            print(f"Installing plugin '{plugin_name}', version {attributes['version']}")
+            log.info(f"Installing plugin '{plugin_name}', version {attributes['version']}")
             install_plugin(plugin_name, attributes)
         except PluginInstallationError:
             disable_plugin(plugin_name)
-            print(
+            log.error(
                 f"Installation failed for plugin '{plugin_name}', version {attributes['version']}. The plugin has been disabled"
             )
             continue

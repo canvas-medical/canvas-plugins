@@ -16,10 +16,7 @@ import redis.asyncio as redis
 import statsd
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import (
-    ReloadPluginsRequest,
-    ReloadPluginsResponse,
-)
+from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
@@ -239,7 +236,7 @@ async def synchronize_plugins(max_iterations: None | int = None) -> None:
                     install_plugins()
                     load_plugins()
                 except Exception as e:
-                    print("plugin-synchronizer: `install_plugins` failed:", e)
+                    log.info(f"plugin-synchronizer: `install_plugins` failed: {e}")
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
