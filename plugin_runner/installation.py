@@ -215,7 +215,7 @@ def uninstall_plugin(plugin_name: str) -> None:
 
 def install_plugins() -> None:
     """Install all enabled plugins."""
-    log.info("`install_plugins()` called")
+    log.info("Installing plugins")
 
     if Path(PLUGIN_DIRECTORY).exists():
         shutil.rmtree(PLUGIN_DIRECTORY)

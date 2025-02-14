@@ -252,7 +252,7 @@ async def synchronize_plugins_and_report_errors() -> None:
     """
     Run synchronize_plugins() in perpetuity and report any encountered errors.
     """
-    log.error("Starting synchronize_plugins loop...")
+    log.info("Starting synchronize_plugins loop...")
 
     while True:
         try:
