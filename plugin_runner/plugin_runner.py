@@ -258,7 +258,7 @@ async def synchronize_plugins_and_report_errors() -> None:
         try:
             await synchronize_plugins()
         except Exception as e:
-            log.error(f'synchronize_plugins encountered error: "{e}"')
+            log.error(f"synchronize_plugins error: {e}")
 
         # don't crush redis if we're retrying in a tight loop
         await asyncio.sleep(0.5)
@@ -278,7 +278,9 @@ def validate_effects(effects: list[Effect]) -> list[Effect]:
             if seen_autocomplete:
                 log.warning("Discarding additional AUTOCOMPLETE_SEARCH_RESULTS effect.")
                 continue
+
             seen_autocomplete = True
+
         validated_effects.append(effect)
 
     return validated_effects
