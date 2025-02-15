@@ -440,23 +440,30 @@ def refresh_event_type_map() -> None:
                 log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
-def load_plugins() -> None:
+def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     """Load the plugins."""
     # first mark each plugin as inactive since we want to remove it from
     # LOADED_PLUGINS if it no longer exists on disk
     for plugin in LOADED_PLUGINS.values():
         plugin["active"] = False
 
-    candidates = os.listdir(PLUGIN_DIRECTORY)
+    if specified_plugin_paths is not None:
+        # convert to Paths
+        plugin_paths = [pathlib.Path(name) for name in specified_plugin_paths]
 
-    # convert to Paths
-    plugin_paths = [pathlib.Path(os.path.join(PLUGIN_DIRECTORY, name)) for name in candidates]
+        for plugin_path in plugin_paths:
+            # when we import plugins we'll use the module name directly so we need to add the plugin
+            # directory to the path
+            path_to_append = pathlib.Path(".") / plugin_path.parent
+            sys.path.append(path_to_append.as_posix())
+    else:
+        candidates = os.listdir(PLUGIN_DIRECTORY)
+
+        # convert to Paths
+        plugin_paths = [pathlib.Path(os.path.join(PLUGIN_DIRECTORY, name)) for name in candidates]
 
     # get all directories under the plugin directory
     plugin_paths = [path for path in plugin_paths if path.is_dir()]
-
-    # filter to only the directories containing a manifest file
-    plugin_paths = [path for path in plugin_paths if (path / MANIFEST_FILE_NAME).exists()]
 
     # load or reload each plugin
     for plugin_path in plugin_paths:
@@ -473,7 +480,7 @@ def load_plugins() -> None:
 _cleanup_coroutines = []
 
 
-async def serve() -> None:
+async def serve(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server."""
     port = "50051"
 
@@ -485,7 +492,7 @@ async def serve() -> None:
     log.info(f"Starting server, listening on port {port}")
 
     install_plugins()
-    load_plugins()
+    load_plugins(specified_plugin_paths)
 
     await server.start()
 
@@ -498,7 +505,8 @@ async def serve() -> None:
     await server.wait_for_termination()
 
 
-def run_server() -> None:
+# NOTE: specified_plugin_paths powers the `canvas run-plugins` command
+def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server."""
     loop = asyncio.new_event_loop()
 
@@ -507,7 +515,7 @@ def run_server() -> None:
     try:
         loop.run_until_complete(
             asyncio.gather(
-                serve(),
+                serve(specified_plugin_paths),
                 synchronize_plugins_and_report_errors(),
             )
         )
