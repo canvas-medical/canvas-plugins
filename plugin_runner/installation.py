@@ -14,6 +14,7 @@ import requests
 from psycopg import Connection
 from psycopg.rows import dict_row
 
+from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.exceptions import InvalidPluginFormat, PluginInstallationError
 from settings import (
@@ -72,8 +73,8 @@ def enabled_plugins() -> dict[str, PluginAttributes]:
 
     with conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
-            "select name, package, version, key, value from plugin_io_plugin p "
-            "left join plugin_io_pluginsecret s on p.id = s.plugin_id where is_enabled"
+            "SELECT name, package, version, key, value FROM plugin_io_plugin p "
+            "LEFT JOIN plugin_io_pluginsecret s ON p.id = s.plugin_id WHERE is_enabled"
         )
         rows = cursor.fetchall()
         plugins = _extract_rows_to_dict(rows)
@@ -83,6 +84,7 @@ def enabled_plugins() -> dict[str, PluginAttributes]:
 
 def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
     plugins = {}
+
     for row in rows:
         if row["name"] not in plugins:
             plugins[row["name"]] = PluginAttributes(
@@ -92,6 +94,7 @@ def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
             )
         else:
             plugins[row["name"]]["secrets"][row["key"]] = row["value"]
+
     return plugins
 
 
@@ -123,16 +126,18 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         prefix_dir = Path(temp_dir) / UPLOAD_TO_PREFIX
         prefix_dir.mkdir()  # create an intermediate directory reflecting the prefix
         download_path = Path(temp_dir) / plugin_package
+
         with open(download_path, "wb") as download_file:
             response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
             download_file.write(response.content)
+
         yield download_path
 
 
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
-        print(f"Installing plugin '{plugin_name}'")
+        log.info(f'Installing plugin "{plugin_name}"')
 
         plugin_installation_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
@@ -145,12 +150,14 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as ex:
-        print(f"Failed to install plugin '{plugin_name}', version {attributes['version']}")
+        log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
         raise PluginInstallationError() from ex
 
 
 def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> None:
     """Extract plugin in `file` to the given `path`."""
+    log.info(f'Extracting plugin at "{plugin_file_path}"')
+
     archive: tarfile.TarFile | None = None
 
     try:
@@ -160,10 +167,10 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
                     archive = tarfile.TarFile.open(fileobj=file)
                     archive.extractall(plugin_installation_path, filter="data")
             except tarfile.ReadError as ex:
-                print(f"Unreadable tar archive: '{plugin_file_path}'")
+                log.error(f"Unreadable tar archive: '{plugin_file_path}'")
                 raise InvalidPluginFormat from ex
         else:
-            print(f"Unsupported file format: '{plugin_file_path}'")
+            log.error(f"Unsupported file format: '{plugin_file_path}'")
             raise InvalidPluginFormat
     finally:
         if archive:
@@ -172,7 +179,7 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
 
 def install_plugin_secrets(plugin_name: str, secrets: dict[str, str]) -> None:
     """Write the plugin's secrets to disk in the package's directory."""
-    print(f"Writing plugin secrets for '{plugin_name}'")
+    log.info(f"Writing plugin secrets for '{plugin_name}'")
 
     secrets_path = Path(PLUGIN_DIRECTORY) / plugin_name / SECRETS_FILE_NAME
 
@@ -188,7 +195,7 @@ def disable_plugin(plugin_name: str) -> None:
     """Disable the given plugin."""
     conn = open_database_connection()
     conn.cursor().execute(
-        "update plugin_io_plugin set is_enabled = false where name = %s", (plugin_name,)
+        "UPDATE plugin_io_plugin SET is_enabled = false WHERE name = %s", (plugin_name,)
     )
     conn.commit()
     conn.close()
@@ -198,6 +205,8 @@ def disable_plugin(plugin_name: str) -> None:
 
 def uninstall_plugin(plugin_name: str) -> None:
     """Remove the plugin from the filesystem."""
+    log.info(f'Uninstalling plugin "{plugin_name}"')
+
     plugin_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
     if plugin_path.exists():
@@ -206,6 +215,8 @@ def uninstall_plugin(plugin_name: str) -> None:
 
 def install_plugins() -> None:
     """Install all enabled plugins."""
+    log.info("Installing plugins")
+
     if Path(PLUGIN_DIRECTORY).exists():
         shutil.rmtree(PLUGIN_DIRECTORY)
 
@@ -213,12 +224,13 @@ def install_plugins() -> None:
 
     for plugin_name, attributes in enabled_plugins().items():
         try:
-            print(f"Installing plugin '{plugin_name}', version {attributes['version']}")
+            log.info(f'Installing plugin "{plugin_name}", version {attributes["version"]}')
             install_plugin(plugin_name, attributes)
         except PluginInstallationError:
             disable_plugin(plugin_name)
-            print(
-                f"Installation failed for plugin '{plugin_name}', version {attributes['version']}. The plugin has been disabled"
+            log.error(
+                f'Installation failed for plugin "{plugin_name}", version {attributes["version"]};'
+                " the plugin has been disabled"
             )
             continue
 

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from pytest_mock import MockerFixture
 
-from plugin_runner.plugin_installer import (
+from plugin_runner.installation import (
     PluginAttributes,
     _extract_rows_to_dict,
     download_plugin,
@@ -82,7 +82,7 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
     tarball_1 = _create_tarball("plugin1")
     tarball_2 = _create_tarball("plugin2")
 
-    mocker.patch("plugin_runner.plugin_installer.enabled_plugins", return_value=mock_plugins)
+    mocker.patch("plugin_runner.installation.enabled_plugins", return_value=mock_plugins)
 
     def mock_download_plugin(package: str) -> MagicMock:
         mock_context = mocker.Mock()
@@ -94,7 +94,7 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
         return mock_context
 
     mocker.patch(
-        "plugin_runner.plugin_installer.download_plugin",
+        "plugin_runner.installation.download_plugin",
         side_effect=mock_download_plugin,
     )
 

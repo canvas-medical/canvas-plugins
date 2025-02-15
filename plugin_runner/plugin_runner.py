@@ -16,10 +16,7 @@ import redis.asyncio as redis
 import statsd
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import (
-    ReloadPluginsRequest,
-    ReloadPluginsResponse,
-)
+from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
@@ -30,7 +27,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
 from logger import log
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.plugin_installer import install_plugins
+from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
@@ -207,19 +204,21 @@ class PluginRunner(PluginRunnerServicer):
             yield ReloadPluginsResponse(success=True)
 
 
-async def synchronize_plugins(max_iterations: None | int = None) -> None:
-    """Listen for messages on the pubsub channel that will indicate it is necessary to reinstall and reload plugins."""
+async def synchronize_plugins(run_once: bool = False) -> None:
+    """
+    Listen for messages on the pubsub channel that will indicate it is
+    necessary to reinstall and reload plugins.
+    """
+    log.info(f'synchronize_plugins: listening for messages on pubsub channel "{CHANNEL_NAME}"')
+
     client, pubsub = get_client()
     await pubsub.psubscribe(CHANNEL_NAME)
-    log.info("Listening for messages on pubsub channel")
-    iterations: int = 0
-    while (
-        max_iterations is None or iterations < max_iterations
-    ):  # max_iterations == -1 means infinite iterations
-        iterations += 1
+
+    while True:
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
+
         if message is not None:
-            log.info("Received message from pubsub channel")
+            log.info(f'synchronize_plugins: received message from pubsub channel "{CHANNEL_NAME}"')
 
             message_type = message.get("type", "")
 
@@ -232,19 +231,44 @@ async def synchronize_plugins(max_iterations: None | int = None) -> None:
                 continue
 
             if data["action"] == "reload":
+                log.info("synchronize_plugins: installing and reloading plugins for action=reload")
+
                 try:
-                    log.info(
-                        "plugin-synchronizer: installing and reloading plugins after receiving command"
-                    )
                     install_plugins()
+                except Exception as e:
+                    # TODO capture_exception when Sentry is installed
+                    log.error(f"synchronize_plugins: install_plugins failed: {e}")
+
+                try:
                     load_plugins()
                 except Exception as e:
-                    print("plugin-synchronizer: `install_plugins` failed:", e)
+                    # TODO capture_exception when Sentry is installed
+                    log.error(f"synchronize_plugins: load_plugins failed: {e}")
+        if run_once:
+            break
+
+
+async def synchronize_plugins_and_report_errors() -> None:
+    """
+    Run synchronize_plugins() in perpetuity and report any encountered errors.
+    """
+    log.info("Starting synchronize_plugins loop...")
+
+    while True:
+        try:
+            await synchronize_plugins()
+        except Exception as e:
+            log.error(f"synchronize_plugins error: {e}")
+
+        # don't crush redis if we're retrying in a tight loop
+        await asyncio.sleep(0.5)
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
     """Validates the effects based on predefined rules.
-    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all non-search-related effects.
+
+    Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all
+    non-search-related effects.
     """
     seen_autocomplete = False
     validated_effects = []
@@ -254,7 +278,9 @@ def validate_effects(effects: list[Effect]) -> list[Effect]:
             if seen_autocomplete:
                 log.warning("Discarding additional AUTOCOMPLETE_SEARCH_RESULTS effect.")
                 continue
+
             seen_autocomplete = True
+
         validated_effects.append(effect)
 
     return validated_effects
@@ -311,7 +337,7 @@ def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
 
 async def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
-    log.info("Publishing message to pubsub channel")
+    log.info(f'Publishing message to pubsub channel "{CHANNEL_NAME}"')
     client, _ = get_client()
 
     await client.publish(CHANNEL_NAME, pickle.dumps(message))
@@ -327,7 +353,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
 
 def load_or_reload_plugin(path: pathlib.Path) -> None:
     """Given a path, load or reload a plugin."""
-    log.info(f"Loading {path}")
+    log.info(f'Loading plugin at "{path}"')
 
     manifest_file = path / MANIFEST_FILE_NAME
     manifest_json_str = manifest_file.read_text()
@@ -366,7 +392,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             handler_module, handler_class = handler["class"].split(":")
             name_and_class = f"{name}:{handler_module}:{handler_class}"
         except ValueError:
-            log.error(f"Unable to parse class for plugin '{name}': '{handler['class']}'")
+            log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
             continue
 
         try:
@@ -391,7 +417,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                     "secrets": secrets_json,
                 }
         except Exception as err:
-            log.error(f"Error importing module '{name_and_class}': {err}")
+            log.error(f'Error importing module "{name_and_class}": {err}')
+
             for error_line in traceback.format_exception(err):
                 log.error(error_line)
 
@@ -438,9 +465,6 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     # get all directories under the plugin directory
     plugin_paths = [path for path in plugin_paths if path.is_dir()]
 
-    # filter to only the directories containing a manifest file
-    plugin_paths = [path for path in plugin_paths if (path / MANIFEST_FILE_NAME).exists()]
-
     # load or reload each plugin
     for plugin_path in plugin_paths:
         load_or_reload_plugin(plugin_path)
@@ -481,6 +505,7 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
     await server.wait_for_termination()
 
 
+# NOTE: specified_plugin_paths powers the `canvas run-plugins` command
 def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     """Run the server."""
     loop = asyncio.new_event_loop()
@@ -489,7 +514,10 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
 
     try:
         loop.run_until_complete(
-            asyncio.gather(serve(specified_plugin_paths), synchronize_plugins())
+            asyncio.gather(
+                serve(specified_plugin_paths),
+                synchronize_plugins_and_report_errors(),
+            )
         )
     except KeyboardInterrupt:
         pass
