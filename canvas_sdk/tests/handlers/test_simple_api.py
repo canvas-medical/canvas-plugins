@@ -66,7 +66,7 @@ def make_event(
                     "method": method,
                     "path": path,
                     "query_string": query_string or "",
-                    "body": b64encode(body).decode() if body else None,
+                    "body": b64encode(body or b"").decode(),
                     "headers": headers or {},
                 },
                 indent=None,
@@ -80,7 +80,7 @@ def make_event(
 @pytest.mark.parametrize(
     argnames="method,path,query_string,body,headers",
     argvalues=[
-        ("GET", "/route", "value1=a&value2=b", None, {}),
+        ("GET", "/route", "value1=a&value2=b", b"", {}),
         (
             "POST",
             "/route",
@@ -401,7 +401,7 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
         ),
         (
             Response(status_code=HTTPStatus.NO_CONTENT, headers=HEADERS),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header"}, "body": null, '
+            '{"headers": {"Canvas-Plugins-Test-Header": "test header"}, "body": "", '
             '"status_code": 204}',
         ),
     ],
