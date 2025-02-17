@@ -9,8 +9,3 @@ class PlanCommand(_BaseCommand):
         commit_required_fields = ("narrative",)
 
     narrative: str = ""
-
-    @property
-    def values(self) -> dict:
-        """The Plan command's field values."""
-        return {"narrative": self.narrative}

@@ -39,15 +39,3 @@ class TaskCommand(BaseCommand):
     comment: str | None = None
     labels: list[str] | None = None
     linked_items_urns: list[str] | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Task command's field values."""
-        return {
-            "title": self.title,
-            "assign_to": self.assign_to,
-            "due_date": self.due_date.isoformat() if self.due_date else None,
-            "comment": self.comment,
-            "labels": self.labels,
-            "linked_items_urns": self.linked_items_urns,
-        }

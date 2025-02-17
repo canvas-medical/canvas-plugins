@@ -10,8 +10,3 @@ class InstructCommand(BaseCommand):
 
     instruction: str | None = None
     comment: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Instruct command's field values."""
-        return {"instruction": self.instruction, "comment": self.comment}

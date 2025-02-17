@@ -16,11 +16,3 @@ class RemoveAllergyCommand(BaseCommand):
         json_schema_extra={"commands_api_name": "allergy"},
     )
     narrative: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Remove Allergy command's field values."""
-        return {
-            "allergy_id": self.allergy_id,
-            "narrative": self.narrative,
-        }
