@@ -31,7 +31,7 @@ class Response:
         """Convert the response into an effect."""
         payload = {
             "headers": self._headers or {},
-            "body": b64encode(self._content).decode() if self._content else None,
+            "body": b64encode(self._content or b"").decode(),
             "status_code": self._status_code,
         }
 

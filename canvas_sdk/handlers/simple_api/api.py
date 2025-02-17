@@ -37,9 +37,8 @@ from plugin_runner.exceptions import PluginError
 # - Rollback should occur if error was detected in the handler or in home-app
 
 # TODO: Discuss a durable way to get the plugin name
-# - talk to jose
-# TODO: Consistent handling of empty string vs. None with query string and body
-# TODO: HTTPMethod enum or string?kl
+# - talk to Jose
+# TODO: HTTPMethod enum or string?
 
 # TODO: Discuss whether the response effects should inherit from the base effects
 # - use this as a learning opportunity for how to create effects with (or without) pydantic
@@ -61,7 +60,7 @@ class Request:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
-        self.body = b64decode(event.context["body"]) if event.context["body"] is not None else None
+        self.body = b64decode(event.context["body"])
         self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
 
         self.query_params = parse_qs(self.query_string)
@@ -69,11 +68,11 @@ class Request:
 
     def json(self) -> JSON:
         """Return the response JSON."""
-        return json.loads(self.body)  # type: ignore[arg-type]
+        return json.loads(self.body)
 
     def text(self) -> str:
         """Return the response body as plain text."""
-        return self.body.decode()  # type: ignore[union-attr]
+        return self.body.decode()
 
 
 RouteHandler = Callable[[], Response | list[Response | Effect]]
