@@ -11,9 +11,10 @@ from urllib.parse import parse_qs
 from requests.structures import CaseInsensitiveDict
 
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.simple_api import JSONResponse, Response
+from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
+from logger import log
 from plugin_runner.exceptions import PluginError
 
 # TODO: Routing by path regex?
@@ -185,15 +186,12 @@ class SimpleAPIBase(BaseHandler, ABC):
         # If there is more than one response, remove the responses and return an error response
         # instead. Allow non-response effects to pass through unaffected.
         if response_count > 1:
+            log.error(f"Multiple responses provided by f{SimpleAPI.__name__} handler")
+
             effects = [
                 effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
             ]
-            effects.append(
-                JSONResponse(
-                    {"error": "Multiple responses provided"},
-                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                ).apply()
-            )
+            effects.append(Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply())
 
         return effects
 
