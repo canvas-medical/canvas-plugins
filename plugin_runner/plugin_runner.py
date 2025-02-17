@@ -13,7 +13,6 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
-import statsd
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
@@ -24,7 +23,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
-from canvas_sdk.utils.stats import get_duration_ms, tags_to_line_protocol
+from canvas_sdk.utils.stats import get_duration_ms, statsd_client
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.installation import install_plugins
@@ -107,10 +106,6 @@ class PluginManifest(TypedDict):
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
-    def __init__(self) -> None:
-        self.statsd_client = statsd.StatsClient()
-        super().__init__()
-
     sandbox: Sandbox
 
     async def HandleEvent(
@@ -165,10 +160,10 @@ class PluginRunner(PluginRunnerServicer):
                 compute_duration = get_duration_ms(compute_start_time)
 
                 log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
-                statsd_tags = tags_to_line_protocol({"plugin": plugin_name})
-                self.statsd_client.timing(
-                    f"plugins.protocol_duration_ms,{statsd_tags}",
+                statsd_client.timing(
+                    "plugins.protocol_duration_ms",
                     delta=compute_duration,
+                    tags={"plugin": plugin_name},
                 )
             except Exception as e:
                 for error_line_with_newlines in traceback.format_exception(e):
@@ -183,10 +178,8 @@ class PluginRunner(PluginRunnerServicer):
         # Don't log anything if a plugin handler didn't actually run.
         if relevant_plugins:
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
-            statsd_tags = tags_to_line_protocol({"event": event_name})
-            self.statsd_client.timing(
-                f"plugins.event_duration_ms,{statsd_tags}",
-                delta=event_duration,
+            statsd_client.timing(
+                "plugins.event_duration_ms", delta=event_duration, tags={"event": event_name}
             )
 
         yield EventResponse(success=True, effects=effect_list)
@@ -475,6 +468,15 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             del LOADED_PLUGINS[name]
 
     refresh_event_type_map()
+
+    log_nr_event_handlers()
+
+
+def log_nr_event_handlers() -> None:
+    """Log the number of event handlers for each event."""
+    for key in EventType.keys():  # noqa: SIM118
+        value = len(EVENT_HANDLER_MAP[key]) if key in EVENT_HANDLER_MAP else 0
+        statsd_client.timing("plugins.event_nr_handlers", value, tags={"event": key})
 
 
 _cleanup_coroutines = []
