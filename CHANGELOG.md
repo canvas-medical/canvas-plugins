@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.20.0 (2025-02-18)
+
+### Bug Fixes
+
+- Refactor command values into dynamic method
+  ([#415](https://github.com/canvas-medical/canvas-plugins/pull/415),
+  [`09527d3`](https://github.com/canvas-medical/canvas-plugins/commit/09527d3367a57effabd40a4a0d32cf92e9837481))
+
+### Chores
+
+- **metrics**: Log nr event handlers
+  ([#416](https://github.com/canvas-medical/canvas-plugins/pull/416),
+  [`43e1f4d`](https://github.com/canvas-medical/canvas-plugins/commit/43e1f4d3cfaf597cbb33034b14ff90a5360ac438))
+
+### Features
+
+- Add follow-up command ([#409](https://github.com/canvas-medical/canvas-plugins/pull/409),
+  [`9a3eb4e`](https://github.com/canvas-medical/canvas-plugins/commit/9a3eb4edcb6862a8399a1adfc4267ace4f6a0e92))
+
+- Add new target option to LaunchModalEffect
+  ([#414](https://github.com/canvas-medical/canvas-plugins/pull/414),
+  [`82728dc`](https://github.com/canvas-medical/canvas-plugins/commit/82728dcf4be2f9d6604bdcf6f822de282119a6f1))
+
+- Add partner lab models and update lab order command to validate results
+  ([#404](https://github.com/canvas-medical/canvas-plugins/pull/404),
+  [`e692077`](https://github.com/canvas-medical/canvas-plugins/commit/e692077ab1b71b0c3341b90e237e3d86f0dea3a1))
+
+- Improve logging ([#413](https://github.com/canvas-medical/canvas-plugins/pull/413),
+  [`46d99b4`](https://github.com/canvas-medical/canvas-plugins/commit/46d99b4ffe1e3564aa8911693624ccbc027c510b))
+
+
 ## v0.19.1 (2025-02-13)
 
 ### Bug Fixes
