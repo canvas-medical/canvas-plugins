@@ -16,6 +16,7 @@ class LaunchModalEffect(_BaseEffect):
         DEFAULT_MODAL = "default_modal"
         NEW_WINDOW = "new_window"
         RIGHT_CHART_PANE = "right_chart_pane"
+        RIGHT_CHART_PANE_LARGE = "right_chart_pane_large"
 
     url: str | None = None
     content: str | None = None
