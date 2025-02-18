@@ -17,6 +17,7 @@ class PatientProfileConfiguration(_BaseEffect):
 
     class Section(Enum):
         DEMOGRAPHICS = "demographics"
+        PORTAL = "portal"
         PREFERENCES = "preferences"
         PREFERRED_PHARMACIES = "preferred_pharmacies"
         PATIENT_CONSENTS = "patient_consents"
