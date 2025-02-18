@@ -10,7 +10,7 @@ class UpdateBillingLineItem(_BaseEffect):
     """
 
     class Meta:
-        effect_type = EffectType.ADD_BILLING_LINE_ITEM
+        effect_type = EffectType.UPDATE_BILLING_LINE_ITEM
         apply_required_fields = ("billing_line_item_id",)
 
     billing_line_item_id: str | None = None
