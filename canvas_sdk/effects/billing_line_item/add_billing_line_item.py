@@ -11,9 +11,8 @@ class AddBillingLineItem(_BaseEffect):
 
     class Meta:
         effect_type = EffectType.ADD_BILLING_LINE_ITEM
-        apply_required_fields = ("patient_id|patient_filter", "note_id", "cpt")
+        apply_required_fields = ("note_id", "cpt")
 
-    patient_id: str | None = None
     note_id: str | None = None
     cpt: str | None = None
     units: int | None = 1
@@ -34,8 +33,6 @@ class AddBillingLineItem(_BaseEffect):
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {
-            "patient": self.patient_id,
-            "patient_filter": self.patient_filter,
             "note_id": self.note_id,
             "data": self.values,
         }
