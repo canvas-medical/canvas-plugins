@@ -10,8 +10,3 @@ class PerformCommand(BaseCommand):
 
     cpt_code: str
     notes: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Perform command's field values."""
-        return {"cpt_code": self.cpt_code, "notes": self.notes}

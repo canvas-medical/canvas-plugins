@@ -15,11 +15,6 @@ class MedicationStatementCommand(_BaseCommand):
     )
     sig: str | None = None
 
-    @property
-    def values(self) -> dict:
-        """The MedicationStatement command's field values."""
-        return {"fdb_code": self.fdb_code, "sig": self.sig}
-
 
 # how do we make sure fdb_code is a valid code?
 

@@ -17,18 +17,3 @@ class MedicalHistoryCommand(BaseCommand):
     approximate_end_date: date | None = None
     show_on_condition_list: bool = True
     comments: str | None = Field(max_length=1000, default=None)
-
-    @property
-    def values(self) -> dict:
-        """The Medical History command's field values."""
-        return {
-            "past_medical_history": self.past_medical_history,
-            "approximate_start_date": (
-                self.approximate_start_date.isoformat() if self.approximate_start_date else None
-            ),
-            "approximate_end_date": (
-                self.approximate_end_date.isoformat() if self.approximate_end_date else None
-            ),
-            "show_on_condition_list": self.show_on_condition_list,
-            "comments": self.comments,
-        }

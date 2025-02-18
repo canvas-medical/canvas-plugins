@@ -18,17 +18,3 @@ class DiagnoseCommand(_BaseCommand):
     background: str | None = None
     approximate_date_of_onset: date | None = None
     today_assessment: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Diagnose command's field values."""
-        return {
-            "icd10_code": self.icd10_code,
-            "background": self.background,
-            "approximate_date_of_onset": (
-                self.approximate_date_of_onset.isoformat()
-                if self.approximate_date_of_onset
-                else None
-            ),
-            "today_assessment": self.today_assessment,
-        }

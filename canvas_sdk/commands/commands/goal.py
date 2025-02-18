@@ -33,17 +33,3 @@ class GoalCommand(_BaseCommand):
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
     progress: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Goal command's field values."""
-        return {
-            "goal_statement": self.goal_statement,
-            "start_date": (self.start_date.isoformat() if self.start_date else None),
-            "due_date": (self.due_date.isoformat() if self.due_date else None),
-            "achievement_status": (
-                self.achievement_status.value if self.achievement_status else None
-            ),
-            "priority": (self.priority.value if self.priority else None),
-            "progress": self.progress,
-        }
