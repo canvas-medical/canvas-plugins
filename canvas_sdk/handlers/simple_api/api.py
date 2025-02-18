@@ -1,5 +1,5 @@
 import json
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, ABCMeta
 from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
@@ -156,9 +156,8 @@ class SimpleAPIBase(BaseHandler, ABC):
     def _plugin_name(self) -> str:
         return self.__class__.__module__.split(".", maxsplit=1)[0]
 
-    @abstractmethod
     def _path_prefix(self) -> str:
-        raise NotImplementedError
+        return ""
 
     @cached_property
     def request(self) -> Request:
@@ -240,6 +239,3 @@ class SimpleAPIRoute(SimpleAPIBase, metaclass=SimpleAPIRouteMeta):
             )
 
         super().__init_subclass__(**kwargs)
-
-    def _path_prefix(self) -> str:
-        return ""
