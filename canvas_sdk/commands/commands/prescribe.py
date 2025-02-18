@@ -45,18 +45,11 @@ class PrescribeCommand(_BaseCommand):
     @property
     def values(self) -> dict:
         """The Prescribe command's field values."""
-        return {
-            "fdb_code": self.fdb_code,
-            "icd10_codes": self.icd10_codes,
-            "sig": self.sig,
-            "days_supply": self.days_supply,
-            "quantity_to_dispense": (
+        values = super().values
+
+        if self.is_dirty("quantity_to_dispense"):
+            values["quantity_to_dispense"] = (
                 str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
-            ),
-            "type_to_dispense": self.type_to_dispense if self.type_to_dispense else None,
-            "refills": self.refills,
-            "substitutions": self.substitutions.value if self.substitutions else None,
-            "pharmacy": self.pharmacy,
-            "prescriber_id": self.prescriber_id,
-            "note_to_pharmacist": self.note_to_pharmacist,
-        }
+            )
+
+        return values

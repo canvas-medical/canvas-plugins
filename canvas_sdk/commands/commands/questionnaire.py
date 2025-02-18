@@ -14,8 +14,3 @@ class QuestionnaireCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "questionnaire"}
     )
     result: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Questionnaire command's field values."""
-        return {"questionnaire_id": self.questionnaire_id, "result": self.result}

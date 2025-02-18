@@ -15,14 +15,3 @@ class PastSurgicalHistoryCommand(BaseCommand):
     past_surgical_history: str | None = None
     approximate_date: date | None = None
     comment: str | None = Field(max_length=1000, default=None)
-
-    @property
-    def values(self) -> dict:
-        """The Past Surgical History command's field values."""
-        return {
-            "past_surgical_history": self.past_surgical_history,
-            "approximate_date": (
-                self.approximate_date.isoformat() if self.approximate_date else None
-            ),
-            "comment": self.comment,
-        }

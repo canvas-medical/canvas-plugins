@@ -15,13 +15,3 @@ class UpdateDiagnosisCommand(BaseCommand):
     new_condition_code: str | None = None
     background: str | None = None
     narrative: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The Update Diagnosis command's field values."""
-        return {
-            "condition_code": self.condition_code,
-            "new_condition_code": self.new_condition_code,
-            "background": self.background,
-            "narrative": self.narrative,
-        }

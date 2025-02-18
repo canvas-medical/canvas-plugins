@@ -47,12 +47,3 @@ class ReasonForVisitCommand(_BaseCommand):
         # the commands api does not include the 'structured' field in the fields response
         command_schema.pop("structured")
         return command_schema
-
-    @property
-    def values(self) -> dict:
-        """The ReasonForVisit command's field values."""
-        return {
-            "structured": self.structured,
-            "coding": str(self.coding) if isinstance(self.coding, UUID) else self.coding,
-            "comment": self.comment,
-        }

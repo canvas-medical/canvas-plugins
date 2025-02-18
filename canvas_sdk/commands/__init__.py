@@ -4,6 +4,7 @@ from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.exam import PhysicalExamCommand
 from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
+from canvas_sdk.commands.commands.follow_up import FollowUpCommand
 from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
@@ -36,6 +37,7 @@ __all__ = (
     "CloseGoalCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
+    "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "InstructCommand",

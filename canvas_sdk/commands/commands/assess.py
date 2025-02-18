@@ -24,16 +24,6 @@ class AssessCommand(_BaseCommand):
     status: Status | None = None
     narrative: str | None = None
 
-    @property
-    def values(self) -> dict:
-        """The Assess command's field values."""
-        return {
-            "condition_id": self.condition_id,
-            "background": self.background,
-            "status": self.status.value if self.status else None,
-            "narrative": self.narrative,
-        }
-
 
 # how do we make sure that condition_id is a valid condition for the patient?
 

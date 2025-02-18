@@ -9,8 +9,3 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
         commit_required_fields = ("narrative",)
 
     narrative: str | None = None
-
-    @property
-    def values(self) -> dict:
-        """The HPI command's field values."""
-        return {"narrative": self.narrative}

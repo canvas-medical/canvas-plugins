@@ -1,8 +1,10 @@
+import datetime
 import json
 import re
-from enum import EnumType
+from enum import Enum, EnumType
 from types import NoneType, UnionType
-from typing import Union, get_args, get_origin
+from typing import Any, Union, get_args, get_origin
+from uuid import UUID
 
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
@@ -19,6 +21,32 @@ class _BaseCommand(Model):
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
 
+    # A set to track which fields have been modified.
+    _dirty_keys: set[str] = set()
+
+    def __init__(self, /, **data: Any) -> None:
+        """Initialize the command and mark all provided keys as dirty."""
+        super().__init__(**data)
+
+        # Initialize a set to track which fields have been modified.
+        self._dirty_keys = set()
+
+        # Explicitly mark all keys provided in the constructor as dirty.
+        self._dirty_keys.update(data.keys())
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Set an attribute and mark it as dirty unless excluded."""
+        if not name.startswith("_") and name not in (
+            "note_uuid",
+            "command_uuid",
+        ):
+            self._dirty_keys.add(name)
+        super().__setattr__(name, value)
+
+    def is_dirty(self, key: str) -> bool:
+        """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
+        return key in self._dirty_keys
+
     def constantized_key(self) -> str:
         return re.sub(r"(?<!^)(?=[A-Z])", "_", self.Meta.key).upper()
 
@@ -32,7 +60,23 @@ class _BaseCommand(Model):
 
     @property
     def values(self) -> dict:
-        return {}
+        """Return a dictionary of modified attributes with type-specific transformations."""
+        result = {}
+        for key in self._dirty_keys:
+            value = getattr(self, key)
+            if isinstance(value, Enum):
+                # If it's an enum, use its .value.
+                result[key] = value.value if value else None
+            elif isinstance(value, datetime.date | datetime.datetime):
+                # If it's a date/datetime, use isoformat().
+                result[key] = value.isoformat() if value else None
+            elif isinstance(value, UUID):
+                # If it's a UUID, use its string representation.
+                result[key] = str(value) if value else None
+            else:
+                # For strings, integers, or any other type, return as is.
+                result[key] = value
+        return result
 
     @property
     def coding_filter(self) -> Coding | None:
