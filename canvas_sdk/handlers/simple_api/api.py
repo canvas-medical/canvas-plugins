@@ -1,5 +1,5 @@
 import json
-from abc import ABC, ABCMeta
+from abc import ABC
 from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
@@ -202,40 +202,59 @@ class SimpleAPI(SimpleAPIBase):
         return self.PREFIX if hasattr(self, "PREFIX") and self.PREFIX else ""
 
 
-class SimpleAPIRouteMeta(ABCMeta):
-    """Metaclass for the SimpleAPIRoute class."""
-
-    def __new__(cls, name: str, bases: tuple, namespace: dict, **kwargs: Any) -> type:
-        """Automatically marks the get, post, put, delete, and match methods as handler methods."""
-        for attr_name, attr_value in namespace.items():
-            if not callable(attr_value):
-                continue
-
-            if attr_name in {"get", "post", "put", "delete", "patch"} and "PATH" not in namespace:
-                raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
-
-            match attr_name:
-                case "get":
-                    namespace[attr_name] = get(namespace["PATH"])(attr_value)
-                case "post":
-                    namespace[attr_name] = post(namespace["PATH"])(attr_value)
-                case "put":
-                    namespace[attr_name] = put(namespace["PATH"])(attr_value)
-                case "delete":
-                    namespace[attr_name] = delete(namespace["PATH"])(attr_value)
-                case "patch":
-                    namespace[attr_name] = patch(namespace["PATH"])(attr_value)
-
-        return super().__new__(cls, name, bases, namespace, **kwargs)
-
-
-class SimpleAPIRoute(SimpleAPIBase, metaclass=SimpleAPIRouteMeta):
+class SimpleAPIRoute(SimpleAPIBase):
     """Base class for HTTP API routes."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Automatically mark the get, post, put, delete, and patch methods as handler methods."""
         if hasattr(cls, "PREFIX"):
             raise PluginError(
                 f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
             )
 
         super().__init_subclass__(**kwargs)
+
+        for attr_name, attr_value in cls.__dict__.items():
+            decorator: Callable | None
+            match attr_name:
+                case "get":
+                    decorator = get
+                case "post":
+                    decorator = post
+                case "put":
+                    decorator = put
+                case "delete":
+                    decorator = delete
+                case "patch":
+                    decorator = patch
+                case _:
+                    decorator = None
+
+            if not callable(attr_value) or decorator is None:
+                continue
+
+            path = cls.__dict__.get("PATH")
+            if not path:
+                raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
+
+            decorator(path)(attr_value)
+
+    def get(self) -> list[Response | Effect]:
+        """Stub method for GET handler."""
+        return []
+
+    def post(self) -> list[Response | Effect]:
+        """Stub method for POST handler."""
+        return []
+
+    def put(self) -> list[Response | Effect]:
+        """Stub method for PUT handler."""
+        return []
+
+    def delete(self) -> list[Response | Effect]:
+        """Stub method for DELETE handler."""
+        return []
+
+    def patch(self) -> list[Response | Effect]:
+        """Stub method for PATCH handler."""
+        return []
