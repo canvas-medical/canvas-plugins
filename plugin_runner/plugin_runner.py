@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
+import sentry_sdk
 import statsd
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -31,19 +32,39 @@ from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
+    CUSTOMER_IDENTIFIER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
 )
 
+if CUSTOMER_IDENTIFIER != "local":
+    sentry_sdk.init(
+        dsn="https://b3e2a586fd0082d90bd64bc387db7cb9@o1318981.ingest.us.sentry.io/4508815443492864",
+        release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
+        send_default_pii=True,
+        traces_sample_rate=0.0,
+        profiles_sample_rate=0.0,
+    )
+
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
 sys.path.append(PLUGIN_DIRECTORY)
 
+Plugin = TypedDict(
+    "Plugin",
+    {
+        "active": bool,
+        "class": Any,
+        "sandbox": Any,
+        "handler": Any,
+        "secrets": dict[str, str],
+    },
+)
+
 # a global dictionary of loaded plugins
-# TODO: create typings here for the subkeys
-LOADED_PLUGINS: dict = {}
+LOADED_PLUGINS: dict[str, Plugin] = {}
 
 # a global dictionary of events to handler class names
 EVENT_HANDLER_MAP: dict[str, list] = defaultdict(list)
