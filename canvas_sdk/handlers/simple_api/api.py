@@ -157,7 +157,8 @@ class SimpleAPIBase(BaseHandler, ABC):
         return self.__class__.__module__.split(".", maxsplit=1)[0]
 
     @abstractmethod
-    def _path_prefix(self) -> str: ...
+    def _path_prefix(self) -> str:
+        raise NotImplementedError
 
     @cached_property
     def request(self) -> Request:
