@@ -311,3 +311,41 @@ class LabTest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.ontology_test_name}: f{self.ontology_test_code}"
+
+
+class LabPartner(models.Model):
+    """A class representing a lab partner."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_lab_partner_001"
+
+    objects: models.Manager["LabPartner"]
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=256)
+    active = models.BooleanField()
+    electronic_ordering_enabled = models.BooleanField()
+    keywords = models.TextField()
+    default_lab_account_number = models.CharField(max_length=256)
+
+
+class LabPartnerTest(models.Model):
+    """A class representing a lab partner's test."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_lab_partner_test_001"
+
+    objects: models.Manager["LabPartnerTest"]
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    lab_partner = models.ForeignKey(
+        "LabPartner", on_delete=models.DO_NOTHING, related_name="available_tests"
+    )
+    order_code = models.CharField(max_length=256, blank=True)
+    order_name = models.TextField()
+    keywords = models.TextField(blank=True)
+    cpt_code = models.CharField(max_length=256, blank=True, null=True)
