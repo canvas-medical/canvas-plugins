@@ -17,8 +17,11 @@ from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
 
+from .security import AuthenticationScheme
+
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
+
 # TODO: How to handle authz/authn?
 #   * Risk of having a completely open endpoint — DOS?
 #   * Auth is mandatory; must be a default mechanism
@@ -32,6 +35,14 @@ from plugin_runner.exceptions import PluginError
 # - require definition of auth methods on classes
 # - basic, bearer, API key, and custom for first release; digest and JWT later
 # - should be some difference between something specific and custom
+# TODO: Exceptions in customer code; pre-auth, return 401, post-auth, return 500; need to not suppress traceback
+# TODO: API Key — overridable header?
+# TODO: API Key — both header and query parameter?
+# TODO: Auth scheme — class or object
+# TODO: Add attributes to auth object (request, secrets, etc.)?
+# TODO: Handle various auth errors (no header, invalid values in header, etc.)
+# TODO: Unit tests for authentication
+
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # - Look into wrapping everything in a transaction and rolling back on any error
 # - Rollback should occur if error was detected in the handler or in home-app
@@ -124,9 +135,17 @@ class SimpleAPIBase(BaseHandler, ABC):
         # Build the registry of routes so that requests can be routed to the correct handler
         self._routes: dict[tuple[str, str], Callable] = {}
         for name in dir(self):
+            # Skip properties, because calling getattr on a property executes it. We don't want that
+            # here, because we're only looking for methods that are marked as routes.
+            if hasattr(self.__class__, name) and isinstance(
+                getattr(self.__class__, name), property
+            ):
+                continue
+
             attr = getattr(self, name)
-            if ismethod(attr) and hasattr(attr, "route"):
-                method, relative_path = attr.route
+            route = getattr(attr, "route", None)
+            if ismethod(attr) and route:
+                method, relative_path = route
                 plugin_name = self._plugin_name()
 
                 if plugin_name:
@@ -171,6 +190,13 @@ class SimpleAPIBase(BaseHandler, ABC):
         if not handler:
             return []
 
+        # Authenticate the request
+        try:
+            if not self._authenticate():
+                raise RuntimeWarning("Authentication failed")
+        except Exception:
+            return [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+
         # Handle the request
         effects = handler()
 
@@ -194,12 +220,19 @@ class SimpleAPIBase(BaseHandler, ABC):
 
         return effects
 
+    def _authenticate(self) -> bool:
+        auth_scheme_cls = getattr(self, "AuthScheme", None)
+        if auth_scheme_cls is None or not issubclass(auth_scheme_cls, AuthenticationScheme):
+            return False
+
+        return auth_scheme_cls(self).authenticate()
+
 
 class SimpleAPI(SimpleAPIBase):
     """Base class for HTTP APIs."""
 
     def _path_prefix(self) -> str:
-        return self.PREFIX if hasattr(self, "PREFIX") and self.PREFIX else ""
+        return getattr(self, "PREFIX", None) or ""
 
 
 class SimpleAPIRoute(SimpleAPIBase):
