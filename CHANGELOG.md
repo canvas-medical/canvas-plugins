@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.21.0 (2025-02-19)
+
+### Bug Fixes
+
+- Lab order command validations ([#423](https://github.com/canvas-medical/canvas-plugins/pull/423),
+  [`45376f1`](https://github.com/canvas-medical/canvas-plugins/commit/45376f1562b455871fd997b6a5128768110583dc))
+
+### Features
+
+- Create effects for billinglineitems
+  ([#418](https://github.com/canvas-medical/canvas-plugins/pull/418),
+  [`d8b9187`](https://github.com/canvas-medical/canvas-plugins/commit/d8b91876478f07771097f841aa015bdc8128f3df))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.20.0 (2025-02-18)
 
 ### Bug Fixes
