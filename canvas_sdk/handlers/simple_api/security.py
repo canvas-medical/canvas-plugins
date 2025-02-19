@@ -98,4 +98,4 @@ class APIKey(AuthenticationScheme, ABC):
 
     def __init__(self, handler: "SimpleAPIBase", *args: Any, **kwargs: Any) -> None:
         super().__init__(handler, *args, **kwargs)
-        self.api_key = self.handler.request.headers.get(self.HEADER_NAME) or None
+        self.key = self.handler.request.headers.get(self.HEADER_NAME) or None
