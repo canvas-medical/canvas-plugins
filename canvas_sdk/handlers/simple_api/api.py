@@ -19,44 +19,30 @@ from plugin_runner.exceptions import PluginError
 
 from .security import Credentials
 
-# TODO: Routing by path regex?
-# TODO: Support multipart/form-data by adding helpers to the request class
-
-# TODO: How to handle authz/authn?
-#   * Risk of having a completely open endpoint — DOS?
-#   * Auth is mandatory; must be a default mechanism
-#   * Default auth strategy: disallow access and return 401
-#   * Auth strategies: Set some constant
-#     * custom: provide a callable
-# - start with postman auth options
-# - bring up security concerns about having an open endpoint
-# - look into rejecting requests that do not match a plugin
-# - auth is mandatory; default response is 401
-# - require definition of auth methods on classes
-# - basic, bearer, API key, and custom for first release; digest and JWT later
-# - should be some difference between something specific and custom
-# TODO: Exceptions in customer code; pre-auth, return 401, post-auth, return 500; need to not suppress traceback
-# TODO: API Key — overridable header?
+# TODO: Resolve what to do (if anything) about having an open endpoint
+# TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: API Key — both header and query parameter?
-# TODO: Auth scheme — class or object
-# TODO: Add attributes to auth object (request, secrets, etc.)?
 # TODO: Handle various auth errors (no header, invalid values in header, etc.)
+# TODO: Exceptions in customer code; pre-auth, return 401, post-auth, return 500; need to not suppress traceback
 # TODO: Unit tests for authentication
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # - Look into wrapping everything in a transaction and rolling back on any error
 # - Rollback should occur if error was detected in the handler or in home-app
 
-# TODO: Discuss a durable way to get the plugin name
-# - talk to Jose
-# TODO: HTTPMethod enum or string?
-
-# TODO: Discuss whether the response effects should inherit from the base effects
-# - use this as a learning opportunity for how to create effects with (or without) pydantic
 # TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
 # - implement general event filtering on handlers to solve this problem
 # - not general handling; only pre-built filtering
 # - 404s will require detection in the main event loop
+
+# TODO: Discuss a durable way to get the plugin name
+# - talk to Jose
+
+# TODO: Routing by path regex?
+# TODO: Support multipart/form-data by adding helpers to the request class
+
+# TODO: Discuss whether the response effects should inherit from the base effects
+# - use this as a learning opportunity for how to create effects with (or without) pydantic
 
 # TODO: Sanity check — test the handlers with an installed plugin
 # TODO: Get the xfail test to pass
