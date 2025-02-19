@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID
 
 from django.db.models.query_utils import Q
 from pydantic_core import InitErrorDetails
@@ -19,7 +20,7 @@ class LabOrderCommand(BaseCommand):
             "diagnosis_codes",
         )
 
-    lab_partner: str | None = None
+    lab_partner: UUID | str | None = None
     tests_order_codes: list[str] = []
     ordering_provider_key: str | None = None
     diagnosis_codes: list[str] = []
@@ -55,8 +56,17 @@ class LabOrderCommand(BaseCommand):
                     )
                 )
             else:
+                uuid_tests = []
+                order_code_tests = []
+
+                for code in self.tests_order_codes:
+                    try:
+                        uuid_tests.append(UUID(code))
+                    except ValueError:
+                        order_code_tests.append(code)
+
                 tests = LabPartnerTest.objects.filter(
-                    Q(order_code__in=self.tests_order_codes) | Q(id__in=self.tests_order_codes),
+                    Q(order_code__in=order_code_tests) | Q(id__in=uuid_tests),
                     lab_partner_id=lab_partner_obj["dbid"],
                 ).values_list("id", "order_code")
 
