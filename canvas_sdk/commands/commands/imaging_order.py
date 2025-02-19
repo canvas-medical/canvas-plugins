@@ -1,6 +1,7 @@
 from enum import Enum
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.constants import ServiceProvider
 
 
 class ImagingOrderCommand(BaseCommand):
@@ -22,7 +23,7 @@ class ImagingOrderCommand(BaseCommand):
     diagnosis_codes: list[str] = []
     priority: Priority | None = None
     additional_details: str | None = None
-    imaging_center: str | None = None
+    service_provider: ServiceProvider | None = None
     comment: str | None = None
     ordering_provider_key: str | None = None
     linked_items_urns: list[str] | None = None
@@ -30,12 +31,9 @@ class ImagingOrderCommand(BaseCommand):
     @property
     def values(self) -> dict:
         """The Imaging Order command's field values."""
-        return {
-            "image_code": self.image_code,
-            "diagnosis_codes": self.diagnosis_codes,
-            "priority": self.priority.value if self.priority else None,
-            "additional_details": self.additional_details,
-            "comment": self.comment,
-            "ordering_provider_key": self.ordering_provider_key,
-            "linked_items_urns": self.linked_items_urns,
-        }
+        values = super().values
+
+        if self.is_dirty("service_provider"):
+            values["service_provider"] = self.service_provider.__dict__
+
+        return values
