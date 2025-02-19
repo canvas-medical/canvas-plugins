@@ -17,7 +17,7 @@ from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
 
-from .security import AuthenticationScheme
+from .security import Credentials
 
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
@@ -183,6 +183,10 @@ class SimpleAPIBase(BaseHandler, ABC):
         """Return the request object from the event."""
         return Request(self.event)
 
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate the request."""
+        return False
+
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
         # Get the handler method
@@ -221,11 +225,13 @@ class SimpleAPIBase(BaseHandler, ABC):
         return effects
 
     def _authenticate(self) -> bool:
-        auth_scheme_cls = getattr(self, "AuthScheme", None)
-        if auth_scheme_cls is None or not issubclass(auth_scheme_cls, AuthenticationScheme):
+        # Create the credentials object and pass it into the developer-defined authenticate method
+        credentials_cls = self.authenticate.__annotations__.get("credentials")
+        if not credentials_cls or not issubclass(credentials_cls, Credentials):
             return False
+        credentials = credentials_cls(self.request)
 
-        return auth_scheme_cls(self).authenticate()
+        return self.authenticate(credentials)
 
 
 class SimpleAPI(SimpleAPIBase):

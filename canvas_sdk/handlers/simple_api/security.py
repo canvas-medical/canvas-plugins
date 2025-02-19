@@ -1,38 +1,38 @@
-from abc import ABC, abstractmethod
 from base64 import b64decode
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .api import SimpleAPIBase
+    from .api import Request
 
 
-class AuthenticationScheme(ABC):
-    """Abstract base class for authentication schemes."""
-
-    def __init__(self, handler: "SimpleAPIBase", *args: Any, **kwargs: Any) -> None:
-        self.handler = handler
-
-    @abstractmethod
-    def authenticate(self) -> bool:
-        """Authenticate the request."""
-        raise NotImplementedError
-
-
-class Basic(AuthenticationScheme, ABC):
+class Credentials:
     """
-    Basic authentication scheme.
+    Credentials base class.
 
-    Parses and decodes the username and password from the Authorization header and saves them as
-    attributes.
+    Performs no parsing of the request Authorization header. This class can be used as a base class
+    for defining custom credentials classes, or can be specified by a developer as the credentials
+    class if they wish to just access the request directly in their authentication method.
     """
 
-    def __init__(self, handler: "SimpleAPIBase", *args: Any, **kwargs: Any) -> None:
-        super().__init__(handler, *args, **kwargs)
+    def __init__(self, request: "Request") -> None:
+        pass
+
+
+class BasicCredentials(Credentials):
+    """
+    Basic authentication credentials class.
+
+    Parses and decodes the username and password from the request Authorization header and saves
+    them as attributes.
+    """
+
+    def __init__(self, request: "Request") -> None:
+        super().__init__(request)
 
         self.username = None
         self.password = None
 
-        authorization = self.handler.request.headers.get("Authorization")
+        authorization = request.headers.get("Authorization")
         if not authorization:
             return
 
@@ -57,19 +57,19 @@ class Basic(AuthenticationScheme, ABC):
         self.password = password
 
 
-class Bearer(AuthenticationScheme, ABC):
+class BearerCredentials(Credentials):
     """
-    Bearer authentication scheme.
+    Bearer authentication credentials class.
 
-    Parses the token from the Authorization header and saves it as an attribute.
+    Parses the token from the request Authorization header and saves it as an attribute.
     """
 
-    def __init__(self, handler: "SimpleAPIBase", *args: Any, **kwargs: Any) -> None:
-        super().__init__(handler, *args, **kwargs)
+    def __init__(self, request: "Request") -> None:
+        super().__init__(request)
 
         self.token = None
 
-        authorization = self.handler.request.headers.get("Authorization")
+        authorization = request.headers.get("Authorization")
         if not authorization:
             return
 
@@ -84,11 +84,11 @@ class Bearer(AuthenticationScheme, ABC):
         self.token = token
 
 
-class APIKey(AuthenticationScheme, ABC):
+class APIKeyCredentials(Credentials):
     """
-    API Key authentication scheme.
+    API Key credentials class.
 
-    Obtains the API key from the Authorization header and saves it as an attribute.
+    Obtains the API key from the request Authorization header and saves it as an attribute.
 
     The default header name is "Authorization", but can be changed by overriding the HEADER_NAME
     class variable in subclasses.
@@ -96,6 +96,7 @@ class APIKey(AuthenticationScheme, ABC):
 
     HEADER_NAME = "Authorization"
 
-    def __init__(self, handler: "SimpleAPIBase", *args: Any, **kwargs: Any) -> None:
-        super().__init__(handler, *args, **kwargs)
-        self.key = self.handler.request.headers.get(self.HEADER_NAME) or None
+    def __init__(self, request: "Request") -> None:
+        super().__init__(request)
+
+        self.key = request.headers.get(self.HEADER_NAME) or None

@@ -1,4 +1,11 @@
 from .api import SimpleAPI, SimpleAPIRoute
-from .security import APIKey, AuthenticationScheme, Basic, Bearer
+from .security import APIKeyCredentials, BasicCredentials, BearerCredentials, Credentials
 
-__all__ = ["APIKey", "AuthenticationScheme", "Basic", "Bearer", "SimpleAPI", "SimpleAPIRoute"]
+__all__ = [
+    "APIKeyCredentials",
+    "BasicCredentials",
+    "BearerCredentials",
+    "Credentials",
+    "SimpleAPI",
+    "SimpleAPIRoute",
+]
