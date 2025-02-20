@@ -28,9 +28,9 @@ class QuestionnaireCommand(_BaseCommand):
     result: str | None = None
 
     @cached_property
-    def _questionnaire(self) -> Questionnaire:
+    def _questionnaire(self) -> Questionnaire | None:
         if not self.questionnaire_id:
-            raise ValueError("questionnaire_id is required for QuestionnaireCommand")
+            return None
         return Questionnaire.objects.get(id=self.questionnaire_id)
 
     @cached_property
@@ -42,6 +42,9 @@ class QuestionnaireCommand(_BaseCommand):
         appropriate question subclass based on the question.response_option_set.type.
         """
         question_objs: list[BaseQuestion] = []
+        if not self._questionnaire:
+            return question_objs
+
         for question in self._questionnaire.questions.all():
             qdata: dict[str, Any] = {
                 "name": f"question-{question.pk}",
