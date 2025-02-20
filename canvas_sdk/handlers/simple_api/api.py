@@ -19,11 +19,14 @@ from plugin_runner.exceptions import PluginError
 
 from .security import Credentials
 
-# TODO: Resolve what to do (if anything) about having an open endpoint
+# TODO: Perform authentication before request body deserialization if possible
+# TODO: Implement specialized handling that will prevent handler instantiation if the request path
+#  does not match the plugin name. This behavior will NOT be generalizable. Make sure that ONLY one plugin (that must match the criteria) responds to the event.
+
 # TODO: Reject requests that do not match a plugin (on the home-app side)
-# TODO: API Key — both header and query parameter?
-# TODO: Handle various auth errors (no header, invalid values in header, etc.)
-# TODO: Exceptions in customer code; pre-auth, return 401, post-auth, return 500; need to not suppress traceback
+# TODO: Try-except with 500 response and logging around auth and handler
+# TODO: Raise exceptions in credential classes on error
+# TODO: Add secrets to allowed modules
 # TODO: Pre-built solutions: security toolbox, mixins?
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?
@@ -38,6 +41,7 @@ from .security import Credentials
 # TODO: Sanity check — test plugin installation, updating, enabling, and disabling
 
 
+# TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
 
