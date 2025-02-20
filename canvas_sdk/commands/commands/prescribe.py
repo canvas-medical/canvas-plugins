@@ -28,7 +28,7 @@ class PrescribeCommand(_BaseCommand):
 
     fdb_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "prescribe"})
     icd10_codes: conlist(str, max_length=2) = Field(  # type: ignore[valid-type]
-        [], json_schema_extra={"commands_api_name": "indications"}
+        default=[], json_schema_extra={"commands_api_name": "indications"}
     )
     sig: str = ""
     days_supply: int | None = None

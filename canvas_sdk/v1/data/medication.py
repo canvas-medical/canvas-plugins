@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Self, cast
 
 from django.db import models
 from django.db.models import TextChoices
@@ -21,7 +21,9 @@ class Status(TextChoices):
 class MedicationQuerySet(ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
     """MedicationQuerySet."""
 
-    pass
+    def active(self) -> Self:
+        """Filter by active medications."""
+        return self.committed().filter(status=Status.ACTIVE)
 
 
 MedicationManager = BaseModelManager.from_queryset(MedicationQuerySet)
