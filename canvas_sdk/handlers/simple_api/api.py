@@ -30,12 +30,6 @@ from .security import Credentials
 # - Look into wrapping everything in a transaction and rolling back on any error
 # - Rollback should occur if error was detected in the handler or in home-app
 
-# TODO: Handle 404s: Make changes higher up the chain, or require handlers to return a response object
-# - implement general event filtering on handlers to solve this problem
-# - not general handling; only pre-built filtering
-# - 404s will require detection in the main event loop
-# TODO: Get the xfail test to pass
-
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
 
@@ -175,17 +169,15 @@ class SimpleAPIBase(BaseHandler, ABC):
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
-        # Get the handler method
-        handler = self._routes.get((self.request.method, self.request.path))
-        if not handler:
-            return []
-
         # Authenticate the request
         try:
             if not self._authenticate():
                 raise RuntimeWarning("Authentication failed")
         except Exception:
             return [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+
+        # Get the handler method
+        handler = self._routes[(self.request.method, self.request.path)]
 
         # Handle the request
         effects = handler()
@@ -209,6 +201,10 @@ class SimpleAPIBase(BaseHandler, ABC):
             effects.append(Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply())
 
         return effects
+
+    def ignore_event(self) -> bool:
+        """Ignore the event if the handler does not implement the route."""
+        return (self.request.method, self.request.path) not in self._routes
 
     def _authenticate(self) -> bool:
         # Create the credentials object and pass it into the developer-defined authenticate method
