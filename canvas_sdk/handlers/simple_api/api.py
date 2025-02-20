@@ -33,13 +33,14 @@ from .security import Credentials
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
 
+# TODO: Look into making the response effects should inherit from the base effects
+
+# TODO: Sanity check — test plugin installation, updating, enabling, and disabling
+
+
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
 
-# TODO: Discuss whether the response effects should inherit from the base effects
-# - use this as a learning opportunity for how to create effects with (or without) pydantic
-
-# TODO: Sanity check — test the handlers with an installed plugin
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
