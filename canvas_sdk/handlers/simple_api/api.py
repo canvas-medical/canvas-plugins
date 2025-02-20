@@ -34,6 +34,7 @@ from .security import Credentials
 # - implement general event filtering on handlers to solve this problem
 # - not general handling; only pre-built filtering
 # - 404s will require detection in the main event loop
+# TODO: Get the xfail test to pass
 
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
@@ -45,7 +46,6 @@ from .security import Credentials
 # - use this as a learning opportunity for how to create effects with (or without) pydantic
 
 # TODO: Sanity check — test the handlers with an installed plugin
-# TODO: Get the xfail test to pass
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
