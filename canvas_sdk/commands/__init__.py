@@ -23,6 +23,7 @@ from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
+from canvas_sdk.commands.commands.resolve_condition import ResolveConditionCommand
 from canvas_sdk.commands.commands.review_of_systems import ReviewOfSystemsCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.structured_assessment import StructuredAssessmentCommand
@@ -53,6 +54,7 @@ __all__ = (
     "ReasonForVisitCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
+    "ResolveConditionCommand",
     "ReviewOfSystemsCommand",
     "StopMedicationCommand",
     "StructuredAssessmentCommand",
