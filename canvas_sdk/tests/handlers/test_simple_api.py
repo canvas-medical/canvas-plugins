@@ -2,10 +2,13 @@ import json
 from base64 import b64decode, b64encode
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import parse_qs
+from uuid import uuid4
 
 import pytest
+from _pytest.fixtures import SubRequest
 
 from canvas_sdk.effects.simple_api import (
     Effect,
@@ -17,7 +20,13 @@ from canvas_sdk.effects.simple_api import (
 )
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
-from canvas_sdk.handlers.simple_api.api import Credentials, Request, SimpleAPI, SimpleAPIRoute
+from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIRoute
+from canvas_sdk.handlers.simple_api.security import (
+    APIKeyCredentials,
+    BasicCredentials,
+    BearerCredentials,
+    Credentials,
+)
 from plugin_runner.exceptions import PluginError
 
 # TODO: test error: route not found
@@ -36,19 +45,35 @@ class RoutePathMixin:
     def _plugin_name(self) -> str:
         return ""
 
-    def authenticate(self, credentials: Credentials) -> bool:
+
+class NoAuth:
+    """Mixin to bypass authentication for tests that are not related to authentication."""
+
+    def authenticate(self, _: Credentials) -> bool:
         """Authenticate the request."""
         return True
 
 
+class TestRouteNoAuth(RoutePathMixin, NoAuth, SimpleAPIRoute):
+    """Route class that bypasses authentication."""
+
+    pass
+
+
+class TestAPINoAuth(RoutePathMixin, NoAuth, SimpleAPI):
+    """API class that bypasses authentication."""
+
+    pass
+
+
 class TestRoute(RoutePathMixin, SimpleAPIRoute):
-    """Route class with overridden plugin name for testing."""
+    """Route class that requires authentication."""
 
     pass
 
 
 class TestAPI(RoutePathMixin, SimpleAPI):
-    """API class with overridden plugin name for testing."""
+    """API class that requires authentication."""
 
     pass
 
@@ -149,7 +174,7 @@ def json_response_body(effects: Iterable[Effect]) -> Any:
 def test_request_routing_route(method: str) -> None:
     """Test request routing for SimpleAPIRoute plugins."""
 
-    class Route(TestRoute):
+    class Route(TestRouteNoAuth):
         PATH = "/route"
 
         def get(self) -> list[Response | Effect]:
@@ -219,7 +244,7 @@ def test_request_routing_api(
 ) -> None:
     """Test request routing for SimpleAPI plugins."""
 
-    class API(TestAPI):
+    class API(TestAPINoAuth):
         PREFIX = prefix
 
         @decorator("/route1")
@@ -249,7 +274,7 @@ def test_request_routing_api(
 def test_request_lifecycle() -> None:
     """Test the request-response lifecycle."""
 
-    class Route(TestRoute):
+    class Route(TestRouteNoAuth):
         PATH = "/route"
 
         def post(self) -> list[Response | Effect]:
@@ -355,7 +380,7 @@ def test_request_lifecycle() -> None:
 def test_response(response: Callable, expected_effects: Sequence[Effect]) -> None:
     """Test the construction and return of different kinds of responses."""
 
-    class Route(TestRoute):
+    class Route(TestRouteNoAuth):
         PATH = "/route"
 
         def get(self) -> list[Response | Effect]:
@@ -420,7 +445,7 @@ def test_override_base_handler_attributes_error() -> None:
     """Test the enforcement of the error that occurs when base handler attributes are overridden."""
     with pytest.raises(PluginError):
 
-        class API(TestAPI):
+        class API(TestAPINoAuth):
             @api.get("/route")  # type: ignore[arg-type]
             def compute(self) -> list[Response | Effect]:  # type: ignore[override]
                 return [JSONResponse({})]
@@ -432,7 +457,7 @@ def test_route_missing_path_error() -> None:
     """
     with pytest.raises(PluginError):
 
-        class Route(TestRoute):
+        class Route(TestRouteNoAuth):
             def get(self) -> list[Response | Effect]:
                 return []
 
@@ -441,9 +466,167 @@ def test_route_has_prefix_error() -> None:
     """Test the enforcement of the error that occurs when a SimpleAPIRoute has a PREFIX value."""
     with pytest.raises(PluginError):
 
-        class Route(TestRoute):
+        class Route(TestRouteNoAuth):
             PREFIX = "/prefix"
             PATH = "/route"
 
             def get(self) -> list[Response | Effect]:
                 return []
+
+
+def basic_headers(username: str, password: str) -> dict[str, str]:
+    """Given a username and password, return headers that include a basic authentication header."""
+    return {"Authorization": f"Basic {b64encode(f'{username}:{password}'.encode()).decode()}"}
+
+
+def bearer_headers(token: str) -> dict[str, str]:
+    """Given a token, return headers that include a bearer authentication header."""
+    return {"Authorization": f"Bearer {token}"}
+
+
+def api_key_headers(api_key: str) -> dict[str, str]:
+    """Given an API key, return headers that include an API key authentication header."""
+    return {"Authorization": api_key}
+
+
+def custom_headers(api_key: str, app_key: str) -> dict[str, str]:
+    """
+    Given an API key and an app key, return headers that include custom authentication headers.
+    """
+    return {"API-Key": api_key, "App-Key": app_key}
+
+
+USERNAME = uuid4().hex
+PASSWORD = uuid4().hex
+TOKEN = uuid4().hex
+API_KEY = uuid4().hex
+APP_KEY = uuid4().hex
+
+
+@pytest.fixture(
+    params=[
+        (
+            BasicCredentials,
+            lambda _, credentials: credentials.username == USERNAME
+            and credentials.password == PASSWORD,
+            basic_headers(USERNAME, PASSWORD),
+        ),
+        (
+            BearerCredentials,
+            lambda _, credentials: credentials.token == TOKEN,
+            bearer_headers(TOKEN),
+        ),
+        (
+            APIKeyCredentials,
+            lambda _, credentials: credentials.key == API_KEY,
+            api_key_headers(API_KEY),
+        ),
+        (
+            Credentials,
+            lambda request, _: request.headers["API-Key"] == API_KEY
+            and request.headers["App-Key"] == APP_KEY,
+            custom_headers(API_KEY, APP_KEY),
+        ),
+    ],
+    ids=["basic", "bearer", "API key", "custom"],
+)
+def authenticated_route(request: SubRequest) -> SimpleNamespace:
+    """
+    Parametrized test fixture that returns a Route class with authentication.
+
+    It will also return a set of headers that will pass authentication for the route.
+    """
+    credentials_cls, authenticate_impl, headers = request.param
+
+    class Route(TestRoute):
+        PATH = "/route"
+
+        def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
+            return authenticate_impl(self.request, credentials)
+
+        def get(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    return SimpleNamespace(cls=Route, headers=headers)
+
+
+def test_authentication(authenticated_route: SimpleNamespace) -> None:
+    """Test that valid credentials result in a successful response."""
+    handler = authenticated_route.cls(
+        make_event(method="GET", path="/route", headers=authenticated_route.headers)
+    )
+
+    effects = handler.compute()
+
+    assert effects == [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+
+@pytest.mark.parametrize(
+    argnames="headers",
+    argvalues=[
+        basic_headers(username=uuid4().hex, password=uuid4().hex),
+        basic_headers(username="", password=uuid4().hex),
+        basic_headers(username=uuid4().hex, password=""),
+        bearer_headers(token=uuid4().hex),
+        bearer_headers(token=""),
+        api_key_headers(api_key=uuid4().hex),
+        api_key_headers(api_key=""),
+        custom_headers(api_key=uuid4().hex, app_key=uuid4().hex),
+        custom_headers(api_key="", app_key=uuid4().hex),
+        custom_headers(api_key=uuid4().hex, app_key=""),
+        {},
+    ],
+    ids=[
+        "basic",
+        "basic missing username",
+        "basic missing password",
+        "bearer",
+        "bearer missing token",
+        "API key",
+        "API key missing value",
+        "custom",
+        "custom missing API key",
+        "custom missing app key",
+        "no authentication headers",
+    ],
+)
+def test_authentication_failure(
+    authenticated_route: SimpleNamespace, headers: Mapping[str, str]
+) -> None:
+    """Test that invalid credentials result in a failure response."""
+    handler = authenticated_route.cls(make_event(method="GET", path="/route", headers=headers))
+
+    effects = handler.compute()
+
+    assert effects == [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+
+
+@pytest.mark.parametrize(
+    argnames="credentials_cls,headers",
+    argvalues=[
+        (BasicCredentials, basic_headers(USERNAME, PASSWORD)),
+        (BearerCredentials, bearer_headers(TOKEN)),
+        (APIKeyCredentials, api_key_headers(API_KEY)),
+        (Credentials, custom_headers(API_KEY, APP_KEY)),
+    ],
+    ids=["basic", "bearer", "API key", "custom"],
+)
+def test_authentication_exception(
+    credentials_cls: type[Credentials], headers: Mapping[str, str]
+) -> None:
+    """Test that an exception occurring during authentication results in a failure response."""
+
+    class Route(TestRoute):
+        PATH = "/route"
+
+        def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
+            raise RuntimeError
+
+        def get(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    handler = Route(make_event(method="GET", path="/route", headers=headers))
+
+    effects = handler.compute()
+
+    assert effects == [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
