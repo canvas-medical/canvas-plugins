@@ -24,7 +24,7 @@ from .security import Credentials
 # TODO: API Key — both header and query parameter?
 # TODO: Handle various auth errors (no header, invalid values in header, etc.)
 # TODO: Exceptions in customer code; pre-auth, return 401, post-auth, return 500; need to not suppress traceback
-# TODO: Security toolbox?
+# TODO: Pre-built solutions: security toolbox, mixins?
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # - Look into wrapping everything in a transaction and rolling back on any error
