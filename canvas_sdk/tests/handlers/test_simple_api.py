@@ -29,9 +29,6 @@ from canvas_sdk.handlers.simple_api.security import (
 )
 from plugin_runner.exceptions import PluginError
 
-# TODO: test error: duplicate routes in same handler (depends on 404 handling)
-
-
 REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 HEADERS = {"Canvas-Plugins-Test-Header": "test header"}
 
@@ -445,6 +442,24 @@ def test_override_base_handler_attributes_error() -> None:
             @api.get("/route")  # type: ignore[arg-type]
             def compute(self) -> list[Response | Effect]:  # type: ignore[override]
                 return [JSONResponse({})]
+
+
+def test_multiple_handlers_for_route_error() -> None:
+    """
+    Test the enforcement of the error that occurs when a route is assigned to multiple handlers.
+    """
+    with pytest.raises(PluginError):
+
+        class API(TestAPINoAuth):
+            @api.get("/route")  # type: ignore[arg-type]
+            def route1(self) -> list[Response | Effect]:
+                return []
+
+            @api.get("/route")  # type: ignore[arg-type]
+            def route2(self) -> list[Response | Effect]:
+                return []
+
+        API(make_event(method="GET", path="/route"))
 
 
 def test_route_missing_path_error() -> None:
