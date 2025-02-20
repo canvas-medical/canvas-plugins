@@ -132,6 +132,7 @@ class _BaseCommand(Model):
             type=f"ORIGINATE_{self.constantized_key()}_COMMAND",
             payload=json.dumps(
                 {
+                    "command": self.command_uuid,
                     "note": self.note_uuid,
                     "data": self.values,
                     "line_number": line_number,
