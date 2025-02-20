@@ -66,7 +66,7 @@ class Request:
         return self.body.decode()
 
 
-RouteHandler = Callable[[], Response | list[Response | Effect]]
+RouteHandler = Callable[["SimpleAPI"], Response | list[Response | Effect]]
 
 
 def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
@@ -134,6 +134,13 @@ class SimpleAPIBase(BaseHandler, ABC):
                     prefix = self._path_prefix()
 
                 route = (method, f"{prefix}{relative_path}")
+
+                if route in self._routes:
+                    raise PluginError(
+                        f"The route {method} {relative_path} must only be handled by one route "
+                        "handler"
+                    )
+
                 self._routes[route] = attr
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
