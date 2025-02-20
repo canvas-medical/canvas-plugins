@@ -29,10 +29,7 @@ from canvas_sdk.handlers.simple_api.security import (
 )
 from plugin_runner.exceptions import PluginError
 
-# TODO: test error: route not found
 # TODO: test error: duplicate routes in same handler (depends on 404 handling)
-# TODO: test error: no handler (depends on 404 handling)
-# TODO: test error: multiple responses (depends on 404 handling)
 
 
 REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -363,10 +360,9 @@ def test_request_lifecycle() -> None:
             ],
         ),
         (lambda: [], []),
-        pytest.param(
-            lambda: [],
-            [Response(content=b"", status_code=HTTPStatus.NOT_FOUND, headers=HEADERS).apply()],
-            marks=pytest.mark.xfail,
+        (
+            lambda: [Response(), Response()],
+            [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()],
         ),
     ],
     ids=[
@@ -374,7 +370,7 @@ def test_request_lifecycle() -> None:
         "list of effects with response object",
         "list of effects with response effect",
         "no response",
-        "not found",
+        "multiple responses",
     ],
 )
 def test_response(response: Callable, expected_effects: Sequence[Effect]) -> None:
