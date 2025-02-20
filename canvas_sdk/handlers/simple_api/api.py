@@ -26,7 +26,6 @@ from .security import Credentials
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Try-except with 500 response and logging around auth and handler
 # TODO: Raise exceptions in credential classes on error
-# TODO: Add secrets to allowed modules
 # TODO: Pre-built solutions: security toolbox, mixins?
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?

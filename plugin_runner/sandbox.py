@@ -73,6 +73,7 @@ ALLOWED_MODULES = frozenset(
         "rapidfuzz",
         "re",
         "requests",
+        "secrets",
         "string",
         "time",
         "traceback",
