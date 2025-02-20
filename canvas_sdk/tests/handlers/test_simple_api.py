@@ -17,7 +17,7 @@ from canvas_sdk.effects.simple_api import (
 )
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
-from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIRoute
+from canvas_sdk.handlers.simple_api.api import Credentials, Request, SimpleAPI, SimpleAPIRoute
 from plugin_runner.exceptions import PluginError
 
 # TODO: test error: route not found
@@ -35,6 +35,10 @@ class RoutePathMixin:
 
     def _plugin_name(self) -> str:
         return ""
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate the request."""
+        return True
 
 
 class TestRoute(RoutePathMixin, SimpleAPIRoute):
