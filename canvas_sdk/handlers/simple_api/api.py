@@ -19,14 +19,12 @@ from plugin_runner.exceptions import PluginError
 
 from .security import Credentials
 
-# TODO: Perform authentication before request body deserialization if possible
 # TODO: Implement specialized handling that will prevent handler instantiation if the request path
 #  does not match the plugin name. This behavior will NOT be generalizable. Make sure that ONLY one plugin (that must match the criteria) responds to the event.
 
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Try-except with 500 response and logging around auth and handler
 # TODO: Raise exceptions in credential classes on error
-# TODO: Pre-built solutions: security toolbox, mixins?
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?
 # - Look into wrapping everything in a transaction and rolling back on any error
@@ -55,11 +53,16 @@ class Request:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
-        self.body = b64decode(event.context["body"])
+        self._body = event.context["body"]
         self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
 
         self.query_params = parse_qs(self.query_string)
         self.content_type = self.headers.get("Content-Type")
+
+    @cached_property
+    def body(self) -> bytes:
+        """Decode and return the response body."""
+        return b64decode(self._body)
 
     def json(self) -> JSON:
         """Return the response JSON."""
@@ -174,10 +177,6 @@ class SimpleAPIBase(BaseHandler, ABC):
         """Return the request object from the event."""
         return Request(self.event)
 
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate the request."""
-        return False
-
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
         # Authenticate the request
@@ -216,6 +215,10 @@ class SimpleAPIBase(BaseHandler, ABC):
     def ignore_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
         return (self.request.method, self.request.path) not in self._routes
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate the request."""
+        return False
 
     def _authenticate(self) -> bool:
         # Create the credentials object and pass it into the developer-defined authenticate method
