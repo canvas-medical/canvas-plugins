@@ -2,6 +2,7 @@ import asyncio
 import logging
 import pickle
 import shutil
+from http import HTTPStatus
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,6 +10,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
+from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
@@ -316,3 +318,20 @@ def import_me() -> str:
     assert len(result[0].effects) == 1
     assert result[0].effects[0].type == EffectType.LOG
     assert result[0].effects[0].payload == "Successfully changed!"
+
+
+@pytest.mark.asyncio
+async def test_simple_api_not_found_response(plugin_runner: PluginRunner) -> None:
+    """
+    Test that the PluginRunner will return an effect for unhandled SimpleAPI request events.
+
+    If a SimpleAPI request event is not handled by any handler, the PluginRunner must return a
+    Response effect with a 404 Not Found status code.
+    """
+    event = EventRequest(type=EventType.SIMPLE_API_REQUEST, context="")
+
+    result = []
+    async for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert result[0].effects == [Response(status_code=HTTPStatus.NOT_FOUND).apply()]

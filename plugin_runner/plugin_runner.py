@@ -9,6 +9,7 @@ import time
 import traceback
 from collections import defaultdict
 from collections.abc import AsyncGenerator
+from http import HTTPStatus
 from typing import Any, TypedDict
 
 import grpc
@@ -21,6 +22,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, statsd_client
@@ -124,6 +126,7 @@ class PluginRunner(PluginRunnerServicer):
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
+        relevant_handlers_count = 0
 
         for plugin_name in relevant_plugins:
             plugin = LOADED_PLUGINS[plugin_name]
@@ -135,6 +138,14 @@ class PluginRunner(PluginRunnerServicer):
 
             try:
                 handler = handler_class(event, secrets)
+
+                # TODO: Do all handlers inherit from BaseHandler? If not, then this will need to be
+                #  handled a little differently.
+                if handler.ignore_event():
+                    continue
+                else:
+                    relevant_handlers_count += 1
+
                 classname = (
                     handler.__class__.__name__
                     if isinstance(handler, ClinicalQualityMeasure)
@@ -172,6 +183,12 @@ class PluginRunner(PluginRunnerServicer):
                 continue
 
             effect_list += effects
+
+        # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
+        # by calling ignore_event on handlers), then add a 404 Not Found response effect to the list
+        # of effects.
+        if event.type == EventType.SIMPLE_API_REQUEST and relevant_handlers_count == 0:
+            effect_list.append(Response(status_code=HTTPStatus.NOT_FOUND).apply())
 
         event_duration = get_duration_ms(event_start_time)
 

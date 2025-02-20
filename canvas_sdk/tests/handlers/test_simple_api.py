@@ -49,7 +49,7 @@ class RoutePathMixin:
 class NoAuth:
     """Mixin to bypass authentication for tests that are not related to authentication."""
 
-    def authenticate(self, _: Credentials) -> bool:
+    def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate the request."""
         return True
 
