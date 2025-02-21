@@ -10,6 +10,7 @@ from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
 )
+from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.instruct import InstructCommand
 from canvas_sdk.commands.commands.lab_order import LabOrderCommand
 from canvas_sdk.commands.commands.medical_history import MedicalHistoryCommand
@@ -22,6 +23,7 @@ from canvas_sdk.commands.commands.plan import PlanCommand
 from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.commands.commands.reason_for_visit import ReasonForVisitCommand
+from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.resolve_condition import ResolveConditionCommand
@@ -43,6 +45,7 @@ __all__ = (
     "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
+    "ImagingOrderCommand",
     "InstructCommand",
     "LabOrderCommand",
     "MedicalHistoryCommand",
@@ -54,6 +57,7 @@ __all__ = (
     "PhysicalExamCommand",
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
+    "ReferCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
     "ResolveConditionCommand",
