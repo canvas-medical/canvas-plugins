@@ -13,6 +13,8 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
+from asgiref.sync import sync_to_async
+from django.db import connections
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
@@ -103,6 +105,22 @@ class PluginManifest(TypedDict):
     readme: str
 
 
+@sync_to_async
+def reconnect_if_needed() -> None:
+    """
+    Reconnect to the database if the connection has been closed.
+
+    NOTE: Django database functions are not async-safe and must be called
+    via e.g. sync_to_async. They will silently fail and block the handler
+    if called in an async context directly.
+    """
+    connection = connections["default"]
+
+    if not connection.is_usable():
+        log.debug("Connection was unusable, reconnecting...")
+        connection.connect()
+
+
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -118,6 +136,11 @@ class PluginRunner(PluginRunnerServicer):
         event_name = event.name
         relevant_plugins = EVENT_HANDLER_MAP[event_name]
 
+        log.debug(f"Processing {relevant_plugins} for {event_name}")
+
+        if relevant_plugins:
+            await reconnect_if_needed()
+
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
@@ -126,6 +149,8 @@ class PluginRunner(PluginRunnerServicer):
         effect_list = []
 
         for plugin_name in relevant_plugins:
+            log.debug(f"Processing {plugin_name}")
+
             plugin = LOADED_PLUGINS[plugin_name]
             handler_class = plugin["class"]
             base_plugin_name = plugin_name.split(":")[0]
@@ -166,9 +191,12 @@ class PluginRunner(PluginRunnerServicer):
                     tags={"plugin": plugin_name},
                 )
             except Exception as e:
+                log.error(f"Encountered exception in plugin {plugin_name}:")
+
                 for error_line_with_newlines in traceback.format_exception(e):
                     for error_line in error_line_with_newlines.split("\n"):
                         log.error(error_line)
+
                 continue
 
             effect_list += effects
