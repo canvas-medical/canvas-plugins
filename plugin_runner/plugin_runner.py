@@ -222,10 +222,18 @@ class PluginRunner(PluginRunnerServicer):
             effect_list += effects
 
         # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
-        # by calling ignore_event on handlers), then add a 404 Not Found response effect to the list
-        # of effects.
-        if event.type == EventType.SIMPLE_API_REQUEST and len(relevant_plugin_handlers) == 0:
-            effect_list.append(Response(status_code=HTTPStatus.NOT_FOUND).apply())
+        # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
+        # Found response effect. If multiple handlers were able to respond, log an error and set the
+        # effects list to be a single 500 Internal Server Error response effect.
+        if event.type == EventType.SIMPLE_API_REQUEST:
+            if len(relevant_plugin_handlers) == 0:
+                effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+            elif len(relevant_plugin_handlers) > 1:
+                log.error(
+                    f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
+                    f" {event.context['path']}"
+                )
+                effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
         event_duration = get_duration_ms(event_start_time)
 
