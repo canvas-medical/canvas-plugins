@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import pickle
 import shutil
@@ -321,17 +322,59 @@ def import_me() -> str:
 
 
 @pytest.mark.asyncio
-async def test_simple_api_not_found_response(plugin_runner: PluginRunner) -> None:
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+async def test_simple_api_not_found_error(
+    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+) -> None:
     """
     Test that the PluginRunner will return an effect for unhandled SimpleAPI request events.
 
     If a SimpleAPI request event is not handled by any handler, the PluginRunner must return a
     Response effect with a 404 Not Found status code.
     """
-    event = EventRequest(type=EventType.SIMPLE_API_REQUEST, context="")
+    event = EventRequest(
+        type=EventType.SIMPLE_API_REQUEST,
+        context=json.dumps(
+            {
+                "body": "",
+                "headers": {},
+                "method": "GET",
+                "path": "/test_simple_api/notfound",
+                "query_string": "",
+            }
+        ),
+    )
 
     result = []
     async for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
     assert result[0].effects == [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+async def test_simple_api_multiple_handlers_error(
+    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+) -> None:
+    """
+    Test that the PluginRunner returns an error if multiple handlers respond to the same API route.
+    """
+    event = EventRequest(
+        type=EventType.SIMPLE_API_REQUEST,
+        context=json.dumps(
+            {
+                "body": "",
+                "headers": {},
+                "method": "GET",
+                "path": "/test_simple_api/route",
+                "query_string": "",
+            }
+        ),
+    )
+
+    result = []
+    async for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert result[0].effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
