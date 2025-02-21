@@ -22,8 +22,7 @@ from .exceptions import AuthenticationError
 from .security import Credentials
 
 # TODO: Sanity check — test plugin installation, updating, enabling, and disabling
-# TODO: Discuss a durable way to get the plugin name
-# - talk to Jose
+# TODO: Discuss a durable way to get the plugin name (talk to Jose)
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
 
