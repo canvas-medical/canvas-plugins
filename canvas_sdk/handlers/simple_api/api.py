@@ -198,21 +198,17 @@ class SimpleAPIBase(BaseHandler, ABC):
                 if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
                     response_count += 1
 
-            # If there is more than one response, remove the responses and return an error response
-            # instead. Allow non-response effects to pass through unaffected.
+            # Log an error if multiple responses are returned
             if response_count > 1:
+                effects = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
                 log.error(f"Multiple responses provided by f{SimpleAPI.__name__} handler")
-
-                effects = [
-                    effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
-                ]
-                effects.append(Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply())
 
             return effects
         except Exception as e:
             for error_line_with_newlines in traceback.format_exception(e):
                 for error_line in error_line_with_newlines.split("\n"):
                     log.error(error_line)
+
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
     def ignore_event(self) -> bool:
