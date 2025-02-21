@@ -40,7 +40,7 @@ class RoutePathMixin:
         return ""
 
 
-class NoAuth:
+class NoAuthMixin:
     """Mixin to bypass authentication for tests that are not related to authentication."""
 
     def authenticate(self, credentials: Credentials) -> bool:
@@ -48,26 +48,20 @@ class NoAuth:
         return True
 
 
-class TestRouteNoAuth(RoutePathMixin, NoAuth, SimpleAPIRoute):
+class RouteNoAuth(RoutePathMixin, NoAuthMixin, SimpleAPIRoute):
     """Route class that bypasses authentication."""
 
     pass
 
 
-class TestAPINoAuth(RoutePathMixin, NoAuth, SimpleAPI):
+class APINoAuth(RoutePathMixin, NoAuthMixin, SimpleAPI):
     """API class that bypasses authentication."""
 
     pass
 
 
-class TestRoute(RoutePathMixin, SimpleAPIRoute):
+class RouteAuth(RoutePathMixin, SimpleAPIRoute):
     """Route class that requires authentication."""
-
-    pass
-
-
-class TestAPI(RoutePathMixin, SimpleAPI):
-    """API class that requires authentication."""
 
     pass
 
@@ -168,7 +162,7 @@ def json_response_body(effects: Iterable[Effect]) -> Any:
 def test_request_routing_route(method: str) -> None:
     """Test request routing for SimpleAPIRoute plugins."""
 
-    class Route(TestRouteNoAuth):
+    class Route(RouteNoAuth):
         PATH = "/route"
 
         def get(self) -> list[Response | Effect]:
@@ -238,7 +232,7 @@ def test_request_routing_api(
 ) -> None:
     """Test request routing for SimpleAPI plugins."""
 
-    class API(TestAPINoAuth):
+    class API(APINoAuth):
         PREFIX = prefix
 
         @decorator("/route1")
@@ -268,7 +262,7 @@ def test_request_routing_api(
 def test_request_lifecycle() -> None:
     """Test the request-response lifecycle."""
 
-    class Route(TestRouteNoAuth):
+    class Route(RouteNoAuth):
         PATH = "/route"
 
         def post(self) -> list[Response | Effect]:
@@ -398,7 +392,7 @@ def test_request_lifecycle() -> None:
 def test_response(response: Callable, expected_effects: Sequence[Effect]) -> None:
     """Test the construction and return of different kinds of responses."""
 
-    class Route(TestRouteNoAuth):
+    class Route(RouteNoAuth):
         PATH = "/route"
 
         def get(self) -> list[Response | Effect]:
@@ -463,7 +457,7 @@ def test_override_base_handler_attributes_error() -> None:
     """Test the enforcement of the error that occurs when base handler attributes are overridden."""
     with pytest.raises(PluginError):
 
-        class API(TestAPINoAuth):
+        class API(APINoAuth):
             @api.get("/route")  # type: ignore[arg-type]
             def compute(self) -> list[Response | Effect]:  # type: ignore[override]
                 return [JSONResponse({})]
@@ -475,7 +469,7 @@ def test_multiple_handlers_for_route_error() -> None:
     """
     with pytest.raises(PluginError):
 
-        class API(TestAPINoAuth):
+        class API(APINoAuth):
             @api.get("/route")  # type: ignore[arg-type]
             def route1(self) -> list[Response | Effect]:
                 return []
@@ -493,7 +487,7 @@ def test_route_missing_path_error() -> None:
     """
     with pytest.raises(PluginError):
 
-        class Route(TestRouteNoAuth):
+        class Route(RouteNoAuth):
             def get(self) -> list[Response | Effect]:
                 return []
 
@@ -502,7 +496,7 @@ def test_route_has_prefix_error() -> None:
     """Test the enforcement of the error that occurs when a SimpleAPIRoute has a PREFIX value."""
     with pytest.raises(PluginError):
 
-        class Route(TestRouteNoAuth):
+        class Route(RouteNoAuth):
             PREFIX = "/prefix"
             PATH = "/route"
 
@@ -574,7 +568,7 @@ def authenticated_route(request: SubRequest) -> SimpleNamespace:
     """
     credentials_cls, authenticate_impl, headers = request.param
 
-    class Route(TestRoute):
+    class Route(RouteAuth):
         PATH = "/route"
 
         def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
@@ -652,7 +646,7 @@ def test_authentication_exception(
 ) -> None:
     """Test that an exception occurring during authentication results in a failure response."""
 
-    class Route(TestRoute):
+    class Route(RouteAuth):
         PATH = "/route"
 
         def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
@@ -666,7 +660,3 @@ def test_authentication_exception(
     effects = handler.compute()
 
     assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
-
-
-# relevant plugin filtering
-# multiple handlers -> error
