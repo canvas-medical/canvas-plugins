@@ -141,6 +141,7 @@ class PluginRunner(PluginRunnerServicer):
         event_type = event.type
         event_name = event.name
         relevant_plugins = EVENT_HANDLER_MAP[event_name]
+        relevant_plugin_handlers = []
 
         log.debug(f"Processing {relevant_plugins} for {event_name}")
 
@@ -151,9 +152,13 @@ class PluginRunner(PluginRunnerServicer):
             plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+        elif event_type == EventType.SIMPLE_API_REQUEST:
+            # The target plugin's name will be part of the URL path, so other plugins that respond
+            # to SimpleAPI request events are not relevant
+            plugin_name = event.context["path"].split("/")[1]
+            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
-        relevant_handlers_count = 0
 
         for plugin_name in relevant_plugins:
             log.debug(f"Processing {plugin_name}")
@@ -173,7 +178,7 @@ class PluginRunner(PluginRunnerServicer):
                 if handler.ignore_event():
                     continue
                 else:
-                    relevant_handlers_count += 1
+                    relevant_plugin_handlers.append(handler_class)
 
                 classname = (
                     handler.__class__.__name__
@@ -219,7 +224,7 @@ class PluginRunner(PluginRunnerServicer):
         # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
         # by calling ignore_event on handlers), then add a 404 Not Found response effect to the list
         # of effects.
-        if event.type == EventType.SIMPLE_API_REQUEST and relevant_handlers_count == 0:
+        if event.type == EventType.SIMPLE_API_REQUEST and len(relevant_plugin_handlers) == 0:
             effect_list.append(Response(status_code=HTTPStatus.NOT_FOUND).apply())
 
         event_duration = get_duration_ms(event_start_time)
