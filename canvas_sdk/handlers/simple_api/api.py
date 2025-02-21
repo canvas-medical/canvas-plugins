@@ -21,10 +21,10 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError
 from .security import Credentials
 
-# TODO: Reject requests that do not match a plugin (on the home-app side)
+# TODO: Sanity check — test plugin installation, updating, enabling, and disabling
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
-# TODO: Sanity check — test plugin installation, updating, enabling, and disabling
+# TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
 
 
