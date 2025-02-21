@@ -204,7 +204,7 @@ async def synchronize_plugins(run_once: bool = False) -> None:
     """
     log.info(f'synchronize_plugins: listening for messages on pubsub channel "{CHANNEL_NAME}"')
 
-    client, pubsub = get_client()
+    _, pubsub = get_client()
     await pubsub.psubscribe(CHANNEL_NAME)
 
     while True:
