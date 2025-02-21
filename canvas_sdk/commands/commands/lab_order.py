@@ -34,11 +34,16 @@ class LabOrderCommand(BaseCommand):
 
         lab_partner_obj = None
         if self.lab_partner:
-            lab_partner_obj = (
-                LabPartner.objects.filter(Q(name=self.lab_partner) | Q(id=self.lab_partner))
-                .values("id", "dbid")
-                .first()
-            )
+            query = {}
+            try:
+                UUID(str(self.lab_partner))
+            except ValueError:
+                query["name"] = self.lab_partner
+            else:
+                query["id"] = self.lab_partner
+
+            lab_partner_obj = LabPartner.objects.filter(**query).values("id", "dbid").first()
+
             if not lab_partner_obj:
                 errors.append(
                     self._create_error_detail(
@@ -61,7 +66,7 @@ class LabOrderCommand(BaseCommand):
 
                 for code in self.tests_order_codes:
                     try:
-                        uuid_tests.append(UUID(code))
+                        uuid_tests.append(UUID(str(code)))
                     except ValueError:
                         order_code_tests.append(code)
 
