@@ -361,6 +361,29 @@ def test_request_lifecycle() -> None:
             lambda: [Response(), Response()],
             [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()],
         ),
+        (
+            lambda: [
+                JSONResponse(
+                    content={"message": "JSON response"},
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    headers=HEADERS,
+                ),
+                Effect(type=EffectType.CREATE_TASK, payload="create task"),
+            ],
+            [
+                JSONResponse(
+                    content={"message": "JSON response"},
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    headers=HEADERS,
+                ).apply()
+            ],
+        ),
+        (
+            lambda: [
+                JSONResponse(content={"message": 1 / 0}, status_code=HTTPStatus.OK, headers=HEADERS)
+            ],
+            [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()],
+        ),
     ],
     ids=[
         "list of effects",
@@ -368,6 +391,8 @@ def test_request_lifecycle() -> None:
         "list of effects with response effect",
         "no response",
         "multiple responses",
+        "handler returns error response",
+        "exception in handler",
     ],
 )
 def test_response(response: Callable, expected_effects: Sequence[Effect]) -> None:
@@ -641,3 +666,7 @@ def test_authentication_exception(
     effects = handler.compute()
 
     assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+
+
+# relevant plugin filtering
+# multiple handlers -> error
