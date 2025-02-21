@@ -1,6 +1,40 @@
 # CHANGELOG
 
 
+## v0.22.0 (2025-02-21)
+
+### Bug Fixes
+
+- Add missing commands to module init
+  ([#435](https://github.com/canvas-medical/canvas-plugins/pull/435),
+  [`f178471`](https://github.com/canvas-medical/canvas-plugins/commit/f178471792631aa2eb3a67aca0c00907f6d75559))
+
+- Allow setting lab partner by name or as None
+  ([#429](https://github.com/canvas-medical/canvas-plugins/pull/429),
+  [`f90733c`](https://github.com/canvas-medical/canvas-plugins/commit/f90733c52c68d7fe5722c526bd780591290177c6))
+
+### Features
+
+- Add imaging order command ([#396](https://github.com/canvas-medical/canvas-plugins/pull/396),
+  [`8b7d10d`](https://github.com/canvas-medical/canvas-plugins/commit/8b7d10d7004b5daafde48b8059598ab14e82933a))
+
+- Add instruct command ([#425](https://github.com/canvas-medical/canvas-plugins/pull/425),
+  [`93aa066`](https://github.com/canvas-medical/canvas-plugins/commit/93aa0665ccddd502934aadb39597d1f3ad1e1710))
+
+- Add refer command ([#430](https://github.com/canvas-medical/canvas-plugins/pull/430),
+  [`eb36f9c`](https://github.com/canvas-medical/canvas-plugins/commit/eb36f9c129b57462effb94d383ab30d39808badb))
+
+- Add resolve condition command ([#428](https://github.com/canvas-medical/canvas-plugins/pull/428),
+  [`ba86b9b`](https://github.com/canvas-medical/canvas-plugins/commit/ba86b9b662e892c09ac31ea0f4aecee382688b4c))
+
+- Adjustprescription command ([#432](https://github.com/canvas-medical/canvas-plugins/pull/432),
+  [`8a84c46`](https://github.com/canvas-medical/canvas-plugins/commit/8a84c4609e745d6904e7258d4f425de8c547f554))
+
+- Implement adding questionnaire responses
+  ([#431](https://github.com/canvas-medical/canvas-plugins/pull/431),
+  [`a36c136`](https://github.com/canvas-medical/canvas-plugins/commit/a36c1368f197659aaa41793043b818c27f3a4f15))
+
+
 ## v0.21.0 (2025-02-19)
 
 ### Bug Fixes
