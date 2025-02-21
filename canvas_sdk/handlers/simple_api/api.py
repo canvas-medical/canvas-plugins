@@ -12,32 +12,28 @@ from urllib.parse import parse_qs
 from requests.structures import CaseInsensitiveDict
 
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
 
+from .exceptions import AuthenticationError
 from .security import Credentials
 
 # TODO: Reject requests that do not match a plugin (on the home-app side)
-# TODO: Raise exceptions in credential classes on error
-
-# TODO: What should happen to other effects if the user returns two response objects from a route?
-# - Look into wrapping everything in a transaction and rolling back on any error
-# - Rollback should occur if error was detected in the handler or in home-app
-
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
-
 # TODO: Look into making the response effects inherit from the base effects
-
 # TODO: Sanity check — test plugin installation, updating, enabling, and disabling
 
 
+# TODO: Documentation
 # TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
+# TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)
+# TODO: Support Effect metadata that is separate from payload
 
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
@@ -187,22 +183,48 @@ class SimpleAPIBase(BaseHandler, ABC):
             # Handle the request
             effects = handler()
 
-            # Transform any API responses into effects if they aren't already effects
-            response_count = 0
+            # Iterate over the returned effects and:
+            # 1. Change any response objects to response effects
+            # 2. Detect if the handler returned multiple responses, and if it did, log an error and
+            #    return only a response effect with a 500 Internal Server Error.
+            # 3. Detect if the handler returned an error response object, and if it did, return only
+            #    the response effect.
+            response_found = False
             for index, effect in enumerate(effects):
+                # Change the response object to a response effect
                 if isinstance(effect, Response):
                     effects[index] = effect.apply()
-                if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
-                    response_count += 1
 
-            # Log an error if multiple responses are returned
-            if response_count > 1:
-                effects = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
-                log.error(f"Multiple responses provided by f{SimpleAPI.__name__} handler")
+                if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+                    # If a response has already been found, return an error response immediately
+                    if response_found:
+                        log.error(f"Multiple responses provided by {SimpleAPI.__name__} handler")
+                        return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+                    else:
+                        response_found = True
+
+                    # Get the status code of the response. If the initial response was an object and
+                    # not an effect, get it from the response object to avoid having to deserialize
+                    # the payload.
+                    if isinstance(effect, Response):
+                        status_code = effect.status_code
+                    else:
+                        status_code = json.loads(effect.payload)["status_code"]
+
+                    # If the handler returned an error response, return only that response effect
+                    # and omit any other included effects
+                    if 400 <= status_code <= 599:
+                        return [effects[index]]
 
             return effects
-        except Exception as e:
-            for error_line_with_newlines in traceback.format_exception(e):
+        except AuthenticationError as error:
+            return [
+                JSONResponse(
+                    content={"error": str(error)}, status_code=HTTPStatus.UNAUTHORIZED
+                ).apply()
+            ]
+        except Exception as exception:
+            for error_line_with_newlines in traceback.format_exception(exception):
                 for error_line in error_line_with_newlines.split("\n"):
                     log.error(error_line)
 

@@ -20,19 +20,19 @@ class Response:
         headers: Mapping[str, Any] | None = None,
         content_type: str | None = None,
     ) -> None:
-        self._content = content
-        self._status_code = status_code
-        self._headers = {**(headers or {})}
+        self.content = content
+        self.status_code = status_code
+        self.headers = {**(headers or {})}
 
         if content_type:
-            self._headers["Content-Type"] = content_type
+            self.headers["Content-Type"] = content_type
 
     def apply(self) -> Effect:
         """Convert the response into an effect."""
         payload = {
-            "headers": self._headers or {},
-            "body": b64encode(self._content or b"").decode(),
-            "status_code": self._status_code,
+            "headers": self.headers or {},
+            "body": b64encode(self.content or b"").decode(),
+            "status_code": self.status_code,
         }
 
         return Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))

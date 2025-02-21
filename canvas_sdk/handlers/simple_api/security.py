@@ -1,6 +1,12 @@
 from base64 import b64decode
 from typing import TYPE_CHECKING
 
+from .exceptions import (
+    AuthenticationSchemeError,
+    InvalidCredentialsError,
+    NoAuthorizationHeaderError,
+)
+
 if TYPE_CHECKING:
     from .api import Request
 
@@ -34,24 +40,24 @@ class BasicCredentials(Credentials):
 
         authorization = request.headers.get("Authorization")
         if not authorization:
-            return
+            raise NoAuthorizationHeaderError
 
         scheme, delimiter, value = authorization.partition(" ")
         if delimiter != " ":
-            return
+            raise AuthenticationSchemeError
         if scheme.lower() != "basic":
-            return
+            raise AuthenticationSchemeError
 
         try:
             value = b64decode(value.encode()).decode()
-        except Exception:
-            return
+        except Exception as exception:
+            raise InvalidCredentialsError from exception
 
         username, delimiter, password = value.partition(":")
         if delimiter != ":":
-            return
+            raise InvalidCredentialsError
         if not username or not password:
-            return
+            raise InvalidCredentialsError
 
         self.username = username
         self.password = password
@@ -71,15 +77,15 @@ class BearerCredentials(Credentials):
 
         authorization = request.headers.get("Authorization")
         if not authorization:
-            return
+            raise NoAuthorizationHeaderError
 
         scheme, delimiter, token = authorization.partition(" ")
         if delimiter != " ":
-            return
+            raise AuthenticationSchemeError
         if scheme.lower() != "bearer":
-            return
+            raise AuthenticationSchemeError
         if not token:
-            return
+            raise InvalidCredentialsError
 
         self.token = token
 
@@ -99,4 +105,9 @@ class APIKeyCredentials(Credentials):
     def __init__(self, request: "Request") -> None:
         super().__init__(request)
 
-        self.key = request.headers.get(self.HEADER_NAME) or None
+        if self.HEADER_NAME not in request.headers:
+            raise NoAuthorizationHeaderError
+
+        self.key = request.headers.get(self.HEADER_NAME)
+        if not self.key:
+            raise InvalidCredentialsError
