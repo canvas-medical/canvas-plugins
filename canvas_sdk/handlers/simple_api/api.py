@@ -20,9 +20,6 @@ from plugin_runner.exceptions import PluginError
 
 from .security import Credentials
 
-# TODO: Implement specialized handling that will prevent handler instantiation if the request path
-#  does not match the plugin name. This behavior will NOT be generalizable. Make sure that ONLY one plugin (that must match the criteria) responds to the event.
-
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Raise exceptions in credential classes on error
 
