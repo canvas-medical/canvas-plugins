@@ -374,6 +374,23 @@ def test_request_lifecycle() -> None:
         ),
         (
             lambda: [
+                JSONResponse(
+                    content={"message": "JSON response"},
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    headers=HEADERS,
+                ).apply(),
+                Effect(type=EffectType.CREATE_TASK, payload="create task"),
+            ],
+            [
+                JSONResponse(
+                    content={"message": "JSON response"},
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    headers=HEADERS,
+                ).apply()
+            ],
+        ),
+        (
+            lambda: [
                 JSONResponse(content={"message": 1 / 0}, status_code=HTTPStatus.OK, headers=HEADERS)
             ],
             [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()],
@@ -385,7 +402,8 @@ def test_request_lifecycle() -> None:
         "list of effects with response effect",
         "no response",
         "multiple responses",
-        "handler returns error response",
+        "handler returns error response object",
+        "handler returns error response effect",
         "exception in handler",
     ],
 )
