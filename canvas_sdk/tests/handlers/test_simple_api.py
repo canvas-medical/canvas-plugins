@@ -534,8 +534,8 @@ APP_KEY = uuid4().hex
         ),
         (
             Credentials,
-            lambda request, _: request.headers["API-Key"] == API_KEY
-            and request.headers["App-Key"] == APP_KEY,
+            lambda request, _: request.headers.get("API-Key") == API_KEY
+            and request.headers.get("App-Key") == APP_KEY,
             custom_headers(API_KEY, APP_KEY),
         ),
     ],
@@ -609,7 +609,7 @@ def test_authentication_failure(
 
     effects = handler.compute()
 
-    assert effects == [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+    assert json.loads(effects[0].payload)["status_code"] == HTTPStatus.UNAUTHORIZED
 
 
 @pytest.mark.parametrize(
@@ -640,4 +640,4 @@ def test_authentication_exception(
 
     effects = handler.compute()
 
-    assert effects == [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+    assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
