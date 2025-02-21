@@ -5,13 +5,17 @@ from http import HTTPStatus
 from typing import Any
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, _BaseEffect
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
 
-class Response:
+class Response(_BaseEffect):
     """SimpleAPI response class."""
+
+    content: bytes | None
+    status_code: int
+    headers: dict[str, Any] | None
 
     def __init__(
         self,
@@ -20,12 +24,15 @@ class Response:
         headers: Mapping[str, Any] | None = None,
         content_type: str | None = None,
     ) -> None:
-        self.content = content
-        self.status_code = status_code
-        self.headers = {**(headers or {})}
-
+        headers = {**(headers or {})}
         if content_type:
-            self.headers["Content-Type"] = content_type
+            headers["Content-Type"] = content_type
+
+        super().__init__(
+            content=content,
+            status_code=status_code,
+            headers=headers,  # type: ignore[call-arg]
+        )
 
     def apply(self) -> Effect:
         """Convert the response into an effect."""
