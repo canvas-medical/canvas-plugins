@@ -33,7 +33,7 @@ REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 HEADERS = {"Canvas-Plugins-Test-Header": "test header"}
 
 
-class RoutePathMixin:
+class SetPluginNameMixin:
     """Mixin to override the plugin name."""
 
     def _plugin_name(self) -> str:
@@ -48,19 +48,19 @@ class NoAuthMixin:
         return True
 
 
-class RouteNoAuth(RoutePathMixin, NoAuthMixin, SimpleAPIRoute):
+class RouteNoAuth(SetPluginNameMixin, NoAuthMixin, SimpleAPIRoute):
     """Route class that bypasses authentication."""
 
     pass
 
 
-class APINoAuth(RoutePathMixin, NoAuthMixin, SimpleAPI):
+class APINoAuth(SetPluginNameMixin, NoAuthMixin, SimpleAPI):
     """API class that bypasses authentication."""
 
     pass
 
 
-class RouteAuth(RoutePathMixin, SimpleAPIRoute):
+class RouteAuth(SetPluginNameMixin, SimpleAPIRoute):
     """Route class that requires authentication."""
 
     pass
