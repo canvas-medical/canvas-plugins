@@ -300,7 +300,6 @@ def test_request_lifecycle() -> None:
     }
 
 
-# TODO: Update the not found test once not found handling is resolved
 @pytest.mark.parametrize(
     argnames="response,expected_effects",
     argvalues=[
