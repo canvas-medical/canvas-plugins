@@ -4,7 +4,7 @@ from canvas_sdk.commands.commands.refill import RefillCommand
 
 
 class AdjustPrescriptionCommand(RefillCommand):
-    """A class for managing a Refill command within a specific note."""
+    """A class for managing Adjust Prescription command within a specific note."""
 
     class Meta:
         key = "adjustPrescription"
