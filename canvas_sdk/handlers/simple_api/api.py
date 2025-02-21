@@ -112,7 +112,9 @@ class SimpleAPIBase(BaseHandler, ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        # Build the registry of routes so that requests can be routed to the correct handler
+        # Build the registry of routes so that requests can be routed to the correct handler. This
+        # is done by iterating over the methods on the class instance and looking for methods that
+        # have been marked by the handler decorators (get, post, etc.).
         self._routes: dict[tuple[str, str], Callable] = {}
         for name in dir(self):
             # Skip properties, because calling getattr on a property executes it. We don't want that
