@@ -19,7 +19,7 @@ class ResponseOption:
         self.value: str = value
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, ResponseOption):
+        if isinstance(other, ResponseOption):
             return (
                 self.dbid == other.dbid
                 and self.name == other.name
@@ -51,8 +51,8 @@ class BaseQuestion(ABC):
 
     @abstractmethod
     def add_response(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Record a response for the question.
+        """Record a response for the question.
+
         Subclasses will override this to perform type-specific validation.
         """
         raise NotImplementedError("Subclasses must implement this method.")
@@ -94,6 +94,7 @@ class RadioQuestion(BaseQuestion):
 
     def add_response(self, /, option: ResponseOption) -> None:
         """Record a radio response.
+
         Expects a single keyword argument 'option' of type ResponseOption.
         Validates that the option's value is among the allowed options.
         """
@@ -113,8 +114,7 @@ class CheckboxQuestion(BaseQuestion):
     def add_response(
         self, /, option: ResponseOption, selected: bool = True, comment: str = ""
     ) -> None:
-        """
-        Record a checkbox response.
+        """Record a checkbox response.
 
         Validates that:
           - 'option' is a ResponseOption.
