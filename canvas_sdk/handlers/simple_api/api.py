@@ -24,11 +24,10 @@ from .security import Credentials
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
-# TODO: Look into making the response effects inherit from the base effects
 # TODO: Sanity check — test plugin installation, updating, enabling, and disabling
-
-
 # TODO: Documentation
+
+
 # TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
