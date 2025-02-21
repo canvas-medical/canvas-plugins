@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Self, cast
 
 from django.db import models
 from django.db.models import TextChoices
@@ -30,7 +30,9 @@ class ConditionQuerySet(
 ):
     """ConditionQuerySet."""
 
-    pass
+    def active(self) -> Self:
+        """Return a queryset that filters for active conditions."""
+        return self.committed().filter(clinical_status=ClinicalStatus.ACTIVE)
 
 
 ConditionManager = BaseModelManager.from_queryset(ConditionQuerySet)
