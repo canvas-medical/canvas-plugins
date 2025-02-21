@@ -1,4 +1,5 @@
 import json
+import traceback
 from abc import ABC
 from base64 import b64decode
 from collections.abc import Callable
@@ -23,7 +24,6 @@ from .security import Credentials
 #  does not match the plugin name. This behavior will NOT be generalizable. Make sure that ONLY one plugin (that must match the criteria) responds to the event.
 
 # TODO: Reject requests that do not match a plugin (on the home-app side)
-# TODO: Try-except with 500 response and logging around auth and handler
 # TODO: Raise exceptions in credential classes on error
 
 # TODO: What should happen to other effects if the user returns two response objects from a route?
@@ -33,7 +33,7 @@ from .security import Credentials
 # TODO: Discuss a durable way to get the plugin name
 # - talk to Jose
 
-# TODO: Look into making the response effects should inherit from the base effects
+# TODO: Look into making the response effects inherit from the base effects
 
 # TODO: Sanity check — test plugin installation, updating, enabling, and disabling
 
@@ -179,38 +179,41 @@ class SimpleAPIBase(BaseHandler, ABC):
 
     def compute(self) -> list[Effect]:
         """Route the incoming request to the handler based on the HTTP method and path."""
-        # Authenticate the request
         try:
+            # Authenticate the request
             if not self._authenticate():
-                raise RuntimeWarning("Authentication failed")
-        except Exception:
-            return [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
+                return [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
 
-        # Get the handler method
-        handler = self._routes[(self.request.method, self.request.path)]
+            # Get the handler method
+            handler = self._routes[(self.request.method, self.request.path)]
 
-        # Handle the request
-        effects = handler()
+            # Handle the request
+            effects = handler()
 
-        # Transform any API responses into effects if they aren't already effects
-        response_count = 0
-        for index, effect in enumerate(effects):
-            if isinstance(effect, Response):
-                effects[index] = effect.apply()
-            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
-                response_count += 1
+            # Transform any API responses into effects if they aren't already effects
+            response_count = 0
+            for index, effect in enumerate(effects):
+                if isinstance(effect, Response):
+                    effects[index] = effect.apply()
+                if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+                    response_count += 1
 
-        # If there is more than one response, remove the responses and return an error response
-        # instead. Allow non-response effects to pass through unaffected.
-        if response_count > 1:
-            log.error(f"Multiple responses provided by f{SimpleAPI.__name__} handler")
+            # If there is more than one response, remove the responses and return an error response
+            # instead. Allow non-response effects to pass through unaffected.
+            if response_count > 1:
+                log.error(f"Multiple responses provided by f{SimpleAPI.__name__} handler")
 
-            effects = [
-                effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
-            ]
-            effects.append(Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply())
+                effects = [
+                    effect for effect in effects if effect.type != EffectType.SIMPLE_API_RESPONSE
+                ]
+                effects.append(Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply())
 
-        return effects
+            return effects
+        except Exception as e:
+            for error_line_with_newlines in traceback.format_exception(e):
+                for error_line in error_line_with_newlines.split("\n"):
+                    log.error(error_line)
+            return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
     def ignore_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
