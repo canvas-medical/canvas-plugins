@@ -22,11 +22,7 @@ class PubSubBase:
 
         return None
 
-    def _create_client(self) -> redis.Redis | None:
-        if self.redis_endpoint and self.channel:
-            return redis.Redis.from_url(self.redis_endpoint, decode_responses=True)
-
-        return None
+    def _create_client(self) -> redis.Redis | redis.asyncio.Redis | None: ...
 
 
 class Publisher(PubSubBase):
@@ -36,3 +32,9 @@ class Publisher(PubSubBase):
         """Publishes a message to the channel."""
         if self.client and self.channel:
             self.client.publish(self.channel, message)
+
+    def _create_client(self) -> redis.Redis | None:
+        if self.redis_endpoint and self.channel:
+            return redis.Redis.from_url(self.redis_endpoint, decode_responses=True)
+
+        return None
