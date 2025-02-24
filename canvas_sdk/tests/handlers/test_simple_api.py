@@ -495,8 +495,6 @@ def test_multiple_handlers_for_route_error() -> None:
             def route2(self) -> list[Response | Effect]:
                 return []
 
-        API(make_event(method="GET", path="/route"))
-
 
 def test_route_missing_path_error() -> None:
     """
