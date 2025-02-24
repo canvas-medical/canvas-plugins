@@ -30,6 +30,7 @@ from .security import Credentials
 # TODO: Support multipart/form-data by adding helpers to the request class
 # TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)
 # TODO: Support Effect metadata that is separate from payload
+# TODO: Encode event payloads with MessagePack instead of JSON
 
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
