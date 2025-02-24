@@ -21,9 +21,7 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError
 from .security import Credentials
 
-# TODO: Move exception raises to __init_subclass__?
-# TODO: Two-phase auth (pass down request without body)
-# TODO: Reject requests that do not match a plugin (on the home-app side)
+# TODO: Two-phase auth (pass down request without body), or reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
 
 
