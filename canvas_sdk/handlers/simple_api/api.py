@@ -21,7 +21,6 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError
 from .security import Credentials
 
-# TODO: Prevent decorator being used on route subclasses
 # TODO: Move exception raises to __init_subclass__?
 # TODO: Two-phase auth (pass down request without body)
 # TODO: Reject requests that do not match a plugin (on the home-app side)
@@ -284,7 +283,16 @@ class SimpleAPIRoute(SimpleAPIBase):
                 case _:
                     decorator = None
 
-            if not callable(attr_value) or decorator is None:
+            if not callable(attr_value):
+                continue
+
+            if hasattr(attr_value, "route"):
+                raise PluginError(
+                    f"Using the api decorator on subclasses of {SimpleAPIRoute.__name__} is not "
+                    "allowed"
+                )
+
+            if decorator is None:
                 continue
 
             path = cls.__dict__.get("PATH")
