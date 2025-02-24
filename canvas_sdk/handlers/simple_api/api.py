@@ -21,6 +21,9 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError
 from .security import Credentials
 
+# TODO: Prevent decorator being used on route subclasses
+# TODO: Move exception raises to __init_subclass__?
+# TODO: Two-phase auth (pass down request without body)
 # TODO: Discuss a durable way to get the plugin name (talk to Jose)
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
