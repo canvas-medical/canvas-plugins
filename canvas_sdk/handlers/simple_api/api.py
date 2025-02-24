@@ -21,10 +21,8 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError
 from .security import Credentials
 
-# TODO: Two-phase auth (pass down request without body), or reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
-
-
+# TODO: Two-phase auth (pass down request without body), or reject requests that do not match a plugin (on the home-app side)
 # TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
