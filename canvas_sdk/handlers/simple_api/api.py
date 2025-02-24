@@ -143,22 +143,6 @@ class SimpleAPIBase(BaseHandler, ABC):
 
                 self._routes[route] = attr
 
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Prevent developer-defined route methods from clashing with base class methods."""
-        super().__init_subclass__(**kwargs)
-
-        route_handler_method_names = {
-            name
-            for name, value in cls.__dict__.items()
-            if callable(value) and hasattr(value, "route")
-        }
-        for superclass in cls.__mro__[1:]:
-            if names := route_handler_method_names.intersection(superclass.__dict__):
-                raise PluginError(
-                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base "
-                    f"class attributes: {', '.join(f'{cls.__name__}.{name}' for name in names)}"
-                )
-
     def _plugin_name(self) -> str:
         return self.plugin_name
 
@@ -248,14 +232,30 @@ class SimpleAPIBase(BaseHandler, ABC):
         return self.authenticate(credentials)
 
 
-class SimpleAPI(SimpleAPIBase):
+class SimpleAPI(SimpleAPIBase, ABC):
     """Base class for HTTP APIs."""
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Prevent developer-defined route methods from clashing with base class methods."""
+        super().__init_subclass__(**kwargs)
+
+        route_handler_method_names = {
+            name
+            for name, value in cls.__dict__.items()
+            if callable(value) and hasattr(value, "route")
+        }
+        for superclass in cls.__mro__[1:]:
+            if names := route_handler_method_names.intersection(superclass.__dict__):
+                raise PluginError(
+                    f"{SimpleAPI.__name__} subclass route handler methods are overriding base "
+                    f"class attributes: {', '.join(f'{cls.__name__}.{name}' for name in names)}"
+                )
 
     def _path_prefix(self) -> str:
         return getattr(self, "PREFIX", None) or ""
 
 
-class SimpleAPIRoute(SimpleAPIBase):
+class SimpleAPIRoute(SimpleAPIBase, ABC):
     """Base class for HTTP API routes."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
