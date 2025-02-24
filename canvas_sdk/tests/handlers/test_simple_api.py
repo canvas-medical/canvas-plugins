@@ -521,6 +521,24 @@ def test_route_has_prefix_error() -> None:
                 return []
 
 
+def test_route_that_uses_api_decorator_error() -> None:
+    """
+    Test the enforcement of the error that occurs when a SimpleAPIRoute uses the api decorator.
+    """
+    with pytest.raises(PluginError):
+
+        class Route(RouteNoAuth):
+            PREFIX = "/prefix"
+            PATH = "/route"
+
+            def get(self) -> list[Response | Effect]:
+                return []
+
+            @api.get("/route")  # type: ignore[arg-type]
+            def route(self) -> list[Response | Effect]:
+                return []
+
+
 def basic_headers(username: str, password: str) -> dict[str, str]:
     """Given a username and password, return headers that include a basic authentication header."""
     return {"Authorization": f"Basic {b64encode(f'{username}:{password}'.encode()).decode()}"}
