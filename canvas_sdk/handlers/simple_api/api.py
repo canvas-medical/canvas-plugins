@@ -135,12 +135,6 @@ class SimpleAPIBase(BaseHandler, ABC):
 
                 route = (method, f"{prefix}{relative_path}")
 
-                if route in self._routes:
-                    raise PluginError(
-                        f"The route {method} {relative_path} must only be handled by one route "
-                        "handler"
-                    )
-
                 self._routes[route] = attr
 
     def _plugin_name(self) -> str:
@@ -239,11 +233,18 @@ class SimpleAPI(SimpleAPIBase, ABC):
         """Prevent developer-defined route methods from clashing with base class methods."""
         super().__init_subclass__(**kwargs)
 
-        route_handler_method_names = {
-            name
-            for name, value in cls.__dict__.items()
-            if callable(value) and hasattr(value, "route")
-        }
+        routes = set()
+        route_handler_method_names = set()
+        for name, value in cls.__dict__.items():
+            if callable(value) and hasattr(value, "route"):
+                if value.route in routes:
+                    method, path = value.route
+                    raise PluginError(
+                        f"The route {method} {path} must only be handled by one route handler"
+                    )
+                routes.add(value.route)
+                route_handler_method_names.add(name)
+
         for superclass in cls.__mro__[1:]:
             if names := route_handler_method_names.intersection(superclass.__dict__):
                 raise PluginError(
