@@ -171,7 +171,7 @@ class PluginRunner(PluginRunnerServicer):
                 )
 
                 compute_start_time = time.time()
-                _effects = await asyncio.get_running_loop().run_in_executor(None, handler.compute)
+                _effects = await sync_to_async(handler.compute)()
                 effects = [
                     Effect(
                         type=effect.type,
