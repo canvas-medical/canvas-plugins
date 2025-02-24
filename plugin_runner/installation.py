@@ -137,7 +137,7 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
-        log.info(f'Installing plugin "{plugin_name}"')
+        log.info(f'Installing plugin "{plugin_name}", version {attributes["version"]}')
 
         plugin_installation_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
@@ -224,7 +224,6 @@ def install_plugins() -> None:
 
     for plugin_name, attributes in enabled_plugins().items():
         try:
-            log.info(f'Installing plugin "{plugin_name}", version {attributes["version"]}')
             install_plugin(plugin_name, attributes)
         except PluginInstallationError:
             disable_plugin(plugin_name)
