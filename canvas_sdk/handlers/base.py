@@ -23,6 +23,7 @@ class BaseHandler(ABC):
     ) -> None:
         self.event = event
         self.secrets = secrets or {}
+        self.plugin_name = self.__class__.__module__.split(".")[0]
 
     @property
     @deprecation.deprecated(
@@ -50,3 +51,8 @@ class BaseHandler(ABC):
     def compute(self) -> list[Effect]:
         """Compute the effects to be applied."""
         pass
+
+    # TODO: Need a good name for this method
+    def ignore_event(self) -> bool:
+        """Determine whether an event should be ignored by the handler."""
+        return False
