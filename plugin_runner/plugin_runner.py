@@ -32,6 +32,7 @@ from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
+    IS_TESTING,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
@@ -114,6 +115,9 @@ def reconnect_if_needed() -> None:
     via e.g. sync_to_async. They will silently fail and block the handler
     if called in an async context directly.
     """
+    if IS_TESTING:
+        return
+
     connection = connections["default"]
 
     if not connection.is_usable():
