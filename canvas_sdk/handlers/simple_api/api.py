@@ -24,7 +24,6 @@ from .security import Credentials
 # TODO: Prevent decorator being used on route subclasses
 # TODO: Move exception raises to __init_subclass__?
 # TODO: Two-phase auth (pass down request without body)
-# TODO: Discuss a durable way to get the plugin name (talk to Jose)
 # TODO: Reject requests that do not match a plugin (on the home-app side)
 # TODO: Documentation
 
@@ -162,7 +161,7 @@ class SimpleAPIBase(BaseHandler, ABC):
                 )
 
     def _plugin_name(self) -> str:
-        return self.__class__.__module__.split(".", maxsplit=1)[0]
+        return self.plugin_name
 
     def _path_prefix(self) -> str:
         return ""
