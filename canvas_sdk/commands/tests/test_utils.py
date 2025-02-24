@@ -367,6 +367,9 @@ def wait_for_log(
     thread = threading.Thread(target=ws.run_forever)
     thread.start()
 
-    connected_event.wait(timeout=5.0)
+    timeout_not_hit = connected_event.wait(timeout=5.0)
+    if not timeout_not_hit:
+        ws.close()
+    assert timeout_not_hit, "connection timeout hit"
 
     return message_received_event, thread, ws

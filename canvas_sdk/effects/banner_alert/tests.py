@@ -107,7 +107,10 @@ class Protocol(BaseProtocol):
         )
         response.raise_for_status()
 
-        message_received_event.wait(timeout=5.0)
+        timeout_not_hit = message_received_event.wait(timeout=15.0)
+        if not timeout_not_hit:
+            ws.close()
+        assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
 
     yield
 

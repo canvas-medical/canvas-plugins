@@ -49,7 +49,10 @@ def write_and_install_protocol_and_clean_up(
         f"Loading plugin '{plugin_name}",
     )
     install_plugin(plugin_name, token)
-    message_received_event.wait(timeout=5.0)
+    timeout_not_hit = message_received_event.wait(timeout=15.0)
+    if not timeout_not_hit:
+        ws.close()
+    assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
 
     yield
 
