@@ -23,7 +23,6 @@ class BaseHandler(ABC):
     ) -> None:
         self.event = event
         self.secrets = secrets or {}
-        self.plugin_name = self.__class__.__module__.split(".")[0]
 
     @property
     @deprecation.deprecated(

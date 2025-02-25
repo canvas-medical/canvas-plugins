@@ -33,13 +33,6 @@ REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 HEADERS = {"Canvas-Plugins-Test-Header": "test header"}
 
 
-class SetPluginNameMixin:
-    """Mixin to override the plugin name."""
-
-    def _plugin_name(self) -> str:
-        return ""
-
-
 class NoAuthMixin:
     """Mixin to bypass authentication for tests that are not related to authentication."""
 
@@ -48,20 +41,14 @@ class NoAuthMixin:
         return True
 
 
-class RouteNoAuth(SetPluginNameMixin, NoAuthMixin, SimpleAPIRoute):
+class RouteNoAuth(NoAuthMixin, SimpleAPIRoute):
     """Route class that bypasses authentication."""
 
     pass
 
 
-class APINoAuth(SetPluginNameMixin, NoAuthMixin, SimpleAPI):
+class APINoAuth(NoAuthMixin, SimpleAPI):
     """API class that bypasses authentication."""
-
-    pass
-
-
-class RouteAuth(SetPluginNameMixin, SimpleAPIRoute):
-    """Route class that requires authentication."""
 
     pass
 
@@ -601,7 +588,7 @@ def authenticated_route(request: SubRequest) -> SimpleNamespace:
     """
     credentials_cls, authenticate_impl, headers = request.param
 
-    class Route(RouteAuth):
+    class Route(SimpleAPIRoute):
         PATH = "/route"
 
         def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
@@ -679,7 +666,7 @@ def test_authentication_exception(
 ) -> None:
     """Test that an exception occurring during authentication results in a failure response."""
 
-    class Route(RouteAuth):
+    class Route(SimpleAPIRoute):
         PATH = "/route"
 
         def authenticate(self, credentials: credentials_cls) -> bool:  # type: ignore[valid-type]
