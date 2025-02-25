@@ -5,7 +5,6 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from inspect import ismethod
 from typing import Any
 from urllib.parse import parse_qs
 
@@ -110,17 +109,8 @@ class SimpleAPIBase(BaseHandler, ABC):
         # is done by iterating over the methods on the class instance and looking for methods that
         # have been marked by the handler decorators (get, post, etc.).
         self._routes: dict[tuple[str, str], Callable] = {}
-        for name in dir(self):
-            # Skip properties, because calling getattr on a property executes it. We don't want that
-            # here, because we're only looking for methods that are marked as routes.
-            if hasattr(self.__class__, name) and isinstance(
-                getattr(self.__class__, name), property
-            ):
-                continue
-
-            attr = getattr(self, name)
-            route = getattr(attr, "route", None)
-            if ismethod(attr) and route:
+        for attr in self.__class__.__dict__.values():
+            if callable(attr) and (route := getattr(attr, "route", None)):
                 method, relative_path = route
                 path = f"{self._path_prefix()}{relative_path}"
                 self._routes[(method, path)] = attr
@@ -144,7 +134,7 @@ class SimpleAPIBase(BaseHandler, ABC):
             handler = self._routes[(self.request.method, self.request.path)]
 
             # Handle the request
-            effects = handler()
+            effects = handler(self)
 
             # Iterate over the returned effects and:
             # 1. Change any response objects to response effects
