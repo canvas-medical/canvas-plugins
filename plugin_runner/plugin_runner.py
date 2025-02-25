@@ -152,7 +152,7 @@ class PluginRunner(PluginRunnerServicer):
             plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
-        elif event_type == EventType.SIMPLE_API_REQUEST:
+        elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
             # The target plugin's name will be part of the URL path, so other plugins that respond
             # to SimpleAPI request events are not relevant
             plugin_name = event.context["plugin_name"]
@@ -222,7 +222,7 @@ class PluginRunner(PluginRunnerServicer):
         # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
         # Found response effect. If multiple handlers were able to respond, log an error and set the
         # effects list to be a single 500 Internal Server Error response effect.
-        if event.type == EventType.SIMPLE_API_REQUEST:
+        if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
             if len(relevant_plugin_handlers) == 0:
                 effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
             elif len(relevant_plugin_handlers) > 1:
@@ -552,7 +552,7 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
     log.info(f"Starting server, listening on port {port}")
 
-    install_plugins()
+    # install_plugins()
     load_plugins(specified_plugin_paths)
 
     await server.start()
@@ -577,7 +577,7 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
         loop.run_until_complete(
             asyncio.gather(
                 serve(specified_plugin_paths),
-                synchronize_plugins_and_report_errors(),
+                # synchronize_plugins_and_report_errors(),
             )
         )
     except KeyboardInterrupt:

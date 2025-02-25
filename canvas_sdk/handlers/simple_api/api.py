@@ -5,7 +5,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import parse_qs
 
 from requests.structures import CaseInsensitiveDict
@@ -17,10 +17,9 @@ from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 from plugin_runner.exceptions import PluginError
 
-from .exceptions import AuthenticationError
+from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 
-# TODO: Two-phase auth (pass down request without body), or reject requests that do not match a plugin (on the home-app side)
 # TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
@@ -59,7 +58,9 @@ class Request:
         return self.body.decode()
 
 
-RouteHandler = Callable[["SimpleAPI"], Response | list[Response | Effect]]
+SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
+
+RouteHandler = Callable[[SimpleAPIType], list[Response | Effect]]
 
 
 def get(path: str) -> Callable[[RouteHandler], RouteHandler]:
@@ -103,7 +104,10 @@ def _handler_decorator(method: str, path: str) -> Callable[[RouteHandler], Route
 class SimpleAPIBase(BaseHandler, ABC):
     """Abstract base class for HTTP APIs."""
 
-    RESPONDS_TO = EventType.Name(EventType.SIMPLE_API_REQUEST)
+    RESPONDS_TO = [
+        EventType.Name(EventType.SIMPLE_API_AUTHENTICATE),
+        EventType.Name(EventType.SIMPLE_API_REQUEST),
+    ]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -127,58 +131,14 @@ class SimpleAPIBase(BaseHandler, ABC):
         return Request(self.event)
 
     def compute(self) -> list[Effect]:
-        """Route the incoming request to the handler based on the HTTP method and path."""
+        """Handle the authenticate or request event."""
         try:
-            # Authenticate the request
-            if not self._authenticate():
-                return [Response(status_code=HTTPStatus.UNAUTHORIZED).apply()]
-
-            # Get the handler method
-            handler = self._routes[(self.request.method, self.request.path)]
-
-            # Handle the request
-            effects = handler(self)
-
-            # Iterate over the returned effects and:
-            # 1. Change any response objects to response effects
-            # 2. Detect if the handler returned multiple responses, and if it did, log an error and
-            #    return only a response effect with a 500 Internal Server Error.
-            # 3. Detect if the handler returned an error response object, and if it did, return only
-            #    the response effect.
-            response_found = False
-            for index, effect in enumerate(effects):
-                # Change the response object to a response effect
-                if isinstance(effect, Response):
-                    effects[index] = effect.apply()
-
-                if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
-                    # If a response has already been found, return an error response immediately
-                    if response_found:
-                        log.error(f"Multiple responses provided by {SimpleAPI.__name__} handler")
-                        return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
-                    else:
-                        response_found = True
-
-                    # Get the status code of the response. If the initial response was an object and
-                    # not an effect, get it from the response object to avoid having to deserialize
-                    # the payload.
-                    if isinstance(effect, Response):
-                        status_code = effect.status_code
-                    else:
-                        status_code = json.loads(effect.payload)["status_code"]
-
-                    # If the handler returned an error response, return only that response effect
-                    # and omit any other included effects
-                    if 400 <= status_code <= 599:
-                        return [effects[index]]
-
-            return effects
-        except AuthenticationError as error:
-            return [
-                JSONResponse(
-                    content={"error": str(error)}, status_code=HTTPStatus.UNAUTHORIZED
-                ).apply()
-            ]
+            if self.event.type == EventType.SIMPLE_API_AUTHENTICATE:
+                return self._authenticate()
+            elif self.event.type == EventType.SIMPLE_API_REQUEST:
+                return self._handle_request()
+            else:
+                raise AssertionError(f"Cannot handle event type {EventType.Name(self.event.type)}")
         except Exception as exception:
             for error_line_with_newlines in traceback.format_exception(exception):
                 for error_line in error_line_with_newlines.split("\n"):
@@ -186,22 +146,82 @@ class SimpleAPIBase(BaseHandler, ABC):
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
+    def _authenticate(self) -> list[Effect]:
+        """Authenticate the request."""
+        try:
+            # Create the credentials object
+            credentials_cls = self.authenticate.__annotations__.get("credentials")
+            if not credentials_cls or not issubclass(credentials_cls, Credentials):
+                raise PluginError(
+                    "Cannot determine authentication scheme; please specify the type of "
+                    "credentials your endpoint requires"
+                )
+            credentials = credentials_cls(self.request)
+
+            # Pass the credentials object into the developer-defined authenticate method. If
+            # authentication succeeds, return a 200 back to home-app, otherwise return a response
+            # with the error
+            if self.authenticate(credentials):
+                return [Response(status_code=HTTPStatus.OK).apply()]
+            else:
+                raise InvalidCredentialsError
+        except AuthenticationError as error:
+            return [
+                JSONResponse(
+                    content={"error": str(error)}, status_code=HTTPStatus.UNAUTHORIZED
+                ).apply()
+            ]
+
+    def _handle_request(self) -> list[Effect]:
+        """Route the incoming request to the handler method based on the HTTP method and path."""
+        # Get the handler method
+        handler = self._routes[(self.request.method, self.request.path)]
+
+        # Handle the request
+        effects = handler(self)
+
+        # Iterate over the returned effects and:
+        # 1. Change any response objects to response effects
+        # 2. Detect if the handler returned multiple responses, and if it did, log an error and
+        #    return only a response effect with a 500 Internal Server Error.
+        # 3. Detect if the handler returned an error response object, and if it did, return only
+        #    the response effect.
+        response_found = False
+        for index, effect in enumerate(effects):
+            # Change the response object to a response effect
+            if isinstance(effect, Response):
+                effects[index] = effect.apply()
+
+            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+                # If a response has already been found, return an error response immediately
+                if response_found:
+                    log.error(f"Multiple responses provided by {SimpleAPI.__name__} handler")
+                    return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+                else:
+                    response_found = True
+
+                # Get the status code of the response. If the initial response was an object and
+                # not an effect, get it from the response object to avoid having to deserialize
+                # the payload.
+                if isinstance(effect, Response):
+                    status_code = effect.status_code
+                else:
+                    status_code = json.loads(effect.payload)["status_code"]
+
+                # If the handler returned an error response, return only that response effect
+                # and omit any other included effects
+                if 400 <= status_code <= 599:
+                    return [effects[index]]
+
+        return effects
+
     def accept_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
         return (self.request.method, self.request.path) in self._routes
 
     def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate the request."""
+        """Method the user should override to authenticate requests."""
         return False
-
-    def _authenticate(self) -> bool:
-        # Create the credentials object and pass it into the developer-defined authenticate method
-        credentials_cls = self.authenticate.__annotations__.get("credentials")
-        if not credentials_cls or not issubclass(credentials_cls, Credentials):
-            return False
-        credentials = credentials_cls(self.request)
-
-        return self.authenticate(credentials)
 
 
 class SimpleAPI(SimpleAPIBase, ABC):
