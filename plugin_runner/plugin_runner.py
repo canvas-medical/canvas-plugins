@@ -552,7 +552,7 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
     log.info(f"Starting server, listening on port {port}")
 
-    # install_plugins()
+    install_plugins()
     load_plugins(specified_plugin_paths)
 
     await server.start()
@@ -577,7 +577,7 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
         loop.run_until_complete(
             asyncio.gather(
                 serve(specified_plugin_paths),
-                # synchronize_plugins_and_report_errors(),
+                synchronize_plugins_and_report_errors(),
             )
         )
     except KeyboardInterrupt:
