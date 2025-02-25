@@ -483,6 +483,36 @@ def test_multiple_handlers_for_route_error() -> None:
                 return []
 
 
+def test_invalid_prefix_error() -> None:
+    """Test the enforcement of the error that occurs when an API has an invalid prefix."""
+    with pytest.raises(PluginError):
+
+        class API(APINoAuth):
+            PREFIX = "prefix"
+
+            @api.get("/route")  # type: ignore[arg-type]
+            def route(self) -> list[Response | Effect]:
+                return []
+
+
+def test_invalid_path_error() -> None:
+    """Test the enforcement of the error that occurs when a route has an invalid path."""
+    with pytest.raises(PluginError):
+
+        class Route(RouteNoAuth):
+            PATH = "route"
+
+            def get(self) -> list[Response | Effect]:
+                return []
+
+    with pytest.raises(PluginError):
+
+        class API(APINoAuth):
+            @api.get("route")  # type: ignore[arg-type]
+            def route(self) -> list[Response | Effect]:
+                return []
+
+
 def test_route_missing_path_error() -> None:
     """
     Test the enforcement of the error that occurs when a SimpleAPIRoute is missing a PATH value.
