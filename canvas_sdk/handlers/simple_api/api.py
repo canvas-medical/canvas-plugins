@@ -122,19 +122,8 @@ class SimpleAPIBase(BaseHandler, ABC):
             route = getattr(attr, "route", None)
             if ismethod(attr) and route:
                 method, relative_path = route
-                plugin_name = self._plugin_name()
-
-                if plugin_name:
-                    prefix = f"/{plugin_name}{self._path_prefix()}"
-                else:
-                    prefix = self._path_prefix()
-
-                route = (method, f"{prefix}{relative_path}")
-
-                self._routes[route] = attr
-
-    def _plugin_name(self) -> str:
-        return self.plugin_name
+                path = f"{self._path_prefix()}{relative_path}"
+                self._routes[(method, path)] = attr
 
     def _path_prefix(self) -> str:
         return ""
