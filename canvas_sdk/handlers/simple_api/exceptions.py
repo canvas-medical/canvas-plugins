@@ -25,7 +25,7 @@ class AuthenticationSchemeError(AuthenticationError):
         super().__init__("Authorization header has no recognized authentication scheme")
 
 
-class InvalidCredentialsError(AuthenticationError):
+class InvalidCredentialsFormatError(AuthenticationError):
     """Exception class for requests that have incorrectly-formatted credentials."""
 
     def __init__(self) -> None:

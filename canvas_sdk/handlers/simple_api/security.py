@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from .exceptions import (
     AuthenticationSchemeError,
-    InvalidCredentialsError,
+    InvalidCredentialsFormatError,
     NoAuthorizationHeaderError,
 )
 
@@ -51,13 +51,13 @@ class BasicCredentials(Credentials):
         try:
             value = b64decode(value.encode()).decode()
         except Exception as exception:
-            raise InvalidCredentialsError from exception
+            raise InvalidCredentialsFormatError from exception
 
         username, delimiter, password = value.partition(":")
         if delimiter != ":":
-            raise InvalidCredentialsError
+            raise InvalidCredentialsFormatError
         if not username or not password:
-            raise InvalidCredentialsError
+            raise InvalidCredentialsFormatError
 
         self.username = username
         self.password = password
@@ -85,7 +85,7 @@ class BearerCredentials(Credentials):
         if scheme.lower() != "bearer":
             raise AuthenticationSchemeError
         if not token:
-            raise InvalidCredentialsError
+            raise InvalidCredentialsFormatError
 
         self.token = token
 
@@ -110,4 +110,4 @@ class APIKeyCredentials(Credentials):
 
         self.key = request.headers.get(self.HEADER_NAME)
         if not self.key:
-            raise InvalidCredentialsError
+            raise InvalidCredentialsFormatError
