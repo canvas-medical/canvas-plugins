@@ -20,7 +20,7 @@ from canvas_sdk.effects.simple_api import (
 )
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
-from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIRoute
+from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIBase, SimpleAPIRoute
 from canvas_sdk.handlers.simple_api.security import (
     APIKeyCredentials,
     BasicCredentials,
@@ -54,6 +54,7 @@ class APINoAuth(NoAuthMixin, SimpleAPI):
 
 
 def make_event(
+    event_type: EventType,
     method: str,
     path: str,
     query_string: str | None = None,
@@ -61,9 +62,12 @@ def make_event(
     headers: Mapping[str, str] | None = None,
 ) -> Event:
     """Make a SIMPLE_API_REQUEST event suitable for testing."""
+    if event_type == EventType.SIMPLE_API_AUTHENTICATE:
+        body = b""
+
     return Event(
         event_request=EventRequest(
-            type=EventType.SIMPLE_API_REQUEST,
+            type=event_type,
             target=None,
             context=json.dumps(
                 {
@@ -79,6 +83,35 @@ def make_event(
             target_type=None,
         )
     )
+
+
+def handle_request(
+    cls: type[SimpleAPIBase],
+    method: str,
+    path: str,
+    query_string: str | None = None,
+    body: bytes | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> list[Effect]:
+    """
+    Mimic the two-pass request handling in home-app.
+
+    First, handle the authentication event, and if it succeeds, handle the request event.
+    """
+    handler = cls(
+        make_event(EventType.SIMPLE_API_AUTHENTICATE, method, path, query_string, body, headers)
+    )
+    effects = handler.compute()
+
+    payload = json.loads(effects[0].payload)
+    if payload["status_code"] != HTTPStatus.OK:
+        return effects
+
+    handler = cls(
+        make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers)
+    )
+
+    return handler.compute()
 
 
 @pytest.mark.parametrize(
@@ -111,7 +144,9 @@ def test_request(
     headers: Mapping[str, str] | None,
 ) -> None:
     """Test the construction of a Request object and access to its attributes."""
-    request = Request(make_event(method, path, query_string, body, headers))
+    request = Request(
+        make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers)
+    )
 
     assert request.method == method
     assert request.path == path
@@ -187,9 +222,7 @@ def test_request_routing_route(method: str) -> None:
                 )
             ]
 
-    handler = Route(make_event(method, path="/route"))
-
-    effects = handler.compute()
+    effects = handle_request(Route, method, path="/route")
     body = json_response_body(effects)
 
     assert body["method"] == method
@@ -238,9 +271,7 @@ def test_request_routing_api(
                 )
             ]
 
-    handler = API(make_event(method, path=f"{prefix or ''}{path}"))
-
-    effects = handler.compute()
+    effects = handle_request(API, method, path=f"{prefix or ''}{path}")
     body = json_response_body(effects)
 
     assert body["method"] == method
@@ -265,17 +296,14 @@ def test_request_lifecycle() -> None:
                 )
             ]
 
-    handler = Route(
-        make_event(
-            method="POST",
-            path="/route",
-            query_string="value1=a&value2=b",
-            body=b'{"message": "JSON request"}',
-            headers=HEADERS,
-        )
+    effects = handle_request(
+        Route,
+        method="POST",
+        path="/route",
+        query_string="value1=a&value2=b",
+        body=b'{"message": "JSON request"}',
+        headers=HEADERS,
     )
-
-    effects = handler.compute()
     body = json_response_body(effects)
 
     assert body == {
@@ -402,9 +430,7 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
         def get(self) -> list[Response | Effect]:
             return response()
 
-    handler = Route(make_event(method="GET", path="/route"))
-
-    effects = handler.compute()
+    effects = handle_request(Route, method="GET", path="/route")
 
     assert effects == expected_effects
 
@@ -462,9 +488,9 @@ def test_override_base_handler_attributes_error() -> None:
     with pytest.raises(PluginError):
 
         class API(APINoAuth):
-            @api.get("/route")  # type: ignore[arg-type]
+            @api.get("/route")
             def compute(self) -> list[Response | Effect]:  # type: ignore[override]
-                return [JSONResponse({})]
+                return []
 
 
 def test_multiple_handlers_for_route_error() -> None:
@@ -474,11 +500,11 @@ def test_multiple_handlers_for_route_error() -> None:
     with pytest.raises(PluginError):
 
         class API(APINoAuth):
-            @api.get("/route")  # type: ignore[arg-type]
+            @api.get("/route")
             def route1(self) -> list[Response | Effect]:
                 return []
 
-            @api.get("/route")  # type: ignore[arg-type]
+            @api.get("/route")
             def route2(self) -> list[Response | Effect]:
                 return []
 
@@ -490,7 +516,7 @@ def test_invalid_prefix_error() -> None:
         class API(APINoAuth):
             PREFIX = "prefix"
 
-            @api.get("/route")  # type: ignore[arg-type]
+            @api.get("/route")
             def route(self) -> list[Response | Effect]:
                 return []
 
@@ -508,7 +534,7 @@ def test_invalid_path_error() -> None:
     with pytest.raises(PluginError):
 
         class API(APINoAuth):
-            @api.get("route")  # type: ignore[arg-type]
+            @api.get("route")
             def route(self) -> list[Response | Effect]:
                 return []
 
@@ -549,7 +575,7 @@ def test_route_that_uses_api_decorator_error() -> None:
             def get(self) -> list[Response | Effect]:
                 return []
 
-            @api.get("/route")  # type: ignore[arg-type]
+            @api.get("/route")
             def route(self) -> list[Response | Effect]:
                 return []
 
@@ -632,11 +658,9 @@ def authenticated_route(request: SubRequest) -> SimpleNamespace:
 
 def test_authentication(authenticated_route: SimpleNamespace) -> None:
     """Test that valid credentials result in a successful response."""
-    handler = authenticated_route.cls(
-        make_event(method="GET", path="/route", headers=authenticated_route.headers)
+    effects = handle_request(
+        authenticated_route.cls, method="GET", path="/route", headers=authenticated_route.headers
     )
-
-    effects = handler.compute()
 
     assert effects == [Effect(type=EffectType.CREATE_TASK, payload="create task")]
 
@@ -674,9 +698,7 @@ def test_authentication_failure(
     authenticated_route: SimpleNamespace, headers: Mapping[str, str]
 ) -> None:
     """Test that invalid credentials result in a failure response."""
-    handler = authenticated_route.cls(make_event(method="GET", path="/route", headers=headers))
-
-    effects = handler.compute()
+    effects = handle_request(authenticated_route.cls, method="GET", path="/route", headers=headers)
 
     assert json.loads(effects[0].payload)["status_code"] == HTTPStatus.UNAUTHORIZED
 
@@ -705,8 +727,6 @@ def test_authentication_exception(
         def get(self) -> list[Response | Effect]:
             return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
 
-    handler = Route(make_event(method="GET", path="/route", headers=headers))
-
-    effects = handler.compute()
+    effects = handle_request(Route, method="GET", path="/route", headers=headers)
 
     assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]

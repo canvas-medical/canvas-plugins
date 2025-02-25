@@ -30,3 +30,10 @@ class InvalidCredentialsFormatError(AuthenticationError):
 
     def __init__(self) -> None:
         super().__init__("Provided credentials are incorrectly formatted")
+
+
+class InvalidCredentialsError(AuthenticationError):
+    """Exception class for requests that have invalid credentials."""
+
+    def __init__(self) -> None:
+        super().__init__("Provided credentials are invalid")
