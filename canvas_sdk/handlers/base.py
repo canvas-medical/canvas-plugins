@@ -51,7 +51,6 @@ class BaseHandler(ABC):
         """Compute the effects to be applied."""
         pass
 
-    # TODO: Need a good name for this method
-    def ignore_event(self) -> bool:
-        """Determine whether an event should be ignored by the handler."""
-        return False
+    def accept_event(self) -> bool:
+        """Determine whether an event should be accepted and handled by the handler."""
+        return True
