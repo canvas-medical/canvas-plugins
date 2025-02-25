@@ -88,6 +88,9 @@ def patch(path: str) -> Callable[[RouteHandler], RouteHandler]:
 
 
 def _handler_decorator(method: str, path: str) -> Callable[[RouteHandler], RouteHandler]:
+    if not path.startswith("/"):
+        raise PluginError(f"Route path '{path}' must start with a forward slash")
+
     def decorator(handler: RouteHandler) -> RouteHandler:
         """Mark the handler with the HTTP method and path."""
         handler.route = (method, path)  # type: ignore[attr-defined]
@@ -211,6 +214,9 @@ class SimpleAPI(SimpleAPIBase, ABC):
         Prevent developers from defining multiple handlers for the same route, and from defining
         methods that clash with base class methods.
         """
+        if (prefix := cls.__dict__.get("PREFIX")) and not prefix.startswith("/"):
+            raise PluginError(f"Route prefix '{prefix}' must start with a forward slash")
+
         super().__init_subclass__(**kwargs)
 
         routes = set()
