@@ -1,4 +1,4 @@
-class SimpleAPIException(RuntimeError):
+class SimpleAPIException(Exception):
     """Base class for all SimpleAPI exceptions."""
 
     def __init__(self, message: str) -> None:
