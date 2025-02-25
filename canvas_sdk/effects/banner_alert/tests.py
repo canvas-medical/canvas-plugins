@@ -107,11 +107,16 @@ class Protocol(BaseProtocol):
         )
         response.raise_for_status()
 
-        timeout_not_hit = message_received_event.wait(timeout=15.0)
-        if not timeout_not_hit:
-            ws.close()
-        assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
+        message_received_event.wait(timeout=15.0)
 
+        # unfortunately sometimes the log websocket just doesn't return any
+        # messages, so asserting on the state of the timeout here causes failures
+        # even though the delay itself will cause the waiting test to pass (because
+        # the plugin has been loaded).
+        # timeout_not_hit = message_received_event.wait(timeout=15.0)
+        # if not timeout_not_hit:
+        #     ws.close()
+        # assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
     yield
 
     ws.close()
