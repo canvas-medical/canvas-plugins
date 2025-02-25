@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.22.1 (2025-02-25)
+
+### Bug Fixes
+
+- Reconnect to database when connection is lost
+  ([#436](https://github.com/canvas-medical/canvas-plugins/pull/436),
+  [`50efabc`](https://github.com/canvas-medical/canvas-plugins/commit/50efabcf5ab3c7d7794f902dc9c019acdc11e8c8))
+
+
 ## v0.22.0 (2025-02-21)
 
 ### Bug Fixes
