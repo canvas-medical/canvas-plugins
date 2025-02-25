@@ -173,12 +173,9 @@ class PluginRunner(PluginRunnerServicer):
             try:
                 handler = handler_class(event, secrets)
 
-                # TODO: Do all handlers inherit from BaseHandler? If not, then this will need to be
-                #  handled a little differently.
-                if handler.ignore_event():
+                if not handler.accept_event():
                     continue
-                else:
-                    relevant_plugin_handlers.append(handler_class)
+                relevant_plugin_handlers.append(handler_class)
 
                 classname = (
                     handler.__class__.__name__

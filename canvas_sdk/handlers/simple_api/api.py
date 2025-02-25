@@ -183,9 +183,9 @@ class SimpleAPIBase(BaseHandler, ABC):
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
-    def ignore_event(self) -> bool:
+    def accept_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
-        return (self.request.method, self.request.path) not in self._routes
+        return (self.request.method, self.request.path) in self._routes
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate the request."""
