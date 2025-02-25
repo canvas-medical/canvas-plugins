@@ -205,7 +205,12 @@ class SimpleAPI(SimpleAPIBase, ABC):
     """Base class for HTTP APIs."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Prevent developer-defined route methods from clashing with base class methods."""
+        """
+        Detect errors the user makes when defining their handler.
+
+        Prevent developers from defining multiple handlers for the same route, and from defining
+        methods that clash with base class methods.
+        """
         super().__init_subclass__(**kwargs)
 
         routes = set()
