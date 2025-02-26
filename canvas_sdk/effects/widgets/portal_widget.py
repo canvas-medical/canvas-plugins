@@ -18,15 +18,15 @@ class PortalWidget(_BaseEffect):
         MESSAGING = "messaging"
 
     class Size(StrEnum):
-        FULL = "full"
-        TWO_THIRDS = "two_thirds"
-        ONE_THIRD = "one_third"
+        EXPANDED = "expanded"
+        MEDIUM = "medium"
+        COMPACT = "compact"
 
     url: str | None = None
     content: str | None = None
     component: Component | None = None
     priority: int = 100
-    size: Size = Size.FULL
+    size: Size = Size.EXPANDED
 
     @property
     def values(self) -> dict[str, Any]:
@@ -64,7 +64,7 @@ class PortalWidget(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.component is not None and self.size != PortalWidget.Size.FULL:
+        if self.component is not None and self.size != PortalWidget.Size.EXPANDED:
             errors.append(
                 self._create_error_detail(
                     "value",
