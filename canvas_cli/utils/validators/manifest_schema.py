@@ -79,8 +79,6 @@ manifest_schema = {
                                 "SCRIPTS",
                                 "ALLOW_SAME_ORIGIN",
                                 "MICROPHONE",
-                                "ALLOW_FORMS",
-                                "ALLOW_SCRIPTS",
                             ],
                         },
                     },
