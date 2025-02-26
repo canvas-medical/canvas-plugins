@@ -22,7 +22,10 @@ from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import Request, SimpleAPI, SimpleAPIBase, SimpleAPIRoute
 from canvas_sdk.handlers.simple_api.security import (
+    APIKeyAuthMixin,
     APIKeyCredentials,
+    AuthSchemeMixin,
+    BasicAuthMixin,
     BasicCredentials,
     BearerCredentials,
     Credentials,
@@ -730,3 +733,96 @@ def test_authentication_exception(
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
 
     assert effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+
+
+@pytest.mark.parametrize(
+    argnames="mixin_cls,secrets,headers,expected_effects",
+    argvalues=[
+        (
+            BasicAuthMixin,
+            {"simpleapi-basic-username": USERNAME, "simpleapi-basic-password": PASSWORD},
+            basic_headers(USERNAME, PASSWORD),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            BasicAuthMixin,
+            {"simpleapi-basic-username": USERNAME, "simpleapi-basic-password": PASSWORD},
+            basic_headers(uuid4().hex, uuid4().hex),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            BasicAuthMixin,
+            {},
+            basic_headers(USERNAME, PASSWORD),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            APIKeyAuthMixin,
+            {"simpleapi-api-key": API_KEY},
+            api_key_headers(API_KEY),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            APIKeyAuthMixin,
+            {"simpleapi-api-key": API_KEY},
+            api_key_headers(uuid4().hex),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            APIKeyAuthMixin,
+            {},
+            api_key_headers(API_KEY),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+    ],
+    ids=[
+        "basic valid",
+        "basic invalid",
+        "basic missing secret",
+        "API key valid",
+        "API key invalid",
+        "API key missing secret",
+    ],
+)
+def test_authentication_mixins(
+    mixin_cls: type[AuthSchemeMixin],
+    secrets: dict[str, str],
+    headers: Mapping[str, str],
+    expected_effects: Sequence[Effect],
+) -> None:
+    """
+    Test that the provided authentication mixins behave correctly in success and failure scenarios.
+    """
+
+    class Route(mixin_cls, SimpleAPIRoute):  # type: ignore[misc,valid-type]
+        PATH = "/route"
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self.secrets = secrets
+
+        def get(self) -> list[Response | Effect]:
+            return [Effect(type=EffectType.CREATE_TASK, payload="create task")]
+
+    effects = handle_request(Route, method="GET", path="/route", headers=headers)
+    assert effects == expected_effects

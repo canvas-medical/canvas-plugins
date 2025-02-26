@@ -1,8 +1,12 @@
 from base64 import b64decode
-from typing import TYPE_CHECKING
+from secrets import compare_digest
+from typing import TYPE_CHECKING, Any, Protocol
+
+from logger import log
 
 from .exceptions import (
     AuthenticationSchemeError,
+    InvalidCredentialsError,
     InvalidCredentialsFormatError,
     NoAuthorizationHeaderError,
 )
@@ -34,9 +38,6 @@ class BasicCredentials(Credentials):
 
     def __init__(self, request: "Request") -> None:
         super().__init__(request)
-
-        self.username = None
-        self.password = None
 
         authorization = request.headers.get("Authorization")
         if not authorization:
@@ -73,8 +74,6 @@ class BearerCredentials(Credentials):
     def __init__(self, request: "Request") -> None:
         super().__init__(request)
 
-        self.token = None
-
         authorization = request.headers.get("Authorization")
         if not authorization:
             raise NoAuthorizationHeaderError
@@ -108,6 +107,78 @@ class APIKeyCredentials(Credentials):
         if self.HEADER_NAME not in request.headers:
             raise NoAuthorizationHeaderError
 
-        self.key = request.headers.get(self.HEADER_NAME)
-        if not self.key:
+        key = request.headers.get(self.HEADER_NAME)
+        if not key:
             raise InvalidCredentialsFormatError
+
+        self.key = key
+
+
+class AuthSchemeMixin(Protocol):
+    """Protocol for authentication scheme mixins."""
+
+    secrets: dict[str, str]
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+    def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate the request."""
+        ...
+
+
+class BasicAuthMixin(AuthSchemeMixin):
+    """
+    Basic authentication scheme mixin.
+
+    Provides an implementation the authenticate method for Basic authentication.
+    """
+
+    USERNAME_SECRET_NAME = "simpleapi-basic-username"
+    PASSWORD_SECRET_NAME = "simpleapi-basic-password"
+
+    def authenticate(self, credentials: BasicCredentials) -> bool:  # type: ignore[override]
+        """Authenticate the request."""
+        try:
+            username = self.secrets[self.USERNAME_SECRET_NAME]
+            password = self.secrets[self.PASSWORD_SECRET_NAME]
+        except KeyError as error:
+            log.error(
+                "SimpleAPI secrets for Basic authentication are not set; please set values for "
+                f"{self.USERNAME_SECRET_NAME} and {self.PASSWORD_SECRET_NAME}"
+            )
+            raise InvalidCredentialsError from error
+
+        if not (
+            compare_digest(credentials.username.encode(), username.encode())
+            and compare_digest(credentials.password.encode(), password.encode())
+        ):
+            raise InvalidCredentialsError
+
+        return True
+
+
+class APIKeyAuthMixin(AuthSchemeMixin):
+    """
+    API Key authentication scheme mixin.
+
+    Provides an implementation the authenticate method for API Key authentication.
+    """
+
+    API_KEY_SECRET_NAME = "simpleapi-api-key"
+
+    def authenticate(self, credentials: APIKeyCredentials) -> bool:  # type: ignore[override]
+        """Authenticate the request."""
+        try:
+            api_key = self.secrets[self.API_KEY_SECRET_NAME]
+        except KeyError as error:
+            log.error(
+                f"SimpleAPI secret for API Key authentication is not set; please set a value for "
+                f"{self.API_KEY_SECRET_NAME}"
+            )
+            raise InvalidCredentialsError from error
+
+        if not compare_digest(credentials.key.encode(), api_key.encode()):
+            raise InvalidCredentialsError
+
+        return True
