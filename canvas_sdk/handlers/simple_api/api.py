@@ -20,7 +20,6 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 
-# TODO: Security toolbox, auth mixins
 # TODO: Routing by path regex?
 # TODO: Support multipart/form-data by adding helpers to the request class
 # TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)

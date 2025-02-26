@@ -1,8 +1,19 @@
 from .api import SimpleAPI, SimpleAPIRoute
-from .security import APIKeyCredentials, BasicCredentials, BearerCredentials, Credentials
+from .security import (
+    APIKeyAuthMixin,
+    APIKeyCredentials,
+    AuthSchemeMixin,
+    BasicAuthMixin,
+    BasicCredentials,
+    BearerCredentials,
+    Credentials,
+)
 
 __all__ = [
+    "APIKeyAuthMixin",
     "APIKeyCredentials",
+    "AuthSchemeMixin",
+    "BasicAuthMixin",
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
