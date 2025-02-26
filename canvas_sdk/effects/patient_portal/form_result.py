@@ -14,15 +14,15 @@ class FormResult(_BaseEffect):
 
     questionnaire_id: str | UUID = Field(..., description="The ID of the questionnaire.")
     create_command: bool = False
+    note_id: str | UUID | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The FormResults's values."""
         return {
-            "questionnaire_id": self.questionnaire_id
-            if isinstance(self.questionnaire_id, str)
-            else str(self.questionnaire_id),
+            "questionnaire_id": str(self.questionnaire_id),
             "create_command": self.create_command,
+            "note_id": str(self.note_id) if self.note_id else None,
         }
 
     @property
