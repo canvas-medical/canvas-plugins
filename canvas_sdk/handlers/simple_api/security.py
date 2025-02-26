@@ -131,7 +131,7 @@ class BasicAuthMixin(AuthSchemeMixin):
     """
     Basic authentication scheme mixin.
 
-    Provides an implementation the authenticate method for Basic authentication.
+    Provides an implementation of the authenticate method for Basic authentication.
     """
 
     USERNAME_SECRET_NAME = "simpleapi-basic-username"
@@ -162,7 +162,7 @@ class APIKeyAuthMixin(AuthSchemeMixin):
     """
     API Key authentication scheme mixin.
 
-    Provides an implementation the authenticate method for API Key authentication.
+    Provides an implementation of the authenticate method for API Key authentication.
     """
 
     API_KEY_SECRET_NAME = "simpleapi-api-key"
