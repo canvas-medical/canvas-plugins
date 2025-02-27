@@ -473,6 +473,7 @@ async def test_simple_api(
         result.append(response)
 
     expected_response = Response(status_code=status_code).apply()
-    expected_response.plugin_name = "test_simple_api"
+    if status_code == HTTPStatus.OK:
+        expected_response.plugin_name = "test_simple_api"
 
     assert result[0].effects == [expected_response]
