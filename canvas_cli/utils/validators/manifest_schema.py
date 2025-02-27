@@ -7,6 +7,7 @@ manifest_schema = {
         "description": {"type": "string"},
         "secrets": {"type": "array", "items": {"type": "string"}},
         "origins": {"$ref": "#/$defs/origins"},
+        "url_permissions": {"$ref": "#/$defs/url_permissions"},
         "components": {
             "type": "object",
             "properties": {
@@ -62,6 +63,26 @@ manifest_schema = {
             "properties": {
                 "urls": {"type": "array", "items": {"type": "string"}},
                 "scripts": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "url_permissions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string"},
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "SCRIPTS",
+                                "ALLOW_SAME_ORIGIN",
+                                "MICROPHONE",
+                            ],
+                        },
+                    },
+                },
             },
         },
         "component": {
