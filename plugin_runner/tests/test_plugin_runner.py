@@ -29,7 +29,7 @@ from plugin_runner.plugin_runner import (
 def plugin_runner() -> PluginRunner:
     """Fixture to initialize PluginRunner with mocks."""
     runner = PluginRunner()
-    runner.statsd_client = MagicMock()
+    runner.statsd_client = MagicMock()  # type: ignore[attr-defined]
     return runner
 
 
