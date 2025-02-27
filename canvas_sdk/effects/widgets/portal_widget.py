@@ -68,7 +68,7 @@ class PortalWidget(_BaseEffect):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Component only supports 'full' size",
+                    "Component only supports 'expanded' size",
                     self.size,
                 )
             )
