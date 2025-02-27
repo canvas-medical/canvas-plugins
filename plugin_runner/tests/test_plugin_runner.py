@@ -346,7 +346,10 @@ async def test_simple_api_success(
     async for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
-    assert result[0].effects == [Response(status_code=HTTPStatus.OK).apply()]
+    expected_response = Response(status_code=HTTPStatus.OK).apply()
+    expected_response.plugin_name = "test_simple_api"
+
+    assert result[0].effects == [expected_response]
 
 
 @pytest.mark.asyncio

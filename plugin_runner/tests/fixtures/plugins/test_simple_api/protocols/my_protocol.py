@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from canvas_generated.messages.effects_pb2 import Effect
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPIRoute
 
