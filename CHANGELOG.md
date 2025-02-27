@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.23.0 (2025-02-27)
+
+### Bug Fixes
+
+- Refactor intake forms to be just forms
+  ([#439](https://github.com/canvas-medical/canvas-plugins/pull/439),
+  [`2fe3e89`](https://github.com/canvas-medical/canvas-plugins/commit/2fe3e897463096a09b0747677c67a5ece262977d))
+
+### Features
+
+- Add menu and widgets events and effects
+  ([#424](https://github.com/canvas-medical/canvas-plugins/pull/424),
+  [`33509c8`](https://github.com/canvas-medical/canvas-plugins/commit/33509c85c786cba00dbde8afbdc6fabffd1b4cbb))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+
 ## v0.22.1 (2025-02-25)
 
 ### Bug Fixes
