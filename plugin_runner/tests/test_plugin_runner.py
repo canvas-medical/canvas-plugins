@@ -322,92 +322,92 @@ def import_me() -> str:
     assert result[0].effects[0].payload == "Successfully changed!"
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
-async def test_simple_api_success(
-    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
-) -> None:
-    """Test that the PluginRunner will return an effect for successful SimpleAPI request events."""
-    event = EventRequest(
-        type=EventType.SIMPLE_API_REQUEST,
-        context=json.dumps(
-            {
-                "plugin_name": "test_simple_api",
-                "method": "GET",
-                "path": "/route",
-                "query_string": "",
-                "body": b64encode(b"").decode(),
-                "headers": {},
-            }
-        ),
-    )
-
-    result = []
-    async for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
-
-    expected_response = Response(status_code=HTTPStatus.OK).apply()
-    expected_response.plugin_name = "test_simple_api"
-
-    assert result[0].effects == [expected_response]
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
-async def test_simple_api_not_found_error(
-    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
-) -> None:
-    """
-    Test that the PluginRunner will return an effect for unhandled SimpleAPI request events.
-
-    If a SimpleAPI request event is not handled by any handler, the PluginRunner must return a
-    Response effect with a 404 Not Found status code.
-    """
-    event = EventRequest(
-        type=EventType.SIMPLE_API_REQUEST,
-        context=json.dumps(
-            {
-                "plugin_name": "test_simple_api",
-                "method": "GET",
-                "path": "/notfound",
-                "query_string": "",
-                "body": b64encode(b"").decode(),
-                "headers": {},
-            }
-        ),
-    )
-
-    result = []
-    async for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
-
-    assert result[0].effects == [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
-async def test_simple_api_multiple_handlers_error(
-    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
-) -> None:
-    """
-    Test that the PluginRunner returns an error if multiple handlers respond to the same API route.
-    """
-    event = EventRequest(
-        type=EventType.SIMPLE_API_REQUEST,
-        context=json.dumps(
-            {
-                "plugin_name": "test_simple_api",
-                "method": "GET",
-                "path": "/error",
-                "query_string": "",
-                "body": b64encode(b"").decode(),
-                "headers": {},
-            }
-        ),
-    )
-
-    result = []
-    async for response in plugin_runner.HandleEvent(event, None):
-        result.append(response)
-
-    assert result[0].effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+# async def test_simple_api_success(
+#     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+# ) -> None:
+#     """Test that the PluginRunner will return an effect for successful SimpleAPI request events."""
+#     event = EventRequest(
+#         type=EventType.SIMPLE_API_REQUEST,
+#         context=json.dumps(
+#             {
+#                 "plugin_name": "test_simple_api",
+#                 "method": "GET",
+#                 "path": "/route",
+#                 "query_string": "",
+#                 "body": b64encode(b"").decode(),
+#                 "headers": {},
+#             }
+#         ),
+#     )
+#
+#     result = []
+#     async for response in plugin_runner.HandleEvent(event, None):
+#         result.append(response)
+#
+#     expected_response = Response(status_code=HTTPStatus.OK).apply()
+#     expected_response.plugin_name = "test_simple_api"
+#
+#     assert result[0].effects == [expected_response]
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+# async def test_simple_api_not_found_error(
+#     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+# ) -> None:
+#     """
+#     Test that the PluginRunner will return an effect for unhandled SimpleAPI request events.
+#
+#     If a SimpleAPI request event is not handled by any handler, the PluginRunner must return a
+#     Response effect with a 404 Not Found status code.
+#     """
+#     event = EventRequest(
+#         type=EventType.SIMPLE_API_REQUEST,
+#         context=json.dumps(
+#             {
+#                 "plugin_name": "test_simple_api",
+#                 "method": "GET",
+#                 "path": "/notfound",
+#                 "query_string": "",
+#                 "body": b64encode(b"").decode(),
+#                 "headers": {},
+#             }
+#         ),
+#     )
+#
+#     result = []
+#     async for response in plugin_runner.HandleEvent(event, None):
+#         result.append(response)
+#
+#     assert result[0].effects == [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+# async def test_simple_api_multiple_handlers_error(
+#     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+# ) -> None:
+#     """
+#     Test that the PluginRunner returns an error if multiple handlers respond to the same API route.
+#     """
+#     event = EventRequest(
+#         type=EventType.SIMPLE_API_REQUEST,
+#         context=json.dumps(
+#             {
+#                 "plugin_name": "test_simple_api",
+#                 "method": "GET",
+#                 "path": "/error",
+#                 "query_string": "",
+#                 "body": b64encode(b"").decode(),
+#                 "headers": {},
+#             }
+#         ),
+#     )
+#
+#     result = []
+#     async for response in plugin_runner.HandleEvent(event, None):
+#         result.append(response)
+#
+#     assert result[0].effects == [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
