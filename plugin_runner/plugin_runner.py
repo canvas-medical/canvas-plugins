@@ -39,7 +39,7 @@ from settings import (
     SECRETS_FILE_NAME,
 )
 
-# when we import plugins we'll use the module name directly so we need to add the plugin
+# when  we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
 sys.path.append(PLUGIN_DIRECTORY)
 
