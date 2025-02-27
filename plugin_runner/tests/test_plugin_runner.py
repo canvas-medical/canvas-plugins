@@ -323,6 +323,33 @@ def import_me() -> str:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+async def test_simple_api_success(
+    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+) -> None:
+    """Test that the PluginRunner will return an effect for successful SimpleAPI request events."""
+    event = EventRequest(
+        type=EventType.SIMPLE_API_REQUEST,
+        context=json.dumps(
+            {
+                "plugin_name": "test_simple_api",
+                "method": "GET",
+                "path": "/route",
+                "query_string": "",
+                "body": b"",
+                "headers": {},
+            }
+        ),
+    )
+
+    result = []
+    async for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert result[0].effects == [Response(status_code=HTTPStatus.OK).apply()]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
 async def test_simple_api_not_found_error(
     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
 ) -> None:
@@ -336,11 +363,12 @@ async def test_simple_api_not_found_error(
         type=EventType.SIMPLE_API_REQUEST,
         context=json.dumps(
             {
-                "body": "",
-                "headers": {},
+                "plugin_name": "test_simple_api",
                 "method": "GET",
-                "path": "/test_simple_api/notfound",
+                "path": "/notfound",
                 "query_string": "",
+                "body": b"",
+                "headers": {},
             }
         ),
     )
@@ -364,11 +392,12 @@ async def test_simple_api_multiple_handlers_error(
         type=EventType.SIMPLE_API_REQUEST,
         context=json.dumps(
             {
-                "body": "",
-                "headers": {},
+                "plugin_name": "test_simple_api",
                 "method": "GET",
-                "path": "/test_simple_api/route",
+                "path": "/error",
                 "query_string": "",
+                "body": b"",
+                "headers": {},
             }
         ),
     )
