@@ -233,7 +233,7 @@ class SimpleAPI(SimpleAPIBase, ABC):
         Prevent developers from defining multiple handlers for the same route, and from defining
         methods that clash with base class methods.
         """
-        if (prefix := cls.__dict__.get("PREFIX")) and not prefix.startswith("/"):
+        if (prefix := getattr(cls, "PREFIX", None)) and not prefix.startswith("/"):
             raise PluginError(f"Route prefix '{prefix}' must start with a forward slash")
 
         super().__init_subclass__(**kwargs)
@@ -301,7 +301,7 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             if decorator is None:
                 continue
 
-            path = cls.__dict__.get("PATH")
+            path = getattr(cls, "PATH", None)
             if not path:
                 raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
 
