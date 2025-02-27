@@ -3,6 +3,7 @@ import json
 import logging
 import pickle
 import shutil
+from base64 import b64encode
 from http import HTTPStatus
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -367,7 +368,7 @@ async def test_simple_api_not_found_error(
                 "method": "GET",
                 "path": "/notfound",
                 "query_string": "",
-                "body": b"",
+                "body": b64encode(b"").decode(),
                 "headers": {},
             }
         ),
@@ -396,7 +397,7 @@ async def test_simple_api_multiple_handlers_error(
                 "method": "GET",
                 "path": "/error",
                 "query_string": "",
-                "body": b"",
+                "body": b64encode(b"").decode(),
                 "headers": {},
             }
         ),
