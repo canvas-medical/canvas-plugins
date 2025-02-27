@@ -336,7 +336,7 @@ async def test_simple_api_success(
                 "method": "GET",
                 "path": "/route",
                 "query_string": "",
-                "body": b"",
+                "body": b64encode(b"").decode(),
                 "headers": {},
             }
         ),
