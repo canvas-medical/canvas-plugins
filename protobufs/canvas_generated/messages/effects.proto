@@ -249,6 +249,8 @@ enum EffectType {
   PORTAL_WIDGET = 2101;
 
   LAUNCH_MODAL = 3000;
+
+  SIMPLE_API_RESPONSE = 4000;
 }
 
 message Effect {

@@ -50,3 +50,7 @@ class BaseHandler(ABC):
     def compute(self) -> list[Effect]:
         """Compute the effects to be applied."""
         pass
+
+    def accept_event(self) -> bool:
+        """Determine whether an event should be accepted and handled by the handler."""
+        return True

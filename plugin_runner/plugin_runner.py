@@ -9,6 +9,7 @@ import time
 import traceback
 from collections import defaultdict
 from collections.abc import AsyncGenerator
+from http import HTTPStatus
 from typing import Any, TypedDict
 
 import grpc
@@ -23,6 +24,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
     add_PluginRunnerServicer_to_server,
 )
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, statsd_client
@@ -139,6 +141,7 @@ class PluginRunner(PluginRunnerServicer):
         event_type = event.type
         event_name = event.name
         relevant_plugins = EVENT_HANDLER_MAP[event_name]
+        relevant_plugin_handlers = []
 
         log.debug(f"Processing {relevant_plugins} for {event_name}")
 
@@ -148,6 +151,11 @@ class PluginRunner(PluginRunnerServicer):
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
             # filter only for the plugin(s) that were created/updated
+            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+        elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
+            # The target plugin's name will be part of the URL path, so other plugins that respond
+            # to SimpleAPI request events are not relevant
+            plugin_name = event.context["plugin_name"]
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
         effect_list = []
@@ -164,6 +172,11 @@ class PluginRunner(PluginRunnerServicer):
 
             try:
                 handler = handler_class(event, secrets)
+
+                if not handler.accept_event():
+                    continue
+                relevant_plugin_handlers.append(handler_class)
+
                 classname = (
                     handler.__class__.__name__
                     if isinstance(handler, ClinicalQualityMeasure)
@@ -204,6 +217,20 @@ class PluginRunner(PluginRunnerServicer):
                 continue
 
             effect_list += effects
+
+        # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
+        # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
+        # Found response effect. If multiple handlers were able to respond, log an error and set the
+        # effects list to be a single 500 Internal Server Error response effect.
+        if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
+            if len(relevant_plugin_handlers) == 0:
+                effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+            elif len(relevant_plugin_handlers) > 1:
+                log.error(
+                    f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
+                    f" {event.context['path']}"
+                )
+                effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
         event_duration = get_duration_ms(event_start_time)
 
