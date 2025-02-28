@@ -4,7 +4,17 @@ from pathlib import Path
 
 import pytest
 
-from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
+BASE_DIR = Path(__file__).parent
+FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
+DATA_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "data" / "plugins"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_plugins_dir() -> Generator[None, None, None]:
+    """Setup the plugins directory before running tests."""
+    DATA_PLUGIN_DIR.mkdir(exist_ok=True, parents=True)
+    yield
+    shutil.rmtree(DATA_PLUGIN_DIR.parent)
 
 
 @pytest.fixture
@@ -18,18 +28,10 @@ def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None,
     Yields:
     - Path to the copied plugin directory.
     """
-    # Define base directories
-    base_dir = Path("./plugin_runner/tests")
-    fixture_plugin_dir = base_dir / "fixtures" / "plugins"
-    data_plugin_dir = base_dir / "data" / "plugins"
-
     # The plugin name should be passed as a parameter to the fixture
     plugin_name = request.param  # Expected to be a str
-    src_plugin_path = fixture_plugin_dir / plugin_name
-    dest_plugin_path = data_plugin_dir / plugin_name
-
-    # Ensure the data plugin directory exists
-    data_plugin_dir.mkdir(parents=True, exist_ok=True)
+    src_plugin_path = FIXTURES_PLUGIN_DIR / plugin_name
+    dest_plugin_path = DATA_PLUGIN_DIR / plugin_name
 
     # Copy the specific plugin from fixtures to data
     try:
@@ -44,6 +46,8 @@ def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None,
 @pytest.fixture
 def load_test_plugins() -> Generator[None, None, None]:
     """Manages the lifecycle of test plugins by loading and unloading them."""
+    from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
+
     try:
         load_plugins()
         yield
