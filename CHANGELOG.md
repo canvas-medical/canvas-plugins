@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v0.25.0 (2025-02-28)
+
+### Features
+
+- Plugins custom API handlers ([#382](https://github.com/canvas-medical/canvas-plugins/pull/382),
+  [`e3f2bd3`](https://github.com/canvas-medical/canvas-plugins/commit/e3f2bd3fed605f1c4194dae8f189324ec9ec2d9c))
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
 ## v0.24.0 (2025-02-27)
 
 ### Features
