@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-BASE_DIR = Path("./plugin_runner/tests")
-FIXTURES_PLUGIN_DIR = BASE_DIR / "fixtures" / "plugins"
-DATA_PLUGIN_DIR = BASE_DIR / "data" / "plugins"
+BASE_DIR = Path(__file__).parent
+FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
+DATA_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "data" / "plugins"
 
 
 @pytest.fixture(scope="session", autouse=True)
