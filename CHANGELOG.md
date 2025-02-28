@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v0.24.0 (2025-02-27)
+
+### Features
+
+- Add iframe permissions support ([#399](https://github.com/canvas-medical/canvas-plugins/pull/399),
+  [`f51b349`](https://github.com/canvas-medical/canvas-plugins/commit/f51b349f98096b509028316e0a8e47c44f0ed4d9))
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.23.0 (2025-02-27)
 
 ### Bug Fixes
