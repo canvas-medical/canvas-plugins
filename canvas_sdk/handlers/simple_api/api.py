@@ -114,8 +114,8 @@ class SimpleAPIBase(BaseHandler, ABC):
         super().__init_subclass__(**kwargs)
 
         # Build the registry of routes so that requests can be routed to the correct handler. This
-        # is done by iterating over the methods on the class instance and looking for methods that
-        # have been marked by the handler decorators (get, post, etc.).
+        # is done by iterating over the methods on the class and looking for methods that have been
+        # marked by the handler decorators (get, post, etc.).
         cls._ROUTES = {}
         for attr in cls.__dict__.values():
             if callable(attr) and (route := getattr(attr, "route", None)):
