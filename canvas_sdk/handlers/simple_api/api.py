@@ -133,7 +133,7 @@ def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]
                     elif parameter_name == "filename":
                         filename = parameter_value
             elif header.lower().startswith("content-type"):
-                # Files will have a content type, so grab the content type value
+                # Files will have a content type, so grab it
                 content_type = header.split(":")[1].strip()
 
         if not name or not value:
@@ -146,6 +146,7 @@ def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]
         # part name as the key
         form_data.setdefault(name, [])
         if filename:
+            # Because a filename was provided, we know it's a file and not a simple string value
             form_data[name].append(
                 FileFormPart(name=name, filename=filename, content=value, content_type=content_type)
             )
