@@ -221,7 +221,7 @@ def test_request_form(
         )
     )
 
-    assert request.form_data == expected_form_data
+    assert request.form_data() == expected_form_data
 
 
 def response_body(effects: Iterable[Effect]) -> bytes:

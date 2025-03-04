@@ -160,7 +160,6 @@ class Request:
         """Return the response body as plain text."""
         return self.body.decode()
 
-    @property
     def form_data(self) -> dict[str, list[FormPart]]:
         """Return the response body as a dict of string to list of FormPart objects."""
         if self.content_type == "application/x-www-form-urlencoded":
