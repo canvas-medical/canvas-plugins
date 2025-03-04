@@ -49,7 +49,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .staff import Staff
+from .staff import Staff, StaffContactPoint
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
@@ -109,6 +109,7 @@ __all__ = [
     "ResponseOption",
     "ResponseOptionSet",
     "Staff",
+    "StaffContactPoint",
     "Task",
     "TaskComment",
     "TaskLabel",
