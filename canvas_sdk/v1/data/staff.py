@@ -2,7 +2,13 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.common import PersonSex, TaxIDType
+from canvas_sdk.v1.data.common import (
+    ContactPointState,
+    ContactPointSystem,
+    ContactPointUse,
+    PersonSex,
+    TaxIDType,
+)
 
 
 class Staff(models.Model):
@@ -61,3 +67,21 @@ class Staff(models.Model):
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
+
+
+class StaffContactPoint(models.Model):
+    """StaffContactPoint."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_staffcontactpoint_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    system = models.CharField(choices=ContactPointSystem.choices)
+    value = models.CharField()
+    use = models.CharField(choices=ContactPointUse.choices)
+    use_notes = models.CharField()
+    rank = models.IntegerField()
+    state = models.CharField(choices=ContactPointState.choices)
+    staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
