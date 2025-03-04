@@ -21,11 +21,13 @@ from canvas_sdk.effects.simple_api import (
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import (
+    FileFormPart,
     FormPart,
     Request,
     SimpleAPI,
     SimpleAPIBase,
     SimpleAPIRoute,
+    StringFormPart,
 )
 from canvas_sdk.handlers.simple_api.security import (
     APIKeyAuthMixin,
@@ -185,10 +187,10 @@ def test_request(
             "application/x-www-form-urlencoded",
             {
                 "part1": [
-                    FormPart(name="part1", value="value1"),
-                    FormPart(name="part1", value="value3"),
+                    StringFormPart(name="part1", value="value1"),
+                    StringFormPart(name="part1", value="value3"),
                 ],
-                "part2": [FormPart(name="part2", value="value2")],
+                "part2": [StringFormPart(name="part2", value="value2")],
             },
         ),
         (
@@ -196,12 +198,12 @@ def test_request(
             "multipart/form-data; boundary=--------------------------966149001464621638881292",
             {
                 "part1": [
-                    FormPart(name="part1", value="value1"),
-                    FormPart(
-                        name="part1", value=FILE, filename="Sydney.jpg", content_type="image/jpeg"
+                    StringFormPart(name="part1", value="value1"),
+                    FileFormPart(
+                        name="part1", filename="Sydney.jpg", content=FILE, content_type="image/jpeg"
                     ),
                 ],
-                "part2": [FormPart(name="part2", value="value2")],
+                "part2": [StringFormPart(name="part2", value="value2")],
             },
         ),
     ],

@@ -5,7 +5,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any, TypeVar
+from typing import Any, Protocol, TypeVar
 from urllib.parse import parse_qs
 
 from requests.structures import CaseInsensitiveDict
@@ -29,34 +29,69 @@ from .security import Credentials
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
 
-class FormPart:
+class FormPart(Protocol):
     """
-    Class for representing a form part in the body of a multipart/form-data request.
+    Protocol for representing a form part in the body of a multipart/form-data request.
 
     A form part can represent a simple string value, or a file with a content type.
     """
 
-    def __init__(
-        self,
-        name: str,
-        value: str | bytes,
-        filename: str | None = None,
-        content_type: str | None = None,
-    ) -> None:
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        ...
+
+
+class StringFormPart:
+    """Class for representing a form part that is a simple string value."""
+
+    def __init__(self, name: str, value: str) -> None:
         self.name = name
         self.value = value
-        self.filename = filename
-        self.content_type = content_type
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return False
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, FormPart):
+        if isinstance(other, FileFormPart):
+            return False
+
+        if not isinstance(other, StringFormPart):
+            return NotImplemented
+
+        return self.name == other.name and self.value == other.value
+
+
+class FileFormPart:
+    """Class for representing a form part that is a file."""
+
+    def __init__(
+        self, name: str, filename: str, content: bytes, content_type: str | None = None
+    ) -> None:
+        self.name = name
+        self.filename = filename
+        self.content = content
+        self.content_type = content_type
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, StringFormPart):
+            return False
+
+        if not isinstance(other, FileFormPart):
             return NotImplemented
 
         return all(
             (
                 self.name == other.name,
-                self.value == other.value,
                 self.filename == other.filename,
+                self.content == other.content,
                 self.content_type == other.content_type,
             )
         )
@@ -104,16 +139,19 @@ def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]
         if not name or not value:
             raise RuntimeError("Invalid multipart/form-data request body")
 
-        # Strip off the trailing newline characters from the value, and if the value is not a file,
-        # decode it to a string
+        # Strip off the trailing newline characters from the value
         value = value[:-2]
-        if not filename:
-            value = value.decode()
 
         # Now we have all the data, so append it to the list in the form data dict using the
         # part name as the key
         form_data.setdefault(name, [])
-        form_data[name].append(FormPart(name, value, filename, content_type))
+        if filename:
+            form_data[name].append(
+                FileFormPart(name=name, filename=filename, content=value, content_type=content_type)
+            )
+        else:
+            # Decode the string before adding it
+            form_data[name].append(StringFormPart(name, value.decode()))
 
     return form_data
 
@@ -162,11 +200,13 @@ class Request:
 
     def form_data(self) -> dict[str, list[FormPart]]:
         """Return the response body as a dict of string to list of FormPart objects."""
+        form_data: dict[str, list[FormPart]]
+
         if self.content_type == "application/x-www-form-urlencoded":
             # For request bodies that are URL-encoded, just parse them and return them as simple
             # form parts
             form_data = {
-                name: [FormPart(name=name, value=v) for v in value]
+                name: [StringFormPart(name=name, value=v) for v in value]
                 for name, value in parse_qs(self.body.decode()).items()
             }
         elif self.content_type == "multipart/form-data":
