@@ -1,5 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment
+from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
 from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
@@ -55,6 +55,7 @@ from .user import CanvasUser
 
 __all__ = [
     "Appointment",
+    "AppointmentExternalIdentifier",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
