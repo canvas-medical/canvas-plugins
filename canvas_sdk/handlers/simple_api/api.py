@@ -48,6 +48,19 @@ class FormPart:
         self.filename = filename
         self.content_type = content_type
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FormPart):
+            return NotImplemented
+
+        return all(
+            (
+                self.name == other.name,
+                self.value == other.value,
+                self.filename == other.filename,
+                self.content_type == other.content_type,
+            )
+        )
+
 
 def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]]:
     """Parse a multipart form and return a dict of string to list of form parts."""
