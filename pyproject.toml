@@ -28,7 +28,7 @@ dependencies = [
   "django>=5.1.1,<6",
   "env-tools>=2.4.0,<3",
   "grpcio>=1.60.1,<2",
-  "ipython>=8.21.0,<9",
+  "ipython>=8.21.0,<10",
   "jsonschema>=4.21.1,<5",
   "keyring",
   "protobuf>=4.25.3,<5",
