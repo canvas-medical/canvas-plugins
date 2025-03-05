@@ -165,7 +165,6 @@ class Request:
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
-        self._body_is_decoded = False
         self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
 
         self.query_params = parse_qs(self.query_string)
@@ -182,14 +181,10 @@ class Request:
         else:
             self.content_type = None
 
-    @property
+    @cached_property
     def body(self) -> bytes:
-        """Decode and return the raw response body as bytes."""
-        if not self._body_is_decoded:
-            self._body = b64decode(self._body)
-            self._body_is_decoded = True
-
-        return self._body
+        """Decode and return the response body."""
+        return b64decode(self._body)
 
     def json(self) -> JSON:
         """Return the response body as a JSON dict."""
