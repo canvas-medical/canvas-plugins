@@ -3,8 +3,7 @@ from base64 import b64decode, b64encode
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
 from types import SimpleNamespace
-from typing import Any
-from urllib.parse import parse_qs
+from typing import Any, TypeVar
 from uuid import uuid4
 
 import pytest
@@ -30,10 +29,19 @@ from canvas_sdk.handlers.simple_api.security import (
     BearerCredentials,
     Credentials,
 )
+from canvas_sdk.handlers.simple_api.tools import (
+    CaseInsensitiveMultiDict,
+    MultiDict,
+    separate_headers,
+)
 from plugin_runner.exceptions import PluginError
 
 REQUEST_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"]
-HEADERS = {"Canvas-Plugins-Test-Header": "test header"}
+HEADERS_RAW = {
+    "Canvas-Plugins-Test-Header-1": "test header 1",
+    "Canvas-Plugins-Test-Header-2": "test header 2a, test header 2b",
+}
+HEADERS = CaseInsensitiveMultiDict(separate_headers(HEADERS_RAW))
 
 
 class NoAuthMixin:
@@ -78,7 +86,7 @@ def make_event(
                     "path": path,
                     "query_string": query_string or "",
                     "body": b64encode(body or b"").decode(),
-                    "headers": headers or {},
+                    "headers": dict(headers) if headers else {},
                 },
                 indent=None,
                 separators=(",", ":"),
@@ -117,36 +125,107 @@ def handle_request(
     return handler.compute()
 
 
+T = TypeVar("T")
+
+
 @pytest.mark.parametrize(
-    argnames="method,path,query_string,body,headers",
+    argnames="func,expected_value",
     argvalues=[
-        ("GET", "/route", "value1=a&value2=b", b"", {}),
+        (lambda m: m["b"], 2),
+        (lambda m: m["a"], 1),
+        (lambda m: len(m), 2),
+        (lambda m: next(iter(m.items())), ("a", 1)),
+        (lambda m: "a" in m, True),
+        (lambda m: "d" in m, False),
+        (lambda m: m.get("a"), 1),
+        (lambda m: m.get("d", 4), 4),
+        (lambda m: m.get("d"), None),
+        (lambda m: m.get_list("a"), [1, 3]),
+        (
+            lambda m: [(k, v) for k, v in m.items()],
+            [("a", 1), ("b", 2)],
+        ),
+        (
+            lambda m: [(k, v) for k, v in m.multi_items()],
+            [("a", 1), ("b", 2), ("a", 3)],
+        ),
+        (lambda m: list(m.keys()), ["a", "b"]),
+        (lambda m: list(reversed(m)), ["b", "a"]),
+        (lambda m: list(m.values()), [1, 2]),
+        (lambda m: m == MultiDict((("a", 1), ("b", 2), ("a", 3))), True),
+        (lambda m: m != MultiDict((("a", 1), ("b", 2))), True),
+    ],
+    ids=[
+        "[] single value from single value",
+        "[] single value from multiple values",
+        "len",
+        "iter",
+        "in",
+        "not in",
+        "get",
+        "get default",
+        "get no default",
+        "get_list",
+        "items",
+        "multi_items",
+        "keys",
+        "reversed",
+        "values",
+        "==",
+        "!=",
+    ],
+)
+def test_multidict(func: Callable[[MultiDict[str, int]], T], expected_value: T) -> None:
+    """Test the methods and functionality of MultiDict."""
+    multidict = MultiDict((("a", 1), ("b", 2), ("a", 3)))
+    assert func(multidict) == expected_value
+
+
+@pytest.mark.parametrize(
+    argnames="func,expected_value",
+    argvalues=[
+        (lambda m: m["b"] == m["B"] == 2, True),
+        (lambda m: "a" in m and "A" in m, True),
+        (lambda m: "d" not in m and "D" not in m, True),
+        (lambda m: m.get("a") == m.get("A") == 1, True),
+        (lambda m: m.get_list("a") == m.get_list("A") == [1, 3], True),
+    ],
+    ids=["[]", "in", "not in", "get", "get_list"],
+)
+def test_case_insensitive_multidict(
+    func: Callable[[MultiDict[str, int]], T], expected_value: T
+) -> None:
+    """Test the methods and functionality of CaseInsensitiveMultiDict."""
+    multidict = CaseInsensitiveMultiDict((("a", 1), ("b", 2), ("A", 3)))
+    assert func(multidict) == expected_value
+
+
+@pytest.mark.parametrize(
+    argnames="method,body,headers",
+    argvalues=[
+        ("GET", b"", HEADERS_RAW),
         (
             "POST",
-            "/route",
-            "value1=a&value2=b",
             b'{"message": "JSON request"}',
-            {"Content-Type": "application/json"},
+            {"Content-Type": "application/json"} | HEADERS_RAW,
         ),
         (
             "POST",
-            "/route",
-            "value1=a&value2=b",
             b"plain text request",
-            {"Content-Type": "text/plain"},
+            {"Content-Type": "text/plain"} | HEADERS_RAW,
         ),
-        ("POST", "/route", "value1=a&value2=b", b"<html></html>", {"Content-Type": "text/html"}),
+        ("POST", b"<html></html>", {"Content-Type": "text/html"} | HEADERS_RAW),
     ],
     ids=["no body", "JSON", "plain text", "HTML"],
 )
 def test_request(
     method: str,
-    path: str,
-    query_string: str | None,
     body: bytes,
-    headers: Mapping[str, str] | None,
+    headers: Mapping[str, str],
 ) -> None:
     """Test the construction of a Request object and access to its attributes."""
+    path = "/route"
+    query_string = "value1=a&value2=b"
     request = Request(
         make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers)
     )
@@ -155,11 +234,19 @@ def test_request(
     assert request.path == path
     assert request.query_string == query_string
     assert request.body == body
-    assert request.headers == headers
 
-    assert request.query_params == parse_qs(query_string)
-    assert request.content_type == headers.get("Content-Type")
-    assert request.content_type == request.headers.get("CONTENT-TYPE")
+    assert request.headers == CaseInsensitiveMultiDict(separate_headers(headers))
+    assert request.headers["canvas-plugins-test-header-1"] == "test header 1"
+    assert request.headers["canvas-plugins-test-header-2"] == "test header 2a"
+    assert request.headers.get_list("canvas-plugins-test-header-1") == ["test header 1"]
+    assert request.headers.get_list("canvas-plugins-test-header-2") == [
+        "test header 2a",
+        "test header 2b",
+    ]
+
+    assert request.query_params == MultiDict((("value1", "a"), ("value2", "b")))
+
+    assert request.content_type == request.headers.get("content-type")
 
     if request.content_type:
         if request.content_type == "application/json":
@@ -311,7 +398,7 @@ def test_request_lifecycle() -> None:
 
     assert body == {
         "body": {"message": "JSON request"},
-        "headers": HEADERS,
+        "headers": {k.lower(): v for k, v in HEADERS.items()},
         "method": "POST",
         "path": "/route",
         "query_string": "value1=a&value2=b",
@@ -448,8 +535,9 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 headers=HEADERS,
                 content_type="application/pdf",
             ),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header", "Content-Type": '
-            '"application/pdf"}, "body": "JVBERi0xLjQKJdPr6eE=", "status_code": 202}',
+            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "application/pdf"}, '
+            '"body": "JVBERi0xLjQKJdPr6eE=", "status_code": 202}',
         ),
         (
             JSONResponse(
@@ -457,26 +545,28 @@ def test_response(response: Callable, expected_effects: Sequence[Effect]) -> Non
                 status_code=HTTPStatus.ACCEPTED,
                 headers=HEADERS,
             ),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header", "Content-Type": '
-            '"application/json"}, "body": "eyJtZXNzYWdlIjogIkpTT04gcmVzcG9uc2UifQ==", '
-            '"status_code": 202}',
+            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "application/json"},'
+            ' "body": "eyJtZXNzYWdlIjogIkpTT04gcmVzcG9uc2UifQ==", "status_code": 202}',
         ),
         (
             PlainTextResponse(
                 content="plain text response", status_code=HTTPStatus.ACCEPTED, headers=HEADERS
             ),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header", "Content-Type": '
-            '"text/plain"}, "body": "cGxhaW4gdGV4dCByZXNwb25zZQ==", "status_code": 202}',
+            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "text/plain"}, '
+            '"body": "cGxhaW4gdGV4dCByZXNwb25zZQ==", "status_code": 202}',
         ),
         (
             HTMLResponse(content="<html></html>", status_code=HTTPStatus.ACCEPTED, headers=HEADERS),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header", "Content-Type": '
-            '"text/html"}, "body": "PGh0bWw+PC9odG1sPg==", "status_code": 202}',
+            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+            '"canvas-plugins-test-header-2": "test header 2a", "Content-Type": "text/html"}, '
+            '"body": "PGh0bWw+PC9odG1sPg==", "status_code": 202}',
         ),
         (
             Response(status_code=HTTPStatus.NO_CONTENT, headers=HEADERS),
-            '{"headers": {"Canvas-Plugins-Test-Header": "test header"}, "body": "", '
-            '"status_code": 204}',
+            '{"headers": {"canvas-plugins-test-header-1": "test header 1", '
+            '"canvas-plugins-test-header-2": "test header 2a"}, "body": "", "status_code": 204}',
         ),
     ],
     ids=["binary", "JSON", "plain text", "HTML", "no content"],
