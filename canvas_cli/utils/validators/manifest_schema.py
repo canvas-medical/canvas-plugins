@@ -57,6 +57,7 @@ manifest_schema = {
         "readme",
     ],
     "additionalProperties": False,
+    "allOf": [{"not": {"required": ["url_permissions", "origins"]}}],
     "$defs": {
         "origins": {
             "type": "object",
@@ -69,6 +70,7 @@ manifest_schema = {
             "type": "array",
             "items": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "url": {"type": "string"},
                     "permissions": {
@@ -83,6 +85,7 @@ manifest_schema = {
                         },
                     },
                 },
+                "required": ["url", "permissions"],
             },
         },
         "component": {
