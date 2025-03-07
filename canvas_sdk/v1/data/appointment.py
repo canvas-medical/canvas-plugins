@@ -54,3 +54,25 @@ class Appointment(models.Model):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
+
+
+class AppointmentExternalIdentifier(models.Model):
+    """AppointmentExternalIdentifier."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_appointmentexternalidentifier_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    use = models.CharField()
+    identifier_type = models.CharField()
+    system = models.CharField()
+    value = models.CharField()
+    issued_date = models.DateField()
+    expiration_date = models.DateField()
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.DO_NOTHING, related_name="external_identifiers"
+    )
