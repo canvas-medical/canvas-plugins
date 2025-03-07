@@ -262,7 +262,7 @@ class SimpleAPI(SimpleAPIBase, ABC):
 
     @classmethod
     def _path_prefix(cls) -> str:
-        return getattr(cls, "PREFIX", None) or ""
+        return getattr(cls, "PREFIX", "")
 
 
 class SimpleAPIRoute(SimpleAPIBase, ABC):
