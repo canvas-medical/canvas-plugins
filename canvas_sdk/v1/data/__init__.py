@@ -1,5 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment
+from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
 from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
@@ -49,12 +49,13 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .staff import Staff
+from .staff import Staff, StaffContactPoint
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
 __all__ = [
     "Appointment",
+    "AppointmentExternalIdentifier",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
@@ -109,6 +110,7 @@ __all__ = [
     "ResponseOption",
     "ResponseOptionSet",
     "Staff",
+    "StaffContactPoint",
     "Task",
     "TaskComment",
     "TaskLabel",

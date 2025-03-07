@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.26.0 (2025-03-05)
+
+### Features
+
+- Adds a StaffContactPoint data module model
+  ([#452](https://github.com/canvas-medical/canvas-plugins/pull/452),
+  [`412b0c4`](https://github.com/canvas-medical/canvas-plugins/commit/412b0c406db1a5e13cdb1581adb3f54d19e6d057))
+
+- Adds AppointmentExternalIdentifier model to data module
+  ([#451](https://github.com/canvas-medical/canvas-plugins/pull/451),
+  [`17367ab`](https://github.com/canvas-medical/canvas-plugins/commit/17367aba448d99ecf17ef507fcaf74ad41318c52))
+
+### Testing
+
+- Ensure PLUGINS_DIR exists before being added to sys.path
+  ([#446](https://github.com/canvas-medical/canvas-plugins/pull/446),
+  [`4600d44`](https://github.com/canvas-medical/canvas-plugins/commit/4600d44b95cfae8d7864b2212538977cf519e8e4))
+
+
 ## v0.25.0 (2025-02-28)
 
 ### Features

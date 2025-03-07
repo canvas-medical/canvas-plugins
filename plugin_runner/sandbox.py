@@ -64,6 +64,7 @@ ALLOWED_MODULES = frozenset(
         "hmac",
         "http",
         "json",
+        "jwt",
         "logger",
         "math",
         "operator",
