@@ -36,7 +36,7 @@ class Request:
         self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
 
         match = path_pattern.match(event.context["path"])
-        self.path = match.groupdict() if match else {}
+        self.path_params = match.groupdict() if match else {}
 
         self.query_params = parse_qs(self.query_string)
         self.content_type = self.headers.get("Content-Type")
