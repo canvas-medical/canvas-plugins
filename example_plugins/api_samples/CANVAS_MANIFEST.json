@@ -1,0 +1,38 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "api_samples",
+    "description": "Example usages of the SimpleAPI handler",
+    "components": {
+        "protocols": [
+            {
+                "class": "api_samples.routes.hello_world:HelloWorldAPI",
+                "description": "Returns a json message",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "api_samples.routes.email_bounce:EmailBounceAPI",
+                "description": "Creates a task to confirm patient contact info",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["my-api-key"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
