@@ -5,7 +5,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any, Protocol, TypeVar
+from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qs
 
 from requests.structures import CaseInsensitiveDict
@@ -265,20 +265,23 @@ class SimpleAPIBase(BaseHandler, ABC):
         EventType.Name(EventType.SIMPLE_API_REQUEST),
     ]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    _ROUTES: ClassVar[dict[tuple[str, str], RouteHandler]]
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
 
         # Build the registry of routes so that requests can be routed to the correct handler. This
-        # is done by iterating over the methods on the class instance and looking for methods that
-        # have been marked by the handler decorators (get, post, etc.).
-        self._routes: dict[tuple[str, str], Callable] = {}
-        for attr in self.__class__.__dict__.values():
+        # is done by iterating over the methods on the class and looking for methods that have been
+        # marked by the handler decorators (get, post, etc.).
+        cls._ROUTES = {}
+        for attr in cls.__dict__.values():
             if callable(attr) and (route := getattr(attr, "route", None)):
                 method, relative_path = route
-                path = f"{self._path_prefix()}{relative_path}"
-                self._routes[(method, path)] = attr
+                path = f"{cls._path_prefix()}{relative_path}"
+                cls._ROUTES[(method, path)] = attr
 
-    def _path_prefix(self) -> str:
+    @classmethod
+    def _path_prefix(cls) -> str:
         return ""
 
     @cached_property
@@ -331,7 +334,7 @@ class SimpleAPIBase(BaseHandler, ABC):
     def _handle_request(self) -> list[Effect]:
         """Route the incoming request to the handler method based on the HTTP method and path."""
         # Get the handler method
-        handler = self._routes[(self.request.method, self.request.path)]
+        handler = self._ROUTES[(self.request.method, self.request.path)]
 
         # Handle the request
         effects = handler(self)
@@ -348,7 +351,7 @@ class SimpleAPIBase(BaseHandler, ABC):
             if isinstance(effect, Response):
                 effects[index] = effect.apply()
 
-            if effects[index].type == EffectType.SIMPLE_API_RESPONSE:
+            if cast(Effect, effects[index]).type == EffectType.SIMPLE_API_RESPONSE:
                 # If a response has already been found, return an error response immediately
                 if response_found:
                     log.error(f"Multiple responses provided by {SimpleAPI.__name__} handler")
@@ -367,13 +370,13 @@ class SimpleAPIBase(BaseHandler, ABC):
                 # If the handler returned an error response, return only that response effect
                 # and omit any other included effects
                 if 400 <= status_code <= 599:
-                    return [effects[index]]
+                    return [cast(Effect, effects[index])]
 
-        return effects
+        return cast(list[Effect], effects)
 
     def accept_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
-        return (self.request.method, self.request.path) in self._routes
+        return (self.request.method, self.request.path) in self._ROUTES
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Method the user should override to authenticate requests."""
@@ -414,8 +417,12 @@ class SimpleAPI(SimpleAPIBase, ABC):
                     f"class attributes: {', '.join(f'{cls.__name__}.{name}' for name in names)}"
                 )
 
-    def _path_prefix(self) -> str:
-        return getattr(self, "PREFIX", None) or ""
+    @classmethod
+    def _path_prefix(cls) -> str:
+        # getattr needs a default else it will raise an exception. We also need to ensure that the
+        # final value is a string if the user specifies "None" as the prefix because this value gets
+        # prepended to the URL path
+        return getattr(cls, "PREFIX", "") or ""
 
 
 class SimpleAPIRoute(SimpleAPIBase, ABC):
@@ -427,8 +434,6 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
             raise PluginError(
                 f"Setting a PREFIX value on a {SimpleAPIRoute.__name__} is not allowed"
             )
-
-        super().__init_subclass__(**kwargs)
 
         for attr_name, attr_value in cls.__dict__.items():
             decorator: Callable | None
@@ -463,6 +468,8 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
                 raise PluginError(f"PATH must be specified on a {SimpleAPIRoute.__name__}")
 
             decorator(path)(attr_value)
+
+        super().__init_subclass__(**kwargs)
 
     def get(self) -> list[Response | Effect]:
         """Stub method for GET handler."""
