@@ -166,7 +166,7 @@ class Request:
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
 
         match = path_pattern.match(event.context["path"])
-        self.path = match.groupdict() if match else {}
+        self.path_params = match.groupdict() if match else {}
 
         self.query_params = MultiDict(parse_qsl(self.query_string))
 
