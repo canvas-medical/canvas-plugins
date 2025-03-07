@@ -244,7 +244,7 @@ def test_request(
     query_string = "value1=a&value2=b"
     request = Request(
         make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers),
-        re.compile(path),
+        path_pattern=re.compile(path),
     )
 
     assert request.method == method
