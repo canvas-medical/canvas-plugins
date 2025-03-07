@@ -1,10 +1,12 @@
 import json
+import re
 import traceback
 from abc import ABC
 from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
+from re import Pattern
 from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qsl
 
@@ -18,12 +20,6 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
-
-# TODO: Routing by path regex?
-# TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)
-# TODO: Support Effect metadata that is separate from payload
-# TODO: Encode event payloads with MessagePack instead of JSON
-
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
 
@@ -162,12 +158,15 @@ def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]
 class Request:
     """Request class for incoming requests to the API."""
 
-    def __init__(self, event: Event) -> None:
+    def __init__(self, event: Event, path_pattern: Pattern) -> None:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
+
+        match = path_pattern.match(event.context["path"])
+        self.path = match.groupdict() if match else {}
 
         self.query_params = MultiDict(parse_qsl(self.query_string))
 
@@ -266,7 +265,8 @@ class SimpleAPIBase(BaseHandler, ABC):
         EventType.Name(EventType.SIMPLE_API_REQUEST),
     ]
 
-    _ROUTES: ClassVar[dict[tuple[str, str], RouteHandler]]
+    _ROUTES: ClassVar[dict[str, list[tuple[Pattern, RouteHandler]]]]
+    _PATH_PARAM_REGEX = re.compile("<([a-zA-Z_][a-zA-Z0-9_]*)>")
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -279,7 +279,27 @@ class SimpleAPIBase(BaseHandler, ABC):
             if callable(attr) and (route := getattr(attr, "route", None)):
                 method, relative_path = route
                 path = f"{cls._path_prefix()}{relative_path}"
-                cls._ROUTES[(method, path)] = attr
+
+                # Convert the path to a regular expression pattern so that any path parameters can
+                # be extracted later
+                path_pattern = re.compile(path.replace("<", "(?P<").replace(">", ">[^/]+)"))
+
+                cls._ROUTES.setdefault(method, [])
+                cls._ROUTES[method].append((path_pattern, attr))
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        path = self.event.context["path"]
+
+        # Determine the first handler that matches the path based on the path pattern
+        self._path_pattern = None
+        self._handler = None
+        for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
+            if path_pattern.match(path):
+                self._path_pattern = path_pattern
+                self._handler = handler
+                break
 
     @classmethod
     def _path_prefix(cls) -> str:
@@ -288,7 +308,7 @@ class SimpleAPIBase(BaseHandler, ABC):
     @cached_property
     def request(self) -> Request:
         """Return the request object from the event."""
-        return Request(self.event)
+        return Request(self.event, cast(Pattern, self._path_pattern))
 
     def compute(self) -> list[Effect]:
         """Handle the authenticate or request event."""
@@ -334,11 +354,8 @@ class SimpleAPIBase(BaseHandler, ABC):
 
     def _handle_request(self) -> list[Effect]:
         """Route the incoming request to the handler method based on the HTTP method and path."""
-        # Get the handler method
-        handler = self._ROUTES[(self.request.method, self.request.path)]
-
         # Handle the request
-        effects = handler(self)
+        effects = cast(RouteHandler, self._handler)(self)
 
         # Iterate over the returned effects and:
         # 1. Change any response objects to response effects
@@ -377,7 +394,7 @@ class SimpleAPIBase(BaseHandler, ABC):
 
     def accept_event(self) -> bool:
         """Ignore the event if the handler does not implement the route."""
-        return (self.request.method, self.request.path) in self._ROUTES
+        return self._handler is not None
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Method the user should override to authenticate requests."""
