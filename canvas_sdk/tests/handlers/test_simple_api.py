@@ -150,7 +150,7 @@ def test_request(
     """Test the construction of a Request object and access to its attributes."""
     request = Request(
         make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers),
-        re.compile(path),
+        path_pattern=re.compile(path),
     )
 
     assert request.method == method
