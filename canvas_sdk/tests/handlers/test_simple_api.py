@@ -1,4 +1,5 @@
 import json
+import re
 from base64 import b64decode, b64encode
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
@@ -148,7 +149,8 @@ def test_request(
 ) -> None:
     """Test the construction of a Request object and access to its attributes."""
     request = Request(
-        make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers)
+        make_event(EventType.SIMPLE_API_REQUEST, method, path, query_string, body, headers),
+        re.compile(path),
     )
 
     assert request.method == method
