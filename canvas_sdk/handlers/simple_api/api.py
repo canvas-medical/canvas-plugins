@@ -262,7 +262,10 @@ class SimpleAPI(SimpleAPIBase, ABC):
 
     @classmethod
     def _path_prefix(cls) -> str:
-        return getattr(cls, "PREFIX", "")
+        # getattr needs a default else it will raise an exception. We also need to ensure that the
+        # final value is a string if the user specifies "None" as the prefix because this value gets
+        # prepended to the URL path
+        return getattr(cls, "PREFIX", "") or ""
 
 
 class SimpleAPIRoute(SimpleAPIBase, ABC):
