@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.27.0 (2025-03-10)
+
+### Features
+
+- Added a method to the SimpleAPI request class that can parse form data request bodies
+  ([#453](https://github.com/canvas-medical/canvas-plugins/pull/453),
+  [`946a26a`](https://github.com/canvas-medical/canvas-plugins/commit/946a26a80fdb3e194f6bc1d50b63070cf458032e))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+- Allow importing jwt in the plugin runner sandbox
+  ([#454](https://github.com/canvas-medical/canvas-plugins/pull/454),
+  [`59deb88`](https://github.com/canvas-medical/canvas-plugins/commit/59deb88a769c4abded9a4b4bfd9f050a12d3ad5c))
+
+### Refactoring
+
+- Change SimpleAPI request headers and query parameters to be a multidict structure
+  ([#455](https://github.com/canvas-medical/canvas-plugins/pull/455),
+  [`43f71d9`](https://github.com/canvas-medical/canvas-plugins/commit/43f71d9f5f0b05f0c639dcdafdbbf88c719a823d))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+- Moved construction of SimpleAPI route registry to __init_subclass__
+  ([#450](https://github.com/canvas-medical/canvas-plugins/pull/450),
+  [`9704a44`](https://github.com/canvas-medical/canvas-plugins/commit/9704a44161505dfb209b9ea72cdfe0bb5ead22a0))
+
+Signed-off-by: Christopher Sande <csande@gmail.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
 ## v0.26.0 (2025-03-05)
 
 ### Features
