@@ -5,7 +5,7 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from typing import Any, ClassVar, TypeVar, cast
+from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qsl
 
 from canvas_sdk.effects import Effect, EffectType
@@ -20,13 +20,143 @@ from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
 # TODO: Routing by path regex?
-# TODO: Support multipart/form-data by adding helpers to the request class
 # TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)
 # TODO: Support Effect metadata that is separate from payload
 # TODO: Encode event payloads with MessagePack instead of JSON
 
 
 JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
+
+
+class FormPart(Protocol):
+    """
+    Protocol for representing a form part in the body of a multipart/form-data request.
+
+    A form part can represent a simple string value, or a file with a content type.
+    """
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        ...
+
+
+class StringFormPart(FormPart):
+    """Class for representing a form part that is a simple string value."""
+
+    def __init__(self, name: str, value: str) -> None:
+        self.name = name
+        self.value = value
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return False
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, FileFormPart):
+            return False
+
+        if not isinstance(other, StringFormPart):
+            return NotImplemented
+
+        return self.name == other.name and self.value == other.value
+
+
+class FileFormPart(FormPart):
+    """Class for representing a form part that is a file."""
+
+    def __init__(
+        self, name: str, filename: str, content: bytes, content_type: str | None = None
+    ) -> None:
+        self.name = name
+        self.filename = filename
+        self.content = content
+        self.content_type = content_type
+
+    @staticmethod
+    def is_file() -> bool:
+        """Return True or False depending on whether the form part represents a file."""
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, StringFormPart):
+            return False
+
+        if not isinstance(other, FileFormPart):
+            return NotImplemented
+
+        return all(
+            (
+                self.name == other.name,
+                self.filename == other.filename,
+                self.content == other.content,
+                self.content_type == other.content_type,
+            )
+        )
+
+
+def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]:
+    """Parse a multipart form and return a dict of string to list of form parts."""
+    form_data: list[tuple[str, FormPart]] = []
+
+    # Split the body by the boundary value and iterate over the parts. The first and last
+    # parts can be skipped because there are delimiters on at the start and end of the body
+    parts = form.split(f"--{boundary}".encode())
+    for part in parts[1:-1]:
+        # Each part may be either a simple string value or a file. Simple string values
+        # will just have a name and a value, whereas files will have a name, content type,
+        # filename, and value.
+        name = None
+        content_type = None
+        filename = None
+
+        # Split the part into the headers and the value (i.e. the content)
+        value: str | bytes
+        headers, value = part.split(b"\r\n\r\n", maxsplit=1)
+
+        # Iterate over the headers and extract the name, filename, and content type
+        for header in headers.decode().split("\r\n"):
+            # There are only two possible headers: Content-Disposition and Content-Type
+            if header.lower().startswith("content-disposition: form-data;"):
+                # Iterate over the content disposition parameters to get the form name and
+                # filename
+                for parameter in header.split(";")[1:]:
+                    parameter_name, parameter_value = parameter.strip().split("=")
+
+                    # Strip the quotes from the value
+                    parameter_value = parameter_value[1:-1]
+
+                    if parameter_name == "name":
+                        name = parameter_value
+                    elif parameter_name == "filename":
+                        filename = parameter_value
+            elif header.lower().startswith("content-type"):
+                # Files will have a content type, so grab it
+                content_type = header.split(":")[1].strip()
+
+        if not name or not value:
+            raise RuntimeError("Invalid multipart/form-data request body")
+
+        # Strip off the trailing newline characters from the value
+        value = value[:-2]
+
+        # Now we have all the data, so append it to the list of form data
+        if filename:
+            # Because a filename was provided, we know it's a file and not a simple string value
+            form_data.append(
+                (
+                    name,
+                    FileFormPart(
+                        name=name, filename=filename, content=value, content_type=content_type
+                    ),
+                )
+            )
+        else:
+            # Decode the string before adding it
+            form_data.append((name, StringFormPart(name, value.decode())))
+
+    return MultiDict(form_data)
 
 
 class Request:
@@ -38,8 +168,20 @@ class Request:
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
+
         self.query_params = MultiDict(parse_qsl(self.query_string))
-        self.content_type = self.headers.get("Content-Type")
+
+        # Parse the content type and any included content type parameters
+        content_type = self.headers.get("Content-Type")
+        self._content_type_parameters = {}
+        if content_type:
+            content_type, *parameters = content_type.split(";")
+            self.content_type = content_type.strip()
+            for parameter in parameters:
+                name, value = parameter.strip().split("=")
+                self._content_type_parameters[name] = value
+        else:
+            self.content_type = None
 
     @cached_property
     def body(self) -> bytes:
@@ -47,12 +189,30 @@ class Request:
         return b64decode(self._body)
 
     def json(self) -> JSON:
-        """Return the response JSON."""
+        """Return the response body as a JSON dict."""
         return json.loads(self.body)
 
     def text(self) -> str:
         """Return the response body as plain text."""
         return self.body.decode()
+
+    def form_data(self) -> MultiDict[str, FormPart]:
+        """Return the response body as a dict of string to list of FormPart objects."""
+        form_data: MultiDict[str, FormPart]
+
+        if self.content_type == "application/x-www-form-urlencoded":
+            # For request bodies that are URL-encoded, just parse them and return them as simple
+            # form parts
+            form_data = MultiDict(
+                (name, StringFormPart(name, value)) for name, value in parse_qsl(self.body.decode())
+            )
+        elif self.content_type == "multipart/form-data":
+            # Parse request bodies that are multipart forms
+            form_data = parse_multipart_form(self.body, self._content_type_parameters["boundary"])
+        else:
+            raise RuntimeError(f"Cannot parse content type {self.content_type} as form data")
+
+        return form_data
 
 
 SimpleAPIType = TypeVar("SimpleAPIType", bound="SimpleAPIBase")
