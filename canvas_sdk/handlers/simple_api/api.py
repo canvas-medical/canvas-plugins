@@ -295,13 +295,11 @@ class SimpleAPIBase(BaseHandler, ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        path = self.event.context["path"]
-
         # Determine the first handler that matches the path based on the path pattern
         self._path_pattern = None
         self._handler = None
         for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
-            if path_pattern.match(path):
+            if path_pattern.match(self.event.context["path"]):
                 self._path_pattern = path_pattern
                 self._handler = handler
                 break
