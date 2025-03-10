@@ -6,7 +6,7 @@ from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
 from typing import Any, ClassVar, Protocol, TypeVar, cast
-from urllib.parse import parse_qs, parse_qsl
+from urllib.parse import parse_qsl
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -96,9 +96,9 @@ class FileFormPart(FormPart):
         )
 
 
-def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]]:
+def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]:
     """Parse a multipart form and return a dict of string to list of form parts."""
-    form_data: dict[str, list[FormPart]] = {}
+    form_data: list[tuple[str, FormPart]] = []
 
     # Split the body by the boundary value and iterate over the parts. The first and last
     # parts can be skipped because there are delimiters on at the start and end of the body
@@ -141,19 +141,22 @@ def parse_multipart_form(form: bytes, boundary: str) -> dict[str, list[FormPart]
         # Strip off the trailing newline characters from the value
         value = value[:-2]
 
-        # Now we have all the data, so append it to the list in the form data dict using the
-        # part name as the key
-        form_data.setdefault(name, [])
+        # Now we have all the data, so append it to the list of form data
         if filename:
             # Because a filename was provided, we know it's a file and not a simple string value
-            form_data[name].append(
-                FileFormPart(name=name, filename=filename, content=value, content_type=content_type)
+            form_data.append(
+                (
+                    name,
+                    FileFormPart(
+                        name=name, filename=filename, content=value, content_type=content_type
+                    ),
+                )
             )
         else:
             # Decode the string before adding it
-            form_data[name].append(StringFormPart(name, value.decode()))
+            form_data.append((name, StringFormPart(name, value.decode())))
 
-    return form_data
+    return MultiDict(form_data)
 
 
 class Request:
@@ -193,17 +196,16 @@ class Request:
         """Return the response body as plain text."""
         return self.body.decode()
 
-    def form_data(self) -> dict[str, list[FormPart]]:
+    def form_data(self) -> MultiDict[str, FormPart]:
         """Return the response body as a dict of string to list of FormPart objects."""
-        form_data: dict[str, list[FormPart]]
+        form_data: MultiDict[str, FormPart]
 
         if self.content_type == "application/x-www-form-urlencoded":
             # For request bodies that are URL-encoded, just parse them and return them as simple
             # form parts
-            form_data = {
-                name: [StringFormPart(name=name, value=v) for v in value]
-                for name, value in parse_qs(self.body.decode()).items()
-            }
+            form_data = MultiDict(
+                (name, StringFormPart(name, value)) for name, value in parse_qsl(self.body.decode())
+            )
         elif self.content_type == "multipart/form-data":
             # Parse request bodies that are multipart forms
             form_data = parse_multipart_form(self.body, self._content_type_parameters["boundary"])

@@ -274,28 +274,34 @@ def test_request(
     argnames="body,content_type,expected_form_data",
     argvalues=[
         (
-            b"part1=value1&part1=value3&part2=value2",
+            b"part1=value1&part2=value2&part1=value3",
             "application/x-www-form-urlencoded",
-            {
-                "part1": [
-                    StringFormPart(name="part1", value="value1"),
-                    StringFormPart(name="part1", value="value3"),
-                ],
-                "part2": [StringFormPart(name="part2", value="value2")],
-            },
+            MultiDict(
+                (
+                    ("part1", StringFormPart(name="part1", value="value1")),
+                    ("part2", StringFormPart(name="part2", value="value2")),
+                    ("part1", StringFormPart(name="part1", value="value3")),
+                )
+            ),
         ),
         (
             FORM,
             "multipart/form-data; boundary=--------------------------966149001464621638881292",
-            {
-                "part1": [
-                    StringFormPart(name="part1", value="value1"),
-                    FileFormPart(
-                        name="part1", filename="Sydney.jpg", content=FILE, content_type="image/jpeg"
+            MultiDict(
+                (
+                    ("part1", StringFormPart(name="part1", value="value1")),
+                    ("part2", StringFormPart(name="part2", value="value2")),
+                    (
+                        "part1",
+                        FileFormPart(
+                            name="part1",
+                            filename="Sydney.jpg",
+                            content=FILE,
+                            content_type="image/jpeg",
+                        ),
                     ),
-                ],
-                "part2": [StringFormPart(name="part2", value="value2")],
-            },
+                )
+            ),
         ),
     ],
     ids=["x-www-form-urlencoded", "multipart/form-data"],
