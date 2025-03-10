@@ -6,9 +6,7 @@ from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
 from typing import Any, ClassVar, Protocol, TypeVar, cast
-from urllib.parse import parse_qs
-
-from requests.structures import CaseInsensitiveDict
+from urllib.parse import parse_qs, parse_qsl
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -19,6 +17,7 @@ from plugin_runner.exceptions import PluginError
 
 from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
+from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
 # TODO: Routing by path regex?
 # TODO: Log requests in a format similar to other API frameworks (probably need effect metadata)
@@ -165,9 +164,9 @@ class Request:
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
         self._body = event.context["body"]
-        self.headers: CaseInsensitiveDict = CaseInsensitiveDict(event.context["headers"])
+        self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
 
-        self.query_params = parse_qs(self.query_string)
+        self.query_params = MultiDict(parse_qsl(self.query_string))
 
         # Parse the content type and any included content type parameters
         content_type = self.headers.get("Content-Type")
