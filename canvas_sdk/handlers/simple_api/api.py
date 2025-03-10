@@ -42,7 +42,7 @@ class FormPart(Protocol):
         ...
 
 
-class StringFormPart:
+class StringFormPart(FormPart):
     """Class for representing a form part that is a simple string value."""
 
     def __init__(self, name: str, value: str) -> None:
@@ -64,7 +64,7 @@ class StringFormPart:
         return self.name == other.name and self.value == other.value
 
 
-class FileFormPart:
+class FileFormPart(FormPart):
     """Class for representing a form part that is a file."""
 
     def __init__(
