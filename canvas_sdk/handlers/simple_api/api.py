@@ -282,7 +282,12 @@ class SimpleAPIBase(BaseHandler, ABC):
 
                 # Convert the path to a regular expression pattern so that any path parameters can
                 # be extracted later
-                path_pattern = re.compile(path.replace("<", "(?P<").replace(">", ">[^/]+)"))
+                try:
+                    path_pattern = re.compile(path.replace("<", "(?P<").replace(">", ">[^/]+)"))
+                except re.error as error:
+                    raise PluginError(
+                        f"Path parameter names in route '{path}' must be unique"
+                    ) from error
 
                 cls._ROUTES.setdefault(method, [])
                 cls._ROUTES[method].append((path_pattern, attr))
@@ -333,8 +338,8 @@ class SimpleAPIBase(BaseHandler, ABC):
             credentials_cls = self.authenticate.__annotations__.get("credentials")
             if not credentials_cls or not issubclass(credentials_cls, Credentials):
                 raise PluginError(
-                    "Cannot determine authentication scheme; please specify the type of "
-                    "credentials your endpoint requires"
+                    f"Cannot determine authentication scheme for {self.request.path}; "
+                    "please specify the type of credentials your endpoint requires"
                 )
             credentials = credentials_cls(self.request)
 
