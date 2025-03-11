@@ -80,6 +80,7 @@ class Patient(models.Model):
     birth_order = models.BigIntegerField()
     default_location_id = models.BigIntegerField()
     default_provider_id = models.BigIntegerField()
+    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
     settings: "RelatedManager[PatientSetting]"
 
