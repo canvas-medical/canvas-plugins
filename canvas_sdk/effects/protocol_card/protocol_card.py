@@ -39,6 +39,9 @@ class ProtocolCard(_BaseEffect):
     class Status(Enum):
         DUE = "due"
         SATISFIED = "satisfied"
+        NOT_APPLICABLE = "not_applicable"
+        PENDING = "pending"
+        NOT_RELEVANT = "not_relevant"
 
     class Meta:
         effect_type = EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
