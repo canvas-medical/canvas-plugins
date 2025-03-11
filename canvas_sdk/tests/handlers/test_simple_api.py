@@ -319,7 +319,8 @@ def test_request_form(
             path="/route",
             body=body,
             headers={"Content-Type": content_type},
-        )
+        ),
+        path_pattern=re.compile("/route"),
     )
 
     assert request.form_data() == expected_form_data
