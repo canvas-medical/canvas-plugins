@@ -85,7 +85,7 @@ class Patient(models.Model):
     settings: "RelatedManager[PatientSetting]"
 
     @classmethod
-    def find(cls, id: str) -> Self:
+    def find(cls, id: str) -> "Patient":
         """Find a patient by id."""
         return cls._default_manager.get(id=id)
 
