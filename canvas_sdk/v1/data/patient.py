@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
