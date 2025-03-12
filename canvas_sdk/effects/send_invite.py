@@ -1,41 +1,30 @@
-from typing import Any, Self
+from typing import Any
 
-from pydantic import model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import CanvasUser
 
 
-class UpdateUserEffect(_BaseEffect):
+class SendInviteEffect(_BaseEffect):
     """
-    An Effect that will update the user properties.
+    An Effect that will send an invitation for the Patient Portal.
     """
 
     class Meta:
-        effect_type = EffectType.UPDATE_USER
+        effect_type = EffectType.PATIENT_PORTAL__SEND_INVITE
 
     dbid: int
-    email: str | None = None
-    phone_number: str | None = None
 
     @property
     def values(self) -> dict[str, Any]:
-        """The user's values."""
-        return {"dbid": self.dbid, "email": self.email, "phone_number": self.phone_number}
+        """The user's id."""
+        return {"dbid": self.dbid}
 
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"data": self.values}
-
-    @model_validator(mode="after")
-    def check_exclusive_fields(self) -> Self:
-        """Check that at least one of mutually exclusive field is set."""
-        if self.email is None and self.phone_number is None:
-            raise ValueError("one of 'email', 'phone_number' is required")
-
-        return self
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
