@@ -29,9 +29,10 @@ class SendInviteEffect(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        user = CanvasUser.objects.get(dbid=self.dbid)
+        try:
+            CanvasUser.objects.get(dbid=self.dbid)
 
-        if user is None:
+        except CanvasUser.DoesNotExist:
             errors.append(
                 self._create_error_detail(
                     "value",

@@ -15,6 +15,24 @@ class UpdateUserEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.UPDATE_USER
 
+    # A set to track which fields have been modified.
+    _dirty_keys: set[str] = set()
+
+    def __init__(self, /, **data: Any) -> None:
+        super().__init__(**data)
+        self._dirty_keys = set()
+        self._dirty_keys.update(data.keys())
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Set an attribute and mark it as dirty unless excluded."""
+        if not name.startswith("_"):
+            self._dirty_keys.add(name)
+        super().__setattr__(name, value)
+
+    def is_dirty(self, key: str) -> bool:
+        """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
+        return key in self._dirty_keys
+
     dbid: int
     email: str | None = None
     phone_number: str | None = None
@@ -22,7 +40,13 @@ class UpdateUserEffect(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The user's values."""
-        return {"dbid": self.dbid, "email": self.email, "phone_number": self.phone_number}
+        result = {}
+
+        for key in self._dirty_keys:
+            result[key] = getattr(self, key)
+
+        result["dbid"] = self.dbid
+        return result
 
     @property
     def effect_payload(self) -> dict[str, Any]:
@@ -40,9 +64,10 @@ class UpdateUserEffect(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        user = CanvasUser.objects.get(dbid=self.dbid)
+        try:
+            CanvasUser.objects.get(dbid=self.dbid)
 
-        if user is None:
+        except CanvasUser.DoesNotExist:
             errors.append(
                 self._create_error_detail(
                     "value",
