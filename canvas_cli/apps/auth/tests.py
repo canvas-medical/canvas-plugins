@@ -86,6 +86,7 @@ def test_get_or_request_api_token_requests_token_if_none_stored(
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         json=None,
         data="grant_type=client_credentials&scope=system/Plugins.*&client_id=id&client_secret=secret",
+        timeout=30,
     )
     mock_set_password.assert_called_with(
         "canvas_cli.apps.auth.utils",
@@ -120,6 +121,7 @@ def test_get_or_request_api_token_raises_exception_if_error_token_response(
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         json=None,
         data="grant_type=client_credentials&scope=system/Plugins.*&client_id=id&client_secret=secret",
+        timeout=30,
     )
 
 
@@ -149,4 +151,5 @@ def test_get_or_request_api_token_raises_exception_if_expired_token(
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         json=None,
         data="grant_type=client_credentials&scope=system/Plugins.*&client_id=id&client_secret=secret",
+        timeout=30,
     )
