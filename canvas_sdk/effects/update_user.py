@@ -33,7 +33,7 @@ class UpdateUserEffect(_BaseEffect):
         """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
         return key in self._dirty_keys
 
-    dbid: int
+    user_dbid: int
     email: str | None = None
     phone_number: str | None = None
 
@@ -45,7 +45,7 @@ class UpdateUserEffect(_BaseEffect):
         for key in self._dirty_keys:
             result[key] = getattr(self, key)
 
-        result["dbid"] = self.dbid
+        result["dbid"] = self.user_dbid
         return result
 
     @property
@@ -64,15 +64,14 @@ class UpdateUserEffect(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        try:
-            CanvasUser.objects.get(dbid=self.dbid)
+        user_exists = CanvasUser.objects.filter(dbid=self.user_dbid).exists()
 
-        except CanvasUser.DoesNotExist:
+        if not user_exists:
             errors.append(
                 self._create_error_detail(
                     "value",
                     "User does not exist",
-                    self.dbid,
+                    self.user_dbid,
                 )
             )
 
