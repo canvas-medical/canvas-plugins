@@ -254,7 +254,7 @@ class Sandbox:
 
     def __init__(
         self,
-        source_code: str | Path,
+        source_code: str | Path | None,
         namespace: str | None = None,
         evaluated_modules: dict[str, bool] | None = None,
     ) -> None:
@@ -393,7 +393,7 @@ class Sandbox:
         self._evaluate_implicit_imports(parent)
 
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
-        if not (self._is_known_module(name)):
+        if not self._is_known_module(name):
             raise ImportError(f"{name!r} is not an allowed import.")
 
         self._evaluate_module(name)
