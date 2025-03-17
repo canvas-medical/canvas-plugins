@@ -29,7 +29,11 @@ from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils.stats import get_duration_ms, statsd_client
 from logger import log
-from plugin_runner.authentication import token_for_plugin
+from plugin_runner.authentication import (
+    ontologies_token_for_plugin,
+    science_token_for_plugin,
+    token_for_plugin,
+)
 from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
@@ -168,7 +172,14 @@ class PluginRunner(PluginRunnerServicer):
             base_plugin_name = plugin_name.split(":")[0]
 
             secrets = plugin.get("secrets", {})
-            secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
+
+            secrets.update(
+                {
+                    "graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home"),
+                    "science_jwt": science_token_for_plugin(plugin_name=plugin_name),
+                    "ontologies_jwt": ontologies_token_for_plugin(plugin_name=plugin_name),
+                }
+            )
 
             try:
                 handler = handler_class(event, secrets)

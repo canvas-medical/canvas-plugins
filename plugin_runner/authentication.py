@@ -4,7 +4,7 @@ import arrow
 from jwt import encode
 
 from logger import log
-from settings import PLUGIN_RUNNER_SIGNING_KEY
+from settings import ONTOLOGIES_SIGNING_KEY, PLUGIN_RUNNER_SIGNING_KEY, SCIENCE_SIGNING_KEY
 
 ONE_DAY_IN_MINUTES = 60 * 24
 
@@ -25,7 +25,8 @@ def token_for_plugin(
 
     if not jwt_signing_key:
         log.warning(
-            "Using an insecure JWT signing key for GraphQL access. Set the PLUGIN_RUNNER_SIGNING_KEY environment variable to avoid this message."
+            "Using an insecure JWT signing key for GraphQL access. Set the "
+            "PLUGIN_RUNNER_SIGNING_KEY environment variable to avoid this message."
         )
 
     token = encode(
@@ -42,3 +43,39 @@ def token_for_plugin(
     )
 
     return token
+
+
+def ontologies_token_for_plugin(
+    plugin_name: str,
+    issuer: str = "plugin-runner",
+    extra_kwargs: dict | None = None,
+) -> str:
+    """
+    Generate a JWT for accessing ontologies.
+    """
+    return token_for_plugin(
+        audience="ontologies",
+        expiration_minutes=15,
+        extra_kwargs=extra_kwargs,
+        issuer=issuer,
+        jwt_signing_key=ONTOLOGIES_SIGNING_KEY,
+        plugin_name=plugin_name,
+    )
+
+
+def science_token_for_plugin(
+    plugin_name: str,
+    issuer: str = "plugin-runner",
+    extra_kwargs: dict | None = None,
+) -> str:
+    """
+    Generate a JWT for accessing science.
+    """
+    return token_for_plugin(
+        audience="science",
+        expiration_minutes=15,
+        extra_kwargs=extra_kwargs,
+        issuer=issuer,
+        jwt_signing_key=SCIENCE_SIGNING_KEY,
+        plugin_name=plugin_name,
+    )
