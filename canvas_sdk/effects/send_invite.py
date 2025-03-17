@@ -14,12 +14,12 @@ class SendInviteEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.PATIENT_PORTAL__SEND_INVITE
 
-    dbid: int
+    user_dbid: int
 
     @property
     def values(self) -> dict[str, Any]:
         """The user's id."""
-        return {"dbid": self.dbid}
+        return {"dbid": self.user_dbid}
 
     @property
     def effect_payload(self) -> dict[str, Any]:
@@ -29,15 +29,14 @@ class SendInviteEffect(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        try:
-            CanvasUser.objects.get(dbid=self.dbid)
+        user_exists = CanvasUser.objects.filter(dbid=self.user_dbid).exists()
 
-        except CanvasUser.DoesNotExist:
+        if not user_exists:
             errors.append(
                 self._create_error_detail(
                     "value",
                     "User does not exist",
-                    self.dbid,
+                    self.user_dbid,
                 )
             )
 
