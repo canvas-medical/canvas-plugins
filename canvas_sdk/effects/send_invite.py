@@ -19,7 +19,7 @@ class SendInviteEffect(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The user's id."""
-        return {"dbid": self.user_dbid}
+        return {"user_dbid": self.user_dbid}
 
     @property
     def effect_payload(self) -> dict[str, Any]:
