@@ -1,6 +1,7 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
+from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
 from .command import Command
@@ -59,6 +60,7 @@ __all__ = [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
+    "BannerAlert",
     "BillingLineItem",
     "BillingLineItemModifier",
     "CanvasUser",
