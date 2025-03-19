@@ -95,7 +95,7 @@ def batch_patch(
 class Http:
     """A helper class for completing HTTP calls with metrics tracking."""
 
-    _MAX_WORKER_TIMEOUT_SECONDS = 30
+    _MAX_REQUEST_TIMEOUT_SECONDS = 30
 
     def join_url(self, url: str) -> str:
         """
@@ -138,7 +138,7 @@ class Http:
         return self.session.get(
             self.join_url(url),
             headers=headers,
-            timeout=self._MAX_WORKER_TIMEOUT_SECONDS,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
     @measure_time
@@ -155,7 +155,7 @@ class Http:
             json=json,
             data=data,
             headers=headers,
-            timeout=self._MAX_WORKER_TIMEOUT_SECONDS,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
     @measure_time
@@ -172,7 +172,7 @@ class Http:
             json=json,
             data=data,
             headers=headers,
-            timeout=self._MAX_WORKER_TIMEOUT_SECONDS,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
     @measure_time
@@ -189,7 +189,7 @@ class Http:
             json=json,
             data=data,
             headers=headers,
-            timeout=self._MAX_WORKER_TIMEOUT_SECONDS,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
     @measure_time
@@ -205,11 +205,11 @@ class Http:
         ordering as the requests.
         """
         if timeout is None:
-            timeout = self._MAX_WORKER_TIMEOUT_SECONDS
-        elif timeout < 1 or timeout > self._MAX_WORKER_TIMEOUT_SECONDS:
+            timeout = self._MAX_REQUEST_TIMEOUT_SECONDS
+        elif timeout < 1 or timeout > self._MAX_REQUEST_TIMEOUT_SECONDS:
             raise ValueError(
                 "Timeout value must be greater than 0 and less than or equal "
-                f"to {self._MAX_WORKER_TIMEOUT_SECONDS} seconds"
+                f"to {self._MAX_REQUEST_TIMEOUT_SECONDS} seconds"
             )
 
         with ThreadPoolExecutor() as executor:
