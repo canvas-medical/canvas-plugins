@@ -10,6 +10,7 @@ from canvas_sdk.v1.data.base import (
     TimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.staff import Staff
 
 
 class LabReportQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
