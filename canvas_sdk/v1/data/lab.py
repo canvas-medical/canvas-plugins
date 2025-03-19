@@ -10,6 +10,7 @@ from canvas_sdk.v1.data.base import (
     TimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.staff import Staff
 
 
 class LabReportQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
@@ -213,8 +214,7 @@ class LabOrder(models.Model):
     courtesy_copy_type = models.CharField(choices=CourtesyCopyType, null=True)
     courtesy_copy_number = models.CharField()
     courtesy_copy_text = models.CharField()
-    # TODO - uncomment when Staff model is added
-    # ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
+    ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
     parent_order = models.ForeignKey("LabOrder", on_delete=models.DO_NOTHING, null=True)
     healthgorilla_id = models.CharField()
     manual_processing_status = models.CharField(choices=ManualProcessingStatus)
