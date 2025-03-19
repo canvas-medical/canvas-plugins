@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -80,11 +80,12 @@ class Patient(models.Model):
     birth_order = models.BigIntegerField()
     default_location_id = models.BigIntegerField()
     default_provider_id = models.BigIntegerField()
+    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
     settings: "RelatedManager[PatientSetting]"
 
     @classmethod
-    def find(cls, id: str) -> Self:
+    def find(cls, id: str) -> "Patient":
         """Find a patient by id."""
         return cls._default_manager.get(id=id)
 
