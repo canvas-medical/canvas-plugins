@@ -46,10 +46,9 @@ class Staff(models.Model):
     cultural_ethnicity_terms = ArrayField(models.CharField())
     last_known_timezone = TimeZoneField(null=True)
     active = models.BooleanField()
-    # TODO - uncomment when PracticeLocation field is developed
-    # primary_practice_location = models.ForeignKey(
-    #     'v1.PracticeLocation', on_delete=models.DO_NOTHING, null=True
-    # )
+    primary_practice_location = models.ForeignKey(
+        "v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True
+    )
     npi_number = models.CharField()
     nadean_number = models.CharField()
     group_npi_number = models.CharField()
