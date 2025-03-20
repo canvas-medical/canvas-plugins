@@ -8,5 +8,5 @@ class PerformCommand(BaseCommand):
         key = "perform"
         commit_required_fields = ("cpt_code",)
 
-    cpt_code: str
+    cpt_code: str | None = None
     notes: str | None = None
