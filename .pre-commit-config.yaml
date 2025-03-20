@@ -3,7 +3,8 @@ default_language_version:
 exclude: |
   (?x)(
     CHANGELOG.md|
-    canvas_sdk/value_set/v2022/
+    canvas_sdk/value_set/v2022/|
+    test-plugins/
   )
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
