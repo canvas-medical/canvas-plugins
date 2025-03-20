@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v0.28.0 (2025-03-20)
+
+### Bug Fixes
+
+- Allow originating perform without data
+  ([#492](https://github.com/canvas-medical/canvas-plugins/pull/492),
+  [`ea72158`](https://github.com/canvas-medical/canvas-plugins/commit/ea7215812ed0913d46c3ee7161b0facf8f0c3d24))
+
+- Improve validation rules for new url_permissions format
+  ([#448](https://github.com/canvas-medical/canvas-plugins/pull/448),
+  [`d0e122a`](https://github.com/canvas-medical/canvas-plugins/commit/d0e122a996cfa377e061fd1a4dc957499ca4f00d))
+
+### Features
+
+- Add banner alerts to data module
+  ([#485](https://github.com/canvas-medical/canvas-plugins/pull/485),
+  [`fba170a`](https://github.com/canvas-medical/canvas-plugins/commit/fba170a8ee397ff70ba1ac1d9a84d087728b8f32))
+
+- Add priority to action buttons ([#478](https://github.com/canvas-medical/canvas-plugins/pull/478),
+  [`01ff1d0`](https://github.com/canvas-medical/canvas-plugins/commit/01ff1d02a09f9c03b33c8a618b971fe9f682c2d1))
+
+- Uncomment ordering_provider ([#473](https://github.com/canvas-medical/canvas-plugins/pull/473),
+  [`a59456d`](https://github.com/canvas-medical/canvas-plugins/commit/a59456db685eb191751fe6009a9b40adff919a65))
+
+Signed-off-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.27.0 (2025-03-10)
 
 ### Features
