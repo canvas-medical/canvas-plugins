@@ -9,7 +9,9 @@ def test_http_get(mock_get: MagicMock) -> None:
     http = Http()
     http.get("https://www.canvasmedical.com/", headers={"Authorization": "Bearer as;ldkfjdkj"})
     mock_get.assert_called_once_with(
-        "https://www.canvasmedical.com/", headers={"Authorization": "Bearer as;ldkfjdkj"}
+        "https://www.canvasmedical.com/",
+        headers={"Authorization": "Bearer as;ldkfjdkj"},
+        timeout=30,
     )
 
 
@@ -28,6 +30,7 @@ def test_http_post(mock_post: MagicMock) -> None:
         json={"hey": "hi"},
         data="grant-type=client_credentials",
         headers={"Content-type": "application/json"},
+        timeout=30,
     )
 
 
@@ -46,6 +49,7 @@ def test_http_put(mock_put: MagicMock) -> None:
         json={"hey": "hi"},
         data="grant-type=client_credentials",
         headers={"Content-type": "application/json"},
+        timeout=30,
     )
 
 
@@ -64,4 +68,5 @@ def test_http_patch(mock_patch: MagicMock) -> None:
         json={"hey": "hi"},
         data="grant-type=client_credentials",
         headers={"Content-type": "application/json"},
+        timeout=30,
     )
