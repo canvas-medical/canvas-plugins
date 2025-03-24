@@ -48,6 +48,7 @@ class ActionButton(BaseHandler):
     BUTTON_TITLE: str = ""
     BUTTON_KEY: str = ""
     BUTTON_LOCATION: ButtonLocation
+    PRIORITY: int = 0
 
     @abstractmethod
     def handle(self) -> list[Effect]:
@@ -68,7 +69,11 @@ class ActionButton(BaseHandler):
         if show_button_event_match:
             location = show_button_event_match.group(1)
             if self.ButtonLocation[location] == self.BUTTON_LOCATION and self.visible():
-                return [ShowButtonEffect(key=self.BUTTON_KEY, title=self.BUTTON_TITLE).apply()]
+                return [
+                    ShowButtonEffect(
+                        key=self.BUTTON_KEY, title=self.BUTTON_TITLE, priority=self.PRIORITY
+                    ).apply()
+                ]
         elif self.context["key"] == self.BUTTON_KEY:
             return self.handle()
 
