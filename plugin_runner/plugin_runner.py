@@ -153,8 +153,8 @@ class PluginRunner(PluginRunnerServicer):
             # filter only for the plugin(s) that were created/updated
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
         elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
-            # The target plugin's name will be part of the URL path, so other plugins that respond
-            # to SimpleAPI request events are not relevant
+            # The target plugin's name will be part of the home-app URL path, so other plugins that
+            # respond to SimpleAPI request events are not relevant
             plugin_name = event.context["plugin_name"]
             relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
