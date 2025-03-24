@@ -3,7 +3,7 @@ import re
 import traceback
 from abc import ABC
 from base64 import b64decode
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
 from re import Pattern
@@ -11,7 +11,7 @@ from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qsl
 
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.simple_api import JSONResponse, Response
+from canvas_sdk.effects.simple_api import JSON, JSONResponse, Response
 from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from logger import log
@@ -20,8 +20,6 @@ from plugin_runner.exceptions import PluginError
 from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
-
-JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
 
 class FormPart(Protocol):
