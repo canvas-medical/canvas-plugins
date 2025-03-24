@@ -438,6 +438,112 @@ def test_request_routing_api(
     assert body["method"] == method
 
 
+@pytest.mark.parametrize(
+    argnames="prefix_pattern,path_pattern,body_func,path,expected_body",
+    argvalues=[
+        (
+            "/prefix",
+            "/path/<param>",
+            lambda params: {"param": params["param"]},
+            "/prefix/path/value",
+            {"param": "value"},
+        ),
+        (
+            "/prefix",
+            "/path1/<param1>/path2/<param2>",
+            lambda params: {"param1": params["param1"], "param2": params["param2"]},
+            "/prefix/path1/value1/path2/value2",
+            {"param1": "value1", "param2": "value2"},
+        ),
+        (
+            "/prefix/<param>",
+            "/path",
+            lambda params: {"param": params["param"]},
+            "/prefix/value/path",
+            {"param": "value"},
+        ),
+        (
+            "/<param1>/prefix/<param2>",
+            "/path",
+            lambda params: {"param1": params["param1"], "param2": params["param2"]},
+            "/value1/prefix/value2/path",
+            {"param1": "value1", "param2": "value2"},
+        ),
+        (
+            "/prefix/<param1>",
+            "/path/<param2>",
+            lambda params: {"param1": params["param1"], "param2": params["param2"]},
+            "/prefix/value1/path/value2",
+            {"param1": "value1", "param2": "value2"},
+        ),
+    ],
+    ids=[
+        "single parameter in path",
+        "multiple parameters in path",
+        "single parameter in prefix",
+        "multiple parameters in prefix",
+        "parameters in path and prefix",
+    ],
+)
+def test_request_routing_path_pattern(
+    prefix_pattern: str,
+    path_pattern: str,
+    body_func: Callable[[Mapping[str, str]], Mapping[str, str]],
+    path: str,
+    expected_body: Mapping[str, str],
+) -> None:
+    """Test Request routing for routes that use path patterns."""
+
+    class API(APINoAuth):
+        PREFIX = prefix_pattern
+
+        @api.get(path_pattern)
+        def route(self) -> list[Response | Effect]:
+            return [JSONResponse(body_func(self.request.path_params))]
+
+    effects = handle_request(API, "GET", path=path)
+    body = json_response_body(effects)
+
+    assert body == expected_body
+
+
+@pytest.mark.parametrize(
+    argnames="path_pattern1,path_pattern2,path,expected_body",
+    argvalues=[
+        ("/path/<value>", "/path/test", "/prefix/path/value", {"handler_method": "first"}),
+        ("/path/<value>", "/path/test", "/prefix/path/test", {"handler_method": "first"}),
+        ("/path/test", "/path/<value>", "/prefix/path/test", {"handler_method": "first"}),
+        ("/path/test", "/path/<value>", "/prefix/path/value", {"handler_method": "second"}),
+    ],
+    ids=[
+        "pattern registered first, path matches only pattern",
+        "pattern registered first, path matches both pattern and fixed",
+        "fixed registered first, path matches both pattern and fixed",
+        "fixed registered first, path matches only pattern",
+    ],
+)
+def test_request_routing_path_pattern_multiple_matches(
+    path_pattern1: str, path_pattern2: str, path: str, expected_body: Mapping[str, str]
+) -> None:
+    """Test request routing for path patterns where a path matches multiple routes in a handler."""
+
+    class API(APINoAuth):
+        PREFIX = "/prefix"
+
+        @api.get(path_pattern1)
+        def route1(self) -> list[Response | Effect]:
+            return [JSONResponse({"handler_method": "first"})]
+
+        @api.get(path_pattern2)
+        def route2(self) -> list[Response | Effect]:
+            return [JSONResponse({"handler_method": "second"})]
+
+    effects = handle_request(API, "GET", path=path)
+    body = json_response_body(effects)
+
+    assert body == expected_body
+
+
 def test_request_lifecycle() -> None:
     """Test the request-response lifecycle."""
 
@@ -700,6 +806,17 @@ def test_invalid_path_error() -> None:
         class API(APINoAuth):
             @api.get("route")
             def route(self) -> list[Response | Effect]:
+                return []
+
+
+def test_invalid_path_pattern_error() -> None:
+    """Test the enforcement of the error that occurs when a route has an invalid path pattern."""
+    with pytest.raises(PluginError):
+
+        class Route(RouteNoAuth):
+            PATH = "/path1/<value>/<path2>/<value>"
+
+            def get(self) -> list[Response | Effect]:
                 return []
 
 

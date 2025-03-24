@@ -3,7 +3,7 @@ import re
 import traceback
 from abc import ABC
 from base64 import b64decode
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from functools import cached_property
 from http import HTTPStatus
 from re import Pattern
@@ -21,7 +21,7 @@ from .exceptions import AuthenticationError, InvalidCredentialsError
 from .security import Credentials
 from .tools import CaseInsensitiveMultiDict, MultiDict, separate_headers
 
-JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
+JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
 
 class FormPart(Protocol):
