@@ -1,3 +1,5 @@
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
 
@@ -8,5 +10,5 @@ class PerformCommand(BaseCommand):
         key = "perform"
         commit_required_fields = ("cpt_code",)
 
-    cpt_code: str | None = None
+    cpt_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "perform"})
     notes: str | None = None

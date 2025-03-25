@@ -3,6 +3,7 @@ from collections.abc import Generator
 from contextlib import chdir
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 from typing import Any
 
 import pytest
@@ -14,27 +15,8 @@ from typer.testing import CliRunner
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
-from canvas_sdk.commands.tests.test_utils import MaskedValue, wait_for_log
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
-
-runner = CliRunner()
-
-
-@pytest.fixture(scope="session")
-def token() -> MaskedValue:
-    """Get a valid token."""
-    response = requests.post(
-        f"{settings.INTEGRATION_TEST_URL}/auth/token/",
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={
-            "grant_type": "client_credentials",
-            "client_id": settings.INTEGRATION_TEST_CLIENT_ID,
-            "client_secret": settings.INTEGRATION_TEST_CLIENT_SECRET,
-        },
-    )
-    response.raise_for_status()
-
-    return MaskedValue(response.json()["access_token"])
+from canvas_sdk.tests.utils import MaskedValue
 
 
 @pytest.fixture(scope="session")
@@ -59,7 +41,7 @@ def plugin_name() -> str:
 
 @pytest.fixture(scope="session")
 def write_and_install_protocol_and_clean_up(
-    first_patient_id: str, plugin_name: str, token: MaskedValue
+    cli_runner: CliRunner, first_patient_id: str, plugin_name: str, token: MaskedValue
 ) -> Generator[Any, Any, Any]:
     """Write the protocol code, install the plugin, and clean up after the test."""
     if not settings.INTEGRATION_TEST_URL:
@@ -67,7 +49,7 @@ def write_and_install_protocol_and_clean_up(
 
     # write the protocol
     with chdir(Path("./custom-plugins")):
-        runner.invoke(app, "init", input=plugin_name)
+        cli_runner.invoke(app, "init", input=plugin_name)
 
     protocol_code = f"""
 from canvas_sdk.effects.banner_alert import AddBannerAlert
@@ -92,12 +74,6 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
-        message_received_event, thread, ws = wait_for_log(
-            settings.INTEGRATION_TEST_URL,
-            token.value,
-            f"Loading plugin '{plugin_name}",
-        )
-
         # install the plugin
         response = requests.post(
             plugin_url(settings.INTEGRATION_TEST_URL),
@@ -107,20 +83,8 @@ class Protocol(BaseProtocol):
         )
         response.raise_for_status()
 
-        message_received_event.wait(timeout=15.0)
-
-        # unfortunately sometimes the log websocket just doesn't return any
-        # messages, so asserting on the state of the timeout here causes failures
-        # even though the delay itself will cause the waiting test to pass (because
-        # the plugin has been loaded).
-        # timeout_not_hit = message_received_event.wait(timeout=15.0)
-        # if not timeout_not_hit:
-        #     ws.close()
-        # assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
+    sleep(5)
     yield
-
-    ws.close()
-    thread.join()
 
     # clean up
     if Path(f"./custom-plugins/{plugin_name}").exists():
