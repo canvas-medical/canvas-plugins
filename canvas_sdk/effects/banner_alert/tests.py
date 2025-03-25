@@ -3,6 +3,7 @@ from collections.abc import Generator
 from contextlib import chdir
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 from typing import Any
 
 import pytest
@@ -14,7 +15,7 @@ from typer.testing import CliRunner
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
-from canvas_sdk.commands.tests.test_utils import MaskedValue, wait_for_log
+from canvas_sdk.commands.tests.test_utils import MaskedValue
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
 
 runner = CliRunner()
@@ -92,11 +93,11 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
-        message_received_event, thread, ws = wait_for_log(
-            settings.INTEGRATION_TEST_URL,
-            token.value,
-            f"Loading plugin '{plugin_name}",
-        )
+        # message_received_event, thread, ws = wait_for_log(
+        #     settings.INTEGRATION_TEST_URL,
+        #     token.value,
+        #     f"Loading plugin '{plugin_name}",
+        # )
 
         # install the plugin
         response = requests.post(
@@ -107,7 +108,8 @@ class Protocol(BaseProtocol):
         )
         response.raise_for_status()
 
-        message_received_event.wait(timeout=15.0)
+        sleep(15)
+        # message_received_event.wait(timeout=15.0)
 
         # unfortunately sometimes the log websocket just doesn't return any
         # messages, so asserting on the state of the timeout here causes failures
@@ -119,8 +121,8 @@ class Protocol(BaseProtocol):
         # assert timeout_not_hit, f"plugin loading message timeout hit: Loading plugin '{plugin_name}"
     yield
 
-    ws.close()
-    thread.join()
+    # ws.close()
+    # thread.join()
 
     # clean up
     if Path(f"./custom-plugins/{plugin_name}").exists():
