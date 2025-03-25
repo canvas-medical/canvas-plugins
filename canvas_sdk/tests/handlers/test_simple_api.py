@@ -37,6 +37,9 @@ from canvas_sdk.handlers.simple_api.security import (
     BasicCredentials,
     BearerCredentials,
     Credentials,
+    PatientSessionAuthMixin,
+    SessionCredentials,
+    StaffSessionAuthMixin,
 )
 from canvas_sdk.handlers.simple_api.tools import (
     CaseInsensitiveMultiDict,
@@ -890,6 +893,13 @@ def custom_headers(api_key: str, app_key: str) -> dict[str, str]:
     return {"API-Key": api_key, "App-Key": app_key}
 
 
+def session_headers(id: str, type: str) -> dict[str, str]:
+    """
+    Given an id and a type, return headers that include the expected session based auth headers.
+    """
+    return {"x-canvas-logged-in-user-type": type, "x-canvas-logged-in-user-id": id}
+
+
 USERNAME = uuid4().hex
 PASSWORD = uuid4().hex
 TOKEN = uuid4().hex
@@ -916,13 +926,18 @@ APP_KEY = uuid4().hex
             api_key_headers(API_KEY),
         ),
         (
+            SessionCredentials,
+            lambda _, credentials: credentials.logged_in_user["type"] == "Staff",
+            session_headers("abc123", "Staff"),
+        ),
+        (
             Credentials,
             lambda request, _: request.headers.get("API-Key") == API_KEY
             and request.headers.get("App-Key") == APP_KEY,
             custom_headers(API_KEY, APP_KEY),
         ),
     ],
-    ids=["basic", "bearer", "API key", "custom"],
+    ids=["basic", "bearer", "API key", "custom", "session"],
 )
 def authenticated_route(request: SubRequest) -> SimpleNamespace:
     """
@@ -998,8 +1013,9 @@ def test_authentication_failure(
         (BearerCredentials, bearer_headers(TOKEN)),
         (APIKeyCredentials, api_key_headers(API_KEY)),
         (Credentials, custom_headers(API_KEY, APP_KEY)),
+        (SessionCredentials, session_headers("abc123", "Patient")),
     ],
-    ids=["basic", "bearer", "API key", "custom"],
+    ids=["basic", "bearer", "API key", "custom", "session"],
 )
 def test_authentication_exception(
     credentials_cls: type[Credentials], headers: Mapping[str, str]
@@ -1079,6 +1095,40 @@ def test_authentication_exception(
                 ).apply()
             ],
         ),
+        (
+            StaffSessionAuthMixin,
+            {},
+            session_headers("abc123", "Staff"),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            StaffSessionAuthMixin,
+            {},
+            session_headers("abc123", "Patient"),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
+        (
+            PatientSessionAuthMixin,
+            {},
+            session_headers("abc123", "Patient"),
+            [Effect(type=EffectType.CREATE_TASK, payload="create task")],
+        ),
+        (
+            PatientSessionAuthMixin,
+            {},
+            session_headers("abc123", "Staff"),
+            [
+                JSONResponse(
+                    content={"error": "Provided credentials are invalid"},
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                ).apply()
+            ],
+        ),
     ],
     ids=[
         "basic valid",
@@ -1087,6 +1137,10 @@ def test_authentication_exception(
         "API key valid",
         "API key invalid",
         "API key missing secret",
+        "Staff session valid",
+        "Staff session invalid",
+        "Patient session valid",
+        "Patient session invalid",
     ],
 )
 def test_authentication_mixins(
