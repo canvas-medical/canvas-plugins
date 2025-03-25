@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [ 3.11, 3.12 ]
+        version: [3.11, 3.12 ]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/install-python-and-uv
@@ -29,14 +29,14 @@ jobs:
         run: uv run pytest -m "not integtest" --ff --verbosity 2
 
       # Run Pytest integration tests via uv.
-      - name: Run Pytest integration tests
-        if: matrix.version == '3.12'
-        env:
-          CUSTOMER_IDENTIFIER: "ci-integration-tests"
-          INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
-          INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
-          INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: uv run pytest -m "integtest" --ff --verbosity 2
+#      - name: Run Pytest integration tests
+#        if: matrix.version == '3.12'
+#        env:
+#          CUSTOMER_IDENTIFIER: "ci-integration-tests"
+#          INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
+#          INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
+#          INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
+#        run: uv run pytest -m "integtest" --ff --verbosity 2
 
       - name: Install pipx
         run: pip install pipx
@@ -51,3 +51,25 @@ jobs:
           canvas --version
           rm -rf dist/
         shell: bash
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Integration Tests
+        uses: canvas-medical/return-dispatch@v2
+        id: dispatch
+        with:
+          token: ${{ secrets.GH_PAT }}
+          ref: refs/heads/chore/koala-2646-integration-tests-plugins
+          repo: canvas
+          owner: canvas-medical
+          workflow: test-canvas-plugins.yml
+          workflow_inputs: '{ "commit-sha": "${{ github.sha }}" }'
+      - name: Wait for Integration Tests to complete
+        uses: canvas-medical/await-remote-run@main
+        with:
+          token: ${{ secrets.GH_PAT }}
+          repo: canvas
+          owner: canvas-medical
+          run_id: ${{ steps.dispatch.outputs.run_id }}
+          run_timeout_seconds: 600
+          poll_interval_ms: 60000

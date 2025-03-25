@@ -1,5 +1,5 @@
-from datetime import datetime
-from enum import Enum
+from datetime import date, datetime
+from enum import StrEnum
 
 from canvas_sdk.commands.base import _BaseCommand
 
@@ -11,12 +11,12 @@ class GoalCommand(_BaseCommand):
         key = "goal"
         commit_required_fields = ("goal_statement", "start_date")
 
-    class Priority(Enum):
+    class Priority(StrEnum):
         HIGH = "high-priority"
         MEDIUM = "medium-priority"
         LOW = "low-priority"
 
-    class AchievementStatus(Enum):
+    class AchievementStatus(StrEnum):
         IN_PROGRESS = "in-progress"
         IMPROVING = "improving"
         WORSENING = "worsening"
@@ -28,8 +28,8 @@ class GoalCommand(_BaseCommand):
         NOT_ATTAINABLE = "not-attainable"
 
     goal_statement: str = ""
-    start_date: datetime = datetime.now()
-    due_date: datetime | None = None
+    start_date: date = datetime.now().date()
+    due_date: date | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
     progress: str | None = None

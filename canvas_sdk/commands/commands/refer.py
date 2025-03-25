@@ -1,5 +1,7 @@
 from enum import Enum
 
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.constants import ServiceProvider
 
@@ -30,8 +32,12 @@ class ReferCommand(BaseCommand):
         ROUTINE = "Routine"
         URGENT = "Urgent"
 
-    service_provider: ServiceProvider | None = None
-    diagnosis_codes: list[str] = []
+    service_provider: ServiceProvider | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "refer_to"}
+    )
+    diagnosis_codes: list[str] = Field(
+        default=[], json_schema_extra={"commands_api_name": "indications"}
+    )
     clinical_question: ClinicalQuestion | None = None
     priority: Priority | None = None
     notes_to_specialist: str | None = None
@@ -44,8 +50,8 @@ class ReferCommand(BaseCommand):
         """The Refer command's field values."""
         values = super().values
 
-        if self.is_dirty("service_provider"):
-            values["service_provider"] = self.service_provider.__dict__
+        if self.service_provider and self.is_dirty("service_provider"):
+            values["service_provider"] = self.service_provider.model_dump()
 
         return values
 

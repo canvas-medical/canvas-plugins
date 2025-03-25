@@ -59,10 +59,10 @@ repos:
     rev: v5.0.0
     hooks:
       - id: name-tests-test
-        args: ["--django"]
+        args: ["--pytest-test-first"]
         exclude: |
           (?x)(
-            tests/(factories|fixtures|utils)|
+            tests/(.*/)?(factories|fixtures|utils)|
             tests/.*/utils/.*\.py|
             tests/.*/snapshots/.*\.py|
             tests/.*/_.*\.py
