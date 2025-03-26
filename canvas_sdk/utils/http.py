@@ -97,6 +97,18 @@ class Http:
 
     _MAX_REQUEST_TIMEOUT_SECONDS = 30
 
+    base_url: str
+    session: requests.Session
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """
+        Prevent base_url or session from being updated after initialization.
+        """
+        if name in ("base_url", "session"):
+            raise AttributeError(f"{name} is read-only")
+
+        super().__setattr__(name, value)
+
     def join_url(self, url: str) -> str:
         """
         Join a URL to the base_url.
@@ -109,8 +121,9 @@ class Http:
         return joined
 
     def __init__(self, base_url: str = "") -> None:
-        self.base_url = base_url
-        self.session = requests.Session()
+        super().__setattr__("base_url", base_url)
+        super().__setattr__("session", requests.Session())
+
         self.statsd_client = statsd.StatsClient()
 
     @staticmethod
