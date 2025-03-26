@@ -6,7 +6,6 @@ from base64 import b64decode
 from collections.abc import Callable
 from functools import cached_property
 from http import HTTPStatus
-from re import Pattern
 from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qsl
 
@@ -156,7 +155,7 @@ def parse_multipart_form(form: bytes, boundary: str) -> MultiDict[str, FormPart]
 class Request:
     """Request class for incoming requests to the API."""
 
-    def __init__(self, event: Event, path_pattern: Pattern) -> None:
+    def __init__(self, event: Event, path_pattern: re.Pattern) -> None:
         self.method = event.context["method"]
         self.path = event.context["path"]
         self.query_string = event.context["query_string"]
@@ -263,7 +262,7 @@ class SimpleAPIBase(BaseHandler, ABC):
         EventType.Name(EventType.SIMPLE_API_REQUEST),
     ]
 
-    _ROUTES: ClassVar[dict[str, list[tuple[Pattern, RouteHandler]]]]
+    _ROUTES: ClassVar[dict[str, list[tuple[re.Pattern, RouteHandler]]]]
     _PATH_PARAM_REGEX = re.compile("<([a-zA-Z_][a-zA-Z0-9_]*)>")
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -309,7 +308,7 @@ class SimpleAPIBase(BaseHandler, ABC):
     @cached_property
     def request(self) -> Request:
         """Return the request object from the event."""
-        return Request(self.event, cast(Pattern, self._path_pattern))
+        return Request(self.event, cast(re.Pattern, self._path_pattern))
 
     def compute(self) -> list[Effect]:
         """Handle the authenticate or request event."""
