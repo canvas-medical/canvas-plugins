@@ -168,7 +168,10 @@ class PluginRunner(PluginRunnerServicer):
             base_plugin_name = plugin_name.split(":")[0]
 
             secrets = plugin.get("secrets", {})
-            secrets["graphql_jwt"] = token_for_plugin(plugin_name=plugin_name, audience="home")
+
+            secrets.update(
+                {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
+            )
 
             try:
                 handler = handler_class(event, secrets)
