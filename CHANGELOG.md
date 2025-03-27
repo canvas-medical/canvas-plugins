@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.29.0 (2025-03-27)
+
+### Features
+
+- Add events and effect to configure patient portal join and book buttons
+  ([#487](https://github.com/canvas-medical/canvas-plugins/pull/487),
+  [`fcf397d`](https://github.com/canvas-medical/canvas-plugins/commit/fcf397ddbd24a22f7573a7d51e1674da7f83d32d))
+
+- Add service secrets to the plugin runner
+  ([#480](https://github.com/canvas-medical/canvas-plugins/pull/480),
+  [`d9483ef`](https://github.com/canvas-medical/canvas-plugins/commit/d9483ef2f6f69b08257dfbd20e23481afeb8882d))
+
+- Match SimpleAPI URLs with path patterns
+  ([#457](https://github.com/canvas-medical/canvas-plugins/pull/457),
+  [`6e118eb`](https://github.com/canvas-medical/canvas-plugins/commit/6e118ebd27895b4203b77316a1705400b1990bce))
+
+
 ## v0.28.0 (2025-03-20)
 
 ### Bug Fixes
