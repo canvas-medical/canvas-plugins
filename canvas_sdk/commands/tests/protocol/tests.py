@@ -1,10 +1,9 @@
 from collections.abc import Generator
 from datetime import datetime
-from typing import cast
+from time import sleep
 
 import pytest
 
-import settings
 from canvas_sdk.commands.tests.test_utils import (
     COMMANDS,
     MaskedValue,
@@ -14,7 +13,6 @@ from canvas_sdk.commands.tests.test_utils import (
     get_token,
     install_plugin,
     trigger_plugin_event,
-    wait_for_log,
     write_protocol_code,
 )
 
@@ -43,13 +41,14 @@ def write_and_install_protocol_and_clean_up(
 ) -> Generator[None, None, None]:
     """Write the protocol code, install the plugin, and clean up after the test."""
     write_protocol_code(new_note["externallyExposableId"], plugin_name, COMMANDS)
-    message_received_event, thread, ws = wait_for_log(
-        cast(str, settings.INTEGRATION_TEST_URL),
-        token.value,
-        f"Loading plugin '{plugin_name}",
-    )
+    # message_received_event, thread, ws = wait_for_log(
+    #     cast(str, settings.INTEGRATION_TEST_URL),
+    #     token.value,
+    #     f"Loading plugin '{plugin_name}",
+    # )
     install_plugin(plugin_name, token)
-    message_received_event.wait(timeout=15.0)
+    sleep(15)
+    # message_received_event.wait(timeout=15.0)
 
     # unfortunately sometimes the log websocket just doesn't return any
     # messages, so asserting on the state of the timeout here causes failures
@@ -62,8 +61,8 @@ def write_and_install_protocol_and_clean_up(
 
     yield
 
-    ws.close()
-    thread.join()
+    # ws.close()
+    # thread.join()
     clean_up_files_and_plugins(plugin_name, token)
 
 
