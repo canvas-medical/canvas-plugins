@@ -1,13 +1,13 @@
 import json
 from base64 import b64encode
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect, _BaseEffect
 
-JSON = dict[str, "JSON"] | list["JSON"] | int | float | str | bool | None
+JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
 
 class Response(_BaseEffect):
