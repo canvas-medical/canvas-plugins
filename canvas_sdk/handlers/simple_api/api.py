@@ -275,7 +275,7 @@ class SimpleAPIBase(BaseHandler, ABC):
         for attr in cls.__dict__.values():
             if callable(attr) and (route := getattr(attr, "route", None)):
                 method, relative_path = route
-                path = f"{cls._path_prefix()}{relative_path}"
+                path = f"^{cls._path_prefix()}{relative_path}$"
 
                 # Convert the path to a regular expression pattern so that any path parameters can
                 # be extracted later
@@ -296,7 +296,10 @@ class SimpleAPIBase(BaseHandler, ABC):
         self._path_pattern = None
         self._handler = None
         for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
-            if path_pattern.match(self.event.context["path"]):
+            request_path = self.event.context["path"]
+            if "?" in request_path:
+                request_path = request_path.split("?")[0]
+            if path_pattern.match(request_path):
                 self._path_pattern = path_pattern
                 self._handler = handler
                 break
