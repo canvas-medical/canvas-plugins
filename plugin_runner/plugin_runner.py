@@ -555,7 +555,10 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
     log.info(f"Starting server, listening on port {port}")
 
-    install_plugins()
+    # Only install plugins if the plugin runner was not started from the CLI
+    if specified_plugin_paths is None:
+        install_plugins()
+
     load_plugins(specified_plugin_paths)
 
     await server.start()
@@ -577,12 +580,13 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-        loop.run_until_complete(
-            asyncio.gather(
-                serve(specified_plugin_paths),
-                synchronize_plugins_and_report_errors(),
-            )
-        )
+        coros = [serve(specified_plugin_paths)]
+
+        # Only start the synchronizer if the plugin runner was not started from the CLI
+        if specified_plugin_paths is None:
+            coros.append(synchronize_plugins_and_report_errors())
+
+        loop.run_until_complete(asyncio.gather(*coros))
     except KeyboardInterrupt:
         pass
     finally:

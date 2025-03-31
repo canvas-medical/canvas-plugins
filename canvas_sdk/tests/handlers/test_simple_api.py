@@ -514,12 +514,19 @@ def test_request_routing_path_pattern(
         ("/path/<value>", "/path/test", "/prefix/path/test", {"handler_method": "first"}),
         ("/path/test", "/path/<value>", "/prefix/path/test", {"handler_method": "first"}),
         ("/path/test", "/path/<value>", "/prefix/path/value", {"handler_method": "second"}),
+        (
+            "/path/<value>",
+            "/path/<value>/test",
+            "/prefix/path/value/test",
+            {"handler_method": "second"},
+        ),
     ],
     ids=[
         "pattern registered first, path matches only pattern",
         "pattern registered first, path matches both pattern and fixed",
         "fixed registered first, path matches both pattern and fixed",
         "fixed registered first, path matches only pattern",
+        "two patterns share the same first two segments and then diverge",
     ],
 )
 def test_request_routing_path_pattern_multiple_matches(

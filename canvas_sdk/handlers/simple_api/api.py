@@ -162,7 +162,7 @@ class Request:
         self._body = event.context["body"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
 
-        match = path_pattern.match(event.context["path"])
+        match = path_pattern.fullmatch(event.context["path"])
         self.path_params = match.groupdict() if match else {}
 
         self.query_params = MultiDict(parse_qsl(self.query_string))
@@ -296,7 +296,7 @@ class SimpleAPIBase(BaseHandler, ABC):
         self._path_pattern = None
         self._handler = None
         for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
-            if path_pattern.match(self.event.context["path"]):
+            if path_pattern.fullmatch(self.event.context["path"]):
                 self._path_pattern = path_pattern
                 self._handler = handler
                 break
