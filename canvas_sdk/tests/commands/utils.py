@@ -159,8 +159,6 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
     with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
-    print(protocol_code)
-
     protocols = []
 
     for command in commands:
