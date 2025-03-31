@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.29.1 (2025-03-31)
+
+### Bug Fixes
+
+- Make path matching regex compatible with root paths ('/')
+  ([#505](https://github.com/canvas-medical/canvas-plugins/pull/505),
+  [`1719cca`](https://github.com/canvas-medical/canvas-plugins/commit/1719cca3ad18917267fb7692826febb3758a323c))
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
 ## v0.29.0 (2025-03-27)
 
 ### Features
