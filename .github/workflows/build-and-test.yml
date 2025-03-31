@@ -28,16 +28,6 @@ jobs:
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
         run: uv run pytest -m "not integtest" --ff --verbosity 2
 
-      # Run Pytest integration tests via uv.
-#      - name: Run Pytest integration tests
-#        if: matrix.version == '3.12'
-#        env:
-#          CUSTOMER_IDENTIFIER: "ci-integration-tests"
-#          INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
-#          INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
-#          INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-#        run: uv run pytest -m "integtest" --ff --verbosity 2
-
       - name: Install pipx
         run: pip install pipx
         shell: bash
@@ -71,5 +61,5 @@ jobs:
           repo: canvas
           owner: canvas-medical
           run_id: ${{ steps.dispatch.outputs.run_id }}
-          run_timeout_seconds: 600
-          poll_interval_ms: 60000
+          run_timeout_seconds: 900
+          poll_interval_ms: 30000
