@@ -296,10 +296,7 @@ class SimpleAPIBase(BaseHandler, ABC):
         self._path_pattern = None
         self._handler = None
         for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
-            request_path = self.event.context["path"]
-            if "?" in request_path:
-                request_path = request_path.split("?")[0]
-            if path_pattern.fullmatch(request_path):
+            if path_pattern.fullmatch(self.event.context["path"]):
                 self._path_pattern = path_pattern
                 self._handler = handler
                 break
