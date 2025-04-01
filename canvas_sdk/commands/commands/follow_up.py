@@ -15,7 +15,6 @@ class FollowUpCommand(_BaseCommand):
 
     class Meta:
         key = "followUp"
-        commit_required_fields = ("requested_date", "note_type_id")
 
     structured: bool = False
     requested_date: date | None = None
