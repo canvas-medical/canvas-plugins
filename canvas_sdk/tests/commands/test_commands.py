@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from canvas_sdk.commands import AllergyCommand, GoalCommand
+from canvas_sdk.commands import AllergyCommand, AssessCommand, GoalCommand
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.tests.commands.utils import (
@@ -27,6 +27,7 @@ from canvas_sdk.tests.utils import (
     create_note,
     install_plugin,
 )
+from canvas_sdk.v1.data import Condition
 
 
 def allergy() -> dict[str, Any]:
@@ -36,6 +37,16 @@ def allergy() -> dict[str, Any]:
         "severity": AllergyCommand.Severity.MILD,
         "narrative": "Test",
         "approximate_date": date(2023, 1, 1),
+    }
+
+
+def assess() -> dict[str, Any]:
+    """Assess Command for testing."""
+    return {
+        "condition_id": Condition.objects.active().filter(patient_id=1).first().id,  # type: ignore
+        "background": "Severe pain",
+        "status": AssessCommand.Status.STABLE,
+        "narrative": "The patient has improved.",
     }
 
 
