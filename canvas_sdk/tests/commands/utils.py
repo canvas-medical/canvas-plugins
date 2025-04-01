@@ -105,6 +105,7 @@ def write_protocol_code(
     )
 
     imports = f"""from canvas_sdk.commands import {imports}
+from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from datetime import datetime, date
 from canvas_sdk.protocols import BaseProtocol
 """
