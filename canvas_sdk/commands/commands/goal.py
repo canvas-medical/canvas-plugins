@@ -9,7 +9,6 @@ class GoalCommand(_BaseCommand):
 
     class Meta:
         key = "goal"
-        commit_required_fields = ("goal_statement", "start_date")
 
     class Priority(StrEnum):
         HIGH = "high-priority"

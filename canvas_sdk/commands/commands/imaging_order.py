@@ -11,11 +11,6 @@ class ImagingOrderCommand(BaseCommand):
 
     class Meta:
         key = "imagingOrder"
-        commit_required_fields = (
-            "image_code",
-            "diagnosis_codes",
-            "service_provider",
-        )
 
     class Priority(Enum):
         ROUTINE = "Routine"

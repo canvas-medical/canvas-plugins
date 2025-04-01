@@ -10,7 +10,6 @@ class VitalsCommand(BaseCommand):
 
     class Meta:
         key = "vitals"
-        commit_required_fields = ()
 
     class BodyTemperatureSite(Enum):
         AXILLARY = 0

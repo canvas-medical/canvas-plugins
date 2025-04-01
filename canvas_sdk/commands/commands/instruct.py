@@ -10,7 +10,6 @@ class InstructCommand(BaseCommand):
 
     class Meta:
         key = "instruct"
-        commit_required_fields = ("coding",)
 
     coding: Coding | None = Field(default=None, json_schema_extra={"commands_api_name": "instruct"})
     comment: str | None = None

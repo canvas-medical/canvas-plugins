@@ -26,7 +26,6 @@ class AllergyCommand(BaseCommand):
 
     class Meta:
         key = "allergy"
-        commit_required_fields = ("allergy",)
 
     class Severity(Enum):
         MILD = "mild"

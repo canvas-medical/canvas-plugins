@@ -1,4 +1,3 @@
-import json
 from collections.abc import Generator
 from datetime import date
 from time import sleep
@@ -7,19 +6,19 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from canvas_generated.messages.events_pb2 import Event
 from canvas_sdk.commands import AllergyCommand, GoalCommand
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
     CommandCode,
-    command_event_prefix,
     extract_return_statement,
     get_command,
-    get_command_fields,
     get_commands_in_note,
     originate_command,
+    trigger_commit_command,
+    trigger_edit_command,
+    trigger_originate,
     write_protocol_code,
 )
 from canvas_sdk.tests.utils import (
@@ -27,7 +26,6 @@ from canvas_sdk.tests.utils import (
     clean_up_files_and_plugins,
     create_note,
     install_plugin,
-    trigger_plugin_event,
 )
 
 
@@ -104,12 +102,6 @@ def note_for_editing_commands(token: MaskedValue) -> dict:
     return create_note(token)
 
 
-@pytest.fixture(scope="module")
-def note_for_schema(token: MaskedValue) -> dict:
-    """The note to be used for command schema tests."""
-    return create_note(token)
-
-
 @pytest.fixture
 def command_data(command_cls: type[_BaseCommand]) -> dict[str, Any]:
     """The command data to be used for command schema tests."""
@@ -118,88 +110,6 @@ def command_data(command_cls: type[_BaseCommand]) -> dict[str, Any]:
         pytest.skip(f"No command values found for '{command_cls.Meta.key}'")
 
     return get_command_data()
-
-
-def trigger_originate(
-    token: MaskedValue,
-    command_cls: type[_BaseCommand],
-    note_uuid: str,
-    empty: bool = False,
-) -> None:
-    """Trigger the plugin event."""
-    event = Event(
-        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
-        context=json.dumps({"note": {"uuid": note_uuid}, "ci_originate": {"empty": empty}}),
-    )
-    trigger_plugin_event(event, token)
-
-
-def trigger_edit_command(
-    command_uuid: str,
-    command_cls: type[_BaseCommand],
-    token: MaskedValue,
-) -> None:
-    """Trigger the plugin event."""
-    event = Event(
-        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
-        target=command_uuid,
-        context=json.dumps({"ci_edit": True}),
-    )
-    trigger_plugin_event(event, token)
-
-
-def trigger_commit_command(
-    command_uuid: str,
-    command_cls: type[_BaseCommand],
-    token: MaskedValue,
-) -> None:
-    """Trigger the plugin event."""
-    event = Event(
-        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
-        target=command_uuid,
-        context=json.dumps({"ci_commit": True}),
-    )
-    trigger_plugin_event(event, token)
-
-
-@pytest.fixture
-def command_api_fields(
-    token: MaskedValue, note_for_schema: dict, command_cls: type[_BaseCommand]
-) -> list[dict[str, Any]]:
-    """Return the fields of a command."""
-    response = originate_command(
-        command_key=command_cls.Meta.key,
-        note_uuid=note_for_schema["externallyExposableId"],
-        token=token,
-    )
-
-    command_uuid = response["uuid"]
-
-    return get_command_fields(command_uuid, token)
-
-
-def test_command_has_commit_required_fields(command_cls: type[_BaseCommand]) -> None:
-    """Test that the command schema has the commit required fields."""
-    for field in getattr(command_cls.Meta, "commit_required_fields", ()):
-        assert field in command_cls.model_fields
-
-
-@pytest.mark.integtest
-def test_command_commit_required_fields_matches_command_api(
-    command_api_fields: list[dict[str, Any]], command_cls: type[_BaseCommand]
-) -> None:
-    """Test that the command schema's commit required fields match the command API."""
-    schema_fields = command_cls.command_schema()
-
-    for api_field in command_api_fields:
-        if api_field["required"]:
-            api_field_name = api_field["name"]
-            assert api_field_name in schema_fields, (
-                f"Expected field '{api_field_name}' to be present."
-            )
-            assert schema_fields[api_field_name]["required"] is True, (
-                f"Expected field '{api_field_name}' to be required."
-            )
 
 
 @pytest.mark.integtest

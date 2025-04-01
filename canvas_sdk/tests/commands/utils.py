@@ -11,10 +11,11 @@ from django.conf import settings
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
+from canvas_generated.messages.events_pb2 import Event
 from canvas_sdk import commands
 from canvas_sdk.commands import __all__ as commands_registry
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.tests.utils import MaskedValue
+from canvas_sdk.tests.utils import MaskedValue, trigger_plugin_event
 
 COMMANDS: list[type[_BaseCommand]] = [
     getattr(commands, attr_name) for attr_name in commands_registry
@@ -217,3 +218,45 @@ def extract_return_statement(func: Callable) -> str:
             return ast.unparse(node.value).strip() if node.value else ""
 
     return ""
+
+
+def trigger_originate(
+    token: MaskedValue,
+    command_cls: type[_BaseCommand],
+    note_uuid: str,
+    empty: bool = False,
+) -> None:
+    """Trigger the plugin event."""
+    event = Event(
+        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
+        context=json.dumps({"note": {"uuid": note_uuid}, "ci_originate": {"empty": empty}}),
+    )
+    trigger_plugin_event(event, token)
+
+
+def trigger_edit_command(
+    command_uuid: str,
+    command_cls: type[_BaseCommand],
+    token: MaskedValue,
+) -> None:
+    """Trigger the plugin event."""
+    event = Event(
+        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
+        target=command_uuid,
+        context=json.dumps({"ci_edit": True}),
+    )
+    trigger_plugin_event(event, token)
+
+
+def trigger_commit_command(
+    command_uuid: str,
+    command_cls: type[_BaseCommand],
+    token: MaskedValue,
+) -> None:
+    """Trigger the plugin event."""
+    event = Event(
+        type=f"{command_event_prefix(command_cls)}_COMMAND__POST_INSERTED_INTO_NOTE",
+        target=command_uuid,
+        context=json.dumps({"ci_commit": True}),
+    )
+    trigger_plugin_event(event, token)

@@ -8,7 +8,6 @@ class MedicationStatementCommand(_BaseCommand):
 
     class Meta:
         key = "medicationStatement"
-        commit_required_fields = ("fdb_code",)
 
     fdb_code: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "medication"}
