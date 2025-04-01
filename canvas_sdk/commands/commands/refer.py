@@ -11,12 +11,6 @@ class ReferCommand(BaseCommand):
 
     class Meta:
         key = "refer"
-        commit_required_fields = (
-            "service_provider",
-            "diagnosis_codes",
-            "clinical_question",
-            "notes_to_specialist",
-        )
 
     class ClinicalQuestion(Enum):
         """Clinical question choices."""

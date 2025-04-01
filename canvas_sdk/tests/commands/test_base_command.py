@@ -21,7 +21,6 @@ class DummyCommand(_BaseCommand):
 
     class Meta:
         key = "plan"
-        commit_required_fields = ("enum_field",)
 
     # Fields
     int_field: int = 0
@@ -123,9 +122,9 @@ def test_commit_successfully_returns_commit_effect(
 
 def test_commit_raises_error_when_required_fields_not_set() -> None:
     """Test that commit() raises an error when a required field is not set."""
-    cmd = DummyCommand(str_field="hello", command_uuid="command_uuid")
+    cmd = DummyCommand(str_field="hello")
 
-    with pytest.raises(ValueError, match="enum_field"):
+    with pytest.raises(ValueError, match="command_uuid"):
         cmd.commit()
 
 

@@ -28,10 +28,6 @@ class TaskCommand(BaseCommand):
 
     class Meta:
         key = "task"
-        commit_required_fields = (
-            "title",
-            "assign_to",
-        )
 
     title: str = ""
     assign_to: TaskAssigner | None = None

@@ -6,6 +6,5 @@ class PlanCommand(_BaseCommand):
 
     class Meta:
         key = "plan"
-        commit_required_fields = ("narrative",)
 
     narrative: str = ""

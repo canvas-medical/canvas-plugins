@@ -14,12 +14,6 @@ class LabOrderCommand(BaseCommand):
 
     class Meta:
         key = "labOrder"
-        commit_required_fields = (
-            "lab_partner",
-            "tests_order_codes",
-            "ordering_provider_key",
-            "diagnosis_codes",
-        )
 
     lab_partner: UUID | str | None = None
     tests_order_codes: list[str] = Field(

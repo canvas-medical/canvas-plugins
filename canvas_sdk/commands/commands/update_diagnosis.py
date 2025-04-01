@@ -8,10 +8,6 @@ class UpdateDiagnosisCommand(BaseCommand):
 
     class Meta:
         key = "updateDiagnosis"
-        commit_required_fields = (
-            "condition_code",
-            "new_condition_code",
-        )
 
     condition_code: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "condition"}

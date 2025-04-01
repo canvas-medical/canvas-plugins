@@ -8,7 +8,6 @@ class PerformCommand(BaseCommand):
 
     class Meta:
         key = "perform"
-        commit_required_fields = ("cpt_code",)
 
     cpt_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "perform"})
     notes: str | None = None
