@@ -8,8 +8,9 @@ import pytest
 from typer.testing import CliRunner
 
 from canvas_generated.messages.events_pb2 import Event
-from canvas_sdk.commands import GoalCommand
+from canvas_sdk.commands import AllergyCommand, GoalCommand
 from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
     CommandCode,
@@ -28,6 +29,16 @@ from canvas_sdk.tests.utils import (
     install_plugin,
     trigger_plugin_event,
 )
+
+
+def allergy() -> dict[str, Any]:
+    """Allergy Command for testing."""
+    return {
+        "allergy": Allergen(concept_id=900208, concept_type=AllergenType.ALLERGEN_GROUP),
+        "severity": AllergyCommand.Severity.MILD,
+        "narrative": "Test",
+        "approximate_date": date(2023, 1, 1),
+    }
 
 
 def plan() -> dict[str, Any]:
