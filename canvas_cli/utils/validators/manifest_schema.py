@@ -81,6 +81,7 @@ manifest_schema = {
                                 "SCRIPTS",
                                 "ALLOW_SAME_ORIGIN",
                                 "MICROPHONE",
+                                "CAMERA",
                             ],
                         },
                     },
