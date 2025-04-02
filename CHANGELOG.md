@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.30.0 (2025-04-02)
+
+### Features
+
+- Allow iframes to request the camera permission
+  ([#510](https://github.com/canvas-medical/canvas-plugins/pull/510),
+  [`6c05a6f`](https://github.com/canvas-medical/canvas-plugins/commit/6c05a6fb166b01e0c90b63ced1a4bd83165b9e78))
+
+
 ## v0.29.1 (2025-03-31)
 
 ### Bug Fixes
