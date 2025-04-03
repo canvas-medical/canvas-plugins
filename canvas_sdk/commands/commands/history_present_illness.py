@@ -6,6 +6,5 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
 
     class Meta:
         key = "hpi"
-        commit_required_fields = ("narrative",)
 
     narrative: str | None = None

@@ -14,9 +14,10 @@ class ResolveConditionCommand(BaseCommand):
 
     class Meta:
         key = "resolveCondition"
-        commit_required_fields = ("condition_id",)
 
-    condition_id: UUID | str | None = None
+    condition_id: UUID | str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "condition"}
+    )
     show_in_condition_list: bool = False
     rationale: str | None = Field(max_length=1024, default=None)
 
