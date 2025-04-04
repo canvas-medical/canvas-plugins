@@ -136,14 +136,14 @@ class SessionCredentials(Credentials):
         super().__init__(request)
 
         if (
-            "x-canvas-logged-in-user-type" not in request.headers
-            or "x-canvas-logged-in-user-id" not in request.headers
+            "canvas-logged-in-user-type" not in request.headers
+            or "canvas-logged-in-user-id" not in request.headers
         ):
             raise NoAuthorizationHeaderError
 
         self.logged_in_user = {
-            "id": request.headers.get("x-canvas-logged-in-user-id"),
-            "type": request.headers.get("x-canvas-logged-in-user-type"),
+            "id": request.headers.get("canvas-logged-in-user-id"),
+            "type": request.headers.get("canvas-logged-in-user-type"),
         }
 
 

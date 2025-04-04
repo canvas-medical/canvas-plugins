@@ -897,7 +897,7 @@ def session_headers(id: str, type: str) -> dict[str, str]:
     """
     Given an id and a type, return headers that include the expected session based auth headers.
     """
-    return {"x-canvas-logged-in-user-type": type, "x-canvas-logged-in-user-id": id}
+    return {"canvas-logged-in-user-type": type, "canvas-logged-in-user-id": id}
 
 
 USERNAME = uuid4().hex
