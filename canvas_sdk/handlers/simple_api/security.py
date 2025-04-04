@@ -2,7 +2,6 @@ from base64 import b64decode
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol
 
-from canvas_sdk.v1.data import Patient, Staff
 from logger import log
 
 from .exceptions import (
@@ -146,14 +145,6 @@ class SessionCredentials(Credentials):
             "id": request.headers.get("canvas-logged-in-user-id"),
             "type": request.headers.get("canvas-logged-in-user-type"),
         }
-
-        self.logged_in_staff = None
-        self.logged_in_patient = None
-
-        if self.logged_in_user["type"] == "Staff":
-            self.logged_in_staff = Staff.objects.get(id=self.logged_in_user["id"])
-        if self.logged_in_user["type"] == "Patient":
-            self.logged_in_patient = Patient.objects.get(id=self.logged_in_user["id"])
 
 
 class AuthSchemeMixin(Protocol):
