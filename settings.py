@@ -1,11 +1,14 @@
 import os
 import sys
+from pathlib import Path
 from urllib import parse
 
 from dotenv import load_dotenv
 from env_tools import env_to_bool
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.resolve()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
@@ -20,6 +23,9 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
+CANVAS_SDK_REDIS_ENDPOINT = os.getenv("CANVAS_SDK_REDIS_ENDPOINT")
+CANVAS_SDK_REDIS_DATABASE = os.getenv("CANVAS_SDK_REDIS_DATABASE", "0")
+CANVAS_SDK_CACHE_TIMEOUT_SECONDS = os.getenv("CANVAS_SDK_CACHE_TIMEOUT", 60 * 60 * 24 * 14)
 
 INSTALLED_APPS = [
     "canvas_sdk.v1",
@@ -78,9 +84,9 @@ PLUGIN_DIRECTORY = os.getenv(
     (
         "/plugin-runner/custom-plugins"
         if IS_PRODUCTION
-        else "./plugin_runner/tests/data/plugins"
+        else (BASE_DIR / "plugin_runner/tests/data/plugins").as_posix()
         if IS_TESTING
-        else "./custom-plugins"
+        else (BASE_DIR / "custom-plugins").as_posix()
     ),
 )
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
@@ -99,3 +105,27 @@ TEMPLATES = [
         "OPTIONS": {},
     },
 ]
+
+PLUGINS_CACHE_CONFIG = (
+    {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "KEY_PREFIX": CUSTOMER_IDENTIFIER,
+        "LOCATION": f"{CANVAS_SDK_REDIS_ENDPOINT}/{CANVAS_SDK_REDIS_DATABASE}",
+        "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
+    }
+    if CANVAS_SDK_REDIS_ENDPOINT and not IS_TESTING
+    else {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "KEY_PREFIX": CUSTOMER_IDENTIFIER,
+        "LOCATION": "plugins_cache",
+        "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
+    }
+)
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    },
+    "plugins": PLUGINS_CACHE_CONFIG,
+}

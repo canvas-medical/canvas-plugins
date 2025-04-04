@@ -28,6 +28,41 @@ CODE_WITH_FORBIDDEN_FUNC_NAME = """
 builtins = {}
 """
 
+CODE_WITH_PRIVATE_ACCESS = [
+    """
+class MyClass:
+  _private_attr = 42
+
+pvt = MyClass()._private_attr
+""",
+    """
+class MyClass:
+  _private_attr = 42
+
+pvt = object.__getattribute__(MyClass(), "_private_attr")
+""",
+    """
+class MyClass:
+  _private_attr = 42
+
+pvt = MyClass().__dict__["_private_attr"]
+""",
+    """
+class MyClass:
+  def _private_method(self):
+    return 42
+pvt = MyClass()._private_method()
+""",
+    """
+class MyClass:
+   _private_attr = 42
+
+name = "_" + "private_attr"
+pvt = _getattr_(MyClass(), name)
+""",
+]
+
+
 SOURCE_CODE_MODULE = """
 import module.b
 result = module.b
@@ -135,3 +170,21 @@ def test_sandbox_denies_module_name_import_outside_package() -> None:
     sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE, namespace="other_module.a")
     with pytest.raises(ImportError, match="module.b' is not an allowed import."):
         sandbox_module_a.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    CODE_WITH_PRIVATE_ACCESS,
+    ids=[
+        "private_attr",
+        "getattr_private_attr",
+        "dict_private_attr",
+        "private_method",
+        "private_attr_dynamic_name",
+    ],
+)
+def test_sandbox_denies_access_to_private_attributes(code: str) -> None:
+    """Test that private attribute/method access is not allowed."""
+    sandbox = Sandbox(source_code=code)
+    with pytest.raises((RuntimeError, AttributeError)):
+        sandbox.execute()
