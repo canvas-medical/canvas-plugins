@@ -23,7 +23,6 @@ from RestrictedPython.Guards import (
 from RestrictedPython.transformer import (
     ALLOWED_FUNC_NAMES,
     FORBIDDEN_FUNC_NAMES,
-    copy_locations,
 )
 
 ##
@@ -39,6 +38,7 @@ ALLOWED_MODULES = frozenset(
         "arrow",
         "base64",
         "cached_property",
+        "canvas_sdk.caching.plugins",
         "canvas_sdk.commands",
         "canvas_sdk.data",
         "canvas_sdk.effects",
@@ -204,54 +204,6 @@ class Sandbox:
                 elif isinstance(elt, ast.Tuple | ast.List):
                     self.check_for_name_in_iterable(elt)
 
-        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-            """Checks and mutates attribute access/assignment.
-
-            'a.b' becomes '_getattr_(a, "b")'
-            'a.b = c' becomes '_write_(a).b = c'
-            'del a.b' becomes 'del _write_(a).b'
-
-            The _write_ function should return a security proxy.
-
-            Override to turn errors into warnings for leading underscores.
-            """
-            if node.attr.startswith("_") and node.attr != "_":
-                self.warn(
-                    node,
-                    f'"{node.attr}" is an invalid attribute name because it starts with "_".',
-                )
-
-            if node.attr.endswith("__roles__"):
-                self.error(
-                    node,
-                    f'"{node.attr}" is an invalid attribute name because it ends with "__roles__".',
-                )
-
-            if isinstance(node.ctx, ast.Load):
-                node = self.node_contents_visit(node)
-                new_node = ast.Call(
-                    func=ast.Name("_getattr_", ast.Load()),
-                    args=[node.value, ast.Constant(node.attr)],
-                    keywords=[],
-                )
-
-                copy_locations(new_node, node)
-                return new_node
-
-            elif isinstance(node.ctx, ast.Store | ast.Del):
-                node = self.node_contents_visit(node)
-                new_value = ast.Call(
-                    func=ast.Name("_write_", ast.Load()), args=[node.value], keywords=[]
-                )
-
-                copy_locations(new_value, node.value)
-                node.value = new_value
-                return node
-
-            else:  # pragma: no cover
-                # Impossible Case only ctx Load, Store and Del are defined in ast.
-                raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
-
     def __init__(
         self,
         source_code: str | Path | None,
@@ -305,7 +257,6 @@ class Sandbox:
             "_write_": _unrestricted,
             "_getiter_": _unrestricted,
             "_getitem_": default_guarded_getitem,
-            "_getattr_": getattr,
             "_print_": PrintCollector,
             "_apply_": _apply,
             "_inplacevar_": _unrestricted,
