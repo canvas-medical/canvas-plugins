@@ -139,7 +139,7 @@ class SessionCredentials(Credentials):
             "canvas-logged-in-user-type" not in request.headers
             or "canvas-logged-in-user-id" not in request.headers
         ):
-            raise AuthenticationSchemeError
+            raise InvalidCredentialsError
 
         self.logged_in_user = {
             "id": request.headers.get("canvas-logged-in-user-id"),
