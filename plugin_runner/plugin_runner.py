@@ -34,6 +34,7 @@ from plugin_runner.installation import install_plugins
 from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
+    CUSTOMER_IDENTIFIER,
     IS_TESTING,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
@@ -48,6 +49,11 @@ sys.path.append(PLUGIN_DIRECTORY)
 # a global dictionary of loaded plugins
 # TODO: create typings here for the subkeys
 LOADED_PLUGINS: dict = {}
+
+# a global dictionary of values made available to all plugins
+ENVIRONMENT: dict = {
+    "CUSTOMER_IDENTIFIER": CUSTOMER_IDENTIFIER,
+}
 
 # a global dictionary of events to handler class names
 EVENT_HANDLER_MAP: dict[str, list] = defaultdict(list)
@@ -174,7 +180,7 @@ class PluginRunner(PluginRunnerServicer):
             )
 
             try:
-                handler = handler_class(event, secrets)
+                handler = handler_class(event, secrets, ENVIRONMENT)
 
                 if not handler.accept_event():
                     continue
