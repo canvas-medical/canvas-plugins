@@ -273,38 +273,48 @@ async def synchronize_plugins(run_once: bool = False) -> None:
     log.info(f'synchronize_plugins: listening for messages on pubsub channel "{CHANNEL_NAME}"')
 
     _, pubsub = get_client()
+
     await pubsub.psubscribe(CHANNEL_NAME)
 
     while True:
-        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
+        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
-        if message is not None:
-            log.info(f'synchronize_plugins: received message from pubsub channel "{CHANNEL_NAME}"')
+        if message is None:
+            continue
 
-            message_type = message.get("type", "")
+        log.info(f'synchronize_plugins: received message from pubsub channel "{CHANNEL_NAME}"')
 
-            if message_type != "pmessage":
-                continue
+        message_type = message.get("type", "")
 
-            data = pickle.loads(message.get("data", pickle.dumps({})))
+        if message_type != "pmessage":
+            continue
 
-            if "action" not in data:
-                continue
+        data = pickle.loads(message.get("data", pickle.dumps({})))
 
-            if data["action"] == "reload":
-                log.info("synchronize_plugins: installing and reloading plugins for action=reload")
+        if "action" not in data:
+            continue
 
-                try:
-                    install_plugins()
-                except Exception as e:
-                    # TODO capture_exception when Sentry is installed
-                    log.error(f"synchronize_plugins: install_plugins failed: {e}")
+        if data["action"] == "reload":
+            log.info("synchronize_plugins: installing and reloading plugins for action=reload")
 
-                try:
-                    load_plugins()
-                except Exception as e:
-                    # TODO capture_exception when Sentry is installed
-                    log.error(f"synchronize_plugins: load_plugins failed: {e}")
+            try:
+                install_plugins()
+            except Exception as e:
+                # TODO capture_exception when Sentry is installed
+                log.error(f"synchronize_plugins: install_plugins failed: {e}")
+
+            try:
+                load_plugins()
+            except Exception as e:
+                # TODO capture_exception when Sentry is installed
+                log.error(f"synchronize_plugins: load_plugins failed: {e}")
+
+        await pubsub.check_health()
+
+        if not pubsub.connection.is_connected:  # type: ignore
+            log.info("synchronize_plugins: reconnecting to Redis")
+            await pubsub.connection.connect()  # type: ignore
+
         if run_once:
             break
 
@@ -313,13 +323,13 @@ async def synchronize_plugins_and_report_errors() -> None:
     """
     Run synchronize_plugins() in perpetuity and report any encountered errors.
     """
-    log.info("Starting synchronize_plugins loop...")
+    log.info("synchronize_plugins: starting loop...")
 
     while True:
         try:
             await synchronize_plugins()
         except Exception as e:
-            log.error(f"synchronize_plugins error: {e}")
+            log.error(f"synchronize_plugins: error: {e}")
 
         # don't crush redis if we're retrying in a tight loop
         await asyncio.sleep(0.5)
@@ -586,13 +596,13 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-        coros = [serve(specified_plugin_paths)]
+        coroutines = [serve(specified_plugin_paths)]
 
         # Only start the synchronizer if the plugin runner was not started from the CLI
         if specified_plugin_paths is None:
-            coros.append(synchronize_plugins_and_report_errors())
+            coroutines.append(synchronize_plugins_and_report_errors())
 
-        loop.run_until_complete(asyncio.gather(*coros))
+        loop.run_until_complete(asyncio.gather(*coroutines))
     except KeyboardInterrupt:
         pass
     finally:
