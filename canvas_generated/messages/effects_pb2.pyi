@@ -204,6 +204,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
+    CREATE_NOTE: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -401,6 +402,7 @@ SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
 SIMPLE_API_RESPONSE: EffectType
+CREATE_NOTE: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname")

@@ -251,6 +251,8 @@ enum EffectType {
   LAUNCH_MODAL = 3000;
 
   SIMPLE_API_RESPONSE = 4000;
+
+  CREATE_NOTE = 5000;
 }
 
 message Effect {
