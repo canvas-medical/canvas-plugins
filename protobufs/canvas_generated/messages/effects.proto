@@ -258,6 +258,7 @@ enum EffectType {
   UPDATE_USER = 5000;
 
   CREATE_NOTE = 6000;
+  CREATE_APPOINTMENT = 6001;
 }
 
 message Effect {
