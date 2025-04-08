@@ -8,6 +8,6 @@ from canvas_sdk.utils.plugins import plugin_only
 
 @plugin_only
 def get_cache(**kwargs: Any) -> Cache:
-    """Get the cache client base on the specified driver."""
+    """Get the cache client for plugins."""
     prefix = kwargs["plugin_name"]
-    return get_cache_client("plugins", prefix, int(settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS))
+    return get_cache_client("plugins", prefix, settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS)
