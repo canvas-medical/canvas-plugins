@@ -268,21 +268,25 @@ async def synchronize_plugins(run_once: bool = False) -> None:
 
     _, pubsub = get_client()
 
-    async def handle_message(message: Any) -> None:
+    await pubsub.psubscribe(CHANNEL_NAME)
+
+    while True:
+        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
+
         if message is None:
-            return
+            continue
 
         log.info(f'synchronize_plugins: received message from pubsub channel "{CHANNEL_NAME}"')
 
         message_type = message.get("type", "")
 
         if message_type != "pmessage":
-            return
+            continue
 
         data = pickle.loads(message.get("data", pickle.dumps({})))
 
         if "action" not in data:
-            return
+            continue
 
         if data["action"] == "reload":
             log.info("synchronize_plugins: installing and reloading plugins for action=reload")
@@ -299,10 +303,6 @@ async def synchronize_plugins(run_once: bool = False) -> None:
                 # TODO capture_exception when Sentry is installed
                 log.error(f"synchronize_plugins: load_plugins failed: {e}")
 
-    await pubsub.psubscribe(**{CHANNEL_NAME: handle_message})
-
-    while True:
-        await pubsub.get_message(timeout=5.0)
         await pubsub.check_health()
 
         if not pubsub.connection.is_connected:  # type: ignore
