@@ -2,6 +2,8 @@ import logging
 import os
 from typing import Any
 
+import redis
+
 from pubsub.pubsub import Publisher
 
 
@@ -15,7 +17,11 @@ class PubSubLogHandler(logging.Handler):
     def emit(self, record: Any) -> None:
         """Publishes the log message to the pub/sub channel."""
         message = self.format(record)
-        self.publisher.publish(message)
+
+        try:
+            self.publisher.publish(message)
+        except redis.ConnectionError as e:
+            print(f"PubSubLogHandler: failed to log message due to redis error: {e}")
 
 
 class PluginLogger:
