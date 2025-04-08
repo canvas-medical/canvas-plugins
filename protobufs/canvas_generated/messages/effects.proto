@@ -256,6 +256,8 @@ enum EffectType {
   SIMPLE_API_RESPONSE = 4000;
 
   UPDATE_USER = 5000;
+
+  CREATE_NOTE = 6000;
 }
 
 message Effect {
