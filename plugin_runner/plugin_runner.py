@@ -323,7 +323,7 @@ async def synchronize_plugins_and_report_errors() -> None:
         try:
             await synchronize_plugins()
         except Exception as e:
-            log.warning(f"synchronize_plugins: error: {e}")
+            log.error(f"synchronize_plugins: error: {e}")
 
         # don't crush redis if we're retrying in a tight loop
         await asyncio.sleep(0.5)
