@@ -127,6 +127,9 @@ class CreateAppointment(_CreateNoteOrAppointment):
         external_identifiers (list[AppointmentIdentifier] | None): A list of external identifiers for the appointment.
     """
 
+    class Meta:
+        effect_type = EffectType.CREATE_APPOINTMENT
+
     appointment_note_type_id: UUID | str
     start_time: datetime.datetime
     duration_minutes: int
