@@ -2,6 +2,7 @@ import ast
 import builtins
 import importlib
 import sys
+import types
 from _ast import AnnAssign
 from functools import cached_property
 from pathlib import Path
@@ -23,6 +24,8 @@ from RestrictedPython.Guards import (
 from RestrictedPython.transformer import (
     ALLOWED_FUNC_NAMES,
     FORBIDDEN_FUNC_NAMES,
+    INSPECT_ATTRIBUTES,
+    copy_locations,
 )
 
 ##
@@ -91,6 +94,7 @@ ALLOWED_MODULES = frozenset(
 # The names in this list are forbidden to be assigned to in a sandboxed runtime.
 #
 FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
+PROTECTED_RESOURCES = frozenset(["canvas_sdk.caching.base.Cache"])
 
 
 def _is_known_module(name: str) -> bool:
@@ -99,6 +103,48 @@ def _is_known_module(name: str) -> bool:
 
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
+    return _ob
+
+
+def safe_getattr(_ob: Any, name: Any, default: Any = None) -> Any:
+    """A safer getattr implementation."""
+    if isinstance(_ob, types.ModuleType):
+        module = _ob.__name__.split(".")[0]
+    elif isinstance(_ob, type):
+        module = _ob.__module__.split(".")[0]
+    else:
+        module = _ob.__class__.__module__.split(".")[0]
+
+    if type(name) is not str:
+        raise TypeError("type(name) must be str")
+    if name in ("format", "format_map") and (
+        isinstance(_ob, str) or (isinstance(_ob, type) and issubclass(_ob, str))
+    ):
+        raise NotImplementedError("Using the format*() methods of `str` is not safe")
+    if name in INSPECT_ATTRIBUTES:
+        raise AttributeError(
+            f'"{name}" is a restricted name, that is forbidden to access in RestrictedPython.'
+        )
+    if name.startswith("_") and any(
+        allowed_module.startswith(module) for allowed_module in ALLOWED_MODULES
+    ):
+        raise AttributeError(f'"{name}" is an invalid attribute name because it starts with "_"')
+    args = (_ob, name, default)
+
+    return getattr(*args)
+
+
+def _safe_write(_ob: Any, *args: Any, **kwargs: Any) -> Any:
+    """Check if the given obj belongs to a protected resource."""
+    if isinstance(_ob, types.ModuleType):
+        full_name = _ob.__name__
+    elif isinstance(_ob, type):
+        full_name = f"{_ob.__module__}.{_ob.__qualname__}"
+    else:
+        full_name = f"{_ob.__module__}.{_ob.__class__.__qualname__}"
+
+    if full_name in PROTECTED_RESOURCES:
+        raise TypeError(f"Forbidden assignment to a protected resource: {full_name}.")
     return _ob
 
 
@@ -204,6 +250,51 @@ class Sandbox:
                 elif isinstance(elt, ast.Tuple | ast.List):
                     self.check_for_name_in_iterable(elt)
 
+        def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+            """Checks and mutates attribute access/assignment.
+            'a.b' becomes '_getattr_(a, "b")'
+            'a.b = c' becomes '_write_(a).b = c'
+            'del a.b' becomes 'del _write_(a).b'
+            The _write_ function should return a security proxy.
+            Override to turn errors into warnings for leading underscores.
+            """
+            if node.attr.startswith("_") and node.attr != "_":
+                self.warn(
+                    node,
+                    f'"{node.attr}" is an invalid attribute name because it starts with "_".',
+                )
+
+            if node.attr.endswith("__roles__"):
+                self.error(
+                    node,
+                    f'"{node.attr}" is an invalid attribute name because it ends with "__roles__".',
+                )
+
+            if isinstance(node.ctx, ast.Load):
+                node = self.node_contents_visit(node)
+                new_node = ast.Call(
+                    func=ast.Name("_getattr_", ast.Load()),
+                    args=[node.value, ast.Constant(node.attr)],
+                    keywords=[],
+                )
+
+                copy_locations(new_node, node)
+                return new_node
+
+            elif isinstance(node.ctx, ast.Store | ast.Del):
+                node = self.node_contents_visit(node)
+                new_value = ast.Call(
+                    func=ast.Name("_write_", ast.Load()), args=[node.value], keywords=[]
+                )
+
+                copy_locations(new_value, node.value)
+                node.value = new_value
+                return node
+
+            else:  # pragma: no cover
+                # Impossible Case only ctx Load, Store and Del are defined in ast.
+                raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
+
     def __init__(
         self,
         source_code: str | Path | None,
@@ -254,7 +345,8 @@ class Sandbox:
             "__metaclass__": type,
             "__name__": self.namespace,
             "__is_plugin__": True,
-            "_write_": _unrestricted,
+            "_write_": _safe_write,
+            "_getattr_": safe_getattr,
             "_getiter_": _unrestricted,
             "_getitem_": default_guarded_getitem,
             "_print_": PrintCollector,

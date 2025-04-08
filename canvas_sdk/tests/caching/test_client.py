@@ -173,21 +173,23 @@ def test_make_key_is_called_for_all_cache_methods(
 
 def test_get_timeout_raises_an_exception_if_the_timeout_exceeds_the_max_timeout() -> None:
     """Ensure that an exception is raised if the timeout exceeds the max timeout."""
-    cache = get_cache(max_timeout=10)
+    cache = get_cache(max_timeout_seconds=10)
     with pytest.raises(CachingException):
-        cache._get_timeout(timeout=20)
+        cache._get_timeout(timeout_seconds=20)
 
 
-def test_get_timeout_returns_the_max_timeout_if_no_timeout_is_provided() -> None:
+def test_get_timeout_returns_the_max_timeout_seconds_if_no_timeout_is_provided() -> None:
     """Ensure that the max timeout is returned if no timeout is provided."""
-    cache = get_cache(max_timeout=10)
-    assert cache._get_timeout(timeout=None) == 10
+    cache = get_cache(max_timeout_seconds=10)
+    assert cache._get_timeout(timeout_seconds=None) == 10
 
 
-def test_get_timeout_returns_the_provided_timeout_if_it_does_not_exceed_the_max_timeout() -> None:
+def test_get_timeout_returns_the_provided_timeout_if_it_does_not_exceed_the_max_timeout_seconds() -> (
+    None
+):
     """Ensure that the provided timeout is returned if it does not exceed the max timeout."""
-    cache = get_cache(max_timeout=10)
-    assert cache._get_timeout(timeout=5) == 5
+    cache = get_cache(max_timeout_seconds=10)
+    assert cache._get_timeout(timeout_seconds=5) == 5
 
 
 def test_get_timeout_is_called_by_all_set_operations(

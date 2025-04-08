@@ -12,53 +12,53 @@ class Cache:
 
     _connection = WriteOnceProperty[BaseCache]()
     _prefix = WriteOnceProperty[str]()
-    _max_timeout = WriteOnceProperty[int | None]()
+    _max_timeout_seconds = WriteOnceProperty[int | None]()
 
     def __init__(
-        self, connection: BaseCache, prefix: str = "", max_timeout: int | None = None
+        self, connection: BaseCache, prefix: str = "", max_timeout_seconds: int | None = None
     ) -> None:
         self._connection = connection
         self._prefix = prefix
-        self._max_timeout = max_timeout
+        self._max_timeout_seconds = max_timeout_seconds
 
     def _make_key(self, key: str) -> str:
         return f"{self._prefix}:{key}" if self._prefix else key
 
-    def _get_timeout(self, timeout: int | None) -> int | None:
-        if timeout is None:
-            return self._max_timeout
+    def _get_timeout(self, timeout_seconds: int | None) -> int | None:
+        if timeout_seconds is None:
+            return self._max_timeout_seconds
 
-        if self._max_timeout is not None and timeout > self._max_timeout:
+        if self._max_timeout_seconds is not None and timeout_seconds > self._max_timeout_seconds:
             raise CachingException(
-                f"Timeout {timeout} exceeds the max timeout of {self._max_timeout}"
+                f"Timeout of {timeout_seconds} seconds exceeds the max timeout of {self._max_timeout_seconds} seconds."
             )
 
-        return timeout
+        return timeout_seconds
 
-    def set(self, key: str, value: Any, timeout: int | None = None) -> None:
+    def set(self, key: str, value: Any, timeout_seconds: int | None = None) -> None:
         """Set a value in the cache.
 
         Args:
             key: The cache key.
             value: The value to cache.
-            timeout: The number of seconds for which the value should be cached.
+            timeout_seconds: The number of seconds for which the value should be cached.
         """
         key = self._make_key(key)
-        self._connection.set(key, value, self._get_timeout(timeout))
+        self._connection.set(key, value, self._get_timeout(timeout_seconds))
 
-    def set_many(self, data: dict[str, Any], timeout: int | None = None) -> list[str]:
+    def set_many(self, data: dict[str, Any], timeout_seconds: int | None = None) -> list[str]:
         """Set multiple values in the cache simultaneously.
 
         Args:
             data: A dict of cache keys and their values.
-            timeout: The number of seconds for which to cache the data.
+            timeout_seconds: The number of seconds for which to cache the data.
 
         Returns:
             Returns a list of cache keys that failed insertion if supported by
             the backend. Otherwise, an empty list is returned.
         """
         data = {self._make_key(key): value for key, value in data.items()}
-        return self._connection.set_many(data, self._get_timeout(timeout))
+        return self._connection.set_many(data, self._get_timeout(timeout_seconds))
 
     def get(self, key: str, default: Any | None = None) -> Any:
         """Fetch a given key from the cache.
@@ -73,7 +73,9 @@ class Cache:
         key = self._make_key(key)
         return self._connection.get(key, default)
 
-    def get_or_set(self, key: str, default: Any | None = None, timeout: int | None = None) -> Any:
+    def get_or_set(
+        self, key: str, default: Any | None = None, timeout_seconds: int | None = None
+    ) -> Any:
         """Fetch a given key from the cache, or set it to the given default.
 
         If the key does not exist, it will be created with the given default as
@@ -84,13 +86,13 @@ class Cache:
             key: The key to retrieve.
             default: The default value to set if the key does not exist. May be
                      a callable with no arguments.
-            timeout: The number of seconds for which to cache the key.
+            timeout_seconds: The number of seconds for which to cache the key.
 
         Returns:
             The cached value.
         """
         key = self._make_key(key)
-        return self._connection.get_or_set(key, default, self._get_timeout(timeout))
+        return self._connection.get_or_set(key, default, self._get_timeout(timeout_seconds))
 
     def get_many(self, keys: Iterable[str]) -> Any:
         """Fetch multiple values from the cache.
