@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v0.31.0 (2025-04-08)
+
+### Bug Fixes
+
+- Don't block for Redis messages ([#516](https://github.com/canvas-medical/canvas-plugins/pull/516),
+  [`6f87f0c`](https://github.com/canvas-medical/canvas-plugins/commit/6f87f0c76673dd1b4ad6d72fbacb3e571c3242d9))
+
+### Features
+
+- Add all protocol card statuses ([#468](https://github.com/canvas-medical/canvas-plugins/pull/468),
+  [`26521ad`](https://github.com/canvas-medical/canvas-plugins/commit/26521ad9ee9bd9f12a2edc5a777faecf5ef98623))
+
+- Add environment dict containing the customer identifier to plugin handler scope
+  ([#513](https://github.com/canvas-medical/canvas-plugins/pull/513),
+  [`d23cfd9`](https://github.com/canvas-medical/canvas-plugins/commit/d23cfd9bea7a3d86746f3d36b00669b89cbada27))
+
+- Add session based auth to simpleapi
+  ([#495](https://github.com/canvas-medical/canvas-plugins/pull/495),
+  [`3b2b96a`](https://github.com/canvas-medical/canvas-plugins/commit/3b2b96a4cad62aca539c7681fbced5c93fcc7973))
+
+
 ## v0.30.0 (2025-04-02)
 
 ### Features
