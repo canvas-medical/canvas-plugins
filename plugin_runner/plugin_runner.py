@@ -302,15 +302,15 @@ async def synchronize_plugins(run_once: bool = False) -> None:
     await pubsub.psubscribe(**{CHANNEL_NAME: handle_message})
 
     while True:
-        if run_once:
-            break
-
         await pubsub.get_message(timeout=5.0)
         await pubsub.check_health()
 
         if not pubsub.connection.is_connected:  # type: ignore
             log.info("synchronize_plugins: reconnecting to Redis")
             await pubsub.connection.connect()  # type: ignore
+
+        if run_once:
+            break
 
 
 async def synchronize_plugins_and_report_errors() -> None:
