@@ -180,6 +180,7 @@ class PluginRunner(PluginRunnerServicer):
         relevant_plugin_handlers = []
 
         log.debug(f"Processing {relevant_plugins} for {event_name}")
+        sentry_sdk.set_tag("event-name", event_name)
 
         if relevant_plugins:
             await reconnect_if_needed()
@@ -198,6 +199,7 @@ class PluginRunner(PluginRunnerServicer):
 
         for plugin_name in relevant_plugins:
             log.debug(f"Processing {plugin_name}")
+            sentry_sdk.set_tag("plugin-name", plugin_name)
 
             plugin = LOADED_PLUGINS[plugin_name]
             handler_class = plugin["class"]
@@ -258,6 +260,8 @@ class PluginRunner(PluginRunnerServicer):
                 continue
 
             effect_list += effects
+
+        sentry_sdk.set_tag("plugin-name", None)
 
         # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
         # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
