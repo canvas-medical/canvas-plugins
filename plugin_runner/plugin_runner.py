@@ -14,6 +14,7 @@ from typing import Any, TypedDict
 
 import grpc
 import redis.asyncio as redis
+import sentry_sdk
 from asgiref.sync import sync_to_async
 from django.db import connections
 
@@ -35,20 +36,49 @@ from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
+    ENV,
+    IS_PRODUCTION_CUSTOMER,
     IS_TESTING,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
+    SENTRY_DSN,
 )
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=ENV,
+        release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
+        send_default_pii=True,
+        traces_sample_rate=0.0,
+        profiles_sample_rate=0.0,
+    )
+
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_tag("customer", CUSTOMER_IDENTIFIER)
+        scope.set_tag("logger", "python")
+        scope.set_tag("source", "plugin-runner")
+        scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
 sys.path.append(PLUGIN_DIRECTORY)
 
+Plugin = TypedDict(
+    "Plugin",
+    {
+        "active": bool,
+        "class": Any,
+        "sandbox": Any,
+        "handler": Any,
+        "secrets": dict[str, str],
+    },
+)
+
 # a global dictionary of loaded plugins
-# TODO: create typings here for the subkeys
-LOADED_PLUGINS: dict = {}
+LOADED_PLUGINS: dict[str, Plugin] = {}
 
 # a global dictionary of values made available to all plugins
 ENVIRONMENT: dict = {
@@ -150,6 +180,7 @@ class PluginRunner(PluginRunnerServicer):
         relevant_plugin_handlers = []
 
         log.debug(f"Processing {relevant_plugins} for {event_name}")
+        sentry_sdk.set_tag("event-name", event_name)
 
         if relevant_plugins:
             await reconnect_if_needed()
@@ -168,6 +199,7 @@ class PluginRunner(PluginRunnerServicer):
 
         for plugin_name in relevant_plugins:
             log.debug(f"Processing {plugin_name}")
+            sentry_sdk.set_tag("plugin-name", plugin_name)
 
             plugin = LOADED_PLUGINS[plugin_name]
             handler_class = plugin["class"]
@@ -223,9 +255,13 @@ class PluginRunner(PluginRunnerServicer):
                     for error_line in error_line_with_newlines.split("\n"):
                         log.error(error_line)
 
+                sentry_sdk.capture_exception(e)
+
                 continue
 
             effect_list += effects
+
+        sentry_sdk.set_tag("plugin-name", None)
 
         # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
         # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
@@ -295,19 +331,19 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             continue
 
         if data["action"] == "reload":
-            log.info("synchronize_plugins: installing and reloading plugins for action=reload")
+            log.info("synchronize_plugins: installing/reloading plugins for action=reload")
 
             try:
                 install_plugins()
             except Exception as e:
-                # TODO capture_exception when Sentry is installed
                 log.error(f"synchronize_plugins: install_plugins failed: {e}")
+                sentry_sdk.capture_exception(e)
 
             try:
                 load_plugins()
             except Exception as e:
-                # TODO capture_exception when Sentry is installed
                 log.error(f"synchronize_plugins: load_plugins failed: {e}")
+                sentry_sdk.capture_exception(e)
 
         await pubsub.check_health()
 
@@ -330,13 +366,15 @@ async def synchronize_plugins_and_report_errors() -> None:
             await synchronize_plugins()
         except Exception as e:
             log.error(f"synchronize_plugins: error: {e}")
+            sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
         await asyncio.sleep(0.5)
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
-    """Validates the effects based on predefined rules.
+    """
+    Validates the effects based on predefined rules.
 
     Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all
     non-search-related effects.
@@ -436,6 +474,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {e}')
+        sentry_sdk.capture_exception(e)
+
         return
 
     secrets_file = path / SECRETS_FILE_NAME
@@ -446,6 +486,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             secrets_json = json.load(secrets_file.open())
         except Exception as e:
             log.error(f'Unable to load secrets for plugin "{name}": {str(e)}')
+            sentry_sdk.capture_exception(e)
 
     # TODO add existing schema validation from Michela here
     try:
@@ -454,6 +495,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         ].get("applications", [])
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
+        sentry_sdk.capture_exception(e)
+
         return
 
     for handler in handlers:
@@ -462,8 +505,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         try:
             handler_module, handler_class = handler["class"].split(":")
             name_and_class = f"{name}:{handler_module}:{handler_class}"
-        except ValueError:
+        except ValueError as e:
             log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
+            sentry_sdk.capture_exception(e)
+
             continue
 
         try:
@@ -487,11 +532,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                     "handler": handler,
                     "secrets": secrets_json,
                 }
-        except Exception as err:
-            log.error(f'Error importing module "{name_and_class}": {err}')
+        except Exception as e:
+            log.error(f'Error importing module "{name_and_class}": {e}')
 
-            for error_line in traceback.format_exception(err):
+            for error_line in traceback.format_exception(e):
                 log.error(error_line)
+
+            sentry_sdk.capture_exception(e)
 
 
 def refresh_event_type_map() -> None:
@@ -589,8 +636,8 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
 
 # NOTE: specified_plugin_paths powers the `canvas run-plugins` command
-def run_server(specified_plugin_paths: list[str] | None = None) -> None:
-    """Run the server."""
+def main(specified_plugin_paths: list[str] | None = None) -> None:
+    """Run the server and the synchronize_plugins loop."""
     loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
@@ -611,4 +658,4 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    run_server()
+    main()
