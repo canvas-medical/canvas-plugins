@@ -9,6 +9,8 @@ from http import HTTPStatus
 from typing import Any, ClassVar, Protocol, TypeVar, cast
 from urllib.parse import parse_qsl
 
+import sentry_sdk
+
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.simple_api import JSON, JSONResponse, Response
 from canvas_sdk.events import Event, EventType
@@ -323,6 +325,8 @@ class SimpleAPIBase(BaseHandler, ABC):
             for error_line_with_newlines in traceback.format_exception(exception):
                 for error_line in error_line_with_newlines.split("\n"):
                     log.error(error_line)
+
+            sentry_sdk.capture_exception(exception)
 
             return [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 

@@ -253,6 +253,8 @@ class PluginRunner(PluginRunnerServicer):
                     for error_line in error_line_with_newlines.split("\n"):
                         log.error(error_line)
 
+                sentry_sdk.capture_exception(e)
+
                 continue
 
             effect_list += effects
@@ -330,14 +332,14 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             try:
                 install_plugins()
             except Exception as e:
-                # TODO capture_exception when Sentry is installed
                 log.error(f"synchronize_plugins: install_plugins failed: {e}")
+                sentry_sdk.capture_exception(e)
 
             try:
                 load_plugins()
             except Exception as e:
-                # TODO capture_exception when Sentry is installed
                 log.error(f"synchronize_plugins: load_plugins failed: {e}")
+                sentry_sdk.capture_exception(e)
 
         await pubsub.check_health()
 
@@ -360,6 +362,7 @@ async def synchronize_plugins_and_report_errors() -> None:
             await synchronize_plugins()
         except Exception as e:
             log.error(f"synchronize_plugins: error: {e}")
+            sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
         await asyncio.sleep(0.5)
@@ -467,6 +470,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {e}')
+        sentry_sdk.capture_exception(e)
+
         return
 
     secrets_file = path / SECRETS_FILE_NAME
@@ -477,6 +482,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             secrets_json = json.load(secrets_file.open())
         except Exception as e:
             log.error(f'Unable to load secrets for plugin "{name}": {str(e)}')
+            sentry_sdk.capture_exception(e)
 
     # TODO add existing schema validation from Michela here
     try:
@@ -485,6 +491,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         ].get("applications", [])
     except Exception as e:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
+        sentry_sdk.capture_exception(e)
+
         return
 
     for handler in handlers:
@@ -493,8 +501,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         try:
             handler_module, handler_class = handler["class"].split(":")
             name_and_class = f"{name}:{handler_module}:{handler_class}"
-        except ValueError:
+        except ValueError as e:
             log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
+            sentry_sdk.capture_exception(e)
+
             continue
 
         try:
@@ -518,11 +528,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                     "handler": handler,
                     "secrets": secrets_json,
                 }
-        except Exception as err:
-            log.error(f'Error importing module "{name_and_class}": {err}')
+        except Exception as e:
+            log.error(f'Error importing module "{name_and_class}": {e}')
 
-            for error_line in traceback.format_exception(err):
+            for error_line in traceback.format_exception(e):
                 log.error(error_line)
+
+            sentry_sdk.capture_exception(e)
 
 
 def refresh_event_type_map() -> None:
