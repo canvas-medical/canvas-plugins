@@ -7,6 +7,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import NoteType
+from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
 
@@ -29,12 +30,10 @@ class _CreateNoteOrAppointment(_BaseEffect):
     Base class for all note creation effects.
 
     Attributes:
-        note_type_id (UUID | str): The ID of the note type.
         practice_location_id (UUID | str): The ID of the practice location.
         provider_id (str): The ID of the provider.
     """
 
-    note_type_id: UUID | str
     practice_location_id: UUID | str
     provider_id: str
 
@@ -47,7 +46,6 @@ class _CreateNoteOrAppointment(_BaseEffect):
             dict[str, Any]: A dictionary containing the practice location, provider, patient, and note type IDs.
         """
         return {
-            "note_type": str(self.note_type_id),
             "practice_location": str(self.practice_location_id),
             "provider": self.provider_id,
         }
@@ -65,6 +63,7 @@ class CreateNote(_CreateNoteOrAppointment):
     class Meta:
         effect_type = EffectType.CREATE_NOTE
 
+    note_type_id: UUID | str
     datetime_of_service: datetime.datetime
     patient_id: str
 
@@ -78,6 +77,7 @@ class CreateNote(_CreateNoteOrAppointment):
         """
         return {
             **super().values,
+            "note_type": str(self.note_type_id),
             "datetime_of_service": self.datetime_of_service.isoformat(),
             "patient": self.patient_id,
         }
@@ -125,17 +125,20 @@ class CreateAppointment(_CreateNoteOrAppointment):
         meeting_link (str | None): The meeting link for the appointment, if any.
         patient_id (str | None): The ID of the patient, if applicable.
         external_identifiers (list[AppointmentIdentifier] | None): A list of external identifiers for the appointment.
+        status (AppointmentProgressStatus | None): The status of the appointment.
     """
 
     class Meta:
         effect_type = EffectType.CREATE_APPOINTMENT
 
+    note_type_id: UUID | str | None = None
     appointment_note_type_id: UUID | str
     start_time: datetime.datetime
     duration_minutes: int
-    meeting_link: str | None
+    meeting_link: str | None = None
     patient_id: str | None
     external_identifiers: list[AppointmentIdentifier] | None = None
+    status: AppointmentProgressStatus | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -147,11 +150,13 @@ class CreateAppointment(_CreateNoteOrAppointment):
         """
         return {
             **super().values,
+            "note_type": str(self.note_type_id) if self.note_type_id else None,
             "appointment_note_type": str(self.appointment_note_type_id),
             "start_time": self.start_time.isoformat(),
             "duration_minutes": self.duration_minutes,
             "meeting_link": self.meeting_link,
             "patient": self.patient_id,
+            "status": self.status.value if self.status else None,
             "external_identifiers": [
                 {"system": identifier.system, "value": identifier.value}
                 for identifier in self.external_identifiers
@@ -176,9 +181,13 @@ class CreateAppointment(_CreateNoteOrAppointment):
             NoteTypeCategories.APPOINTMENT,
             NoteTypeCategories.SCHEDULE_EVENT,
         )
-        note_type_category = NoteType.objects.values_list("category", flat=True).get(
-            id=self.note_type_id
+
+        note_type_category = (
+            NoteTypeCategories.APPOINTMENT
+            if not self.note_type_id
+            else NoteType.objects.values_list("category", flat=True).get(id=self.note_type_id)
         )
+
         if note_type_category not in valid_appointment_types:
             errors.append(
                 self._create_error_detail(
@@ -192,19 +201,28 @@ class CreateAppointment(_CreateNoteOrAppointment):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Appointment note type requires a patient_id.",
+                    "Appointment requires a patient_id.",
                     self.note_type_id,
                 )
             )
 
-        appointment_note_type_category = NoteType.objects.values_list("category", flat=True).get(
+        category, is_scheduleable = NoteType.objects.values_list("category", "is_scheduleable").get(
             id=self.appointment_note_type_id
         )
-        if appointment_note_type_category != NoteTypeCategories.ENCOUNTER:
+        if category != NoteTypeCategories.ENCOUNTER:
             errors.append(
                 self._create_error_detail(
                     "value",
-                    f"Appointment note type must be of type, {NoteTypeCategories.ENCOUNTER} but got: {appointment_note_type_category}.",
+                    f"Appointment note type must be of type, {NoteTypeCategories.ENCOUNTER} but got: {category}.",
+                    self.appointment_note_type_id,
+                )
+            )
+
+        if not is_scheduleable:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Appointment note type must be scheduleable.",
                     self.appointment_note_type_id,
                 )
             )
