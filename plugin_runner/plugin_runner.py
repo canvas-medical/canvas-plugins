@@ -36,21 +36,31 @@ from plugin_runner.sandbox import Sandbox
 from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
+    ENV,
+    IS_PRODUCTION_CUSTOMER,
     IS_TESTING,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
+    SENTRY_DSN,
 )
 
-if CUSTOMER_IDENTIFIER != "local":
+if SENTRY_DSN:
     sentry_sdk.init(
-        dsn="https://b3e2a586fd0082d90bd64bc387db7cb9@o1318981.ingest.us.sentry.io/4508815443492864",
+        dsn=SENTRY_DSN,
+        environment=ENV,
         release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
         send_default_pii=True,
         traces_sample_rate=0.0,
         profiles_sample_rate=0.0,
     )
+
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_tag("customer", CUSTOMER_IDENTIFIER)
+        scope.set_tag("logger", "python")
+        scope.set_tag("source", "plugin-runner")
+        scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
@@ -315,7 +325,7 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             continue
 
         if data["action"] == "reload":
-            log.info("synchronize_plugins: installing and reloading plugins for action=reload")
+            log.info("synchronize_plugins: installing/reloading plugins for action=reload")
 
             try:
                 install_plugins()
@@ -356,7 +366,8 @@ async def synchronize_plugins_and_report_errors() -> None:
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
-    """Validates the effects based on predefined rules.
+    """
+    Validates the effects based on predefined rules.
 
     Keeps only the first AUTOCOMPLETE_SEARCH_RESULTS effect and preserve all
     non-search-related effects.
@@ -609,8 +620,8 @@ async def serve(specified_plugin_paths: list[str] | None = None) -> None:
 
 
 # NOTE: specified_plugin_paths powers the `canvas run-plugins` command
-def run_server(specified_plugin_paths: list[str] | None = None) -> None:
-    """Run the server."""
+def main(specified_plugin_paths: list[str] | None = None) -> None:
+    """Run the server and the synchronize_plugins loop."""
     loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
@@ -631,4 +642,4 @@ def run_server(specified_plugin_paths: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    run_server()
+    main()

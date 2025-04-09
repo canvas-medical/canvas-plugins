@@ -9,6 +9,7 @@ load_dotenv()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
+IS_PRODUCTION_CUSTOMER = env_to_bool("IS_PRODUCTION_CUSTOMER", IS_PRODUCTION)
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 APP_NAME = os.getenv("APP_NAME")
@@ -87,6 +88,8 @@ CHANNEL_NAME = f"{CUSTOMER_IDENTIFIER}:{PLUGINS_PUBSUB_CHANNEL}"
 MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 
 SECRETS_FILE_NAME = "SECRETS.json"
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 
 TEMPLATES = [
     {
