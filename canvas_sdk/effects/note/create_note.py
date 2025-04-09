@@ -132,7 +132,7 @@ class CreateAppointment(_CreateNoteOrAppointment):
         effect_type = EffectType.CREATE_APPOINTMENT
 
     note_type_id: UUID | str | None = None
-    appointment_note_type_id: UUID | str
+    appointment_note_type_id: UUID | str | None
     start_time: datetime.datetime
     duration_minutes: int
     meeting_link: str | None = None
@@ -151,7 +151,9 @@ class CreateAppointment(_CreateNoteOrAppointment):
         return {
             **super().values,
             "note_type": str(self.note_type_id) if self.note_type_id else None,
-            "appointment_note_type": str(self.appointment_note_type_id),
+            "appointment_note_type": str(self.appointment_note_type_id)
+            if self.appointment_note_type_id
+            else None,
             "start_time": self.start_time.isoformat(),
             "duration_minutes": self.duration_minutes,
             "meeting_link": self.meeting_link,
@@ -197,33 +199,43 @@ class CreateAppointment(_CreateNoteOrAppointment):
                 )
             )
 
-        if note_type_category == NoteTypeCategories.APPOINTMENT and not self.patient_id:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Appointment requires a patient_id.",
-                    self.note_type_id,
+        if note_type_category == NoteTypeCategories.APPOINTMENT:
+            if not self.patient_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Appointment requires a patient_id.",
+                        self.note_type_id,
+                    )
                 )
-            )
 
-        category, is_scheduleable = NoteType.objects.values_list("category", "is_scheduleable").get(
-            id=self.appointment_note_type_id
-        )
-        if category != NoteTypeCategories.ENCOUNTER:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Appointment note type must be of type, {NoteTypeCategories.ENCOUNTER} but got: {category}.",
-                    self.appointment_note_type_id,
-                )
-            )
+            if self.appointment_note_type_id:
+                category, is_scheduleable = NoteType.objects.values_list(
+                    "category", "is_scheduleable"
+                ).get(id=self.appointment_note_type_id)
+                if category != NoteTypeCategories.ENCOUNTER:
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            f"Appointment note type must be of type, {NoteTypeCategories.ENCOUNTER} but got: {category}.",
+                            self.appointment_note_type_id,
+                        )
+                    )
 
-        if not is_scheduleable:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Appointment note type must be scheduleable.",
-                    self.appointment_note_type_id,
+                if not is_scheduleable:
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            "Appointment note type must be scheduleable.",
+                            self.appointment_note_type_id,
+                        )
+                    )
+            else:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Appointment requires an appointment_note_type_id.",
+                        self.note_type_id,
+                    )
                 )
-            )
         return errors
