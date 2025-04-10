@@ -17,10 +17,17 @@ y = 20
 result = x + y
 """
 
-CODE_WITH_RESTRICTED_IMPORT = """
+CODE_WITH_RESTRICTED_IMPORTS = [
+    """
 import os
 result = os.listdir('.')
-"""
+""",
+    """
+from django.core.cache import caches
+
+cache = caches['default']
+""",
+]
 
 CODE_WITH_PLUGIN_RUNNER_SETTING_IMPORT = """
 import settings
@@ -135,10 +142,11 @@ def test_valid_code_execution() -> None:
     assert scope["result"] == 30, "The code should compute result as 30."
 
 
-def test_disallowed_import() -> None:
+@pytest.mark.parametrize("code", CODE_WITH_RESTRICTED_IMPORTS, ids=["os", "django_cache"])
+def test_disallowed_import(code: str) -> None:
     """Test that restricted imports are not allowed."""
-    sandbox = Sandbox(CODE_WITH_RESTRICTED_IMPORT)
-    with pytest.raises(ImportError, match="'os' is not an allowed import."):
+    sandbox = Sandbox(code)
+    with pytest.raises(ImportError, match="is not an allowed import."):
         sandbox.execute()
 
 
