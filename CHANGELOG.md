@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.32.0 (2025-04-11)
+
+### Bug Fixes
+
+- Add missing events ([#521](https://github.com/canvas-medical/canvas-plugins/pull/521),
+  [`20ced4e`](https://github.com/canvas-medical/canvas-plugins/commit/20ced4ee9c937c4f8afd4a07d7c64844eb4937d1))
+
+### Features
+
+- Add Sentry logging ([#410](https://github.com/canvas-medical/canvas-plugins/pull/410),
+  [`e064b4c`](https://github.com/canvas-medical/canvas-plugins/commit/e064b4ca9f308d4105d634c1966968b4852a45f2))
+
+
 ## v0.31.0 (2025-04-08)
 
 ### Bug Fixes

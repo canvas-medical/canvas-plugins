@@ -51,7 +51,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.31.0"
+version = "0.32.0"
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
