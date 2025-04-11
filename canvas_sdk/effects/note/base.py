@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.v1.data import PracticeLocation, Staff
+from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 
 
 @dataclass
@@ -89,6 +90,7 @@ class CreateAppointmentABC(CreateNoteOrAppointmentABC, ABC):
 
     start_time: datetime.datetime
     duration_minutes: int
+    status: AppointmentProgressStatus | None = None
     external_identifiers: list[AppointmentIdentifier] | None = None
 
     @property
@@ -103,6 +105,7 @@ class CreateAppointmentABC(CreateNoteOrAppointmentABC, ABC):
             **super().values,
             "start_time": self.start_time.isoformat(),
             "duration_minutes": self.duration_minutes,
+            "status": self.status.value if self.status else None,
             "external_identifiers": [
                 {"system": identifier.system, "value": identifier.value}
                 for identifier in self.external_identifiers
