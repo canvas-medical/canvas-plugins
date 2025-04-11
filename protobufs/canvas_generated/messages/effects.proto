@@ -259,6 +259,7 @@ enum EffectType {
 
   CREATE_NOTE = 6000;
   CREATE_APPOINTMENT = 6001;
+  CREATE_SCHEDULE_EVENT = 6002;
 }
 
 message Effect {
