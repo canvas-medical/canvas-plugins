@@ -1,6 +1,14 @@
-import pytest
+from typing import Any
 
-from plugin_runner.sandbox import FORBIDDEN_ASSIGNMENTS, Sandbox
+import pytest
+from pytest_mock import MockerFixture
+
+from plugin_runner.sandbox import (
+    ALLOWED_MODULES,
+    FORBIDDEN_ASSIGNMENTS,
+    PROTECTED_RESOURCES,
+    Sandbox,
+)
 
 # Sample code strings for testing various scenarios
 VALID_CODE = """
@@ -9,10 +17,17 @@ y = 20
 result = x + y
 """
 
-CODE_WITH_RESTRICTED_IMPORT = """
+CODE_WITH_RESTRICTED_IMPORTS = [
+    """
 import os
 result = os.listdir('.')
-"""
+""",
+    """
+from django.core.cache import caches
+
+cache = caches['default']
+""",
+]
 
 CODE_WITH_PLUGIN_RUNNER_SETTING_IMPORT = """
 import settings
@@ -27,6 +42,68 @@ result = json.dumps({"key": "value"})
 CODE_WITH_FORBIDDEN_FUNC_NAME = """
 builtins = {}
 """
+
+
+CODE_WITH_PRIVATE_ACCESS = [
+    """
+class MyClass:
+  _private_attr = 42
+
+pvt = MyClass()._private_attr
+""",
+]
+
+CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
+    """
+from canvas_sdk.caching.plugins import get_cache
+
+cache = get_cache()
+pvt = cache._connection
+""",
+    """
+from canvas_sdk.caching.plugins import get_cache
+
+cache = get_cache()
+
+pvt = cache.__dict__["_connection"]
+""",
+    """
+from canvas_sdk.caching.plugins import get_cache
+
+cache = get_cache()
+pvt = cache._make_key("test")
+""",
+    """
+from canvas_sdk.caching.plugins import get_cache
+
+cache = get_cache()
+
+name = "_" + "private_attr"
+pvt = _getattr_(cache, name)
+""",
+]
+
+CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES = [
+    """
+from canvas_sdk.caching.plugins import get_cache
+cache = get_cache()
+setattr(cache, "_connection", None)
+""",
+    """
+from canvas_sdk.caching.plugins import get_cache
+cache = get_cache()
+cache.set = None
+""",
+    """
+import json
+json.dumps = None
+""",
+    """
+from canvas_sdk.caching.base import Cache
+Cache._connection = None
+""",
+]
+
 
 SOURCE_CODE_MODULE = """
 import module.b
@@ -46,6 +123,18 @@ CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
 ]
 
 
+@pytest.fixture
+def mock_allowed_modules(mocker: "MockerFixture", request: Any) -> None:
+    """Mock the ALLOWED_MODULES."""
+    mocker.patch("plugin_runner.sandbox.ALLOWED_MODULES", request.param)
+
+
+@pytest.fixture
+def mock_protected_resources(mocker: "MockerFixture", request: Any) -> None:
+    """Mock the PROTECTED_RESOURCES."""
+    mocker.patch("plugin_runner.sandbox.PROTECTED_RESOURCES", request.param)
+
+
 def test_valid_code_execution() -> None:
     """Test execution of valid code in the sandbox."""
     sandbox = Sandbox(VALID_CODE)
@@ -53,10 +142,11 @@ def test_valid_code_execution() -> None:
     assert scope["result"] == 30, "The code should compute result as 30."
 
 
-def test_disallowed_import() -> None:
+@pytest.mark.parametrize("code", CODE_WITH_RESTRICTED_IMPORTS, ids=["os", "django_cache"])
+def test_disallowed_import(code: str) -> None:
     """Test that restricted imports are not allowed."""
-    sandbox = Sandbox(CODE_WITH_RESTRICTED_IMPORT)
-    with pytest.raises(ImportError, match="'os' is not an allowed import."):
+    sandbox = Sandbox(code)
+    with pytest.raises(ImportError, match="is not an allowed import."):
         sandbox.execute()
 
 
@@ -135,3 +225,71 @@ def test_sandbox_denies_module_name_import_outside_package() -> None:
     sandbox_module_a = Sandbox(source_code=SOURCE_CODE_MODULE, namespace="other_module.a")
     with pytest.raises(ImportError, match="module.b' is not an allowed import."):
         sandbox_module_a.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    CODE_WITH_PRIVATE_ACCESS,
+    ids=["private_attr"],
+)
+def test_sandbox_allows_access_to_private_attributes_same_module(code: str) -> None:
+    """Test that private attribute/method access is allowed for the same module/package."""
+    sandbox = Sandbox(source_code=code)
+    sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES,
+    ids=[
+        "private_attr",
+        "dict_private_attr",
+        "private_method",
+        "private_attr_dynamic_name",
+    ],
+)
+def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: str) -> None:
+    """Test that private attribute/method access is not allowed for external modules."""
+    sandbox = Sandbox(source_code=code)
+    with pytest.raises(AttributeError):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    ("code", "error_message", "mock_protected_resources", "mock_allowed_modules"),
+    [
+        (
+            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[0],
+            "attribute-less object",
+            PROTECTED_RESOURCES,
+            ALLOWED_MODULES,
+        ),
+        (
+            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[1],
+            "Forbidden assignment",
+            PROTECTED_RESOURCES,
+            ALLOWED_MODULES,
+        ),
+        (
+            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[2],
+            "Forbidden assignment",
+            ["json"],
+            ALLOWED_MODULES,
+        ),
+        (
+            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[3],
+            "Forbidden assignment",
+            PROTECTED_RESOURCES,
+            list(ALLOWED_MODULES) + ["canvas_sdk.caching.base"],
+        ),
+    ],
+    ids=["setattr", "assign", "module", "class"],
+    indirect=["mock_protected_resources", "mock_allowed_modules"],
+)
+def test_sandbox_denies_setattr_to_protected_resources(
+    code: str, error_message: str, mock_protected_resources: None, mock_allowed_modules: None
+) -> None:
+    """Test that setting attributes on protected resources is not allowed."""
+    sandbox = Sandbox(source_code=code)
+    with pytest.raises(TypeError, match=error_message):
+        sandbox.execute()
