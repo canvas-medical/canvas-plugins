@@ -206,6 +206,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
+    CREATE_SCHEDULE_EVENT: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -405,6 +406,7 @@ LAUNCH_MODAL: EffectType
 SIMPLE_API_RESPONSE: EffectType
 CREATE_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
+CREATE_SCHEDULE_EVENT: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname")
