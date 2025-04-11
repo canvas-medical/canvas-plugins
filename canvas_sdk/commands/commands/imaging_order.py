@@ -1,5 +1,7 @@
 from enum import Enum
 
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.constants import ServiceProvider
 
@@ -9,21 +11,20 @@ class ImagingOrderCommand(BaseCommand):
 
     class Meta:
         key = "imagingOrder"
-        commit_required_fields = (
-            "image_code",
-            "diagnosis_codes",
-            "ordering_provider",
-        )
 
     class Priority(Enum):
         ROUTINE = "Routine"
         URGENT = "Urgent"
 
-    image_code: str | None = None
-    diagnosis_codes: list[str] = []
+    image_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "image"})
+    diagnosis_codes: list[str] | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "indications"}
+    )
     priority: Priority | None = None
     additional_details: str | None = None
-    service_provider: ServiceProvider | None = None
+    service_provider: ServiceProvider | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "ordering_provider"}
+    )
     comment: str | None = None
     ordering_provider_key: str | None = None
     linked_items_urns: list[str] | None = None
