@@ -1,3 +1,4 @@
+import datetime
 from typing import Any
 from uuid import UUID
 
@@ -6,7 +7,6 @@ from pydantic_core import InitErrorDetails
 from canvas_sdk.effects.base import EffectType
 from canvas_sdk.effects.note.base import CreateAppointmentABC
 from canvas_sdk.v1.data import NoteType, Patient
-from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
 
@@ -87,9 +87,9 @@ class CreateAppointment(CreateAppointmentABC):
         effect_type = EffectType.CREATE_APPOINTMENT
 
     appointment_note_type_id: UUID | str
+    datetime_of_service: datetime.datetime
     meeting_link: str | None = None
     patient_id: str
-    status: AppointmentProgressStatus | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -104,9 +104,9 @@ class CreateAppointment(CreateAppointmentABC):
             "appointment_note_type": str(self.appointment_note_type_id)
             if self.appointment_note_type_id
             else None,
+            "datetime_of_service": self.datetime_of_service.isoformat(),
             "meeting_link": self.meeting_link,
             "patient": self.patient_id,
-            "status": self.status.value if self.status else None,
         }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
