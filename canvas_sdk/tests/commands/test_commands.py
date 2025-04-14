@@ -131,7 +131,7 @@ def test_plugin_originates_command_in_note(
     command_cls: type[_BaseCommand],
     command_data: dict[str, Any],
 ) -> None:
-    """Test that commands are successfully originated in a note via plugin."""
+    """Test that commands with data are successfully originated in a note via plugin."""
     trigger_originate(token, command_cls, note_for_originating_commands["externallyExposableId"])
     commands_in_note = get_commands_in_note(
         note_id=note_for_originating_commands["id"], token=token, command_key=command_cls.Meta.key
@@ -156,7 +156,7 @@ def test_plugin_originates_empty_command_in_note(
     note_for_originating_empty_commands: dict,
     command_cls: type[_BaseCommand],
 ) -> None:
-    """Test that commands are successfully originated in a note via plugin."""
+    """Test that empty commands are successfully originated in a note via plugin."""
     trigger_originate(
         token, command_cls, note_for_originating_empty_commands["externallyExposableId"], empty=True
     )
@@ -206,7 +206,7 @@ def test_plugin_commits_command(
     command_cls: type[_BaseCommand],
     command_data: dict[str, Any],
 ) -> None:
-    """Test that commands are successfully edited via plugin."""
+    """Test that commands are successfully committed via plugin."""
     command = originate_command(
         command_key=command_cls.Meta.key,
         note_uuid=note_for_editing_commands["externallyExposableId"],

@@ -162,7 +162,7 @@ def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], lis
 
 
 def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 8 - disable and then uninstall the plugin."""
+    """Step 9 - uninstall the plugin."""
     return (
         f"uninstall {plugin_name}",
         0,
