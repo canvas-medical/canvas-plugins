@@ -28,19 +28,11 @@ from RestrictedPython.transformer import (
     copy_locations,
 )
 
-##
-# ALLOWED_MODULES
-#
 # The modules in this list are the only ones that can be imported in a sandboxed
 # runtime.
-#
 ALLOWED_MODULES = frozenset(
     [
-        "__future__",
-        "_strptime",
-        "arrow",
-        "base64",
-        "cached_property",
+        # Canvas SDK
         "canvas_sdk.caching.plugins",
         "canvas_sdk.commands",
         "canvas_sdk.data",
@@ -49,41 +41,46 @@ ALLOWED_MODULES = frozenset(
         "canvas_sdk.handlers",
         "canvas_sdk.protocols",
         "canvas_sdk.questionnaires",
-        "canvas_sdk.utils",
         "canvas_sdk.templates",
+        "canvas_sdk.utils",
         "canvas_sdk.v1",
         "canvas_sdk.value_set",
         "canvas_sdk.views",
+        # Standard Library
+        "__future__",
+        "_strptime",
+        "base64",
         "contextlib",
         "dataclasses",
         "datetime",
         "dateutil",
         "decimal",
-        "django.db.models",
-        "django.utils.functional",
         "enum",
         "functools",
         "hashlib",
         "hmac",
         "http",
         "json",
-        "jwt",
         "logger",
         "math",
         "operator",
-        "pickletools",
-        "pydantic",
         "random",
-        "rapidfuzz",
         "re",
-        "requests",
-        "secrets",
         "string",
         "time",
         "traceback",
         "typing",
         "urllib",
         "uuid",
+        # Third party
+        "arrow",
+        "django.db.models",
+        "django.utils.functional",
+        "jwt",
+        "pickletools",
+        "pydantic",
+        "rapidfuzz",
+        "requests",
     ]
 )
 
@@ -97,41 +94,30 @@ FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
 PROTECTED_RESOURCES = frozenset(["canvas_sdk.caching.base.Cache"])
 
 
+def _module_matches(name: str, module: str) -> bool:
+    """
+    When importing `re`, match `re` or `re.thing`, but not `redis`.
+    """
+    if name == module:
+        return True
+
+    # exclude modules that start with underscore from prefix matching
+    if name.startswith("_"):
+        return False
+
+    if name.startswith(f"{module}."):  # noqa: SIM103
+        return True
+
+    return False
+
+
 def _is_known_module(name: str) -> bool:
-    return any(name.startswith(m) for m in ALLOWED_MODULES)
+    return any(_module_matches(name, module) for module in ALLOWED_MODULES)
 
 
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
     return _ob
-
-
-def safe_getattr(_ob: Any, name: Any, default: Any = None) -> Any:
-    """A safer getattr implementation."""
-    if isinstance(_ob, types.ModuleType):
-        module = _ob.__name__.split(".")[0]
-    elif isinstance(_ob, type):
-        module = _ob.__module__.split(".")[0]
-    else:
-        module = _ob.__class__.__module__.split(".")[0]
-
-    if type(name) is not str:
-        raise TypeError("type(name) must be str")
-    if name in ("format", "format_map") and (
-        isinstance(_ob, str) or (isinstance(_ob, type) and issubclass(_ob, str))
-    ):
-        raise NotImplementedError("Using the format*() methods of `str` is not safe")
-    if name in INSPECT_ATTRIBUTES:
-        raise AttributeError(
-            f'"{name}" is a restricted name, that is forbidden to access in RestrictedPython.'
-        )
-    if name.startswith("_") and any(
-        allowed_module.startswith(module) for allowed_module in ALLOWED_MODULES
-    ):
-        raise AttributeError(f'"{name}" is an invalid attribute name because it starts with "_"')
-    args = (_ob, name, default)
-
-    return getattr(*args)
 
 
 def _safe_write(_ob: Any, *args: Any, **kwargs: Any) -> Any:
@@ -145,6 +131,7 @@ def _safe_write(_ob: Any, *args: Any, **kwargs: Any) -> Any:
 
     if full_name in PROTECTED_RESOURCES:
         raise TypeError(f"Forbidden assignment to a protected resource: {full_name}.")
+
     return _ob
 
 
@@ -154,7 +141,9 @@ def _apply(_ob: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 def _find_folder_in_path(file_path: Path, target_folder_name: str) -> Path | None:
-    """Recursively search for a folder with the specified name in the hierarchy of the given file path."""
+    """
+    Recursively search for a folder with the specified name in the hierarchy of the given file path.
+    """
     file_path = file_path.resolve()
 
     if file_path.name == target_folder_name:
@@ -340,13 +329,12 @@ class Sandbox:
                 "list": builtins.list,
                 "next": builtins.next,
                 "iter": builtins.iter,
-                "type": builtins.type,
             },
             "__metaclass__": type,
             "__name__": self.namespace,
             "__is_plugin__": True,
             "_write_": _safe_write,
-            "_getattr_": safe_getattr,
+            "_getattr_": self._safe_getattr,
             "_getiter_": _unrestricted,
             "_getitem_": default_guarded_getitem,
             "_print_": PrintCollector,
@@ -390,7 +378,9 @@ class Sandbox:
 
     def _evaluate_module(self, module_name: str) -> None:
         """Evaluate the given module in the sandbox.
-        If the module to import belongs to the same package as the current module, evaluate it inside a sandbox.
+
+        If the module to import belongs to the same package as the current module,
+        evaluate it inside a sandbox.
         """
         if not module_name.startswith(self.package_name) or module_name in self._evaluated_modules:
             return  # Skip modules outside the package or already evaluated.
@@ -415,7 +405,8 @@ class Sandbox:
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or already the source code root.
+        # Skip evaluation if the parent module is outside the base path or
+        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -435,9 +426,47 @@ class Sandbox:
 
         self._evaluate_implicit_imports(parent)
 
+    def _safe_getattr(self, _ob: Any, name: Any, default: Any = None) -> Any:
+        """A safer getattr implementation."""
+        if isinstance(_ob, types.ModuleType):
+            module = _ob.__name__.split(".")[0]
+        elif isinstance(_ob, type):
+            module = _ob.__module__.split(".")[0]
+        else:
+            module = _ob.__class__.__module__.split(".")[0]
+
+        if type(name) is not str:
+            raise TypeError("type(name) must be str")
+
+        if name in ("format", "format_map") and (
+            isinstance(_ob, str) or (isinstance(_ob, type) and issubclass(_ob, str))
+        ):
+            raise NotImplementedError(
+                "Using the format and format_map methods of `str` is not safe"
+            )
+
+        if name in INSPECT_ATTRIBUTES:
+            raise AttributeError(f'"{name}" is a restricted name.')
+
+        # Code defined in the Sandbox namespace can access its own underscore variables
+        if name.startswith("_") and module != self.namespace:
+            raise AttributeError(
+                f'"{name}" is an invalid attribute name because it starts with "_"'
+            )
+
+        return getattr(_ob, name, default)
+
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
         if not self._is_known_module(name):
             raise ImportError(f"{name!r} is not an allowed import.")
+
+        if len(args) >= 3:
+            from_list = args[2]
+
+            if from_list is not None:
+                for item in from_list:
+                    if item.startswith("_"):
+                        raise ImportError(f"{item!r} is not an allowed import.")
 
         self._evaluate_module(name)
 
