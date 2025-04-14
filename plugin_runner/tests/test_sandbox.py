@@ -29,6 +29,9 @@ VALID_CODE = """
 
 CODE_WITH_RESTRICTED_IMPORTS = [
     """
+        from canvas_sdk.commands.tests.schema.tests import settings
+    """,
+    """
         import os
         result = os.listdir('.')
     """,
@@ -152,7 +155,9 @@ def test_valid_code_execution() -> None:
     assert scope["result"] == 30, "The code should compute result as 30."
 
 
-@pytest.mark.parametrize("code", CODE_WITH_RESTRICTED_IMPORTS, ids=["os", "django_cache"])
+@pytest.mark.parametrize(
+    "code", CODE_WITH_RESTRICTED_IMPORTS, ids=["settings", "os", "django_cache"]
+)
 def test_disallowed_import(code: str) -> None:
     """Test that restricted imports are not allowed."""
     sandbox = _sandbox_from_code(code)
