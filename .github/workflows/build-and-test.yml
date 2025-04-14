@@ -49,7 +49,7 @@ jobs:
         id: dispatch
         with:
           token: ${{ secrets.GH_PAT }}
-          ref: refs/heads/chore/koala-2646-integration-tests-plugins
+          ref: refs/heads/develop
           repo: canvas
           owner: canvas-medical
           workflow: test-canvas-plugins.yml
