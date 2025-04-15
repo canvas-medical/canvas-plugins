@@ -37,3 +37,6 @@ def render_to_string(
     template = Template(template_path.read_text())
 
     return template.render(Context(context))
+
+
+__canvas_allowed_attributes__ = ("render_to_string",)

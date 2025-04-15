@@ -187,3 +187,6 @@ class ValueSetTimeframeLookupQuerySet(ValueSetLookupQuerySet, TimeframeLookupQue
     """A class that includes methods for looking up value sets and using timeframes."""
 
     pass
+
+
+__canvas_allowed_attributes__ = ()

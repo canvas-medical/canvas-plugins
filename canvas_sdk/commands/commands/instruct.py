@@ -26,3 +26,6 @@ class InstructCommand(BaseCommand):
             errors.append(self._create_error_detail("value", message, self.coding))
 
         return errors
+
+
+__canvas_allowed_attributes__ = ("InstructCommand",)

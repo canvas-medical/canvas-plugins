@@ -12,3 +12,6 @@ class CloseGoalCommand(BaseCommand):
     goal_id: int | None = None
     achievement_status: GoalCommand.AchievementStatus | None = None
     progress: str | None = None
+
+
+__canvas_allowed_attributes__ = ("CloseGoalCommand",)

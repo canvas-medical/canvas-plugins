@@ -9,3 +9,6 @@ class PlanCommand(_BaseCommand):
         commit_required_fields = ("narrative",)
 
     narrative: str = ""
+
+
+__canvas_allowed_attributes__ = ("PlanCommand",)

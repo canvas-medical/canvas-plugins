@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -213,3 +215,6 @@ class HistoryOfHipFractureInParent(ValueSet):
         "445121000124105",  # Family history of paternal hip fracture (situation)
         "445501000124107",  # Family history of hip fracture in parent (situation)
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

@@ -8,4 +8,8 @@ from canvas_sdk.effects.billing_line_item.update_billing_line_item import (
     UpdateBillingLineItem,
 )
 
-__all__ = ("AddBillingLineItem", "UpdateBillingLineItem", "RemoveBillingLineItem")
+__all__ = __canvas_allowed_attributes__ = (
+    "AddBillingLineItem",
+    "UpdateBillingLineItem",
+    "RemoveBillingLineItem",
+)

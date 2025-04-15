@@ -11,3 +11,6 @@ class CanvasUser(models.Model):
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     email = models.EmailField(db_column="email")
     phone_number = models.CharField(db_column="phone_number", max_length=255)
+
+
+__canvas_allowed_attributes__ = ("CanvasUser",)

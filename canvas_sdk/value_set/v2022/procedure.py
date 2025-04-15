@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -4037,3 +4039,6 @@ class FluorideVarnishApplicationForChildren(ValueSet):
         "234723000",  # Topical application of fluoride - tooth (procedure)
         "313042009",  # Application of dental fluoride varnish (procedure)
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

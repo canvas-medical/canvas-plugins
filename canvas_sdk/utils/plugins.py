@@ -24,3 +24,6 @@ def plugin_only(func: Callable[..., Any]) -> Callable[..., Any]:
         return func(*args, **kwargs)
 
     return wrapper
+
+
+__canvas_allowed_attributes__ = ()

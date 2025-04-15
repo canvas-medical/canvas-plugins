@@ -4,8 +4,8 @@ from .surescripts_messages import (
     SendSurescriptsMedicationHistoryRequestEffect,
 )
 
-__all__ = [
+__all__ = __canvas_allowed_attributes__ = (
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
     "SendSurescriptsMedicationHistoryRequestEffect",
-]
+)

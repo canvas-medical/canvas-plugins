@@ -52,3 +52,6 @@ class VitalsCommand(BaseCommand):
     respiration_rate: conint(ge=6, le=60) | None = None  # type: ignore[valid-type]
     oxygen_saturation: conint(ge=60, le=100) | None = None  # type: ignore[valid-type]
     note: constr(max_length=150) | None = None  # type: ignore[valid-type]
+
+
+__canvas_allowed_attributes__ = ("VitalsCommand",)

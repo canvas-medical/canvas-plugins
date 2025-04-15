@@ -38,3 +38,6 @@ class Assessment(models.Model):
     narrative = models.CharField()
     background = models.CharField()
     care_team = models.CharField()
+
+
+__canvas_allowed_attributes__ = ("AssessmentStatus", "Assessment")

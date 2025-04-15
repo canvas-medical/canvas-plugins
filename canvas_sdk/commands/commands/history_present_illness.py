@@ -9,3 +9,6 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
         commit_required_fields = ("narrative",)
 
     narrative: str | None = None
+
+
+__canvas_allowed_attributes__ = ("HistoryOfPresentIllnessCommand",)

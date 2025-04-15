@@ -108,3 +108,15 @@ class TaskTaskLabel(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING, null=True)
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
+
+
+__canvas_allowed_attributes__ = (
+    "TaskType",
+    "EventType",
+    "TaskStatus",
+    "TaskLabelModule",
+    "Task",
+    "TaskComment",
+    "TaskLabel",
+    "TaskTaskLabel",
+)

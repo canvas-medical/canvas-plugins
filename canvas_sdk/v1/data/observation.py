@@ -122,3 +122,12 @@ class ObservationValueCoding(models.Model):
     observation = models.ForeignKey(
         Observation, on_delete=models.DO_NOTHING, related_name="value_codings", null=True
     )
+
+
+__canvas_allowed_attributes__ = (
+    "Observation",
+    "ObservationCoding",
+    "ObservationComponent",
+    "ObservationComponentCoding",
+    "ObservationValueCoding",
+)

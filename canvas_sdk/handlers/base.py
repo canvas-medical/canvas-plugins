@@ -57,3 +57,6 @@ class BaseHandler(ABC):
     def accept_event(self) -> bool:
         """Determine whether an event should be accepted and handled by the handler."""
         return True
+
+
+__canvas_allowed_attributes__ = ("BaseHandler",)

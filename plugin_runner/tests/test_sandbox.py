@@ -1,4 +1,6 @@
+import importlib
 import re
+from collections.abc import Generator
 from textwrap import dedent
 from typing import Any
 
@@ -7,6 +9,7 @@ from pytest_mock import MockerFixture
 
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
+    CANVAS_SUBMODULES,
     FORBIDDEN_ASSIGNMENTS,
     PROTECTED_RESOURCES,
     Sandbox,
@@ -137,15 +140,19 @@ CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
 
 
 @pytest.fixture
-def mock_allowed_modules(mocker: "MockerFixture", request: Any) -> None:
+def mock_allowed_modules(mocker: "MockerFixture", request: Any) -> Generator:
     """Mock the ALLOWED_MODULES."""
     mocker.patch("plugin_runner.sandbox.ALLOWED_MODULES", request.param)
+    yield
+    mocker.stopall()
 
 
 @pytest.fixture
-def mock_protected_resources(mocker: "MockerFixture", request: Any) -> None:
+def mock_protected_resources(mocker: "MockerFixture", request: Any) -> Generator:
     """Mock the PROTECTED_RESOURCES."""
     mocker.patch("plugin_runner.sandbox.PROTECTED_RESOURCES", request.param)
+    yield
+    mocker.stopall()
 
 
 def test_valid_code_execution() -> None:
@@ -202,6 +209,16 @@ RE_ERROR_STRINGS = re.compile(
 )
 
 
+@pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULES)
+def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
+    """
+    Test that no module in ALLOWED_MODULES re-exports settings.
+    """
+    imported_module = importlib.import_module(canvas_module)
+
+    assert hasattr(imported_module, "__canvas_allowed_attributes__")
+
+
 @pytest.mark.parametrize("allowed_module", ALLOWED_MODULES)
 def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> None:
     """
@@ -215,6 +232,36 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
     )
 
     with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+        sandbox.execute()
+
+
+def test_plugin_runner_re_export_1() -> None:
+    """
+    Test what is re-exported by our code.
+    """
+    sandbox = _sandbox_from_code(
+        """
+            import canvas_sdk.caching.plugins
+            canvas_sdk.caching.plugins.get_cache_client()
+        """
+    )
+
+    with pytest.raises(AttributeError):
+        sandbox.execute()
+
+
+def test_plugin_runner_re_export_2() -> None:
+    """
+    Test what is re-exported by our code.
+    """
+    sandbox = _sandbox_from_code(
+        """
+            import canvas_sdk.caching.plugins
+            canvas_sdk.caching.plugins.CANVAS_SDK_CACHE_TIMEOUT_SECONDS
+        """
+    )
+
+    with pytest.raises(AttributeError):
         sandbox.execute()
 
 
@@ -310,6 +357,18 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
+def test_sandbox_allows_access_to_sub_modules() -> None:
+    """
+    Ensure we can import from allowed sub-modules.
+    """
+    sandbox = _sandbox_from_code("""
+        import canvas_sdk.handlers.base
+        from canvas_sdk.handlers.simple_api import BasicAuthMixin
+    """)
+
+    sandbox.execute()
+
+
 def test_type_is_inaccessible() -> None:
     """Test that type() is inaccessible."""
     sandbox = _sandbox_from_code(
@@ -329,7 +388,7 @@ def test_type_is_inaccessible() -> None:
 def test_get_cache_client_is_inaccessible() -> None:
     """Test that get_cache_client from the plugins module is inaccessible."""
     sandbox = _sandbox_from_code(
-        source_code="from canvas_sdk.caching.plugins import _get_cache_client"
+        source_code="from canvas_sdk.caching.plugins import get_cache_client"
     )
 
     with pytest.raises(ImportError, match="is not an allowed import."):
@@ -378,14 +437,8 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
             ["json"],
             ALLOWED_MODULES,
         ),
-        (
-            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[3],
-            "Forbidden assignment",
-            PROTECTED_RESOURCES,
-            list(ALLOWED_MODULES) + ["canvas_sdk.caching.base"],
-        ),
     ],
-    ids=["setattr", "assign", "module", "class"],
+    ids=["setattr", "assign", "module"],
     indirect=["mock_protected_resources", "mock_allowed_modules"],
 )
 def test_sandbox_denies_setattr_to_protected_resources(

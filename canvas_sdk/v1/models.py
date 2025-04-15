@@ -2,3 +2,5 @@
 # reasons. For this reason, we import * from data to avoid duplication.
 
 from .data import *  # noqa: F403
+
+__canvas_allowed_attributes__ = ()
