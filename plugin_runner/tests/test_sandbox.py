@@ -217,6 +217,7 @@ def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> 
     imported_module = importlib.import_module(canvas_module)
 
     assert hasattr(imported_module, "__canvas_allowed_attributes__")
+    assert isinstance(imported_module.__canvas_allowed_attributes__, tuple)
 
 
 @pytest.mark.parametrize("allowed_module", ALLOWED_MODULES)
