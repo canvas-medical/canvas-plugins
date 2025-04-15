@@ -54,7 +54,6 @@ def find_submodules(starting_modules: Iterable[str]) -> list[str]:
 
 
 CANVAS_MODULES = (
-    "canvas_sdk.caching.plugins",
     "canvas_sdk.commands",
     "canvas_sdk.effects",
     "canvas_sdk.events",
@@ -133,7 +132,7 @@ ALLOWED_MODULES = frozenset([*CANVAS_MODULES, *STANDARD_LIBRARY_MODULES, *THIRD_
 
 # The names in this list are forbidden to be assigned to in a sandboxed runtime.
 FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
-PROTECTED_RESOURCES = frozenset(["canvas_sdk.caching.base.Cache"])
+PROTECTED_RESOURCES: frozenset[str] = frozenset()
 
 
 def _module_matches(name: str, module: str) -> bool:

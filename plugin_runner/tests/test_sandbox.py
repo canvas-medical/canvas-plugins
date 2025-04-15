@@ -11,7 +11,6 @@ from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     CANVAS_SUBMODULES,
     FORBIDDEN_ASSIGNMENTS,
-    PROTECTED_RESOURCES,
     Sandbox,
 )
 
@@ -49,74 +48,73 @@ CODE_WITH_FORBIDDEN_FUNC_NAME = """
     builtins = {}
 """
 
-
 CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
-        pvt = cache._connection
+        client = Http()
+        pvt = client._session
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
+        client = Http()
 
-        pvt = cache.__dict__["_connection"]
+        pvt = client.__dict__["_session"]
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
-        pvt = cache._make_key("test")
+        client = Http()
+        pvt = client.__setattr__("test", "test")
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
+        client = Http()
 
-        name = "_" + "private_attr"
-        pvt = _getattr_(cache, name)
+        name = "_" + "_session"
+        pvt = _getattr_(client, name)
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
-        pvt = cache.__connection
+        client = Http()
+        pvt = client.__connection
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
+        client = Http()
 
-        pvt = cache.__dict__["__connection"]
+        pvt = client.__dict__["__connection"]
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
+        from canvas_sdk.utils import Http
 
-        cache = get_cache()
-        pvt = cache.__class__
+        client = Http()
+        pvt = client.__class__
     """,
 ]
 
 CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES = [
     """
-        from canvas_sdk.caching.plugins import get_cache
-        cache = get_cache()
-        setattr(cache, "_connection", None)
+        from canvas_sdk.utils import Http
+        client = Http()
+        setattr(client, "_session", None)
     """,
     """
-        from canvas_sdk.caching.plugins import get_cache
-        cache = get_cache()
-        cache.set = None
+        from canvas_sdk.utils import Http
+        client = Http()
+        client.get = None
     """,
     """
         import json
         json.dumps = None
     """,
     """
-        from canvas_sdk.caching.base import Cache
-        Cache._connection = None
+        from canvas_sdk.utils import Http
+        Cache._session = None
     """,
 ]
 
@@ -236,33 +234,18 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
         sandbox.execute()
 
 
-def test_plugin_runner_re_export_1() -> None:
+def test_plugin_runner_re_export() -> None:
     """
     Test what is re-exported by our code.
     """
     sandbox = _sandbox_from_code(
         """
-            import canvas_sdk.caching.plugins
-            canvas_sdk.caching.plugins.get_cache_client()
+            import canvas_sdk.utils
+            canvas_sdk.utils.ThreadPoolExecutor()
         """
     )
 
-    with pytest.raises(AttributeError):
-        sandbox.execute()
-
-
-def test_plugin_runner_re_export_2() -> None:
-    """
-    Test what is re-exported by our code.
-    """
-    sandbox = _sandbox_from_code(
-        """
-            import canvas_sdk.caching.plugins
-            canvas_sdk.caching.plugins.CANVAS_SDK_CACHE_TIMEOUT_SECONDS
-        """
-    )
-
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="invalid attribute name"):
         sandbox.execute()
 
 
@@ -374,25 +357,15 @@ def test_type_is_inaccessible() -> None:
     """Test that type() is inaccessible."""
     sandbox = _sandbox_from_code(
         """
-            from canvas_sdk.caching.plugins import get_cache
+            from canvas_sdk.utils import Http
 
-            cache = get_cache()
+            client = Http()
 
-            cache_class = type(cache)
+            cache_class = type(client)
         """
     )
 
     with pytest.raises(NameError, match="name 'type' is not defined"):
-        sandbox.execute()
-
-
-def test_get_cache_client_is_inaccessible() -> None:
-    """Test that get_cache_client from the plugins module is inaccessible."""
-    sandbox = _sandbox_from_code(
-        source_code="from canvas_sdk.caching.plugins import get_cache_client"
-    )
-
-    with pytest.raises(ImportError, match="is not an allowed import."):
         sandbox.execute()
 
 
@@ -404,8 +377,8 @@ def test_get_cache_client_is_inaccessible() -> None:
         "dict_private_attr_connection",
         "private_method",
         "private_attr_dynamic_name",
-        "private_attr__conection",
-        "dict_private_attr__connection",
+        "private_attr__session",
+        "dict_private_attr__session",
         "private_attr__class__",
     ],
 )
@@ -423,13 +396,13 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[0],
             "attribute-less object",
-            PROTECTED_RESOURCES,
+            ["canvas_sdk.utils.http.Http"],
             ALLOWED_MODULES,
         ),
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[1],
             "Forbidden assignment",
-            PROTECTED_RESOURCES,
+            ["canvas_sdk.utils.http.Http"],
             ALLOWED_MODULES,
         ),
         (
