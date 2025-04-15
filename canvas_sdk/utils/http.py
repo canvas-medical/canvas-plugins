@@ -1,15 +1,14 @@
 import concurrent
 import functools
 import os
-import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from functools import wraps
-from typing import Any, Literal, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar
 
 import requests
 
+from canvas_sdk.utils.metrics import measured
 from canvas_sdk.utils.stats import StatsDClientProxy
 
 F = TypeVar("F", bound=Callable)
@@ -119,22 +118,7 @@ class Http:
 
         self.statsd_client = StatsDClientProxy()
 
-    @staticmethod
-    def measure_time(fn: F) -> F:
-        """A decorator to store timing of HTTP calls."""
-
-        @wraps(fn)
-        def wrapper(self: "Http", *args: Any, **kwargs: Any) -> Any:
-            start_time = time.time()
-            result = fn(self, *args, **kwargs)
-            end_time = time.time()
-            timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing, tags={})
-            return result
-
-        return cast(F, wrapper)
-
-    @measure_time
+    @measured(track_plugins_usage=True)
     def get(
         self, url: str, headers: Mapping[str, str | bytes | None] | None = None
     ) -> requests.Response:
@@ -147,7 +131,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def post(
         self,
         url: str,
@@ -164,7 +148,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def put(
         self,
         url: str,
@@ -181,7 +165,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def patch(
         self,
         url: str,
@@ -198,7 +182,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
