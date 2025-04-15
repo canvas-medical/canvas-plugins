@@ -290,10 +290,13 @@ class Sandbox:
 
         def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
             """Checks and mutates attribute access/assignment.
+
             'a.b' becomes '_getattr_(a, "b")'
             'a.b = c' becomes '_write_(a).b = c'
             'del a.b' becomes 'del _write_(a).b'
+
             The _write_ function should return a security proxy.
+
             Override to turn errors into warnings for leading underscores.
             """
             if node.attr.startswith("_") and node.attr != "_":
