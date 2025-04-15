@@ -17,6 +17,7 @@ import redis.asyncio as redis
 import sentry_sdk
 from asgiref.sync import sync_to_async
 from django.db import connections
+from sentry_sdk.integrations.logging import ignore_logger
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
@@ -55,6 +56,10 @@ if SENTRY_DSN:
         traces_sample_rate=0.0,
         profiles_sample_rate=0.0,
     )
+
+    # Sentry creates an issue for anything logged with logger.error();
+    # we want the exceptions themselves, not these error lines
+    ignore_logger("plugin_runner_logger")
 
     with sentry_sdk.configure_scope() as scope:
         scope.set_tag("customer", CUSTOMER_IDENTIFIER)
