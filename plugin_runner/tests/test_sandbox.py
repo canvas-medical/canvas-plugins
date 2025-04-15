@@ -143,16 +143,16 @@ CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
 def mock_allowed_modules(mocker: "MockerFixture", request: Any) -> Generator:
     """Mock the ALLOWED_MODULES."""
     mocker.patch("plugin_runner.sandbox.ALLOWED_MODULES", request.param)
+
     yield
-    mocker.stopall()
 
 
 @pytest.fixture
 def mock_protected_resources(mocker: "MockerFixture", request: Any) -> Generator:
     """Mock the PROTECTED_RESOURCES."""
     mocker.patch("plugin_runner.sandbox.PROTECTED_RESOURCES", request.param)
+
     yield
-    mocker.stopall()
 
 
 def test_valid_code_execution() -> None:

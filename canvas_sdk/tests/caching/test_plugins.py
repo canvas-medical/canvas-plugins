@@ -44,8 +44,6 @@ def mock_plugin_caller(mocker: MockerFixture, request: Any) -> Generator[str]:
 
     yield plugin_name
 
-    mocker.stopall()
-
 
 def nuke_caching() -> None:
     """
