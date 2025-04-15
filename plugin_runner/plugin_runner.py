@@ -320,6 +320,12 @@ async def synchronize_plugins(run_once: bool = False) -> None:
     while True:
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
+        await pubsub.check_health()
+
+        if not pubsub.connection.is_connected:  # type: ignore
+            log.info("synchronize_plugins: reconnecting to Redis")
+            await pubsub.connection.connect()  # type: ignore
+
         if message is None:
             continue
 
@@ -349,12 +355,6 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             except Exception as e:
                 log.error(f"synchronize_plugins: load_plugins failed: {e}")
                 sentry_sdk.capture_exception(e)
-
-        await pubsub.check_health()
-
-        if not pubsub.connection.is_connected:  # type: ignore
-            log.info("synchronize_plugins: reconnecting to Redis")
-            await pubsub.connection.connect()  # type: ignore
 
         if run_once:
             break
