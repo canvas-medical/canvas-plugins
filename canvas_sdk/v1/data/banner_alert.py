@@ -25,3 +25,6 @@ class BannerAlert(models.Model):
     intent = models.CharField()
     href = models.CharField()
     status = models.CharField()
+
+
+__canvas_allowed_attributes__ = ("BannerAlert",)

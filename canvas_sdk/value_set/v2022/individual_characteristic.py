@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -311,3 +313,6 @@ class White(ValueSet):
     CDCREC = {
         "2106-3",  # White
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

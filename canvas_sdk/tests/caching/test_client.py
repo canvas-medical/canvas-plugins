@@ -27,6 +27,8 @@ def mock_caches(
 
     yield list(drivers.values())
 
+    mocker.stopall()
+
 
 @pytest.fixture
 def mock_django_caches(
@@ -41,6 +43,8 @@ def mock_django_caches(
     )
 
     yield list(drivers.values())
+
+    mocker.stopall()
 
 
 def test_get_client_default_driver() -> None:
@@ -170,6 +174,8 @@ def test_make_key_is_called_for_all_cache_methods(
         getattr(cache, method_name)(*args)
         assert mock_make_key.call_count == call_count
 
+    mocker.stopall()
+
 
 def test_get_timeout_raises_an_exception_if_the_timeout_exceeds_the_max_timeout() -> None:
     """Ensure that an exception is raised if the timeout exceeds the max timeout."""
@@ -210,3 +216,5 @@ def test_get_timeout_is_called_by_all_set_operations(
         args = method_args.get(method_name, [])
         getattr(cache, method_name)(*args)
         assert mock_get_timeout.call_count == call_count
+
+    mocker.stopall()

@@ -54,7 +54,7 @@ from .staff import Staff, StaffContactPoint
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
-__all__ = [
+__all__ = __canvas_allowed_attributes__ = (
     "Appointment",
     "AppointmentExternalIdentifier",
     "AllergyIntolerance",
@@ -120,4 +120,4 @@ __all__ = [
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
-]
+)

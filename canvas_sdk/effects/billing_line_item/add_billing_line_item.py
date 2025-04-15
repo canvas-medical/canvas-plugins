@@ -36,3 +36,6 @@ class AddBillingLineItem(_BaseEffect):
             "note_id": self.note_id,
             "data": self.values,
         }
+
+
+__canvas_allowed_attributes__ = ("AddBillingLineItem",)

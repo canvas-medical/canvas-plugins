@@ -46,3 +46,6 @@ class Event:
         self.name = EventType.Name(self.type)
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
+
+
+__canvas_allowed_attributes__ = ("TargetType", "Event")

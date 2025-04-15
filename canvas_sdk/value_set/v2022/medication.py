@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -5128,3 +5130,6 @@ class MedicationsForBelowNormalBmi(ValueSet):
         "860221",  # megestrol acetate 40 MG Oral Tablet
         "860225",  # megestrol acetate 40 MG/ML Oral Suspension
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

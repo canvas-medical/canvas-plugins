@@ -37,3 +37,6 @@ class Timeframe:
             start = start.shift(days=days)
 
         return Timeframe(start=start, end=end)
+
+
+__canvas_allowed_attributes__ = ("Timeframe",)

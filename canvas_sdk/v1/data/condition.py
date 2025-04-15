@@ -76,3 +76,10 @@ class ConditionCoding(models.Model):
     condition = models.ForeignKey(
         Condition, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
+
+
+__canvas_allowed_attributes__ = (
+    "ClinicalStatus",
+    "Condition",
+    "ConditionCoding",
+)

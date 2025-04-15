@@ -100,3 +100,11 @@ class UpdateTask(_BaseEffect):
             else:
                 value_dict[field] = getattr(self, field)
         return value_dict
+
+
+__canvas_allowed_attributes__ = (
+    "AddTask",
+    "AddTaskComment",
+    "TaskStatus",
+    "UpdateTask",
+)

@@ -113,8 +113,10 @@ def test_plugin_installation_from_tarball(mocker: MockerFixture) -> None:
     assert not Path("plugin_runner/tests/data/plugins/plugin1").exists()
     assert not Path("plugin_runner/tests/data/plugins/plugin2").exists()
 
+    mocker.stopall()
 
-def test_download(mocker: MockerFixture) -> None:
+
+def test_download() -> None:
     """Test that the plugin package can be written to disk, mocking out S3."""
     mock_response = MagicMock()
     mock_response.status_code = 200

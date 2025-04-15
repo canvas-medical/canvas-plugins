@@ -58,3 +58,10 @@ class CareTeamMembership(models.Model):
 
     def __str__(self) -> str:
         return f"id={self.id}"
+
+
+__canvas_allowed_attributes__ = (
+    "CareTeamMembershipStatus",
+    "CareTeamRole",
+    "CareTeamMembership",
+)

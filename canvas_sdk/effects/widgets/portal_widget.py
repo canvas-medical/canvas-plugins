@@ -74,3 +74,6 @@ class PortalWidget(_BaseEffect):
             )
 
         return errors
+
+
+__canvas_allowed_attributes__ = ("PortalWidget",)
