@@ -9,4 +9,4 @@ class PhysicalExamCommand(QuestionnaireCommand):
         commit_required_fields = ("questionnaire_id",)
 
 
-__canvas_allowed_attributes__ = ("PhysicalExamCommand",)
+__exports__ = ("PhysicalExamCommand",)

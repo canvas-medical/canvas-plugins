@@ -9,4 +9,4 @@ class StructuredAssessmentCommand(QuestionnaireCommand):
         commit_required_fields = ("questionnaire_id",)
 
 
-__canvas_allowed_attributes__ = ("StructuredAssessmentCommand",)
+__exports__ = ("StructuredAssessmentCommand",)

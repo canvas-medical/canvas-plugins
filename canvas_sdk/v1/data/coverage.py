@@ -294,7 +294,7 @@ class TransactorPhone(models.Model):
         return f"id={self.id}"
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "CoverageStack",
     "CoverageState",
     "CoverageType",

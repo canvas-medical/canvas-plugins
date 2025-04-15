@@ -17,4 +17,4 @@ class StopMedicationCommand(_BaseCommand):
     rationale: str | None = None
 
 
-__canvas_allowed_attributes__ = ("StopMedicationCommand",)
+__exports__ = ("StopMedicationCommand",)

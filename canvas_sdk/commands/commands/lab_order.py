@@ -96,4 +96,4 @@ class LabOrderCommand(BaseCommand):
         return errors
 
 
-__canvas_allowed_attributes__ = ("LabOrderCommand",)
+__exports__ = ("LabOrderCommand",)

@@ -54,4 +54,4 @@ class VitalsCommand(BaseCommand):
     note: constr(max_length=150) | None = None  # type: ignore[valid-type]
 
 
-__canvas_allowed_attributes__ = ("VitalsCommand",)
+__exports__ = ("VitalsCommand",)

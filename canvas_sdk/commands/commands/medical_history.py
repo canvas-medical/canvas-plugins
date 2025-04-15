@@ -19,4 +19,4 @@ class MedicalHistoryCommand(BaseCommand):
     comments: str | None = Field(max_length=1000, default=None)
 
 
-__canvas_allowed_attributes__ = ("MedicalHistoryCommand",)
+__exports__ = ("MedicalHistoryCommand",)

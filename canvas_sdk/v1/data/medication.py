@@ -74,4 +74,4 @@ class MedicationCoding(models.Model):
     )
 
 
-__canvas_allowed_attributes__ = ("Status", "Medication", "MedicationCoding")
+__exports__ = ("Status", "Medication", "MedicationCoding")

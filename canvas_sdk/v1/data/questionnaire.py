@@ -212,7 +212,7 @@ class InterviewQuestionResponse(models.Model):
     comment = models.CharField()
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "ResponseOptionSet",
     "ResponseOption",
     "Question",

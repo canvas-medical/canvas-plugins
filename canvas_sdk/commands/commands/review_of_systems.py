@@ -9,4 +9,4 @@ class ReviewOfSystemsCommand(QuestionnaireCommand):
         commit_required_fields = ("questionnaire_id",)
 
 
-__canvas_allowed_attributes__ = ("ReviewOfSystemsCommand",)
+__exports__ = ("ReviewOfSystemsCommand",)

@@ -33,4 +33,4 @@ class StatinAllergen(ValueSet):
     }
 
 
-__canvas_allowed_attributes__ = ("StatinAllergen",)
+__exports__ = ("StatinAllergen",)

@@ -31,4 +31,4 @@ class FormResult(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("FormResult",)
+__exports__ = ("FormResult",)

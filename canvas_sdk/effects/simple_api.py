@@ -83,7 +83,7 @@ class HTMLResponse(Response):
         super().__init__(content.encode(), status_code, headers, content_type="text/html")
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "JSON",
     "Response",
     "JSONResponse",

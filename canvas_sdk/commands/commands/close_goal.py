@@ -14,4 +14,4 @@ class CloseGoalCommand(BaseCommand):
     progress: str | None = None
 
 
-__canvas_allowed_attributes__ = ("CloseGoalCommand",)
+__exports__ = ("CloseGoalCommand",)

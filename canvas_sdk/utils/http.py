@@ -261,7 +261,7 @@ class ScienceHttp(Http):
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
-__all__ = __canvas_allowed_attributes__ = (
+__all__ = __exports__ = (
     # TODO_SANDBOX test safety of this
     "ThreadPoolExecutor",
     "Http",

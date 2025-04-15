@@ -251,7 +251,7 @@ class PatientSessionAuthMixin(AuthSchemeMixin):
         return True
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "Credentials",
     "BasicCredentials",
     "BearerCredentials",

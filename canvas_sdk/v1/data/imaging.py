@@ -99,7 +99,7 @@ class ImagingReport(models.Model):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "ImagingOrder",
     "ImagingReview",
     "ImagingReport",

@@ -351,7 +351,7 @@ class LabPartnerTest(models.Model):
     cpt_code = models.CharField(max_length=256, blank=True, null=True)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "TransmissionType",
     "LabReport",
     "LabReviewQuerySet",

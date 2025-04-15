@@ -39,7 +39,7 @@ class AllergyCommand(BaseCommand):
     approximate_date: date | None = None
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "AllergenType",
     "Allergen",
     "AllergyCommand",

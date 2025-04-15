@@ -110,7 +110,7 @@ class TaskTaskLabel(models.Model):
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "TaskType",
     "EventType",
     "TaskStatus",

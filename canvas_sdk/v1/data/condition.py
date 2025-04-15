@@ -78,7 +78,7 @@ class ConditionCoding(models.Model):
     )
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "ClinicalStatus",
     "Condition",
     "ConditionCoding",

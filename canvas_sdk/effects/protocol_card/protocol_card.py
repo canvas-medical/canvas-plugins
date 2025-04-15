@@ -95,7 +95,7 @@ class ProtocolCard(_BaseEffect):
         self.recommendations.append(recommendation)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "Recommendation",
     "ProtocolCard",
 )

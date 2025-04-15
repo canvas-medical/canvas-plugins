@@ -103,7 +103,7 @@ class PracticeLocationSetting(models.Model):
         return self.name
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "PracticeLocationPOS",
     "PracticeLocation",
     "PracticeLocationSetting",

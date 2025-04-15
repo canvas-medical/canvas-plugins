@@ -18,4 +18,4 @@ class RemoveAllergyCommand(BaseCommand):
     narrative: str | None = None
 
 
-__canvas_allowed_attributes__ = ("RemoveAllergyCommand",)
+__exports__ = ("RemoveAllergyCommand",)

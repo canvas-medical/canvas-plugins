@@ -60,7 +60,7 @@ class CareTeamMembership(models.Model):
         return f"id={self.id}"
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "CareTeamMembershipStatus",
     "CareTeamRole",
     "CareTeamMembership",

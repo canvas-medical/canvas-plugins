@@ -112,7 +112,7 @@ class ValueSet(CodeConstantsURLMappingMixin, metaclass=ValueSystems):
         }
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "CodeConstants",
     "CodeConstantsURLMappingMixin",
     "CombinedValueSet",

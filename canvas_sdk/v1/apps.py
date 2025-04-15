@@ -7,4 +7,4 @@ class CanvasSdkV1Config(AppConfig):
     name = "canvas_sdk.v1"
 
 
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

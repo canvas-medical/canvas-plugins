@@ -115,7 +115,7 @@ def separate_headers(headers: Mapping[str, str]) -> list[tuple[str, str]]:
     return headers_list
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "KeyType",
     "ValueType",
     "MultiDict",

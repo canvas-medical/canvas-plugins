@@ -38,4 +38,4 @@ class Command(models.Model):
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
 
 
-__canvas_allowed_attributes__ = ("Command",)
+__exports__ = ("Command",)

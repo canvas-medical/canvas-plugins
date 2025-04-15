@@ -28,4 +28,4 @@ class InstructCommand(BaseCommand):
         return errors
 
 
-__canvas_allowed_attributes__ = ("InstructCommand",)
+__exports__ = ("InstructCommand",)

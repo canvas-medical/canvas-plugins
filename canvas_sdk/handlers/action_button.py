@@ -80,7 +80,7 @@ class ActionButton(BaseHandler):
         return []
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "SHOW_BUTTON_REGEX",
     "ActionButton",
 )

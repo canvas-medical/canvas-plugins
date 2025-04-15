@@ -17,4 +17,4 @@ class PastSurgicalHistoryCommand(BaseCommand):
     comment: str | None = Field(max_length=1000, default=None)
 
 
-__canvas_allowed_attributes__ = ("PastSurgicalHistoryCommand",)
+__exports__ = ("PastSurgicalHistoryCommand",)

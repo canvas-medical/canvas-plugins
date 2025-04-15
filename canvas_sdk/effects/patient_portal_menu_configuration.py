@@ -36,4 +36,4 @@ class PatientPortalMenuConfiguration(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("PatientPortalMenuConfiguration",)
+__exports__ = ("PatientPortalMenuConfiguration",)

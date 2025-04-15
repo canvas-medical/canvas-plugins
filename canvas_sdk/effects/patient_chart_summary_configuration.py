@@ -40,4 +40,4 @@ class PatientChartSummaryConfiguration(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("PatientChartSummaryConfiguration",)
+__exports__ = ("PatientChartSummaryConfiguration",)

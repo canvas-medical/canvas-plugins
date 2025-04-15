@@ -86,4 +86,4 @@ class StaffContactPoint(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
 
 
-__canvas_allowed_attributes__ = ("Staff", "StaffContactPoint")
+__exports__ = ("Staff", "StaffContactPoint")

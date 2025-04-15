@@ -22,4 +22,4 @@ class PatientPortalApplicationConfiguration(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("PatientPortalApplicationConfiguration",)
+__exports__ = ("PatientPortalApplicationConfiguration",)

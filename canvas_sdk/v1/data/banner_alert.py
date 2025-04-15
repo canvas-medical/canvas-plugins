@@ -27,4 +27,4 @@ class BannerAlert(models.Model):
     status = models.CharField()
 
 
-__canvas_allowed_attributes__ = ("BannerAlert",)
+__exports__ = ("BannerAlert",)

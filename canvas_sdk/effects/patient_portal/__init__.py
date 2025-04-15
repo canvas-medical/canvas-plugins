@@ -1,1 +1,1 @@
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

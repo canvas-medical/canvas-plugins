@@ -62,4 +62,4 @@ class StatsDClientProxy:
 
 statsd_client = StatsDClientProxy()
 
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

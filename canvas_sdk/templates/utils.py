@@ -39,4 +39,4 @@ def render_to_string(
     return template.render(Context(context))
 
 
-__canvas_allowed_attributes__ = ("render_to_string",)
+__exports__ = ("render_to_string",)

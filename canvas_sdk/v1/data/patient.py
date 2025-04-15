@@ -227,7 +227,7 @@ class PatientSetting(models.Model):
     value = models.JSONField()
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
     "Patient",

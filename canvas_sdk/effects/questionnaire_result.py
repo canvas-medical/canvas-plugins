@@ -29,4 +29,4 @@ class CreateQuestionnaireResult(_BaseEffect):
         }
 
 
-__canvas_allowed_attributes__ = ("CreateQuestionnaireResult",)
+__exports__ = ("CreateQuestionnaireResult",)

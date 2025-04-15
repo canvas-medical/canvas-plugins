@@ -35,4 +35,4 @@ class CronTask(BaseHandler):
         return []
 
 
-__canvas_allowed_attributes__ = ("CronTask",)
+__exports__ = ("CronTask",)

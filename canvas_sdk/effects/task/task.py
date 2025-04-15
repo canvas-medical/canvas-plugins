@@ -102,7 +102,7 @@ class UpdateTask(_BaseEffect):
         return value_dict
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "AddTask",
     "AddTaskComment",
     "TaskStatus",

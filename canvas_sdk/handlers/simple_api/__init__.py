@@ -12,7 +12,7 @@ from .security import (
     StaffSessionAuthMixin,
 )
 
-__all__ = __canvas_allowed_attributes__ = (
+__all__ = __exports__ = (
     "api",
     "APIKeyAuthMixin",
     "APIKeyCredentials",

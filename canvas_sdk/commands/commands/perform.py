@@ -12,4 +12,4 @@ class PerformCommand(BaseCommand):
     notes: str | None = None
 
 
-__canvas_allowed_attributes__ = ("PerformCommand",)
+__exports__ = ("PerformCommand",)

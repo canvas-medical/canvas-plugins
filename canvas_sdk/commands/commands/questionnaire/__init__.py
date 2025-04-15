@@ -102,4 +102,4 @@ class QuestionnaireCommand(_BaseCommand):
         return values
 
 
-__canvas_allowed_attributes__ = ("QUESTION_CLASSES", "QuestionnaireCommand")
+__exports__ = ("QUESTION_CLASSES", "QuestionnaireCommand")

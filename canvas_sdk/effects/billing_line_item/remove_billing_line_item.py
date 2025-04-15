@@ -22,4 +22,4 @@ class RemoveBillingLineItem(_BaseEffect):
         }
 
 
-__canvas_allowed_attributes__ = ("RemoveBillingLineItem",)
+__exports__ = ("RemoveBillingLineItem",)

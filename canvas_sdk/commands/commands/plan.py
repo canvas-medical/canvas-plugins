@@ -11,4 +11,4 @@ class PlanCommand(_BaseCommand):
     narrative: str = ""
 
 
-__canvas_allowed_attributes__ = ("PlanCommand",)
+__exports__ = ("PlanCommand",)

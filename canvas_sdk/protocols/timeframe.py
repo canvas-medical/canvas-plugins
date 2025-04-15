@@ -39,4 +39,4 @@ class Timeframe:
         return Timeframe(start=start, end=end)
 
 
-__canvas_allowed_attributes__ = ("Timeframe",)
+__exports__ = ("Timeframe",)

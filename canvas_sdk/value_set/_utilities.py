@@ -13,4 +13,4 @@ def get_overrides(dictionary: dict[str, Any]) -> tuple:
     )
 
 
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

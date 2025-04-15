@@ -36,4 +36,4 @@ class LaunchModalEffect(_BaseEffect):
         return self
 
 
-__canvas_allowed_attributes__ = ("LaunchModalEffect",)
+__exports__ = ("LaunchModalEffect",)

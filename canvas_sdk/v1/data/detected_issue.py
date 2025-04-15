@@ -51,4 +51,4 @@ class DetectedIssueEvidence(models.Model):
     )
 
 
-__canvas_allowed_attributes__ = ("DetectedIssue", "DetectedIssueEvidence")
+__exports__ = ("DetectedIssue", "DetectedIssueEvidence")

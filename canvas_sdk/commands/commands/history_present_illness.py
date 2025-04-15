@@ -11,4 +11,4 @@ class HistoryOfPresentIllnessCommand(_BaseCommand):
     narrative: str | None = None
 
 
-__canvas_allowed_attributes__ = ("HistoryOfPresentIllnessCommand",)
+__exports__ = ("HistoryOfPresentIllnessCommand",)

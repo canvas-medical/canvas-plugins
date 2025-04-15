@@ -93,7 +93,7 @@ class SendSurescriptsBenefitsRequestEffect(_BaseEffect):
         return self.values
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
     "SendSurescriptsMedicationHistoryRequestEffect",

@@ -49,4 +49,4 @@ class ReasonForVisitCommand(_BaseCommand):
         return command_schema
 
 
-__canvas_allowed_attributes__ = ("ReasonForVisitCommand",)
+__exports__ = ("ReasonForVisitCommand",)

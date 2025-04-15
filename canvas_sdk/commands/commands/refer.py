@@ -50,4 +50,4 @@ class ReferCommand(BaseCommand):
         return values
 
 
-__canvas_allowed_attributes__ = ("ReferCommand",)
+__exports__ = ("ReferCommand",)

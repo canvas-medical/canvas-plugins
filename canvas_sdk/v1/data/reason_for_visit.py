@@ -22,4 +22,4 @@ class ReasonForVisitSettingCoding(models.Model):
     duration = ArrayField(models.DurationField())
 
 
-__canvas_allowed_attributes__ = ("ReasonForVisitSettingCoding",)
+__exports__ = ("ReasonForVisitSettingCoding",)

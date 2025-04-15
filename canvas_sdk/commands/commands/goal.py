@@ -35,4 +35,4 @@ class GoalCommand(_BaseCommand):
     progress: str | None = None
 
 
-__canvas_allowed_attributes__ = ("GoalCommand",)
+__exports__ = ("GoalCommand",)

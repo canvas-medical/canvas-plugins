@@ -26,4 +26,4 @@ def plugin_only(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

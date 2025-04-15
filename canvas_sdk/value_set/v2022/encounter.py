@@ -2566,4 +2566,4 @@ class HospitalServicesForUrologyCare(ValueSet):
     }
 
 
-__canvas_allowed_attributes__ = get_overrides(locals().copy())
+__exports__ = get_overrides(locals().copy())

@@ -69,4 +69,4 @@ class FollowUpCommand(_BaseCommand):
         return errors
 
 
-__canvas_allowed_attributes__ = ("FollowUpCommand",)
+__exports__ = ("FollowUpCommand",)

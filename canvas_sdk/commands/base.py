@@ -185,4 +185,4 @@ class _BaseCommand(Model):
         return Recommendation(title=title, button=button, command=command, context=self.values)
 
 
-__canvas_allowed_attributes__ = ("_BaseCommand",)
+__exports__ = ("_BaseCommand",)

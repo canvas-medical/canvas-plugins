@@ -20,4 +20,4 @@ class DiagnoseCommand(_BaseCommand):
     today_assessment: str | None = None
 
 
-__canvas_allowed_attributes__ = ("DiagnoseCommand",)
+__exports__ = ("DiagnoseCommand",)

@@ -41,7 +41,7 @@ class TaskCommand(BaseCommand):
     linked_items_urns: list[str] | None = None
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "AssigneeType",
     "TaskAssigner",
     "TaskCommand",

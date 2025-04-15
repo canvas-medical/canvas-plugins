@@ -176,4 +176,4 @@ class FrailtySymptom(ValueSet):
     }
 
 
-__canvas_allowed_attributes__ = ("FrailtySymptom",)
+__exports__ = ("FrailtySymptom",)

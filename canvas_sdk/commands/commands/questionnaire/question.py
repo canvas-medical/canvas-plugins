@@ -134,7 +134,7 @@ class CheckboxQuestion(BaseQuestion):
         )
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "ResponseOption",
     "BaseQuestion",
     "TextQuestion",

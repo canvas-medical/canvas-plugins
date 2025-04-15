@@ -41,4 +41,4 @@ class AssessCommand(_BaseCommand):
 # idea2:
 # validator that checks that condition.patient is the same as note.patient
 
-__canvas_allowed_attributes__ = ("AssessCommand",)
+__exports__ = ("AssessCommand",)

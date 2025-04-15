@@ -518,7 +518,7 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
         return []
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "FormPart",
     "StringFormPart",
     "FileFormPart",

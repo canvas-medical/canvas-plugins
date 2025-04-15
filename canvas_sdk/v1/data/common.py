@@ -156,7 +156,7 @@ class AddressState(models.TextChoices):
     DELETED = "deleted", "Deleted"
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "DocumentReviewMode",
     "OrderStatus",
     "ReviewPatientCommunicationMethod",

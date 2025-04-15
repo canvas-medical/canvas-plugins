@@ -28,7 +28,7 @@ class _BaseEffect(Model):
         return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "_BaseEffect",
     # Not defined here but used in a current plugin
     "EffectType",

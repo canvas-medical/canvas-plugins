@@ -162,7 +162,7 @@ class Note(models.Model):
     place_of_service = models.CharField()
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
     "NoteTypes",

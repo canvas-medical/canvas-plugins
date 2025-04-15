@@ -3,4 +3,4 @@
 
 from .data import *  # noqa: F403
 
-__canvas_allowed_attributes__ = ()
+__exports__ = ()

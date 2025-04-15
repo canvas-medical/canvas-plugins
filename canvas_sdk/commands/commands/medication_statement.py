@@ -26,4 +26,4 @@ class MedicationStatementCommand(_BaseCommand):
 # idea2:
 # see if we can get ValueSets to play nicely with pydantic
 
-__canvas_allowed_attributes__ = ("MedicationStatementCommand",)
+__exports__ = ("MedicationStatementCommand",)

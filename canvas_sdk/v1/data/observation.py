@@ -124,7 +124,7 @@ class ObservationValueCoding(models.Model):
     )
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "Observation",
     "ObservationCoding",
     "ObservationComponent",

@@ -21,4 +21,4 @@ class RemoveBannerAlert(_BaseEffect):
         return {"patient": self.patient_id, "patient_filter": self.patient_filter, "key": self.key}
 
 
-__canvas_allowed_attributes__ = ("RemoveBannerAlert",)
+__exports__ = ("RemoveBannerAlert",)

@@ -79,4 +79,4 @@ class AllergyIntoleranceCoding(models.Model):
     )
 
 
-__canvas_allowed_attributes__ = ("AllergyIntolerance", "AllergyIntoleranceCoding")
+__exports__ = ("AllergyIntolerance", "AllergyIntoleranceCoding")

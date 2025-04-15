@@ -55,7 +55,7 @@ class PrescribeCommand(_BaseCommand):
         return values
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "PrescribeCommand",
     # Not defined here but used in a current plugin
     "ClinicalQuantity",

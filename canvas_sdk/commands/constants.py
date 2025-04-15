@@ -52,7 +52,7 @@ class ServiceProvider(Model):
     notes: str | None = Field(max_length=512, default=None)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "CodeSystems",
     "Coding",
     "ClinicalQuantity",

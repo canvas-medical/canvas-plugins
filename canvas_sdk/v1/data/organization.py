@@ -28,4 +28,4 @@ class Organization(models.Model):
     main_location = models.OneToOneField("v1.PracticeLocation", on_delete=models.DO_NOTHING)
 
 
-__canvas_allowed_attributes__ = ("Organization",)
+__exports__ = ("Organization",)

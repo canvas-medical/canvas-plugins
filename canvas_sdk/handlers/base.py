@@ -59,4 +59,4 @@ class BaseHandler(ABC):
         return True
 
 
-__canvas_allowed_attributes__ = ("BaseHandler",)
+__exports__ = ("BaseHandler",)

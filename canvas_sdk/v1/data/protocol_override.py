@@ -69,7 +69,7 @@ class ProtocolOverride(models.Model):
     status = models.CharField(choices=Status.choices)
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "IntervalUnit",
     "Status",
     "ProtocolOverride",

@@ -43,4 +43,4 @@ class ResolveConditionCommand(BaseCommand):
         return errors
 
 
-__canvas_allowed_attributes__ = ("ResolveConditionCommand",)
+__exports__ = ("ResolveConditionCommand",)

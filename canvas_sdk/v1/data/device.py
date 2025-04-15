@@ -42,4 +42,4 @@ class Device(models.Model):
     procedure_id = models.BigIntegerField()
 
 
-__canvas_allowed_attributes__ = ("Device",)
+__exports__ = ("Device",)

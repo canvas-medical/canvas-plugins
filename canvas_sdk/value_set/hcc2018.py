@@ -55369,4 +55369,4 @@ class HCCConditions(ValueSet):
         return 0
 
 
-__canvas_allowed_attributes__ = ("HCCConditions",)
+__exports__ = ("HCCConditions",)

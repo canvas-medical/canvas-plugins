@@ -44,4 +44,4 @@ class UpdateBillingLineItem(_BaseEffect):
         }
 
 
-__canvas_allowed_attributes__ = ("UpdateBillingLineItem",)
+__exports__ = ("UpdateBillingLineItem",)

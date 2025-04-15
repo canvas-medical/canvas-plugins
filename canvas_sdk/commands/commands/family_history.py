@@ -13,4 +13,4 @@ class FamilyHistoryCommand(BaseCommand):
     note: str | None = None
 
 
-__canvas_allowed_attributes__ = ("FamilyHistoryCommand",)
+__exports__ = ("FamilyHistoryCommand",)

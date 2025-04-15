@@ -17,4 +17,4 @@ class UpdateDiagnosisCommand(BaseCommand):
     narrative: str | None = None
 
 
-__canvas_allowed_attributes__ = ("UpdateDiagnosisCommand",)
+__exports__ = ("UpdateDiagnosisCommand",)

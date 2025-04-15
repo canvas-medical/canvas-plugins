@@ -1,6 +1,6 @@
 from .task import AddTask, AddTaskComment, TaskStatus, UpdateTask
 
-__all__ = __canvas_allowed_attributes__ = (
+__all__ = __exports__ = (
     "AddTask",
     "AddTaskComment",
     "TaskStatus",

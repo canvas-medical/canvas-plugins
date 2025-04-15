@@ -61,4 +61,4 @@ class AddBannerAlert(_BaseEffect):
         }
 
 
-__canvas_allowed_attributes__ = ("AddBannerAlert",)
+__exports__ = ("AddBannerAlert",)

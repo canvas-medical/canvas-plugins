@@ -29,4 +29,4 @@ class Application(BaseHandler, ABC):
         return f"{self.__class__.__module__}:{self.__class__.__qualname__}"
 
 
-__canvas_allowed_attributes__ = ("Application",)
+__exports__ = ("Application",)

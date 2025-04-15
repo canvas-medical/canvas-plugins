@@ -39,7 +39,7 @@ class InvalidCredentialsError(AuthenticationError):
         super().__init__("Provided credentials are invalid")
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "SimpleAPIException",
     "AuthenticationError",
     "NoAuthorizationHeaderError",

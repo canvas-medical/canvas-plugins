@@ -40,4 +40,4 @@ class Assessment(models.Model):
     care_team = models.CharField()
 
 
-__canvas_allowed_attributes__ = ("AssessmentStatus", "Assessment")
+__exports__ = ("AssessmentStatus", "Assessment")

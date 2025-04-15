@@ -29,4 +29,4 @@ class ShowButtonEffect(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("ShowButtonEffect",)
+__exports__ = ("ShowButtonEffect",)

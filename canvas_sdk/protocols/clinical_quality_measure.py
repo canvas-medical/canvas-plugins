@@ -134,4 +134,4 @@ class ClinicalQualityMeasure(BaseProtocol):
         return self._patient_id
 
 
-__canvas_allowed_attributes__ = ("ClinicalQualityMeasure",)
+__exports__ = ("ClinicalQualityMeasure",)

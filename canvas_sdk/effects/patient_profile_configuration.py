@@ -45,4 +45,4 @@ class PatientProfileConfiguration(_BaseEffect):
         return {"data": self.values}
 
 
-__canvas_allowed_attributes__ = ("PatientProfileConfiguration",)
+__exports__ = ("PatientProfileConfiguration",)

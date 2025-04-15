@@ -38,4 +38,4 @@ class AddBillingLineItem(_BaseEffect):
         }
 
 
-__canvas_allowed_attributes__ = ("AddBillingLineItem",)
+__exports__ = ("AddBillingLineItem",)

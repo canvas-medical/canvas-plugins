@@ -24,4 +24,4 @@ class AdjustPrescriptionCommand(RefillCommand):
     )
 
 
-__canvas_allowed_attributes__ = ("AdjustPrescriptionCommand",)
+__exports__ = ("AdjustPrescriptionCommand",)

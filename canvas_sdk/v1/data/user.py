@@ -13,4 +13,4 @@ class CanvasUser(models.Model):
     phone_number = models.CharField(db_column="phone_number", max_length=255)
 
 
-__canvas_allowed_attributes__ = ("CanvasUser",)
+__exports__ = ("CanvasUser",)

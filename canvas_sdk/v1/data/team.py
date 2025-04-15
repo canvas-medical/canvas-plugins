@@ -76,7 +76,7 @@ class TeamContactPoint(models.Model):
     team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, related_name="telecom")
 
 
-__canvas_allowed_attributes__ = (
+__exports__ = (
     "TeamResponsibility",
     "Team",
     "TeamContactPoint",

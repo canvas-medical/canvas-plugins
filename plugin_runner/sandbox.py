@@ -79,7 +79,7 @@ ALLOWED_ATTRIBUTES_BY_MODULE = defaultdict(set)
 for module_path in CANVAS_SUBMODULES:
     module = importlib.import_module(module_path)
 
-    allowed_attributes = getattr(module, "__canvas_allowed_attributes__", None)
+    allowed_attributes = getattr(module, "__exports__", None)
 
     if allowed_attributes:
         ALLOWED_ATTRIBUTES_BY_MODULE[module_path].update(allowed_attributes)
@@ -485,7 +485,7 @@ class Sandbox:
 
         1. underscored attributes created outside of the defining namespace
         2. attributes used by the `inspect` module
-        3. if a __canvas_allowed_attributes__ module property is defined, any
+        3. if a __exports__ module property is defined, any
            attribute not in that property's value
         """
         if isinstance(_ob, types.ModuleType):
@@ -514,7 +514,7 @@ class Sandbox:
                 f'"{name}" is an invalid attribute name because it starts with "_"'
             )
 
-        allowed_attributes = getattr(_ob, "__canvas_allowed_attributes__", None)
+        allowed_attributes = getattr(_ob, "__exports__", None)
 
         if allowed_attributes and name not in allowed_attributes:
             raise AttributeError(f'"{name}" is an invalid attribute name')

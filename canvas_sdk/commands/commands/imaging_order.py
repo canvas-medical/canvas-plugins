@@ -39,4 +39,4 @@ class ImagingOrderCommand(BaseCommand):
         return values
 
 
-__canvas_allowed_attributes__ = ("ImagingOrderCommand",)
+__exports__ = ("ImagingOrderCommand",)
