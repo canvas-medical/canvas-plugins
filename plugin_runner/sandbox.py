@@ -5,6 +5,7 @@ import pkgutil
 import sys
 import types
 from _ast import AnnAssign
+from collections import defaultdict
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
@@ -29,7 +30,6 @@ from RestrictedPython.transformer import (
     INSPECT_ATTRIBUTES,
     copy_locations,
 )
-from tini import defaultdict
 
 
 def find_submodules(starting_modules: Iterable[str]) -> list[str]:
