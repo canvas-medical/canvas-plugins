@@ -534,4 +534,6 @@ __exports__ = (
     "SimpleAPIBase",
     "SimpleAPI",
     "SimpleAPIRoute",
+    # Not defined here but used in an existing plugin
+    "Credentials",
 )
