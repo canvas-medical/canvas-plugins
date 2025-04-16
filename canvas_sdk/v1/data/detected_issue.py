@@ -49,3 +49,6 @@ class DetectedIssueEvidence(models.Model):
         related_name="evidence",
         null=True,
     )
+
+
+__canvas_allowed_attributes__ = ("DetectedIssue", "DetectedIssueEvidence")

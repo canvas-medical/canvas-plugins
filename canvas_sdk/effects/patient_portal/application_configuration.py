@@ -20,3 +20,6 @@ class PatientPortalApplicationConfiguration(_BaseEffect):
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"data": self.values}
+
+
+__canvas_allowed_attributes__ = ("PatientPortalApplicationConfiguration",)

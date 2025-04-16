@@ -48,3 +48,6 @@ class ReferCommand(BaseCommand):
             values["service_provider"] = self.service_provider.__dict__
 
         return values
+
+
+__canvas_allowed_attributes__ = ("ReferCommand",)

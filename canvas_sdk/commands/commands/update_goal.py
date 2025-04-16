@@ -36,3 +36,6 @@ class UpdateGoalCommand(_BaseCommand):
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
     progress: str | None = None
+
+
+__canvas_allowed_attributes__ = ("UpdateGoalCommand",)

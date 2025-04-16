@@ -93,3 +93,9 @@ class ProtocolCard(_BaseEffect):
             title=title, button=button, href=href, command=command, context=context
         )
         self.recommendations.append(recommendation)
+
+
+__canvas_allowed_attributes__ = (
+    "Recommendation",
+    "ProtocolCard",
+)

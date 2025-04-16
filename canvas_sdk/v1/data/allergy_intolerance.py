@@ -77,3 +77,6 @@ class AllergyIntoleranceCoding(models.Model):
         related_name="codings",
         null=True,
     )
+
+
+__canvas_allowed_attributes__ = ("AllergyIntolerance", "AllergyIntoleranceCoding")

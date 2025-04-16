@@ -47,3 +47,6 @@ class ReasonForVisitCommand(_BaseCommand):
         # the commands api does not include the 'structured' field in the fields response
         command_schema.pop("structured")
         return command_schema
+
+
+__canvas_allowed_attributes__ = ("ReasonForVisitCommand",)

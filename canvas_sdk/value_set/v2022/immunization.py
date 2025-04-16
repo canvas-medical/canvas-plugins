@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -339,3 +341,6 @@ class PneumococcalPolysaccharide23Vaccine(ValueSet):
         "33",  # pneumococcal polysaccharide vaccine, 23 valent
         "109",  # pneumococcal vaccine, unspecified formulation
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

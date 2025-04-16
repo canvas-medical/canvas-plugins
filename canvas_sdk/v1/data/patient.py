@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Self
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -81,10 +83,10 @@ class Patient(models.Model):
     default_location_id = models.BigIntegerField()
     default_provider_id = models.BigIntegerField()
 
-    settings: "RelatedManager[PatientSetting]"
+    settings: RelatedManager[PatientSetting]
 
     @classmethod
-    def find(cls, id: str) -> Self:
+    def find(cls, id: str) -> Patient:
         """Find a patient by id."""
         return cls._default_manager.get(id=id)
 
@@ -222,3 +224,17 @@ class PatientSetting(models.Model):
     )
     name = models.CharField()
     value = models.JSONField()
+
+
+__canvas_allowed_attributes__ = (
+    "SexAtBirth",
+    "PatientSettingConstants",
+    "Patient",
+    "PatientContactPoint",
+    "PatientAddress",
+    "PatientExternalIdentifier",
+    "PatientSetting",
+    # not defined here but used by current plugins
+    "ContactPointState",
+    "ContactPointSystem",
+)

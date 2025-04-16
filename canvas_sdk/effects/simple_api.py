@@ -81,3 +81,12 @@ class HTMLResponse(Response):
         headers: Mapping[str, Any] | None = None,
     ):
         super().__init__(content.encode(), status_code, headers, content_type="text/html")
+
+
+__canvas_allowed_attributes__ = (
+    "JSON",
+    "Response",
+    "JSONResponse",
+    "PlainTextResponse",
+    "HTMLResponse",
+)

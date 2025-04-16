@@ -60,6 +60,7 @@ canvas = "canvas_cli.main:app"
 django_settings_module = "settings"
 
 [tool.hatch.build.targets.sdist]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",
@@ -71,6 +72,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",

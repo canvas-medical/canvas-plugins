@@ -78,3 +78,9 @@ class ActionButton(BaseHandler):
             return self.handle()
 
         return []
+
+
+__canvas_allowed_attributes__ = (
+    "SHOW_BUTTON_REGEX",
+    "ActionButton",
+)

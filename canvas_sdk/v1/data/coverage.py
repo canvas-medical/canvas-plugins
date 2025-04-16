@@ -292,3 +292,17 @@ class TransactorPhone(models.Model):
 
     def __str__(self) -> str:
         return f"id={self.id}"
+
+
+__canvas_allowed_attributes__ = (
+    "CoverageStack",
+    "CoverageState",
+    "CoverageType",
+    "CoverageRelationshipCode",
+    "TransactorCoverageType",
+    "TransactorType",
+    "Coverage",
+    "Transactor",
+    "TransactorAddress",
+    "TransactorPhone",
+)

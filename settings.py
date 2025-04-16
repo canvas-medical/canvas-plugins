@@ -1,11 +1,14 @@
 import os
 import sys
+from pathlib import Path
 from urllib import parse
 
 from dotenv import load_dotenv
 from env_tools import env_to_bool
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.resolve()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
@@ -20,6 +23,11 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
+CANVAS_SDK_PLUGINS_CACHE_ENABLED = env_to_bool("CANVAS_SDK_PLUGINS_CACHE_ENABLED", IS_TESTING)
+CANVAS_SDK_PLUGINS_CACHE_LOCATION = os.getenv(
+    "CANVAS_SDK_PLUGINS_CACHE_LOCATION", "plugin_io_plugins_cache"
+)
+CANVAS_SDK_CACHE_TIMEOUT_SECONDS = int(os.getenv("CANVAS_SDK_CACHE_TIMEOUT", 60 * 60 * 24 * 14))
 
 INSTALLED_APPS = [
     "canvas_sdk.v1",
@@ -78,9 +86,9 @@ PLUGIN_DIRECTORY = os.getenv(
     (
         "/plugin-runner/custom-plugins"
         if IS_PRODUCTION
-        else "./plugin_runner/tests/data/plugins"
+        else (BASE_DIR / "plugin_runner/tests/data/plugins").as_posix()
         if IS_TESTING
-        else "./custom-plugins"
+        else (BASE_DIR / "custom-plugins").as_posix()
     ),
 )
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")
@@ -99,3 +107,26 @@ TEMPLATES = [
         "OPTIONS": {},
     },
 ]
+
+
+if IS_TESTING:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        },
+        "plugins": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "KEY_PREFIX": CUSTOMER_IDENTIFIER,
+            "LOCATION": "plugins_cache",
+            "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
+        },
+    }
+elif CANVAS_SDK_PLUGINS_CACHE_ENABLED:
+    CACHES = {
+        "plugins": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "KEY_PREFIX": CUSTOMER_IDENTIFIER,
+            "LOCATION": CANVAS_SDK_PLUGINS_CACHE_LOCATION,
+            "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
+        }
+    }

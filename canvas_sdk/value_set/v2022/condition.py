@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -40652,3 +40654,6 @@ class UrinaryRetention(ValueSet):
         "267064002",  # Retention of urine (disorder)
         "12245681000119103",  # Postprocedural retention of urine (disorder)
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

@@ -43,3 +43,6 @@ class RefillCommand(PrescribeCommand):
                 )
 
         return errors
+
+
+__canvas_allowed_attributes__ = ("RefillCommand",)

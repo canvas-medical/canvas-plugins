@@ -349,3 +349,19 @@ class LabPartnerTest(models.Model):
     order_name = models.TextField()
     keywords = models.TextField(blank=True)
     cpt_code = models.CharField(max_length=256, blank=True, null=True)
+
+
+__canvas_allowed_attributes__ = (
+    "TransmissionType",
+    "LabReport",
+    "LabReviewQuerySet",
+    "LabReview",
+    "LabValue",
+    "LabValueCoding",
+    "LabOrder",
+    "LabOrderReason",
+    "LabOrderReasonCondition",
+    "LabTest",
+    "LabPartner",
+    "LabPartnerTest",
+)

@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -1248,3 +1250,6 @@ class HumanImmunodeficiencyVirusHivLaboratoryTestCodesAbAndAg(ValueSet):
         "9669-3",  # HIV 1 p66 Ab [Presence] in Serum by Immunoblot
         "9821-0",  # HIV 1 p24 Ag [Presence] in Serum
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

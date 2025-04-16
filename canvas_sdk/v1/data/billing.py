@@ -83,3 +83,10 @@ class BillingLineItemModifier(models.Model):
         related_name="modifiers",
         null=True,
     )
+
+
+__canvas_allowed_attributes__ = (
+    "BillingLineItemStatus",
+    "BillingLineItem",
+    "BillingLineItemModifier",
+)

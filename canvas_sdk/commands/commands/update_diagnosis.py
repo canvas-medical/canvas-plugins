@@ -15,3 +15,6 @@ class UpdateDiagnosisCommand(BaseCommand):
     new_condition_code: str | None = None
     background: str | None = None
     narrative: str | None = None
+
+
+__canvas_allowed_attributes__ = ("UpdateDiagnosisCommand",)

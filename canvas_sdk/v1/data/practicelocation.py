@@ -101,3 +101,10 @@ class PracticeLocationSetting(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+__canvas_allowed_attributes__ = (
+    "PracticeLocationPOS",
+    "PracticeLocation",
+    "PracticeLocationSetting",
+)

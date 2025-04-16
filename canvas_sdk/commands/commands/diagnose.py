@@ -18,3 +18,6 @@ class DiagnoseCommand(_BaseCommand):
     background: str | None = None
     approximate_date_of_onset: date | None = None
     today_assessment: str | None = None
+
+
+__canvas_allowed_attributes__ = ("DiagnoseCommand",)

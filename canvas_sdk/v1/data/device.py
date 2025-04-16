@@ -40,3 +40,6 @@ class Device(models.Model):
     manufacturing_date = models.DateField()
     manufacturer = models.CharField()
     procedure_id = models.BigIntegerField()
+
+
+__canvas_allowed_attributes__ = ("Device",)

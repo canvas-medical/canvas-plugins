@@ -15,3 +15,6 @@ class StopMedicationCommand(_BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "medication"}
     )
     rationale: str | None = None
+
+
+__canvas_allowed_attributes__ = ("StopMedicationCommand",)

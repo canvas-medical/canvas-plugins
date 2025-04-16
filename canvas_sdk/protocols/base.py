@@ -9,3 +9,6 @@ class BaseProtocol(BaseHandler, ABC):
     """
 
     pass
+
+
+__canvas_allowed_attributes__ = ("BaseProtocol",)

@@ -97,14 +97,14 @@ class Http:
 
     _MAX_REQUEST_TIMEOUT_SECONDS = 30
 
-    base_url: str
-    session: requests.Session
+    _base_url: str
+    _session: requests.Session
 
     def __setattr__(self, name: str, value: Any) -> None:
         """
         Prevent base_url or session from being updated after initialization.
         """
-        if name in ("base_url", "session"):
+        if name in ("_base_url", "_session"):
             raise AttributeError(f"{name} is read-only")
 
         super().__setattr__(name, value)
@@ -113,16 +113,16 @@ class Http:
         """
         Join a URL to the base_url.
         """
-        joined = urllib.parse.urljoin(self.base_url, url)
+        joined = urllib.parse.urljoin(self._base_url, url)
 
-        if not joined.startswith(self.base_url):
+        if not joined.startswith(self._base_url):
             raise ValueError("You may not access other URLs using this client.")
 
         return joined
 
     def __init__(self, base_url: str = "") -> None:
-        super().__setattr__("base_url", base_url)
-        super().__setattr__("session", requests.Session())
+        super().__setattr__("_base_url", base_url)
+        super().__setattr__("_session", requests.Session())
 
         self.statsd_client = statsd.StatsClient()
 
@@ -148,7 +148,7 @@ class Http:
         """Sends a GET request."""
         if headers is None:
             headers = {}
-        return self.session.get(
+        return self._session.get(
             self.join_url(url),
             headers=headers,
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
@@ -163,7 +163,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a POST request."""
-        return self.session.post(
+        return self._session.post(
             self.join_url(url),
             json=json,
             data=data,
@@ -180,7 +180,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PUT request."""
-        return self.session.put(
+        return self._session.put(
             self.join_url(url),
             json=json,
             data=data,
@@ -197,7 +197,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PATCH request."""
-        return self.session.patch(
+        return self._session.patch(
             self.join_url(url),
             json=json,
             data=data,
@@ -244,7 +244,7 @@ class OntologiesHttp(Http):
         # import here to avoid making it exportable to module importers
         import os
 
-        self.session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
 class ScienceHttp(Http):
@@ -258,10 +258,12 @@ class ScienceHttp(Http):
         # import here to avoid making it exportable to module importers
         import os
 
-        self.session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
-__all__ = [
+__all__ = __canvas_allowed_attributes__ = (
+    # TODO_SANDBOX test safety of this
+    "ThreadPoolExecutor",
     "Http",
     "OntologiesHttp",
     "ScienceHttp",
@@ -269,4 +271,4 @@ __all__ = [
     "batch_post",
     "batch_put",
     "batch_patch",
-]
+)

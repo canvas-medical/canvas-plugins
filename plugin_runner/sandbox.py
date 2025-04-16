@@ -1,8 +1,11 @@
 import ast
 import builtins
 import importlib
+import pkgutil
 import sys
+import types
 from _ast import AnnAssign
+from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import Any, cast
@@ -23,82 +26,161 @@ from RestrictedPython.Guards import (
 from RestrictedPython.transformer import (
     ALLOWED_FUNC_NAMES,
     FORBIDDEN_FUNC_NAMES,
+    INSPECT_ATTRIBUTES,
     copy_locations,
 )
+from tini import defaultdict
 
-##
-# ALLOWED_MODULES
-#
-# The modules in this list are the only ones that can be imported in a sandboxed
-# runtime.
-#
-ALLOWED_MODULES = frozenset(
-    [
-        "__future__",
-        "_strptime",
-        "arrow",
-        "base64",
-        "cached_property",
-        "canvas_sdk.commands",
-        "canvas_sdk.data",
-        "canvas_sdk.effects",
-        "canvas_sdk.events",
-        "canvas_sdk.handlers",
-        "canvas_sdk.protocols",
-        "canvas_sdk.questionnaires",
-        "canvas_sdk.utils",
-        "canvas_sdk.templates",
-        "canvas_sdk.v1",
-        "canvas_sdk.value_set",
-        "canvas_sdk.views",
-        "contextlib",
-        "dataclasses",
-        "datetime",
-        "dateutil",
-        "decimal",
-        "django.db.models",
-        "django.utils.functional",
-        "enum",
-        "functools",
-        "hashlib",
-        "hmac",
-        "http",
-        "json",
-        "jwt",
-        "logger",
-        "math",
-        "operator",
-        "pickletools",
-        "pydantic",
-        "random",
-        "rapidfuzz",
-        "re",
-        "requests",
-        "secrets",
-        "string",
-        "time",
-        "traceback",
-        "typing",
-        "urllib",
-        "uuid",
-    ]
+
+def find_submodules(starting_modules: Iterable[str]) -> list[str]:
+    """
+    Given a list of modules, return a list of those modules and their submodules.
+    """
+    submodules = set(starting_modules)
+
+    for module_path in starting_modules:
+        try:
+            module = importlib.import_module(module_path)
+
+            if not hasattr(module, "__path__"):
+                continue
+
+            for _, name, _ in pkgutil.walk_packages(module.__path__, prefix=module.__name__ + "."):
+                submodules.add(name)
+        except Exception as e:
+            print(f"could not import {module_path}: {e}")
+
+    return sorted(submodules)
+
+
+CANVAS_MODULES = (
+    "canvas_sdk.caching.plugins",
+    "canvas_sdk.commands",
+    "canvas_sdk.effects",
+    "canvas_sdk.events",
+    "canvas_sdk.handlers",
+    "canvas_sdk.protocols",
+    "canvas_sdk.questionnaires",
+    "canvas_sdk.templates",
+    "canvas_sdk.utils",
+    "canvas_sdk.v1",
+    "canvas_sdk.value_set",
+    "canvas_sdk.views",
 )
 
+CANVAS_SUBMODULES = [
+    found_module
+    for found_module in find_submodules(CANVAS_MODULES)
+    # tests are excluded from the built and distributed module in pyproject.toml
+    if "tests" not in found_module and "test_" not in found_module
+]
 
-##
-# FORBIDDEN_ASSIGNMENTS
-#
+ALLOWED_ATTRIBUTES_BY_MODULE = defaultdict(set)
+
+for module_path in CANVAS_SUBMODULES:
+    module = importlib.import_module(module_path)
+
+    allowed_attributes = getattr(module, "__canvas_allowed_attributes__", None)
+
+    if allowed_attributes:
+        ALLOWED_ATTRIBUTES_BY_MODULE[module_path].update(allowed_attributes)
+
+# In use by a current plugin...
+ALLOWED_ATTRIBUTES_BY_MODULE["canvas_sdk.commands"].add("*")
+
+
+STANDARD_LIBRARY_MODULES = (
+    "__future__",
+    "_strptime",
+    "base64",
+    "contextlib",
+    "dataclasses",
+    "datetime",
+    "dateutil",
+    "decimal",
+    "enum",
+    "functools",
+    "hashlib",
+    "hmac",
+    "http",
+    "json",
+    "logger",
+    "math",
+    "operator",
+    "random",
+    "re",
+    "string",
+    "time",
+    "traceback",
+    "typing",
+    "urllib",
+    "uuid",
+)
+
+THIRD_PARTY_MODULES = (
+    "arrow",
+    "django.db.models",
+    "django.utils.functional",
+    "jwt",
+    "pickletools",
+    "pydantic",
+    "rapidfuzz",
+    "requests",
+)
+
+# The modules in this list are the only ones that can be imported in a sandboxed runtime.
+ALLOWED_MODULES = frozenset([*CANVAS_MODULES, *STANDARD_LIBRARY_MODULES, *THIRD_PARTY_MODULES])
+
 # The names in this list are forbidden to be assigned to in a sandboxed runtime.
-#
 FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
+PROTECTED_RESOURCES = frozenset(["canvas_sdk.caching.base.Cache"])
+
+
+def _module_matches(name: str, module: str) -> bool:
+    """
+    When importing `re`, match `re` or `re.thing`, but not `redis`.
+    """
+    if name == module:
+        return True
+
+    # exclude modules that start with underscore from prefix matching
+    if name.startswith("_"):
+        return False
+
+    # Given:
+    #
+    # import canvas_sdk.commands.commands
+    #
+    # Results in:
+    #
+    # "canvas_sdk.commands.commands".startswith("canvas_sdk.commands.")
+    if name.startswith(f"{module}."):  # noqa: SIM103
+        return True
+
+    return False
 
 
 def _is_known_module(name: str) -> bool:
-    return any(name.startswith(m) for m in ALLOWED_MODULES)
+    return any(_module_matches(name, module) for module in ALLOWED_MODULES)
 
 
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
+    return _ob
+
+
+def _safe_write(_ob: Any, *args: Any, **kwargs: Any) -> Any:
+    """Check if the given obj belongs to a protected resource."""
+    if isinstance(_ob, types.ModuleType):
+        full_name = _ob.__name__
+    elif isinstance(_ob, type):
+        full_name = f"{_ob.__module__}.{_ob.__qualname__}"
+    else:
+        full_name = f"{_ob.__module__}.{_ob.__class__.__qualname__}"
+
+    if full_name in PROTECTED_RESOURCES:
+        raise TypeError(f"Forbidden assignment to a protected resource: {full_name}.")
+
     return _ob
 
 
@@ -108,7 +190,9 @@ def _apply(_ob: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 def _find_folder_in_path(file_path: Path, target_folder_name: str) -> Path | None:
-    """Recursively search for a folder with the specified name in the hierarchy of the given file path."""
+    """
+    Recursively search for a folder with the specified name in the hierarchy of the given file path.
+    """
     file_path = file_path.resolve()
 
     if file_path.name == target_folder_name:
@@ -297,15 +381,14 @@ class Sandbox:
                 "list": builtins.list,
                 "next": builtins.next,
                 "iter": builtins.iter,
-                "type": builtins.type,
             },
             "__metaclass__": type,
             "__name__": self.namespace,
             "__is_plugin__": True,
-            "_write_": _unrestricted,
+            "_write_": _safe_write,
+            "_getattr_": self._safe_getattr,
             "_getiter_": _unrestricted,
             "_getitem_": default_guarded_getitem,
-            "_getattr_": getattr,
             "_print_": PrintCollector,
             "_apply_": _apply,
             "_inplacevar_": _unrestricted,
@@ -347,7 +430,9 @@ class Sandbox:
 
     def _evaluate_module(self, module_name: str) -> None:
         """Evaluate the given module in the sandbox.
-        If the module to import belongs to the same package as the current module, evaluate it inside a sandbox.
+
+        If the module to import belongs to the same package as the current module,
+        evaluate it inside a sandbox.
         """
         if not module_name.startswith(self.package_name) or module_name in self._evaluated_modules:
             return  # Skip modules outside the package or already evaluated.
@@ -372,7 +457,8 @@ class Sandbox:
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or already the source code root.
+        # Skip evaluation if the parent module is outside the base path or
+        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -392,9 +478,70 @@ class Sandbox:
 
         self._evaluate_implicit_imports(parent)
 
+    def _safe_getattr(self, _ob: Any, name: Any, default: Any = None) -> Any:
+        """
+        Prevent access to several classes of attributes.
+
+        Restricted attribute types:
+
+        1. underscored attributes created outside of the defining namespace
+        2. attributes used by the `inspect` module
+        3. if a __canvas_allowed_attributes__ module property is defined, any
+           attribute not in that property's value
+        """
+        if isinstance(_ob, types.ModuleType):
+            module = _ob.__name__.split(".")[0]
+        elif isinstance(_ob, type):
+            module = _ob.__module__.split(".")[0]
+        else:
+            module = _ob.__class__.__module__.split(".")[0]
+
+        if type(name) is not str:
+            raise TypeError("type(name) must be str")
+
+        if name in ("format", "format_map") and (
+            isinstance(_ob, str) or (isinstance(_ob, type) and issubclass(_ob, str))
+        ):
+            raise NotImplementedError(
+                "Using the format and format_map methods of `str` is not safe"
+            )
+
+        if name in INSPECT_ATTRIBUTES:
+            raise AttributeError(f'"{name}" is a restricted name.')
+
+        # Code defined in the Sandbox namespace can access its own underscore variables
+        if name.startswith("_") and module != self.namespace:
+            raise AttributeError(
+                f'"{name}" is an invalid attribute name because it starts with "_"'
+            )
+
+        allowed_attributes = getattr(_ob, "__canvas_allowed_attributes__", None)
+
+        if allowed_attributes and name not in allowed_attributes:
+            raise AttributeError(f'"{name}" is an invalid attribute name')
+
+        return getattr(_ob, name, default)
+
     def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
         if not self._is_known_module(name):
             raise ImportError(f"{name!r} is not an allowed import.")
+
+        # Exclude our test code
+        if name.startswith("canvas_sdk") and "test" in name and "laboratory_test" not in name:
+            raise ImportError(f"{name!r} is not an allowed import.")
+
+        # Disallow importing items that contain underscores; this means we also
+        # need to set __all__ for everything underneath canvas_sdk
+        if len(args) >= 3:
+            from_list = args[2]
+
+            if from_list is not None:
+                for item in from_list:
+                    if name.startswith("canvas_sdk."):
+                        if item not in ALLOWED_ATTRIBUTES_BY_MODULE[name]:
+                            raise ImportError(f"{item!r} is not an allowed import from {name!r}.")
+                    elif item.startswith("_"):
+                        raise ImportError(f"{item!r} is not an allowed import from {name!r}.")
 
         self._evaluate_module(name)
 

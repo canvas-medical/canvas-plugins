@@ -91,3 +91,10 @@ class SendSurescriptsBenefitsRequestEffect(_BaseEffect):
     def effect_payload(self) -> dict[str, Any]:
         """Benefits Request effect payload."""
         return self.values
+
+
+__canvas_allowed_attributes__ = (
+    "SendSurescriptsBenefitsRequestEffect",
+    "SendSurescriptsEligibilityRequestEffect",
+    "SendSurescriptsMedicationHistoryRequestEffect",
+)

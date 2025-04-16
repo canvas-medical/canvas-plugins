@@ -10,3 +10,6 @@ class CanvasUser(models.Model):
 
     dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
     email = models.CharField()
+
+
+__canvas_allowed_attributes__ = ("CanvasUser",)

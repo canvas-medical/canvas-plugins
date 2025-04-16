@@ -55367,3 +55367,6 @@ class HCCConditions(ValueSet):
         if icd10 in HCCConditions.LABELS:
             return cast(float, HCCConditions.LABELS[icd10]["CommunityRAF"])
         return 0
+
+
+__canvas_allowed_attributes__ = ("HCCConditions",)

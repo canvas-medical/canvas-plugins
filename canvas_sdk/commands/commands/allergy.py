@@ -37,3 +37,10 @@ class AllergyCommand(BaseCommand):
     severity: Severity | None = None
     narrative: str | None = None
     approximate_date: date | None = None
+
+
+__canvas_allowed_attributes__ = (
+    "AllergenType",
+    "Allergen",
+    "AllergyCommand",
+)

@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -172,3 +174,6 @@ class CardiacPacer(ValueSet):
         "360128001",  # Intravenous triggered cardiac pacemaker system (physical object)
         "424921004",  # Permanent cardiac pacemaker, device (physical object)
     }
+
+
+__canvas_allowed_attributes__ = get_overrides(locals().copy())

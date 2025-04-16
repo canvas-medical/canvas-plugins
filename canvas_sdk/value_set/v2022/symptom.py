@@ -174,3 +174,6 @@ class FrailtySymptom(ValueSet):
         "16018431000119109",  # Paresis of right lower limb (finding)
         "16419651000119103",  # Dependence on biphasic positive airway pressure ventilation due to central sleep apnea syndrome (finding)
     }
+
+
+__canvas_allowed_attributes__ = ("FrailtySymptom",)
