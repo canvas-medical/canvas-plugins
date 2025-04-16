@@ -262,7 +262,6 @@ class ScienceHttp(Http):
 
 
 __all__ = __exports__ = (
-    # TODO_SANDBOX test safety of this
     "ThreadPoolExecutor",
     "Http",
     "OntologiesHttp",
