@@ -70,23 +70,10 @@ class QuestionnaireCommand(_BaseCommand):
                 else [],
             }
             q_type = question.response_option_set.type if question.response_option_set else None
-            q_obj: BaseQuestion
             if q_type in QUESTION_CLASSES:
                 question_objs.append(QUESTION_CLASSES[q_type](**qdata))
             else:
                 raise ValueError(f"Unsupported question type: {q_type}")
-            if q_type == ResponseOption.TYPE_TEXT:
-                q_obj = TextQuestion(**qdata)
-            elif q_type == ResponseOption.TYPE_INTEGER:
-                q_obj = IntegerQuestion(**qdata)
-            elif q_type == ResponseOption.TYPE_RADIO:
-                q_obj = RadioQuestion(**qdata)
-            elif q_type == ResponseOption.TYPE_CHECKBOX:
-                q_obj = CheckboxQuestion(**qdata)
-            else:
-                # This should never happen, but just in case
-                raise ValueError(f"Unsupported question type: {q_type}")
-            question_objs.append(q_obj)
         return question_objs
 
     @property
