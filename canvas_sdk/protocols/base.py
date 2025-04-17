@@ -9,3 +9,6 @@ class BaseProtocol(BaseHandler, ABC):
     """
 
     pass
+
+
+__exports__ = ("BaseProtocol",)

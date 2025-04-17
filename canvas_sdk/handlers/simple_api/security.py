@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from base64 import b64decode
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol
@@ -24,7 +26,7 @@ class Credentials:
     class if they wish to just access the request directly in their authentication method.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         pass
 
 
@@ -36,7 +38,7 @@ class BasicCredentials(Credentials):
     them as attributes.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         authorization = request.headers.get("Authorization")
@@ -71,7 +73,7 @@ class BearerCredentials(Credentials):
     Parses the token from the request Authorization header and saves it as an attribute.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         authorization = request.headers.get("Authorization")
@@ -101,7 +103,7 @@ class APIKeyCredentials(Credentials):
 
     HEADER_NAME = "Authorization"
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         if self.HEADER_NAME not in request.headers:
@@ -132,7 +134,7 @@ class SessionCredentials(Credentials):
     authenticate method.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         if (
@@ -247,3 +249,17 @@ class PatientSessionAuthMixin(AuthSchemeMixin):
         if credentials.logged_in_user["type"] != "Patient":
             raise InvalidCredentialsError
         return True
+
+
+__exports__ = (
+    "Credentials",
+    "BasicCredentials",
+    "BearerCredentials",
+    "APIKeyCredentials",
+    "AuthSchemeMixin",
+    "BasicAuthMixin",
+    "APIKeyAuthMixin",
+    "SessionCredentials",
+    "StaffSessionAuthMixin",
+    "PatientSessionAuthMixin",
+)

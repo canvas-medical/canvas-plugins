@@ -97,3 +97,10 @@ class ImagingReport(models.Model):
     result_date = models.DateField()
     original_date = models.DateField()
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
+
+
+__exports__ = (
+    "ImagingOrder",
+    "ImagingReview",
+    "ImagingReport",
+)

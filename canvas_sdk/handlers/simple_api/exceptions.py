@@ -37,3 +37,13 @@ class InvalidCredentialsError(AuthenticationError):
 
     def __init__(self) -> None:
         super().__init__("Provided credentials are invalid")
+
+
+__exports__ = (
+    "SimpleAPIException",
+    "AuthenticationError",
+    "NoAuthorizationHeaderError",
+    "AuthenticationSchemeError",
+    "InvalidCredentialsFormatError",
+    "InvalidCredentialsError",
+)

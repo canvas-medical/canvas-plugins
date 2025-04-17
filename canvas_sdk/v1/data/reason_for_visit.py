@@ -20,3 +20,6 @@ class ReasonForVisitSettingCoding(models.Model):
     version = models.CharField()
 
     duration = ArrayField(models.DurationField())
+
+
+__exports__ = ("ReasonForVisitSettingCoding",)

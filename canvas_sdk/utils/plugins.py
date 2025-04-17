@@ -18,8 +18,12 @@ def plugin_only(func: Callable[..., Any]) -> Callable[..., Any]:
 
         plugin_name = caller.f_globals["__name__"].split(".")[0]
         plugin_dir = Path(PLUGIN_DIRECTORY) / plugin_name
+        kwargs["plugin_name"] = plugin_name
         kwargs["plugin_dir"] = plugin_dir.resolve()
 
         return func(*args, **kwargs)
 
     return wrapper
+
+
+__exports__ = ()

@@ -53,3 +53,11 @@ class PrescribeCommand(_BaseCommand):
             )
 
         return values
+
+
+__exports__ = (
+    "PrescribeCommand",
+    # Not defined here but used in a current plugin
+    "ClinicalQuantity",
+    "Decimal",
+)

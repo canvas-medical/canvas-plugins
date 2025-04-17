@@ -49,3 +49,6 @@ class DetectedIssueEvidence(models.Model):
         related_name="evidence",
         null=True,
     )
+
+
+__exports__ = ("DetectedIssue", "DetectedIssueEvidence")

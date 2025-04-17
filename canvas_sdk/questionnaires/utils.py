@@ -115,3 +115,10 @@ def json_schema() -> dict[str, Any]:
     )
 
     return schema
+
+
+__exports__ = (
+    "Draft7Validator",
+    "ExtendedDraft7Validator",
+    "from_yaml",
+)

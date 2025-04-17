@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -1330,3 +1332,6 @@ class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
         "408289007",  # Refer to weight management program (procedure)
         "416790000",  # Referral for home physical therapy (procedure)
     }
+
+
+__exports__ = get_overrides(locals().copy())

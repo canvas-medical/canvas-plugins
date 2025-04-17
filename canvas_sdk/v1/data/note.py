@@ -160,3 +160,12 @@ class Note(models.Model):
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField()
     place_of_service = models.CharField()
+
+
+__exports__ = (
+    "NoteTypeCategories",
+    "PracticeLocationPOS",
+    "NoteTypes",
+    "NoteType",
+    "Note",
+)

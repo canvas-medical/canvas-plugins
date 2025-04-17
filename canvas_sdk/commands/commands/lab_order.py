@@ -94,3 +94,6 @@ class LabOrderCommand(BaseCommand):
                     )
 
         return errors
+
+
+__exports__ = ("LabOrderCommand",)

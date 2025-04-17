@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, cast
 
 import arrow
@@ -92,7 +94,7 @@ class ClinicalQualityMeasure(BaseProtocol):
         incurring more SQL queries.
         """
 
-        def patient_id(model: "type[Model]") -> str:
+        def patient_id(model: type[Model]) -> str:
             if model == Patient:
                 return self.event.target.id
             else:
@@ -130,3 +132,6 @@ class ClinicalQualityMeasure(BaseProtocol):
                 ) from error
 
         return self._patient_id
+
+
+__exports__ = ("ClinicalQualityMeasure",)

@@ -15,3 +15,6 @@ class PastSurgicalHistoryCommand(BaseCommand):
     past_surgical_history: str | None = None
     approximate_date: date | None = None
     comment: str | None = Field(max_length=1000, default=None)
+
+
+__exports__ = ("PastSurgicalHistoryCommand",)

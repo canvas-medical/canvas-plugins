@@ -33,3 +33,6 @@ class GoalCommand(_BaseCommand):
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
     progress: str | None = None
+
+
+__exports__ = ("GoalCommand",)

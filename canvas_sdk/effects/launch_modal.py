@@ -34,3 +34,6 @@ class LaunchModalEffect(_BaseEffect):
             raise ValueError("'url' and 'content' are mutually exclusive")
 
         return self
+
+
+__exports__ = ("LaunchModalEffect",)

@@ -77,3 +77,6 @@ class AllergyIntoleranceCoding(models.Model):
         related_name="codings",
         null=True,
     )
+
+
+__exports__ = ("AllergyIntolerance", "AllergyIntoleranceCoding")

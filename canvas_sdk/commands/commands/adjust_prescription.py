@@ -22,3 +22,6 @@ class AdjustPrescriptionCommand(RefillCommand):
     new_fdb_code: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "change_medication_to"}
     )
+
+
+__exports__ = ("AdjustPrescriptionCommand",)

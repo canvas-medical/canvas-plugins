@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -230,3 +232,6 @@ class StatinAllergen(ValueSet):
     SNOMEDCT = {
         "372912004",  # Substance with 3-hydroxy-3-methylglutaryl-coenzyme A reductase inhibitor mechanism of action (substance)
     }
+
+
+__exports__ = get_overrides(locals().copy())

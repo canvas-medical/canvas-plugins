@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -4965,3 +4967,6 @@ class DexaDualEnergyXrayAbsorptiometry_BoneDensityForUrologyCare(ValueSet):
         "38265-5",  # DXA Radius and Ulna [T-score] Bone density
         "38268-9",  # DXA Skeletal system Views for bone density
     }
+
+
+__exports__ = get_overrides(locals().copy())

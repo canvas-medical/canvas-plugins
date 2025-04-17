@@ -1,3 +1,4 @@
+import inspect
 import json
 import re
 import traceback
@@ -334,7 +335,10 @@ class SimpleAPIBase(BaseHandler, ABC):
         """Authenticate the request."""
         try:
             # Create the credentials object
-            credentials_cls = self.authenticate.__annotations__.get("credentials")
+            credentials_cls = inspect.get_annotations(self.authenticate, eval_str=True).get(
+                "credentials"
+            )
+
             if not credentials_cls or not issubclass(credentials_cls, Credentials):
                 raise PluginError(
                     f"Cannot determine authentication scheme for {self.request.path}; "
@@ -512,3 +516,24 @@ class SimpleAPIRoute(SimpleAPIBase, ABC):
     def patch(self) -> list[Response | Effect]:
         """Stub method for PATCH handler."""
         return []
+
+
+__exports__ = (
+    "FormPart",
+    "StringFormPart",
+    "FileFormPart",
+    "parse_multipart_form",
+    "Request",
+    "SimpleAPIType",
+    "RouteHandler",
+    "get",
+    "post",
+    "put",
+    "delete",
+    "patch",
+    "SimpleAPIBase",
+    "SimpleAPI",
+    "SimpleAPIRoute",
+    # Not defined here but used in an existing plugin
+    "Credentials",
+)

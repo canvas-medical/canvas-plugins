@@ -25,3 +25,5 @@ class MedicationStatementCommand(_BaseCommand):
 
 # idea2:
 # see if we can get ValueSets to play nicely with pydantic
+
+__exports__ = ("MedicationStatementCommand",)

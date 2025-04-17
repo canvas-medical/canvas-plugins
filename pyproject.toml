@@ -27,6 +27,7 @@ dependencies = [
   "django-timezone-utils>=0.15.0,<0.16",
   "django>=5.1.1,<6",
   "env-tools>=2.4.0,<3",
+  "frozendict>=2.4.6",
   "grpcio>=1.60.1,<2",
   "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
@@ -60,6 +61,7 @@ canvas = "canvas_cli.main:app"
 django_settings_module = "settings"
 
 [tool.hatch.build.targets.sdist]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",
@@ -71,6 +73,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 import arrow
@@ -82,10 +84,10 @@ class Patient(models.Model):
     default_provider_id = models.BigIntegerField()
     user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
-    settings: "RelatedManager[PatientSetting]"
+    settings: RelatedManager[PatientSetting]
 
     @classmethod
-    def find(cls, id: str) -> "Patient":
+    def find(cls, id: str) -> Patient:
         """Find a patient by id."""
         return cls._default_manager.get(id=id)
 
@@ -223,3 +225,17 @@ class PatientSetting(models.Model):
     )
     name = models.CharField()
     value = models.JSONField()
+
+
+__exports__ = (
+    "SexAtBirth",
+    "PatientSettingConstants",
+    "Patient",
+    "PatientContactPoint",
+    "PatientAddress",
+    "PatientExternalIdentifier",
+    "PatientSetting",
+    # not defined here but used by current plugins
+    "ContactPointState",
+    "ContactPointSystem",
+)

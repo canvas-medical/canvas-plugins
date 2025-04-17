@@ -107,7 +107,7 @@ class Questionnaire(models.Model):
     code_system = models.CharField()
     code = models.CharField()
     search_tags = models.CharField()
-    questions = models.ManyToManyField(Question, through="v1.QuestionnaireQuestionMap")  # type: ignore[misc, var-annotated]
+    questions = models.ManyToManyField(Question, through="v1.QuestionnaireQuestionMap")
     use_in_shx = models.BooleanField()
     carry_forward = models.TextField()
 
@@ -159,9 +159,9 @@ class Interview(models.Model):
     )
     note_id = models.BigIntegerField()
     appointment_id = models.BigIntegerField()
-    questionnaires = models.ManyToManyField(  # type: ignore[var-annotated]
+    questionnaires = models.ManyToManyField(
         Questionnaire,
-        through="v1.InterviewQuestionnaireMap",  # type: ignore[misc]
+        through="v1.InterviewQuestionnaireMap",
     )
     progress_status = models.CharField()
     created = models.DateTimeField()
@@ -210,3 +210,16 @@ class InterviewQuestionResponse(models.Model):
     questionnaire_state = models.TextField()
     interview_state = models.TextField()
     comment = models.CharField()
+
+
+__exports__ = (
+    "ResponseOptionSet",
+    "ResponseOption",
+    "Question",
+    "Questionnaire",
+    "QuestionnaireQuestionMap",
+    "InterviewQuerySet",
+    "Interview",
+    "InterviewQuestionnaireMap",
+    "InterviewQuestionResponse",
+)

@@ -101,3 +101,10 @@ class PracticeLocationSetting(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+__exports__ = (
+    "PracticeLocationPOS",
+    "PracticeLocation",
+    "PracticeLocationSetting",
+)

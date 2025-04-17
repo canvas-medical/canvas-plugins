@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -199,3 +201,6 @@ class BmiRatio(ValueSet):
     LOINC = {
         "39156-5",  # Body mass index (BMI) [Ratio]
     }
+
+
+__exports__ = get_overrides(locals().copy())

@@ -74,3 +74,6 @@ class PortalWidget(_BaseEffect):
             )
 
         return errors
+
+
+__exports__ = ("PortalWidget",)

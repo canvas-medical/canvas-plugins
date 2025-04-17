@@ -16,3 +16,6 @@ class RemoveAllergyCommand(BaseCommand):
         json_schema_extra={"commands_api_name": "allergy"},
     )
     narrative: str | None = None
+
+
+__exports__ = ("RemoveAllergyCommand",)

@@ -19,3 +19,6 @@ class RemoveBannerAlert(_BaseEffect):
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"patient": self.patient_id, "patient_filter": self.patient_filter, "key": self.key}
+
+
+__exports__ = ("RemoveBannerAlert",)

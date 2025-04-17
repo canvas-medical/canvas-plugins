@@ -70,3 +70,6 @@ class PluginLogger:
     def critical(self, message: Any) -> None:
         """Logs a critical message."""
         self.logger.critical(message)
+
+
+__exports__ = ()

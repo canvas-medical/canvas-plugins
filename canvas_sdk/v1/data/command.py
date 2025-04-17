@@ -36,3 +36,6 @@ class Command(models.Model):
             app_label=self._meta.app_label, model_name=self.anchor_object_type
         )
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
+
+
+__exports__ = ("Command",)
