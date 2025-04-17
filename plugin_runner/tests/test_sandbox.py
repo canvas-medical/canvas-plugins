@@ -1,15 +1,12 @@
 import importlib
 import re
-from collections.abc import Generator
 from textwrap import dedent
-from typing import Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
-    CANVAS_SUBMODULES,
+    CANVAS_SUBMODULE_NAMES,
     FORBIDDEN_ASSIGNMENTS,
     Sandbox,
 )
@@ -137,22 +134,6 @@ CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
 ]
 
 
-@pytest.fixture
-def mock_allowed_modules(mocker: "MockerFixture", request: Any) -> Generator:
-    """Mock the ALLOWED_MODULES."""
-    mocker.patch("plugin_runner.sandbox.ALLOWED_MODULES", request.param)
-
-    yield
-
-
-@pytest.fixture
-def mock_protected_resources(mocker: "MockerFixture", request: Any) -> Generator:
-    """Mock the PROTECTED_RESOURCES."""
-    mocker.patch("plugin_runner.sandbox.PROTECTED_RESOURCES", request.param)
-
-    yield
-
-
 def test_valid_code_execution() -> None:
     """Test execution of valid code in the sandbox."""
     sandbox = _sandbox_from_code(VALID_CODE)
@@ -207,10 +188,11 @@ RE_ERROR_STRINGS = re.compile(
 )
 
 
-@pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULES)
+@pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
-    Test that no module in ALLOWED_MODULES re-exports settings.
+    Test that all modules under cavas_sdk have an __exports__ module attribute
+    and that it is a tuple.
     """
     imported_module = importlib.import_module(canvas_module)
 
@@ -231,6 +213,75 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
     )
 
     with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+        sandbox.execute()
+
+
+BANNED_IMPORTS = [
+    "from arrow.parser import sys",
+    "from arrow.parser import sys as something_else",
+    "from requests.sessions import os",
+    "from requests.sessions import os as something_else",
+    """
+        from arrow import parser  # fails here
+        parser.sys
+    """,
+    """
+        from requests import sessions  # fails here
+        sessions.os
+    """,
+]
+
+
+@pytest.mark.parametrize("banned_import", BANNED_IMPORTS)
+def test_sandbox_disallows_bad_modules(banned_import: str) -> None:
+    """
+    Test that os, sys, etc. are not importable.
+    """
+    sandbox = _sandbox_from_code(banned_import)
+
+    with pytest.raises(ImportError):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "banned_attribute",
+    [
+        """
+            import jwt
+            jwt.decode_complete
+        """,
+    ],
+)
+def test_sandbox_disallows_bad_attributes(banned_attribute: str) -> None:
+    """
+    Test that module attributes not allowlisted are denied.
+    """
+    sandbox = _sandbox_from_code(banned_attribute)
+
+    with pytest.raises(AttributeError):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "banned_attribute",
+    [
+        """
+            import jwt
+            jwt.encode = lambda x: print(x)
+        """,
+        """
+            from requests import Response
+            Response.status_code = 500
+        """,
+    ],
+)
+def test_sandbox_disallows_bad_attribute_writes(banned_attribute: str) -> None:
+    """
+    Test that module attributes not allowlisted are denied.
+    """
+    sandbox = _sandbox_from_code(banned_attribute)
+
+    with pytest.raises(TypeError, match="Forbidden assignment to a (non-)?module attribute:"):
         sandbox.execute()
 
 
@@ -391,32 +442,30 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 
 
 @pytest.mark.parametrize(
-    ("code", "error_message", "mock_protected_resources", "mock_allowed_modules"),
+    ("code", "error_message", "mock_protected_resources"),
     [
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[0],
             "attribute-less object",
             ["canvas_sdk.utils.http.Http"],
-            ALLOWED_MODULES,
         ),
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[1],
             "Forbidden assignment",
             ["canvas_sdk.utils.http.Http"],
-            ALLOWED_MODULES,
         ),
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[2],
             "Forbidden assignment",
             ["json"],
-            ALLOWED_MODULES,
         ),
     ],
     ids=["setattr", "assign", "module"],
-    indirect=["mock_protected_resources", "mock_allowed_modules"],
 )
 def test_sandbox_denies_setattr_to_protected_resources(
-    code: str, error_message: str, mock_protected_resources: None, mock_allowed_modules: None
+    code: str,
+    error_message: str,
+    mock_protected_resources: None,
 ) -> None:
     """Test that setting attributes on protected resources is not allowed."""
     sandbox = _sandbox_from_code(source_code=code)
