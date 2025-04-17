@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.33.0 (2025-04-17)
+
+### Features
+
+- Add portal section to patient profile configuration
+  ([#417](https://github.com/canvas-medical/canvas-plugins/pull/417),
+  [`d253ceb`](https://github.com/canvas-medical/canvas-plugins/commit/d253ceb94ab4217c728dc12dfb25dcf0f4b29e4f))
+
+- Add update_user and patient_portal_send_invite effects
+  ([#470](https://github.com/canvas-medical/canvas-plugins/pull/470),
+  [`0584714`](https://github.com/canvas-medical/canvas-plugins/commit/0584714b93dbf5fe1c46a1769c5b42fdb4f2529a))
+
+
 ## v0.32.0 (2025-04-11)
 
 ### Bug Fixes
