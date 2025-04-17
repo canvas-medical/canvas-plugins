@@ -3,10 +3,17 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
 BASE_DIR = Path(__file__).parent
 FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
 DATA_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "data" / "plugins"
+
+
+@pytest.fixture(scope="session")
+def cli_runner() -> CliRunner:
+    """Return a CliRunner."""
+    return CliRunner()
 
 
 @pytest.fixture(scope="session", autouse=True)

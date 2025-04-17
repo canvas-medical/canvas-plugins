@@ -6,4 +6,3 @@ class ReviewOfSystemsCommand(QuestionnaireCommand):
 
     class Meta:
         key = "ros"
-        commit_required_fields = ("questionnaire_id",)

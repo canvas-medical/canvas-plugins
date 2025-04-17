@@ -10,7 +10,6 @@ class MedicalHistoryCommand(BaseCommand):
 
     class Meta:
         key = "medicalHistory"
-        commit_required_fields = ("past_medical_history",)
 
     past_medical_history: str | None = None
     approximate_start_date: date | None = None

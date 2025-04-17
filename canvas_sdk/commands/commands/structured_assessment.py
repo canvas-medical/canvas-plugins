@@ -6,4 +6,3 @@ class StructuredAssessmentCommand(QuestionnaireCommand):
 
     class Meta:
         key = "structuredAssessment"
-        commit_required_fields = ("questionnaire_id",)

@@ -11,7 +11,6 @@ class UpdateGoalCommand(_BaseCommand):
 
     class Meta:
         key = "updateGoal"
-        commit_required_fields = ("goal_id",)
 
     class AchievementStatus(Enum):
         IN_PROGRESS = "in-progress"

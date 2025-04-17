@@ -12,8 +12,6 @@ from canvas_cli.main import app
 
 from .plugin import validate_package
 
-runner = CliRunner()
-
 
 def test_validate_package_unexistant_path() -> None:
     """Tests the validate_package callback with an invalid folder."""
@@ -52,9 +50,9 @@ def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
         shutil.rmtree(Path(f"./{init_plugin_name}"))
 
 
-def test_canvas_init(init_plugin_name: str) -> None:
+def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the CLI successfully creates a plugin with init."""
-    result = runner.invoke(app, "init", input=init_plugin_name)
+    result = cli_runner.invoke(app, "init", input=init_plugin_name)
     assert result.exit_code == 0
 
     # plugin directory exists
@@ -66,7 +64,7 @@ def test_canvas_init(init_plugin_name: str) -> None:
     manifest = Path(f"./{init_plugin_name}/CANVAS_MANIFEST.json")
     assert manifest.exists()
     assert manifest.is_file()
-    manifest_result = runner.invoke(app, f"validate-manifest {init_plugin_name}")
+    manifest_result = cli_runner.invoke(app, f"validate-manifest {init_plugin_name}")
     assert manifest_result.exit_code == 0
 
     # readme file exists

@@ -12,15 +12,6 @@ class PrescribeCommand(_BaseCommand):
 
     class Meta:
         key = "prescribe"
-        commit_required_fields = (
-            "fdb_code",
-            "sig",
-            "quantity_to_dispense",
-            "type_to_dispense",
-            "refills",
-            "substitutions",
-            "prescriber_id",
-        )
 
     class Substitutions(Enum):
         ALLOWED = "allowed"

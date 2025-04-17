@@ -6,6 +6,8 @@ from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
 from uuid import UUID
 
+from django.core.exceptions import ImproperlyConfigured
+
 from canvas_sdk.base import Model
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
@@ -34,6 +36,17 @@ class _BaseCommand(Model):
         # Explicitly mark all keys provided in the constructor as dirty.
         self._dirty_keys.update(data.keys())
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Validate that the command has a key and required fields."""
+        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
+            raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify Meta.key.")
+
+        if hasattr(cls.Meta, "commit_required_fields"):
+            command_fields = set(cls.__pydantic_fields__.keys() | cls.__annotations__.keys())
+            for field in cls.Meta.commit_required_fields:
+                if field not in command_fields:
+                    raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify {field}.")
+
     def __setattr__(self, name: str, value: Any) -> None:
         """Set an attribute and mark it as dirty unless excluded."""
         if not name.startswith("_") and name not in (
@@ -47,8 +60,9 @@ class _BaseCommand(Model):
         """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
         return key in self._dirty_keys
 
-    def constantized_key(self) -> str:
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", self.Meta.key).upper()
+    @classmethod
+    def constantized_key(cls) -> str:
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", cls.Meta.key).upper()
 
     note_uuid: str | None = None
     command_uuid: str | None = None
@@ -115,6 +129,7 @@ class _BaseCommand(Model):
         base_properties = {"note_uuid", "command_uuid"}
         schema = cls.model_json_schema()
         required_fields: tuple = getattr(cls.Meta, "commit_required_fields", ())
+
         return {
             definition.get("commands_api_name", name): {
                 "required": name in required_fields,
