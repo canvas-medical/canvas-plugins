@@ -20,7 +20,7 @@ def aws_sig_v4_headers(
 ) -> dict[str, str]:
     """Constructs signed headers for use in requests made to AWS."""
     algorithm = "AWS4-HMAC-SHA256"
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     amzdate = now.strftime("%Y%m%dT%H%M%SZ")
     datestamp = now.strftime("%Y%m%d")
     payload_hash = hashlib.sha256(payload).hexdigest()
