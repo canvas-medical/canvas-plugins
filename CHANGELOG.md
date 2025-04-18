@@ -1,6 +1,53 @@
 # CHANGELOG
 
 
+## v0.33.0 (2025-04-17)
+
+### Features
+
+- Add portal section to patient profile configuration
+  ([#417](https://github.com/canvas-medical/canvas-plugins/pull/417),
+  [`d253ceb`](https://github.com/canvas-medical/canvas-plugins/commit/d253ceb94ab4217c728dc12dfb25dcf0f4b29e4f))
+
+- Add update_user and patient_portal_send_invite effects
+  ([#470](https://github.com/canvas-medical/canvas-plugins/pull/470),
+  [`0584714`](https://github.com/canvas-medical/canvas-plugins/commit/0584714b93dbf5fe1c46a1769c5b42fdb4f2529a))
+
+
+## v0.32.0 (2025-04-11)
+
+### Bug Fixes
+
+- Add missing events ([#521](https://github.com/canvas-medical/canvas-plugins/pull/521),
+  [`20ced4e`](https://github.com/canvas-medical/canvas-plugins/commit/20ced4ee9c937c4f8afd4a07d7c64844eb4937d1))
+
+### Features
+
+- Add Sentry logging ([#410](https://github.com/canvas-medical/canvas-plugins/pull/410),
+  [`e064b4c`](https://github.com/canvas-medical/canvas-plugins/commit/e064b4ca9f308d4105d634c1966968b4852a45f2))
+
+
+## v0.31.0 (2025-04-08)
+
+### Bug Fixes
+
+- Don't block for Redis messages ([#516](https://github.com/canvas-medical/canvas-plugins/pull/516),
+  [`6f87f0c`](https://github.com/canvas-medical/canvas-plugins/commit/6f87f0c76673dd1b4ad6d72fbacb3e571c3242d9))
+
+### Features
+
+- Add all protocol card statuses ([#468](https://github.com/canvas-medical/canvas-plugins/pull/468),
+  [`26521ad`](https://github.com/canvas-medical/canvas-plugins/commit/26521ad9ee9bd9f12a2edc5a777faecf5ef98623))
+
+- Add environment dict containing the customer identifier to plugin handler scope
+  ([#513](https://github.com/canvas-medical/canvas-plugins/pull/513),
+  [`d23cfd9`](https://github.com/canvas-medical/canvas-plugins/commit/d23cfd9bea7a3d86746f3d36b00669b89cbada27))
+
+- Add session based auth to simpleapi
+  ([#495](https://github.com/canvas-medical/canvas-plugins/pull/495),
+  [`3b2b96a`](https://github.com/canvas-medical/canvas-plugins/commit/3b2b96a4cad62aca539c7681fbced5c93fcc7973))
+
+
 ## v0.30.0 (2025-04-02)
 
 ### Features

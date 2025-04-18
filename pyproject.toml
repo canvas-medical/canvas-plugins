@@ -40,6 +40,7 @@ dependencies = [
   "redis>=5.0.4,<6",
   "requests",
   "restrictedpython>=8.0",
+  "sentry-sdk>=2.25.1",
   "statsd>=4.0.1,<5",
   "typer",
   "typing-extensions>=4.8,<4.13",
@@ -50,7 +51,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.30.0"
+version = "0.33.0"
 
 [project.scripts]
 canvas = "canvas_cli.main:app"

@@ -1,4 +1,4 @@
-from plugin_runner.plugin_runner import run_server
+from plugin_runner.plugin_runner import main as run_server
 
 
 def run_plugin(plugin_directory: str) -> None:

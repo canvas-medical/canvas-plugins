@@ -11,6 +11,7 @@ from urllib import parse
 
 import psycopg
 import requests
+import sentry_sdk
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -149,9 +150,11 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
-    except Exception as ex:
+    except Exception as e:
         log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
-        raise PluginInstallationError() from ex
+        sentry_sdk.capture_exception(e)
+
+        raise PluginInstallationError() from e
 
 
 def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> None:
@@ -166,9 +169,11 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
                 with open(plugin_file_path, "rb") as file:
                     archive = tarfile.TarFile.open(fileobj=file)
                     archive.extractall(plugin_installation_path, filter="data")
-            except tarfile.ReadError as ex:
+            except tarfile.ReadError as e:
                 log.error(f"Unreadable tar archive: '{plugin_file_path}'")
-                raise InvalidPluginFormat from ex
+                sentry_sdk.capture_exception(e)
+
+                raise InvalidPluginFormat from e
         else:
             log.error(f"Unsupported file format: '{plugin_file_path}'")
             raise InvalidPluginFormat
@@ -225,12 +230,16 @@ def install_plugins() -> None:
     for plugin_name, attributes in enabled_plugins().items():
         try:
             install_plugin(plugin_name, attributes)
-        except PluginInstallationError:
+        except PluginInstallationError as e:
             disable_plugin(plugin_name)
+
             log.error(
                 f'Installation failed for plugin "{plugin_name}", version {attributes["version"]};'
                 " the plugin has been disabled"
             )
+
+            sentry_sdk.capture_exception(e)
+
             continue
 
     return None
