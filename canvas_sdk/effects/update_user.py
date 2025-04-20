@@ -76,3 +76,6 @@ class UpdateUserEffect(_BaseEffect):
             )
 
         return errors
+
+
+__exports__ = ("UpdateUserEffect",)
