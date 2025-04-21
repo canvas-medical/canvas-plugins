@@ -33,7 +33,7 @@ from canvas_sdk.utils.stats import get_duration_ms, statsd_client
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.installation import install_plugins
-from plugin_runner.sandbox import Sandbox
+from plugin_runner.sandbox import Sandbox, sandbox_from_module
 from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
@@ -437,18 +437,6 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     return modules
 
 
-def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
-    """Sandbox the code execution."""
-    module_path = base_path / str(module_name.replace(".", "/") + ".py")
-
-    if not module_path.exists():
-        raise ModuleNotFoundError(f'Could not load module "{module_name}"')
-
-    sandbox = Sandbox(module_path, namespace=module_name)
-
-    return sandbox.execute()
-
-
 async def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
     log.info(f'Publishing message to pubsub channel "{CHANNEL_NAME}"')
@@ -521,7 +509,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             continue
 
         try:
-            result = sandbox_from_module(path.parent, handler_module)
+            sandbox = sandbox_from_module(path.parent, handler_module)
+            result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading plugin '{name_and_class}'")

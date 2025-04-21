@@ -257,7 +257,7 @@ FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
 
 
 def _is_known_module(name: str) -> bool:
-    return any(name == module for module in ALLOWED_MODULES)
+    return name in ALLOWED_MODULES
 
 
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
@@ -421,29 +421,21 @@ class Sandbox:
 
     def __init__(
         self,
-        source_code: str | Path | None,
-        namespace: str | None = None,
+        source_code: Path,
+        namespace: str,
         evaluated_modules: dict[str, bool] | None = None,
     ) -> None:
-        if source_code is None:
-            raise TypeError("source_code may not be None")
-
         self.namespace = namespace or "protocols"
         self.package_name = self.namespace.split(".")[0]
 
-        if isinstance(source_code, Path):
-            if not source_code.exists():
-                raise FileNotFoundError(f"File not found: {source_code}")
+        if not source_code.exists():
+            raise FileNotFoundError(f"File not found: {source_code}")
 
-            self.source_code_path = source_code.as_posix()
-            self.source_code = source_code.read_text()
-            package_path = _find_folder_in_path(source_code, self.package_name)
-            self.base_path = package_path.parent if package_path else None
-            self._evaluated_modules: dict[str, bool] = evaluated_modules or {}
-        else:
-            self.source_code_path = "<inline code>"
-            self.source_code = source_code
-            self.base_path = None
+        self.source_code_path = source_code.as_posix()
+        self.source_code = source_code.read_text()
+        package_path = _find_folder_in_path(source_code, self.package_name)
+        self.base_path = package_path.parent if package_path else None
+        self._evaluated_modules: dict[str, bool] = evaluated_modules or {}
 
     @cached_property
     def scope(self) -> dict[str, Any]:
@@ -530,8 +522,11 @@ class Sandbox:
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
             Sandbox(
-                module, namespace=module_name, evaluated_modules=self._evaluated_modules
+                module,
+                namespace=module_name,
+                evaluated_modules=self._evaluated_modules,
             ).execute()
+
             self._evaluated_modules[module_name] = True
 
         # Reload the module if already imported to ensure the latest version is used.
@@ -556,8 +551,11 @@ class Sandbox:
             if init_file.exists():
                 # Mark as evaluated to prevent infinite recursion.
                 self._evaluated_modules[module_name] = True
+
                 Sandbox(
-                    init_file, namespace=module_name, evaluated_modules=self._evaluated_modules
+                    init_file,
+                    namespace=module_name,
+                    evaluated_modules=self._evaluated_modules,
                 ).execute()
             else:
                 # Mark as evaluated even if no init file exists to prevent redundant checks.
@@ -667,3 +665,15 @@ class Sandbox:
         exec(self.compile_result.code, self.scope)
 
         return self.scope
+
+
+def sandbox_from_module(base_path: Path, module_name: str) -> Sandbox:
+    """Sandbox the code execution."""
+    module_path = base_path / str(module_name.replace(".", "/") + ".py")
+
+    if not module_path.exists():
+        raise ModuleNotFoundError(f'Could not load module "{module_name}"')
+
+    sandbox = Sandbox(module_path, namespace=module_name)
+
+    return sandbox

@@ -1,5 +1,7 @@
 import importlib
 import re
+from pathlib import Path
+from tempfile import mkdtemp
 from textwrap import dedent
 
 import pytest
@@ -9,14 +11,26 @@ from plugin_runner.sandbox import (
     CANVAS_SUBMODULE_NAMES,
     FORBIDDEN_ASSIGNMENTS,
     Sandbox,
+    sandbox_from_module,
 )
 
 
-def _sandbox_from_code(source_code: str, namespace: str | None = None) -> Sandbox:
+def _sandbox_from_code(source_code: str) -> Sandbox:
     """
-    Helper method to dedent the passed in source code so our tests are more readable.
+    Helper method to ceate a Sandbox that matches production conditions.
     """
-    return Sandbox(source_code=dedent(source_code), namespace=namespace)
+    temp_directory = Path(mkdtemp())
+
+    plugin_directory = temp_directory / "plugin_name" / "protocols"
+    plugin_directory.mkdir(parents=True)
+
+    init_file = plugin_directory / "__init__.py"
+    init_file.touch()
+
+    protocol_file = plugin_directory / "protocol.py"
+    protocol_file.write_text(dedent(source_code))
+
+    return sandbox_from_module(temp_directory, "plugin_name.protocols.protocol")
 
 
 # Sample code strings for testing various scenarios
@@ -372,9 +386,8 @@ def test_print_collector() -> None:
 
 def test_sandbox_denies_module_name_import_outside_package() -> None:
     """Test that modules outside the root package cannot be imported."""
-    sandbox_module_a = _sandbox_from_code(
-        source_code=SOURCE_CODE_MODULE, namespace="other_module.a"
-    )
+    # TODO rewrite
+    sandbox_module_a = _sandbox_from_code(source_code=SOURCE_CODE_MODULE)
 
     with pytest.raises(ImportError, match="module.b' is not an allowed import."):
         sandbox_module_a.execute()
@@ -442,22 +455,19 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 
 
 @pytest.mark.parametrize(
-    ("code", "error_message", "mock_protected_resources"),
+    ("code", "error_message"),
     [
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[0],
             "attribute-less object",
-            ["canvas_sdk.utils.http.Http"],
         ),
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[1],
             "Forbidden assignment",
-            ["canvas_sdk.utils.http.Http"],
         ),
         (
             CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[2],
             "Forbidden assignment",
-            ["json"],
         ),
     ],
     ids=["setattr", "assign", "module"],
@@ -465,7 +475,6 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 def test_sandbox_denies_setattr_to_protected_resources(
     code: str,
     error_message: str,
-    mock_protected_resources: None,
 ) -> None:
     """Test that setting attributes on protected resources is not allowed."""
     sandbox = _sandbox_from_code(source_code=code)
