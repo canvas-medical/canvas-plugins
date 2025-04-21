@@ -54,10 +54,19 @@ class CreateNote(CreateNoteOrAppointmentABC):
         """
         errors = super()._get_error_details(method)
 
-        note_type_category = NoteType.objects.values_list("category", flat=True).get(
-            id=self.note_type_id
+        note_type_category = (
+            NoteType.objects.values_list("category", flat=True).filter(id=self.note_type_id).first()
         )
-        if note_type_category in (
+
+        if not note_type_category:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Note type with ID {self.note_type_id} does not exist.",
+                    self.note_type_id,
+                )
+            )
+        elif note_type_category in (
             NoteTypeCategories.APPOINTMENT,
             NoteTypeCategories.SCHEDULE_EVENT,
             NoteTypeCategories.MESSAGE,

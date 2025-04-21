@@ -86,6 +86,12 @@ class CreateNoteOrAppointmentABC(_BaseEffect, ABC):
 class CreateAppointmentABC(CreateNoteOrAppointmentABC, ABC):
     """
     Base class for appointment creation effects.
+
+    Attributes:
+        start_time (datetime.datetime): The start time of the appointment.
+        duration_minutes (int): The duration of the appointment in minutes.
+        status (AppointmentProgressStatus | None): The status of the appointment.
+        external_identifiers (list[AppointmentIdentifier] | None): List of external identifiers for the appointment.
     """
 
     start_time: datetime.datetime
