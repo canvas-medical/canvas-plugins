@@ -260,6 +260,8 @@ enum EffectType {
   CREATE_NOTE = 6000;
   CREATE_APPOINTMENT = 6001;
   CREATE_SCHEDULE_EVENT = 6002;
+  
+  CREATE_PATIENT = 6003;
 }
 
 message Effect {
