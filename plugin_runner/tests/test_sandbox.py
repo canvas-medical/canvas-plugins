@@ -382,9 +382,8 @@ def test_print_collector() -> None:
 
 def test_eval_disallowed() -> None:
     """Test that eval() is not allowed in the sandbox."""
-    sandbox = _sandbox_from_code("""
-        eval("2 ** 8")
-    """)
+    sandbox = _sandbox_from_code('eval("2 ** 8")')
+
     with pytest.raises(RuntimeError, match="Code is invalid"):
         sandbox.execute()
 
@@ -393,10 +392,12 @@ def test_printf_import_denied() -> None:
     """Test that imports are checked when invoked in a string format operation."""
     sandbox = _sandbox_from_code("""
         def do_import():
-            import bad_module
-        print(f"{do_import()}")
+            from requests.sessions import os
+
+        print(f'{do_import()}')
     """)
-    with pytest.raises(ImportError, match="'bad_module' is not an allowed import."):
+
+    with pytest.raises(ImportError, match="'requests.sessions' is not an allowed import."):
         sandbox.execute()
 
 
