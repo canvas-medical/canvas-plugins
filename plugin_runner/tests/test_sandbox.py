@@ -380,6 +380,26 @@ def test_print_collector() -> None:
     assert "Hello, Sandbox!" in scope["_print"].txt, "Print output should be captured."
 
 
+def test_eval_disallowed() -> None:
+    """Test that eval() is not allowed in the sandbox."""
+    sandbox = _sandbox_from_code("""
+        eval("2 ** 8")
+    """)
+    with pytest.raises(RuntimeError, match="Code is invalid"):
+        sandbox.execute()
+
+
+def test_printf_import_denied() -> None:
+    """Test that imports are checked when invoked in a string format operation."""
+    sandbox = _sandbox_from_code("""
+        def do_import():
+            import bad_module
+        print(f"{do_import()}")
+    """)
+    with pytest.raises(ImportError, match="'bad_module' is not an allowed import."):
+        sandbox.execute()
+
+
 def test_sandbox_denies_module_name_import_outside_package() -> None:
     """Test that modules outside the root package cannot be imported."""
     sandbox = _sandbox_from_code(
