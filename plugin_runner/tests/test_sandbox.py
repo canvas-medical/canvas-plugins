@@ -498,13 +498,22 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
         ),
         (
             """
+                import json
+                other_name = json
+                other_name.dumps = None
+                assert json.dumps is not None
+            """,
+            "Forbidden assignment",
+        ),
+        (
+            """
                 from canvas_sdk.utils import Http
                 Http._session = None
             """,
             "Forbidden assignment",
         ),
     ],
-    ids=["setattr", "assign", "module", "http"],
+    ids=["setattr", "assign", "module", "tricky", "http"],
 )
 def test_sandbox_denies_setattr_to_protected_resources(
     code: str,
