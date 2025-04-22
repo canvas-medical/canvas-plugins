@@ -5,7 +5,7 @@ import pkgutil
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from functools import cached_property
 from pathlib import Path
 from typing import Any, cast
@@ -639,23 +639,28 @@ class Sandbox:
 
         return getattr(_ob, name, default)
 
-    def _safe_import(self, name: str, *args: Any, **kwargs: Any) -> Any:
+    def _safe_import(
+        self,
+        name: str,
+        globals: Any = None,
+        locals: Any = None,
+        fromlist: Sequence[str] = (),
+        level: int = 0,
+    ) -> Any:
         if not self._same_module(name):
+            # Disallow importing anything not explicitly allowed by ALLOWED_MODULES
             if name not in ALLOWED_MODULES:
                 raise ImportError(f"{name!r} is not an allowed import.")
 
-            # Disallow importing anything not explicitly allowed by ALLOWED_MODULES
-            if len(args) >= 3:
-                from_list = args[2]
+            if fromlist is not None:
+                for item in fromlist:
+                    if item not in ALLOWED_MODULES.get(name, set()):
+                        raise ImportError(f"{item!r} is not an allowed import from {name!r}.")
 
-                if from_list is not None:
-                    for item in from_list:
-                        if item not in ALLOWED_MODULES.get(name, set()):
-                            raise ImportError(f"{item!r} is not an allowed import from {name!r}.")
-
+        # evaluate the module in the sandbox if needed
         self._evaluate_module(name)
 
-        return __import__(name, *args, **kwargs)
+        return __import__(name, globals, locals, fromlist, level)
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""
