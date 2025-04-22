@@ -9,7 +9,8 @@ from functools import wraps
 from typing import Any, Literal, Protocol, TypeVar, cast, override
 
 import requests
-import statsd
+
+from canvas_sdk.utils.stats import StatsDClientProxy
 
 F = TypeVar("F", bound=Callable)
 
@@ -116,7 +117,7 @@ class Http:
         self._base_url = base_url
         self._session = requests.Session()
 
-        self.statsd_client = statsd.StatsClient()
+        self.statsd_client = StatsDClientProxy()
 
     @staticmethod
     def measure_time(fn: F) -> F:
@@ -128,7 +129,7 @@ class Http:
             result = fn(self, *args, **kwargs)
             end_time = time.time()
             timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing)
+            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing, tags={})
             return result
 
         return cast(F, wrapper)

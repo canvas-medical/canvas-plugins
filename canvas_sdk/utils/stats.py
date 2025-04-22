@@ -31,6 +31,9 @@ def tags_to_line_protocol(tags: dict[str, Any]) -> str:
     )
 
 
+STATS_ENABLED = True
+
+
 class StatsDClientProxy:
     """Proxy for a StatsD client."""
 
@@ -45,6 +48,9 @@ class StatsDClientProxy:
             value (float): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
+        if not STATS_ENABLED:
+            return
+
         statsd_tags = tags_to_line_protocol(tags)
         self.client.gauge(f"{metric_name},{statsd_tags}", value)
 
@@ -56,6 +62,9 @@ class StatsDClientProxy:
             delta (float | timedelta): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
+        if not STATS_ENABLED:
+            return
+
         statsd_tags = tags_to_line_protocol(tags)
         self.client.timing(f"{metric_name},{statsd_tags}", delta)
 
