@@ -5,6 +5,7 @@ requires = ["hatchling"]
 [dependency-groups]
 dev = [
   "grpcio-tools>=1.60.1,<2",
+  "httpretty>=1.1.4",
   "mypy",
   "pre-commit",
   "pytest",
@@ -180,3 +181,6 @@ version_toml = ["pyproject.toml:project.version"]
 default = true
 name = "PyPI"
 url = "https://pypi.org/simple/"
+
+[tool.uv.sources]
+httpretty = {git = "https://github.com/carlsmedstad/HTTPretty.git", rev = "8e96b1e312d473429fbd08bc867376e9932ad42a"}

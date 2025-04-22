@@ -117,6 +117,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "grpcio-tools" },
+    { name = "httpretty" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -162,6 +163,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.60.1,<2" },
+    { name = "httpretty", git = "https://github.com/carlsmedstad/HTTPretty.git?rev=8e96b1e312d473429fbd08bc867376e9932ad42a" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -579,6 +581,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/29/3b/7cdf4a9e5a3e0a35a528b48b111355cd14da601413a4f887aa99b6da468f/grpcio_tools-1.62.3-cp312-cp312-win32.whl", hash = "sha256:b881fd9505a84457e9f7e99362eeedd86497b659030cf57c6f0070df6d9c2b9b", size = 910416 },
     { url = "https://files.pythonhosted.org/packages/6c/66/dd3ec249e44c1cc15e902e783747819ed41ead1336fcba72bf841f72c6e9/grpcio_tools-1.62.3-cp312-cp312-win_amd64.whl", hash = "sha256:11c625eebefd1fd40a228fc8bae385e448c7e32a6ae134e43cf13bbc23f902b7", size = 1052856 },
 ]
+
+[[package]]
+name = "httpretty"
+version = "1.1.4"
+source = { git = "https://github.com/carlsmedstad/HTTPretty.git?rev=8e96b1e312d473429fbd08bc867376e9932ad42a#8e96b1e312d473429fbd08bc867376e9932ad42a" }
 
 [[package]]
 name = "identify"
