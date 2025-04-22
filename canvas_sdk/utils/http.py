@@ -1,11 +1,12 @@
 import concurrent
 import functools
+import os
 import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
-from typing import Any, Literal, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar, cast, override
 
 import requests
 import statsd
@@ -100,15 +101,6 @@ class Http:
     _base_url: str
     _session: requests.Session
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        """
-        Prevent base_url or session from being updated after initialization.
-        """
-        if name in ("_base_url", "_session"):
-            raise AttributeError(f"{name} is read-only")
-
-        super().__setattr__(name, value)
-
     def join_url(self, url: str) -> str:
         """
         Join a URL to the base_url.
@@ -121,8 +113,8 @@ class Http:
         return joined
 
     def __init__(self, base_url: str = "") -> None:
-        super().__setattr__("_base_url", base_url)
-        super().__setattr__("_session", requests.Session())
+        self._base_url = base_url
+        self._session = requests.Session()
 
         self.statsd_client = statsd.StatsClient()
 
@@ -233,7 +225,54 @@ class Http:
             return [future.result() for future in futures]
 
 
-class OntologiesHttp(Http):
+class JsonOnlyHttp(Http):
+    @override
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def get_json(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> dict[str, Any]:
+        return super().get(url, headers).json()
+
+    @override
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    @override
+    def put(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    @override
+    def patch(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+
+class OntologiesHttp(JsonOnlyHttp):
     """
     An HTTP client for the ontologies service.
     """
@@ -241,13 +280,10 @@ class OntologiesHttp(Http):
     def __init__(self) -> None:
         super().__init__(base_url="https://ontologies.canvasmedical.com")
 
-        # import here to avoid making it exportable to module importers
-        import os
-
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
-class ScienceHttp(Http):
+class ScienceHttp(JsonOnlyHttp):
     """
     An HTTP client for the ontologies service.
     """
@@ -255,17 +291,17 @@ class ScienceHttp(Http):
     def __init__(self) -> None:
         super().__init__(base_url="https://science.canvasmedical.com")
 
-        # import here to avoid making it exportable to module importers
-        import os
-
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
+
+ontologies_http = OntologiesHttp()
+science_http = ScienceHttp()
 
 __all__ = __exports__ = (
     "ThreadPoolExecutor",
     "Http",
-    "OntologiesHttp",
-    "ScienceHttp",
+    "ontologies_http",
+    "science_http",
     "batch_get",
     "batch_post",
     "batch_put",

@@ -14,22 +14,37 @@ from plugin_runner.sandbox import (
 )
 
 
-def _sandbox_from_code(source_code: str) -> Sandbox:
+def _sandbox_from_code(
+    source_code: str,
+    module_name: str = "plugin_name.protocols.protocol",
+    extra_source_code: str | None = None,
+    extra_module_name: str | None = None,
+) -> Sandbox:
     """
     Helper method to ceate a Sandbox that matches production conditions.
     """
     temp_directory = Path(mkdtemp())
 
-    plugin_directory = temp_directory / "plugin_name" / "protocols"
+    plugin_directory = temp_directory.joinpath(*module_name.split(".")[:-1])
     plugin_directory.mkdir(parents=True)
 
     init_file = plugin_directory / "__init__.py"
     init_file.touch()
 
-    protocol_file = plugin_directory / "protocol.py"
+    protocol_file = plugin_directory / (module_name.split(".")[-1] + ".py")
     protocol_file.write_text(dedent(source_code))
 
-    return sandbox_from_module(temp_directory, "plugin_name.protocols.protocol")
+    if extra_source_code and extra_module_name:
+        extra_plugin_directory = temp_directory.joinpath(*extra_module_name.split(",")[:-1])
+        extra_plugin_directory.mkdir(parents=True, exist_ok=True)
+
+        extra_init_file = extra_plugin_directory / "__init__.py"
+        extra_init_file.touch()
+
+        extra_protocol_file = extra_plugin_directory / (extra_module_name.split(".")[-1] + ".py")
+        extra_protocol_file.write_text(dedent(extra_source_code))
+
+    return sandbox_from_module(temp_directory, module_name)
 
 
 # Sample code strings for testing various scenarios
@@ -101,12 +116,17 @@ CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
         client = Http()
         pvt = client.__class__
     """,
-]
+    """
+        from canvas_sdk.utils.http import ontologies_http
 
-SOURCE_CODE_MODULE = """
-    import module.b
-    result = module.b
-"""
+        ontologies_http._base_url = 'evil'
+    """,
+    """
+        from canvas_sdk.utils.http import ontologies_http
+
+        ontologies_http._session
+    """,
+]
 
 
 def test_valid_code_execution() -> None:
@@ -278,7 +298,7 @@ def test_sandbox_disallows_bad_attribute_writes(banned_attribute: str) -> None:
     """
     sandbox = _sandbox_from_code(banned_attribute)
 
-    with pytest.raises(TypeError, match="Forbidden assignment to a (non-)?module attribute:"):
+    with pytest.raises(AttributeError, match="Forbidden assignment to a (non-)?module attribute:"):
         sandbox.execute()
 
 
@@ -402,11 +422,22 @@ def test_print_collector() -> None:
 
 def test_sandbox_denies_module_name_import_outside_package() -> None:
     """Test that modules outside the root package cannot be imported."""
-    # TODO rewrite
-    sandbox_module_a = _sandbox_from_code(source_code=SOURCE_CODE_MODULE)
+    sandbox = _sandbox_from_code(
+        source_code="""
+            import bad_module.bad
+            result = bad_module.bad
+        """,
+        module_name="good_module.good",
+        extra_source_code="""
+            def thing():
+                return 42
 
-    with pytest.raises(ImportError, match="module.b' is not an allowed import."):
-        sandbox_module_a.execute()
+        """,
+        extra_module_name="bad_module.bad",
+    )
+
+    with pytest.raises(ImportError, match="'bad_module.bad' is not an allowed import."):
+        sandbox.execute()
 
 
 def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
@@ -460,6 +491,8 @@ def test_type_is_inaccessible() -> None:
         "private_attr__session",
         "dict_private_attr__session",
         "private_attr__class__",
+        "ontologies_base_url",
+        "ontologies_session",
     ],
 )
 def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: str) -> None:
@@ -522,5 +555,5 @@ def test_sandbox_denies_setattr_to_protected_resources(
     """Test that setting attributes on protected resources is not allowed."""
     sandbox = _sandbox_from_code(source_code=code)
 
-    with pytest.raises(TypeError, match=error_message):
+    with pytest.raises((AttributeError, TypeError), match=error_message):
         sandbox.execute()

@@ -646,7 +646,7 @@ class Sandbox:
 
         if is_module:
             if not self._same_module(_ob.__name__):
-                raise TypeError(f"Forbidden assignment to a module attribute: {_ob.__name__}.")
+                raise AttributeError(f"Forbidden assignment to a module attribute: {_ob.__name__}.")
         elif isinstance(_ob, type):
             full_name = f"{_ob.__module__}.{_ob.__qualname__}"
         else:
@@ -658,7 +658,7 @@ class Sandbox:
             # deny if it's anything callable
             or callable(getattr(_ob, attribute))
         ):
-            raise TypeError(
+            raise AttributeError(
                 f"Forbidden assignment to a non-module attribute: {full_name} "
                 f"at {name}.{attribute}."
             )
