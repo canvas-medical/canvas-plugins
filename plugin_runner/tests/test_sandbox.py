@@ -299,6 +299,25 @@ def test_sandbox_disallows_bad_attribute_writes(banned_attribute: str) -> None:
         sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "good_attribute",
+    [
+        """
+            from canvas_sdk.commands import StopMedicationCommand
+
+            obj = StopMedicationCommand(note_uuid="123")
+            obj.rationale = "The patient is feeling better."
+        """,
+    ],
+)
+def test_sandbox_allows_good_attribute_writes(good_attribute: str) -> None:
+    """
+    Test that attributes on objects created in the namespace are allowed.
+    """
+    sandbox = _sandbox_from_code(good_attribute)
+    sandbox.execute()
+
+
 def test_plugin_runner_re_export() -> None:
     """
     Test what is re-exported by our code.
