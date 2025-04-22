@@ -9,7 +9,6 @@ import pytest
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     CANVAS_SUBMODULE_NAMES,
-    FORBIDDEN_ASSIGNMENTS,
     Sandbox,
     sandbox_from_module,
 )
@@ -54,10 +53,6 @@ CODE_WITH_RESTRICTED_IMPORTS = [
         cache = caches['default']
     """,
 ]
-
-CODE_WITH_FORBIDDEN_FUNC_NAME = """
-    builtins = {}
-"""
 
 CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
     """
@@ -108,44 +103,10 @@ CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
     """,
 ]
 
-CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES = [
-    """
-        from canvas_sdk.utils import Http
-        client = Http()
-        setattr(client, "_session", None)
-    """,
-    """
-        from canvas_sdk.utils import Http
-        client = Http()
-        client.get = None
-    """,
-    """
-        import json
-        json.dumps = None
-    """,
-    """
-        from canvas_sdk.utils import Http
-        Cache._session = None
-    """,
-]
-
-
 SOURCE_CODE_MODULE = """
     import module.b
     result = module.b
 """
-
-CODE_WITH_FORBIDDEN_ASSIGNMENTS = [
-    code
-    for var in FORBIDDEN_ASSIGNMENTS
-    for code in [
-        f"{var} = 'test'",
-        f"test = {var} = 'test'",
-        f"test = {var} = test2 = 'test'",
-        f"(a, (b, c), (d, ({var}, f))) = (1, (2, 3), (4, (5, 6)))",
-        f"(a, (b, c), (d, [{var}, f])) = (1, (2, 3), (4, [5, 6]))",
-    ]
-]
 
 
 def test_valid_code_execution() -> None:
@@ -192,16 +153,6 @@ def test_plugin_runner_settings_import() -> None:
         sandbox.execute()
 
 
-RE_ERROR_STRINGS = re.compile(
-    r"""(
-        'settings'\ is\ not\ an\ allowed\ import|
-        cannot\ import\ name\ 'settings'|
-        future\ feature\ settings\ is\ not\ defined
-    )""",
-    flags=re.VERBOSE,
-)
-
-
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
@@ -212,6 +163,16 @@ def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> 
 
     assert hasattr(imported_module, "__exports__")
     assert isinstance(imported_module.__exports__, tuple)
+
+
+RE_ERROR_STRINGS = re.compile(
+    r"""(
+        '(settings|os|sys)'\ is\ not\ an\ allowed\ import|
+        cannot\ import\ name\ '(settings|os|sys)'|
+        future\ feature\ (settings|os|sys)\ is\ not\ defined
+    )""",
+    flags=re.VERBOSE,
+)
 
 
 @pytest.mark.parametrize("allowed_module", ALLOWED_MODULES)
@@ -225,6 +186,28 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
             result = settings.AWS_SECRET_ACCESS_KEY
         """
     )
+
+    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("allowed_module", ALLOWED_MODULES)
+def test_plugin_runner_os_allowed_module_import(allowed_module: str) -> None:
+    """
+    Test that no module in ALLOWED_MODULES re-exports settings.
+    """
+    sandbox = _sandbox_from_code(f"from {allowed_module} import os")
+
+    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+        sandbox.execute()
+
+
+@pytest.mark.parametrize("allowed_module", ALLOWED_MODULES)
+def test_plugin_runner_sys_allowed_module_import(allowed_module: str) -> None:
+    """
+    Test that no module in ALLOWED_MODULES re-exports settings.
+    """
+    sandbox = _sandbox_from_code(f"from {allowed_module} import sys")
 
     with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
         sandbox.execute()
@@ -348,12 +331,26 @@ def test_allowed_import() -> None:
 
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
-    sandbox = _sandbox_from_code(CODE_WITH_FORBIDDEN_FUNC_NAME)
+    sandbox = _sandbox_from_code("builtins = {}")
+
     with pytest.raises(RuntimeError, match="Code is invalid"):
         sandbox.execute()
 
 
-@pytest.mark.parametrize("code", CODE_WITH_FORBIDDEN_ASSIGNMENTS)
+@pytest.mark.parametrize(
+    "code",
+    [
+        code
+        for var in ("__is_plugin__", "__name__", "__does_not_exist__")
+        for code in [
+            f"{var} = 'test'",
+            f"test = {var} = 'test'",
+            f"test = {var} = test2 = 'test'",
+            f"(a, (b, c), (d, ({var}, f))) = (1, (2, 3), (4, (5, 6)))",
+            f"(a, (b, c), (d, [{var}, f])) = (1, (2, 3), (4, [5, 6]))",
+        ]
+    ],
+)
 def test_forbidden_assignment(code: str) -> None:
     """Test that forbidden assignments are blocked by Transformer."""
     sandbox = _sandbox_from_code(code)
@@ -477,19 +474,37 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
     ("code", "error_message"),
     [
         (
-            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[0],
+            """
+                from canvas_sdk.utils import Http
+                client = Http()
+                setattr(client, "_session", None)
+            """,
             "attribute-less object",
         ),
         (
-            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[1],
+            """
+                from canvas_sdk.utils import Http
+                client = Http()
+                client.get = None
+            """,
             "Forbidden assignment",
         ),
         (
-            CODE_WITH_ASSIGNMENTS_TO_PROTECTED_RESOURCES[2],
+            """
+                import json
+                json.dumps = None
+            """,
+            "Forbidden assignment",
+        ),
+        (
+            """
+                from canvas_sdk.utils import Http
+                Http._session = None
+            """,
             "Forbidden assignment",
         ),
     ],
-    ids=["setattr", "assign", "module"],
+    ids=["setattr", "assign", "module", "http"],
 )
 def test_sandbox_denies_setattr_to_protected_resources(
     code: str,

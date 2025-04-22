@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import builtins
 import importlib
@@ -8,7 +10,7 @@ from _ast import AnnAssign
 from collections.abc import Iterable, Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from frozendict import frozendict
 from RestrictedPython import (
@@ -30,6 +32,16 @@ from RestrictedPython.transformer import (
     INSPECT_ATTRIBUTES,
     copy_locations,
 )
+
+if TYPE_CHECKING:
+
+    class ImportedNames(TypedDict):
+        """
+        Type the stored imported_names dicitionary for mypy.
+        """
+
+        names: list[str]
+        names_to_module: dict[str, str]
 
 
 def find_submodules(starting_modules: Iterable[str]) -> list[str]:
@@ -252,10 +264,6 @@ ALLOWED_MODULES = frozendict(
 )
 
 
-# The names in this list are forbidden to be assigned to in a sandboxed runtime.
-FORBIDDEN_ASSIGNMENTS = frozenset(["__name__", "__is_plugin__"])
-
-
 def _is_known_module(name: str) -> bool:
     return name in ALLOWED_MODULES
 
@@ -294,6 +302,50 @@ class Sandbox:
 
     class Transformer(RestrictingNodeTransformer):
         """A node transformer for customizing the sandbox compiler."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+
+            # we can't just add a self attribute here so we abuse used_names
+            # which gets returned as part of the CompileResult
+            self.used_names["__imported_names__"] = {
+                "names": [],
+                "names_to_module": {},
+            }
+
+        def handle_names(self, node: ast.Import | ast.ImportFrom) -> None:
+            """
+            Store imported names.
+            """
+            module = node.module if isinstance(node, ast.ImportFrom) else None
+
+            for name in node.names:
+                name_string = name.asname if name.asname else name.name
+
+                self.used_names["__imported_names__"]["names"].append(name_string)
+
+                if module:
+                    self.used_names["__imported_names__"]["names_to_module"][name_string] = module
+
+        def visit_Import(self, node: ast.Import) -> ast.Import:
+            """
+            Store imported names.
+            """
+            node = super().visit_Import(node)
+
+            self.handle_names(node)
+
+            return node
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
+            """
+            Store imported names.
+            """
+            node = super().visit_ImportFrom(node)
+
+            self.handle_names(node)
+
+            return node
 
         def visit_AnnAssign(self, node: AnnAssign) -> AnnAssign:
             """Allow type annotations."""
@@ -356,7 +408,11 @@ class Sandbox:
         def visit_Assign(self, node: ast.Assign) -> ast.AST:
             """Check for forbidden assignments."""
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id in FORBIDDEN_ASSIGNMENTS:
+                if (
+                    isinstance(target, ast.Name)
+                    and target.id.startswith("__")
+                    and target.id != "__all__"
+                ):
                     self.error(node, f"Assignments to '{target.id}' are not allowed.")
                 elif isinstance(target, ast.Tuple | ast.List):
                     self.check_for_name_in_iterable(target)
@@ -366,7 +422,7 @@ class Sandbox:
         def check_for_name_in_iterable(self, iterable_node: ast.Tuple | ast.List) -> None:
             """Check if any element of an iterable is a forbidden assignment."""
             for elt in iterable_node.elts:
-                if isinstance(elt, ast.Name) and elt.id in FORBIDDEN_ASSIGNMENTS:
+                if isinstance(elt, ast.Name) and elt.id.startswith("__") and elt.id != "__all__":
                     self.error(iterable_node, f"Assignments to '{elt.id}' are not allowed.")
                 elif isinstance(elt, ast.Tuple | ast.List):
                     self.check_for_name_in_iterable(elt)
@@ -407,8 +463,15 @@ class Sandbox:
 
             elif isinstance(node.ctx, ast.Store | ast.Del):
                 node = self.node_contents_visit(node)
+
                 new_value = ast.Call(
-                    func=ast.Name("_write_", ast.Load()), args=[node.value], keywords=[]
+                    func=ast.Name("_write_", ast.Load()),
+                    args=[
+                        node.value,
+                        ast.Constant(node.value.id if isinstance(node.value, ast.Name) else None),
+                        ast.Constant(node.attr),
+                    ],
+                    keywords=[],
                 )
 
                 copy_locations(new_value, node.value)
@@ -445,34 +508,36 @@ class Sandbox:
                 **safe_builtins.copy(),
                 **utility_builtins.copy(),
                 "__import__": self._safe_import,
-                "classmethod": builtins.classmethod,
-                "staticmethod": builtins.staticmethod,
-                "any": builtins.any,
                 "all": builtins.all,
-                "enumerate": builtins.enumerate,
-                "property": builtins.property,
-                "super": builtins.super,
+                "any": builtins.any,
+                "classmethod": builtins.classmethod,
                 "dict": builtins.dict,
+                "enumerate": builtins.enumerate,
                 "filter": builtins.filter,
+                "hasattr": builtins.hasattr,
+                "iter": builtins.iter,
+                "list": builtins.list,
+                "map": builtins.map,
                 "max": builtins.max,
                 "min": builtins.min,
-                "list": builtins.list,
                 "next": builtins.next,
-                "iter": builtins.iter,
+                "property": builtins.property,
+                "reversed": builtins.reversed,
+                "staticmethod": builtins.staticmethod,
+                "super": builtins.super,
             },
+            "__is_plugin__": True,
             "__metaclass__": type,
             "__name__": self.namespace,
-            "__is_plugin__": True,
-            "_write_": self._safe_write,
-            "_getattr_": self._safe_getattr,
-            "_getiter_": _unrestricted,
-            "_getitem_": default_guarded_getitem,
-            "_print_": PrintCollector,
             "_apply_": _apply,
+            "_getattr_": self._safe_getattr,
+            "_getitem_": default_guarded_getitem,
+            "_getiter_": _unrestricted,
             "_inplacevar_": _unrestricted,
             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
+            "_print_": PrintCollector,
             "_unpack_sequence_": guarded_unpack_sequence,
-            "hasattr": hasattr,
+            "_write_": self._safe_write,
         }
 
     @cached_property
@@ -483,6 +548,11 @@ class Sandbox:
             policy=self.Transformer,
             filename=self.source_code_path,
         )
+
+    @property
+    def imported_names(self) -> ImportedNames:
+        """Return the imported names collecting during parsing."""
+        return self.compile_result.used_names["__imported_names__"]
 
     @property
     def errors(self) -> tuple[str, ...]:
@@ -513,8 +583,9 @@ class Sandbox:
         If the module to import belongs to the same package as the current module,
         evaluate it inside a sandbox.
         """
+        # Skip modules already evaluated
         if not self._same_module(module_name) or module_name in self._evaluated_modules:
-            return  # Skip modules outside the package or already evaluated.
+            return
 
         module = self._get_module(module_name)
         self._evaluate_implicit_imports(module)
@@ -567,26 +638,30 @@ class Sandbox:
         """
         Return True if `module` is within the plugin code.
         """
-        return bool(self.base_path) and (
-            module == self.package_name or f"{module}.".startswith(f"{self.package_name}.")
-        )
+        return bool(self.base_path) and module.split(".")[0] == self.package_name
 
-    def _safe_write(self, _ob: Any) -> Any:
+    def _safe_write(self, _ob: Any, name: str, attribute: str) -> Any:
         """Check if the given obj belongs to a protected resource."""
         is_module = isinstance(_ob, types.ModuleType)
 
         if is_module:
-            full_name = _ob.__name__
+            if not self._same_module(_ob.__name__):
+                raise TypeError(f"Forbidden assignment to a module attribute: {_ob.__name__}.")
         elif isinstance(_ob, type):
             full_name = f"{_ob.__module__}.{_ob.__qualname__}"
         else:
             full_name = f"{_ob.__module__}.{_ob.__class__.__qualname__}"
 
-        if is_module:
-            if not self._same_module(full_name):
-                raise TypeError(f"Forbidden assignment to a module attribute: {full_name}.")
-        elif not self._same_module(_ob.__module__):
-            raise TypeError(f"Forbidden assignment to a non-module attribute: {full_name}.")
+        if not self._same_module(_ob.__module__) and (
+            # deny if it was anything imported
+            name in self.imported_names["names"]
+            # deny if it's anything callable
+            or callable(getattr(_ob, attribute))
+        ):
+            raise TypeError(
+                f"Forbidden assignment to a non-module attribute: {full_name} "
+                f"at {name}.{attribute}."
+            )
 
         return _ob
 
@@ -624,9 +699,15 @@ class Sandbox:
             raise AttributeError(f'"{name}" is a restricted name.')
 
         # Code defined in the Sandbox namespace can access its own underscore variables
-        if name.startswith("_") and module != self.namespace:
+        if name.startswith("_") and not self._same_module(module):
             raise AttributeError(
                 f'"{name}" is an invalid attribute name because it starts with "_"'
+            )
+
+        # Nothing can write to dunder methods
+        if name.startswith("__"):
+            raise AttributeError(
+                f'"{name}" is an invalid attribute name because it starts with "__"'
             )
 
         exports = getattr(_ob, "__exports__", None)
