@@ -419,6 +419,7 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
             "class_name": """
                 class Thing:
                     def __init__(self):
+                        super().__init__()
                         print(f'name: {self.__class__.__name__}')
 
                 thing = Thing()

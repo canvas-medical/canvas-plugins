@@ -76,6 +76,7 @@ SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
 SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__dict__",
     "__eq__",
+    "__init__",
     "__name__",
 }
 
