@@ -21,7 +21,6 @@ from RestrictedPython import (
     safe_builtins,
     utility_builtins,
 )
-from RestrictedPython.Eval import default_guarded_getitem
 from RestrictedPython.Guards import (
     guarded_iter_unpack_sequence,
     guarded_unpack_sequence,
@@ -65,11 +64,18 @@ def find_submodules(starting_modules: Iterable[str]) -> list[str]:
     return sorted(submodules)
 
 
-SAFE_DUNDER_READ_ATTRIBUTES = {
+SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__class__",
     "__dict__",
     "__eq__",
     "__init__",
+    "__name__",
+}
+
+
+SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__dict__",
+    "__eq__",
     "__name__",
 }
 
@@ -539,7 +545,7 @@ class Sandbox:
             "__name__": self.namespace,
             "_apply_": _apply,
             "_getattr_": self._safe_getattr,
-            "_getitem_": default_guarded_getitem,
+            "_getitem_": self._safe_getitem,
             "_getiter_": _unrestricted,
             "_inplacevar_": _unrestricted,
             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
@@ -648,7 +654,7 @@ class Sandbox:
         """
         return bool(self.base_path) and module.split(".")[0] == self.package_name
 
-    def _safe_write(self, _ob: Any, name: str, attribute: str) -> Any:
+    def _safe_write(self, _ob: Any, name: str | None = None, attribute: str | None = None) -> Any:
         """Check if the given obj belongs to a protected resource."""
         is_module = isinstance(_ob, types.ModuleType)
 
@@ -664,7 +670,7 @@ class Sandbox:
             # deny if it was anything imported
             name in self.imported_names["names"]
             # deny if it's anything callable
-            or callable(getattr(_ob, attribute))
+            or (attribute is not None and callable(getattr(_ob, attribute)))
         ):
             raise AttributeError(
                 f"Forbidden assignment to a non-module attribute: {full_name} "
@@ -672,6 +678,15 @@ class Sandbox:
             )
 
         return _ob
+
+    def _safe_getitem(self, ob: Any, index: Any) -> Any:
+        """
+        Prevent access to several classes of items.
+        """
+        if isinstance(index, str) and index.startswith("_"):
+            raise AttributeError(f'"{index}" is an invalid item name because it starts with "_"')
+
+        return ob[index]
 
     def _safe_getattr(self, _ob: Any, name: Any, default: Any = None) -> Any:
         """
@@ -709,16 +724,17 @@ class Sandbox:
 
         # Code defined in the Sandbox namespace can access its own underscore variables
         if name.startswith("_"):
-            if not self._same_module(module):
-                raise AttributeError(
-                    f'"{name}" is an invalid attribute name because it starts with "_"'
-                )
-
-            # Nothing can read dunder attributes except those on our safe list
-            if name.startswith("__") and name not in SAFE_DUNDER_READ_ATTRIBUTES:
-                raise AttributeError(
-                    f'"{name}" is an invalid attribute name because it starts with "__"'
-                )
+            if self._same_module(module):
+                if name.startswith("__") and name not in SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES:
+                    raise AttributeError(
+                        f'"{name}" is an invalid attribute name because it starts with "_"'
+                    )
+            else:
+                # Nothing can read dunder attributes except those on our safe list
+                if name not in SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES:
+                    raise AttributeError(
+                        f'"{name}" is an invalid attribute name because it starts with "__"'
+                    )
 
         exports = getattr(_ob, "__exports__", None)
 

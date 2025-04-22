@@ -412,17 +412,35 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
-def test_sandbox_allows_read_access_to_self_class_name() -> None:
-    """
-    Some plugins introspect their class name.
-    """
-    sandbox = _sandbox_from_code("""
-        class Thing:
-            def __init__(self):
-                print(f'name: {self.__class__.__name__}')
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "class_name": """
+                class Thing:
+                    def __init__(self):
+                        print(f'name: {self.__class__.__name__}')
 
-        thing = Thing()
-    """)
+                thing = Thing()
+            """,
+            "model_dict": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+
+                print(f'{obj.__dict__}')
+
+                obj.__dict__.get('note_uuid')
+                obj.__dict__.items()
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_read_access_to_required_methods(code: str) -> None:
+    """
+    Some plugins introspect their class name, __dict__, etc..
+    """
+    sandbox = _sandbox_from_code(code)
     sandbox.execute()
 
 
@@ -493,18 +511,18 @@ def test_type_is_inaccessible() -> None:
                 name = "_" + "_session"
                 pvt = _getattr_(client, name)
             """,
-            "private_attr__session": """
+            "private_attr_session": """
                 from canvas_sdk.utils import Http
 
                 client = Http()
-                pvt = client.__connection
+                pvt = client._session
             """,
-            "dict_private_attr__session": """
+            "dict_private_attr_session": """
                 from canvas_sdk.utils import Http
 
                 client = Http()
 
-                pvt = client.__dict__["__connection"]
+                pvt = client.__dict__["_session"]
             """,
             "private_attr__class__": """
                 from canvas_sdk.utils import Http
@@ -516,6 +534,11 @@ def test_type_is_inaccessible() -> None:
                 from canvas_sdk.utils.http import ontologies_http
 
                 ontologies_http._base_url = 'evil'
+            """,
+            "ontologies_base_url_dict": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http.__dict__['_base_url'] = 'evil'
             """,
             "ontologies_session": """
                 from canvas_sdk.utils.http import ontologies_http
