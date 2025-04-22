@@ -3,8 +3,10 @@ import re
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
+from typing import Any
 
 import pytest
+from _pytest.mark import ParameterSet
 
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
@@ -12,6 +14,22 @@ from plugin_runner.sandbox import (
     Sandbox,
     sandbox_from_module,
 )
+
+
+def params_from_dict(params: dict[str, str | tuple[str, Any]]) -> list[ParameterSet]:
+    """
+    Convert a dictionary of test parameters to a list suitable for parametrize.
+
+    Given a dictionary like: {"test-id-1": "import x from y"}
+    Return:                  [pytest.param("import x from y", id="test-id-1")]
+
+    Given a dictionary like: {"test-id-1": ("import x from y", "arg-2")}
+    Return:                  [pytest.param("import x from y", "arg-2", id="test-id-1")]
+    """
+    return [
+        pytest.param(*(value if isinstance(value, tuple) else (value,)), id=key)
+        for key, value in params.items()
+    ]
 
 
 def _sandbox_from_code(
@@ -54,80 +72,6 @@ VALID_CODE = """
     result = x + y
 """
 
-CODE_WITH_RESTRICTED_IMPORTS = [
-    """
-        from canvas_sdk.commands.tests.schema.tests import settings
-    """,
-    """
-        import os
-        result = os.listdir('.')
-    """,
-    """
-        from django.core.cache import caches
-
-        cache = caches['default']
-    """,
-]
-
-CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES = [
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-        pvt = client._session
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-
-        pvt = client.__dict__["_session"]
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-        pvt = client.__setattr__("test", "test")
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-
-        name = "_" + "_session"
-        pvt = _getattr_(client, name)
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-        pvt = client.__connection
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-
-        pvt = client.__dict__["__connection"]
-    """,
-    """
-        from canvas_sdk.utils import Http
-
-        client = Http()
-        pvt = client.__class__
-    """,
-    """
-        from canvas_sdk.utils.http import ontologies_http
-
-        ontologies_http._base_url = 'evil'
-    """,
-    """
-        from canvas_sdk.utils.http import ontologies_http
-
-        ontologies_http._session
-    """,
-]
-
 
 def test_valid_code_execution() -> None:
     """Test execution of valid code in the sandbox."""
@@ -137,7 +81,23 @@ def test_valid_code_execution() -> None:
 
 
 @pytest.mark.parametrize(
-    "code", CODE_WITH_RESTRICTED_IMPORTS, ids=["settings", "os", "django_cache"]
+    "code",
+    params_from_dict(
+        {
+            "settings": """
+                from canvas_sdk.commands.tests.schema.tests import settings
+            """,
+            "os": """
+                import os
+                result = os.listdir('.')
+            """,
+            "django_cache": """
+                from django.core.cache import caches
+
+                cache = caches['default']
+            """,
+        }
+    ),
 )
 def test_disallowed_import(code: str) -> None:
     """Test that restricted imports are not allowed."""
@@ -233,23 +193,23 @@ def test_plugin_runner_sys_allowed_module_import(allowed_module: str) -> None:
         sandbox.execute()
 
 
-BANNED_IMPORTS = [
-    "from arrow.parser import sys",
-    "from arrow.parser import sys as something_else",
-    "from requests.sessions import os",
-    "from requests.sessions import os as something_else",
-    """
-        from arrow import parser  # fails here
-        parser.sys
-    """,
-    """
-        from requests import sessions  # fails here
-        sessions.os
-    """,
-]
-
-
-@pytest.mark.parametrize("banned_import", BANNED_IMPORTS)
+@pytest.mark.parametrize(
+    "banned_import",
+    [
+        "from arrow.parser import sys",
+        "from arrow.parser import sys as something_else",
+        "from requests.sessions import os",
+        "from requests.sessions import os as something_else",
+        """
+            from arrow import parser  # fails here
+            parser.sys
+        """,
+        """
+            from requests import sessions  # fails here
+            sessions.os
+        """,
+    ],
+)
 def test_sandbox_disallows_bad_modules(banned_import: str) -> None:
     """
     Test that os, sys, etc. are not importable.
@@ -452,6 +412,28 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
+def test_sandbox_allows_read_access_to_self_class_name() -> None:
+    """
+    Some plugins introspect their class name.
+    """
+    sandbox = _sandbox_from_code("""
+        class Thing:
+            def __init__(self):
+                print(f'name: {self.__class__.__name__}')
+
+        thing = Thing()
+    """)
+    sandbox.execute()
+
+
+def test_sandbox_allows_write_access_to_id() -> None:
+    """
+    Some plugins write to a variable called `id` (which is the name of a Python builtin method).
+    """
+    sandbox = _sandbox_from_code("id = 5")
+    sandbox.execute()
+
+
 def test_sandbox_allows_access_to_sub_modules() -> None:
     """
     Ensure we can import from allowed sub-modules.
@@ -482,18 +464,66 @@ def test_type_is_inaccessible() -> None:
 
 @pytest.mark.parametrize(
     "code",
-    CODE_WITH_PRIVATE_ACCESS_EXTERNAL_MODULES,
-    ids=[
-        "private_attr_connection",
-        "dict_private_attr_connection",
-        "private_method",
-        "private_attr_dynamic_name",
-        "private_attr__session",
-        "dict_private_attr__session",
-        "private_attr__class__",
-        "ontologies_base_url",
-        "ontologies_session",
-    ],
+    params_from_dict(
+        {
+            "private_attr_connection": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+                pvt = client._session
+            """,
+            "dict_private_attr_connection": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+
+                pvt = client.__dict__["_session"]
+            """,
+            "private_method": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+                pvt = client.__setattr__("test", "test")
+            """,
+            "private_attr_dynamic_name": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+
+                name = "_" + "_session"
+                pvt = _getattr_(client, name)
+            """,
+            "private_attr__session": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+                pvt = client.__connection
+            """,
+            "dict_private_attr__session": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+
+                pvt = client.__dict__["__connection"]
+            """,
+            "private_attr__class__": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+                pvt = client.__class__
+            """,
+            "ontologies_base_url": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http._base_url = 'evil'
+            """,
+            "ontologies_session": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http._session
+            """,
+        }
+    ),
 )
 def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: str) -> None:
     """Test that private attribute/method access is not allowed for external modules."""
@@ -505,48 +535,49 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 
 @pytest.mark.parametrize(
     ("code", "error_message"),
-    [
-        (
-            """
-                from canvas_sdk.utils import Http
-                client = Http()
-                setattr(client, "_session", None)
-            """,
-            "attribute-less object",
-        ),
-        (
-            """
-                from canvas_sdk.utils import Http
-                client = Http()
-                client.get = None
-            """,
-            "Forbidden assignment",
-        ),
-        (
-            """
-                import json
-                json.dumps = None
-            """,
-            "Forbidden assignment",
-        ),
-        (
-            """
-                import json
-                other_name = json
-                other_name.dumps = None
-                assert json.dumps is not None
-            """,
-            "Forbidden assignment",
-        ),
-        (
-            """
-                from canvas_sdk.utils import Http
-                Http._session = None
-            """,
-            "Forbidden assignment",
-        ),
-    ],
-    ids=["setattr", "assign", "module", "tricky", "http"],
+    params_from_dict(
+        {
+            "setattr": (
+                """
+                    from canvas_sdk.utils import Http
+                    client = Http()
+                    setattr(client, "_session", None)
+                """,
+                "attribute-less object",
+            ),
+            "assign": (
+                """
+                    from canvas_sdk.utils import Http
+                    client = Http()
+                    client.get = None
+                """,
+                "Forbidden assignment",
+            ),
+            "module": (
+                """
+                    import json
+                    json.dumps = None
+                """,
+                "Forbidden assignment",
+            ),
+            "tricky-module": (
+                """
+                    import json
+                    other_name = json
+                    other_name.dumps = None
+                    assert json.dumps is not None
+                """,
+                "Forbidden assignment",
+            ),
+            "http": (
+                """
+                    from canvas_sdk.utils import Http
+                    Http._session = None
+                """,
+                "Forbidden assignment",
+            ),
+        }
+    ),
 )
 def test_sandbox_denies_setattr_to_protected_resources(
     code: str,

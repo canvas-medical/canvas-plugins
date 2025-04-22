@@ -65,6 +65,14 @@ def find_submodules(starting_modules: Iterable[str]) -> list[str]:
     return sorted(submodules)
 
 
+SAFE_DUNDER_READ_ATTRIBUTES = {
+    "__class__",
+    "__dict__",
+    "__eq__",
+    "__init__",
+    "__name__",
+}
+
 CANVAS_TOP_LEVEL_MODULES = (
     "canvas_sdk.commands",
     "canvas_sdk.effects",
@@ -673,7 +681,8 @@ class Sandbox:
 
         1. underscored attributes created outside of the defining namespace
         2. attributes used by the `inspect` module
-        3. if a __exports__ module property is defined, any
+        3. dunder methods except for those we deem safe
+        4. if a __exports__ module property is defined, any
            attribute not in that property's value
         """
         is_module = isinstance(_ob, types.ModuleType)
@@ -699,16 +708,17 @@ class Sandbox:
             raise AttributeError(f'"{name}" is a restricted name.')
 
         # Code defined in the Sandbox namespace can access its own underscore variables
-        if name.startswith("_") and not self._same_module(module):
-            raise AttributeError(
-                f'"{name}" is an invalid attribute name because it starts with "_"'
-            )
+        if name.startswith("_"):
+            if not self._same_module(module):
+                raise AttributeError(
+                    f'"{name}" is an invalid attribute name because it starts with "_"'
+                )
 
-        # Nothing can write to dunder methods
-        if name.startswith("__"):
-            raise AttributeError(
-                f'"{name}" is an invalid attribute name because it starts with "__"'
-            )
+            # Nothing can read dunder attributes except those on our safe list
+            if name.startswith("__") and name not in SAFE_DUNDER_READ_ATTRIBUTES:
+                raise AttributeError(
+                    f'"{name}" is an invalid attribute name because it starts with "__"'
+                )
 
         exports = getattr(_ob, "__exports__", None)
 
