@@ -117,7 +117,7 @@ init_forbid_extra = true
 init_typed = true
 
 [tool.pytest.ini_options]
-addopts = "--durations=5 --pdbcls=IPython.terminal.debugger:TerminalPdb"
+addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
 asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
