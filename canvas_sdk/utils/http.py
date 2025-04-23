@@ -6,7 +6,7 @@ import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
-from typing import Any, Literal, Protocol, TypeVar, cast, override
+from typing import Any, Literal, Protocol, TypeVar, cast
 
 import requests
 
@@ -227,7 +227,6 @@ class Http:
 
 
 class JsonOnlyHttp(Http):
-    @override
     def get(
         self,
         url: str,
@@ -242,7 +241,6 @@ class JsonOnlyHttp(Http):
     ) -> dict[str, Any]:
         return super().get(url, headers).json()
 
-    @override
     def post(
         self,
         url: str,
@@ -252,7 +250,6 @@ class JsonOnlyHttp(Http):
     ) -> requests.Response:
         raise NotImplementedError
 
-    @override
     def put(
         self,
         url: str,
@@ -262,7 +259,6 @@ class JsonOnlyHttp(Http):
     ) -> requests.Response:
         raise NotImplementedError
 
-    @override
     def patch(
         self,
         url: str,
