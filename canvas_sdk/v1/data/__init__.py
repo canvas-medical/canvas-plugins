@@ -21,6 +21,7 @@ from .lab import (
     LabValueCoding,
 )
 from .medication import Medication, MedicationCoding
+from .message import Message, MessageAttachment, MessageTransmission
 from .note import Note, NoteType
 from .observation import (
     Observation,
@@ -89,6 +90,9 @@ __all__ = __exports__ = (
     "LabValueCoding",
     "Medication",
     "MedicationCoding",
+    "Message",
+    "MessageAttachment",
+    "MessageTransmission",
     "Note",
     "NoteType",
     "Observation",
