@@ -1,6 +1,7 @@
 from canvas_sdk.commands.commands.adjust_prescription import AdjustPrescriptionCommand
 from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
+from canvas_sdk.commands.commands.change_medication import ChangeMedicationCommand
 from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.exam import PhysicalExamCommand
@@ -39,6 +40,7 @@ __all__ = __exports__ = (
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
+    "ChangeMedicationCommand",
     "CloseGoalCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
