@@ -113,3 +113,12 @@ def separate_headers(headers: Mapping[str, str]) -> list[tuple[str, str]]:
             headers_list.append((key, value.strip()))
 
     return headers_list
+
+
+__exports__ = (
+    "KeyType",
+    "ValueType",
+    "MultiDict",
+    "CaseInsensitiveMultiDict",
+    "separate_headers",
+)

@@ -33,3 +33,6 @@ class CronTask(BaseHandler):
         if datetime in Cron(self.SCHEDULE):
             return self.execute()
         return []
+
+
+__exports__ = ("CronTask",)

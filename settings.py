@@ -1,11 +1,14 @@
 import os
 import sys
+from pathlib import Path
 from urllib import parse
 
 from dotenv import load_dotenv
 from env_tools import env_to_bool
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.resolve()
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
@@ -78,9 +81,9 @@ PLUGIN_DIRECTORY = os.getenv(
     (
         "/plugin-runner/custom-plugins"
         if IS_PRODUCTION
-        else "./plugin_runner/tests/data/plugins"
+        else (BASE_DIR / "plugin_runner/tests/data/plugins").as_posix()
         if IS_TESTING
-        else "./custom-plugins"
+        else (BASE_DIR / "custom-plugins").as_posix()
     ),
 )
 PLUGINS_PUBSUB_CHANNEL = os.getenv("PLUGINS_PUBSUB_CHANNEL", default="plugins")

@@ -59,3 +59,6 @@ class AddBannerAlert(_BaseEffect):
             "key": self.key,
             "data": self.values,
         }
+
+
+__exports__ = ("AddBannerAlert",)

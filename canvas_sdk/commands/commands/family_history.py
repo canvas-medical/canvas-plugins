@@ -11,3 +11,6 @@ class FamilyHistoryCommand(BaseCommand):
     family_history: str | None = None
     relative: str | None = None
     note: str | None = None
+
+
+__exports__ = ("FamilyHistoryCommand",)

@@ -100,3 +100,6 @@ class QuestionnaireCommand(_BaseCommand):
         values["questions"] = {q.name: q.response for q in self.questions if q.response is not None}
 
         return values
+
+
+__exports__ = ("QUESTION_CLASSES", "QuestionnaireCommand")

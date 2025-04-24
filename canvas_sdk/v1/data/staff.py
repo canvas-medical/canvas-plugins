@@ -84,3 +84,6 @@ class StaffContactPoint(models.Model):
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
+
+
+__exports__ = ("Staff", "StaffContactPoint")

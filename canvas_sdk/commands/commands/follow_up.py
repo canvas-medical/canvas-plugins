@@ -67,3 +67,6 @@ class FollowUpCommand(_BaseCommand):
             )
 
         return errors
+
+
+__exports__ = ("FollowUpCommand",)

@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <3.13"
 
 [[package]]
@@ -92,6 +93,7 @@ dependencies = [
     { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "django-timezone-utils" },
     { name = "env-tools" },
+    { name = "frozendict" },
     { name = "grpcio" },
     { name = "ipython" },
     { name = "jsonschema" },
@@ -115,6 +117,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "grpcio-tools" },
+    { name = "httpretty" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -136,6 +139,7 @@ requires-dist = [
     { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.1.1,<6" },
     { name = "django-timezone-utils", specifier = ">=0.15.0,<0.16" },
     { name = "env-tools", specifier = ">=2.4.0,<3" },
+    { name = "frozendict", specifier = ">=2.4.6" },
     { name = "grpcio", specifier = ">=1.60.1,<2" },
     { name = "ipython", specifier = ">=8.21.0,<9" },
     { name = "jsonschema", specifier = ">=4.21.1,<5" },
@@ -159,6 +163,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.60.1,<2" },
+    { name = "httpretty", git = "https://github.com/carlsmedstad/HTTPretty.git?rev=8e96b1e312d473429fbd08bc867376e9932ad42a" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -489,6 +494,16 @@ wheels = [
 ]
 
 [[package]]
+name = "frozendict"
+version = "2.4.6"
+source = { registry = "https://pypi.org/simple/" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/59/19eb300ba28e7547538bdf603f1c6c34793240a90e1a7b61b65d8517e35e/frozendict-2.4.6.tar.gz", hash = "sha256:df7cd16470fbd26fc4969a208efadc46319334eb97def1ddf48919b351192b8e", size = 316416 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/13/d9839089b900fa7b479cce495d62110cddc4bd5630a04d8469916c0e79c5/frozendict-2.4.6-py311-none-any.whl", hash = "sha256:d065db6a44db2e2375c23eac816f1a022feb2fa98cbb50df44a9e83700accbea", size = 16148 },
+    { url = "https://files.pythonhosted.org/packages/ba/d0/d482c39cee2ab2978a892558cf130681d4574ea208e162da8958b31e9250/frozendict-2.4.6-py312-none-any.whl", hash = "sha256:49344abe90fb75f0f9fdefe6d4ef6d4894e640fadab71f11009d52ad97f370b9", size = 16146 },
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.12"
 source = { registry = "https://pypi.org/simple/" }
@@ -566,6 +581,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/29/3b/7cdf4a9e5a3e0a35a528b48b111355cd14da601413a4f887aa99b6da468f/grpcio_tools-1.62.3-cp312-cp312-win32.whl", hash = "sha256:b881fd9505a84457e9f7e99362eeedd86497b659030cf57c6f0070df6d9c2b9b", size = 910416 },
     { url = "https://files.pythonhosted.org/packages/6c/66/dd3ec249e44c1cc15e902e783747819ed41ead1336fcba72bf841f72c6e9/grpcio_tools-1.62.3-cp312-cp312-win_amd64.whl", hash = "sha256:11c625eebefd1fd40a228fc8bae385e448c7e32a6ae134e43cf13bbc23f902b7", size = 1052856 },
 ]
+
+[[package]]
+name = "httpretty"
+version = "1.1.4"
+source = { git = "https://github.com/carlsmedstad/HTTPretty.git?rev=8e96b1e312d473429fbd08bc867376e9932ad42a#8e96b1e312d473429fbd08bc867376e9932ad42a" }
 
 [[package]]
 name = "identify"

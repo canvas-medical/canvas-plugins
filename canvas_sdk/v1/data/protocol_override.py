@@ -67,3 +67,10 @@ class ProtocolOverride(models.Model):
     cycle_quantity = models.IntegerField()
     cycle_unit = models.CharField(choices=IntervalUnit.choices)
     status = models.CharField(choices=Status.choices)
+
+
+__exports__ = (
+    "IntervalUnit",
+    "Status",
+    "ProtocolOverride",
+)

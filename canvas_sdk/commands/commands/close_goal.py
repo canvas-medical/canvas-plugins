@@ -12,3 +12,6 @@ class CloseGoalCommand(BaseCommand):
     goal_id: int | None = None
     achievement_status: GoalCommand.AchievementStatus | None = None
     progress: str | None = None
+
+
+__exports__ = ("CloseGoalCommand",)

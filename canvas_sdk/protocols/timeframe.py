@@ -37,3 +37,6 @@ class Timeframe:
             start = start.shift(days=days)
 
         return Timeframe(start=start, end=end)
+
+
+__exports__ = ("Timeframe",)

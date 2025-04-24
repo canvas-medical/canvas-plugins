@@ -5,6 +5,7 @@ requires = ["hatchling"]
 [dependency-groups]
 dev = [
   "grpcio-tools>=1.60.1,<2",
+  "httpretty>=1.1.4",
   "mypy",
   "pre-commit",
   "pytest",
@@ -27,6 +28,7 @@ dependencies = [
   "django-timezone-utils>=0.15.0,<0.16",
   "django>=5.1.1,<6",
   "env-tools>=2.4.0,<3",
+  "frozendict>=2.4.6",
   "grpcio>=1.60.1,<2",
   "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
@@ -60,6 +62,7 @@ canvas = "canvas_cli.main:app"
 django_settings_module = "settings"
 
 [tool.hatch.build.targets.sdist]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",
@@ -71,6 +74,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
+exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
   "canvas_generated",
@@ -114,7 +118,7 @@ init_forbid_extra = true
 init_typed = true
 
 [tool.pytest.ini_options]
-addopts = "--durations=10"
+addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
 asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
@@ -177,3 +181,6 @@ version_toml = ["pyproject.toml:project.version"]
 default = true
 name = "PyPI"
 url = "https://pypi.org/simple/"
+
+[tool.uv.sources]
+httpretty = {git = "https://github.com/carlsmedstad/HTTPretty.git", rev = "8e96b1e312d473429fbd08bc867376e9932ad42a"}

@@ -1,5 +1,6 @@
 import concurrent
 import functools
+import os
 import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
@@ -8,7 +9,8 @@ from functools import wraps
 from typing import Any, Literal, Protocol, TypeVar, cast
 
 import requests
-import statsd
+
+from canvas_sdk.utils.stats import StatsDClientProxy
 
 F = TypeVar("F", bound=Callable)
 
@@ -97,34 +99,25 @@ class Http:
 
     _MAX_REQUEST_TIMEOUT_SECONDS = 30
 
-    base_url: str
-    session: requests.Session
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """
-        Prevent base_url or session from being updated after initialization.
-        """
-        if name in ("base_url", "session"):
-            raise AttributeError(f"{name} is read-only")
-
-        super().__setattr__(name, value)
+    _base_url: str
+    _session: requests.Session
 
     def join_url(self, url: str) -> str:
         """
         Join a URL to the base_url.
         """
-        joined = urllib.parse.urljoin(self.base_url, url)
+        joined = urllib.parse.urljoin(self._base_url, url)
 
-        if not joined.startswith(self.base_url):
+        if not joined.startswith(self._base_url):
             raise ValueError("You may not access other URLs using this client.")
 
         return joined
 
     def __init__(self, base_url: str = "") -> None:
-        super().__setattr__("base_url", base_url)
-        super().__setattr__("session", requests.Session())
+        self._base_url = base_url
+        self._session = requests.Session()
 
-        self.statsd_client = statsd.StatsClient()
+        self.statsd_client = StatsDClientProxy()
 
     @staticmethod
     def measure_time(fn: F) -> F:
@@ -136,7 +129,7 @@ class Http:
             result = fn(self, *args, **kwargs)
             end_time = time.time()
             timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing)
+            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing, tags={})
             return result
 
         return cast(F, wrapper)
@@ -148,7 +141,7 @@ class Http:
         """Sends a GET request."""
         if headers is None:
             headers = {}
-        return self.session.get(
+        return self._session.get(
             self.join_url(url),
             headers=headers,
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
@@ -163,7 +156,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a POST request."""
-        return self.session.post(
+        return self._session.post(
             self.join_url(url),
             json=json,
             data=data,
@@ -180,7 +173,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PUT request."""
-        return self.session.put(
+        return self._session.put(
             self.join_url(url),
             json=json,
             data=data,
@@ -197,7 +190,7 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PATCH request."""
-        return self.session.patch(
+        return self._session.patch(
             self.join_url(url),
             json=json,
             data=data,
@@ -233,7 +226,50 @@ class Http:
             return [future.result() for future in futures]
 
 
-class OntologiesHttp(Http):
+class JsonOnlyHttp(Http):
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def get_json(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> dict[str, Any]:
+        return super().get(url, headers).json()
+
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def put(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def patch(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+
+class OntologiesHttp(JsonOnlyHttp):
     """
     An HTTP client for the ontologies service.
     """
@@ -241,13 +277,10 @@ class OntologiesHttp(Http):
     def __init__(self) -> None:
         super().__init__(base_url="https://ontologies.canvasmedical.com")
 
-        # import here to avoid making it exportable to module importers
-        import os
-
-        self.session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
-class ScienceHttp(Http):
+class ScienceHttp(JsonOnlyHttp):
     """
     An HTTP client for the ontologies service.
     """
@@ -255,18 +288,19 @@ class ScienceHttp(Http):
     def __init__(self) -> None:
         super().__init__(base_url="https://science.canvasmedical.com")
 
-        # import here to avoid making it exportable to module importers
-        import os
-
-        self.session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
-__all__ = [
+ontologies_http = OntologiesHttp()
+science_http = ScienceHttp()
+
+__all__ = __exports__ = (
+    "ThreadPoolExecutor",
     "Http",
-    "OntologiesHttp",
-    "ScienceHttp",
+    "ontologies_http",
+    "science_http",
     "batch_get",
     "batch_post",
     "batch_put",
     "batch_patch",
-]
+)

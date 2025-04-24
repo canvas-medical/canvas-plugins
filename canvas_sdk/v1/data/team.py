@@ -52,7 +52,7 @@ class Team(models.Model):
     name = models.CharField()
     responsibilities = ArrayField(models.CharField(choices=TeamResponsibility.choices))
     members = models.ManyToManyField(  # type: ignore[var-annotated]
-        "v1.Staff",  # type: ignore[misc]
+        "v1.Staff",
         related_name="teams",
         db_table="canvas_sdk_data_api_team_members_001",
     )
@@ -74,3 +74,10 @@ class TeamContactPoint(models.Model):
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
     team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, related_name="telecom")
+
+
+__exports__ = (
+    "TeamResponsibility",
+    "Team",
+    "TeamContactPoint",
+)
