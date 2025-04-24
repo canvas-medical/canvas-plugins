@@ -27,3 +27,6 @@ class Application(BaseHandler, ABC):
     def identifier(self) -> str:
         """The application identifier."""
         return f"{self.__class__.__module__}:{self.__class__.__qualname__}"
+
+
+__exports__ = ("Application",)

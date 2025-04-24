@@ -154,3 +154,21 @@ class AddressState(models.TextChoices):
 
     ACTIVE = "active", "Active"
     DELETED = "deleted", "Deleted"
+
+
+__exports__ = (
+    "DocumentReviewMode",
+    "OrderStatus",
+    "ReviewPatientCommunicationMethod",
+    "ReviewStatus",
+    "PersonSex",
+    "TaxIDType",
+    "ColorEnum",
+    "Origin",
+    "ContactPointSystem",
+    "ContactPointUse",
+    "ContactPointState",
+    "AddressUse",
+    "AddressType",
+    "AddressState",
+)

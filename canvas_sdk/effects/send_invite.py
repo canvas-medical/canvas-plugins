@@ -41,3 +41,6 @@ class SendInviteEffect(_BaseEffect):
             )
 
         return errors
+
+
+__exports__ = ("SendInviteEffect",)

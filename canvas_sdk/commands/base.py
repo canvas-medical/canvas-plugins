@@ -183,3 +183,6 @@ class _BaseCommand(Model):
             button = self.constantized_key().lower().replace("_", " ")
         command = self.Meta.key.lower()
         return Recommendation(title=title, button=button, command=command, context=self.values)
+
+
+__exports__ = ("_BaseCommand",)

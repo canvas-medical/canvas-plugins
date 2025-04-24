@@ -1,3 +1,5 @@
+from canvas_sdk.value_set._utilities import get_overrides
+
 from ..value_set import ValueSet
 
 
@@ -323,3 +325,6 @@ class ConsultantReport(ValueSet):
         "371531000",  # Report of clinical encounter (record artifact)
         "371545006",  # Confirmatory consultation report (record artifact)
     }
+
+
+__exports__ = get_overrides(locals().copy())

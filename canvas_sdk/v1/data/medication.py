@@ -72,3 +72,6 @@ class MedicationCoding(models.Model):
     medication = models.ForeignKey(
         Medication, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
+
+
+__exports__ = ("Status", "Medication", "MedicationCoding")

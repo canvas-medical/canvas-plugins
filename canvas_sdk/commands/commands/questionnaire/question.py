@@ -132,3 +132,13 @@ class CheckboxQuestion(BaseQuestion):
         self.response.append(
             {"text": option.name, "value": option.dbid, "comment": comment, "selected": selected}
         )
+
+
+__exports__ = (
+    "ResponseOption",
+    "BaseQuestion",
+    "TextQuestion",
+    "IntegerQuestion",
+    "RadioQuestion",
+    "CheckboxQuestion",
+)

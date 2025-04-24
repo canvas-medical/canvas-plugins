@@ -76,3 +76,10 @@ class ConditionCoding(models.Model):
     condition = models.ForeignKey(
         Condition, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
+
+
+__exports__ = (
+    "ClinicalStatus",
+    "Condition",
+    "ConditionCoding",
+)

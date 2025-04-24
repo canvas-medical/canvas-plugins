@@ -33,7 +33,7 @@ from canvas_sdk.utils.stats import get_duration_ms, statsd_client
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.installation import install_plugins
-from plugin_runner.sandbox import Sandbox
+from plugin_runner.sandbox import Sandbox, sandbox_from_module
 from settings import (
     CHANNEL_NAME,
     CUSTOMER_IDENTIFIER,
@@ -320,6 +320,12 @@ async def synchronize_plugins(run_once: bool = False) -> None:
     while True:
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
+        await pubsub.check_health()
+
+        if not pubsub.connection.is_connected:  # type: ignore
+            log.info("synchronize_plugins: reconnecting to Redis")
+            await pubsub.connection.connect()  # type: ignore
+
         if message is None:
             continue
 
@@ -349,12 +355,6 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             except Exception as e:
                 log.error(f"synchronize_plugins: load_plugins failed: {e}")
                 sentry_sdk.capture_exception(e)
-
-        await pubsub.check_health()
-
-        if not pubsub.connection.is_connected:  # type: ignore
-            log.info("synchronize_plugins: reconnecting to Redis")
-            await pubsub.connection.connect()  # type: ignore
 
         if run_once:
             break
@@ -437,18 +437,6 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     return modules
 
 
-def sandbox_from_module(base_path: pathlib.Path, module_name: str) -> Any:
-    """Sandbox the code execution."""
-    module_path = base_path / str(module_name.replace(".", "/") + ".py")
-
-    if not module_path.exists():
-        raise ModuleNotFoundError(f'Could not load module "{module_name}"')
-
-    sandbox = Sandbox(module_path, namespace=module_name)
-
-    return sandbox.execute()
-
-
 async def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
     log.info(f'Publishing message to pubsub channel "{CHANNEL_NAME}"')
@@ -465,7 +453,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     return client, pubsub
 
 
-def load_or_reload_plugin(path: pathlib.Path) -> None:
+def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
 
@@ -481,11 +469,11 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         log.error(f'Unable to load plugin "{name}": {e}')
         sentry_sdk.capture_exception(e)
 
-        return
+        return False
 
     secrets_file = path / SECRETS_FILE_NAME
-
     secrets_json = {}
+
     if secrets_file.exists():
         try:
             secrets_json = json.load(secrets_file.open())
@@ -502,7 +490,9 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
         log.error(f'Unable to load plugin "{name}": {str(e)}')
         sentry_sdk.capture_exception(e)
 
-        return
+        return False
+
+    any_failed = False
 
     for handler in handlers:
         # TODO add class colon validation to existing schema validation
@@ -514,10 +504,13 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
             log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
             sentry_sdk.capture_exception(e)
 
+            any_failed = True
+
             continue
 
         try:
-            result = sandbox_from_module(path.parent, handler_module)
+            sandbox = sandbox_from_module(path.parent, handler_module)
+            result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading plugin '{name_and_class}'")
@@ -544,6 +537,10 @@ def load_or_reload_plugin(path: pathlib.Path) -> None:
                 log.error(error_line)
 
             sentry_sdk.capture_exception(e)
+
+            any_failed = True
+
+    return not any_failed
 
 
 def refresh_event_type_map() -> None:

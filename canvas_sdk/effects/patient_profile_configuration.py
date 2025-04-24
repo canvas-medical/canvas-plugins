@@ -9,7 +9,8 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 class PatientProfileConfiguration(_BaseEffect):
     """
-    An Effect that will decide which sections appear, and if they start expanded, on the patient's profile in Canvas.
+    An Effect that will decide which sections appear, and if they start expanded,
+    on the patient's profile in Canvas.
     """
 
     class Meta:
@@ -42,3 +43,6 @@ class PatientProfileConfiguration(_BaseEffect):
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"data": self.values}
+
+
+__exports__ = ("PatientProfileConfiguration",)

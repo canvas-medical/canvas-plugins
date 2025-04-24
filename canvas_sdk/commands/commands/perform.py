@@ -10,3 +10,6 @@ class PerformCommand(BaseCommand):
 
     cpt_code: str | None = None
     notes: str | None = None
+
+
+__exports__ = ("PerformCommand",)

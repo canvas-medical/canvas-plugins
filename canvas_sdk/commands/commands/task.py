@@ -39,3 +39,10 @@ class TaskCommand(BaseCommand):
     comment: str | None = None
     labels: list[str] | None = None
     linked_items_urns: list[str] | None = None
+
+
+__exports__ = (
+    "AssigneeType",
+    "TaskAssigner",
+    "TaskCommand",
+)

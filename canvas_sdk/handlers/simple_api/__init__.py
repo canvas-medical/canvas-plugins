@@ -12,7 +12,8 @@ from .security import (
     StaffSessionAuthMixin,
 )
 
-__all__ = [
+__all__ = __exports__ = (
+    "api",
     "APIKeyAuthMixin",
     "APIKeyCredentials",
     "AuthSchemeMixin",
@@ -25,4 +26,4 @@ __all__ = [
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
-]
+)

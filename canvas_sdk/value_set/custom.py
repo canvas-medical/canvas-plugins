@@ -1,3 +1,4 @@
+from canvas_sdk.value_set._utilities import get_overrides
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -1055,3 +1056,6 @@ class DiabetesOtherClassConditionSuspect(ValueSet):
         "L98498",
         "L98499",
     }
+
+
+__exports__ = get_overrides(locals().copy())

@@ -27,3 +27,6 @@ class CreateQuestionnaireResult(_BaseEffect):
             "code_system": self.code_system,
             "code": self.code,
         }
+
+
+__exports__ = ("CreateQuestionnaireResult",)
