@@ -5,6 +5,7 @@ from datetime import timedelta
 from functools import wraps
 from typing import Any, TypeVar, cast, overload
 
+from django.conf import settings
 from statsd.client.base import StatsClientBase
 from statsd.client.udp import Pipeline
 from statsd.defaults.env import statsd as default_statsd_client
@@ -49,6 +50,9 @@ class StatsDClientProxy:
             value (float): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
+        if not settings.METRICS_ENABLED:
+            return
+
         statsd_tags = tags_to_line_protocol(tags)
         self.client.gauge(f"{metric_name},{statsd_tags}", value)
 
@@ -60,6 +64,9 @@ class StatsDClientProxy:
             delta (float | timedelta): The value to report.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
+        if not settings.METRICS_ENABLED:
+            return
+
         statsd_tags = tags_to_line_protocol(tags)
         self.client.timing(f"{metric_name},{statsd_tags}", delta)
 
@@ -72,6 +79,9 @@ class StatsDClientProxy:
             rate (int): The sample rate.
             tags (dict[str, str]): Dictionary of tags to attach to the metric.
         """
+        if not settings.METRICS_ENABLED:
+            return
+
         statsd_tags = tags_to_line_protocol(tags)
         self.client.incr(f"{metric_name},{statsd_tags}", count, rate)
 
@@ -89,6 +99,9 @@ class PipelineProxy(StatsDClientProxy):
 
     def send(self) -> None:
         """Sends the batched metrics to StatsD."""
+        if not settings.METRICS_ENABLED:
+            return
+
         self.client.send()
 
 

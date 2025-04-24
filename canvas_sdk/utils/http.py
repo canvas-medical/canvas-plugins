@@ -9,7 +9,6 @@ from typing import Any, Literal, Protocol, TypeVar
 import requests
 
 from canvas_sdk.utils.metrics import measured
-from canvas_sdk.utils.stats import StatsDClientProxy
 
 F = TypeVar("F", bound=Callable)
 
@@ -115,8 +114,6 @@ class Http:
     def __init__(self, base_url: str = "") -> None:
         self._base_url = base_url
         self._session = requests.Session()
-
-        self.statsd_client = StatsDClientProxy()
 
     @measured(track_plugins_usage=True)
     def get(
