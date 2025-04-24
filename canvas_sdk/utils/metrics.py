@@ -187,3 +187,6 @@ def measured(fn: F | None = None, **options: Any) -> Callable[[F], F] | F:
         return cast(F, _wrapped)
 
     return _decorator(fn) if fn else _decorator
+
+
+__exports__ = ()
