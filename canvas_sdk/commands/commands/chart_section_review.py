@@ -19,3 +19,6 @@ class ChartSectionReviewCommand(_BaseCommand):
         IMMUNIZATIONS = "immunizations"
 
     section: Sections
+
+
+__exports__ = ("ChartSectionReviewCommand",)
