@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.33.1 (2025-04-24)
+
+### Bug Fixes
+
+- Remove duplicate question append
+  ([#530](https://github.com/canvas-medical/canvas-plugins/pull/530),
+  [`dbac2f4`](https://github.com/canvas-medical/canvas-plugins/commit/dbac2f4f18785a354ce3ef0eda0da01f7f7fb7a2))
+
+- Sandbox security improvements ([#529](https://github.com/canvas-medical/canvas-plugins/pull/529),
+  [`98ddf62`](https://github.com/canvas-medical/canvas-plugins/commit/98ddf6277f2ec5dc310bd346dc546ae2cc76282b))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+Co-authored-by: David Jantzen <mr.djantzen@gmail.com>
+
+
 ## v0.33.0 (2025-04-17)
 
 ### Features
