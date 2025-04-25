@@ -3,7 +3,7 @@ supervising_provider_plugin
 
 ## Description
 
-A description of this plugin
+Add annotations to the supervising provider dropdown in Prescribe, Refill, and Adjust Prescription Commands
 
 ### Important Note!
 
