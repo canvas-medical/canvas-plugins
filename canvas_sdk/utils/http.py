@@ -226,6 +226,31 @@ class Http:
             return [future.result() for future in futures]
 
 
+class JsonOnlyResponse:
+    """
+    A very simple Response analog that only allows access to the json() method
+    and the status_code.
+
+    If we returned the response directly the user could look at the request
+    headers on the response object and see any authentication headers we sent
+    on their behalf.
+    """
+
+    _json: dict[str, Any] | None
+    status_code: int
+
+    def __init__(self, response: requests.Response):
+        self.status_code = response.status_code
+
+        try:
+            self._json = response.json()
+        except Exception:
+            self._json = None
+
+    def json(self) -> dict[str, Any] | None:
+        return self._json
+
+
 class JsonOnlyHttp(Http):
     def get(
         self,
@@ -238,8 +263,8 @@ class JsonOnlyHttp(Http):
         self,
         url: str,
         headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> dict[str, Any]:
-        return super().get(url, headers).json()
+    ) -> JsonOnlyResponse:
+        return JsonOnlyResponse(super().get(url, headers))
 
     def post(
         self,
