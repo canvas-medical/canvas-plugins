@@ -22,7 +22,9 @@ class FakeResponse:
 
 @patch("requests.Session.get")
 def test_http_get_json(mock_get: MagicMock) -> None:
-    """Test that the Http.get method calls requests.get with the correct arguments."""
+    """
+    Test that the OntologiesHttp.get_json method calls requests.get with the correct arguments.
+    """
     mock_get.return_value = FakeResponse()
 
     response = ontologies_http.get_json("/fdb/medication")
