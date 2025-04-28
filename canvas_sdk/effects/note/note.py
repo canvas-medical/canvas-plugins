@@ -4,13 +4,12 @@ from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.note.base import CreateNoteOrAppointmentABC
+from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
 
-class CreateNote(CreateNoteOrAppointmentABC):
+class Note(NoteOrAppointmentABC):
     """
     Effect to create a visit note.
 
@@ -21,26 +20,11 @@ class CreateNote(CreateNoteOrAppointmentABC):
     """
 
     class Meta:
-        effect_type = EffectType.CREATE_NOTE
+        effect_type = "NOTE"
 
     note_type_id: UUID | str
     datetime_of_service: datetime.datetime
     patient_id: str
-
-    @property
-    def values(self) -> dict[str, Any]:
-        """
-        Returns a dictionary of values for the visit note creation effect.
-
-        Returns:
-            dict[str, Any]: A dictionary containing the base values and the datetime of service.
-        """
-        return {
-            **super().values,
-            "note_type": str(self.note_type_id),
-            "datetime_of_service": self.datetime_of_service.isoformat(),
-            "patient": self.patient_id,
-        }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """

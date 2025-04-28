@@ -1,4 +1,5 @@
 import datetime
+import json
 from abc import ABC
 from dataclasses import dataclass
 from typing import Any
@@ -6,7 +7,8 @@ from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_generated.messages.effects_pb2 import Effect
+from canvas_sdk.base import _BaseModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 
@@ -25,30 +27,20 @@ class AppointmentIdentifier:
     value: str
 
 
-class CreateNoteOrAppointmentABC(_BaseEffect, ABC):
+class NoteOrAppointmentABC(_BaseModel, ABC):
     """
-    Base class for all note creation effects.
+    Base class for all note effects.
 
     Attributes:
         practice_location_id (UUID | str): The ID of the practice location.
         provider_id (str): The ID of the provider.
     """
 
+    class Meta:
+        effect_type = None
+
     practice_location_id: UUID | str
     provider_id: str
-
-    @property
-    def values(self) -> dict[str, Any]:
-        """
-        Returns a dictionary of values for the note creation effect.
-
-        Returns:
-            dict[str, Any]: A dictionary containing the practice location, provider, patient, and note type IDs.
-        """
-        return {
-            "practice_location": str(self.practice_location_id),
-            "provider": self.provider_id,
-        }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -82,8 +74,20 @@ class CreateNoteOrAppointmentABC(_BaseEffect, ABC):
 
         return errors
 
+    def create(self) -> Effect:
+        """Originate a new command in the note body."""
+        self._validate_before_effect("create")
+        return Effect(
+            type=f"CREATE_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
 
-class CreateAppointmentABC(CreateNoteOrAppointmentABC, ABC):
+
+class AppointmentABC(NoteOrAppointmentABC, ABC):
     """
     Base class for appointment creation effects.
 
@@ -94,28 +98,26 @@ class CreateAppointmentABC(CreateNoteOrAppointmentABC, ABC):
         external_identifiers (list[AppointmentIdentifier] | None): List of external identifiers for the appointment.
     """
 
+    class Meta:
+        effect_type = "APPOINTMENT"
+        dirty_excluded_keys = ("external_identifiers",)
+
     start_time: datetime.datetime
     duration_minutes: int
     status: AppointmentProgressStatus | None = None
     external_identifiers: list[AppointmentIdentifier] | None = None
 
     @property
-    def values(self) -> dict[str, Any]:
+    def values(self) -> dict:
         """
-        Returns a dictionary of values for the appointment creation effect.
+        Returns a dictionary of modified attributes with type-specific transformations.
+        """
+        values = super().values
 
-        Returns:
-            dict[str, Any]: A dictionary containing the base values and additional appointment-specific details.
-        """
-        return {
-            **super().values,
-            "start_time": self.start_time.isoformat(),
-            "duration_minutes": self.duration_minutes,
-            "status": self.status.value if self.status else None,
-            "external_identifiers": [
+        if self.external_identifiers:
+            values["external_identifiers"] = [
                 {"system": identifier.system, "value": identifier.value}
                 for identifier in self.external_identifiers
             ]
-            if self.external_identifiers
-            else None,
-        }
+
+        return values

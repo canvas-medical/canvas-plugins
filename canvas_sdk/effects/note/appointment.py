@@ -3,42 +3,27 @@ from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.note.base import CreateAppointmentABC
+from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
 
-class CreateScheduleEvent(CreateAppointmentABC):
+class ScheduleEvent(AppointmentABC):
     """
     Effect to create a schedule event.
 
     Attributes:
         note_type_id (UUID | str): The ID of the note type.
         patient_id (str | None): The ID of the patient, if applicable.
+        description (str | None): The description of the schedule event, if applicable.
     """
 
     class Meta:
-        effect_type = EffectType.CREATE_SCHEDULE_EVENT
+        effect_type = "SCHEDULE_EVENT"
 
     note_type_id: UUID | str
     patient_id: str | None = None
     description: str | None = None
-
-    @property
-    def values(self) -> dict[str, Any]:
-        """
-        Returns a dictionary of values for the schedule event creation effect.
-
-        Returns:
-            dict[str, Any]: A dictionary containing the base values and additional schedule event-specific details.
-        """
-        return {
-            **super().values,
-            "note_type": str(self.note_type_id),
-            "patient": self.patient_id,
-            "description": self.description,
-        }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -98,39 +83,22 @@ class CreateScheduleEvent(CreateAppointmentABC):
         return errors
 
 
-class CreateAppointment(CreateAppointmentABC):
+class Appointment(AppointmentABC):
     """
     Effect to create an appointment.
 
     Attributes:
         appointment_note_type_id (UUID | str): The ID of the appointment note type.
         meeting_link (str | None): The meeting link for the appointment, if any.
-        patient_id (str | None): The ID of the patient, if applicable.
+        patient_id (str): The ID of the patient.
     """
 
     class Meta:
-        effect_type = EffectType.CREATE_APPOINTMENT
+        effect_type = "APPOINTMENT"
 
     appointment_note_type_id: UUID | str
     meeting_link: str | None = None
     patient_id: str
-
-    @property
-    def values(self) -> dict[str, Any]:
-        """
-        Returns a dictionary of values for the appointment creation effect.
-
-        Returns:
-            dict[str, Any]: A dictionary containing the base values and additional appointment-specific details.
-        """
-        return {
-            **super().values,
-            "appointment_note_type": str(self.appointment_note_type_id)
-            if self.appointment_note_type_id
-            else None,
-            "meeting_link": self.meeting_link,
-            "patient": self.patient_id,
-        }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """

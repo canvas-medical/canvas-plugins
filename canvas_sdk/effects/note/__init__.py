@@ -1,10 +1,10 @@
+from canvas_sdk.effects.note.appointment import Appointment, ScheduleEvent
 from canvas_sdk.effects.note.base import AppointmentIdentifier
-from canvas_sdk.effects.note.create_appointment import CreateAppointment, CreateScheduleEvent
-from canvas_sdk.effects.note.create_note import CreateNote
+from canvas_sdk.effects.note.note import Note
 
 __all__ = (
     "AppointmentIdentifier",
-    "CreateNote",
-    "CreateAppointment",
-    "CreateScheduleEvent",
+    "Note",
+    "Appointment",
+    "ScheduleEvent",
 )
