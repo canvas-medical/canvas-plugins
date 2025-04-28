@@ -124,3 +124,6 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
             ]
 
         return values
+
+
+__exports__ = ("AppointmentIdentifier", "NoteOrAppointmentABC", "AppointmentABC")

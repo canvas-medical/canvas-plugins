@@ -143,3 +143,6 @@ class Appointment(AppointmentABC):
             )
 
         return errors
+
+
+__exports__ = ("ScheduleEvent", "Appointment")

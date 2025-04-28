@@ -74,3 +74,6 @@ class Note(NoteOrAppointmentABC):
             )
 
         return errors
+
+
+__exports__ = ("Note",)
