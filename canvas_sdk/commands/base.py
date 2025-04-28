@@ -18,7 +18,11 @@ class _BaseCommand(_BaseModel):
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
-        dirty_excluded_keys = ("note_uuid", "command_uuid")
+
+    _dirty_excluded_keys = [
+        "note_uuid",
+        "command_uuid",
+    ]
 
     def __init__(self, /, **data: Any) -> None:
         """Initialize the command and mark all provided keys as dirty."""

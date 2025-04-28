@@ -100,7 +100,10 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
 
     class Meta:
         effect_type = "APPOINTMENT"
-        dirty_excluded_keys = ("external_identifiers",)
+
+    _dirty_excluded_keys = [
+        "external_identifiers",
+    ]
 
     start_time: datetime.datetime
     duration_minutes: int

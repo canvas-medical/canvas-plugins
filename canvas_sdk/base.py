@@ -62,15 +62,9 @@ class _BaseModel(Model):
         _dirty_keys (set[str]): A set to track which fields have been modified.
     """
 
-    class Meta:
-        """Metaclass for _BaseModel.
-
-        Attributes:
-            dirty_excluded_keys (tuple): Keys excluded from being marked as dirty.
-
-        """
-
-        dirty_excluded_keys = ("note_uuid",)
+    _dirty_excluded_keys: list[str] = [
+        "note_uuid",
+    ]
 
     _dirty_keys: set[str] = set()
 
@@ -86,7 +80,7 @@ class _BaseModel(Model):
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Set an attribute and mark it as dirty unless excluded."""
-        if not name.startswith("_") and name not in self.Meta.dirty_excluded_keys:
+        if not name.startswith("_") and name not in self._dirty_excluded_keys:
             self._dirty_keys.add(name)
         super().__setattr__(name, value)
 
