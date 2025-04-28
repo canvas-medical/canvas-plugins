@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.34.0 (2025-04-28)
+
+### Features
+
+- Add JsonOnlyResponse and a test for ontologies_http
+  ([#564](https://github.com/canvas-medical/canvas-plugins/pull/564),
+  [`9414ef7`](https://github.com/canvas-medical/canvas-plugins/commit/9414ef71f21c73f510ce5a682cb2d4eb23640658))
+
+
 ## v0.33.1 (2025-04-24)
 
 ### Bug Fixes
