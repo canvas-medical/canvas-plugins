@@ -60,14 +60,19 @@ class QuestionnaireCommand(_BaseCommand):
                     "system": question.code_system,
                     "code": question.code,
                 },
-                "options": [
-                    ResponseOption(
-                        dbid=option.pk, name=option.name, code=option.code, value=option.value
-                    )
-                    for option in question.response_option_set.options.all()
-                ]
-                if question.response_option_set
-                else [],
+                "options": (
+                    [
+                        ResponseOption(
+                            dbid=option.pk,
+                            name=option.name,
+                            code=option.code,
+                            value=option.value,
+                        )
+                        for option in question.response_option_set.options.all()
+                    ]
+                    if question.response_option_set
+                    else []
+                ),
             }
             q_type = question.response_option_set.type if question.response_option_set else None
             if q_type in QUESTION_CLASSES:
