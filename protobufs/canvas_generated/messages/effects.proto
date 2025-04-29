@@ -263,6 +263,7 @@ enum EffectType {
   CREATE_MESSAGE = 6003;
   SEND_MESSAGE = 6004;
   CREATE_AND_SEND_MESSAGE = 6005;
+  EDIT_MESSAGE = 6006;
 }
 
 message Effect {
