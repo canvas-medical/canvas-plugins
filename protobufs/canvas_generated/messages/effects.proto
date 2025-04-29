@@ -274,6 +274,9 @@ enum EffectType {
 
   CREATE_PATIENT = 6003;
 
+  CREATE_MESSAGE = 6004;
+  SEND_MESSAGE = 6005;
+  CREATE_AND_SEND_MESSAGE = 6006;
 }
 
 message Effect {
