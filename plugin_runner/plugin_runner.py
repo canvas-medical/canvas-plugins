@@ -596,7 +596,7 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 
     for key in EventType.keys():  # noqa: SIM118
         value = len(EVENT_HANDLER_MAP[key]) if key in EVENT_HANDLER_MAP else 0
-        statsd_client.gauge("plugins.measurements.event_nr_handlers", value, tags={"event": key})
+        statsd_client.gauge("plugins.measurements.event_handler_count", value, tags={"event": key})
 
 
 _cleanup_coroutines = []
