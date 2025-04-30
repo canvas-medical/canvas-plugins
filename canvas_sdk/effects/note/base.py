@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
-from canvas_sdk.base import _BaseModel
+from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 
@@ -27,7 +27,7 @@ class AppointmentIdentifier:
     value: str
 
 
-class NoteOrAppointmentABC(_BaseModel, ABC):
+class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
     """
     Base class for all note effects.
 

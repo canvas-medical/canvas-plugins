@@ -54,7 +54,7 @@ class Model(BaseModel):
             raise ValidationError.from_exception_data(self.__class__.__name__, error_details)
 
 
-class _BaseModel(Model):
+class TrackableFieldsModel(Model):
     """
     A base model with additional functionality for tracking modified fields.
 
