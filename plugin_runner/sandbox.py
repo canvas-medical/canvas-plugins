@@ -316,6 +316,9 @@ def node_name(node: ast.AST) -> str:
     """
     Given an AST node, return its name.
     """
+    if isinstance(node, ast.Call):
+        return ".".join(node_name(arg) for arg in node.args)
+
     if isinstance(node, ast.Constant):
         return str(node.value)
 
@@ -544,14 +547,12 @@ class Sandbox:
 
                 return new_node
             elif isinstance(node.ctx, ast.Del | ast.Store):
-                name = ".".join(node_name(arg) for arg in cast(ast.Call, node.value).args)
-
                 new_value = ast.Call(
                     func=ast.Name("_write_", ast.Load()),
                     args=[
                         node.value,
-                        ast.Constant(name),
-                        ast.Constant(node.slice.value),  # type: ignore
+                        ast.Constant(node_name(node.value)),
+                        ast.Constant(node_name(node.slice)),
                     ],
                     keywords=[],
                 )
