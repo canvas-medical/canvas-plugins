@@ -17,7 +17,7 @@ from typing import Any, TypedDict
 import grpc
 import redis
 import sentry_sdk
-from django.db import connections
+from django.core.signals import request_finished, request_started
 from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
@@ -41,7 +41,6 @@ from settings import (
     CUSTOMER_IDENTIFIER,
     ENV,
     IS_PRODUCTION_CUSTOMER,
-    IS_TESTING,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
     REDIS_ENDPOINT,
@@ -151,18 +150,6 @@ class PluginManifest(TypedDict):
     readme: str
 
 
-def reconnect_if_needed() -> None:
-    """Reconnect to the database if the connection has been closed."""
-    if IS_TESTING:
-        return
-
-    connection = connections["default"]
-
-    if not connection.is_usable():
-        log.debug("Connection was unusable, reconnecting...")
-        connection.connect()
-
-
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
@@ -181,7 +168,8 @@ class PluginRunner(PluginRunnerServicer):
         sentry_sdk.set_tag("event-name", event_name)
 
         if relevant_plugins:
-            reconnect_if_needed()
+            # Send the Django request_started signal
+            request_started.send(sender=None)
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
@@ -279,6 +267,9 @@ class PluginRunner(PluginRunnerServicer):
 
         # Don't log anything if a plugin handler didn't actually run.
         if relevant_plugins:
+            # Send the Django request_started signal
+            request_finished.send(sender=None)
+
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
             statsd_client.timing(
                 "plugins.event_duration_ms", delta=event_duration, tags={"event": event_name}
@@ -317,10 +308,6 @@ def synchronize_plugins(run_once: bool = False) -> None:
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
         pubsub.check_health()
-
-        # if not pubsub.connection.is_connected:  # type: ignore
-        #     log.info("synchronize_plugins: reconnecting to Redis")
-        #     pubsub.connection.connect()  # type: ignore
 
         if message is None:
             continue
