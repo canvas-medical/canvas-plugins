@@ -499,7 +499,7 @@ def test_sandbox_allows_write_access_to_id() -> None:
     sandbox.execute()
 
 
-def test_sandbox_dictionary_access() -> None:
+def test_sandbox_dictionary_and_list_access() -> None:
     """
     Test dictionary and list read and write.
     """
@@ -509,6 +509,11 @@ def test_sandbox_dictionary_access() -> None:
         a[1]['d'] = 'g'
         a[2]['f'][1]
         a[2]['f'][2] = 3
+        a[2] = True
+        assert a[-1] == True
+
+        b = [0, 1, 2, 3, 4, 5]
+        assert b[0:3] == [0, 1, 2]
     """)
     sandbox.execute()
 
