@@ -72,6 +72,10 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 MEDIA_S3_BUCKET_NAME = os.getenv("MEDIA_S3_BUCKET_NAME", "canvas-client-media")
 
+PLUGIN_RUNNER_MAX_WORKERS = (
+    int(max_workers) if (max_workers := os.getenv("PLUGIN_RUNNER_MAX_WORKERS")) else None
+)
+
 # ONTOLOGIES_SIGNING_KEY = os.getenv("ONTOLOGIES_SIGNING_KEY", "")
 PLUGIN_RUNNER_SIGNING_KEY = os.getenv("PLUGIN_RUNNER_SIGNING_KEY", "")
 # SCIENCE_SIGNING_KEY = os.getenv("SCIENCE_SIGNING_KEY", "")

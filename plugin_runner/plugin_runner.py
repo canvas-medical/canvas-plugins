@@ -1,24 +1,26 @@
-import asyncio
 import json
 import os
 import pathlib
 import pickle
 import pkgutil
 import sys
+import threading
 import time
 import traceback
 from collections import defaultdict
-from collections.abc import AsyncGenerator
+from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
+from time import sleep
 from typing import Any, TypedDict
 
 import grpc
-import redis.asyncio as redis
+import redis
 import sentry_sdk
-from asgiref.sync import sync_to_async
 from django.db import connections
 from sentry_sdk.integrations.logging import ignore_logger
 
+import settings
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
 from canvas_generated.services.plugin_runner_pb2_grpc import (
@@ -149,15 +151,8 @@ class PluginManifest(TypedDict):
     readme: str
 
 
-@sync_to_async
 def reconnect_if_needed() -> None:
-    """
-    Reconnect to the database if the connection has been closed.
-
-    NOTE: Django database functions are not async-safe and must be called
-    via e.g. sync_to_async. They will silently fail and block the handler
-    if called in an async context directly.
-    """
+    """Reconnect to the database if the connection has been closed."""
     if IS_TESTING:
         return
 
@@ -173,9 +168,7 @@ class PluginRunner(PluginRunnerServicer):
 
     sandbox: Sandbox
 
-    async def HandleEvent(
-        self, request: EventRequest, context: Any
-    ) -> AsyncGenerator[EventResponse, None]:
+    def HandleEvent(self, request: EventRequest, context: Any) -> Iterable[EventResponse]:
         """This is invoked when an event comes in."""
         event_start_time = time.time()
         event = Event(request)
@@ -188,7 +181,7 @@ class PluginRunner(PluginRunnerServicer):
         sentry_sdk.set_tag("event-name", event_name)
 
         if relevant_plugins:
-            await reconnect_if_needed()
+            reconnect_if_needed()
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
@@ -230,7 +223,7 @@ class PluginRunner(PluginRunnerServicer):
                 )
 
                 compute_start_time = time.time()
-                _effects = await sync_to_async(handler.compute)()
+                _effects = handler.compute()
                 effects = [
                     Effect(
                         type=effect.type,
@@ -293,20 +286,23 @@ class PluginRunner(PluginRunnerServicer):
 
         yield EventResponse(success=True, effects=effect_list)
 
-    async def ReloadPlugins(
+    def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
-    ) -> AsyncGenerator[ReloadPluginsResponse, None]:
+    ) -> Iterable[ReloadPluginsResponse]:
         """This is invoked when we need to reload plugins."""
         log.info("Reloading plugins...")
         try:
-            await publish_message(message={"action": "reload"})
+            publish_message(message={"action": "reload"})
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
 
 
-async def synchronize_plugins(run_once: bool = False) -> None:
+STOP_SYNCHRONIZER = threading.Event()
+
+
+def synchronize_plugins(run_once: bool = False) -> None:
     """
     Listen for messages on the pubsub channel that will indicate it is
     necessary to reinstall and reload plugins.
@@ -315,16 +311,16 @@ async def synchronize_plugins(run_once: bool = False) -> None:
 
     _, pubsub = get_client()
 
-    await pubsub.psubscribe(CHANNEL_NAME)
+    pubsub.psubscribe(CHANNEL_NAME)
 
-    while True:
-        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
+    while not STOP_SYNCHRONIZER.is_set():
+        message = pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
-        await pubsub.check_health()
+        pubsub.check_health()
 
-        if not pubsub.connection.is_connected:  # type: ignore
-            log.info("synchronize_plugins: reconnecting to Redis")
-            await pubsub.connection.connect()  # type: ignore
+        # if not pubsub.connection.is_connected:  # type: ignore
+        #     log.info("synchronize_plugins: reconnecting to Redis")
+        #     pubsub.connection.connect()  # type: ignore
 
         if message is None:
             continue
@@ -360,21 +356,21 @@ async def synchronize_plugins(run_once: bool = False) -> None:
             break
 
 
-async def synchronize_plugins_and_report_errors() -> None:
+def synchronize_plugins_and_report_errors() -> None:
     """
     Run synchronize_plugins() in perpetuity and report any encountered errors.
     """
     log.info("synchronize_plugins: starting loop...")
 
-    while True:
+    while not STOP_SYNCHRONIZER.is_set():
         try:
-            await synchronize_plugins()
+            synchronize_plugins()
         except Exception as e:
             log.error(f"synchronize_plugins: error: {e}")
             sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
-        await asyncio.sleep(0.5)
+        sleep(0.5)
 
 
 def validate_effects(effects: list[Effect]) -> list[Effect]:
@@ -437,17 +433,17 @@ def find_modules(base_path: pathlib.Path, prefix: str | None = None) -> list[str
     return modules
 
 
-async def publish_message(message: dict) -> None:
+def publish_message(message: dict) -> None:
     """Publish a message to the pubsub channel."""
     log.info(f'Publishing message to pubsub channel "{CHANNEL_NAME}"')
     client, _ = get_client()
 
-    await client.publish(CHANNEL_NAME, pickle.dumps(message))
+    client.publish(CHANNEL_NAME, pickle.dumps(message))
 
 
 def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
-    """Return an async Redis client and pubsub object."""
-    client = redis.Redis.from_url(REDIS_ENDPOINT)
+    """Return a Redis client and pubsub object."""
+    client = redis.from_url(REDIS_ENDPOINT)
     pubsub = client.pubsub()
 
     return client, pubsub
@@ -606,57 +602,39 @@ def log_nr_event_handlers() -> None:
         statsd_client.timing("plugins.event_nr_handlers", value, tags={"event": key})
 
 
-_cleanup_coroutines = []
-
-
-async def serve(specified_plugin_paths: list[str] | None = None) -> None:
-    """Run the server."""
+# NOTE: specified_plugin_paths powers the `canvas run-plugins` command
+def main(specified_plugin_paths: list[str] | None = None) -> None:
+    """Run the server and the synchronize_plugins loop."""
     port = "50051"
 
-    server = grpc.aio.server()
+    executor = ThreadPoolExecutor(max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS)
+    server = grpc.server(thread_pool=executor)
     server.add_insecure_port("127.0.0.1:" + port)
 
     add_PluginRunnerServicer_to_server(PluginRunner(), server)
 
     log.info(f"Starting server, listening on port {port}")
 
-    # Only install plugins if the plugin runner was not started from the CLI
+    # Only install plugins and start the synchronizer thread if the plugin runner was not started
+    # from the CLI
+    synchronizer_thread = threading.Thread(target=synchronize_plugins_and_report_errors)
     if specified_plugin_paths is None:
         install_plugins()
+        synchronizer_thread.start()
 
     load_plugins(specified_plugin_paths)
 
-    await server.start()
-
-    async def server_graceful_shutdown() -> None:
-        log.info("Starting graceful shutdown...")
-        await server.stop(5)
-
-    _cleanup_coroutines.append(server_graceful_shutdown())
-
-    await server.wait_for_termination()
-
-
-# NOTE: specified_plugin_paths powers the `canvas run-plugins` command
-def main(specified_plugin_paths: list[str] | None = None) -> None:
-    """Run the server and the synchronize_plugins loop."""
-    loop = asyncio.new_event_loop()
-
-    asyncio.set_event_loop(loop)
+    server.start()
 
     try:
-        coroutines = [serve(specified_plugin_paths)]
-
-        # Only start the synchronizer if the plugin runner was not started from the CLI
-        if specified_plugin_paths is None:
-            coroutines.append(synchronize_plugins_and_report_errors())
-
-        loop.run_until_complete(asyncio.gather(*coroutines))
+        server.wait_for_termination()
     except KeyboardInterrupt:
         pass
     finally:
-        loop.run_until_complete(*_cleanup_coroutines)
-        loop.close()
+        executor.shutdown(wait=True, cancel_futures=True)
+        if synchronizer_thread.is_alive():
+            STOP_SYNCHRONIZER.set()
+            synchronizer_thread.join()
 
 
 if __name__ == "__main__":

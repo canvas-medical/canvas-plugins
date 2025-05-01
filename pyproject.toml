@@ -9,7 +9,6 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
-  "pytest-asyncio>=0.24,<0.26",
   "pytest-mock",
   "python-semantic-release",
   "requests-mock",
@@ -119,7 +118,6 @@ init_typed = true
 
 [tool.pytest.ini_options]
 addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
-asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
   'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
