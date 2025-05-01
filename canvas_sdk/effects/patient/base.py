@@ -1,11 +1,12 @@
 import datetime
+import json
 from dataclasses import dataclass
 from typing import Any
 
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_generated.messages.effects_pb2 import Effect
+from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse, PersonSex
 
@@ -31,11 +32,11 @@ class PatientContactPoint:
         }
 
 
-class CreatePatient(_BaseEffect):
+class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
     class Meta:
-        effect_type = EffectType.CREATE_PATIENT
+        effect_type = "PATIENT"
 
     first_name: str
     last_name: str
@@ -104,3 +105,19 @@ class CreatePatient(_BaseEffect):
             )
 
         return errors
+
+    def create(self) -> Effect:
+        """Create a new Patient."""
+        self._validate_before_effect("create")
+
+        return Effect(
+            type=f"CREATE_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
+
+__exports__ = ("Patient", "PatientContactPoint")
