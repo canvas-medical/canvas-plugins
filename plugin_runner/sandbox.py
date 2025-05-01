@@ -206,6 +206,9 @@ STANDARD_LIBRARY_MODULES = {
         "Type",
         "TypedDict",
     },
+    "urllib": {
+        "parse",
+    },
     "urllib.parse": {
         "urlencode",
         "quote",
@@ -307,6 +310,19 @@ def _find_folder_in_path(file_path: Path, target_folder_name: str) -> Path | Non
         return None
 
     return _find_folder_in_path(file_path.parent, target_folder_name)
+
+
+def node_name(node: ast.AST) -> str:
+    """
+    Given an AST node, return its name.
+    """
+    if isinstance(node, ast.Constant):
+        return str(node.value)
+
+    if isinstance(node, ast.Name):
+        return str(node.id)
+
+    return "__unknown__"
 
 
 class Sandbox:
@@ -483,7 +499,7 @@ class Sandbox:
                     func=ast.Name("_write_", ast.Load()),
                     args=[
                         node.value,
-                        ast.Constant(node.value.id if isinstance(node.value, ast.Name) else None),
+                        ast.Constant(node_name(node.value)),
                         ast.Constant(node.attr),
                     ],
                     keywords=[],
@@ -493,6 +509,57 @@ class Sandbox:
                 node.value = new_value
                 return node
 
+            else:  # pragma: no cover
+                # Impossible Case only ctx Load, Store and Del are defined in ast.
+                raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
+
+        def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
+            """Transforms all kinds of subscripts.
+
+            'foo[bar]' becomes '_getitem_(foo, bar)'
+            'foo[:ab]' becomes '_getitem_(foo, slice(None, ab, None))'
+            'foo[ab:]' becomes '_getitem_(foo, slice(ab, None, None))'
+            'foo[a:b]' becomes '_getitem_(foo, slice(a, b, None))'
+            'foo[a:b:c]' becomes '_getitem_(foo, slice(a, b, c))'
+            'foo[a, b:c] becomes '_getitem_(foo, (a, slice(b, c, None)))'
+            'foo[a] = c' becomes '_write_(foo)[a] = c'
+            'del foo[a]' becomes 'del _write_(foo)[a]'
+
+            The _write_ function should return a security proxy.
+            """
+            node = self.node_contents_visit(node)
+
+            # 'AugStore' and 'AugLoad' are defined in 'Python.asdl' as possible
+            # 'expr_context'. However, according to Python/ast.c
+            # they are NOT used by the implementation => No need to worry here.
+            # Instead ast.c creates 'AugAssign' nodes, which can be visited.
+            if isinstance(node.ctx, ast.Load):
+                new_node = ast.Call(
+                    func=ast.Name("_getitem_", ast.Load()),
+                    args=[node.value, self.transform_slice(node.slice)],
+                    keywords=[],
+                )
+
+                copy_locations(new_node, node)
+
+                return new_node
+            elif isinstance(node.ctx, ast.Del | ast.Store):
+                name = ".".join(node_name(arg) for arg in cast(ast.Call, node.value).args)
+
+                new_value = ast.Call(
+                    func=ast.Name("_write_", ast.Load()),
+                    args=[
+                        node.value,
+                        ast.Constant(name),
+                        ast.Constant(node.slice.value),  # type: ignore
+                    ],
+                    keywords=[],
+                )
+
+                copy_locations(new_value, node)
+                node.value = new_value
+
+                return node
             else:  # pragma: no cover
                 # Impossible Case only ctx Load, Store and Del are defined in ast.
                 raise NotImplementedError(f"Unknown ctx type: {type(node.ctx)}")
@@ -655,7 +722,12 @@ class Sandbox:
         """
         return bool(self.base_path) and module.split(".")[0] == self.package_name
 
-    def _safe_write(self, _ob: Any, name: str | None = None, attribute: str | None = None) -> Any:
+    def _safe_write(
+        self,
+        _ob: Any,
+        name: str | None = None,
+        attribute: str | int | None = None,
+    ) -> Any:
         """Check if the given obj belongs to a protected resource."""
         is_module = isinstance(_ob, types.ModuleType)
 
@@ -664,14 +736,30 @@ class Sandbox:
                 raise AttributeError(f"Forbidden assignment to a module attribute: {_ob.__name__}.")
         elif isinstance(_ob, type):
             full_name = f"{_ob.__module__}.{_ob.__qualname__}"
+            module_name = _ob.__module__
         else:
-            full_name = f"{_ob.__module__}.{_ob.__class__.__qualname__}"
+            full_name = f"{_ob.__class__.__module__}.{_ob.__class__.__qualname__}"
+            module_name = _ob.__class__.__module__
 
-        if not self._same_module(_ob.__module__) and (
+        if attribute is not None:
+            if isinstance(_ob, dict):
+                value = dict.get(_ob, attribute)
+            elif isinstance(_ob, list | tuple) and isinstance(attribute, int):
+                value = _ob.__getitem__(attribute)
+            elif isinstance(attribute, str):
+                value = getattr(_ob, attribute, None)
+            else:
+                value = None
+        else:
+            value = None
+
+        if not self._same_module(module_name) and (
             # deny if it was anything imported
-            name in self.imported_names["names"]
+            (name and name.split(".")[0] in self.imported_names["names"])
             # deny if it's anything callable
-            or (attribute is not None and callable(getattr(_ob, attribute)))
+            or callable(value)
+            # deny writes to dictionary underscore keys
+            or (isinstance(_ob, dict) and isinstance(attribute, str) and attribute.startswith("_"))
         ):
             raise AttributeError(
                 f"Forbidden assignment to a non-module attribute: {full_name} "
@@ -704,7 +792,7 @@ class Sandbox:
         is_module = isinstance(_ob, types.ModuleType)
 
         if is_module:
-            module = _ob.__name__.split(".")[0]
+            module = _ob.__name__
         elif isinstance(_ob, type):
             module = _ob.__module__.split(".")[0]
         else:
@@ -743,7 +831,9 @@ class Sandbox:
             if name not in exports:
                 raise AttributeError(f'"{name}" is an invalid attribute name (not in __exports__)')
         elif is_module and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module]):
-            raise AttributeError(f'"{name}" is an invalid attribute name (not in ALLOWED_MODULES)')
+            raise AttributeError(
+                f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
+            )
 
         return getattr(_ob, name, default)
 
