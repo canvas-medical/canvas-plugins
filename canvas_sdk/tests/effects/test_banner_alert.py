@@ -16,7 +16,7 @@ import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
 from canvas_cli.main import app
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
-from canvas_sdk.tests.utils import MaskedValue
+from canvas_sdk.tests.shared import MaskedValue
 
 
 @pytest.fixture(scope="session")

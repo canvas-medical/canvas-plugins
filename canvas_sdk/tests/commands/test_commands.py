@@ -21,7 +21,7 @@ from canvas_sdk.tests.commands.utils import (
     trigger_originate,
     write_protocol_code,
 )
-from canvas_sdk.tests.utils import (
+from canvas_sdk.tests.shared import (
     MaskedValue,
     clean_up_files_and_plugins,
     create_note,

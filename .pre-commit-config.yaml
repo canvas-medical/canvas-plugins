@@ -62,8 +62,8 @@ repos:
         args: ["--pytest-test-first"]
         exclude: |
           (?x)(
-            tests/(.*/)?(factories|fixtures|utils)|
-            tests/.*/utils/.*\.py|
+            tests/(.*/)?(factories|fixtures)|
+            tests/(.*/)?(utils|shared)\.py|
             tests/.*/snapshots/.*\.py|
             tests/.*/_.*\.py
           )

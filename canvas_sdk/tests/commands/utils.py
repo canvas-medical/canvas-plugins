@@ -15,7 +15,7 @@ from canvas_generated.messages.events_pb2 import Event
 from canvas_sdk import commands
 from canvas_sdk.commands import __all__ as commands_registry
 from canvas_sdk.commands.base import _BaseCommand
-from canvas_sdk.tests.utils import MaskedValue, trigger_plugin_event
+from canvas_sdk.tests.shared import MaskedValue, trigger_plugin_event
 
 COMMANDS: list[type[_BaseCommand]] = [
     getattr(commands, attr_name) for attr_name in commands_registry

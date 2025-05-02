@@ -3,7 +3,7 @@ import requests
 from django.conf import settings
 from typer.testing import CliRunner
 
-from canvas_sdk.tests.utils import MaskedValue
+from canvas_sdk.tests.shared import MaskedValue
 
 
 @pytest.fixture(scope="session")
