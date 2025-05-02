@@ -6,7 +6,6 @@ class FamilyHistoryCommand(BaseCommand):
 
     class Meta:
         key = "familyHistory"
-        commit_required_fields = ("family_history",)
 
     family_history: str | None = None
     relative: str | None = None

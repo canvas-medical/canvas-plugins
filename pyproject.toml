@@ -13,7 +13,7 @@ dev = [
   "pytest-mock",
   "python-semantic-release",
   "requests-mock",
-  "ruff>=0.8,<0.10",
+  "ruff",
   "types-protobuf",
   "types-requests"
 ]

@@ -1,4 +1,5 @@
 from enum import Enum
+from uuid import UUID
 
 from pydantic import Field
 
@@ -10,14 +11,13 @@ class AssessCommand(_BaseCommand):
 
     class Meta:
         key = "assess"
-        commit_required_fields = ("condition_id",)
 
     class Status(Enum):
         IMPROVED = "improved"
         STABLE = "stable"
         DETERIORATED = "deteriorated"
 
-    condition_id: str | None = Field(
+    condition_id: UUID | str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "condition"}
     )
     background: str | None = None
