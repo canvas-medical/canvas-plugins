@@ -169,7 +169,7 @@ class PluginRunner(PluginRunnerServicer):
 
         if relevant_plugins:
             # Send the Django request_started signal
-            request_started.send(sender=None)
+            request_started.send(sender=self.__class__)
 
         if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
             plugin_name = event.target.id
