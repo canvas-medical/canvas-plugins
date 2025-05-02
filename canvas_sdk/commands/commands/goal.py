@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from enum import StrEnum
 
+from pydantic import Field
+
 from canvas_sdk.commands.base import _BaseCommand
 
 
@@ -27,7 +29,7 @@ class GoalCommand(_BaseCommand):
         NOT_ATTAINABLE = "not-attainable"
 
     goal_statement: str = ""
-    start_date: date = datetime.now().date()
+    start_date: date = Field(default_factory=lambda: datetime.now().date())
     due_date: date | None = None
     achievement_status: AchievementStatus | None = None
     priority: Priority | None = None
