@@ -48,7 +48,7 @@ jobs:
         uses: canvas-medical/return-dispatch@v2
         id: dispatch
         with:
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.CANVAS_REMOTE_WORKFLOW_DISPATCH_TOKEN }}
           ref: refs/heads/develop
           repo: canvas
           owner: canvas-medical
@@ -57,7 +57,7 @@ jobs:
       - name: Wait for Integration Tests to complete
         uses: canvas-medical/await-remote-run@main
         with:
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.CANVAS_REMOTE_WORKFLOW_DISPATCH_TOKEN }}
           repo: canvas
           owner: canvas-medical
           run_id: ${{ steps.dispatch.outputs.run_id }}
