@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.34.1 (2025-05-01)
+
+### Bug Fixes
+
+- Un-break sandbox dictionary and list access
+  ([#577](https://github.com/canvas-medical/canvas-plugins/pull/577),
+  [`4907d22`](https://github.com/canvas-medical/canvas-plugins/commit/4907d22596ae98125c5971339e80843fbb5386c2))
+
+
 ## v0.34.0 (2025-04-28)
 
 ### Features
