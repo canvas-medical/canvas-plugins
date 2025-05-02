@@ -607,6 +607,7 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     synchronizer_thread = threading.Thread(target=synchronize_plugins_and_report_errors)
     if specified_plugin_paths is None:
         install_plugins()
+        STOP_SYNCHRONIZER.clear()
         synchronizer_thread.start()
 
     load_plugins(specified_plugin_paths)
