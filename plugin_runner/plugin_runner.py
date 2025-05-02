@@ -267,8 +267,8 @@ class PluginRunner(PluginRunnerServicer):
 
         # Don't log anything if a plugin handler didn't actually run.
         if relevant_plugins:
-            # Send the Django request_started signal
-            request_finished.send(sender=None)
+            # Send the Django request_finished signal
+            request_finished.send(sender=self.__class__)
 
             log.info(f"Responded to Event {event_name} ({event_duration} ms)")
             statsd_client.timing(
