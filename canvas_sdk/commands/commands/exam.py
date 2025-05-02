@@ -6,7 +6,6 @@ class PhysicalExamCommand(QuestionnaireCommand):
 
     class Meta:
         key = "exam"
-        commit_required_fields = ("questionnaire_id",)
 
 
 __exports__ = ("PhysicalExamCommand",)

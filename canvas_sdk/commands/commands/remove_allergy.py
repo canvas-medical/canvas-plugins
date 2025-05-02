@@ -8,7 +8,6 @@ class RemoveAllergyCommand(BaseCommand):
 
     class Meta:
         key = "removeAllergy"
-        commit_required_fields = ("allergy_id",)
 
     allergy_id: str | None = Field(
         description="The external ID of the allergy to remove.",

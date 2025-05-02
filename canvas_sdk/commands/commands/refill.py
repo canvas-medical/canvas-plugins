@@ -12,15 +12,6 @@ class RefillCommand(PrescribeCommand):
 
     class Meta:
         key = "refill"
-        commit_required_fields = (
-            "fdb_code",
-            "sig",
-            "quantity_to_dispense",
-            "type_to_dispense",
-            "refills",
-            "substitutions",
-            "prescriber_id",
-        )
 
     def _get_error_details(
         self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
