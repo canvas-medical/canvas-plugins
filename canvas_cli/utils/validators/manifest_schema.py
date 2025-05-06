@@ -121,7 +121,20 @@ manifest_schema = {
                     "name": {"type": "string", "maxLength": 32},
                     "description": {"type": "string", "maxLength": 256},
                     "icon": {"type": "string"},
-                    "scope": {"type": "string", "enum": ["patient_specific", "global"]},
+                    "scope": {
+                        "type": "string",
+                        "enum": [
+                            "patient_specific",
+                            "global",
+                            "provider_menu_item",
+                            "portal_menu_item"
+                        ]
+                    },
+                    "menu_position": {
+                        "type": "string",
+                        "enum": ["top", "bottom"],
+                    },
+                    "menu_order": {"type": "integer"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
