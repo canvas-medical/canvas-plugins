@@ -384,5 +384,6 @@ async def test_simple_api(
     expected_response = Response(status_code=status_code).apply()
     if status_code == HTTPStatus.OK:
         expected_response.plugin_name = "test_simple_api"
+        expected_response.handler_name = "canvas_sdk.handlers.simple_api.api.SimpleAPIBase.compute"
 
     assert result[0].effects == [expected_response]

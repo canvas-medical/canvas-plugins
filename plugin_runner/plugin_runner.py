@@ -5,7 +5,6 @@ import pathlib
 import pickle
 import pkgutil
 import sys
-import time
 import traceback
 from collections import defaultdict
 from collections.abc import AsyncGenerator
@@ -29,7 +28,8 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
-from canvas_sdk.utils.stats import get_duration_ms, statsd_client
+from canvas_sdk.utils import metrics
+from canvas_sdk.utils.metrics import measured, statsd_client
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.installation import install_plugins
@@ -177,121 +177,118 @@ class PluginRunner(PluginRunnerServicer):
         self, request: EventRequest, context: Any
     ) -> AsyncGenerator[EventResponse, None]:
         """This is invoked when an event comes in."""
-        event_start_time = time.time()
         event = Event(request)
-        event_type = event.type
-        event_name = event.name
-        relevant_plugins = EVENT_HANDLER_MAP[event_name]
-        relevant_plugin_handlers = []
+        with metrics.measure(
+            metrics.get_qualified_name(self.HandleEvent), extra_tags={"event": event.name}
+        ):
+            event_type = event.type
+            event_name = event.name
+            relevant_plugins = EVENT_HANDLER_MAP[event_name]
+            relevant_plugin_handlers = []
 
-        log.debug(f"Processing {relevant_plugins} for {event_name}")
-        sentry_sdk.set_tag("event-name", event_name)
+            log.debug(f"Processing {relevant_plugins} for {event_name}")
+            sentry_sdk.set_tag("event-name", event_name)
 
-        if relevant_plugins:
-            await reconnect_if_needed()
+            if relevant_plugins:
+                await reconnect_if_needed()
 
-        if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
-            plugin_name = event.target.id
-            # filter only for the plugin(s) that were created/updated
-            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
-        elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
-            # The target plugin's name will be part of the home-app URL path, so other plugins that
-            # respond to SimpleAPI request events are not relevant
-            plugin_name = event.context["plugin_name"]
-            relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+            if event_type in [EventType.PLUGIN_CREATED, EventType.PLUGIN_UPDATED]:
+                plugin_name = event.target.id
+                # filter only for the plugin(s) that were created/updated
+                relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+            elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
+                # The target plugin's name will be part of the home-app URL path, so other plugins that
+                # respond to SimpleAPI request events are not relevant
+                plugin_name = event.context["plugin_name"]
+                relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
-        effect_list = []
+            effect_list = []
 
-        for plugin_name in relevant_plugins:
-            log.debug(f"Processing {plugin_name}")
-            sentry_sdk.set_tag("plugin-name", plugin_name)
+            for plugin_name in relevant_plugins:
+                log.debug(f"Processing {plugin_name}")
+                sentry_sdk.set_tag("plugin-name", plugin_name)
 
-            plugin = LOADED_PLUGINS[plugin_name]
-            handler_class = plugin["class"]
-            base_plugin_name = plugin_name.split(":")[0]
+                plugin = LOADED_PLUGINS[plugin_name]
+                handler_class = plugin["class"]
+                base_plugin_name = plugin_name.split(":")[0]
 
-            secrets = plugin.get("secrets", {})
+                secrets = plugin.get("secrets", {})
 
-            secrets.update(
-                {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
-            )
-
-            try:
-                handler = handler_class(event, secrets, ENVIRONMENT)
-
-                if not handler.accept_event():
-                    continue
-                relevant_plugin_handlers.append(handler_class)
-
-                classname = (
-                    handler.__class__.__name__
-                    if isinstance(handler, ClinicalQualityMeasure)
-                    else None
+                secrets.update(
+                    {"graphql_jwt": token_for_plugin(plugin_name=plugin_name, audience="home")}
                 )
 
-                compute_start_time = time.time()
-                _effects = await sync_to_async(handler.compute)()
-                effects = [
-                    Effect(
-                        type=effect.type,
-                        payload=effect.payload,
-                        plugin_name=base_plugin_name,
-                        classname=classname,
+                try:
+                    handler = handler_class(event, secrets, ENVIRONMENT)
+
+                    if not handler.accept_event():
+                        continue
+                    relevant_plugin_handlers.append(handler_class)
+
+                    classname = (
+                        handler.__class__.__name__
+                        if isinstance(handler, ClinicalQualityMeasure)
+                        else None
                     )
-                    for effect in _effects
-                ]
+                    handler_name = metrics.get_qualified_name(handler.compute)
+                    with metrics.measure(
+                        name=handler_name,
+                        extra_tags={
+                            "plugin": base_plugin_name,
+                            "event": event_name,
+                        },
+                    ):
+                        _effects = await sync_to_async(handler.compute)()
+                        effects = [
+                            Effect(
+                                type=effect.type,
+                                payload=effect.payload,
+                                plugin_name=base_plugin_name,
+                                classname=classname,
+                                handler_name=handler_name,
+                            )
+                            for effect in _effects
+                        ]
 
-                effects = validate_effects(effects)
+                        effects = validate_effects(effects)
 
-                apply_effects_to_context(effects, event=event)
+                        apply_effects_to_context(effects, event=event)
 
-                compute_duration = get_duration_ms(compute_start_time)
+                        log.info(f"{plugin_name}.compute() completed.")
 
-                log.info(f"{plugin_name}.compute() completed ({compute_duration} ms)")
-                statsd_client.timing(
-                    "plugins.protocol_duration_ms",
-                    delta=compute_duration,
-                    tags={"plugin": plugin_name},
-                )
-            except Exception as e:
-                log.error(f"Encountered exception in plugin {plugin_name}:")
+                except Exception as e:
+                    log.error(f"Encountered exception in plugin {plugin_name}:")
 
-                for error_line_with_newlines in traceback.format_exception(e):
-                    for error_line in error_line_with_newlines.split("\n"):
-                        log.error(error_line)
+                    for error_line_with_newlines in traceback.format_exception(e):
+                        for error_line in error_line_with_newlines.split("\n"):
+                            log.error(error_line)
 
-                sentry_sdk.capture_exception(e)
+                    sentry_sdk.capture_exception(e)
+                    continue
 
-                continue
+                effect_list += effects
 
-            effect_list += effects
+            sentry_sdk.set_tag("plugin-name", None)
 
-        sentry_sdk.set_tag("plugin-name", None)
+            # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
+            # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
+            # Found response effect. If multiple handlers were able to respond, log an error and set the
+            # effects list to be a single 500 Internal Server Error response effect.
+            if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
+                if len(relevant_plugin_handlers) == 0:
+                    effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
+                elif len(relevant_plugin_handlers) > 1:
+                    log.error(
+                        f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
+                        f" {event.context['path']}"
+                    )
+                    effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
 
-        # Special handling for SimpleAPI requests: if there were no relevant handlers (as determined
-        # by calling ignore_event on handlers), then set the effects list to be a single 404 Not
-        # Found response effect. If multiple handlers were able to respond, log an error and set the
-        # effects list to be a single 500 Internal Server Error response effect.
-        if event.type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
-            if len(relevant_plugin_handlers) == 0:
-                effect_list = [Response(status_code=HTTPStatus.NOT_FOUND).apply()]
-            elif len(relevant_plugin_handlers) > 1:
-                log.error(
-                    f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_REQUEST)}"
-                    f" {event.context['path']}"
-                )
-                effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+            # Don't log anything if a plugin handler didn't actually run.
+            if relevant_plugins:
+                log.info(f"Responded to Event {event_name}.")
 
-        event_duration = get_duration_ms(event_start_time)
-
-        # Don't log anything if a plugin handler didn't actually run.
-        if relevant_plugins:
-            log.info(f"Responded to Event {event_name} ({event_duration} ms)")
-            statsd_client.timing(
-                "plugins.event_duration_ms", delta=event_duration, tags={"event": event_name}
-            )
-
-        yield EventResponse(success=True, effects=effect_list)
+            yield EventResponse(success=True, effects=effect_list)
 
     async def ReloadPlugins(
         self, request: ReloadPluginsRequest, context: Any
@@ -560,6 +557,7 @@ def refresh_event_type_map() -> None:
                 log.warning(f"Unknown RESPONDS_TO type: {type(responds_to)}")
 
 
+@measured
 def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
     """Load the plugins."""
     # first mark each plugin as inactive since we want to remove it from
@@ -596,14 +594,9 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 
     refresh_event_type_map()
 
-    log_nr_event_handlers()
-
-
-def log_nr_event_handlers() -> None:
-    """Log the number of event handlers for each event."""
     for key in EventType.keys():  # noqa: SIM118
         value = len(EVENT_HANDLER_MAP[key]) if key in EVENT_HANDLER_MAP else 0
-        statsd_client.timing("plugins.event_nr_handlers", value, tags={"event": key})
+        statsd_client.gauge("plugins.event_handler_count", value, tags={"event": key})
 
 
 _cleanup_coroutines = []
