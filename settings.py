@@ -52,6 +52,7 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
+            "OPTIONS": {"pool": True},
             "NAME": parsed_url.path[1:],
             "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
             "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
@@ -63,6 +64,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
+            "OPTIONS": {"pool": True},
             "NAME": CANVAS_SDK_DB_NAME,
             "USER": CANVAS_SDK_DB_USERNAME,
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
@@ -75,6 +77,8 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 MEDIA_S3_BUCKET_NAME = os.getenv("MEDIA_S3_BUCKET_NAME", "canvas-client-media")
+
+PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
 
 # ONTOLOGIES_SIGNING_KEY = os.getenv("ONTOLOGIES_SIGNING_KEY", "")
 PLUGIN_RUNNER_SIGNING_KEY = os.getenv("PLUGIN_RUNNER_SIGNING_KEY", "")

@@ -83,7 +83,7 @@ class Protocol(BaseProtocol):
         )
         response.raise_for_status()
 
-    sleep(5)
+    sleep(10)
     yield
 
     # clean up
