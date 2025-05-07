@@ -77,3 +77,6 @@ class MessageTransmission(models.Model):
         related_name="transmissions_delivered",
         null=True,
     )
+
+
+__exports__ = ("TransmissionChannel", "Message", "MessageAttachment", "MessageTransmission")
