@@ -4,10 +4,9 @@ from enum import EnumType
 from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
 
-from canvas_sdk.base import TrackableFieldsModel
 from django.core.exceptions import ImproperlyConfigured
 
-from canvas_sdk.base import Model
+from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
@@ -42,9 +41,9 @@ class _BaseCommand(TrackableFieldsModel):
                 if field not in command_fields:
                     raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify {field}.")
 
-
-    def constantized_key(self) -> str:
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", self.Meta.key).upper()
+    @classmethod
+    def constantized_key(cls) -> str:
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", cls.Meta.key).upper()
 
     note_uuid: str | None = None
     command_uuid: str | None = None
