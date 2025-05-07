@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v0.35.0 (2025-05-07)
+
+### Chores
+
+- Add plugin metrics ([#532](https://github.com/canvas-medical/canvas-plugins/pull/532),
+  [`1e7dcab`](https://github.com/canvas-medical/canvas-plugins/commit/1e7dcab6b1c7421dca439c9669d785c5a45f3dac))
+
+- **tests**: Increase wait time for plugin installation
+  ([#578](https://github.com/canvas-medical/canvas-plugins/pull/578),
+  [`cc4afd0`](https://github.com/canvas-medical/canvas-plugins/commit/cc4afd0d4f1aed600cd00e13c4a8bc42e60c5827))
+
+### Features
+
+- Add "Change Medication" command
+  ([#543](https://github.com/canvas-medical/canvas-plugins/pull/543),
+  [`ef726dd`](https://github.com/canvas-medical/canvas-plugins/commit/ef726dd8a1f24ab01aa4288d7e33a5ad26af0dcc))
+
+- Add Create Patient effect ([#535](https://github.com/canvas-medical/canvas-plugins/pull/535),
+  [`930a4b1`](https://github.com/canvas-medical/canvas-plugins/commit/930a4b19d71d4cb8b65cfe713c983b3227279ed5))
+
+- Add message to data module ([#542](https://github.com/canvas-medical/canvas-plugins/pull/542),
+  [`945e0e2`](https://github.com/canvas-medical/canvas-plugins/commit/945e0e265a1e0bcd8cc7be09151e2bcddf300327))
+
+- Allow importing ZoneInfo ([#585](https://github.com/canvas-medical/canvas-plugins/pull/585),
+  [`5e7e30e`](https://github.com/canvas-medical/canvas-plugins/commit/5e7e30efb06d5f2ddbdd88fb6b4c9efd86732c42))
+
+### Refactoring
+
+- Canvas-plugins test suite ([#497](https://github.com/canvas-medical/canvas-plugins/pull/497),
+  [`42083de`](https://github.com/canvas-medical/canvas-plugins/commit/42083deac2c41f31e5f6d3250a56ed9277af20f2))
+
+
 ## v0.34.1 (2025-05-01)
 
 ### Bug Fixes
