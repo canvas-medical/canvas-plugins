@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
@@ -51,3 +52,58 @@ class Model(BaseModel):
         self.model_validate(self)
         if error_details := self._get_error_details(method):
             raise ValidationError.from_exception_data(self.__class__.__name__, error_details)
+
+
+class TrackableFieldsModel(Model):
+    """
+    A base model with additional functionality for tracking modified fields.
+
+    Attributes:
+        _dirty_keys (set[str]): A set to track which fields have been modified.
+    """
+
+    _dirty_excluded_keys: list[str] = [
+        "note_uuid",
+    ]
+
+    _dirty_keys: set[str] = set()
+
+    def __init__(self, /, **data: Any) -> None:
+        """Initialize the command and mark all provided keys as dirty."""
+        super().__init__(**data)
+
+        # Initialize a set to track which fields have been modified.
+        self._dirty_keys = set()
+
+        # Explicitly mark all keys provided in the constructor as dirty.
+        self._dirty_keys.update(data.keys())
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Set an attribute and mark it as dirty unless excluded."""
+        if not name.startswith("_") and name not in self._dirty_excluded_keys:
+            self._dirty_keys.add(name)
+        super().__setattr__(name, value)
+
+    def is_dirty(self, key: str) -> bool:
+        """Returns True if the given property has been modified (i.e. marked as dirty), False otherwise."""
+        return key in self._dirty_keys
+
+    @property
+    def values(self) -> dict:
+        """Return a dictionary of modified attributes with type-specific transformations."""
+        result = {}
+        for key in self._dirty_keys:
+            value = getattr(self, key)
+            if isinstance(value, Enum):
+                # If it's an enum, use its .value.
+                result[key] = value.value if value else None
+            elif isinstance(value, date | datetime):
+                # If it's a date/datetime, use isoformat().
+                result[key] = value.isoformat() if value else None
+            elif isinstance(value, UUID):
+                # If it's a UUID, use its string representation.
+                result[key] = str(value) if value else None
+            else:
+                # For strings, integers, or any other type, return as is.
+                result[key] = value
+        return result
