@@ -150,8 +150,8 @@ def measure(
         tags = {**tags, "status": "success"}
     finally:
         duration_ms = (time.perf_counter_ns() - timing_start) / 1_000_000
-        pipeline.timing("plugins.measurements.timings", duration_ms, tags=tags)
-        pipeline.incr("plugins.measurements.executions", tags=tags)
+        pipeline.timing("plugins.timings", duration_ms, tags=tags)
+        pipeline.incr("plugins.executions", tags=tags)
         pipeline.send()
 
 
