@@ -14,6 +14,7 @@ ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
 IS_PRODUCTION_CUSTOMER = env_to_bool("IS_PRODUCTION_CUSTOMER", IS_PRODUCTION)
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
+IS_SCRIPT = env_to_bool("IS_SCRIPT", "plugin_runner.py" not in sys.argv[0])
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 APP_NAME = os.getenv("APP_NAME")
 
@@ -23,6 +24,9 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
+
+
+METRICS_ENABLED = env_to_bool("PLUGINS_METRICS_ENABLED", not IS_SCRIPT)
 
 INSTALLED_APPS = [
     "canvas_sdk.v1",

@@ -142,6 +142,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_REFER_COMMAND: _ClassVar[EffectType]
     COMMIT_REFER_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_REFER_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    EDIT_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    DELETE_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    COMMIT_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
     CREATE_QUESTIONNAIRE_RESULT: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
@@ -208,6 +213,10 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     LAUNCH_MODAL: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
     UPDATE_USER: _ClassVar[EffectType]
+    CREATE_NOTE: _ClassVar[EffectType]
+    CREATE_APPOINTMENT: _ClassVar[EffectType]
+    CREATE_SCHEDULE_EVENT: _ClassVar[EffectType]
+    CREATE_PATIENT: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -343,6 +352,11 @@ EDIT_REFER_COMMAND: EffectType
 DELETE_REFER_COMMAND: EffectType
 COMMIT_REFER_COMMAND: EffectType
 ENTER_IN_ERROR_REFER_COMMAND: EffectType
+ORIGINATE_CHANGE_MEDICATION_COMMAND: EffectType
+EDIT_CHANGE_MEDICATION_COMMAND: EffectType
+DELETE_CHANGE_MEDICATION_COMMAND: EffectType
+COMMIT_CHANGE_MEDICATION_COMMAND: EffectType
+ENTER_IN_ERROR_CHANGE_MEDICATION_COMMAND: EffectType
 CREATE_QUESTIONNAIRE_RESULT: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
@@ -409,15 +423,21 @@ PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
 SIMPLE_API_RESPONSE: EffectType
 UPDATE_USER: EffectType
+CREATE_NOTE: EffectType
+CREATE_APPOINTMENT: EffectType
+CREATE_SCHEDULE_EVENT: EffectType
+CREATE_PATIENT: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "classname")
+    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
     CLASSNAME_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
     classname: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ...) -> None: ...
+    handler_name: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ...) -> None: ...
