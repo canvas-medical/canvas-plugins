@@ -8,7 +8,6 @@ class ChartSectionReviewCommand(_BaseCommand):
 
     class Meta:
         key = "chartSectionReview"
-        commit_required_fields = ("section",)
 
     class Sections(Enum):
         CONDITIONS = "conditions"
