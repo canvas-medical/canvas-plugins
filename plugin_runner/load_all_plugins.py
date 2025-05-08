@@ -18,10 +18,7 @@ from canvas_generated.messages.events_pb2 import PLUGIN_CREATED
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_sdk.events.base import Event
 from canvas_sdk.protocols.base import BaseProtocol
-from canvas_sdk.utils import stats
 from plugin_runner.plugin_runner import LOADED_PLUGINS, load_or_reload_plugin
-
-stats.STATS_ENABLED = False
 
 ORIGINAL_PATH = sys.path.copy()
 

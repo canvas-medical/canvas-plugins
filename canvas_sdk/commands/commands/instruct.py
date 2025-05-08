@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
@@ -9,9 +10,8 @@ class InstructCommand(BaseCommand):
 
     class Meta:
         key = "instruct"
-        commit_required_fields = ("instruction",)
 
-    coding: Coding | None = None
+    coding: Coding | None = Field(default=None, json_schema_extra={"commands_api_name": "instruct"})
     comment: str | None = None
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:

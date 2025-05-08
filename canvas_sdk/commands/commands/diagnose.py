@@ -10,7 +10,6 @@ class DiagnoseCommand(_BaseCommand):
 
     class Meta:
         key = "diagnose"
-        commit_required_fields = ("icd10_code",)
 
     icd10_code: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "diagnose"}

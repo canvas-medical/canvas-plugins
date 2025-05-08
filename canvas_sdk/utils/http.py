@@ -1,16 +1,14 @@
 import concurrent
 import functools
 import os
-import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from functools import wraps
-from typing import Any, Literal, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar
 
 import requests
 
-from canvas_sdk.utils.stats import StatsDClientProxy
+from canvas_sdk.utils.metrics import measured
 
 F = TypeVar("F", bound=Callable)
 
@@ -117,24 +115,7 @@ class Http:
         self._base_url = base_url
         self._session = requests.Session()
 
-        self.statsd_client = StatsDClientProxy()
-
-    @staticmethod
-    def measure_time(fn: F) -> F:
-        """A decorator to store timing of HTTP calls."""
-
-        @wraps(fn)
-        def wrapper(self: "Http", *args: Any, **kwargs: Any) -> Any:
-            start_time = time.time()
-            result = fn(self, *args, **kwargs)
-            end_time = time.time()
-            timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing, tags={})
-            return result
-
-        return cast(F, wrapper)
-
-    @measure_time
+    @measured(track_plugins_usage=True)
     def get(
         self, url: str, headers: Mapping[str, str | bytes | None] | None = None
     ) -> requests.Response:
@@ -147,7 +128,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def post(
         self,
         url: str,
@@ -164,7 +145,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def put(
         self,
         url: str,
@@ -181,7 +162,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def patch(
         self,
         url: str,
@@ -198,7 +179,7 @@ class Http:
             timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
         )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
@@ -226,6 +207,31 @@ class Http:
             return [future.result() for future in futures]
 
 
+class JsonOnlyResponse:
+    """
+    A very simple Response analog that only allows access to the json() method
+    and the status_code.
+
+    If we returned the response directly the user could look at the request
+    headers on the response object and see any authentication headers we sent
+    on their behalf.
+    """
+
+    _json: dict[str, Any] | None
+    status_code: int
+
+    def __init__(self, response: requests.Response):
+        self.status_code = response.status_code
+
+        try:
+            self._json = response.json()
+        except Exception:
+            self._json = None
+
+    def json(self) -> dict[str, Any] | None:
+        return self._json
+
+
 class JsonOnlyHttp(Http):
     def get(
         self,
@@ -238,8 +244,8 @@ class JsonOnlyHttp(Http):
         self,
         url: str,
         headers: Mapping[str, str | bytes | None] | None = None,
-    ) -> dict[str, Any]:
-        return super().get(url, headers).json()
+    ) -> JsonOnlyResponse:
+        return JsonOnlyResponse(super().get(url, headers))
 
     def post(
         self,
