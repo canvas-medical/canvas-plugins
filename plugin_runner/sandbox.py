@@ -81,6 +81,7 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
 }
 
 CANVAS_TOP_LEVEL_MODULES = (
+    "canvas_sdk.caching",
     "canvas_sdk.commands",
     "canvas_sdk.effects",
     "canvas_sdk.events",
