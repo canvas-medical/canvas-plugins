@@ -2,6 +2,7 @@ from datetime import date
 from typing import Literal
 from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand
@@ -14,11 +15,12 @@ class FollowUpCommand(_BaseCommand):
 
     class Meta:
         key = "followUp"
-        commit_required_fields = ("requested_date", "note_type")
 
     structured: bool = False
     requested_date: date | None = None
-    note_type_id: UUID | str | None = None
+    note_type_id: UUID | str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "note_type"}
+    )
     reason_for_visit: Coding | UUID | str | None = None
     comment: str | None = None
 

@@ -2,6 +2,7 @@ from typing import Literal
 from uuid import UUID
 
 from django.db.models.query_utils import Q
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
@@ -13,17 +14,17 @@ class LabOrderCommand(BaseCommand):
 
     class Meta:
         key = "labOrder"
-        commit_required_fields = (
-            "lab_partner",
-            "tests_order_codes",
-            "ordering_provider",
-            "diagnosis_codes",
-        )
 
     lab_partner: UUID | str | None = None
-    tests_order_codes: list[str] = []
-    ordering_provider_key: str | None = None
-    diagnosis_codes: list[str] = []
+    tests_order_codes: list[str] = Field(
+        default=[], json_schema_extra={"commands_api_name": "tests"}
+    )
+    ordering_provider_key: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "ordering_provider"}
+    )
+    diagnosis_codes: list[str] = Field(
+        default=[], json_schema_extra={"commands_api_name": "diagnosis"}
+    )
     fasting_required: bool = False
     comment: str | None = None
 

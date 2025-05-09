@@ -241,16 +241,22 @@ def test_sandbox_disallows_bad_attributes(banned_attribute: str) -> None:
 
 @pytest.mark.parametrize(
     "banned_attribute",
-    [
-        """
-            import jwt
-            jwt.encode = lambda x: print(x)
-        """,
-        """
-            from requests import Response
-            Response.status_code = 500
-        """,
-    ],
+    params_from_dict(
+        {
+            "jwt_attribute_method": """
+                import jwt
+                jwt.encode = lambda x: print(x)
+            """,
+            "response_existing_attribute": """
+                from requests import Response
+                Response.text = "evil"
+            """,
+            "response_new_attribute": """
+                from requests import Response
+                Response.status_code = 500
+            """,
+        }
+    ),
 )
 def test_sandbox_disallows_bad_attribute_writes(banned_attribute: str) -> None:
     """
@@ -433,6 +439,25 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
+def test_urllib() -> None:
+    """Test that urllib.parse (and modules like it) work, but only with the allowed attributes."""
+    sandbox = _sandbox_from_code("""
+        from urllib import parse
+        parse.quote("testing")
+    """)
+    sandbox.execute()
+
+    with pytest.raises(
+        AttributeError,
+        match=r'"urllib.parse.unquote_plus" is an invalid attribute name',
+    ):
+        sandbox = _sandbox_from_code("""
+            from urllib import parse
+            parse.unquote_plus("testing")
+        """)
+        sandbox.execute()
+
+
 @pytest.mark.parametrize(
     "code",
     params_from_dict(
@@ -471,6 +496,25 @@ def test_sandbox_allows_write_access_to_id() -> None:
     Some plugins write to a variable called `id` (which is the name of a Python builtin method).
     """
     sandbox = _sandbox_from_code("id = 5")
+    sandbox.execute()
+
+
+def test_sandbox_dictionary_and_list_access() -> None:
+    """
+    Test dictionary and list read and write.
+    """
+    sandbox = _sandbox_from_code("""
+        a = [{'b': 'c'}, {'d': 'e'}, {'f': [0, 1, 2]}]
+        a[0]['b']
+        a[1]['d'] = 'g'
+        a[2]['f'][1]
+        a[2]['f'][2] = 3
+        a[2] = True
+        assert a[-1] == True
+
+        b = [0, 1, 2, 3, 4, 5]
+        assert b[0:3] == [0, 1, 2]
+    """)
     sandbox.execute()
 
 
