@@ -25,7 +25,6 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
-CANVAS_SDK_PLUGINS_CACHE_ENABLED = env_to_bool("CANVAS_SDK_PLUGINS_CACHE_ENABLED", "1")
 CANVAS_SDK_PLUGINS_CACHE_LOCATION = os.getenv(
     "CANVAS_SDK_PLUGINS_CACHE_LOCATION", "plugin_io_plugins_cache"
 )
@@ -126,7 +125,7 @@ if IS_TESTING:
             "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
         },
     }
-elif CANVAS_SDK_PLUGINS_CACHE_ENABLED:
+else:
     CACHES = {
         "plugins": {
             "BACKEND": "django.core.cache.backends.db.DatabaseCache",
