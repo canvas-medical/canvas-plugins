@@ -831,6 +831,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_CHART_SUMMARY_CODING_GAPS_SECTION_BUTTON: _ClassVar[EventType]
     SIMPLE_API_AUTHENTICATE: _ClassVar[EventType]
     SIMPLE_API_REQUEST: _ClassVar[EventType]
+    SIMPLE_API_WEBSOCKET_AUTHENTICATE: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1653,6 +1654,7 @@ SHOW_CHART_SUMMARY_FAMILY_HISTORY_SECTION_BUTTON: EventType
 SHOW_CHART_SUMMARY_CODING_GAPS_SECTION_BUTTON: EventType
 SIMPLE_API_AUTHENTICATE: EventType
 SIMPLE_API_REQUEST: EventType
+SIMPLE_API_WEBSOCKET_AUTHENTICATE: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type")

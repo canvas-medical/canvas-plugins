@@ -11,6 +11,7 @@ from .security import (
     SessionCredentials,
     StaffSessionAuthMixin,
 )
+from .websocket import WebSocketAPI
 
 __all__ = __exports__ = (
     "api",
@@ -26,4 +27,5 @@ __all__ = __exports__ = (
     "SimpleAPI",
     "SimpleAPIRoute",
     "StaffSessionAuthMixin",
+    "WebSocketAPI",
 )

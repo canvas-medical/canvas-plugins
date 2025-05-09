@@ -1,11 +1,13 @@
 import json
+import re
 from base64 import b64encode
 from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
 
-from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects import Effect, _BaseEffect
+from pydantic_core import InitErrorDetails
+
+from canvas_sdk.effects import Effect, EffectType, _BaseEffect
 
 JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
@@ -83,10 +85,67 @@ class HTMLResponse(Response):
         super().__init__(content.encode(), status_code, headers, content_type="text/html")
 
 
+class AcceptConnection(_BaseEffect):
+    """AcceptConnection effect."""
+
+    class Meta:
+        effect_type = EffectType.SIMPLE_API_WEBSOCKET_ACCEPT
+
+
+class DenyConnection(_BaseEffect):
+    """DenyConnection effect."""
+
+    message: str | None = None
+
+    class Meta:
+        effect_type = EffectType.SIMPLE_API_WEBSOCKET_DENY
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """Make the payload."""
+        return {"message": self.message} if self.message else {}
+
+
+class Broadcast(_BaseEffect):
+    """Broadcast effect."""
+
+    class Meta:
+        effect_type = EffectType.SIMPLE_API_WEBSOCKET_BROADCAST
+
+    channel: str
+    message: dict[str, Any]
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """Make the payload."""
+        return {"channel": self.channel, "message": self.message}
+
+    def is_valid_channel_name(self) -> bool:
+        """Check if the channel name is valid."""
+        return re.fullmatch(r"\w+", self.channel) is not None
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+
+        if not self.is_valid_channel_name():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Invalid channel name. Channel name must be alphanumeric and can contain underscores.",
+                    self.channel,
+                )
+            )
+
+        return errors
+
+
 __exports__ = (
     "JSON",
     "Response",
     "JSONResponse",
     "PlainTextResponse",
     "HTMLResponse",
+    "AcceptConnection",
+    "DenyConnection",
+    "Broadcast",
 )
