@@ -9,6 +9,7 @@ from env_tools import env_to_bool
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.resolve()
+FOURTEEN_DAYS = 60 * 60 * 24 * 14
 
 ENV = os.getenv("ENV", "development")
 IS_PRODUCTION = ENV == "production"
@@ -24,11 +25,11 @@ INTEGRATION_TEST_CLIENT_SECRET = os.getenv("INTEGRATION_TEST_CLIENT_SECRET")
 
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/plugins-graphql")
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT", f"redis://{APP_NAME}-redis:6379")
-CANVAS_SDK_PLUGINS_CACHE_ENABLED = env_to_bool("CANVAS_SDK_PLUGINS_CACHE_ENABLED", IS_TESTING)
+CANVAS_SDK_PLUGINS_CACHE_ENABLED = env_to_bool("CANVAS_SDK_PLUGINS_CACHE_ENABLED", "1")
 CANVAS_SDK_PLUGINS_CACHE_LOCATION = os.getenv(
     "CANVAS_SDK_PLUGINS_CACHE_LOCATION", "plugin_io_plugins_cache"
 )
-CANVAS_SDK_CACHE_TIMEOUT_SECONDS = int(os.getenv("CANVAS_SDK_CACHE_TIMEOUT", 60 * 60 * 24 * 14))
+CANVAS_SDK_CACHE_TIMEOUT_SECONDS = int(os.getenv("CANVAS_SDK_CACHE_TIMEOUT", FOURTEEN_DAYS))
 
 
 METRICS_ENABLED = env_to_bool("PLUGINS_METRICS_ENABLED", not IS_SCRIPT)

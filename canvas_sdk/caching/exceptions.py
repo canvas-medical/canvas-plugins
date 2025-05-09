@@ -18,4 +18,4 @@ class CacheConfigurationError(CachingException):
         return f"The cache driver {self.driver} does not exist"
 
 
-__exports__ = ()
+__exports__ = ("CachingException", "CacheConfigurationError")
