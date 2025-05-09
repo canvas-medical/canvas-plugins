@@ -16,8 +16,6 @@ from canvas_cli.apps.auth.utils import CONFIG_PATH
 
 from .main import app
 
-runner = CliRunner()
-
 
 @pytest.fixture(scope="session")
 def plugin_name() -> str:
@@ -73,9 +71,9 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
 
 @pytest.fixture(autouse=True, scope="session")
-def write_plugin(plugin_name: str) -> Generator[Any, Any, Any]:
+def write_plugin(cli_runner: CliRunner, plugin_name: str) -> Generator[Any, Any, Any]:
     """Writes a plugin to the file system."""
-    runner.invoke(app, "init", input=plugin_name)
+    cli_runner.invoke(app, "init", input=plugin_name)
 
     protocol_code = """
 from canvas_sdk.events import EventType
@@ -164,9 +162,7 @@ def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], lis
 
 
 def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 8 - disable and then uninstall the plugin."""
-    runner.invoke(app, f"disable {plugin_name}")
-
+    """Step 9 - uninstall the plugin."""
     return (
         f"uninstall {plugin_name}",
         0,
@@ -191,6 +187,7 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
         (list_disabled_plugin),
         (enable_plugin),
         (uninstall_enabled_plugin),
+        (disable_plugin),
         (uninstall_disabled_plugin),
         (list_empty_plugins),
     ],
@@ -201,6 +198,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     plugin_name: str,
     create_or_update_config_auth_file_for_testing: None,
     step: Callable,
+    cli_runner: CliRunner,
 ) -> None:
     """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin."""
     mock_get_password.return_value = None
@@ -208,7 +206,7 @@ def test_canvas_list_install_disable_enable_uninstall(
 
     (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
 
-    result = runner.invoke(app, command)
+    result = cli_runner.invoke(app, command)
 
     assert result.exit_code == expected_exit_code
     for expected_output in expected_outputs:

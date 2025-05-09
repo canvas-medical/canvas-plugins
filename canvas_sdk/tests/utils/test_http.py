@@ -1,6 +1,42 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from canvas_sdk.utils import Http
+from canvas_sdk.utils.http import ontologies_http
+
+
+class FakeResponse:
+    """
+    A mock requests.Response.
+    """
+
+    def __init__(self) -> None:
+        self.status_code = 200
+
+    def json(self) -> dict[str, Any]:
+        """
+        Return a known response for mocking.
+        """
+        return {"abc": 123}
+
+
+@patch("requests.Session.get")
+def test_http_get_json(mock_get: MagicMock) -> None:
+    """
+    Test that the OntologiesHttp.get_json method calls requests.get with the correct arguments.
+    """
+    mock_get.return_value = FakeResponse()
+
+    response = ontologies_http.get_json("/fdb/medication")
+
+    mock_get.assert_called_once_with(
+        "https://ontologies.canvasmedical.com/fdb/medication",
+        headers={},
+        timeout=30,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"abc": 123}
 
 
 @patch("requests.Session.get")
