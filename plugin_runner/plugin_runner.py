@@ -17,6 +17,9 @@ import grpc
 import redis
 import sentry_sdk
 from django.core.signals import request_finished, request_started
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import ConnectionError, TimeoutError
+from redis.retry import Retry
 from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
@@ -304,8 +307,6 @@ def synchronize_plugins(run_once: bool = False) -> None:
     while not STOP_SYNCHRONIZER.is_set():
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=5.0)
 
-        pubsub.check_health()
-
         if message is None:
             continue
 
@@ -427,7 +428,12 @@ def publish_message(message: dict) -> None:
 
 def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     """Return a Redis client and pubsub object."""
-    client = redis.from_url(REDIS_ENDPOINT)
+    client = redis.from_url(
+        REDIS_ENDPOINT,
+        retry=Retry(backoff=ExponentialBackoff(), retries=10),
+        retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
+        health_check_interval=1,
+    )
     pubsub = client.pubsub()
 
     return client, pubsub
