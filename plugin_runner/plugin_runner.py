@@ -29,7 +29,7 @@ from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils import metrics
-from canvas_sdk.utils.metrics import measured, statsd_client
+from canvas_sdk.utils.metrics import measured
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.installation import install_plugins
@@ -593,10 +593,6 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             del LOADED_PLUGINS[name]
 
     refresh_event_type_map()
-
-    for key in EventType.keys():  # noqa: SIM118
-        value = len(EVENT_HANDLER_MAP[key]) if key in EVENT_HANDLER_MAP else 0
-        statsd_client.gauge("plugins.event_handler_count", value, tags={"event": key})
 
 
 _cleanup_coroutines = []
