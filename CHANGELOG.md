@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.35.1 (2025-05-13)
+
+### Bug Fixes
+
+- Remove event_handler_count to keep influx from exploding
+  ([#602](https://github.com/canvas-medical/canvas-plugins/pull/602),
+  [`9c9cf21`](https://github.com/canvas-medical/canvas-plugins/commit/9c9cf215270f0ddc7b241af2f3e91b40e5e6d83b))
+
+- Replace use of the gRPC AsyncIO API with the gRPC standard API
+  ([#575](https://github.com/canvas-medical/canvas-plugins/pull/575),
+  [`71234b3`](https://github.com/canvas-medical/canvas-plugins/commit/71234b34bc715684e14fd5317f4a4d8b966e4c55))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
 ## v0.35.0 (2025-05-07)
 
 ### Chores
