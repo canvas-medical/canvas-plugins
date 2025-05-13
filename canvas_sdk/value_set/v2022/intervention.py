@@ -1334,4 +1334,4 @@ class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals().copy())
+__exports__ = get_overrides(locals())
