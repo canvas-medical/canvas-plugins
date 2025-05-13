@@ -88,7 +88,7 @@ def install_plugin_commands(
 
     write_protocol_code(cli_runner, plugin_name, commands)
     install_plugin(plugin_name, token)
-    sleep(5)  # Wait for the plugin to be installed
+    sleep(10)  # Wait for the plugin to be installed
 
     yield
 

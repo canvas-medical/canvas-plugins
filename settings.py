@@ -46,12 +46,15 @@ CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 
+PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+
 if os.getenv("DATABASE_URL"):
     parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
 
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
             "NAME": parsed_url.path[1:],
             "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
             "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
@@ -63,6 +66,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
             "NAME": CANVAS_SDK_DB_NAME,
             "USER": CANVAS_SDK_DB_USERNAME,
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
