@@ -1,13 +1,13 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
+    "plugin_version": "0.0.1a",
     "name": "supervising_provider_prescribe",
-    "description": "Fills the supervising provider field in the Prescribe command.",
+    "description": "This protocol responds to the PRESCRIBE_COMMAND__POST_ORIGINATE event.\n\n    It is used to test whether the supervising provider field is automatically populated\n    when the Prescribe command is triggered. The protocol reacts to the command's creation\n    and sets the field accordingly.\n\n    The same logic can be tested for Refill and Adjust Prescription commands by updating\n    the RESPONDS_TO event and the command class.",
     "components": {
         "protocols": [
             {
                 "class": "supervising_provider_prescribe.protocols.my_protocol:Protocol",
-                "description": "Fills the supervising provider field in the Prescribe command.",
+                "description": "This protocol responds to the PRESCRIBE_COMMAND__POST_ORIGINATE event.\n\n    It is used to test whether the supervising provider field is automatically populated\n    when the Prescribe command is triggered. The protocol reacts to the command's creation\n    and sets the field accordingly.\n\n    The same logic can be tested for Refill and Adjust Prescription commands by updating\n    the RESPONDS_TO event and the command class.",
                 "data_access": {
                     "event": "",
                     "read": [],
