@@ -38,7 +38,7 @@ dependencies = [
   "pyjwt==2.10.1",
   "python-dotenv>=1.0.1,<2",
   "rapidfuzz>=3.10.1,<4",
-  "redis>=5.0.4,<6",
+  "redis>=5.0.4,<7",
   "requests",
   "restrictedpython>=8.0",
   "sentry-sdk>=2.25.1",
