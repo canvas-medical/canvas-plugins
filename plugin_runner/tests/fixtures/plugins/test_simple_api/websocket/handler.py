@@ -1,4 +1,4 @@
-from canvas_sdk.handlers.simple_api import WebSocketAPI as WebSocketAPIBase
+from canvas_sdk.handlers.simple_api.websocket import WebSocketAPI as WebSocketAPIBase
 
 
 class WebsocketAPI(WebSocketAPIBase):

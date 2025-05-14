@@ -5,7 +5,8 @@ import pytest
 
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection
 from canvas_sdk.events import Event, EventRequest, EventType
-from canvas_sdk.handlers.simple_api import WebSocketAPI
+from canvas_sdk.handlers.simple_api.websocket import WebSocketAPI
+from canvas_sdk.tests.shared import params_from_dict
 
 
 def make_auth_event(
@@ -42,17 +43,21 @@ HEADERS = {
 
 
 @pytest.mark.parametrize(
-    argnames="property,expected_value",
-    argvalues=[
-        ("channel", "test_channel"),
-        ("headers", HEADERS),
-        (
-            "logged_in_user",
-            {"id": USER["canvas-logged-in-user-id"], "type": USER["canvas-logged-in-user-type"]},
-        ),
-        ("auth_token", HEADERS.get("authorization")),
-    ],
-    ids=["channel", "headers", "logged_in_user", "auth_token"],
+    ("property", "expected_value"),
+    params_from_dict(
+        {
+            "channel": ("channel", "test_channel"),
+            "headers": ("headers", HEADERS),
+            "logged_in_user": (
+                "logged_in_user",
+                {
+                    "id": USER["canvas-logged-in-user-id"],
+                    "type": USER["canvas-logged-in-user-type"],
+                },
+            ),
+            "auth_token": ("auth_token", HEADERS.get("authorization")),
+        }
+    ),
 )
 def test_properties(property: str, expected_value: str) -> None:
     """Test the properties of the WebSocketAPI class."""
