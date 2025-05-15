@@ -5,6 +5,7 @@ import pytest
 
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection
 from canvas_sdk.events import Event, EventRequest, EventType
+from canvas_sdk.handlers.simple_api.tools import CaseInsensitiveMultiDict, separate_headers
 from canvas_sdk.handlers.simple_api.websocket import WebSocketAPI
 from canvas_sdk.tests.shared import params_from_dict
 
@@ -36,10 +37,14 @@ USER = {
     "canvas-logged-in-user-type": "Staff",
 }
 
-HEADERS = {
-    **USER,
-    "authorization": "test_token",
-}
+HEADERS = CaseInsensitiveMultiDict(
+    separate_headers(
+        {
+            **USER,
+            "authorization": "key",
+        }
+    )
+)
 
 
 @pytest.mark.parametrize(
@@ -55,12 +60,12 @@ HEADERS = {
                     "type": USER["canvas-logged-in-user-type"],
                 },
             ),
-            "auth_token": ("auth_token", HEADERS.get("authorization")),
+            "key": ("key", HEADERS.get("authorization")),
         }
     ),
 )
-def test_properties(property: str, expected_value: str) -> None:
-    """Test the properties of the WebSocketAPI class."""
+def test_websocket_properties(property: str, expected_value: str) -> None:
+    """Test the properties of the WebSocket class."""
     event = make_auth_event(
         channel="test_channel",
         headers=HEADERS,
@@ -68,8 +73,7 @@ def test_properties(property: str, expected_value: str) -> None:
 
     handler = WebSocketAPI(event=event)
 
-    # Check if the property returns the expected value
-    assert getattr(handler, property) == expected_value
+    assert getattr(handler.websocket, property) == expected_value
 
 
 def test_session_based_authentication() -> None:
@@ -82,9 +86,9 @@ def test_session_based_authentication() -> None:
     class SessionAuthWebSocketAPI(WebSocketAPI):
         def authenticate(self) -> bool:
             return (
-                self.logged_in_user is not None
-                and self.logged_in_user.get("id") == USER["canvas-logged-in-user-id"]
-                and self.logged_in_user.get("type") == USER["canvas-logged-in-user-type"]
+                self.websocket.logged_in_user is not None
+                and self.websocket.logged_in_user.get("id") == USER["canvas-logged-in-user-id"]
+                and self.websocket.logged_in_user.get("type") == USER["canvas-logged-in-user-type"]
             )
 
     handler = SessionAuthWebSocketAPI(event=event)
@@ -92,18 +96,18 @@ def test_session_based_authentication() -> None:
     assert handler.compute() == [AcceptConnection().apply()]
 
 
-def test_token_based_authentication() -> None:
-    """Test the token-based authentication."""
+def test_key_based_authentication() -> None:
+    """Test the key-based authentication."""
     event = make_auth_event(
         channel="test_channel",
         headers=HEADERS,
     )
 
-    class SessionWebSocketAPI(WebSocketAPI):
+    class KeyAuthWebSocketAPI(WebSocketAPI):
         def authenticate(self) -> bool:
-            return self.auth_token == self.secrets.get("token")
+            return self.websocket.key == self.secrets.get("key")
 
-    handler = SessionWebSocketAPI(event=event, secrets={"token": HEADERS.get("authorization")})
+    handler = KeyAuthWebSocketAPI(event=event, secrets={"key": HEADERS.get("authorization")})
 
     assert handler.compute() == [AcceptConnection().apply()]
 

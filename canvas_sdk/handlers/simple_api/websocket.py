@@ -7,11 +7,29 @@ import sentry_sdk
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection
-from canvas_sdk.events import EventType
+from canvas_sdk.events import Event, EventType
 from canvas_sdk.handlers.base import BaseHandler
 from logger import log
 
 from .exceptions import AuthenticationError, InvalidCredentialsError
+from .tools import CaseInsensitiveMultiDict, separate_headers
+
+
+class WebSocket:
+    """Request class for incoming requests to the API."""
+
+    def __init__(self, event: Event) -> None:
+        self.channel = event.context["channel_name"]
+        self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
+        self.key = self.headers.get("authorization")
+        self.logged_in_user = (
+            {
+                "id": self.headers.get("canvas-logged-in-user-id", ""),
+                "type": self.headers.get("canvas-logged-in-user-type", ""),
+            }
+            if "canvas-logged-in-user-id" in self.headers
+            else None
+        )
 
 
 class WebSocketAPI(BaseHandler, ABC):
@@ -20,6 +38,11 @@ class WebSocketAPI(BaseHandler, ABC):
     RESPONDS_TO: ClassVar[list[str]] = [
         EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE),
     ]
+
+    @cached_property
+    def websocket(self) -> WebSocket:
+        """Return the WebSocket object for the event."""
+        return WebSocket(self.event)
 
     def compute(self) -> list[Effect]:
         """Handle WebSocket authenticate event."""
@@ -37,33 +60,6 @@ class WebSocketAPI(BaseHandler, ABC):
 
             return [DenyConnection(message="Internal server error").apply()]
 
-    @cached_property
-    def headers(self) -> dict[str, str]:
-        """Return the headers for the WebSocket connection."""
-        return self.event.context.get("headers", {})
-
-    @cached_property
-    def channel(self) -> str:
-        """Return the channel name for the WebSocket connection."""
-        return self.event.context.get("channel_name", "")
-
-    @cached_property
-    def logged_in_user(self) -> dict[str, str] | None:
-        """Return the logged-in user information."""
-        return (
-            {
-                "id": self.headers.get("canvas-logged-in-user-id", ""),
-                "type": self.headers.get("canvas-logged-in-user-type", ""),
-            }
-            if "canvas-logged-in-user-id" in self.headers
-            else None
-        )
-
-    @cached_property
-    def auth_token(self) -> str | None:
-        """Return the authentication token for the WebSocket connection."""
-        return self.headers.get("authorization")
-
     def _authenticate(self) -> list[Effect]:
         """Authenticate the WebSocket request."""
         try:
@@ -80,4 +76,4 @@ class WebSocketAPI(BaseHandler, ABC):
         return False
 
 
-__exports__ = ("WebSocketAPI",)
+__exports__ = ("WebSocketAPI", "WebSocket")
