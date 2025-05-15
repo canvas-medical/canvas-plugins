@@ -21,7 +21,7 @@ class WebSocket:
     def __init__(self, event: Event) -> None:
         self.channel = event.context["channel_name"]
         self.headers = CaseInsensitiveMultiDict(separate_headers(event.context["headers"]))
-        self.key = self.headers.get("authorization")
+        self.api_key = self.headers.get("authorization")
         self.logged_in_user = (
             {
                 "id": self.headers.get("canvas-logged-in-user-id", ""),

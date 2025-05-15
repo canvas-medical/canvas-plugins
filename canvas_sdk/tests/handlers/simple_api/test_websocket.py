@@ -60,7 +60,7 @@ HEADERS = CaseInsensitiveMultiDict(
                     "type": USER["canvas-logged-in-user-type"],
                 },
             ),
-            "key": ("key", HEADERS.get("authorization")),
+            "api_key": ("api_key", HEADERS.get("authorization")),
         }
     ),
 )
@@ -105,7 +105,7 @@ def test_key_based_authentication() -> None:
 
     class KeyAuthWebSocketAPI(WebSocketAPI):
         def authenticate(self) -> bool:
-            return self.websocket.key == self.secrets.get("key")
+            return self.websocket.api_key == self.secrets.get("key")
 
     handler = KeyAuthWebSocketAPI(event=event, secrets={"key": HEADERS.get("authorization")})
 
