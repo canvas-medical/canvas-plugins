@@ -16,7 +16,7 @@ from .tools import CaseInsensitiveMultiDict, separate_headers
 
 
 class WebSocket:
-    """Request class for incoming requests to the API."""
+    """WebSocket class for incoming requests to the WebSocketAPI."""
 
     def __init__(self, event: Event) -> None:
         self.channel = event.context["channel_name"]
