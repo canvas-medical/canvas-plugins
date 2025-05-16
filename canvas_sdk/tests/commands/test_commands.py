@@ -6,7 +6,12 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from canvas_sdk.commands import AllergyCommand, AssessCommand, GoalCommand
+from canvas_sdk.commands import (
+    AllergyCommand,
+    AssessCommand,
+    ChartSectionReviewCommand,
+    GoalCommand,
+)
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.tests.commands.utils import (
@@ -28,6 +33,9 @@ from canvas_sdk.tests.shared import (
     install_plugin,
 )
 from canvas_sdk.v1.data import Condition
+
+# some commands can't be originated without any content
+EMPTY_COMMAND_NOT_ALLOWED = ["chartSectionReview"]
 
 
 def allergy() -> dict[str, Any]:
@@ -65,6 +73,11 @@ def goal() -> dict[str, Any]:
         "priority": GoalCommand.Priority.HIGH,
         "progress": "in progress",
     }
+
+
+def chart_section_review() -> dict[str, Any]:
+    """Chart Section Review Command for testing."""
+    return {"section": ChartSectionReviewCommand.Sections.MEDICATIONS}
 
 
 @pytest.fixture(params=COMMANDS)
@@ -157,6 +170,11 @@ def test_plugin_originates_empty_command_in_note(
     command_cls: type[_BaseCommand],
 ) -> None:
     """Test that empty commands are successfully originated in a note via plugin."""
+    if command_cls.Meta.key in EMPTY_COMMAND_NOT_ALLOWED:
+        pytest.skip(
+            f"Skipping '{command_cls.Meta.key}' due to command not being allowed to be inserted without values"
+        )
+
     trigger_originate(
         token, command_cls, note_for_originating_empty_commands["externallyExposableId"], empty=True
     )
