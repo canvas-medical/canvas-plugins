@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1a",
+    "name": "supervising_provider_plugin",
+    "description": "Add annotations to the supervising provider dropdown in Prescribe, Refill, and Adjust Prescription Commands",
+    "components": {
+        "protocols": [
+            {
+                "class": "supervising_provider_plugin.protocols.my_protocol:Protocol",
+                "description": "Add annotations to the supervising provider dropdown in Prescribe, Refill, and Adjust Prescription Commands",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
