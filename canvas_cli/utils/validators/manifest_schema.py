@@ -123,8 +123,19 @@ manifest_schema = {
                     "icon": {"type": "string"},
                     "scope": {
                         "type": "string",
-                        "enum": ["patient_specific", "global", "provider_companion"],
+                        "enum": [
+                            "patient_specific",
+                            "global",
+                            "provider_menu_item",
+                            "portal_menu_item",
+                            "provider_companion",
+                        ],
                     },
+                    "menu_position": {
+                        "type": "string",
+                        "enum": ["top", "bottom"],
+                    },
+                    "menu_order": {"type": "integer"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
