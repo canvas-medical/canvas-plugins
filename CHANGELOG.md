@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.36.0 (2025-05-16)
+
+### Bug Fixes
+
+- Don't copy locals(), prevents additional memory usage
+  ([#605](https://github.com/canvas-medical/canvas-plugins/pull/605),
+  [`8b7b26f`](https://github.com/canvas-medical/canvas-plugins/commit/8b7b26f0192a88ec3deb627c08dbf5fbcf2f0c0e))
+
+- Ensure that meta props still get created for cqms where type annotations are included
+  ([#566](https://github.com/canvas-medical/canvas-plugins/pull/566),
+  [`0cf38d1`](https://github.com/canvas-medical/canvas-plugins/commit/0cf38d1f20fa3532addba3ca50abe6d2476f4a77))
+
+### Features
+
+- Add chart section review command
+  ([#537](https://github.com/canvas-medical/canvas-plugins/pull/537),
+  [`16f2f8b`](https://github.com/canvas-medical/canvas-plugins/commit/16f2f8b18b5be6aa6e34654a030f0e94b73c5a8d))
+
+- Add provider companion specific scope to applications
+  ([#533](https://github.com/canvas-medical/canvas-plugins/pull/533),
+  [`cf86041`](https://github.com/canvas-medical/canvas-plugins/commit/cf86041bedb90947adc4fad502e1cabfed2e77f5))
+
+- Implement Caching API ([#561](https://github.com/canvas-medical/canvas-plugins/pull/561),
+  [`f39aabf`](https://github.com/canvas-medical/canvas-plugins/commit/f39aabf0ec154eb43938ea5eb4e0cec4b00f1971))
+
+- Launch modal effect improvements
+  ([#588](https://github.com/canvas-medical/canvas-plugins/pull/588),
+  [`bb795f8`](https://github.com/canvas-medical/canvas-plugins/commit/bb795f87ce73b69ba435fb84ec279ed03c76970a))
+
+- Websockets API ([#606](https://github.com/canvas-medical/canvas-plugins/pull/606),
+  [`90f2686`](https://github.com/canvas-medical/canvas-plugins/commit/90f2686a40a818a6336d095a83568746d0dab293))
+
+
 ## v0.35.1 (2025-05-13)
 
 ### Bug Fixes
