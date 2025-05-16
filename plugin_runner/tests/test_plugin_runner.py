@@ -12,7 +12,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
@@ -371,5 +371,56 @@ def test_simple_api(
     if status_code == HTTPStatus.OK:
         expected_response.plugin_name = "test_simple_api"
         expected_response.handler_name = "canvas_sdk.handlers.simple_api.api.SimpleAPIBase.compute"
+
+    assert result[0].effects == [expected_response]
+
+
+@pytest.mark.parametrize(
+    argnames="context",
+    argvalues=[
+        (
+            {
+                "plugin_name": "test_simple_api",
+                "channel_name": "test_channel",
+                "headers": {},
+            }
+        ),
+        (
+            {
+                "plugin_name": "unknown_plugin",
+                "channel_name": "test_channel",
+                "headers": {},
+            }
+        ),
+    ],
+    ids=["success", "no handlers"],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+def test_simple_api_websocket(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    context: dict[str, Any],
+) -> None:
+    """Test that the PluginRunner returns responses to  SimpleAPI Websocket events."""
+    event = EventRequest(
+        type=EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE,
+        context=json.dumps(context),
+    )
+
+    result = []
+    for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    expected_response = (
+        AcceptConnection().apply()
+        if context["plugin_name"] == "test_simple_api"
+        else DenyConnection().apply()
+    )
+    if context["plugin_name"] == "test_simple_api":
+        expected_response.plugin_name = "test_simple_api"
+        expected_response.handler_name = (
+            "canvas_sdk.handlers.simple_api.websocket.WebSocketAPI.compute"
+        )
 
     assert result[0].effects == [expected_response]

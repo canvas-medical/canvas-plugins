@@ -32,6 +32,7 @@ from canvas_generated.services.plugin_runner_pb2_grpc import (
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
+from canvas_sdk.handlers.simple_api.websocket import DenyConnection
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
@@ -180,7 +181,11 @@ class PluginRunner(PluginRunnerServicer):
                 plugin_name = event.target.id
                 # filter only for the plugin(s) that were created/updated
                 relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
-            elif event_type in {EventType.SIMPLE_API_AUTHENTICATE, EventType.SIMPLE_API_REQUEST}:
+            elif event_type in {
+                EventType.SIMPLE_API_AUTHENTICATE,
+                EventType.SIMPLE_API_REQUEST,
+                EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE,
+            }:
                 # The target plugin's name will be part of the home-app URL path, so other plugins that
                 # respond to SimpleAPI request events are not relevant
                 plugin_name = event.context["plugin_name"]
@@ -267,6 +272,15 @@ class PluginRunner(PluginRunnerServicer):
                         f" {event.context['path']}"
                     )
                     effect_list = [Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR).apply()]
+            if event.type == EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE:
+                if len(relevant_plugin_handlers) == 0:
+                    effect_list = [DenyConnection().apply()]
+                elif len(relevant_plugin_handlers) > 1:
+                    log.error(
+                        f"Multiple handlers responded to {EventType.Name(EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE)}"
+                        f" {event.context['channel']}"
+                    )
+                    effect_list = [DenyConnection().apply()]
 
             # Don't log anything if a plugin handler didn't actually run.
             if relevant_plugins:

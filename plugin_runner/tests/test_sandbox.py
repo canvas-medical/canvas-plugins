@@ -3,33 +3,16 @@ import re
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
-from typing import Any
 
 import pytest
-from _pytest.mark import ParameterSet
 
+from canvas_sdk.tests.shared import params_from_dict
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     CANVAS_SUBMODULE_NAMES,
     Sandbox,
     sandbox_from_module,
 )
-
-
-def params_from_dict(params: dict[str, str | tuple[str, Any]]) -> list[ParameterSet]:
-    """
-    Convert a dictionary of test parameters to a list suitable for parametrize.
-
-    Given a dictionary like: {"test-id-1": "import x from y"}
-    Return:                  [pytest.param("import x from y", id="test-id-1")]
-
-    Given a dictionary like: {"test-id-1": ("import x from y", "arg-2")}
-    Return:                  [pytest.param("import x from y", "arg-2", id="test-id-1")]
-    """
-    return [
-        pytest.param(*(value if isinstance(value, tuple) else (value,)), id=key)
-        for key, value in params.items()
-    ]
 
 
 def _sandbox_from_code(

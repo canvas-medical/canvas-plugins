@@ -1,8 +1,10 @@
 import shutil
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
+import pytest
 import requests
+from _pytest.mark import ParameterSet
 
 import settings
 from canvas_cli.apps.plugin.plugin import _build_package, plugin_url
@@ -81,3 +83,19 @@ def create_note(token: MaskedValue) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def params_from_dict(params: dict[str, str | tuple[Any, Any]]) -> list[ParameterSet]:
+    """
+    Convert a dictionary of test parameters to a list suitable for parametrize.
+
+    Given a dictionary like: {"test-id-1": "import x from y"}
+    Return:                  [pytest.param("import x from y", id="test-id-1")]
+
+    Given a dictionary like: {"test-id-1": ("import x from y", "arg-2")}
+    Return:                  [pytest.param("import x from y", "arg-2", id="test-id-1")]
+    """
+    return [
+        pytest.param(*(value if isinstance(value, tuple) else (value,)), id=key)
+        for key, value in params.items()
+    ]

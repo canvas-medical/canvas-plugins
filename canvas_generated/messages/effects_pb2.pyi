@@ -213,6 +213,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_BROADCAST: _ClassVar[EffectType]
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
@@ -424,6 +427,9 @@ SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
 SIMPLE_API_RESPONSE: EffectType
+SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
+SIMPLE_API_WEBSOCKET_DENY: EffectType
+SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
