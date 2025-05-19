@@ -227,6 +227,19 @@ class PatientSetting(models.Model):
     value = models.JSONField()
 
 
+class PatientMetadata(models.Model):
+    """A class representing Patient Metadata."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_patientmetadata_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True)
+    key = models.CharField(db_column="key", max_length=255)
+    value = models.CharField(db_column="value", max_length=255)
+
+
 __exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
@@ -235,6 +248,7 @@ __exports__ = (
     "PatientAddress",
     "PatientExternalIdentifier",
     "PatientSetting",
+    "PatientMetadata",
     # not defined here but used by current plugins
     "ContactPointState",
     "ContactPointSystem",
