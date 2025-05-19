@@ -1,17 +1,22 @@
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
-from dataclasses import dataclass
 
 from canvas_sdk.effects import EffectType, _BaseEffect
 
+
 class InputType(StrEnum):
+    """Type of input for a form field."""
+
     TEXT = "text"
     SELECT = "select"
     DATE = "date"
 
+
 @dataclass
 class FormField:
     """A class representing a Field."""
+
     key: str | None = None
     label: str | None = None
     required: bool = False
@@ -30,6 +35,7 @@ class FormField:
             "options": self.options,
         }
 
+
 class CreateFormEffect(_BaseEffect):
     """An Effect that will create a form."""
 
@@ -41,9 +47,7 @@ class CreateFormEffect(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """Return the values of the form as a dictionary."""
-        return {
-            "form": [field.to_dict() for field in self.form_fields]
-        }
+        return {"form": [field.to_dict() for field in self.form_fields]}
 
 
 __exports__ = ("CreateFormEffect", "FormField", "InputType")
