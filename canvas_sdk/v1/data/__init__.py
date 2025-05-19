@@ -36,8 +36,8 @@ from .patient import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
-    PatientSetting,
     PatientMetadata,
+    PatientSetting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
