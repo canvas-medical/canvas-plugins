@@ -40,7 +40,7 @@ class CreateFormEffect(_BaseEffect):
     """An Effect that will create a form."""
 
     class Meta:
-        effect_type = EffectType.CREATE_ADDITIONAL_FIELDS
+        effect_type = EffectType.PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS
 
     form_fields: list[FormField]
 
