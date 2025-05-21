@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1a",
+    "name": "supervising_provider_prescribe_protocol",
+    "description": "This protocol responds to the NOTE_STATE_CHANGE_EVENT_CREATED event.\n\n    It inserts a ProtocolCard containing a recommended Prescribe command. When the user triggers\n    this command, the supervising provider field will be automatically populated.\n\n    This plugin is primarily used to test and validate that the supervising provider is correctly\n    set during command initialization from a protocol.",
+    "components": {
+        "protocols": [
+            {
+                "class": "supervising_provider_prescribe_protocol.protocols.my_protocol:Protocol",
+                "description": "This protocol responds to the NOTE_STATE_CHANGE_EVENT_CREATED event.\n\n    It inserts a ProtocolCard containing a recommended Prescribe command. When the user triggers\n    this command, the supervising provider field will be automatically populated.\n\n    This plugin is primarily used to test and validate that the supervising provider is correctly\n    set during command initialization from a protocol.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
