@@ -31,6 +31,9 @@ class PrescribeCommand(_BaseCommand):
     prescriber_id: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "prescriber"}
     )
+    supervising_provider_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "supervising_provider"}
+    )
     note_to_pharmacist: str | None = None
 
     @property
