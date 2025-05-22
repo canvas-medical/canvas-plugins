@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Any
 
 from canvas_sdk.effects import EffectType, _BaseEffect
+from pydantic_core import InitErrorDetails
 
 
 class InputType(StrEnum):
@@ -49,5 +50,19 @@ class CreateFormEffect(_BaseEffect):
         """Return the values of the form as a dictionary."""
         return {"form": [field.to_dict() for field in self.form_fields]}
 
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+
+        for field in self.form_fields:
+            if field.type != InputType.SELECT and field.options:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "The options attribute is only used for fields of type select",
+                        field.key,
+                    )
+                )
+
+        return errors
 
 __exports__ = ("CreateFormEffect", "FormField", "InputType")

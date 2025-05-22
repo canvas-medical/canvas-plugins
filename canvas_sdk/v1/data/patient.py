@@ -238,8 +238,8 @@ class PatientMetadata(models.Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True
     )
-    key = models.CharField(db_column="key", max_length=255)
-    value = models.CharField(db_column="value", max_length=255)
+    key = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
 
 
 __exports__ = (
