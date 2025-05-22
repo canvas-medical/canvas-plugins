@@ -131,6 +131,10 @@ STANDARD_LIBRARY_MODULES = {
         "b64decode",
         "b64encode",
     },
+    "collections": {
+        "Counter",
+        "defaultdict",
+    },
     "datetime": {
         "date",
         "datetime",

@@ -1,0 +1,44 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_provider_companion_app",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "url_permissions": [
+        {
+            "url": "https://www.canvasmedical.com/extensions",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS", "MICROPHONE", "CAMERA"]
+        }
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "example_provider_companion_app.applications.my_application:MyApplication",
+                "name": "My Cool Tool",
+                "description": "Defines the app icon what it should launch.",
+                "scope": "provider_companion",
+                "icon": "assets/doctor.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "example_provider_companion_app.handlers.my_web_app:MyWebApp",
+                "description": "Serves the application",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.37.0 (2025-05-21)
+
+### Documentation
+
+- Add example application plugins
+  ([#622](https://github.com/canvas-medical/canvas-plugins/pull/622),
+  [`6170320`](https://github.com/canvas-medical/canvas-plugins/commit/6170320bd0e69302bd0cf574aa4d415ddbd25a63))
+
+### Features
+
+- Add new events for supervising provider post/pre search and allow prescribe command to set
+  supervising provider ([#527](https://github.com/canvas-medical/canvas-plugins/pull/527),
+  [`f3581f0`](https://github.com/canvas-medical/canvas-plugins/commit/f3581f00d916377af459dcd562c29633f7259ea3))
+
+
 ## v0.36.0 (2025-05-16)
 
 ### Bug Fixes
