@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from canvas_sdk.effects import EffectType, _BaseEffect
 from pydantic_core import InitErrorDetails
+
+from canvas_sdk.effects import EffectType, _BaseEffect
 
 
 class InputType(StrEnum):
@@ -64,5 +65,6 @@ class PatientMetadataCreateFormEffect(_BaseEffect):
                 )
 
         return errors
+
 
 __exports__ = ("PatientMetadataCreateFormEffect", "FormField", "InputType")
