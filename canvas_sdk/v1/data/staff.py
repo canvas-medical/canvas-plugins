@@ -3,6 +3,9 @@ from django.db import models
 from timezone_utils.fields import TimeZoneField
 
 from canvas_sdk.v1.data.common import (
+    AddressState,
+    AddressType,
+    AddressUse,
     ContactPointState,
     ContactPointSystem,
     ContactPointUse,
@@ -86,4 +89,47 @@ class StaffContactPoint(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
 
 
-__exports__ = ("Staff", "StaffContactPoint")
+class StaffAddress(models.Model):
+    """StaffAddress."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_staffaddress_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    line1 = models.CharField()
+    line2 = models.CharField()
+    city = models.CharField()
+    district = models.CharField()
+    state_code = models.CharField()
+    postal_code = models.CharField()
+    use = models.CharField(choices=AddressUse.choices)
+    type = models.CharField(choices=AddressType.choices)
+    longitude = models.FloatField()
+    latitude = models.FloatField()
+    start = models.DateField()
+    end = models.DateField()
+    country = models.CharField()
+    state = models.CharField(choices=AddressState.choices)
+    staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="addresses")
+
+
+class StaffPhoto(models.Model):
+    """StaffPhoto."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_staffphoto_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="photos")
+    url = models.CharField(
+        default="https://d3hn0m4rbsz438.cloudfront.net/avatar1.png", max_length=512
+    )
+    title = models.CharField(max_length=255, blank=True, default="")
+
+
+__exports__ = ("Staff", "StaffContactPoint", "StaffAddress", "StaffPhoto")
