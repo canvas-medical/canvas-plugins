@@ -36,6 +36,7 @@ from .patient import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientMetadata,
     PatientSetting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
@@ -106,6 +107,7 @@ __all__ = __exports__ = (
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientSetting",
+    "PatientMetadata",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
