@@ -22,7 +22,7 @@ class LaunchModalEffect(_BaseEffect):
     url: str | None = None
     content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
-    title: str = "Modal"
+    title: str = "Untitled"
 
     @property
     def values(self) -> dict[str, Any]:
