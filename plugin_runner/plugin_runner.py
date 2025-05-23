@@ -66,11 +66,12 @@ if SENTRY_DSN:
     # we want the exceptions themselves, not these error lines
     ignore_logger("plugin_runner_logger")
 
-    with sentry_sdk.configure_scope() as scope:
-        scope.set_tag("customer", CUSTOMER_IDENTIFIER)
-        scope.set_tag("logger", "python")
-        scope.set_tag("source", "plugin-runner")
-        scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
+    global_scope = sentry_sdk.get_global_scope()
+
+    global_scope.set_tag("customer", CUSTOMER_IDENTIFIER)
+    global_scope.set_tag("logger", "python")
+    global_scope.set_tag("source", "plugin-runner")
+    global_scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
 
 # when we import plugins we'll use the module name directly so we need to add the plugin
 # directory to the path
