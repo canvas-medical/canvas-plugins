@@ -57,7 +57,7 @@ from settings import (
 if PLUGIN_POOL_DEBUG:
     handler = logging.StreamHandler()
     handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("[%(process)d:%(thread)d] %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
 
     pool_logger = logging.getLogger("psycopg.pool")
