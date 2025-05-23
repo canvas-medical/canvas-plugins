@@ -37,7 +37,7 @@ class FormField:
         }
 
 
-class CreateFormEffect(_BaseEffect):
+class PatientMetadataCreateFormEffect(_BaseEffect):
     """An Effect that will create a form."""
 
     class Meta:
@@ -65,4 +65,4 @@ class CreateFormEffect(_BaseEffect):
 
         return errors
 
-__exports__ = ("CreateFormEffect", "FormField", "InputType")
+__exports__ = ("PatientMetadataCreateFormEffect", "FormField", "InputType")
