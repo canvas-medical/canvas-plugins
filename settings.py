@@ -60,7 +60,7 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS * 5}},
             "NAME": parsed_url.path[1:],
             "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
             "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
@@ -72,7 +72,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS * 5}},
             "NAME": CANVAS_SDK_DB_NAME,
             "USER": CANVAS_SDK_DB_USERNAME,
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
