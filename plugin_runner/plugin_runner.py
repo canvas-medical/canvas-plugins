@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib
 import pickle
@@ -47,10 +48,21 @@ from settings import (
     IS_PRODUCTION_CUSTOMER,
     MANIFEST_FILE_NAME,
     PLUGIN_DIRECTORY,
+    PLUGIN_POOL_DEBUG,
     REDIS_ENDPOINT,
     SECRETS_FILE_NAME,
     SENTRY_DSN,
 )
+
+if PLUGIN_POOL_DEBUG:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+
+    pool_logger = logging.getLogger("psycopg.pool")
+    pool_logger.setLevel(logging.DEBUG)
+    pool_logger.addHandler(handler)
 
 if SENTRY_DSN:
     sentry_sdk.init(

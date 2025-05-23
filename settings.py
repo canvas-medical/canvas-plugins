@@ -16,6 +16,7 @@ IS_PRODUCTION = ENV == "production"
 IS_PRODUCTION_CUSTOMER = env_to_bool("IS_PRODUCTION_CUSTOMER", IS_PRODUCTION)
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
 IS_SCRIPT = env_to_bool("IS_SCRIPT", "plugin_runner.py" not in sys.argv[0])
+PLUGIN_POOL_DEBUG = env_to_bool("PLUGIN_POOL_DEBUG")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 APP_NAME = os.getenv("APP_NAME")
 
