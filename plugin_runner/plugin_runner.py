@@ -297,7 +297,7 @@ class PluginRunner(PluginRunnerServicer):
 
             # Don't log anything if a plugin handler didn't actually run.
             if relevant_plugins:
-                # Send the Django request_finished signal
+                # Send the Django request_finished signal to trigger database connection cleanup
                 request_finished.send(sender=self.__class__)
 
                 log.info(f"Responded to Event {event_name}.")
