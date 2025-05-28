@@ -19,10 +19,16 @@ class ImagingOrder(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
     deleted = models.BooleanField()
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING)
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+"
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
@@ -52,10 +58,16 @@ class ImagingReview(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
     deleted = models.BooleanField()
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
     patient_communication_method = models.CharField(choices=ReviewPatientCommunicationMethod)
     # TODO  - uncomment when Note model is complete
     # note = models.ForeignKey('v1.Note', on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True)
