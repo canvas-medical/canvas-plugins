@@ -55,6 +55,7 @@ class ProtocolCard(_BaseEffect):
     status: Status = Status.DUE
     feedback_enabled: bool = False
     due_in: int = -1
+    can_be_snoozed: bool = False
 
     @property
     def values(self) -> dict[str, Any]:
