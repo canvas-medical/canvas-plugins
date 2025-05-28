@@ -12,9 +12,15 @@ class Device(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="devices", null=True
     )
