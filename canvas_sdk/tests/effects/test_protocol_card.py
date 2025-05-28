@@ -26,7 +26,7 @@ def test_apply_method_succeeds_with_patient_id_and_key() -> None:
     applied = p.apply()
     assert (
         applied.payload
-        == '{"patient": "uuid", "patient_filter": null, "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due", "feedback_enabled": false, "due_in": -1}}'
+        == '{"patient": "uuid", "patient_filter": null, "key": "something-unique", "data": {"title": "", "narrative": "", "recommendations": [], "status": "due", "feedback_enabled": false, "due_in": -1, "can_be_snoozed": false}}'
     )
 
 
@@ -139,6 +139,7 @@ def test_add_recommendations(
         "status": "due",
         "due_in": -1,
         "feedback_enabled": False,
+        "can_be_snoozed": False,
     }
 
 
