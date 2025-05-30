@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import pathlib
@@ -212,6 +213,16 @@ class PluginRunner(PluginRunnerServicer):
                 # The target plugin's name will be part of the home-app URL path, so other plugins that
                 # respond to SimpleAPI request events are not relevant
                 plugin_name = event.context["plugin_name"]
+                relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
+            elif event_type in {
+                EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
+                EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
+            }:
+                # The target plugin's name will be part of the payment processor identifier, so other plugins that
+                # respond to payment processor charge events are not relevant
+                plugin_name = (
+                    base64.b64decode(event.context["identifier"]).decode("utf-8").split(".")[0]
+                )
                 relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
             effect_list = []

@@ -279,6 +279,14 @@
   "canvas_sdk.effects.patient_profile_configuration": [
     "PatientProfileConfiguration"
   ],
+  "canvas_sdk.effects.payment_processor": [
+    "AddPaymentMethodResponse",
+    "CreditCardTransaction",
+    "PaymentMethod",
+    "PaymentProcessorForm",
+    "PaymentProcessorMetadata",
+    "RemovePaymentMethodResponse"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
@@ -363,6 +371,12 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.payment_processors.base": [
+    "PaymentProcessor"
+  ],
+  "canvas_sdk.handlers.payment_processors.card": [
+    "CardPaymentProcessor"
   ],
   "canvas_sdk.handlers.simple_api": [
     "APIKeyAuthMixin",
