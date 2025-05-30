@@ -16,6 +16,7 @@ IS_PRODUCTION = ENV == "production"
 IS_PRODUCTION_CUSTOMER = env_to_bool("IS_PRODUCTION_CUSTOMER", IS_PRODUCTION)
 IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] == "-c")
 IS_SCRIPT = env_to_bool("IS_SCRIPT", "plugin_runner.py" not in sys.argv[0])
+PLUGIN_POOL_DEBUG = env_to_bool("PLUGIN_POOL_DEBUG")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
 APP_NAME = os.getenv("APP_NAME")
 
@@ -59,7 +60,7 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS * 5}},
             "NAME": parsed_url.path[1:],
             "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
             "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
@@ -71,7 +72,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS * 5}},
             "NAME": CANVAS_SDK_DB_NAME,
             "USER": CANVAS_SDK_DB_USERNAME,
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
