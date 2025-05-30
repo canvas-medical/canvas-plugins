@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.38.0 (2025-05-30)
+
+### Bug Fixes
+
+- Add missing Sentry tags ([#636](https://github.com/canvas-medical/canvas-plugins/pull/636),
+  [`75f19b5`](https://github.com/canvas-medical/canvas-plugins/commit/75f19b5c63a1ea1caa792247076f4d16190ed089))
+
+### Features
+
+- Add staff addresses and photos to data module
+  ([#621](https://github.com/canvas-medical/canvas-plugins/pull/621),
+  [`3038df7`](https://github.com/canvas-medical/canvas-plugins/commit/3038df733b8a7256fa093975a20fefe85acf3991))
+
+
 ## v0.37.0 (2025-05-21)
 
 ### Documentation
