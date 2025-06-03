@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -343,4 +341,18 @@ class PneumococcalPolysaccharide23Vaccine(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "DtapVaccine",
+    "HepatitisAVaccine",
+    "HepatitisBVaccine",
+    "HibVaccine3DoseSchedule",
+    "HibVaccine4DoseSchedule",
+    "InactivatedPolioVaccineIpv",
+    "InfluenzaVaccine",
+    "InfluenzaVirusLaivImmunization",
+    "Measles_MumpsAndRubellaMmrVaccine",
+    "PneumococcalConjugateVaccine",
+    "PneumococcalPolysaccharide23Vaccine",
+    "RotavirusVaccine3DoseSchedule",
+    "VaricellaZosterVaccineVzv",
+)

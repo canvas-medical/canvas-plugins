@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -234,4 +232,11 @@ class StatinAllergen(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "AceInhibitorOrArbIngredient",
+    "BetaBlockerTherapyIngredient",
+    "EggSubstance",
+    "InfluenzaVaccination",
+    "InfluenzaVaccine",
+    "StatinAllergen",
+)

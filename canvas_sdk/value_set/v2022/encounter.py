@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -2566,4 +2564,61 @@ class HospitalServicesForUrologyCare(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "AcuteInpatient",
+    "AnnualWellnessVisit",
+    "AudiologyVisit",
+    "BehavioralHealthFollowUpVisit",
+    "BehavioralNeuropsychAssessment",
+    "CareServicesInLongTermResidentialFacility",
+    "ClinicalOralEvaluation",
+    "ContactOrOfficeVisit",
+    "DetoxificationVisit",
+    "DischargeServicesHospitalInpatient",
+    "DischargeServicesHospitalInpatientSameDayDischarge",
+    "DischargeServicesNursingFacility",
+    "EmergencyDepartmentVisit",
+    "EncounterInfluenza",
+    "EncounterInpatient",
+    "EncounterToDocumentMedications",
+    "EncounterToEvaluateBmi",
+    "EncounterToScreenForBloodPressure",
+    "EncounterToScreenForDepression",
+    "EsrdMonthlyOutpatientServices",
+    "FrailtyEncounter",
+    "GroupPsychotherapy",
+    "HomeHealthcareServices",
+    "HospitalInpatientVisitInitial",
+    "HospitalObservationCareInitial",
+    "HospitalServicesForUrologyCare",
+    "MedicalDisabilityExam",
+    "NonacuteInpatient",
+    "NursingFacilityVisit",
+    "Observation",
+    "OccupationalTherapyEvaluation",
+    "OfficeVisit",
+    "OnlineAssessments",
+    "OphthalmologicalServices",
+    "OphthalmologicServices",
+    "Outpatient",
+    "OutpatientConsultation",
+    "OutpatientEncountersForPreventiveCare",
+    "PalliativeCareEncounter",
+    "PatientProviderInteraction",
+    "PhysicalTherapyEvaluation",
+    "PreventiveCare_EstablishedOfficeVisit_0To17",
+    "PreventiveCareServices_InitialOfficeVisit_0To17",
+    "PreventiveCareServicesEstablishedOfficeVisit_18AndUp",
+    "PreventiveCareServicesGroupCounseling",
+    "PreventiveCareServicesIndividualCounseling",
+    "PreventiveCareServicesInitialOfficeVisit_18AndUp",
+    "PreventiveCareServicesOther",
+    "Psychoanalysis",
+    "PsychotherapyAndPharmacologicManagement",
+    "PsychVisitDiagnosticEvaluation",
+    "PsychVisitFamilyPsychotherapy",
+    "PsychVisitPsychotherapy",
+    "SpeechAndHearingEvaluation",
+    "TelehealthServices",
+    "TelephoneVisits",
+)
