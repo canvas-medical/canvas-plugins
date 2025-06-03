@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -203,4 +201,12 @@ class BmiRatio(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "BestCorrectedVisualAcuityExamUsingSnellenChart",
+    "BmiPercentile",
+    "BmiRatio",
+    "HeartRate",
+    "Height",
+    "RetinalOrDilatedEyeExam",
+    "Weight",
+)

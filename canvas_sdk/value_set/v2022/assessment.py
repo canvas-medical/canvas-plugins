@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -217,4 +215,13 @@ class HistoryOfHipFractureInParent(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "AverageNumberOfDrinksPerDrinkingDay",
+    "FallsScreening",
+    "HistoryOfHipFractureInParent",
+    "Phq9AndPhq9MTools",
+    "SexuallyActive",
+    "StandardizedPainAssessmentTool",
+    "StandardizedToolsForAssessmentOfCognition",
+    "TobaccoUseScreening",
+)

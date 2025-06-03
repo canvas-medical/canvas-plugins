@@ -1,4 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
 from canvas_sdk.value_set.value_set import ValueSet
 
 
@@ -1058,4 +1057,17 @@ class DiabetesOtherClassConditionSuspect(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "Antiarrhythmics",
+    "DiabetesCirculatoryClassConditionSuspect",
+    "DiabetesEyeClassConditionSuspect",
+    "DiabetesEyeConditionSuspect",
+    "DiabetesNeurologicConditionSuspect",
+    "DiabetesOtherClassConditionSuspect",
+    "DiabetesRenalConditionSuspect",
+    "DiabetesWithoutComplication",
+    "DysrhythmiaClassConditionSuspect",
+    "Hcc005v1AnnualWellnessVisit",
+    "HypertensiveChronicKidneyDisease",
+    "LabReportCreatinine",
+)

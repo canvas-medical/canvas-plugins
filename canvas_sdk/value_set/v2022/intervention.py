@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -1334,4 +1332,31 @@ class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "AlcoholAndDrugDependenceTreatment",
+    "CognitiveAssessment",
+    "CounselingForNutrition",
+    "CounselingForPhysicalActivity",
+    "DialysisEducation",
+    "DietaryRecommendations",
+    "FollowUpForAboveNormalBmi",
+    "FollowUpForAdolescentDepression",
+    "FollowUpForAdultDepression",
+    "FollowUpForBelowNormalBmi",
+    "FollowUpWithin4Weeks",
+    "HospiceCareAmbulatory",
+    "LifestyleRecommendation",
+    "OtherServicesRelatedToDialysis",
+    "PalliativeCareIntervention",
+    "PalliativeOrHospiceCare",
+    "PsychVisitPsychotherapy",
+    "RecommendationToIncreasePhysicalActivity",
+    "Referral",
+    "ReferralForAdolescentDepression",
+    "ReferralForAdultDepression",
+    "ReferralOrCounselingForAlcoholConsumption",
+    "ReferralsWhereWeightAssessmentMayOccur",
+    "ReferralToPrimaryCareOrAlternateProvider",
+    "TobaccoUseCessationCounseling",
+    "WeightReductionRecommended",
+)

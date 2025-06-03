@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -4041,4 +4039,46 @@ class FluorideVarnishApplicationForChildren(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "BilateralMastectomy",
+    "Cabg_PciProcedure",
+    "CabgSurgeries",
+    "CardiacSurgery",
+    "CarotidIntervention",
+    "CataractSurgery",
+    "ChemotherapyAdministration",
+    "Colonoscopy",
+    "CystectomyForUrologyCare",
+    "DialysisServices",
+    "DtapVaccineAdministered",
+    "FlexibleSigmoidoscopy",
+    "FluorideVarnishApplicationForChildren",
+    "GastricBypassSurgery",
+    "Hemodialysis",
+    "HepatitisAVaccineAdministered",
+    "HepatitisBVaccineAdministered",
+    "HibVaccine3DoseScheduleAdministered",
+    "HibVaccine4DoseScheduleAdministered",
+    "HysterectomyWithNoResidualCervix",
+    "InactivatedPolioVaccineIpvAdministered",
+    "InfluenzaVaccination",
+    "InfluenzaVaccineAdministered",
+    "InfluenzaVirusLaivProcedure",
+    "KidneyTransplant",
+    "Measles_MumpsAndRubellaMmrVaccineAdministered",
+    "Pci",
+    "PeritonealDialysis",
+    "PneumococcalConjugateVaccineAdministered",
+    "PrimaryThaProcedure",
+    "PrimaryTkaProcedure",
+    "ProceduresUsedToIndicateSexualActivity",
+    "ProstateCancerTreatment",
+    "RadiationTreatmentManagement",
+    "RotavirusVaccine2DoseScheduleAdministered",
+    "RotavirusVaccine3DoseScheduleAdministered",
+    "SalvageTherapy",
+    "TotalColectomy",
+    "UnilateralMastectomyLeft",
+    "UnilateralMastectomyRight",
+    "VaricellaZosterVaccineVzvAdministered",
+)

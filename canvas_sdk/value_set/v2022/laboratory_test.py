@@ -1,5 +1,3 @@
-from canvas_sdk.value_set._utilities import get_overrides
-
 from ..value_set import ValueSet
 
 
@@ -1252,4 +1250,30 @@ class HumanImmunodeficiencyVirusHivLaboratoryTestCodesAbAndAg(ValueSet):
     }
 
 
-__exports__ = get_overrides(locals())
+__exports__ = (
+    "AntiHepatitisAIggAntigenTest",
+    "AntiHepatitisBVirusSurfaceAb",
+    "ChlamydiaScreening",
+    "FecalOccultBloodTestFobt",
+    "FitDna",
+    "GroupAStreptococcusTest",
+    "Hba1CLaboratoryTest",
+    "HpvTest",
+    "HumanImmunodeficiencyVirusHivLaboratoryTestCodesAbAndAg",
+    "LaboratoryTestsForHypertension",
+    "LabTestsDuringPregnancy",
+    "LabTestsForSexuallyTransmittedInfections",
+    "LdlCholesterol",
+    "MeaslesAntibodyTestIggAntibodyPresence",
+    "MeaslesAntibodyTestIggAntibodyTiter",
+    "MumpsAntibodyTestIggAntibodyPresence",
+    "MumpsAntibodyTestIggAntibodyTiter",
+    "PapTest",
+    "PregnancyTest",
+    "ProstateSpecificAntigenTest",
+    "RubellaAntibodyTestIggAntibodyPresence",
+    "RubellaAntibodyTestIggAntibodyTiter",
+    "UrineProteinTests",
+    "VaricellaZosterAntibodyTestIggAntibodyPresence",
+    "VaricellaZosterAntibodyTestIggAntibodyTiter",
+)
