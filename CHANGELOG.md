@@ -1,6 +1,42 @@
 # CHANGELOG
 
 
+## v0.39.0 (2025-06-04)
+
+### Bug Fixes
+
+- Generate protobufs ([#662](https://github.com/canvas-medical/canvas-plugins/pull/662),
+  [`f3bb504`](https://github.com/canvas-medical/canvas-plugins/commit/f3bb504c05d5ebd5530cdfa08fed2e12756a81b8))
+
+- Reduce ValueSet memory usage ([#655](https://github.com/canvas-medical/canvas-plugins/pull/655),
+  [`34d0369`](https://github.com/canvas-medical/canvas-plugins/commit/34d0369193eee98de5f037d3ae8c87dd10ee08c7))
+
+### Features
+
+- Add can_be_snoozed attribute to ProtocolCard
+  ([#639](https://github.com/canvas-medical/canvas-plugins/pull/639),
+  [`4e04612`](https://github.com/canvas-medical/canvas-plugins/commit/4e04612ae115fadb0dc18b0af8fa71baaeea709b))
+
+- Add create form effect and patient metadata data module
+  ([#624](https://github.com/canvas-medical/canvas-plugins/pull/624),
+  [`3f58aac`](https://github.com/canvas-medical/canvas-plugins/commit/3f58aac56946dcfef84eac0aead7245c2b4caba2))
+
+- Add launch modal title property
+  ([#635](https://github.com/canvas-medical/canvas-plugins/pull/635),
+  [`2bf9047`](https://github.com/canvas-medical/canvas-plugins/commit/2bf90476c05de911c7459274f944cf90a9527340))
+
+- Add message effects ([#567](https://github.com/canvas-medical/canvas-plugins/pull/567),
+  [`69d8a4f`](https://github.com/canvas-medical/canvas-plugins/commit/69d8a4f243cdb05e6338fb2f5950b82b776c1d68))
+
+- Patient external identifier events
+  ([#630](https://github.com/canvas-medical/canvas-plugins/pull/630),
+  [`894ad12`](https://github.com/canvas-medical/canvas-plugins/commit/894ad123c85076959cbcdf0ed20ce5f6840af50a))
+
+Signed-off-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
 ## v0.38.0 (2025-05-30)
 
 ### Bug Fixes
