@@ -225,6 +225,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEND_MESSAGE: _ClassVar[EffectType]
     CREATE_AND_SEND_MESSAGE: _ClassVar[EffectType]
     EDIT_MESSAGE: _ClassVar[EffectType]
+    PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -443,6 +444,7 @@ CREATE_MESSAGE: EffectType
 SEND_MESSAGE: EffectType
 CREATE_AND_SEND_MESSAGE: EffectType
 EDIT_MESSAGE: EffectType
+PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
