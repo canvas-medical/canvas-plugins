@@ -44,8 +44,12 @@ class Medication(models.Model):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="medications", null=True
     )
     deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
     status = models.CharField(choices=Status.choices)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
