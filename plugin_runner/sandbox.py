@@ -199,6 +199,7 @@ STANDARD_LIBRARY_MODULES = {
     },
     "typing": {
         "Any",
+        "cast",
         "Dict",
         "Final",
         "Iterable",
