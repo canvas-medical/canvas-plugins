@@ -145,7 +145,7 @@ class PatientContactPoint(models.Model):
     use_notes = models.CharField()
     rank = models.IntegerField()
     state = models.CharField(choices=ContactPointState.choices)
-    patient = models.ForeignKey(
+    patient = models.ForeignKey[Patient](
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom", null=True
     )
     has_consent = models.BooleanField()
@@ -177,7 +177,7 @@ class PatientAddress(models.Model):
     end = models.DateField()
     country = models.CharField()
     state = models.CharField(choices=AddressState.choices)
-    patient = models.ForeignKey(
+    patient = models.ForeignKey[Patient](
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="addresses", null=True
     )
 
