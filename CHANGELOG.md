@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.40.0 (2025-06-10)
+
+### Bug Fixes
+
+- Correct a typo ([#663](https://github.com/canvas-medical/canvas-plugins/pull/663),
+  [`964b60b`](https://github.com/canvas-medical/canvas-plugins/commit/964b60b49a7f5c3db18b45c6307be268ac391f01))
+
+### Features
+
+- Add `cast` to allowed imports ([#666](https://github.com/canvas-medical/canvas-plugins/pull/666),
+  [`e0be57d`](https://github.com/canvas-medical/canvas-plugins/commit/e0be57dc9b0f42b41bb3bdb67c059f5621184e12))
+
+- Add PLUGIN_POOL_DEBUG and thread_cleanup
+  ([#637](https://github.com/canvas-medical/canvas-plugins/pull/637),
+  [`ba3902d`](https://github.com/canvas-medical/canvas-plugins/commit/ba3902d719d1568951fda23de823795acef127fe))
+
+
 ## v0.39.0 (2025-06-04)
 
 ### Bug Fixes
