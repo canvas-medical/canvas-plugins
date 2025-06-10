@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.40.1 (2025-06-10)
+
+### Bug Fixes
+
+- Allow non-protocol imports, add tests
+  ([#677](https://github.com/canvas-medical/canvas-plugins/pull/677),
+  [`98a2c61`](https://github.com/canvas-medical/canvas-plugins/commit/98a2c61b95081cc792cdcba41a0266c839a98870))
+
+
 ## v0.40.0 (2025-06-10)
 
 ### Bug Fixes
