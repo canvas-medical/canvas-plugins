@@ -22,6 +22,16 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+
+                "class": "test_caching_api.protocols.my_protocol:CacheImport",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],

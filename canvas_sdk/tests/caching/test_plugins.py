@@ -17,7 +17,9 @@ if typing.TYPE_CHECKING:
 
 
 @pytest.fixture
-def mock_plugin_caller(mocker: "MockerFixture", request: "Any") -> str:
+def mock_plugin_caller(
+    mocker: "MockerFixture", request: "Any"
+) -> typing.Generator[str, None, None]:
     """A fixture that mocks plugin_only decorator.
     It generates a random plugin name and patches the plugin_only to simulate plugin behavior.
     """
@@ -42,7 +44,10 @@ def mock_plugin_caller(mocker: "MockerFixture", request: "Any") -> str:
     # Reload the canvas_sdk.caching.plugins module to apply the mock
     importlib.reload(canvas_sdk.caching.plugins)
 
-    return plugin_name
+    yield plugin_name
+    # Cleanup: Unpatch the plugin_only decorator after the test
+    mocker.stopall()
+    importlib.reload(canvas_sdk.caching.plugins)
 
 
 def test_get_cache_returns_the_correct_cache_client(
@@ -84,6 +89,17 @@ def test_plugin_access_to_private_properties_cache_is_forbidden(
         "test_caching_api:test_caching_api.protocols.my_protocol:ForbiddenProtocol"
         not in LOADED_PLUGINS
     )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_caching_api"], indirect=True)
+def test_plugin_import_cache_from_other_modules_within_plugin(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that plugin can import cache from other modules within the plugin package."""
+    plugin = LOADED_PLUGINS["test_caching_api:test_caching_api.protocols.my_protocol:CacheImport"]
+    effects = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert effects[0].payload == "bar"
 
 
 def test_plugin_caller_name_cannot_be_set(
