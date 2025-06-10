@@ -17,11 +17,14 @@ if typing.TYPE_CHECKING:
 
 
 @pytest.fixture
-def mock_plugin_caller(mocker: "MockerFixture", request: "Any") -> str:
+def mock_plugin_caller(
+    mocker: "MockerFixture",
+    request: "Any",
+) -> typing.Generator[str, None, None]:
     """A fixture that mocks plugin_only decorator.
     It generates a random plugin name and patches the plugin_only to simulate plugin behavior.
     """
-    plugin_name = "".join(random.choice(string.ascii_lowercase) for i in range(10))
+    plugin_name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
 
     def patched_plugin_only(
         func: typing.Callable[..., typing.Any],
@@ -42,7 +45,10 @@ def mock_plugin_caller(mocker: "MockerFixture", request: "Any") -> str:
     # Reload the canvas_sdk.caching.plugins module to apply the mock
     importlib.reload(canvas_sdk.caching.plugins)
 
-    return plugin_name
+    yield plugin_name
+    # Cleanup: Unpatch the plugin_only decorator after the test
+    mocker.stopall()
+    importlib.reload(canvas_sdk.caching.plugins)
 
 
 def test_get_cache_returns_the_correct_cache_client(
