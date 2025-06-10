@@ -868,7 +868,13 @@ class Sandbox:
         # evaluate the module in the sandbox if needed
         self._evaluate_module(name)
 
-        return __import__(name, globals, locals, fromlist, level)
+        imported_module = __import__(name, globals, locals, fromlist, level)
+
+        # If the module is part of the plugin, mark it as a plugin module
+        if self._same_module(name):
+            imported_module.__is_plugin__ = True  # type: ignore[attr-defined]
+
+        return imported_module
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""
