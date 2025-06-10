@@ -74,6 +74,13 @@ def test_plugin_successfully_sets_gets_key_value_in_cache(
 
     assert effects[0].payload == "bar"
 
+    plugin = LOADED_PLUGINS[
+        "test_caching_api:test_caching_api.protocols.my_secondary_protocol:Protocol"
+    ]
+    effects = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+
+    assert effects[0].payload == "bar2bar3"
+
 
 @pytest.mark.parametrize("install_test_plugin", ["test_caching_api"], indirect=True)
 def test_plugin_access_to_private_properties_cache_is_forbidden(
