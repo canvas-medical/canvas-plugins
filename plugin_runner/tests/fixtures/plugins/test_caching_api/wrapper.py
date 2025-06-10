@@ -2,6 +2,8 @@ from typing import Any
 
 from canvas_sdk.caching.plugins import get_cache
 
+test_cache = get_cache()
+
 
 def wrapped_get_cache(*args: Any, **kwargs: Any) -> Any:
     """
