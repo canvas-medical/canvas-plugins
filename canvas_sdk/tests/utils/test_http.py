@@ -35,6 +35,8 @@ def test_http_get_json(mock_get: MagicMock) -> None:
         timeout=30,
     )
 
+    assert ontologies_http._session.headers.get("Authorization") == "TEST_PSK"
+
     assert response.status_code == 200
     assert response.json() == {"abc": 123}
 

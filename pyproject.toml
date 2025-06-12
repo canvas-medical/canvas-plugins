@@ -9,6 +9,7 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
+  "pytest-env>=1.1.5",
   "pytest-mock",
   "python-semantic-release",
   "requests-mock",
@@ -118,6 +119,7 @@ init_typed = true
 
 [tool.pytest.ini_options]
 addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
+env = ["PRE_SHARED_KEY=TEST_PSK"]
 filterwarnings = [
   'ignore:No directory at.*static.*:UserWarning:whitenoise.base',
   'ignore:SelectableGroups dict interface is deprecated. .*:DeprecationWarning'
