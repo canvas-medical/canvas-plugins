@@ -37,16 +37,12 @@ class PatientExternalIdentifier:
 
     system: str
     value: str
-    issued_date: datetime.date | None = None
-    expiration_date: datetime.date | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the external identifier to a dictionary."""
         return {
             "system": self.system,
             "value": self.value,
-            "issued_date": self.issued_date.isoformat() if self.issued_date else None,
-            "expiration_date": self.expiration_date.isoformat() if self.expiration_date else None,
         }
 
 class Patient(TrackableFieldsModel):
