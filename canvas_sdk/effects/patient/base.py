@@ -31,6 +31,23 @@ class PatientContactPoint:
             "has_consent": self.has_consent,
         }
 
+@dataclass
+class PatientExternalIdentifier:
+    """A class representing a patient external identifier."""
+
+    system: str
+    value: str
+    issued_date: datetime.date | None = None
+    expiration_date: datetime.date | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the external identifier to a dictionary."""
+        return {
+            "system": self.system,
+            "value": self.value,
+            "issued_date": self.issued_date.isoformat() if self.issued_date else None,
+            "expiration_date": self.expiration_date.isoformat() if self.expiration_date else None,
+        }
 
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
@@ -53,6 +70,7 @@ class Patient(TrackableFieldsModel):
     default_provider_id: str | None = None
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
+    external_identifiers: list[PatientExternalIdentifier] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -74,6 +92,9 @@ class Patient(TrackableFieldsModel):
             "default_provider": self.default_provider_id,
             "contact_points": [cp.to_dict() for cp in self.contact_points]
             if self.contact_points
+            else None,
+            "external_identifiers": [ids.to_dict() for ids in self.external_identifiers]
+            if self.external_identifiers
             else None,
         }
 
@@ -120,4 +141,4 @@ class Patient(TrackableFieldsModel):
         )
 
 
-__exports__ = ("Patient", "PatientContactPoint")
+__exports__ = ("Patient", "PatientContactPoint", "PatientExternalIdentifier")
