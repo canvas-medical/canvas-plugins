@@ -3,7 +3,6 @@ from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Patient
-from logger import log
 
 
 # Inherit from BaseHandler to properly get registered for events
@@ -18,10 +17,9 @@ class Handler(BaseHandler):
         background_color = self.secrets["BACKGROUND_COLOR"]
         if not background_color:
             background_color = "rgb(12, 98, 72)"
-        log.info(f"Patient: {patient}, Background Color: {background_color}")
 
         payload = {
-            "patient": str(patient),
+            "patient": patient.preferred_full_name,
             "background_color": background_color,
         }
 
