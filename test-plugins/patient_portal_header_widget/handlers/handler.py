@@ -11,7 +11,7 @@ class Handler(BaseHandler):
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__WIDGET_CONFIGURATION)
 
-    def compute(self):
+    def compute(self) -> list[PortalWidget]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         patient = Patient.objects.get(id=self.target)
         background_color = self.secrets["BACKGROUND_COLOR"]
