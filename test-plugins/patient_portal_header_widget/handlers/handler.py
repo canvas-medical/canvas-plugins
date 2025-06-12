@@ -1,3 +1,4 @@
+from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects.widgets import PortalWidget
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
@@ -11,7 +12,7 @@ class Handler(BaseHandler):
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__WIDGET_CONFIGURATION)
 
-    def compute(self) -> list[PortalWidget]:
+    def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         patient = Patient.objects.get(id=self.target)
         background_color = self.secrets["BACKGROUND_COLOR"]
