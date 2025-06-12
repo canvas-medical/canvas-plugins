@@ -104,7 +104,7 @@
         <!-- Cards Container -->
         <div class="cards-container">
             <!-- Question Card -->
-            <div class="card" onclick="navigate('http://localhost:8000/app/messaging')">
+            <div class="card" onclick="navigateTo('http://localhost:8000/app/messaging')">
                 <div class="icon-container">
                     <!-- Chat icon -->
                     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%"
@@ -137,7 +137,7 @@
             </div>
 
             <!-- Schedule Card -->
-            <div class="card" onclick="navigate('http://localhost:8000/app/appointments/create')">
+            <div class="card" onclick="navigateTo('http://localhost:8000/app/appointments/create')">
                 <div class="icon-container">
                     <!-- Video icon -->
                     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%"
@@ -172,13 +172,8 @@
     </div>
 
     <script>
-        function navigate(location) {
+        function navigateTo(location) {
             window.top.location.href = location;
-
-            window.postMessage({
-                type: 'navigate',
-                url: location
-            });
         }
     </script>
 </body>
