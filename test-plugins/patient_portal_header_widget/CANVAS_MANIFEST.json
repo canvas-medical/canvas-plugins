@@ -7,7 +7,7 @@
         "protocols": [
             {
                 "class": "patient_portal_header_widget.handlers.handler:Handler",
-                "description": "A protocol that does xyz...",
+                "description": "The handler that listens for the patient portal events and renders the header widget.",
                 "data_access": {
                     "event": "",
                     "read": [],
