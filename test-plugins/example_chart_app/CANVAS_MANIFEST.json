@@ -1,0 +1,39 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_chart_app",
+    "description": "Used to test various canvas plugins functionality",
+    "url_permissions": [],
+    "components": {
+        "protocols": [
+            {
+                "class": "example_chart_app.applications.my_application:MyApi",
+                "description": "Provides api for the application",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "applications": [
+            {
+                "class": "example_chart_app.applications.my_application:MyChartApplication",
+                "name": "Example Chart App",
+                "description": "Show a custom, interactive UI in the chart",
+                "scope": "patient_specific",
+                "icon": "assets/rx.png"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
