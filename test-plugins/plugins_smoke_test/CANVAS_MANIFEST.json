@@ -1,0 +1,44 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "plugins_smoke_test",
+    "description": "Used to test various canvas plugins functionality",
+    "url_permissions": [
+        {
+            "url": "https://www.canvasmedical.com/extensions",
+            "permissions": []
+        }
+    ],
+    "components": {
+        "protocols": [
+            {
+                "class": "plugins_smoke_test.applications.my_application:SmokeTestApi",
+                "description": "Provides api for the application",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "applications": [
+            {
+                "class": "plugins_smoke_test.applications.my_application:MyGlobalApplication",
+                "name": "Smoke Test",
+                "description": "Test various canvas plugins functionality",
+                "scope": "global",
+                "icon": "assets/test-pattern.png"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
