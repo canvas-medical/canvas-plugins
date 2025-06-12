@@ -1,4 +1,4 @@
-from canvas_generated.messages.effects_pb2 import Effect
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.widgets import PortalWidget
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
@@ -20,7 +20,7 @@ class Handler(BaseHandler):
             background_color = "rgb(12, 98, 72)"
 
         payload = {
-            "patient": patient.preferred_full_name,
+            "preferred_full_name": patient.preferred_full_name,
             "background_color": background_color,
         }
 
