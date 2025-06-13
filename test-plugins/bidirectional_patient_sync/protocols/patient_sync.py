@@ -1,4 +1,6 @@
+import json
 from http import HTTPStatus
+from typing import Any, cast
 
 import arrow
 
@@ -19,6 +21,8 @@ BRIDGE_SANDBOX = "https://app.usebridge.xyz"
 
 
 class PatientSync(BaseProtocol):
+    """Protocol for synchronizing patient data between systems."""
+
     RESPONDS_TO = [
         EventType.Name(EventType.PATIENT_CREATED),
         EventType.Name(EventType.PATIENT_UPDATED),
@@ -30,20 +34,24 @@ class PatientSync(BaseProtocol):
     ]
 
     @property
-    def bridge_api_base_url(self):
+    def bridge_api_base_url(self) -> str:
+        """Return the base URL for the Bridge API."""
         return self.sanitize_url(self.secrets["BRIDGE_API_BASE_URL"] or f"{BRIDGE_SANDBOX}/api")
 
     @property
-    def bridge_ui_base_url(self):
+    def bridge_ui_base_url(self) -> str:
+        """Return the base URL for the Bridge UI."""
         return self.sanitize_url(self.secrets["BRIDGE_UI_BASE_URL"] or BRIDGE_SANDBOX)
 
     @property
-    def bridge_request_headers(self):
+    def bridge_request_headers(self) -> dict[str, str]:
+        """Return the request headers for Bridge API requests."""
         bridge_secret_api_key = self.secrets["BRIDGE_SECRET_API_KEY"]
         return {"X-API-Key": bridge_secret_api_key}
 
     @property
-    def bridge_patient_metadata(self):
+    def bridge_patient_metadata(self) -> dict[str, str | None]:
+        """Return metadata for the Bridge patient."""
         metadata = {"canvasPatientId": self.get_patient_id()}
 
         canvas_url = self.secrets["CANVAS_BASE_URL"]
@@ -52,27 +60,33 @@ class PatientSync(BaseProtocol):
 
         return metadata
 
-    def get_patient_id(self):
+    def get_patient_id(self) -> str | None:
+        """Get the patient ID from the event."""
         if self.event.type in [EventType.PATIENT_CREATED, EventType.PATIENT_UPDATED]:
             return self.target
         # elif self.event.type in [EventType.PATIENT_ADDRESS_CREATED, EventType.PATIENT_ADDRESS_UPDATED]:
         #     address_id = self.target
         #     address = PatientAddress.objects.get(id=address_id)
         #     return address.patient.id
+        return None
 
-    def get_system_id(self, canvas_patient, system):
+    def get_system_id(self, canvas_patient: Patient, system: str) -> str | None:
+        """Get the system ID for a given patient and system."""
         # If the patient already has a system external identifier, use the first one
         if canvas_patient.external_identifiers.filter(system=system).count() > 0:
-            return canvas_patient.external_identifiers(system=system)[0].value
+            return canvas_patient.external_identifiers.filter(system=system)[0].value
+        return None
 
-    def system_patient_lookup(self, canvas_patient_id):
+    def system_patient_lookup(self, canvas_patient_id: str) -> Any:
+        """Look up a patient in the external system."""
         http = Http()
         return http.get(
             f"{self.bridge_api_base_url}/patients/v2/{canvas_patient_id}",
             headers=self.bridge_request_headers,
         )
 
-    def compute(self):
+    def compute(self) -> list[Effect]:
+        """Compute the sync actions for the patient."""
         event_type = self.event.type
         canvas_patient_id = self.get_patient_id()
 
@@ -88,17 +102,18 @@ class PatientSync(BaseProtocol):
 
         update_patient_external_identifier = False
         # if it's a patient update, check if external system ID exists and needs to be added to the model
-        if event_type in [EventType.PATIENT_UPDATED]:
-            if not system_patient_id:
-                # Get the third party ID by seeing if they exist in third party
-                get_system_patient = self.system_patient_lookup(canvas_patient_id)
+        if (
+            event_type in [EventType.PATIENT_UPDATED]
+            and not system_patient_id
+            and canvas_patient_id is not None
+        ):
+            # Get the third party ID by seeing if they exist in third party
+            get_system_patient = self.system_patient_lookup(canvas_patient_id)
 
-                system_patient_id = (
-                    get_system_patient.json()["id"]
-                    if get_system_patient.status_code == 200
-                    else None
-                )
-                update_patient_external_identifier = True if system_patient_id else False
+            system_patient_id = (
+                get_system_patient.json()["id"] if get_system_patient.status_code == 200 else None
+            )
+            update_patient_external_identifier = bool(system_patient_id)
 
         # Great, now we know if the patient has a third party ID and if we need to update it.
         # At this point it can be 3 values: None, value from Canvas, or value from third party
@@ -124,7 +139,7 @@ class PatientSync(BaseProtocol):
         if event_type == EventType.PATIENT_CREATED:
             # Add placeholder email when creating the Bridge patient since it's required
             bridge_payload["email"] = "patient_" + canvas_patient.id + "@canvasmedical.com"
-            bridge_payload["metadata"] = self.bridge_patient_metadata
+            bridge_payload["metadata"] = json.dumps(self.bridge_patient_metadata)
 
         base_request_url = f"{self.bridge_api_base_url}/patients/v2"
 
@@ -139,10 +154,12 @@ class PatientSync(BaseProtocol):
 
         resp = http.post(request_url, json=bridge_payload, headers=self.bridge_request_headers)
 
-        if event_type == EventType.PATIENT_CREATED and resp.status_code == 409:
+        bridge_patient_exists = resp.status_code == 409
+
+        if event_type == EventType.PATIENT_CREATED and bridge_patient_exists:
             log.info(f">>> Bridge patient already exists for {canvas_patient_id}")
             return []
-        elif update_patient_external_identifier == True:
+        elif update_patient_external_identifier:
             # queue up an effect to update the patient in canvas and add the external ID
             log.info(
                 f">>> Call PatientExternalIdentifierEffect to add system external identifier {system_patient_id} to patient"
@@ -194,16 +211,20 @@ class PatientSync(BaseProtocol):
 
         return [sync_banner.apply()]
 
-    def sanitize_url(self, url):
+    def sanitize_url(self, url: str) -> str:
+        """Remove a trailing slash from a URL if present."""
         # Remove a trailing forward slash since our request paths will start with '/'
         return url[:-1] if url[-1] == "/" else url
 
 
 class PatientSyncApi(SimpleAPI):
+    """API for bidirectional patient sync."""
+
     # https://<instance-name>.canvasmedical.com/plugin-io/api/bidirectional-patient-sync
     # /patients
 
     def authenticate(self, credentials: Credentials) -> bool:
+        """Authenticate with the provided credentials."""
         # api_key = self.secrets["my_canvas_api_key"]
         # log.info(f'PatientSyncApi.post: authenticating with API key {api_key}')
 
@@ -212,6 +233,7 @@ class PatientSyncApi(SimpleAPI):
     # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
     @api.post("/patients")
     def post(self) -> list[Response | Effect]:
+        """Handle POST requests for patient sync."""
         json_body = self.request.json()
         log.info(f"PatientSyncApi.post: {json_body}")
 
@@ -223,13 +245,13 @@ class PatientSyncApi(SimpleAPI):
             ]
         birthdate = None
         date_of_birth_str = json_body.get("dateOfBirth")
-        if date_of_birth_str:
+        if isinstance(date_of_birth_str, str) and date_of_birth_str:
             birthdate = arrow.get(date_of_birth_str).date()
 
         sex_at_birth = None
         sex_at_birth_str = json_body.get("sexAtBirth")
         if sex_at_birth_str:
-            s = sex_at_birth_str.strip().upper()
+            s = cast(str, sex_at_birth_str).strip().upper()
             if s in ("F", "FEMALE"):
                 sex_at_birth = PersonSex.SEX_FEMALE
             elif s in ("M", "MALE"):
@@ -242,10 +264,20 @@ class PatientSyncApi(SimpleAPI):
                 sex_at_birth = None
 
         # this supports the first external identifier but could be extended to support multiple
+        external_identifiers = json_body.get("externalIdentifiers")
+        if (
+            isinstance(external_identifiers, list)
+            and external_identifiers
+            and isinstance(external_identifiers[0], dict)
+        ):
+            ext_id_dict = external_identifiers[0]
+        else:
+            ext_id_dict = {}
+
         external_id = PatientExternalIdentifierEffect(
-            system=str(json_body.get("externalIdentifiers", [{}])[0].get("system", "Bridge")),
-            issuer=str(json_body.get("externalIdentifiers", [{}])[0].get("issuer", "Bridge")),
-            value=str(json_body.get("externalIdentifiers", [{}])[0].get("id", "")),
+            system=str(ext_id_dict.get("system", "Bridge")),
+            issuer=str(ext_id_dict.get("issuer", "Bridge")),
+            value=str(ext_id_dict.get("id", "")),
         )
 
         patient = PatientEffect(
