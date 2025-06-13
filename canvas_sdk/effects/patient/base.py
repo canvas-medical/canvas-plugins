@@ -31,19 +31,23 @@ class PatientContactPoint:
             "has_consent": self.has_consent,
         }
 
+
 @dataclass
 class PatientExternalIdentifier:
     """A class representing a patient external identifier."""
 
-    system: str
     value: str
+    system: str | None = None
+    issuer: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the external identifier to a dictionary."""
         return {
             "system": self.system,
             "value": self.value,
+            "issuer": self.issuer,
         }
+
 
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
