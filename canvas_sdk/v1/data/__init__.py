@@ -10,7 +10,6 @@ from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
-from .instruction import Instruction, InstructionCoding
 from .lab import (
     LabOrder,
     LabOrderReason,
@@ -79,8 +78,6 @@ __all__ = __exports__ = (
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
-    "Instruction",
-    "InstructionCoding",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",

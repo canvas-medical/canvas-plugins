@@ -3,7 +3,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
-from canvas_sdk.v1.data import Command, Instruction
+from canvas_sdk.v1.data import Command
 
 
 class InstructCommand(BaseCommand):
@@ -20,8 +20,7 @@ class InstructCommand(BaseCommand):
 
         if method == "commit" and self.command_uuid:
             cmd = Command.objects.get(id=self.command_uuid)
-            instruction = Instruction.objects.get(dbid=cmd.anchor_object_dbid)
-            if not instruction.coding:
+            if not cmd.data.get("coding"):
                 errors.append(
                     self._create_error_detail(
                         "value",
