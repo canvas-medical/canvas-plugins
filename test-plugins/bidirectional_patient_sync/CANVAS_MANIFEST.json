@@ -1,0 +1,44 @@
+{
+    "sdk_version": "0.40.0",
+    "plugin_version": "0.0.1",
+    "name": "bidirectional_patient_sync",
+    "description": "Bidirectional patient synchronization between Canvas and 3rd party systems",
+    "components": {
+        "protocols": [
+            {
+                "class": "bidirectional_patient_sync.protocols.patient_sync:PatientSync",
+                "description": "Create or update patients in an external system based on creation or changes to patients in Canvas",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "bidirectional_patient_sync.protocols.patient_sync:PatientSyncApi",
+                "description": "Create a patient in Canvas when a user is created in an external system",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [
+        "BRIDGE_UI_BASE_URL",
+        "BRIDGE_API_BASE_URL",
+        "BRIDGE_SECRET_API_KEY",
+        "CANVAS_BASE_URL"
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
