@@ -44,7 +44,7 @@ dependencies = [
   "sentry-sdk>=2.25.1",
   "statsd>=4.0.1,<5",
   "typer",
-  "typing-extensions>=4.8,<4.13",
+  "typing-extensions>=4.8,<4.15",
   "websocket-client>=1.7.0,<2"
 ]
 description = "SDK to customize event-driven actions in your Canvas instance"
