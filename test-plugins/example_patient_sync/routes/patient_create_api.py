@@ -58,19 +58,12 @@ class PatientCreateApi(SimpleAPI):
                 sex_at_birth = None
 
         # this supports the first external identifier but could be extended to support multiple
-        external_identifiers = json_body.get("externalIdentifiers")
-        if (
-            isinstance(external_identifiers, list)
-            and external_identifiers
-            and isinstance(external_identifiers[0], dict)
-        ):
-            ext_id_dict = external_identifiers[0]
-        else:
-            ext_id_dict = {}
+        bridge_id = self.request.query_params.get("bridge_identifier")
 
         external_id = PatientExternalIdentifier(
-            system=str(ext_id_dict.get("system", "Bridge")),
-            value=str(ext_id_dict.get("value", "")),
+            issuer="https://canvas.app.usebridge.com",
+            system="https://canvas.app.usebridge.com",
+            value=bridge_id,
         )
 
         patient = Patient(
