@@ -56,9 +56,11 @@ class PatientSync(BaseProtocol):
     def get_system_id(self, canvas_patient: Patient, system: str) -> str | None:
         """Get the system ID for a given patient and system."""
         # If the patient already has a system external identifier, use the first one
-        if canvas_patient.external_identifiers.filter(system=system).count() > 0:
-            return canvas_patient.external_identifiers.filter(system=system)[0].value
-        return None
+        return (
+            canvas_patient.external_identifiers.filter(system=system)
+            .values_list("value", flat=True)
+            .first()
+        )
 
     def system_patient_lookup(self, canvas_patient_id: str) -> Any:
         """Look up a patient in the external system."""
@@ -80,14 +82,14 @@ class PatientSync(BaseProtocol):
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
 
         existing_system_id = self.get_system_id(canvas_patient, "Bridge")
-        system_patient_id = existing_system_id if existing_system_id else None
-        log.info(f">>> Existing system patient ID: {system_patient_id}")
+        log.info(f">>> Existing system patient ID: {existing_system_id}")
 
+        system_patient_id = existing_system_id
         update_patient_external_identifier = False
         # if it's a patient update, check if external system ID exists and needs to be added to the model
         if (
             event_type in [EventType.PATIENT_UPDATED]
-            and not system_patient_id
+            and not existing_system_id
             and canvas_patient_id is not None
         ):
             # Get the third party ID by seeing if they exist in third party
@@ -119,7 +121,7 @@ class PatientSync(BaseProtocol):
 
         if event_type == EventType.PATIENT_CREATED:
             # Add placeholder email when creating the Bridge patient since it's required
-            bridge_payload["email"] = "patient_" + canvas_patient.id + "@canvasmedical.com"
+            bridge_payload["email"] = f"patient_{canvas_patient.id}@canvasmedical.com"
             bridge_payload["metadata"] = json.dumps(self.bridge_patient_metadata)
 
         base_request_url = f"{self.bridge_api_base_url}/patients/v2"
