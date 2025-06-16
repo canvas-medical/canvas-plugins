@@ -59,4 +59,4 @@ class BaseHandler(ABC):
         return True
 
 
-__exports__ = ("BaseHandler",)
+__exports__ = ("BaseHandler", "version")

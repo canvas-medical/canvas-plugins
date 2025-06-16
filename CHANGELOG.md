@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.41.0 (2025-06-13)
+
+### Documentation
+
+- Add more example plugins ([#687](https://github.com/canvas-medical/canvas-plugins/pull/687),
+  [`8c9dadf`](https://github.com/canvas-medical/canvas-plugins/commit/8c9dadfc7edcbe8babd570b54ed333983867d1a7))
+
+### Features
+
+- Export installed SDK version ([#654](https://github.com/canvas-medical/canvas-plugins/pull/654),
+  [`d9dbb49`](https://github.com/canvas-medical/canvas-plugins/commit/d9dbb4940fa75401a9eefa9d712e01eba2713e7b))
+
+
 ## v0.40.1 (2025-06-10)
 
 ### Bug Fixes
