@@ -4,8 +4,7 @@ from typing import cast
 import arrow
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.patient import Patient as PatientEffect
-from canvas_sdk.effects.patient import PatientExternalIdentifier as PatientExternalIdentifierEffect
+from canvas_sdk.effects.patient import Patient, PatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
@@ -19,6 +18,7 @@ class PatientCreateApi(SimpleAPI):
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate with the provided credentials."""
+        # TODO: fix this before merging
         # api_key = self.secrets["my_canvas_api_key"]
         # log.info(f'PatientCreateApi.post: authenticating with API key {api_key}')
         return True
@@ -68,12 +68,12 @@ class PatientCreateApi(SimpleAPI):
         else:
             ext_id_dict = {}
 
-        external_id = PatientExternalIdentifierEffect(
+        external_id = PatientExternalIdentifier(
             system=str(ext_id_dict.get("system", "Bridge")),
             value=str(ext_id_dict.get("value", "")),
         )
 
-        patient = PatientEffect(
+        patient = Patient(
             birthdate=birthdate,
             first_name=str(json_body.get("firstName")),
             last_name=str(json_body.get("lastName")),
