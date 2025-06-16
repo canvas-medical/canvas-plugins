@@ -15,7 +15,7 @@
                 }
             },
             {
-                "class": "example_patient_sync.protocols.patient_sync:PatientCreateApi",
+                "class": "example_patient_sync.routes.patient_create_api:PatientCreateApi",
                 "description": "Create a patient in Canvas when a user is created in an external system",
                 "data_access": {
                     "event": "",

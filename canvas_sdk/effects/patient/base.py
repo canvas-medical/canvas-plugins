@@ -38,14 +38,12 @@ class PatientExternalIdentifier:
 
     value: str
     system: str | None = None
-    issuer: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the external identifier to a dictionary."""
         return {
             "system": self.system,
             "value": self.value,
-            "issuer": self.issuer,
         }
 
 
