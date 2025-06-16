@@ -70,8 +70,7 @@ class PatientCreateApi(SimpleAPI):
 
         external_id = PatientExternalIdentifierEffect(
             system=str(ext_id_dict.get("system", "Bridge")),
-            issuer=str(ext_id_dict.get("issuer", "Bridge")),
-            value=str(ext_id_dict.get("id", "")),
+            value=str(ext_id_dict.get("value", "")),
         )
 
         patient = PatientEffect(
