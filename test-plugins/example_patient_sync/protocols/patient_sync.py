@@ -1,19 +1,11 @@
 import json
-from http import HTTPStatus
-from typing import Any, cast
-
-import arrow
+from typing import Any
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert
-from canvas_sdk.effects.patient import Patient as PatientEffect
-from canvas_sdk.effects.patient import PatientExternalIdentifier as PatientExternalIdentifierEffect
-from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.events import EventType
-from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.utils import Http
-from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
@@ -26,11 +18,6 @@ class PatientSync(BaseProtocol):
     RESPONDS_TO = [
         EventType.Name(EventType.PATIENT_CREATED),
         EventType.Name(EventType.PATIENT_UPDATED),
-        # leaving as a TODO for now to focus on the bidirectionality of the sync:
-        # EventType.Name(EventType.PATIENT_CONTACT_POINT_CREATED),
-        # EventType.Name(EventType.PATIENT_CONTACT_POINT_UPDATED),
-        # EventType.Name(EventType.PATIENT_ADDRESS_CREATED),
-        # EventType.Name(EventType.PATIENT_ADDRESS_UPDATED),
     ]
 
     @property
@@ -64,10 +51,6 @@ class PatientSync(BaseProtocol):
         """Get the patient ID from the event."""
         if self.event.type in [EventType.PATIENT_CREATED, EventType.PATIENT_UPDATED]:
             return self.target
-        # elif self.event.type in [EventType.PATIENT_ADDRESS_CREATED, EventType.PATIENT_ADDRESS_UPDATED]:
-        #     address_id = self.target
-        #     address = PatientAddress.objects.get(id=address_id)
-        #     return address.patient.id
         return None
 
     def get_system_id(self, canvas_patient: Patient, system: str) -> str | None:
@@ -127,13 +110,11 @@ class PatientSync(BaseProtocol):
 
         # Generate the payload for creating or updating the patient in third party API
         # regardless of the event type (create or update)
-        # TODO: Pass contacts and address here
         bridge_payload = {
             "externalId": canvas_patient.id,
             "firstName": canvas_patient.first_name,
             "lastName": canvas_patient.last_name,
             "dateOfBirth": canvas_patient.birth_date.isoformat(),
-            # 'telecom': [self.serialize_contact_point(contact_point)] if contact_point else [],
         }
 
         if event_type == EventType.PATIENT_CREATED:
@@ -160,6 +141,7 @@ class PatientSync(BaseProtocol):
             log.info(f">>> Bridge patient already exists for {canvas_patient_id}")
             return []
         elif update_patient_external_identifier:
+            # TODO: enable this functionality when KOALA-2956 is implemented
             # queue up an effect to update the patient in canvas and add the external ID
             log.info(
                 f">>> Call PatientExternalIdentifierEffect to add system external identifier {system_patient_id} to patient"
@@ -215,82 +197,3 @@ class PatientSync(BaseProtocol):
         """Remove a trailing slash from a URL if present."""
         # Remove a trailing forward slash since our request paths will start with '/'
         return url[:-1] if url[-1] == "/" else url
-
-
-class PatientSyncApi(SimpleAPI):
-    """API for bidirectional patient sync."""
-
-    # https://<instance-name>.canvasmedical.com/plugin-io/api/bidirectional-patient-sync
-    # /patients
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate with the provided credentials."""
-        # api_key = self.secrets["my_canvas_api_key"]
-        # log.info(f'PatientSyncApi.post: authenticating with API key {api_key}')
-
-        return True
-
-    # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
-    @api.post("/patients")
-    def post(self) -> list[Response | Effect]:
-        """Handle POST requests for patient sync."""
-        json_body = self.request.json()
-        log.info(f"PatientSyncApi.post: {json_body}")
-
-        if not isinstance(json_body, dict):
-            return [
-                JSONResponse(
-                    content="Invalid JSON body.", status_code=HTTPStatus.BAD_REQUEST
-                ).apply()
-            ]
-        birthdate = None
-        date_of_birth_str = json_body.get("dateOfBirth")
-        if isinstance(date_of_birth_str, str) and date_of_birth_str:
-            birthdate = arrow.get(date_of_birth_str).date()
-
-        sex_at_birth = None
-        sex_at_birth_str = json_body.get("sexAtBirth")
-        if sex_at_birth_str:
-            s = cast(str, sex_at_birth_str).strip().upper()
-            if s in ("F", "FEMALE"):
-                sex_at_birth = PersonSex.SEX_FEMALE
-            elif s in ("M", "MALE"):
-                sex_at_birth = PersonSex.SEX_MALE
-            elif s in ("O", "OTHER"):
-                sex_at_birth = PersonSex.SEX_OTHER
-            elif s in ("U", "UNKNOWN"):
-                sex_at_birth = PersonSex.SEX_UNKNOWN
-            else:
-                sex_at_birth = None
-
-        # this supports the first external identifier but could be extended to support multiple
-        external_identifiers = json_body.get("externalIdentifiers")
-        if (
-            isinstance(external_identifiers, list)
-            and external_identifiers
-            and isinstance(external_identifiers[0], dict)
-        ):
-            ext_id_dict = external_identifiers[0]
-        else:
-            ext_id_dict = {}
-
-        external_id = PatientExternalIdentifierEffect(
-            system=str(ext_id_dict.get("system", "Bridge")),
-            issuer=str(ext_id_dict.get("issuer", "Bridge")),
-            value=str(ext_id_dict.get("id", "")),
-        )
-
-        patient = PatientEffect(
-            birthdate=birthdate,
-            first_name=str(json_body.get("firstName")),
-            last_name=str(json_body.get("lastName")),
-            sex_at_birth=sex_at_birth,
-            external_identifiers=[external_id],
-        )
-        log.info(f"PatientSyncApi.post: patient={patient}")
-
-        # TODO: we need to return the newly created Canvas patient ID ("key") in the response for external systems to save
-        return [
-            patient.create(),
-            JSONResponse(content=str(patient), status_code=HTTPStatus.CREATED).apply(),
-        ]

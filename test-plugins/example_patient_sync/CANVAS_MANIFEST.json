@@ -1,13 +1,13 @@
 {
     "sdk_version": "0.40.0",
     "plugin_version": "0.0.1",
-    "name": "bidirectional_patient_sync",
-    "description": "Bidirectional patient synchronization between Canvas and 3rd party systems",
+    "name": "example_patient_sync",
+    "description": "Example bidirectional patient synchronization between Canvas and a 3rd party system",
     "components": {
         "protocols": [
             {
-                "class": "bidirectional_patient_sync.protocols.patient_sync:PatientSync",
-                "description": "Create or update patients in an external system based on creation or changes to patients in Canvas",
+                "class": "example_patient_sync.protocols.patient_sync:PatientSync",
+                "description": "Create or update patients in an external system based on Canvas events",
                 "data_access": {
                     "event": "",
                     "read": [],
@@ -15,7 +15,7 @@
                 }
             },
             {
-                "class": "bidirectional_patient_sync.protocols.patient_sync:PatientSyncApi",
+                "class": "example_patient_sync.protocols.patient_sync:PatientCreateApi",
                 "description": "Create a patient in Canvas when a user is created in an external system",
                 "data_access": {
                     "event": "",
