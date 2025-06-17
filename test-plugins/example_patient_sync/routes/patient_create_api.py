@@ -11,7 +11,7 @@ from canvas_sdk.v1.data.common import PersonSex
 from logger import log
 
 # This is a client specific instance of the third-party software to sync with Canvas
-PARTNER_URL = "https://canvas.app.usebridge.com"
+PARTNER_URL = "https://canvas.app.usebridge.xyz"
 
 
 class PatientCreateApi(SimpleAPI):
@@ -75,7 +75,7 @@ class PatientCreateApi(SimpleAPI):
         )
         log.info(f"PatientCreateApi.post: patient={patient}")
 
-        response = {"external_identifier": {"url": PARTNER_URL, "value": partner_id}}
+        response = {"external_identifier": {"system": PARTNER_URL, "value": partner_id}}
 
         return [
             patient.create(),

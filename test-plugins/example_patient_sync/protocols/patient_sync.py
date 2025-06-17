@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from canvas_sdk.effects import Effect
@@ -10,6 +9,7 @@ from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
 PARTNER_URL_BASE = "https://app.usebridge.xyz"
+SYSTEM_URL = "https://canvas.app.usebridge.xyz"
 
 
 class PatientSync(BaseProtocol):
@@ -37,7 +37,7 @@ class PatientSync(BaseProtocol):
         return {"X-API-Key": partner_secret_api_key}
 
     @property
-    def partner_patient_metadata(self) -> dict[str, str | None]:
+    def partner_patient_metadata(self) -> Any:
         """Return metadata for creation of the patient on external partner platform."""
         metadata = {"canvasPatientId": self.get_patient_id()}
 
@@ -81,7 +81,7 @@ class PatientSync(BaseProtocol):
 
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
 
-        existing_partner_id = self.get_system_id(canvas_patient, PARTNER_URL_BASE)
+        existing_partner_id = self.get_system_id(canvas_patient, SYSTEM_URL)
         log.info(f">>> Existing system patient ID: {existing_partner_id}")
 
         partner_patient_id = existing_partner_id
@@ -122,7 +122,7 @@ class PatientSync(BaseProtocol):
         if event_type == EventType.PATIENT_CREATED:
             # Add placeholder email when creating the patient if it's required
             partner_payload["email"] = f"patient_{canvas_patient.id}@canvasmedical.com"
-            partner_payload["metadata"] = json.dumps(self.partner_patient_metadata)
+            partner_payload["metadata"] = self.partner_patient_metadata
 
         base_request_url = f"{self.partner_api_base_url}/patients/v2"
 
