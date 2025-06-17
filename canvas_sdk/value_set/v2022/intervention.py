@@ -1330,3 +1330,33 @@ class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
         "408289007",  # Refer to weight management program (procedure)
         "416790000",  # Referral for home physical therapy (procedure)
     }
+
+
+__exports__ = (
+    "AlcoholAndDrugDependenceTreatment",
+    "CognitiveAssessment",
+    "CounselingForNutrition",
+    "CounselingForPhysicalActivity",
+    "DialysisEducation",
+    "DietaryRecommendations",
+    "FollowUpForAboveNormalBmi",
+    "FollowUpForAdolescentDepression",
+    "FollowUpForAdultDepression",
+    "FollowUpForBelowNormalBmi",
+    "FollowUpWithin4Weeks",
+    "HospiceCareAmbulatory",
+    "LifestyleRecommendation",
+    "OtherServicesRelatedToDialysis",
+    "PalliativeCareIntervention",
+    "PalliativeOrHospiceCare",
+    "PsychVisitPsychotherapy",
+    "RecommendationToIncreasePhysicalActivity",
+    "Referral",
+    "ReferralForAdolescentDepression",
+    "ReferralForAdultDepression",
+    "ReferralOrCounselingForAlcoholConsumption",
+    "ReferralsWhereWeightAssessmentMayOccur",
+    "ReferralToPrimaryCareOrAlternateProvider",
+    "TobaccoUseCessationCounseling",
+    "WeightReductionRecommended",
+)

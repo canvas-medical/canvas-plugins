@@ -230,3 +230,13 @@ class StatinAllergen(ValueSet):
     SNOMEDCT = {
         "372912004",  # Substance with 3-hydroxy-3-methylglutaryl-coenzyme A reductase inhibitor mechanism of action (substance)
     }
+
+
+__exports__ = (
+    "AceInhibitorOrArbIngredient",
+    "BetaBlockerTherapyIngredient",
+    "EggSubstance",
+    "InfluenzaVaccination",
+    "InfluenzaVaccine",
+    "StatinAllergen",
+)

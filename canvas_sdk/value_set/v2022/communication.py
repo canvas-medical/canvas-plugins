@@ -323,3 +323,10 @@ class ConsultantReport(ValueSet):
         "371531000",  # Report of clinical encounter (record artifact)
         "371545006",  # Confirmatory consultation report (record artifact)
     }
+
+
+__exports__ = (
+    "ConsultantReport",
+    "LevelOfSeverityOfRetinopathyFindings",
+    "MacularEdemaFindingsPresent",
+)

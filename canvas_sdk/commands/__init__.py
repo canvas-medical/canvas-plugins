@@ -1,6 +1,7 @@
 from canvas_sdk.commands.commands.adjust_prescription import AdjustPrescriptionCommand
 from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
+from canvas_sdk.commands.commands.chart_section_review import ChartSectionReviewCommand
 from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.exam import PhysicalExamCommand
@@ -35,10 +36,11 @@ from canvas_sdk.commands.commands.update_diagnosis import UpdateDiagnosisCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
 
-__all__ = (
+__all__ = __exports__ = (
     "AdjustPrescriptionCommand",
     "AllergyCommand",
     "AssessCommand",
+    "ChartSectionReviewCommand",
     "CloseGoalCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",

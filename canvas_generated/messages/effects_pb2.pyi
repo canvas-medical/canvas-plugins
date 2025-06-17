@@ -142,6 +142,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_REFER_COMMAND: _ClassVar[EffectType]
     COMMIT_REFER_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_REFER_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    EDIT_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    DELETE_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    COMMIT_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_CHANGE_MEDICATION_COMMAND: _ClassVar[EffectType]
     CREATE_QUESTIONNAIRE_RESULT: _ClassVar[EffectType]
     ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: _ClassVar[EffectType]
     ANNOTATE_CLAIM_CONDITION_RESULTS: _ClassVar[EffectType]
@@ -186,10 +191,13 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DELETE_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     COMMIT_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_CHART_SECTION_REVIEW_COMMAND: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENT_IS_RESCHEDULABLE: _ClassVar[EffectType]
+    PATIENT_PORTAL__APPOINTMENT_SHOW_MEETING_LINK: _ClassVar[EffectType]
+    PATIENT_PORTAL__SEND_INVITE: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENTS__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENTS__FORM_APPOINTMENT_TYPES__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENTS__FORM_APPOINTMENT_TYPES__POST_SEARCH_RESULTS: _ClassVar[EffectType]
@@ -197,6 +205,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
+    PATIENT_PORTAL__APPLICATION_CONFIGURATION: _ClassVar[EffectType]
     ADD_BILLING_LINE_ITEM: _ClassVar[EffectType]
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
@@ -204,6 +213,19 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
     SIMPLE_API_RESPONSE: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_ACCEPT: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_DENY: _ClassVar[EffectType]
+    SIMPLE_API_WEBSOCKET_BROADCAST: _ClassVar[EffectType]
+    UPDATE_USER: _ClassVar[EffectType]
+    CREATE_NOTE: _ClassVar[EffectType]
+    CREATE_APPOINTMENT: _ClassVar[EffectType]
+    CREATE_SCHEDULE_EVENT: _ClassVar[EffectType]
+    CREATE_PATIENT: _ClassVar[EffectType]
+    CREATE_MESSAGE: _ClassVar[EffectType]
+    SEND_MESSAGE: _ClassVar[EffectType]
+    CREATE_AND_SEND_MESSAGE: _ClassVar[EffectType]
+    EDIT_MESSAGE: _ClassVar[EffectType]
+    PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -339,6 +361,11 @@ EDIT_REFER_COMMAND: EffectType
 DELETE_REFER_COMMAND: EffectType
 COMMIT_REFER_COMMAND: EffectType
 ENTER_IN_ERROR_REFER_COMMAND: EffectType
+ORIGINATE_CHANGE_MEDICATION_COMMAND: EffectType
+EDIT_CHANGE_MEDICATION_COMMAND: EffectType
+DELETE_CHANGE_MEDICATION_COMMAND: EffectType
+COMMIT_CHANGE_MEDICATION_COMMAND: EffectType
+ENTER_IN_ERROR_CHANGE_MEDICATION_COMMAND: EffectType
 CREATE_QUESTIONNAIRE_RESULT: EffectType
 ANNOTATE_PATIENT_CHART_CONDITION_RESULTS: EffectType
 ANNOTATE_CLAIM_CONDITION_RESULTS: EffectType
@@ -383,10 +410,13 @@ EDIT_ADJUST_PRESCRIPTION_COMMAND: EffectType
 DELETE_ADJUST_PRESCRIPTION_COMMAND: EffectType
 COMMIT_ADJUST_PRESCRIPTION_COMMAND: EffectType
 ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: EffectType
+ORIGINATE_CHART_SECTION_REVIEW_COMMAND: EffectType
 SHOW_ACTION_BUTTON: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType
 PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: EffectType
 PATIENT_PORTAL__APPOINTMENT_IS_RESCHEDULABLE: EffectType
+PATIENT_PORTAL__APPOINTMENT_SHOW_MEETING_LINK: EffectType
+PATIENT_PORTAL__SEND_INVITE: EffectType
 PATIENT_PORTAL__APPOINTMENTS__SLOTS__POST_SEARCH_RESULTS: EffectType
 PATIENT_PORTAL__APPOINTMENTS__FORM_APPOINTMENT_TYPES__PRE_SEARCH_RESULTS: EffectType
 PATIENT_PORTAL__APPOINTMENTS__FORM_APPOINTMENT_TYPES__POST_SEARCH_RESULTS: EffectType
@@ -394,6 +424,7 @@ PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__PRE_SEARCH_RESULTS: EffectType
 PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__POST_SEARCH_RESULTS: EffectType
 PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__PRE_SEARCH_RESULTS: EffectType
 PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__POST_SEARCH_RESULTS: EffectType
+PATIENT_PORTAL__APPLICATION_CONFIGURATION: EffectType
 ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
@@ -401,15 +432,30 @@ SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
 SIMPLE_API_RESPONSE: EffectType
+SIMPLE_API_WEBSOCKET_ACCEPT: EffectType
+SIMPLE_API_WEBSOCKET_DENY: EffectType
+SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
+UPDATE_USER: EffectType
+CREATE_NOTE: EffectType
+CREATE_APPOINTMENT: EffectType
+CREATE_SCHEDULE_EVENT: EffectType
+CREATE_PATIENT: EffectType
+CREATE_MESSAGE: EffectType
+SEND_MESSAGE: EffectType
+CREATE_AND_SEND_MESSAGE: EffectType
+EDIT_MESSAGE: EffectType
+PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "classname")
+    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
     CLASSNAME_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
     classname: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ...) -> None: ...
+    handler_name: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ...) -> None: ...

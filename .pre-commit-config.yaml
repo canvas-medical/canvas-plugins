@@ -35,7 +35,7 @@ repos:
           )$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
+    rev: v0.11.2
     hooks:
       - id: ruff
         args: [ --fix ]
@@ -60,11 +60,11 @@ repos:
     rev: v5.0.0
     hooks:
       - id: name-tests-test
-        args: ["--django"]
+        args: ["--pytest-test-first"]
         exclude: |
           (?x)(
-            tests/(factories|fixtures|utils)|
-            tests/.*/utils/.*\.py|
+            tests/(.*/)?(factories|fixtures)|
+            tests/(.*/)?(utils|shared)\.py|
             tests/.*/snapshots/.*\.py|
             tests/.*/_.*\.py
           )

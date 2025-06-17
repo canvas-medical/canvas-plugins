@@ -213,3 +213,15 @@ class HistoryOfHipFractureInParent(ValueSet):
         "445121000124105",  # Family history of paternal hip fracture (situation)
         "445501000124107",  # Family history of hip fracture in parent (situation)
     }
+
+
+__exports__ = (
+    "AverageNumberOfDrinksPerDrinkingDay",
+    "FallsScreening",
+    "HistoryOfHipFractureInParent",
+    "Phq9AndPhq9MTools",
+    "SexuallyActive",
+    "StandardizedPainAssessmentTool",
+    "StandardizedToolsForAssessmentOfCognition",
+    "TobaccoUseScreening",
+)

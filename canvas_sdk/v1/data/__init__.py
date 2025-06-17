@@ -1,6 +1,7 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
+from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
 from .command import Command
@@ -20,6 +21,7 @@ from .lab import (
     LabValueCoding,
 )
 from .medication import Medication, MedicationCoding
+from .message import Message, MessageAttachment, MessageTransmission
 from .note import Note, NoteType
 from .observation import (
     Observation,
@@ -34,6 +36,7 @@ from .patient import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientMetadata,
     PatientSetting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
@@ -53,12 +56,13 @@ from .staff import Staff, StaffContactPoint
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .user import CanvasUser
 
-__all__ = [
+__all__ = __exports__ = (
     "Appointment",
     "AppointmentExternalIdentifier",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
+    "BannerAlert",
     "BillingLineItem",
     "BillingLineItemModifier",
     "CanvasUser",
@@ -87,6 +91,9 @@ __all__ = [
     "LabValueCoding",
     "Medication",
     "MedicationCoding",
+    "Message",
+    "MessageAttachment",
+    "MessageTransmission",
     "Note",
     "NoteType",
     "Observation",
@@ -100,6 +107,7 @@ __all__ = [
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientSetting",
+    "PatientMetadata",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
@@ -118,4 +126,4 @@ __all__ = [
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
-]
+)

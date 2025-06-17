@@ -172,3 +172,9 @@ class CardiacPacer(ValueSet):
         "360128001",  # Intravenous triggered cardiac pacemaker system (physical object)
         "424921004",  # Permanent cardiac pacemaker, device (physical object)
     }
+
+
+__exports__ = (
+    "CardiacPacer",
+    "FrailtyDevice",
+)

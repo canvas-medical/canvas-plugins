@@ -42,3 +42,6 @@ class UpdateBillingLineItem(_BaseEffect):
             "billing_line_item_id": self.billing_line_item_id,
             "data": self.values,
         }
+
+
+__exports__ = ("UpdateBillingLineItem",)

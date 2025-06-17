@@ -1,0 +1,15 @@
+name: "Label conflicts"
+on:
+  push:
+  pull_request_target:
+    types: [synchronize]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for and label conflicts
+        uses: eps1lon/actions-label-merge-conflict@v3
+        with:
+          dirtyLabel: "PR: Conflicts"
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"

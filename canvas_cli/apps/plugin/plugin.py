@@ -100,9 +100,10 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
         return meta
 
     for meta_b in meta_class.body:
-        if not isinstance(meta_b, ast.Assign):
+        if not isinstance(meta_b, ast.Assign | ast.AnnAssign):
             continue
-        target_id = next((t.id for t in meta_b.targets if isinstance(t, ast.Name)), None)
+        targets = [meta_b.target] if isinstance(meta_b, ast.AnnAssign) else meta_b.targets
+        target_id = next((t.id for t in targets if isinstance(t, ast.Name)), None)
         if not target_id:
             continue
         if isinstance(meta_b.value, ast.Constant):

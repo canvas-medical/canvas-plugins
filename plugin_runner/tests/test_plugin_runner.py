@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import pickle
@@ -7,13 +6,13 @@ from base64 import b64encode
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
     EVENT_HANDLER_MAP,
@@ -43,9 +42,8 @@ def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plu
     )
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
-async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_package(
+def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_package(
     install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
@@ -60,10 +58,7 @@ async def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin
         is True
     )
 
-    result = [
-        response
-        async for response in plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None)
-    ]
+    result = list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
 
     assert len(result) == 1
     assert result[0].success is True
@@ -217,16 +212,15 @@ def test_load_plugins_should_refresh_event_protocol_map(
     ]
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
-async def test_handle_plugin_event_returns_expected_result(
+def test_handle_plugin_event_returns_expected_result(
     install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
 ) -> None:
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
     event = EventRequest(type=EventType.UNKNOWN)
 
     result = []
-    async for response in plugin_runner.HandleEvent(event, None):
+    for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
     assert len(result) == 1
@@ -236,18 +230,17 @@ async def test_handle_plugin_event_returns_expected_result(
     assert result[0].effects[0].payload == "Hello, world!"
 
 
-@pytest.mark.asyncio
-async def test_reload_plugins_event_handler_successfully_publishes_message(
+def test_reload_plugins_event_handler_successfully_publishes_message(
     plugin_runner: PluginRunner,
 ) -> None:
     """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
     with patch(
-        "plugin_runner.plugin_runner.publish_message", new_callable=AsyncMock
+        "plugin_runner.plugin_runner.publish_message", new_callable=Mock
     ) as mock_publish_message:
         request = ReloadPluginsRequest()
 
         result = []
-        async for response in plugin_runner.ReloadPlugins(request, None):
+        for response in plugin_runner.ReloadPlugins(request, None):
             result.append(response)
 
         mock_publish_message.assert_called_once_with(message={"action": "reload"})
@@ -256,44 +249,38 @@ async def test_reload_plugins_event_handler_successfully_publishes_message(
     assert result[0].success is True
 
 
-@pytest.mark.asyncio
-async def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
+def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
     """Test that synchronize_plugins calls install_plugins and load_plugins."""
     with (
         patch("plugin_runner.plugin_runner.get_client", new_callable=MagicMock) as mock_get_client,
         patch(
-            "plugin_runner.plugin_runner.install_plugins", new_callable=AsyncMock
+            "plugin_runner.plugin_runner.install_plugins", new_callable=Mock
         ) as mock_install_plugins,
-        patch(
-            "plugin_runner.plugin_runner.load_plugins", new_callable=AsyncMock
-        ) as mock_load_plugins,
+        patch("plugin_runner.plugin_runner.load_plugins", new_callable=Mock) as mock_load_plugins,
     ):
-        mock_client = AsyncMock()
-        mock_pubsub = AsyncMock()
+        mock_client = Mock()
+        mock_pubsub = Mock()
         mock_get_client.return_value = (mock_client, mock_pubsub)
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
             "data": pickle.dumps({"action": "reload"}),
         }
 
-        task = asyncio.create_task(synchronize_plugins(run_once=True))
-        await asyncio.sleep(0.1)  # Give some time for the coroutine to run
-        task.cancel()
+        synchronize_plugins(run_once=True)
 
         mock_install_plugins.assert_called_once()
         mock_load_plugins.assert_called_once()
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
-async def test_changes_to_plugin_modules_should_be_reflected_after_reload(
+def test_changes_to_plugin_modules_should_be_reflected_after_reload(
     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
 ) -> None:
     """Test that changes to plugin modules are reflected after reloading the plugin."""
     event = EventRequest(type=EventType.UNKNOWN)
 
     result = []
-    async for response in plugin_runner.HandleEvent(event, None):
+    for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
     assert len(result) == 1
@@ -313,7 +300,7 @@ def import_me() -> str:
     load_plugins()
 
     result = []
-    async for response in plugin_runner.HandleEvent(event, None):
+    for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
     assert len(result) == 1
@@ -323,7 +310,6 @@ def import_me() -> str:
     assert result[0].effects[0].payload == "Successfully changed!"
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     argnames="context,status_code",
     argvalues=[
@@ -364,7 +350,7 @@ def import_me() -> str:
     ids=["success", "not found error", "multiple handlers error"],
 )
 @pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
-async def test_simple_api(
+def test_simple_api(
     install_test_plugin: Path,
     load_test_plugins: None,
     plugin_runner: PluginRunner,
@@ -378,11 +364,63 @@ async def test_simple_api(
     )
 
     result = []
-    async for response in plugin_runner.HandleEvent(event, None):
+    for response in plugin_runner.HandleEvent(event, None):
         result.append(response)
 
     expected_response = Response(status_code=status_code).apply()
     if status_code == HTTPStatus.OK:
         expected_response.plugin_name = "test_simple_api"
+        expected_response.handler_name = "canvas_sdk.handlers.simple_api.api.SimpleAPIBase.compute"
+
+    assert result[0].effects == [expected_response]
+
+
+@pytest.mark.parametrize(
+    argnames="context",
+    argvalues=[
+        (
+            {
+                "plugin_name": "test_simple_api",
+                "channel_name": "test_channel",
+                "headers": {},
+            }
+        ),
+        (
+            {
+                "plugin_name": "unknown_plugin",
+                "channel_name": "test_channel",
+                "headers": {},
+            }
+        ),
+    ],
+    ids=["success", "no handlers"],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_simple_api"], indirect=True)
+def test_simple_api_websocket(
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    context: dict[str, Any],
+) -> None:
+    """Test that the PluginRunner returns responses to  SimpleAPI Websocket events."""
+    event = EventRequest(
+        type=EventType.SIMPLE_API_WEBSOCKET_AUTHENTICATE,
+        context=json.dumps(context),
+    )
+
+    result = []
+    for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    expected_response = (
+        AcceptConnection().apply()
+        if context["plugin_name"] == "test_simple_api"
+        else DenyConnection().apply()
+    )
+    if context["plugin_name"] == "test_simple_api":
+        expected_response.plugin_name = "test_simple_api"
+        expected_response.handler_name = (
+            "canvas_sdk.handlers.simple_api.websocket.WebSocketAPI.compute"
+        )
 
     assert result[0].effects == [expected_response]

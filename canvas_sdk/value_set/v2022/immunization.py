@@ -339,3 +339,20 @@ class PneumococcalPolysaccharide23Vaccine(ValueSet):
         "33",  # pneumococcal polysaccharide vaccine, 23 valent
         "109",  # pneumococcal vaccine, unspecified formulation
     }
+
+
+__exports__ = (
+    "DtapVaccine",
+    "HepatitisAVaccine",
+    "HepatitisBVaccine",
+    "HibVaccine3DoseSchedule",
+    "HibVaccine4DoseSchedule",
+    "InactivatedPolioVaccineIpv",
+    "InfluenzaVaccine",
+    "InfluenzaVirusLaivImmunization",
+    "Measles_MumpsAndRubellaMmrVaccine",
+    "PneumococcalConjugateVaccine",
+    "PneumococcalPolysaccharide23Vaccine",
+    "RotavirusVaccine3DoseSchedule",
+    "VaricellaZosterVaccineVzv",
+)

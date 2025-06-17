@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from base64 import b64decode
 from secrets import compare_digest
 from typing import TYPE_CHECKING, Any, Protocol
@@ -24,7 +26,7 @@ class Credentials:
     class if they wish to just access the request directly in their authentication method.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         pass
 
 
@@ -36,7 +38,7 @@ class BasicCredentials(Credentials):
     them as attributes.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         authorization = request.headers.get("Authorization")
@@ -71,7 +73,7 @@ class BearerCredentials(Credentials):
     Parses the token from the request Authorization header and saves it as an attribute.
     """
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         authorization = request.headers.get("Authorization")
@@ -101,7 +103,7 @@ class APIKeyCredentials(Credentials):
 
     HEADER_NAME = "Authorization"
 
-    def __init__(self, request: "Request") -> None:
+    def __init__(self, request: Request) -> None:
         super().__init__(request)
 
         if self.HEADER_NAME not in request.headers:
@@ -112,6 +114,39 @@ class APIKeyCredentials(Credentials):
             raise InvalidCredentialsFormatError
 
         self.key = key
+
+
+class SessionCredentials(Credentials):
+    """
+    Session credentials class.
+
+    Looks for headers set by Canvas with information about the logged in user based on browser
+    cookies and session information in the Canvas database. These headers are removed if received by
+    the client and intentionally set by Canvas only if there is a valid session from an active user.
+
+    One must look at the type of user in order to understand what the id refers to – a patient or a
+    staff member.
+
+    If a SimpleAPI handler is protected by SessionCredentials, the non-presence of these headers
+    results in an unauthorized response. Users of SessionCredentials will likely wish to further
+    restrict access based on the type of user (patient or staff) and perhaps based on the roles
+    associated with the user. This logic is the concern of the implementer of the handler's
+    authenticate method.
+    """
+
+    def __init__(self, request: Request) -> None:
+        super().__init__(request)
+
+        if (
+            "canvas-logged-in-user-type" not in request.headers
+            or "canvas-logged-in-user-id" not in request.headers
+        ):
+            raise InvalidCredentialsError
+
+        self.logged_in_user = {
+            "id": request.headers.get("canvas-logged-in-user-id"),
+            "type": request.headers.get("canvas-logged-in-user-type"),
+        }
 
 
 class AuthSchemeMixin(Protocol):
@@ -182,3 +217,49 @@ class APIKeyAuthMixin(AuthSchemeMixin):
             raise InvalidCredentialsError
 
         return True
+
+
+class StaffSessionAuthMixin(AuthSchemeMixin):
+    """
+    Staff Session authentication scheme mixin.
+
+    Provides an implementation of the authenticate method that ensures only logged in staff members
+    can access the urls provided by this handler. It only cares that they are a staff, with no
+    regard to roles or any other permissioning schemes.
+    """
+
+    def authenticate(self, credentials: SessionCredentials) -> bool:  # type: ignore[override]
+        """Authenticate the request."""
+        if credentials.logged_in_user["type"] != "Staff":
+            raise InvalidCredentialsError
+        return True
+
+
+class PatientSessionAuthMixin(AuthSchemeMixin):
+    """
+    Patient Session authentication scheme mixin.
+
+    Provides an implementation of the authenticate method that ensures only logged in patients can
+    access the urls provided by this handler. It only cares that they are a patient, with no regard
+    any other information.
+    """
+
+    def authenticate(self, credentials: SessionCredentials) -> bool:  # type: ignore[override]
+        """Authenticate the request."""
+        if credentials.logged_in_user["type"] != "Patient":
+            raise InvalidCredentialsError
+        return True
+
+
+__exports__ = (
+    "Credentials",
+    "BasicCredentials",
+    "BearerCredentials",
+    "APIKeyCredentials",
+    "AuthSchemeMixin",
+    "BasicAuthMixin",
+    "APIKeyAuthMixin",
+    "SessionCredentials",
+    "StaffSessionAuthMixin",
+    "PatientSessionAuthMixin",
+)

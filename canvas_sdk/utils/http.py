@@ -1,13 +1,14 @@
 import concurrent
 import functools
-import time
+import os
+import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from functools import wraps
-from typing import Any, Literal, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar
 
 import requests
-import statsd
+
+from canvas_sdk.utils.metrics import measured
 
 F = TypeVar("F", bound=Callable)
 
@@ -94,37 +95,40 @@ def batch_patch(
 class Http:
     """A helper class for completing HTTP calls with metrics tracking."""
 
-    _MAX_WORKER_TIMEOUT_SECONDS = 30
+    _MAX_REQUEST_TIMEOUT_SECONDS = 30
 
-    def __init__(self) -> None:
-        self.session = requests.Session()
-        self.statsd_client = statsd.StatsClient()
+    _base_url: str
+    _session: requests.Session
 
-    @staticmethod
-    def measure_time(fn: F) -> F:
-        """A decorator to store timing of HTTP calls."""
+    def join_url(self, url: str) -> str:
+        """
+        Join a URL to the base_url.
+        """
+        joined = urllib.parse.urljoin(self._base_url, url)
 
-        @wraps(fn)
-        def wrapper(self: "Http", *args: Any, **kwargs: Any) -> Any:
-            start_time = time.time()
-            result = fn(self, *args, **kwargs)
-            end_time = time.time()
-            timing = int((end_time - start_time) * 1000)
-            self.statsd_client.timing(f"plugins.http_{fn.__name__}", timing)
-            return result
+        if not joined.startswith(self._base_url):
+            raise ValueError("You may not access other URLs using this client.")
 
-        return cast(F, wrapper)
+        return joined
 
-    @measure_time
+    def __init__(self, base_url: str = "") -> None:
+        self._base_url = base_url
+        self._session = requests.Session()
+
+    @measured(track_plugins_usage=True)
     def get(
         self, url: str, headers: Mapping[str, str | bytes | None] | None = None
     ) -> requests.Response:
         """Sends a GET request."""
         if headers is None:
             headers = {}
-        return self.session.get(url, headers=headers)
+        return self._session.get(
+            self.join_url(url),
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+        )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def post(
         self,
         url: str,
@@ -133,9 +137,15 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a POST request."""
-        return self.session.post(url, json=json, data=data, headers=headers)
+        return self._session.post(
+            self.join_url(url),
+            json=json,
+            data=data,
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+        )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def put(
         self,
         url: str,
@@ -144,9 +154,15 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PUT request."""
-        return self.session.put(url, json=json, data=data, headers=headers)
+        return self._session.put(
+            self.join_url(url),
+            json=json,
+            data=data,
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+        )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def patch(
         self,
         url: str,
@@ -155,9 +171,15 @@ class Http:
         headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a PATCH request."""
-        return self.session.patch(url, json=json, data=data, headers=headers)
+        return self._session.patch(
+            self.join_url(url),
+            json=json,
+            data=data,
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+        )
 
-    @measure_time
+    @measured(track_plugins_usage=True)
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
@@ -170,10 +192,11 @@ class Http:
         ordering as the requests.
         """
         if timeout is None:
-            timeout = self._MAX_WORKER_TIMEOUT_SECONDS
-        elif timeout < 1 or timeout > self._MAX_WORKER_TIMEOUT_SECONDS:
+            timeout = self._MAX_REQUEST_TIMEOUT_SECONDS
+        elif timeout < 1 or timeout > self._MAX_REQUEST_TIMEOUT_SECONDS:
             raise ValueError(
-                f"Timeout value must be greater than 0 and less than or equal to {self._MAX_WORKER_TIMEOUT_SECONDS} seconds"
+                "Timeout value must be greater than 0 and less than or equal "
+                f"to {self._MAX_REQUEST_TIMEOUT_SECONDS} seconds"
             )
 
         with ThreadPoolExecutor() as executor:
@@ -182,3 +205,108 @@ class Http:
             concurrent.futures.wait(futures, timeout=timeout)
 
             return [future.result() for future in futures]
+
+
+class JsonOnlyResponse:
+    """
+    A very simple Response analog that only allows access to the json() method
+    and the status_code.
+
+    If we returned the response directly the user could look at the request
+    headers on the response object and see any authentication headers we sent
+    on their behalf.
+    """
+
+    _json: dict[str, Any] | None
+    status_code: int
+
+    def __init__(self, response: requests.Response):
+        self.status_code = response.status_code
+
+        try:
+            self._json = response.json()
+        except Exception:
+            self._json = None
+
+    def json(self) -> dict[str, Any] | None:
+        return self._json
+
+
+class JsonOnlyHttp(Http):
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def get_json(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> JsonOnlyResponse:
+        return JsonOnlyResponse(super().get(url, headers))
+
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def put(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def patch(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+
+class OntologiesHttp(JsonOnlyHttp):
+    """
+    An HTTP client for the ontologies service.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(base_url="https://ontologies.canvasmedical.com")
+
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+
+
+class ScienceHttp(JsonOnlyHttp):
+    """
+    An HTTP client for the ontologies service.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(base_url="https://science.canvasmedical.com")
+
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+
+
+ontologies_http = OntologiesHttp()
+science_http = ScienceHttp()
+
+__all__ = __exports__ = (
+    "ThreadPoolExecutor",
+    "Http",
+    "ontologies_http",
+    "science_http",
+    "batch_get",
+    "batch_post",
+    "batch_put",
+    "batch_patch",
+)

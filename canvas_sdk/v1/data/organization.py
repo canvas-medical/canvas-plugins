@@ -26,3 +26,6 @@ class Organization(models.Model):
     group_taxonomy_number = models.CharField()
     include_zz_qualifier = models.BooleanField()
     main_location = models.OneToOneField("v1.PracticeLocation", on_delete=models.DO_NOTHING)
+
+
+__exports__ = ("Organization",)

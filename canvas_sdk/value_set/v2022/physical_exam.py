@@ -199,3 +199,14 @@ class BmiRatio(ValueSet):
     LOINC = {
         "39156-5",  # Body mass index (BMI) [Ratio]
     }
+
+
+__exports__ = (
+    "BestCorrectedVisualAcuityExamUsingSnellenChart",
+    "BmiPercentile",
+    "BmiRatio",
+    "HeartRate",
+    "Height",
+    "RetinalOrDilatedEyeExam",
+    "Weight",
+)

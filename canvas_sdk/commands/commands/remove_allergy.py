@@ -8,7 +8,6 @@ class RemoveAllergyCommand(BaseCommand):
 
     class Meta:
         key = "removeAllergy"
-        commit_required_fields = ("allergy_id",)
 
     allergy_id: str | None = Field(
         description="The external ID of the allergy to remove.",
@@ -16,3 +15,6 @@ class RemoveAllergyCommand(BaseCommand):
         json_schema_extra={"commands_api_name": "allergy"},
     )
     narrative: str | None = None
+
+
+__exports__ = ("RemoveAllergyCommand",)

@@ -26,7 +26,6 @@ class AllergyCommand(BaseCommand):
 
     class Meta:
         key = "allergy"
-        commit_required_fields = ("allergy",)
 
     class Severity(Enum):
         MILD = "mild"
@@ -37,3 +36,10 @@ class AllergyCommand(BaseCommand):
     severity: Severity | None = None
     narrative: str | None = None
     approximate_date: date | None = None
+
+
+__exports__ = (
+    "AllergenType",
+    "Allergen",
+    "AllergyCommand",
+)

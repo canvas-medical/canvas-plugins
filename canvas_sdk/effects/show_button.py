@@ -16,13 +16,17 @@ class ShowButtonEffect(_BaseEffect):
 
     key: str = Field(min_length=1)
     title: str = Field(min_length=1)
+    priority: int = Field(default=0)
 
     @property
     def values(self) -> dict[str, Any]:
         """The ShowButtonEffect's values."""
-        return {"key": self.key, "title": self.title}
+        return {"key": self.key, "title": self.title, "priority": self.priority}
 
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
         return {"data": self.values}
+
+
+__exports__ = ("ShowButtonEffect",)

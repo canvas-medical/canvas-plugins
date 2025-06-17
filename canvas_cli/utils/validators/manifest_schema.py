@@ -57,6 +57,7 @@ manifest_schema = {
         "readme",
     ],
     "additionalProperties": False,
+    "allOf": [{"not": {"required": ["url_permissions", "origins"]}}],
     "$defs": {
         "origins": {
             "type": "object",
@@ -69,6 +70,7 @@ manifest_schema = {
             "type": "array",
             "items": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "url": {"type": "string"},
                     "permissions": {
@@ -79,10 +81,12 @@ manifest_schema = {
                                 "SCRIPTS",
                                 "ALLOW_SAME_ORIGIN",
                                 "MICROPHONE",
+                                "CAMERA",
                             ],
                         },
                     },
                 },
+                "required": ["url", "permissions"],
             },
         },
         "component": {
@@ -117,7 +121,21 @@ manifest_schema = {
                     "name": {"type": "string", "maxLength": 32},
                     "description": {"type": "string", "maxLength": 256},
                     "icon": {"type": "string"},
-                    "scope": {"type": "string", "enum": ["patient_specific", "global"]},
+                    "scope": {
+                        "type": "string",
+                        "enum": [
+                            "patient_specific",
+                            "global",
+                            "provider_menu_item",
+                            "portal_menu_item",
+                            "provider_companion",
+                        ],
+                    },
+                    "menu_position": {
+                        "type": "string",
+                        "enum": ["top", "bottom"],
+                    },
+                    "menu_order": {"type": "integer"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,

@@ -1248,3 +1248,32 @@ class HumanImmunodeficiencyVirusHivLaboratoryTestCodesAbAndAg(ValueSet):
         "9669-3",  # HIV 1 p66 Ab [Presence] in Serum by Immunoblot
         "9821-0",  # HIV 1 p24 Ag [Presence] in Serum
     }
+
+
+__exports__ = (
+    "AntiHepatitisAIggAntigenTest",
+    "AntiHepatitisBVirusSurfaceAb",
+    "ChlamydiaScreening",
+    "FecalOccultBloodTestFobt",
+    "FitDna",
+    "GroupAStreptococcusTest",
+    "Hba1CLaboratoryTest",
+    "HpvTest",
+    "HumanImmunodeficiencyVirusHivLaboratoryTestCodesAbAndAg",
+    "LaboratoryTestsForHypertension",
+    "LabTestsDuringPregnancy",
+    "LabTestsForSexuallyTransmittedInfections",
+    "LdlCholesterol",
+    "MeaslesAntibodyTestIggAntibodyPresence",
+    "MeaslesAntibodyTestIggAntibodyTiter",
+    "MumpsAntibodyTestIggAntibodyPresence",
+    "MumpsAntibodyTestIggAntibodyTiter",
+    "PapTest",
+    "PregnancyTest",
+    "ProstateSpecificAntigenTest",
+    "RubellaAntibodyTestIggAntibodyPresence",
+    "RubellaAntibodyTestIggAntibodyTiter",
+    "UrineProteinTests",
+    "VaricellaZosterAntibodyTestIggAntibodyPresence",
+    "VaricellaZosterAntibodyTestIggAntibodyTiter",
+)

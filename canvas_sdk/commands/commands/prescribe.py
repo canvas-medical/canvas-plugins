@@ -12,15 +12,6 @@ class PrescribeCommand(_BaseCommand):
 
     class Meta:
         key = "prescribe"
-        commit_required_fields = (
-            "fdb_code",
-            "sig",
-            "quantity_to_dispense",
-            "type_to_dispense",
-            "refills",
-            "substitutions",
-            "prescriber_id",
-        )
 
     class Substitutions(Enum):
         ALLOWED = "allowed"
@@ -40,6 +31,9 @@ class PrescribeCommand(_BaseCommand):
     prescriber_id: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "prescriber"}
     )
+    supervising_provider_id: str | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "supervising_provider"}
+    )
     note_to_pharmacist: str | None = None
 
     @property
@@ -53,3 +47,11 @@ class PrescribeCommand(_BaseCommand):
             )
 
         return values
+
+
+__exports__ = (
+    "PrescribeCommand",
+    # Not defined here but used in a current plugin
+    "ClinicalQuantity",
+    "Decimal",
+)

@@ -3,10 +3,12 @@
     "plugin_version": "0.0.1",
     "name": "{{ cookiecutter.__project_slug }}",
     "description": "Edit the description in CANVAS_MANIFEST.json",
-    "origins": {
-        "urls": ["https://www.canvasmedical.com/extensions"],
-        "scripts": []
-    },
+    "url_permissions": [
+        {
+            "url": "https://www.canvasmedical.com/extensions",
+            "permissions": []
+        }
+    ],
     "components": {
         "applications": [
             {

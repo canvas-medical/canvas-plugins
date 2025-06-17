@@ -7,8 +7,10 @@ class CloseGoalCommand(BaseCommand):
 
     class Meta:
         key = "closeGoal"
-        commit_required_fields = ("goal_id",)
 
     goal_id: int | None = None
     achievement_status: GoalCommand.AchievementStatus | None = None
     progress: str | None = None
+
+
+__exports__ = ("CloseGoalCommand",)

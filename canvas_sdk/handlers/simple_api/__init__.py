@@ -7,9 +7,13 @@ from .security import (
     BasicCredentials,
     BearerCredentials,
     Credentials,
+    PatientSessionAuthMixin,
+    SessionCredentials,
+    StaffSessionAuthMixin,
 )
 
-__all__ = [
+__all__ = __exports__ = (
+    "api",
     "APIKeyAuthMixin",
     "APIKeyCredentials",
     "AuthSchemeMixin",
@@ -17,6 +21,9 @@ __all__ = [
     "BasicCredentials",
     "BearerCredentials",
     "Credentials",
+    "PatientSessionAuthMixin",
+    "SessionCredentials",
     "SimpleAPI",
     "SimpleAPIRoute",
-]
+    "StaffSessionAuthMixin",
+)

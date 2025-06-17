@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "test_simple_api.protocols.my_protocol:Route",
+                "class": "test_simple_api.api.handler:Route",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -15,7 +15,7 @@
                 }
             },
             {
-                "class": "test_simple_api.protocols.my_protocol:ErrorRoute1",
+                "class": "test_simple_api.api.handler:ErrorRoute1",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -24,7 +24,16 @@
                 }
             },
             {
-                "class": "test_simple_api.protocols.my_protocol:ErrorRoute2",
+                "class": "test_simple_api.api.handler:ErrorRoute2",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_simple_api.websocket.handler:WebsocketAPI",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

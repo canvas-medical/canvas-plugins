@@ -1,6 +1,337 @@
 # CHANGELOG
 
 
+## v0.41.0 (2025-06-13)
+
+### Documentation
+
+- Add more example plugins ([#687](https://github.com/canvas-medical/canvas-plugins/pull/687),
+  [`8c9dadf`](https://github.com/canvas-medical/canvas-plugins/commit/8c9dadfc7edcbe8babd570b54ed333983867d1a7))
+
+### Features
+
+- Export installed SDK version ([#654](https://github.com/canvas-medical/canvas-plugins/pull/654),
+  [`d9dbb49`](https://github.com/canvas-medical/canvas-plugins/commit/d9dbb4940fa75401a9eefa9d712e01eba2713e7b))
+
+
+## v0.40.1 (2025-06-10)
+
+### Bug Fixes
+
+- Allow non-protocol imports, add tests
+  ([#677](https://github.com/canvas-medical/canvas-plugins/pull/677),
+  [`98a2c61`](https://github.com/canvas-medical/canvas-plugins/commit/98a2c61b95081cc792cdcba41a0266c839a98870))
+
+
+## v0.40.0 (2025-06-10)
+
+### Bug Fixes
+
+- Correct a typo ([#663](https://github.com/canvas-medical/canvas-plugins/pull/663),
+  [`964b60b`](https://github.com/canvas-medical/canvas-plugins/commit/964b60b49a7f5c3db18b45c6307be268ac391f01))
+
+### Features
+
+- Add `cast` to allowed imports ([#666](https://github.com/canvas-medical/canvas-plugins/pull/666),
+  [`e0be57d`](https://github.com/canvas-medical/canvas-plugins/commit/e0be57dc9b0f42b41bb3bdb67c059f5621184e12))
+
+- Add PLUGIN_POOL_DEBUG and thread_cleanup
+  ([#637](https://github.com/canvas-medical/canvas-plugins/pull/637),
+  [`ba3902d`](https://github.com/canvas-medical/canvas-plugins/commit/ba3902d719d1568951fda23de823795acef127fe))
+
+
+## v0.39.0 (2025-06-04)
+
+### Bug Fixes
+
+- Generate protobufs ([#662](https://github.com/canvas-medical/canvas-plugins/pull/662),
+  [`f3bb504`](https://github.com/canvas-medical/canvas-plugins/commit/f3bb504c05d5ebd5530cdfa08fed2e12756a81b8))
+
+- Reduce ValueSet memory usage ([#655](https://github.com/canvas-medical/canvas-plugins/pull/655),
+  [`34d0369`](https://github.com/canvas-medical/canvas-plugins/commit/34d0369193eee98de5f037d3ae8c87dd10ee08c7))
+
+### Features
+
+- Add can_be_snoozed attribute to ProtocolCard
+  ([#639](https://github.com/canvas-medical/canvas-plugins/pull/639),
+  [`4e04612`](https://github.com/canvas-medical/canvas-plugins/commit/4e04612ae115fadb0dc18b0af8fa71baaeea709b))
+
+- Add create form effect and patient metadata data module
+  ([#624](https://github.com/canvas-medical/canvas-plugins/pull/624),
+  [`3f58aac`](https://github.com/canvas-medical/canvas-plugins/commit/3f58aac56946dcfef84eac0aead7245c2b4caba2))
+
+- Add launch modal title property
+  ([#635](https://github.com/canvas-medical/canvas-plugins/pull/635),
+  [`2bf9047`](https://github.com/canvas-medical/canvas-plugins/commit/2bf90476c05de911c7459274f944cf90a9527340))
+
+- Add message effects ([#567](https://github.com/canvas-medical/canvas-plugins/pull/567),
+  [`69d8a4f`](https://github.com/canvas-medical/canvas-plugins/commit/69d8a4f243cdb05e6338fb2f5950b82b776c1d68))
+
+- Patient external identifier events
+  ([#630](https://github.com/canvas-medical/canvas-plugins/pull/630),
+  [`894ad12`](https://github.com/canvas-medical/canvas-plugins/commit/894ad123c85076959cbcdf0ed20ce5f6840af50a))
+
+Signed-off-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
+## v0.38.0 (2025-05-30)
+
+### Bug Fixes
+
+- Add missing Sentry tags ([#636](https://github.com/canvas-medical/canvas-plugins/pull/636),
+  [`75f19b5`](https://github.com/canvas-medical/canvas-plugins/commit/75f19b5c63a1ea1caa792247076f4d16190ed089))
+
+### Features
+
+- Add staff addresses and photos to data module
+  ([#621](https://github.com/canvas-medical/canvas-plugins/pull/621),
+  [`3038df7`](https://github.com/canvas-medical/canvas-plugins/commit/3038df733b8a7256fa093975a20fefe85acf3991))
+
+
+## v0.37.0 (2025-05-21)
+
+### Documentation
+
+- Add example application plugins
+  ([#622](https://github.com/canvas-medical/canvas-plugins/pull/622),
+  [`6170320`](https://github.com/canvas-medical/canvas-plugins/commit/6170320bd0e69302bd0cf574aa4d415ddbd25a63))
+
+### Features
+
+- Add new events for supervising provider post/pre search and allow prescribe command to set
+  supervising provider ([#527](https://github.com/canvas-medical/canvas-plugins/pull/527),
+  [`f3581f0`](https://github.com/canvas-medical/canvas-plugins/commit/f3581f00d916377af459dcd562c29633f7259ea3))
+
+
+## v0.36.0 (2025-05-16)
+
+### Bug Fixes
+
+- Don't copy locals(), prevents additional memory usage
+  ([#605](https://github.com/canvas-medical/canvas-plugins/pull/605),
+  [`8b7b26f`](https://github.com/canvas-medical/canvas-plugins/commit/8b7b26f0192a88ec3deb627c08dbf5fbcf2f0c0e))
+
+- Ensure that meta props still get created for cqms where type annotations are included
+  ([#566](https://github.com/canvas-medical/canvas-plugins/pull/566),
+  [`0cf38d1`](https://github.com/canvas-medical/canvas-plugins/commit/0cf38d1f20fa3532addba3ca50abe6d2476f4a77))
+
+### Features
+
+- Add chart section review command
+  ([#537](https://github.com/canvas-medical/canvas-plugins/pull/537),
+  [`16f2f8b`](https://github.com/canvas-medical/canvas-plugins/commit/16f2f8b18b5be6aa6e34654a030f0e94b73c5a8d))
+
+- Add provider companion specific scope to applications
+  ([#533](https://github.com/canvas-medical/canvas-plugins/pull/533),
+  [`cf86041`](https://github.com/canvas-medical/canvas-plugins/commit/cf86041bedb90947adc4fad502e1cabfed2e77f5))
+
+- Implement Caching API ([#561](https://github.com/canvas-medical/canvas-plugins/pull/561),
+  [`f39aabf`](https://github.com/canvas-medical/canvas-plugins/commit/f39aabf0ec154eb43938ea5eb4e0cec4b00f1971))
+
+- Launch modal effect improvements
+  ([#588](https://github.com/canvas-medical/canvas-plugins/pull/588),
+  [`bb795f8`](https://github.com/canvas-medical/canvas-plugins/commit/bb795f87ce73b69ba435fb84ec279ed03c76970a))
+
+- Websockets API ([#606](https://github.com/canvas-medical/canvas-plugins/pull/606),
+  [`90f2686`](https://github.com/canvas-medical/canvas-plugins/commit/90f2686a40a818a6336d095a83568746d0dab293))
+
+
+## v0.35.1 (2025-05-13)
+
+### Bug Fixes
+
+- Remove event_handler_count to keep influx from exploding
+  ([#602](https://github.com/canvas-medical/canvas-plugins/pull/602),
+  [`9c9cf21`](https://github.com/canvas-medical/canvas-plugins/commit/9c9cf215270f0ddc7b241af2f3e91b40e5e6d83b))
+
+- Replace use of the gRPC AsyncIO API with the gRPC standard API
+  ([#575](https://github.com/canvas-medical/canvas-plugins/pull/575),
+  [`71234b3`](https://github.com/canvas-medical/canvas-plugins/commit/71234b34bc715684e14fd5317f4a4d8b966e4c55))
+
+Signed-off-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.35.0 (2025-05-07)
+
+### Chores
+
+- Add plugin metrics ([#532](https://github.com/canvas-medical/canvas-plugins/pull/532),
+  [`1e7dcab`](https://github.com/canvas-medical/canvas-plugins/commit/1e7dcab6b1c7421dca439c9669d785c5a45f3dac))
+
+- **tests**: Increase wait time for plugin installation
+  ([#578](https://github.com/canvas-medical/canvas-plugins/pull/578),
+  [`cc4afd0`](https://github.com/canvas-medical/canvas-plugins/commit/cc4afd0d4f1aed600cd00e13c4a8bc42e60c5827))
+
+### Features
+
+- Add "Change Medication" command
+  ([#543](https://github.com/canvas-medical/canvas-plugins/pull/543),
+  [`ef726dd`](https://github.com/canvas-medical/canvas-plugins/commit/ef726dd8a1f24ab01aa4288d7e33a5ad26af0dcc))
+
+- Add Create Patient effect ([#535](https://github.com/canvas-medical/canvas-plugins/pull/535),
+  [`930a4b1`](https://github.com/canvas-medical/canvas-plugins/commit/930a4b19d71d4cb8b65cfe713c983b3227279ed5))
+
+- Add message to data module ([#542](https://github.com/canvas-medical/canvas-plugins/pull/542),
+  [`945e0e2`](https://github.com/canvas-medical/canvas-plugins/commit/945e0e265a1e0bcd8cc7be09151e2bcddf300327))
+
+- Allow importing ZoneInfo ([#585](https://github.com/canvas-medical/canvas-plugins/pull/585),
+  [`5e7e30e`](https://github.com/canvas-medical/canvas-plugins/commit/5e7e30efb06d5f2ddbdd88fb6b4c9efd86732c42))
+
+### Refactoring
+
+- Canvas-plugins test suite ([#497](https://github.com/canvas-medical/canvas-plugins/pull/497),
+  [`42083de`](https://github.com/canvas-medical/canvas-plugins/commit/42083deac2c41f31e5f6d3250a56ed9277af20f2))
+
+
+## v0.34.1 (2025-05-01)
+
+### Bug Fixes
+
+- Un-break sandbox dictionary and list access
+  ([#577](https://github.com/canvas-medical/canvas-plugins/pull/577),
+  [`4907d22`](https://github.com/canvas-medical/canvas-plugins/commit/4907d22596ae98125c5971339e80843fbb5386c2))
+
+
+## v0.34.0 (2025-04-28)
+
+### Features
+
+- Add JsonOnlyResponse and a test for ontologies_http
+  ([#564](https://github.com/canvas-medical/canvas-plugins/pull/564),
+  [`9414ef7`](https://github.com/canvas-medical/canvas-plugins/commit/9414ef71f21c73f510ce5a682cb2d4eb23640658))
+
+
+## v0.33.1 (2025-04-24)
+
+### Bug Fixes
+
+- Remove duplicate question append
+  ([#530](https://github.com/canvas-medical/canvas-plugins/pull/530),
+  [`dbac2f4`](https://github.com/canvas-medical/canvas-plugins/commit/dbac2f4f18785a354ce3ef0eda0da01f7f7fb7a2))
+
+- Sandbox security improvements ([#529](https://github.com/canvas-medical/canvas-plugins/pull/529),
+  [`98ddf62`](https://github.com/canvas-medical/canvas-plugins/commit/98ddf6277f2ec5dc310bd346dc546ae2cc76282b))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+Co-authored-by: David Jantzen <mr.djantzen@gmail.com>
+
+
+## v0.33.0 (2025-04-17)
+
+### Features
+
+- Add portal section to patient profile configuration
+  ([#417](https://github.com/canvas-medical/canvas-plugins/pull/417),
+  [`d253ceb`](https://github.com/canvas-medical/canvas-plugins/commit/d253ceb94ab4217c728dc12dfb25dcf0f4b29e4f))
+
+- Add update_user and patient_portal_send_invite effects
+  ([#470](https://github.com/canvas-medical/canvas-plugins/pull/470),
+  [`0584714`](https://github.com/canvas-medical/canvas-plugins/commit/0584714b93dbf5fe1c46a1769c5b42fdb4f2529a))
+
+
+## v0.32.0 (2025-04-11)
+
+### Bug Fixes
+
+- Add missing events ([#521](https://github.com/canvas-medical/canvas-plugins/pull/521),
+  [`20ced4e`](https://github.com/canvas-medical/canvas-plugins/commit/20ced4ee9c937c4f8afd4a07d7c64844eb4937d1))
+
+### Features
+
+- Add Sentry logging ([#410](https://github.com/canvas-medical/canvas-plugins/pull/410),
+  [`e064b4c`](https://github.com/canvas-medical/canvas-plugins/commit/e064b4ca9f308d4105d634c1966968b4852a45f2))
+
+
+## v0.31.0 (2025-04-08)
+
+### Bug Fixes
+
+- Don't block for Redis messages ([#516](https://github.com/canvas-medical/canvas-plugins/pull/516),
+  [`6f87f0c`](https://github.com/canvas-medical/canvas-plugins/commit/6f87f0c76673dd1b4ad6d72fbacb3e571c3242d9))
+
+### Features
+
+- Add all protocol card statuses ([#468](https://github.com/canvas-medical/canvas-plugins/pull/468),
+  [`26521ad`](https://github.com/canvas-medical/canvas-plugins/commit/26521ad9ee9bd9f12a2edc5a777faecf5ef98623))
+
+- Add environment dict containing the customer identifier to plugin handler scope
+  ([#513](https://github.com/canvas-medical/canvas-plugins/pull/513),
+  [`d23cfd9`](https://github.com/canvas-medical/canvas-plugins/commit/d23cfd9bea7a3d86746f3d36b00669b89cbada27))
+
+- Add session based auth to simpleapi
+  ([#495](https://github.com/canvas-medical/canvas-plugins/pull/495),
+  [`3b2b96a`](https://github.com/canvas-medical/canvas-plugins/commit/3b2b96a4cad62aca539c7681fbced5c93fcc7973))
+
+
+## v0.30.0 (2025-04-02)
+
+### Features
+
+- Allow iframes to request the camera permission
+  ([#510](https://github.com/canvas-medical/canvas-plugins/pull/510),
+  [`6c05a6f`](https://github.com/canvas-medical/canvas-plugins/commit/6c05a6fb166b01e0c90b63ced1a4bd83165b9e78))
+
+
+## v0.29.1 (2025-03-31)
+
+### Bug Fixes
+
+- Make path matching regex compatible with root paths ('/')
+  ([#505](https://github.com/canvas-medical/canvas-plugins/pull/505),
+  [`1719cca`](https://github.com/canvas-medical/canvas-plugins/commit/1719cca3ad18917267fb7692826febb3758a323c))
+
+Co-authored-by: Christopher Sande <christopher.sande@canvasmedical.com>
+
+
+## v0.29.0 (2025-03-27)
+
+### Features
+
+- Add events and effect to configure patient portal join and book buttons
+  ([#487](https://github.com/canvas-medical/canvas-plugins/pull/487),
+  [`fcf397d`](https://github.com/canvas-medical/canvas-plugins/commit/fcf397ddbd24a22f7573a7d51e1674da7f83d32d))
+
+- Add service secrets to the plugin runner
+  ([#480](https://github.com/canvas-medical/canvas-plugins/pull/480),
+  [`d9483ef`](https://github.com/canvas-medical/canvas-plugins/commit/d9483ef2f6f69b08257dfbd20e23481afeb8882d))
+
+- Match SimpleAPI URLs with path patterns
+  ([#457](https://github.com/canvas-medical/canvas-plugins/pull/457),
+  [`6e118eb`](https://github.com/canvas-medical/canvas-plugins/commit/6e118ebd27895b4203b77316a1705400b1990bce))
+
+
+## v0.28.0 (2025-03-20)
+
+### Bug Fixes
+
+- Allow originating perform without data
+  ([#492](https://github.com/canvas-medical/canvas-plugins/pull/492),
+  [`ea72158`](https://github.com/canvas-medical/canvas-plugins/commit/ea7215812ed0913d46c3ee7161b0facf8f0c3d24))
+
+- Improve validation rules for new url_permissions format
+  ([#448](https://github.com/canvas-medical/canvas-plugins/pull/448),
+  [`d0e122a`](https://github.com/canvas-medical/canvas-plugins/commit/d0e122a996cfa377e061fd1a4dc957499ca4f00d))
+
+### Features
+
+- Add banner alerts to data module
+  ([#485](https://github.com/canvas-medical/canvas-plugins/pull/485),
+  [`fba170a`](https://github.com/canvas-medical/canvas-plugins/commit/fba170a8ee397ff70ba1ac1d9a84d087728b8f32))
+
+- Add priority to action buttons ([#478](https://github.com/canvas-medical/canvas-plugins/pull/478),
+  [`01ff1d0`](https://github.com/canvas-medical/canvas-plugins/commit/01ff1d02a09f9c03b33c8a618b971fe9f682c2d1))
+
+- Uncomment ordering_provider ([#473](https://github.com/canvas-medical/canvas-plugins/pull/473),
+  [`a59456d`](https://github.com/canvas-medical/canvas-plugins/commit/a59456db685eb191751fe6009a9b40adff919a65))
+
+Signed-off-by: Kristen ONeill <91080969+kristenoneill@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.27.0 (2025-03-10)
 
 ### Features

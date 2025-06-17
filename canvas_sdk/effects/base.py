@@ -26,3 +26,10 @@ class _BaseEffect(Model):
     def apply(self) -> Effect:
         self._validate_before_effect("apply")
         return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
+
+
+__exports__ = (
+    "_BaseEffect",
+    # Not defined here but used in a current plugin
+    "EffectType",
+)

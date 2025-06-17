@@ -17,15 +17,22 @@ class LaunchModalEffect(_BaseEffect):
         NEW_WINDOW = "new_window"
         RIGHT_CHART_PANE = "right_chart_pane"
         RIGHT_CHART_PANE_LARGE = "right_chart_pane_large"
+        PAGE = "page"
 
     url: str | None = None
     content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
+    title: str = "Untitled"
 
     @property
     def values(self) -> dict[str, Any]:
         """The LaunchModalEffect values."""
-        return {"url": self.url, "content": self.content, "target": self.target.value}
+        return {
+            "url": self.url,
+            "content": self.content,
+            "target": self.target.value,
+            "title": self.title,
+        }
 
     @model_validator(mode="after")
     def check_mutually_exclusive_fields(self) -> Self:
@@ -34,3 +41,6 @@ class LaunchModalEffect(_BaseEffect):
             raise ValueError("'url' and 'content' are mutually exclusive")
 
         return self
+
+
+__exports__ = ("LaunchModalEffect",)

@@ -28,10 +28,6 @@ class TaskCommand(BaseCommand):
 
     class Meta:
         key = "task"
-        commit_required_fields = (
-            "title",
-            "assign_to",
-        )
 
     title: str = ""
     assign_to: TaskAssigner | None = None
@@ -39,3 +35,10 @@ class TaskCommand(BaseCommand):
     comment: str | None = None
     labels: list[str] | None = None
     linked_items_urns: list[str] | None = None
+
+
+__exports__ = (
+    "AssigneeType",
+    "TaskAssigner",
+    "TaskCommand",
+)

@@ -4965,3 +4965,18 @@ class DexaDualEnergyXrayAbsorptiometry_BoneDensityForUrologyCare(ValueSet):
         "38265-5",  # DXA Radius and Ulna [T-score] Bone density
         "38268-9",  # DXA Skeletal system Views for bone density
     }
+
+
+__exports__ = (
+    "BoneScan",
+    "CtColonography",
+    "CupToDiscRatio",
+    "DexaDualEnergyXrayAbsorptiometry_BoneDensityForUrologyCare",
+    "DiagnosticStudiesDuringPregnancy",
+    "DxaDualEnergyXrayAbsorptiometryScan",
+    "EjectionFraction",
+    "MacularExam",
+    "Mammography",
+    "OpticDiscExamForStructuralAbnormalities",
+    "XRayStudyAllInclusive",
+)

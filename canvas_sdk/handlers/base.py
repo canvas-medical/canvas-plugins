@@ -13,6 +13,7 @@ version = importlib.metadata.version("canvas")
 class BaseHandler(ABC):
     """The class that all handlers inherit from."""
 
+    environment: dict[str, Any]
     secrets: dict[str, Any]
     event: Event
 
@@ -20,9 +21,11 @@ class BaseHandler(ABC):
         self,
         event: Event,
         secrets: dict[str, Any] | None = None,
+        environment: dict[str, Any] | None = None,
     ) -> None:
         self.event = event
         self.secrets = secrets or {}
+        self.environment = environment or {}
 
     @property
     @deprecation.deprecated(
@@ -54,3 +57,6 @@ class BaseHandler(ABC):
     def accept_event(self) -> bool:
         """Determine whether an event should be accepted and handled by the handler."""
         return True
+
+
+__exports__ = ("BaseHandler", "version")

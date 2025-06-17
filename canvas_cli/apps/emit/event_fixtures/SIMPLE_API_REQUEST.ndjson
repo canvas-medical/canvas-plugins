@@ -1,0 +1,1 @@
+{"EventType": "SIMPLE_API_REQUEST", "target": null, "context": "{\"plugin_name\": \"test_plugin\", \"method\": \"GET\", \"path\": \"/path\", \"query_string\": \"\", \"body\": \"\", \"headers\": {}}"}

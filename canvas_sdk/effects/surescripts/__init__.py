@@ -4,8 +4,8 @@ from .surescripts_messages import (
     SendSurescriptsMedicationHistoryRequestEffect,
 )
 
-__all__ = [
+__all__ = __exports__ = (
     "SendSurescriptsBenefitsRequestEffect",
     "SendSurescriptsEligibilityRequestEffect",
     "SendSurescriptsMedicationHistoryRequestEffect",
-]
+)

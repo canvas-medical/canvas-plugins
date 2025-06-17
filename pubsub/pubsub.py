@@ -2,6 +2,9 @@ import os
 from typing import Any
 
 import redis
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import ConnectionError, TimeoutError
+from redis.retry import Retry
 
 REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER")
@@ -24,7 +27,13 @@ class PubSubBase:
 
     def _create_client(self) -> redis.Redis | None:
         if self.redis_endpoint and self.channel:
-            return redis.Redis.from_url(self.redis_endpoint, decode_responses=True)
+            return redis.Redis.from_url(
+                self.redis_endpoint,
+                decode_responses=True,
+                retry=Retry(backoff=ExponentialBackoff(), retries=10),
+                retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
+                health_check_interval=1,
+            )
 
         return None
 

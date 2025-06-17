@@ -76,3 +76,10 @@ class AppointmentExternalIdentifier(models.Model):
     appointment = models.ForeignKey(
         Appointment, on_delete=models.DO_NOTHING, related_name="external_identifiers"
     )
+
+
+__exports__ = (
+    "AppointmentProgressStatus",
+    "Appointment",
+    "AppointmentExternalIdentifier",
+)
