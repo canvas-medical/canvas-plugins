@@ -10,7 +10,8 @@ from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
 from logger import log
 
-BRIDGE_SANDBOX = "https://app.usebridge.xyz"
+# This is a client specific instance of the third-party software to sync with Canvas
+PARTNER_URL = "https://canvas.app.usebridge.com"
 
 
 class PatientCreateApi(SimpleAPI):
@@ -57,13 +58,12 @@ class PatientCreateApi(SimpleAPI):
             else:
                 sex_at_birth = None
 
-        # this supports the first external identifier but could be extended to support multiple
-        bridge_id = self.request.query_params.get("bridge_identifier")
+        partner_id = self.request.query_params.get("external_identifier")
 
         external_id = PatientExternalIdentifier(
-            issuer="https://canvas.app.usebridge.com",
-            system="https://canvas.app.usebridge.com",
-            value=bridge_id,
+            issuer=PARTNER_URL,
+            system=PARTNER_URL,
+            value=partner_id,
         )
 
         patient = Patient(
@@ -75,7 +75,9 @@ class PatientCreateApi(SimpleAPI):
         )
         log.info(f"PatientCreateApi.post: patient={patient}")
 
+        response = {"external_identifier": {"url": PARTNER_URL, "value": partner_id}}
+
         return [
             patient.create(),
-            JSONResponse(content=str(patient), status_code=HTTPStatus.ACCEPTED).apply(),
+            JSONResponse(content=response, status_code=HTTPStatus.ACCEPTED).apply(),
         ]
