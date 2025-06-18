@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v0.42.0 (2025-06-18)
+
+### Chores
+
+- Rename the test-plugins/ directory to example-plugins/ to clarify they are not part of any
+  automated tests ([#703](https://github.com/canvas-medical/canvas-plugins/pull/703),
+  [`4ea8ad6`](https://github.com/canvas-medical/canvas-plugins/commit/4ea8ad69bca763bfb323111a6ede8b8e9ae8cb5f))
+
+### Documentation
+
+- Add example plugin for SimpleAPI
+  ([#456](https://github.com/canvas-medical/canvas-plugins/pull/456),
+  [`2a115d4`](https://github.com/canvas-medical/canvas-plugins/commit/2a115d4cd8d3b4bfb996bd39459cade1486a0fe8))
+
+### Features
+
+- Implement patient metadata upsert effect
+  ([#673](https://github.com/canvas-medical/canvas-plugins/pull/673),
+  [`1f15e44`](https://github.com/canvas-medical/canvas-plugins/commit/1f15e44a4240b550178af2b32b165bfd679d76da))
+
+
 ## v0.41.0 (2025-06-13)
 
 ### Documentation
