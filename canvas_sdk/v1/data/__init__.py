@@ -4,12 +4,16 @@ from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .care_team import CareTeamMembership, CareTeamRole
+from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue
+from .claim_line_item import ClaimLineItem
 from .command import Command
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
+from .discount import Discount
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .invoice import Invoice
 from .lab import (
     LabOrder,
     LabOrderReason,
@@ -20,6 +24,7 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
+from .line_item_transaction import LineItemTransfer, NewLineItemAdjustment, NewLineItemPayment
 from .medication import Medication, MedicationCoding
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import Note, NoteType
@@ -38,6 +43,14 @@ from .patient import (
     PatientExternalIdentifier,
     PatientMetadata,
     PatientSetting,
+)
+from .payment_collection import PaymentCollection
+from .posting import (
+    BasePosting,
+    BaseRemittanceAdvice,
+    BulkPatientPosting,
+    CoveragePosting,
+    PatientPosting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
@@ -63,24 +76,35 @@ __all__ = __exports__ = (
     "AllergyIntoleranceCoding",
     "Assessment",
     "BannerAlert",
+    "BasePosting",
+    "BaseRemittanceAdvice",
     "BillingLineItem",
     "BillingLineItemModifier",
+    "BulkPatientPosting",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "Claim",
+    "ClaimCoverage",
+    "ClaimLineItem",
+    "ClaimPatient",
+    "ClaimQueue",
     "Command",
     "Condition",
     "ConditionCoding",
     "Coverage",
+    "CoveragePosting",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
+    "Discount",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
+    "Invoice",
     "LabOrder",
     "LabOrderReason",
     "LabOrderReasonCondition",
@@ -89,11 +113,14 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LineItemTransfer",
     "Medication",
     "MedicationCoding",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
+    "NewLineItemAdjustment",
+    "NewLineItemPayment",
     "Note",
     "NoteType",
     "Observation",
@@ -106,8 +133,10 @@ __all__ = __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
+    "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
