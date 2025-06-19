@@ -52,6 +52,9 @@ class Patient(models.Model):
     first_name = models.CharField()
     last_name = models.CharField()
     birth_date = models.DateField()
+    business_line = models.ForeignKey(
+        "v1.BusinessLine", on_delete=models.DO_NOTHING, related_name="patients"
+    )
     sex_at_birth = models.CharField(choices=SexAtBirth.choices)
     created = models.DateTimeField()
     modified = models.DateTimeField()
@@ -197,7 +200,10 @@ class PatientExternalIdentifier(models.Model):
     created = models.DateTimeField()
     modified = models.DateTimeField()
     patient = models.ForeignKey(
-        "v1.Patient", related_name="external_identifiers", on_delete=models.DO_NOTHING, null=True
+        "v1.Patient",
+        related_name="external_identifiers",
+        on_delete=models.DO_NOTHING,
+        null=True,
     )
     use = models.CharField()
     identifier_type = models.CharField()
