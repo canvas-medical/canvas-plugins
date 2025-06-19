@@ -605,9 +605,9 @@ def test_simple_api_websocket(
                 ).decode("utf-8"),
             },
             [
-                PaymentProcessorForm(intent="pay", content="<form>Payment Form</form>").apply(),
+                PaymentProcessorForm(intent="pay", content="<form>Payment Form</form>\n").apply(),
                 PaymentProcessorForm(
-                    intent="add_card", content="<form>Add Card Form</form>"
+                    intent="add_card", content="<form>Add Card Form</form>\n"
                 ).apply(),
             ],
         ),
