@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
+from canvas_sdk.v1.data import Note as NoteModel
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
@@ -37,6 +38,15 @@ class Note(NoteOrAppointmentABC):
             list[InitErrorDetails]: A list of error details for invalid note type categories.
         """
         errors = super()._get_error_details(method)
+
+        if self.instance_id and not NoteModel.objects.filter(id=self.instance_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Note with ID {self.instance_id} does not exist.",
+                    self.instance_id,
+                )
+            )
 
         note_type_category = (
             NoteType.objects.values_list("category", flat=True).filter(id=self.note_type_id).first()

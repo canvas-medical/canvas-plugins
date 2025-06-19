@@ -1,8 +1,10 @@
+import json
 from typing import Any
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
+from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
@@ -82,10 +84,22 @@ class ScheduleEvent(AppointmentABC):
 
         return errors
 
+    def delete(self) -> Effect:
+        """Send a DELETE effect for the schedule event."""
+        self._validate_before_effect("delete")
+        return Effect(
+            type=f"DELETE{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
 
 class Appointment(AppointmentABC):
     """
-    Effect to create an appointment.
+    Effect to create or update an appointment.
 
     Attributes:
         appointment_note_type_id (UUID | str): The ID of the appointment note type.
@@ -143,6 +157,18 @@ class Appointment(AppointmentABC):
             )
 
         return errors
+
+    def cancel(self) -> Effect:
+        """Send a CANCEL effect for the appointment."""
+        self._validate_before_effect("cancel")
+        return Effect(
+            type=f"CANCEL_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
 
 
 __exports__ = ("ScheduleEvent", "Appointment")

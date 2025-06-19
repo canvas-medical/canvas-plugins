@@ -10,7 +10,7 @@ from pydantic_core import InitErrorDetails
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
-from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
+from canvas_sdk.v1.data.appointment import Appointment, AppointmentProgressStatus
 
 
 @dataclass
@@ -32,6 +32,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
     Base class for all note effects.
 
     Attributes:
+        instance_id (UUID | str): The unique identifier for the note or appointment instance.
         practice_location_id (UUID | str): The ID of the practice location.
         provider_id (str): The ID of the provider.
     """
@@ -39,6 +40,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
     class Meta:
         effect_type = None
 
+    instance_id: UUID | str | None
     practice_location_id: UUID | str
     provider_id: str
 
@@ -53,6 +55,15 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             list[InitErrorDetails]: A list of error details for invalid practice location or provider IDs.
         """
         errors = super()._get_error_details(method)
+
+        if method == "create" and self.instance_id:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Instance ID should not be provided for create effects.",
+                    self.instance_id,
+                )
+            )
 
         if not PracticeLocation.objects.filter(id=self.practice_location_id).exists():
             errors.append(
@@ -75,7 +86,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         return errors
 
     def create(self) -> Effect:
-        """Originate a new command in the note body."""
+        """Send a CREATE effect for the note or appointment."""
         self._validate_before_effect("create")
         return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
@@ -86,10 +97,22 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             ),
         )
 
+    def update(self) -> Effect:
+        """Send an UPDATE effect for the note or appointment."""
+        self._validate_before_effect("update")
+        return Effect(
+            type=f"UPDATE_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
 
 class AppointmentABC(NoteOrAppointmentABC, ABC):
     """
-    Base class for appointment creation effects.
+    Base class for appointment create/update effects.
 
     Attributes:
         start_time (datetime.datetime): The start time of the appointment.
@@ -109,6 +132,21 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
     duration_minutes: int
     status: AppointmentProgressStatus | None = None
     external_identifiers: list[AppointmentIdentifier] | None = None
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Validates the appointment instance and returns a list of error details if validation fails."""
+        errors = super()._get_error_details(method)
+
+        if self.instance_id and not Appointment.objects.filter(id=self.instance_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Appointment with ID {self.instance_id} does not exist.",
+                    self.instance_id,
+                )
+            )
+
+        return errors
 
     @property
     def values(self) -> dict:
