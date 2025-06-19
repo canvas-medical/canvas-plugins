@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import pickle
@@ -10,11 +11,19 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
     ReloadPluginRequest,
     ReloadPluginsRequest,
-    UnloadPluginRequest,
+    UnloadPluginRequest
+)
+from canvas_sdk.effects.payment_processor import (
+    AddPaymentMethodResponse,
+    CardTransaction,
+    PaymentMethod,
+    PaymentProcessorForm,
+    PaymentProcessorMetadata,
+    RemovePaymentMethodResponse,
 )
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
@@ -571,3 +580,184 @@ def test_simple_api_websocket(
         )
 
     assert result[0].effects == [expected_response]
+
+
+@pytest.mark.parametrize(
+    argnames="event_type, context, expected_responses",
+    argvalues=[
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__LIST,
+            {},
+            [
+                PaymentProcessorMetadata(
+                    identifier=base64.b64encode(
+                        b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    ).decode("utf-8"),
+                    type=PaymentProcessorMetadata.PaymentProcessorType.CARD,
+                ).apply()
+            ],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
+            {
+                "identifier": base64.b64encode(
+                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                ).decode("utf-8"),
+            },
+            [
+                PaymentProcessorForm(intent="pay", content="<form>Payment Form</form>").apply(),
+                PaymentProcessorForm(
+                    intent="add_card", content="<form>Add Card Form</form>"
+                ).apply(),
+            ],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
+            {
+                "identifier": "unknown_processor",
+            },
+            [],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
+            {
+                "identifier": base64.b64encode(
+                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                ).decode("utf-8"),
+                "amount": "1.23",
+                "token": "tok_123",
+            },
+            [CardTransaction(success=True, transaction_id="txn_123", api_response={}).apply()],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
+            {
+                "identifier": base64.b64encode(b"unknown_processor").decode("utf-8"),
+                "amount": "1.23",
+                "token": "tok_123",
+            },
+            [],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
+            {
+                "identifier": base64.b64encode(
+                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                ).decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [
+                PaymentMethod(
+                    payment_method_id="pm_1",
+                    brand="Visa",
+                    expiration_year=2025,
+                    expiration_month=12,
+                    card_holder_name="John Doe",
+                    postal_code="12345",
+                    card_last_four_digits="1234",
+                ).apply(),
+            ],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
+            {
+                "identifier": base64.b64encode(b"unknown_processor").decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD,
+            {
+                "identifier": base64.b64encode(
+                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                ).decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [AddPaymentMethodResponse(success=True).apply()],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD,
+            {
+                "identifier": base64.b64encode(b"unknown_processor").decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE,
+            {
+                "identifier": base64.b64encode(
+                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                ).decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [RemovePaymentMethodResponse(success=True).apply()],
+        ),
+        (
+            EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE,
+            {
+                "identifier": base64.b64encode(b"unknown_processor").decode("utf-8"),
+                "patient": {
+                    "id": "patient_1",
+                },
+            },
+            [],
+        ),
+    ],
+    ids=[
+        "metadata-event",
+        "selected-event",
+        "select-event-unknown-processor",
+        "charge-event",
+        "charge-event-unknown-processor",
+        "payment-methods-list-event",
+        "payment-methods-list-event-unknown-processor",
+        "add-payment-method-event",
+        "add-payment-method-event-unknown-processor",
+        "remove-payment-method-event",
+        "remove-payment-method-event-unknown-processor",
+    ],
+)
+@pytest.mark.parametrize("install_test_plugin", ["test_payment_processor"], indirect=True)
+@patch("canvas_sdk.handlers.payment_processors.card.Patient", autospec=True)
+def test_payment_processor(
+    mock_patient_model: MagicMock,
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    event_type: EventType,
+    context: dict[str, Any],
+    expected_responses: list[Any],
+) -> None:
+    """Test that the PluginRunner returns responses to Payment Processor events."""
+    event = EventRequest(
+        type=event_type,
+        context=json.dumps(context),
+    )
+
+    result = []
+    for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    expected_effects = [
+        Effect(
+            type=expected_response.type,
+            payload=expected_response.payload,
+            plugin_name="test_payment_processor",
+            handler_name="canvas_sdk.handlers.payment_processors.base.PaymentProcessor.compute",
+        )
+        for expected_response in expected_responses
+    ]
+
+    assert result[0].effects == expected_effects

@@ -5,7 +5,7 @@ from enum import StrEnum
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.payment_processor import (
     AddPaymentMethodResponse,
-    CreditCardTransaction,
+    CardTransaction,
     PaymentMethod,
     PaymentProcessorForm,
     PaymentProcessorMetadata,
@@ -28,8 +28,8 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     def _on_payment_processor_selected(self) -> list[Effect]:
         """Handle the event when a payment processor is selected."""
-        if self.event.context["identifier"] == self.identifier:
-            intent = self.event.context["intent"]
+        if self.event.context.get("identifier") == self.identifier:
+            intent = self.event.context.get("intent")
             effects = self.on_payment_processor_selected(intent=intent)
             return [effect.apply() for effect in effects]
 
@@ -37,7 +37,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     def _charge(self) -> Effect | None:
         """Handle the event when a charge is made."""
-        if self.event.context["identifier"] == self.identifier:
+        if self.event.context.get("identifier") == self.identifier:
             patient = (
                 Patient.objects.get(id=self.event.context.get("patient", {}).get("id"))
                 if self.event.context.get("patient")
@@ -54,7 +54,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     def _payment_methods(self) -> list[Effect]:
         """List payment methods for the card payment processor."""
-        if self.event.context["identifier"] == self.identifier:
+        if self.event.context.get("identifier") == self.identifier:
             patient = (
                 Patient.objects.get(id=self.event.context.get("patient", {}).get("id"))
                 if self.event.context.get("patient")
@@ -67,7 +67,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     def _add_payment_method(self) -> Effect | None:
         """Handle the event when a card is added."""
-        if self.event.context["identifier"] == self.identifier:
+        if self.event.context.get("identifier") == self.identifier:
             patient = (
                 Patient.objects.get(id=self.event.context.get("patient", {}).get("id"))
                 if self.event.context.get("patient")
@@ -85,7 +85,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     def _remove_payment_method(self) -> Effect | None:
         """Handle the event when a payment method is removed."""
-        if self.event.context["identifier"] == self.identifier:
+        if self.event.context.get("identifier") == self.identifier:
             patient = (
                 Patient.objects.get(id=self.event.context.get("patient", {}).get("id"))
                 if self.event.context.get("patient")
@@ -145,8 +145,8 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
     @abstractmethod
     def charge(
         self, amount: Decimal, token: str, patient: Patient | None = None
-    ) -> CreditCardTransaction:
-        """Return the form for charging a credit card.
+    ) -> CardTransaction:
+        """Charge a credit/debit card using the provided token.
 
         Args:
             amount (Decimal): The amount to charge.
@@ -154,7 +154,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
             patient (Patient | None): The patient for whom the charge is being made.
 
         Returns:
-            PaymentProcessorForm: The form for charging a credit card.
+            CardTransaction: The result of the card transaction.
         """
         raise NotImplementedError("Subclasses must implement the charge method.")
 

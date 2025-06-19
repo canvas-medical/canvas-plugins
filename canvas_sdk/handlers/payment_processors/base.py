@@ -33,7 +33,7 @@ class PaymentProcessor(BaseHandler, ABC):
     def compute(self) -> list[Effect]:
         """Compute the effects to be applied."""
         if self.event.type == EventType.REVENUE__PAYMENT_PROCESSOR__LIST and (
-            not self.event.context["payment_type"]
+            "payment_type" not in self.event.context
             or self.event.context["payment_type"] == self.TYPE
         ):
             return [self.metadata().apply()]
