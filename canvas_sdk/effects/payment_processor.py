@@ -33,7 +33,7 @@ class PaymentProcessorForm(_BaseEffect):
     class Meta:
         effect_type = EffectType.REVENUE__PAYMENT_PROCESSOR__FORM
 
-    intent: str | None = None
+    intent: str
     content: str
 
     @property
@@ -45,8 +45,8 @@ class PaymentProcessorForm(_BaseEffect):
         }
 
 
-class CreditCardTransaction(_BaseEffect):
-    """CreditCardTransaction effect class."""
+class CardTransaction(_BaseEffect):
+    """CardTransaction effect class."""
 
     class Meta:
         effect_type = EffectType.REVENUE__PAYMENT_PROCESSOR__CREDIT_CARD_TRANSACTION
@@ -76,8 +76,8 @@ class PaymentMethod(_BaseEffect):
     payment_method_id: str
     card_holder_name: str | None
     brand: str
-    postal_code: str | None
-    country: str | None
+    postal_code: str | None = None
+    country: str | None = None
     expiration_year: int
     expiration_month: int
     card_last_four_digits: str
@@ -104,15 +104,11 @@ class AddPaymentMethodResponse(_BaseEffect):
         effect_type = EffectType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE
 
     success: bool
-    payment_method: PaymentMethod
 
     @property
     def values(self) -> dict[str, Any]:
         """Return the values of the AddPaymentMethodResponse."""
-        return {
-            "success": self.success,
-            "paymentMethod": self.payment_method.values,
-        }
+        return {"success": self.success}
 
 
 class RemovePaymentMethodResponse(_BaseEffect):
@@ -134,7 +130,7 @@ class RemovePaymentMethodResponse(_BaseEffect):
 __exports__ = (
     "PaymentProcessorMetadata",
     "PaymentProcessorForm",
-    "CreditCardTransaction",
+    "CardTransaction",
     "PaymentMethod",
     "AddPaymentMethodResponse",
     "RemovePaymentMethodResponse",
