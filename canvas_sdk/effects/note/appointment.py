@@ -88,7 +88,7 @@ class ScheduleEvent(AppointmentABC):
         """Send a DELETE effect for the schedule event."""
         self._validate_before_effect("delete")
         return Effect(
-            type=f"DELETE{self.Meta.effect_type}",
+            type=f"DELETE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
                     "data": self.values,
