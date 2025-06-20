@@ -14,3 +14,5 @@ It defaults to "rgb(12, 98, 72)".
 
 In order to deal with `SECRETS` take a look at the
 [SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
+
+For more, visit the [Canva SDK documentation](https://docs.canvasmedical.com/sdk/data-patient/)

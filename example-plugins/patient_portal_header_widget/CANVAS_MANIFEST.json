@@ -2,12 +2,12 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "patient_portal_header_widget",
-    "description": "Patient Portal Header Widget plugin to welcome the patient to the portal.",
+    "description": "Patient Portal Header Widget plugin to welcome the patient to the portal",
     "components": {
         "protocols": [
             {
                 "class": "patient_portal_header_widget.handlers.handler:Handler",
-                "description": "The handler that listens for the patient portal events and renders the header widget.",
+                "description": "The handler that listens for the patient portal events and renders the header widget",
                 "data_access": {
                     "event": "",
                     "read": [],
