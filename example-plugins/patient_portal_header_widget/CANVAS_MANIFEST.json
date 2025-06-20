@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "patient_portal_header_widget.handlers.handler:Handler",
+                "class": "patient_portal_header_widget.handlers.header_widget_handler:HeaderWidgetHandler",
                 "description": "The handler that listens for the patient portal events and renders the header widget",
                 "data_access": {
                     "event": "",
