@@ -82,6 +82,16 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
                     )
                 )
 
+        else:
+            if not self.instance_id:
+                errors.append(
+                    self._create_error_detail(
+                        "missing",
+                        "Field 'instance_id' is required to update or cancel/delete a note or appointment.",
+                        None,
+                    )
+                )
+
         if (
             self.practice_location_id
             and not PracticeLocation.objects.filter(id=self.practice_location_id).exists()

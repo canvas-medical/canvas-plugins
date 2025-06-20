@@ -112,7 +112,7 @@ class Appointment(AppointmentABC):
 
     appointment_note_type_id: UUID | str
     meeting_link: str | None = None
-    patient_id: str
+    patient_id: str | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -126,7 +126,16 @@ class Appointment(AppointmentABC):
         """
         errors = super()._get_error_details(method)
 
-        if not Patient.objects.filter(id=self.patient_id).exists():
+        if method == "update" and self.patient_id:
+            errors.append(
+                self._create_error_detail(
+                    "missing",
+                    "Field 'patient_id' cannot be updated for an existing appointment.",
+                    None,
+                )
+            )
+
+        if self.patient_id and not Patient.objects.filter(id=self.patient_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
