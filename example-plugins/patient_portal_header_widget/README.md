@@ -1,4 +1,4 @@
-Patient Portal Header Widget
+patient_portal_header_widget
 ============================
 
 ## Description
@@ -12,7 +12,7 @@ event.
 
 There is a configurable secret named `BACKGROUND_COLOR` that can change the
 widget color without the need to reinstall it.
-It defaults to "rgb(12, 98, 72)".
+It defaults to "#17634d".
 
 In order to deal with `SECRETS` take a look at the
 [SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
