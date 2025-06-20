@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "patient_portal_header_widget",
-    "description": "Simple Patient Portal Header Widget Plugin to welcome the user to the portal.",
+    "description": "Patient Portal Header Widget plugin to welcome the patient to the portal.",
     "components": {
         "protocols": [
             {
