@@ -7,7 +7,7 @@ from canvas_sdk.v1.data.care_team import CareTeamMembershipStatus
 from canvas_sdk.v1.data.patient import Patient
 
 
-# Inherit from BaseProtocol to properly get registered for events
+# Inherit from BaseHandler to properly get registered for events
 class CareTeamWidgetHandler(BaseHandler):
     """The CareTeamWidgetHandler class is responsible for handling the care team widget event."""
 
@@ -40,7 +40,7 @@ class CareTeamWidgetHandler(BaseHandler):
         }
 
         care_team_widget = PortalWidget(
-            content=render_to_string("templates/care_team_widget.html", payload),
+            content=render_to_string("care_team_widget.html", payload),
             size=PortalWidget.Size.COMPACT,
             priority=11,
         )
