@@ -17,7 +17,7 @@ class HeaderWidgetHandler(BaseHandler):
         patient = Patient.objects.get(id=self.target)
         background_color = self.secrets["BACKGROUND_COLOR"]
         if not background_color:
-            background_color = "rgb(12, 98, 72)"
+            background_color = "#17634d"
 
         payload = {
             "preferred_full_name": patient.preferred_full_name,
