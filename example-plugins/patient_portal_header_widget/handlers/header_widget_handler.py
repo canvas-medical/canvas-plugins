@@ -7,7 +7,7 @@ from canvas_sdk.v1.data import Patient
 
 
 # Inherit from BaseHandler to properly get registered for events
-class Handler(BaseHandler):
+class HeaderWidgetHandler(BaseHandler):
     """Handler responsible for rendering a header widget in the patient portal upon receiving a configuration event."""
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__WIDGET_CONFIGURATION)
