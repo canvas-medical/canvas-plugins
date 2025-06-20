@@ -6,6 +6,8 @@ Patient Portal Care Team Widget
 An example of how to use a Canvas plugin to display the active care team
 available for a patient when visiting the Patient Portal App.
 
+It renders a scrollable list in a compact plugin format of all active members. 
+
 ### Important Note!
 
 The CANVAS_MANIFEST.json is used when installing your plugin. Please ensure it
