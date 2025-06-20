@@ -16,27 +16,30 @@ class CareTeamWidgetHandler(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        care_team = []
         patient = Patient.objects.get(id=self.target)
         patient_care_team = patient.care_team_memberships.filter(status=CareTeamMembershipStatus.ACTIVE)
 
+        care_team = []
         for member in patient_care_team:
+            name = f"{member.staff.first_name} {member.staff.last_name}"
+            prefixed_name = f"{member.staff.prefix} " if member.staff.prefix else "" + f"{name}"
+            professional_name = f"{prefixed_name}, {member.staff.suffix}" if member.staff.suffix else prefixed_name
+            photo_url = member.staff.photo_url
+            role = member.role
+
             # Prefetch the photo for each care team member
             care_team.append(
                 {
-                    "prefix": member.staff.prefix,
-                    "suffix": member.staff.suffix,
-                    "first_name": member.staff.first_name,
-                    "last_name": member.staff.last_name,
-                    "photo_url": member.staff.photos.first().url,
-                    "role": member.role,
+                    "name": name,
+                    "prefixed_name": prefixed_name,
+                    "professional_name": professional_name,
+                    "photo_url": photo_url,
+                    "role": role,
                 }
             )
 
         payload = {
             "care_team": care_team,
-            "patient_id": patient.id,
-            "patient_name": patient.name,
         }
 
         care_team_widget = PortalWidget(
