@@ -40,9 +40,9 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
     class Meta:
         effect_type = None
 
-    instance_id: UUID | str | None
-    practice_location_id: UUID | str
-    provider_id: str
+    instance_id: UUID | str | None = None
+    practice_location_id: UUID | str | None = None
+    provider_id: str | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -56,16 +56,36 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         """
         errors = super()._get_error_details(method)
 
-        if method == "create" and self.instance_id:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Instance ID should not be provided for create effects.",
-                    self.instance_id,
+        if method == "create":
+            if self.instance_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Instance ID should not be provided for create effects.",
+                        self.instance_id,
+                    )
                 )
-            )
+            if not self.practice_location_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Practice location ID is required.",
+                        self.practice_location_id,
+                    )
+                )
+            if not self.provider_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Provider ID is required.",
+                        self.provider_id,
+                    )
+                )
 
-        if not PracticeLocation.objects.filter(id=self.practice_location_id).exists():
+        if (
+            self.practice_location_id
+            and not PracticeLocation.objects.filter(id=self.practice_location_id).exists()
+        ):
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -74,7 +94,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
                 )
             )
 
-        if not Staff.objects.filter(id=self.provider_id).exists():
+        if self.provider_id and not Staff.objects.filter(id=self.provider_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",
