@@ -1,12 +1,16 @@
-Patient Portal Care Team Widget
+patient_portal_care_team_widget
 ===============================
 
 ## Description
 
-An example of how to use a Canvas plugin to display the active care team
-available for a patient when visiting the Patient Portal App.
+This handler responds to the `PATIENT_PORTAL__WIDGET_CONFIGURATION` event.
+
+It is used to display a compact widget in the Patient Portal that lists the
+active care team members for a patient.
 
 It renders a scrollable list in a compact plugin format of all active members. 
+
+For more information, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sdk/data-care-team/).
 
 ### Important Note!
 
