@@ -1,6 +1,8 @@
 Patient Portal Header Widget
 ============================
 
+## Description
+
 The Patient Portal Header widget is a simple widget, often sitting at the top
 of the portal.
 The widget displays the patient's preferred name and has quick links for
@@ -16,3 +18,8 @@ In order to deal with `SECRETS` take a look at the
 [SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
 
 For more, visit the [Canva SDK documentation](https://docs.canvasmedical.com/sdk/data-patient/)
+
+### Important Note!
+
+The CANVAS_MANIFEST.json is used when installing your plugin. Please ensure it
+gets updated if you add, remove, or rename protocols.
