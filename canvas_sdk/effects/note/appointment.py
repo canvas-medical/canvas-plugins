@@ -169,7 +169,7 @@ class Appointment(AppointmentABC):
         if method == "update" and self.patient_id:
             errors.append(
                 self._create_error_detail(
-                    "missing",
+                    "value",
                     "Field 'patient_id' cannot be updated for an existing appointment.",
                     None,
                 )
