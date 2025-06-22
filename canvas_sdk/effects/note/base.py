@@ -132,7 +132,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         self._validate_before_effect("update")
 
         # Check if any fields were actually modified
-        if not self._dirty_keys:
+        if self._dirty_keys == {"instance_id"}:
             raise ValueError("No fields have been modified. Nothing to update.")
 
         return Effect(
