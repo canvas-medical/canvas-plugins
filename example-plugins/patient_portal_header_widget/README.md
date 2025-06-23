@@ -17,7 +17,7 @@ It defaults to "#17634d".
 In order to deal with `SECRETS` take a look at the
 [SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
 
-For more, visit the [Canva SDK documentation](https://docs.canvasmedical.com/sdk/data-patient/)
+For more, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sdk/data-patient/)
 
 ### Important Note!
 
