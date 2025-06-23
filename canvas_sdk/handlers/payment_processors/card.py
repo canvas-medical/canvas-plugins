@@ -179,7 +179,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
             patient (Patient): The patient for whom the payment method is being added.
 
         Returns:
-            PaymentMethod: The added payment method.
+            AddPaymentMethodResponse: The response indicating the result of the addition operation.
         """
         raise NotImplementedError("Subclasses must implement the add_payment_method method.")
 
@@ -192,7 +192,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
             patient (Patient): The patient for whom the payment method is being removed.
 
         Returns:
-            Effect: The effect of removing the payment method.
+            RemovePaymentMethodResponse: The response indicating the result of the removal operation.
         """
         raise NotImplementedError("Subclasses must implement the remove_payment_method method.")
 
