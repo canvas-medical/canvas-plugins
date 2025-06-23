@@ -14,7 +14,9 @@ class HeaderWidgetHandler(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        patient = Patient.objects.get(id=self.target)
+        # Get the patient needed fields to generate the preferred full name
+        patient = Patient.objects.only("first_name", "last_name", "suffix", "nickname").get(id=self.target)
+        # Get the background color from secrets, defaulting to a specific color if not set
         background_color = self.secrets["BACKGROUND_COLOR"]
         if not background_color:
             background_color = "#17634d"
