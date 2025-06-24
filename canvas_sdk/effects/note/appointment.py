@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import Effect
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
