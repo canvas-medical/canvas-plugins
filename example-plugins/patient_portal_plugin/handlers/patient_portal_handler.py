@@ -90,3 +90,16 @@ class PatientPortalHandler(BaseHandler):
         )
 
         return care_team_widget.apply()
+
+    def _create_footer_widget(self) -> Effect:
+        """This method gets called when an event of the type RESPONDS_TO is fired."""
+        emergency_contact = self.secrets["EMERGENCY_CONTACT"]
+        if not emergency_contact:
+            emergency_contact = "1-888-555-5555"
+
+        return PortalWidget(
+            content=render_to_string("templates/footer_widget.html", {"emergency_contact": emergency_contact}),
+            size=PortalWidget.Size.EXPANDED,
+            priority=12,
+        ).apply()
+
