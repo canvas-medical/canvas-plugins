@@ -1,14 +1,16 @@
-patient_portal_header_widget
+patient_portal_portal_plugin
 ============================
 
 ## Description
 
-The Patient Portal Header widget is a simple widget, often sitting at the top
-of the portal.
-The widget displays the patient's preferred name and has quick links for
-messaging and scheduling.
-The widget will be available upon the `PATIENT_PORTAL__WIDGET_CONFIGURATION`
-event.
+The Patient Portal Plugin is a simple plugin that provides various widgets for the patient portal.
+The plugin listens to the `PATIENT_PORTAL__WIDGET_CONFIGURATION` event.
+
+## Widgets
+
+### Header Widget
+
+The Header Widget displays the patient's preferred name and has quick links for messaging and scheduling.
 
 There is a configurable secret named `BACKGROUND_COLOR` that can change the
 widget color without the need to reinstall it.
