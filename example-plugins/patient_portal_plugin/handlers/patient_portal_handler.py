@@ -63,7 +63,7 @@ class PatientPortalHandler(BaseHandler):
         for member in patient_care_team:
             # Aliasing the member's name components for clarity
             name = f"{member['staff__first_name']} {member['staff__last_name']}"
-            prefixed_name = f"{member['staff__prefix']} " if member['staff__prefix'] else name
+            prefixed_name = f"{member['staff__prefix']} " if member['staff__prefix'] else "" + f"{name}"
             professional_name = f"{prefixed_name}, {member['staff__suffix']}" if member['staff__suffix'] else prefixed_name
             photo_url = member['staff__photos__url']
             role = member['role_display']
