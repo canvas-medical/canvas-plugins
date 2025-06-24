@@ -6,7 +6,7 @@ class PayorSpecificCharge(models.Model):
 
     class Meta:
         managed = False
-        db_table = "canvas_sdk_data_quality_and_revenue__payorspecificcharge_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_payorspecificcharge_001"
 
     dbid = models.BigIntegerField(primary_key=True)
     transactor = models.ForeignKey(
@@ -20,7 +20,7 @@ class PayorSpecificCharge(models.Model):
     # )
 
     charge_amount = models.DecimalField()
-    eff_date = models.DateField()
+    effective_date = models.DateField()
     end_date = models.DateField()
     part_of_capitated_set = models.BooleanField()
 
