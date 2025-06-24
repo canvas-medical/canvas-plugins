@@ -16,8 +16,7 @@ The Header Widget displays the patient's preferred name and has quick links for 
 There is a configurable secret named `BACKGROUND_COLOR` that can change the widget color.
 It defaults to `#17634d`.
 
-In order to deal with `SECRETS` take a look at the
-[SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
+For more, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sdk/data-patient/)
 
 
 ### Care Team Widget
@@ -29,18 +28,23 @@ It renders a scrollable list in a compact plugin format of all active members.
 
 For more information, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sdk/data-care-team/).
 
+
 ### Footer Widget
 
 The Footer Widget displays the support contact information for the patient.
 
-There is a configurable secret named `EMERGENCY_CONTACT` that can change the contact information.
-It defaults to `1-888-555-5555`.
 
-There is a configurable secret named `BACKGROUND_COLOR` that can change the widget color.
-It defaults to `#17634d`.
+## Secrets
+
+The Patient Portal Plugin uses the following secrets:
+
+- `BACKGROUND_COLOR`: The background color for the widgets. Defaults to `#17634d`.
+- `EMERGENCY_CONTACT`: The emergency contact information. Defaults to `1-888-555-5555`.
+
 
 In order to deal with `SECRETS` take a look at the
 [SDK documentation](https://docs.canvasmedical.com/sdk/secrets/).
+
 
 ## Important Note!
 
