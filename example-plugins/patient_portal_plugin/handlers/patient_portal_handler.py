@@ -56,6 +56,10 @@ class PatientPortalHandler(BaseHandler):
             status=CareTeamMembershipStatus.ACTIVE,
         )
 
+        title_color = self.secrets["BACKGROUND_COLOR"]
+        if not title_color:
+            title_color = "#17634d"
+
         care_team = []
         for member in patient_care_team:
             # Aliasing the member's name components for clarity
@@ -77,6 +81,7 @@ class PatientPortalHandler(BaseHandler):
 
         payload = {
             "care_team": care_team,
+            "title_color": title_color,
         }
 
         care_team_widget = PortalWidget(
