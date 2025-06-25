@@ -61,9 +61,8 @@ class PatientPortalHandler(BaseHandler):
             status=CareTeamMembershipStatus.ACTIVE,
         )
 
-        title_color = self.secrets["BACKGROUND_COLOR"]
-        if not title_color:
-            title_color = "#17634d"
+        # Get the background color from secrets, defaulting to a specific color if not set
+        title_color = self.secrets.get("BACKGROUND_COLOR") or self.BACKGROUND_COLOR
 
         care_team = []
         for member in patient_care_team:
