@@ -12,14 +12,14 @@ class PatientPortalHandler(BaseHandler):
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__WIDGET_CONFIGURATION)
 
+    BACKGROUND_COLOR = "#17634d"  # Default background color if not set in secrets
+
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         # Get the patient needed fields to generate the preferred full name
         patient = Patient.objects.only("first_name", "last_name", "suffix", "nickname").get(id=self.target)
         # Get the background color from secrets, defaulting to a specific color if not set
-        background_color = self.secrets["BACKGROUND_COLOR"]
-        if not background_color:
-            background_color = "#17634d"
+        background_color = self.secrets.get("BACKGROUND_COLOR") or self.BACKGROUND_COLOR
 
         payload = {
             "preferred_full_name": patient.preferred_full_name,
