@@ -3,6 +3,7 @@ from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
+from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
 from .command import Command
 from .condition import Condition, ConditionCoding
@@ -39,6 +40,12 @@ from .patient import (
     PatientMetadata,
     PatientSetting,
 )
+from .patient_consent import (
+    PatientConsent,
+    PatientConsentCoding,
+    PatientConsentRejectionCoding,
+)
+from .payor_specific_charge import PayorSpecificCharge
 from .practicelocation import PracticeLocation, PracticeLocationSetting
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -65,6 +72,7 @@ __all__ = __exports__ = (
     "BannerAlert",
     "BillingLineItem",
     "BillingLineItemModifier",
+    "BusinessLine",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -108,6 +116,10 @@ __all__ = __exports__ = (
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",
+    "PatientConsent",
+    "PatientConsentCoding",
+    "PatientConsentRejectionCoding",
+    "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationSetting",
     "ProtocolOverride",
