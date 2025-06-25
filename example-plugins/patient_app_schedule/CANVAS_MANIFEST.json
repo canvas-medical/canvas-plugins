@@ -1,0 +1,38 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.1",
+  "name": "patient_app_schedule",
+  "description": "Edit the description in CANVAS_MANIFEST.json",
+  "components": {
+    "protocols": [
+      {
+        "class": "patient_app_schedule.protocols.my_protocol:Providers",
+        "description": "A protocol that does xyz...",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      },
+      {
+        "class": "patient_app_schedule.protocols.my_protocol:Locations",
+        "description": "A protocol that does xyz...",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
