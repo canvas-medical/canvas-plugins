@@ -3,7 +3,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -55,6 +56,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PRESCRIPTION_UPDATED: _ClassVar[EventType]
     REFERRAL_REPORT_CREATED: _ClassVar[EventType]
     REFERRAL_REPORT_UPDATED: _ClassVar[EventType]
+    STAFF_CREATED: _ClassVar[EventType]
+    STAFF_UPDATED: _ClassVar[EventType]
     TASK_COMMENT_CREATED: _ClassVar[EventType]
     TASK_CREATED: _ClassVar[EventType]
     TASK_LABELS_ADJUSTED: _ClassVar[EventType]
@@ -91,6 +94,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TASK_COMPLETED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_CREATED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_UPDATED: _ClassVar[EventType]
+    STAFF_ACTIVATED: _ClassVar[EventType]
+    STAFF_DEACTIVATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -888,6 +893,8 @@ PRESCRIPTION_CREATED: EventType
 PRESCRIPTION_UPDATED: EventType
 REFERRAL_REPORT_CREATED: EventType
 REFERRAL_REPORT_UPDATED: EventType
+STAFF_CREATED: EventType
+STAFF_UPDATED: EventType
 TASK_COMMENT_CREATED: EventType
 TASK_CREATED: EventType
 TASK_LABELS_ADJUSTED: EventType
@@ -924,6 +931,8 @@ TASK_CLOSED: EventType
 TASK_COMPLETED: EventType
 DETECTED_ISSUE_EVIDENCE_CREATED: EventType
 DETECTED_ISSUE_EVIDENCE_UPDATED: EventType
+STAFF_ACTIVATED: EventType
+STAFF_DEACTIVATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
