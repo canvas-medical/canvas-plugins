@@ -129,6 +129,16 @@ class Patient(models.Model):
             return None
         return pharmacy_setting
 
+    @property
+    def preferred_full_name(self) -> str:
+        """Returns the patient's preferred full name, taking nickname into consideration."""
+        return " ".join(n for n in (self.preferred_first_name, self.last_name, self.suffix) if n)
+
+    @property
+    def preferred_first_name(self) -> str:
+        """Returns the patient's preferred first name, taking nickname into consideration."""
+        return self.nickname or self.first_name
+
 
 class PatientContactPoint(models.Model):
     """A class representing a patient contact point."""
