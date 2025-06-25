@@ -56,15 +56,14 @@ class PatientPortalHandler(BaseHandler):
             status=CareTeamMembershipStatus.ACTIVE,
         )
 
-        title_color = self.secrets["BACKGROUND_COLOR"]
-        if not title_color:
-            title_color = "#17634d"
+        # Get the background color from secrets, defaulting to a specific color if not set
+        title_color = self.secrets.get("BACKGROUND_COLOR") or self.BACKGROUND_COLOR
 
         care_team = []
         for member in patient_care_team:
             # Aliasing the member's name components for clarity
             name = f"{member['staff__first_name']} {member['staff__last_name']}"
-            prefixed_name = f"{member['staff__prefix']} " if member['staff__prefix'] else "" + f"{name}"
+            prefixed_name = f"{member['staff__prefix']} " if member['staff__prefix'] else name
             professional_name = f"{prefixed_name}, {member['staff__suffix']}" if member['staff__suffix'] else prefixed_name
             photo_url = member['staff__photos__url']
             role = member['role_display']
