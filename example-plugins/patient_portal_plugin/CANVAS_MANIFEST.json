@@ -1,0 +1,31 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "patient_portal_plugin",
+    "description": "Patient Portal Plugin for Canvas",
+    "components": {
+        "protocols": [
+            {
+                "class": "patient_portal_plugin.handlers.patient_portal_handler:PatientPortalHandler",
+                "description": "The handler that listens for the patient portal `PATIENT_PORTAL__WIDGET_CONFIGURATION` and responds with the patient portal widgets",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [
+        "BACKGROUND_COLOR"
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
