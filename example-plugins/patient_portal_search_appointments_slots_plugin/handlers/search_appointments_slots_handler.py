@@ -24,7 +24,7 @@ class SearchAppointmentsSlotsHandler(BaseHandler):
         filtered = {
             provider: dates
             for provider, dates in slots_by_provider.items()
-            if not all(len(slots) == 0 for slots in dates.values())
+            if any(slots for slots in dates.values())
         }
 
         payload = {
