@@ -4,7 +4,7 @@ from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
 
 
-class PatientExternalIdentifier(TrackableFieldsModel):
+class CreatePatientExternalIdentifier(TrackableFieldsModel):
     """Effect to create a Patient External Identifier record."""
 
     class Meta:
@@ -35,3 +35,6 @@ class PatientExternalIdentifier(TrackableFieldsModel):
                 }
             ),
         )
+
+
+__exports__ = "CreatePatientExternalIdentifier"
