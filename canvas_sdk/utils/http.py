@@ -281,9 +281,7 @@ class OntologiesHttp(JsonOnlyHttp):
     """
 
     def __init__(self) -> None:
-        super().__init__(
-            base_url=os.getenv("ONTOLOGIES_ENDPOINT", "https://ontologies.canvasmedical.com")
-        )
+        super().__init__(base_url="https://ontologies.canvasmedical.com")
 
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
@@ -294,9 +292,7 @@ class ScienceHttp(JsonOnlyHttp):
     """
 
     def __init__(self) -> None:
-        super().__init__(
-            base_url=os.getenv("SCIENCE_ENDPOINT", "https://science.canvasmedical.com")
-        )
+        super().__init__(base_url="https://science.canvasmedical.com")
 
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
