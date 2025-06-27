@@ -4,7 +4,7 @@ from typing import cast
 import arrow
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.patient import Patient
+from canvas_sdk.effects.patient import Patient, PatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
@@ -70,6 +70,7 @@ class PatientCreateApi(SimpleAPI):
             first_name=str(json_body.get("firstName")),
             last_name=str(json_body.get("lastName")),
             sex_at_birth=sex_at_birth,
+            external_identifiers=[external_id],
         )
         log.info(f"PatientCreateApi.post: patient={patient}")
 
