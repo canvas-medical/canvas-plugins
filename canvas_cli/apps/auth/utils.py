@@ -3,32 +3,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
-import keyring
 import requests
 
+from canvas_cli.apps.auth.storage import get_token, set_token
 from canvas_sdk.utils import Http
-
-# Keyring namespace we'll use
-KEYRING_SERVICE = __name__
 
 CONFIG_PATH = Path.home() / ".canvas" / "credentials.ini"
 
 LOCALHOST = "http://localhost:8000"
-
-
-def get_password(username: str) -> str | None:
-    """Return the stored password for username, or None."""
-    return keyring.get_password(KEYRING_SERVICE, username)
-
-
-def set_password(username: str, password: str) -> None:
-    """Set the password for the given username."""
-    keyring.set_password(KEYRING_SERVICE, username=username, password=password)
-
-
-def delete_password(username: str) -> None:
-    """Delete the password for the given username."""
-    keyring.delete_password(KEYRING_SERVICE, username=username)
 
 
 def get_config() -> configparser.ConfigParser:
@@ -64,7 +46,7 @@ def read_config(host: str, property: str) -> str:
 
 
 def get_api_client_credentials(host: str) -> str:
-    """Either return the given api_key, or fetch it from the keyring."""
+    """Either return the given api_key, or fetch it from the token storage."""
     hostname = urlparse(host).hostname
 
     if not hostname:
@@ -119,23 +101,6 @@ def request_api_token(host: str, api_client_credentials: str) -> dict:
     return token_response.json()
 
 
-def is_token_valid(host_token_key: str, expiration_date: datetime | None = None) -> bool:
-    """True if the token has not expired yet."""
-    token_exp_date_key = f"{host_token_key}|exp_date"
-
-    if expiration_date:
-        if expiration_date <= datetime.now():
-            return False
-        set_password(token_exp_date_key, expiration_date.isoformat())
-        return True
-
-    stored_expiration_date = get_password(token_exp_date_key)
-    return (
-        stored_expiration_date is not None
-        and datetime.fromisoformat(stored_expiration_date) > datetime.now()
-    )
-
-
 def get_or_request_api_token(host: str | None = None) -> str:
     """Returns an existing stored token if it has not expired, or requests a new one."""
     if not (host := get_default_host(host)):
@@ -143,10 +108,9 @@ def get_or_request_api_token(host: str | None = None) -> str:
             f"Please specify a host or add one to the configuration file at '{CONFIG_PATH}'"
         )
 
-    host_token_key = f"{host}|token"
-    token = get_password(host_token_key)
+    token = get_token(host)
 
-    if token and is_token_valid(host_token_key):
+    if token:
         return token
 
     api_client_credentials = get_api_client_credentials(host)
@@ -155,9 +119,9 @@ def get_or_request_api_token(host: str | None = None) -> str:
         raise Exception(f"A token could not be acquired from the given host '{host}'")
 
     token_expiration_date = datetime.now() + timedelta(seconds=token_response["expires_in"])
-    if not is_token_valid(host_token_key, token_expiration_date):
+    if token_expiration_date <= datetime.now():
         raise Exception(f"A valid token could not be acquired from the given host '{host}'")
 
     new_token = token_response["access_token"]
-    set_password(host_token_key, new_token)
+    set_token(host, new_token, token_expiration_date)
     return new_token

@@ -175,8 +175,8 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
 
 
 @pytest.mark.integtest
-@patch("keyring.get_password")
-@patch("keyring.set_password")
+@patch("canvas_cli.apps.auth.utils.get_token")
+@patch("canvas_cli.apps.auth.utils.set_token")
 @pytest.mark.parametrize(
     "step",
     [
@@ -193,16 +193,16 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
     ],
 )
 def test_canvas_list_install_disable_enable_uninstall(
-    mock_get_password: MagicMock,
-    mock_set_password: MagicMock,
+    mock_get_token: MagicMock,
+    mock_set_token: MagicMock,
     plugin_name: str,
     create_or_update_config_auth_file_for_testing: None,
     step: Callable,
     cli_runner: CliRunner,
 ) -> None:
     """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin."""
-    mock_get_password.return_value = None
-    mock_set_password.return_value = None
+    mock_get_token.return_value = None
+    mock_set_token.return_value = None
 
     (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
 
