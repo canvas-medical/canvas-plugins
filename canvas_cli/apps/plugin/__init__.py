@@ -1,4 +1,5 @@
 from canvas_cli.apps.plugin.plugin import (
+    configure,
     disable,
     enable,
     init,
@@ -8,4 +9,13 @@ from canvas_cli.apps.plugin.plugin import (
     validate_manifest,
 )
 
-__all__ = ("uninstall", "enable", "disable", "init", "validate_manifest", "install", "list")
+__all__ = (
+    "configure",
+    "disable",
+    "enable",
+    "init",
+    "install",
+    "list",
+    "uninstall",
+    "validate_manifest",
+)

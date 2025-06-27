@@ -1,4 +1,6 @@
 import ast
+import base64
+import builtins
 import json
 import tarfile
 import tempfile
@@ -422,6 +424,62 @@ def list(
             print(
                 f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'disabled'}"
             )
+    else:
+        print(f"Status code {r.status_code}: {r.text}")
+        raise typer.Exit(1)
+
+
+def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
+    """Parse secrets from the command line, expecting them in the format Key=value."""
+    if not secrets:
+        raise typer.BadParameter("At least one secret must be provided in the format Key=value")
+
+    parsed_secrets = []
+    for secret in secrets:
+        if "=" not in secret:
+            raise typer.BadParameter(f"Invalid secret format: '{secret}'. Use key=value.")
+        parsed_secrets.append(secret)
+
+    return parsed_secrets
+
+
+def configure(
+    plugin: str = typer.Argument(..., help="Plugin name to configure"),
+    host: str | None = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+    secret: builtins.list[str] = typer.Option(
+        ..., callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
+) -> None:
+    """Configure plugin secrets on a Canvas instance."""
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    token = get_or_request_api_token(host)
+    url = plugin_url(host, plugin)
+
+    encoded_pairs = []
+    for pair in secret:
+        encoded = base64.b64encode(pair.encode()).decode()
+        encoded_pairs.append(("secret", encoded))
+
+    print(f"Configuring secrets for plugin '{plugin}' on {host} using {url}")
+
+    try:
+        r = requests.patch(
+            url,
+            data=encoded_pairs,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except requests.exceptions.RequestException:
+        print(f"Failed to connect to {host}")
+        raise typer.Exit(1) from None
+
+    if r.ok:
+        print(f"Secrets successfully configured for plugin '{plugin}'!")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
