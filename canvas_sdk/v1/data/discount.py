@@ -1,21 +1,21 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import Model
 
-class Discount(models.Model):
+
+class Discount(Model):
     """Model to represent a discount applied to a claim or patient posting."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_discount_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    name = models.CharField()
-    adjustment_group = models.CharField()
-    adjustment_code = models.CharField()
+    name = models.CharField(max_length=500)
+    adjustment_group = models.CharField(max_length=3)
+    adjustment_code = models.CharField(max_length=3)
     discount = models.DecimalField(max_digits=8, decimal_places=2)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("Discount",)

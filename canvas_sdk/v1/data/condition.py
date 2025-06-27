@@ -8,6 +8,8 @@ from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
+    Model,
     ValueSetLookupQuerySetMixin,
 )
 
@@ -38,17 +40,14 @@ class ConditionQuerySet(
 ConditionManager = BaseModelManager.from_queryset(ConditionQuerySet)
 
 
-class Condition(models.Model):
+class Condition(IdentifiableModel):
     """Condition."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_condition_001"
 
     objects = cast(ConditionQuerySet, ConditionManager())
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     deleted = models.BooleanField()
     entered_in_error = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -61,22 +60,20 @@ class Condition(models.Model):
     )
     onset_date = models.DateField()
     resolution_date = models.DateField()
-    clinical_status = models.CharField(choices=ClinicalStatus.choices)
+    clinical_status = models.CharField(choices=ClinicalStatus.choices, max_length=20)
     surgical = models.BooleanField()
 
 
-class ConditionCoding(models.Model):
+class ConditionCoding(Model):
     """ConditionCoding."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_conditioncoding_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
     condition = models.ForeignKey(
         Condition, on_delete=models.DO_NOTHING, related_name="codings", null=True

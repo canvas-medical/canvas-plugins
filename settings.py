@@ -79,7 +79,7 @@ if os.getenv("DATABASE_URL"):
             "PORT": parsed_url.port,
         }
     }
-else:
+elif not IS_SCRIPT:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -89,6 +89,13 @@ else:
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
             "HOST": CANVAS_SDK_DB_HOST,
             "PORT": CANVAS_SDK_DB_PORT,
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -129,7 +136,7 @@ TEMPLATES = [
 ]
 
 
-if IS_TESTING:
+if IS_SCRIPT:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",

@@ -1,6 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -144,17 +145,14 @@ class TransactorType(models.TextChoices):
     BCBS = "bcbs", "Blue Cross Blue Shield"
 
 
-class Coverage(models.Model):
+class Coverage(IdentifiableModel):
     """Coverage."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_coverage_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
@@ -164,22 +162,24 @@ class Coverage(models.Model):
     subscriber = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages", null=True
     )
-    patient_relationship_to_subscriber = models.CharField(choices=CoverageRelationshipCode.choices)
+    patient_relationship_to_subscriber = models.CharField(
+        choices=CoverageRelationshipCode.choices, max_length=2
+    )
     issuer = models.ForeignKey(
         "v1.Transactor", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
-    id_number = models.CharField()
-    plan = models.CharField()
-    sub_plan = models.CharField()
-    group = models.CharField()
-    sub_group = models.CharField()
-    employer = models.CharField()
+    id_number = models.CharField(max_length=100)
+    plan = models.CharField(max_length=255)
+    sub_plan = models.CharField(max_length=255)
+    group = models.CharField(max_length=255)
+    sub_group = models.CharField(max_length=255)
+    employer = models.CharField(max_length=255)
     coverage_start_date = models.DateField()
     coverage_end_date = models.DateField()
     coverage_rank = models.IntegerField()
-    state = models.CharField(choices=CoverageState.choices)
-    plan_type = models.CharField(choices=CoverageType.choices)
-    coverage_type = models.CharField(choices=TransactorCoverageType.choices)
+    state = models.CharField(choices=CoverageState.choices, max_length=20)
+    plan_type = models.CharField(choices=CoverageType.choices, max_length=20)
+    coverage_type = models.CharField(choices=TransactorCoverageType.choices, max_length=64)
     issuer_address = models.ForeignKey(
         "v1.TransactorAddress",
         on_delete=models.DO_NOTHING,
@@ -190,24 +190,22 @@ class Coverage(models.Model):
         "v1.TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
     comments = models.TextField()
-    stack = models.CharField(choices=CoverageStack.choices)
+    stack = models.CharField(choices=CoverageStack.choices, max_length=8)
 
     def __str__(self) -> str:
         return f"id={self.id}"
 
 
-class Transactor(models.Model):
+class Transactor(Model):
     """Transactor."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_transactor_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    payer_id = models.CharField()
-    name = models.CharField()
-    type = models.CharField()
-    transactor_type = models.CharField(choices=TransactorType.choices)
+    payer_id = models.CharField(max_length=50)
+    name = models.CharField(max_length=255)
+    type = models.CharField(max_length=50)
+    transactor_type = models.CharField(choices=TransactorType.choices, max_length=100)
     clearinghouse_payer = models.BooleanField()
     institutional = models.BooleanField(null=True)
     institutional_enrollment_req = models.BooleanField(null=True)
@@ -221,8 +219,8 @@ class Transactor(models.Model):
     secondary_support = models.BooleanField(null=True)
     claim_fee = models.BooleanField(null=True)
     remit_fee = models.BooleanField(null=True)
-    state = models.CharField()
-    description = models.CharField()
+    state = models.CharField(max_length=50)
+    description = models.CharField(max_length=1000)
     active = models.BooleanField()
     use_provider_for_eligibility = models.BooleanField()
 
@@ -233,34 +231,33 @@ class Transactor(models.Model):
         related_name="used_for_submission_by",
     )
 
-    coverage_types = ArrayField(models.CharField(choices=TransactorCoverageType.choices))
+    coverage_types = ArrayField(
+        models.CharField(choices=TransactorCoverageType.choices, max_length=64)
+    )
 
 
-class TransactorAddress(models.Model):
+class TransactorAddress(IdentifiableModel):
     """TransactorAddress."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_transactoraddress_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    line1 = models.CharField()
-    line2 = models.CharField()
-    city = models.CharField()
-    district = models.CharField()
-    state_code = models.CharField()
-    postal_code = models.CharField()
-    use = models.CharField(choices=AddressUse.choices)
-    type = models.CharField(choices=AddressType.choices)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    line1 = models.CharField(max_length=255)
+    line2 = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    district = models.CharField(max_length=255)
+    state_code = models.CharField(max_length=2)
+    postal_code = models.CharField(max_length=255)
+    use = models.CharField(choices=AddressUse.choices, max_length=10)
+    type = models.CharField(choices=AddressType.choices, max_length=10)
     longitude = models.FloatField(null=True, default=None, blank=True)
     latitude = models.FloatField(null=True, default=None, blank=True)
     start = models.DateField(null=True, blank=True)
     end = models.DateField(null=True, blank=True)
     country = models.CharField(max_length=255)
-    state = models.CharField(choices=AddressState.choices)
+    state = models.CharField(choices=AddressState.choices, max_length=20)
     transactor = models.ForeignKey(
         "v1.Transactor", on_delete=models.DO_NOTHING, related_name="addresses", null=True
     )
@@ -269,23 +266,20 @@ class TransactorAddress(models.Model):
         return f"id={self.id}"
 
 
-class TransactorPhone(models.Model):
+class TransactorPhone(IdentifiableModel):
     """TransactorPhone."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_transactorphone_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    system = models.CharField(choices=ContactPointSystem.choices)
-    value = models.CharField()
-    use = models.CharField(choices=ContactPointUse.choices)
-    use_notes = models.CharField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    system = models.CharField(choices=ContactPointSystem.choices, max_length=20)
+    value = models.CharField(max_length=100)
+    use = models.CharField(choices=ContactPointUse.choices, max_length=20)
+    use_notes = models.CharField(max_length=255)
     rank = models.IntegerField()
-    state = models.CharField(choices=ContactPointState.choices)
+    state = models.CharField(choices=ContactPointState.choices, max_length=20)
     transactor = models.ForeignKey(
         "v1.Transactor", on_delete=models.DO_NOTHING, related_name="phones", null=True
     )

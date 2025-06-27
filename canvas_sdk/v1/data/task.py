@@ -1,20 +1,21 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 
 
 class TaskType(models.TextChoices):
     """Choices for task types."""
 
-    TASK = "Task", "Task"
-    REMINDER = "Reminder", "Reminder"
+    TASK = "T", "Task"
+    REMINDER = "R", "Reminder"
 
 
 class EventType(models.TextChoices):
     """Choices for event types."""
 
-    EVENT_CHART_OPEN = "Chart Open", "Chart Open"
+    EVENT_CHART_OPEN = "CHART_OPEN", "Chart Open"
 
 
 class TaskStatus(models.TextChoices):
@@ -32,17 +33,14 @@ class TaskLabelModule(models.TextChoices):
     TASKS = "tasks", "Tasks"
 
 
-class Task(models.Model):
+class Task(IdentifiableModel):
     """Task."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_task_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
     )
@@ -54,25 +52,22 @@ class Task(models.Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
-    task_type = models.CharField(choices=TaskType.choices)
-    tag = models.CharField()
-    title = models.CharField()
+    task_type = models.CharField(choices=TaskType.choices, max_length=1)
+    tag = models.CharField(max_length=64)
+    title = models.TextField()
     due = models.DateTimeField(null=True)
-    due_event = models.CharField(choices=EventType.choices, blank=True)
-    status = models.CharField(choices=TaskStatus.choices)
+    due_event = models.CharField(choices=EventType.choices, blank=True, max_length=16)
+    status = models.CharField(choices=TaskStatus.choices, max_length=9)
 
 
-class TaskComment(models.Model):
+class TaskComment(IdentifiableModel):
     """TaskComment."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_taskcomment_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="comments", null=True
     )
@@ -80,32 +75,27 @@ class TaskComment(models.Model):
     body = models.TextField()
 
 
-class TaskLabel(models.Model):
+class TaskLabel(IdentifiableModel):
     """TaskLabel."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_tasklabel_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
     position = models.IntegerField()
-    color = models.CharField(choices=ColorEnum.choices)
-    task_association = ArrayField(models.CharField(choices=Origin.choices))
-    name = models.CharField()
+    color = models.CharField(choices=ColorEnum.choices, max_length=50)
+    task_association = ArrayField(models.CharField(choices=Origin.choices, max_length=32))
+    name = models.CharField(max_length=255)
     active = models.BooleanField()
-    modules = ArrayField(models.CharField(choices=TaskLabelModule.choices))
+    modules = ArrayField(models.CharField(choices=TaskLabelModule.choices, max_length=32))
 
 
-class TaskTaskLabel(models.Model):
+class TaskTaskLabel(Model):
     """M2M for Task -> TaskLabels."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_tasktasklabel_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING, null=True)
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
