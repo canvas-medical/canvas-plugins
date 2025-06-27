@@ -1,13 +1,59 @@
+import uuid
 from abc import abstractmethod
 from collections.abc import Container
 from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q
+from django.db.models.base import ModelBase
+
+import settings
 
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
+
+IS_SQLITE = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3"
+
+
+class ModelMetaclass(ModelBase):
+    """A metaclass for configuring data models."""
+
+    def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
+        """Create a new model class."""
+        meta = attrs.get("Meta")
+
+        for field_name, field in list(attrs.items()):
+            if isinstance(field, ArrayField) and IS_SQLITE:
+                # Replace ArrayField(CharField(...)) with JSONField
+                attrs[field_name] = models.JSONField(default=list)
+
+        # set managed to True if database is SQLite and not explicitly set
+        if meta and not hasattr(meta, "managed") and not getattr(meta, "abstract", False):
+            meta.managed = IS_SQLITE
+
+        new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
+
+        return new_class
+
+
+class Model(models.Model, metaclass=ModelMetaclass):
+    """A base model."""
+
+    class Meta:
+        abstract = True
+
+    dbid = models.BigAutoField(primary_key=True)
+
+
+class IdentifiableModel(Model):
+    """A model that includes an identifier."""
+
+    class Meta:
+        abstract = True
+
+    id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
 
 class BaseModelManager(models.Manager):

@@ -1,17 +1,16 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
 
-class DetectedIssue(models.Model):
+
+class DetectedIssue(IdentifiableModel):
     """DetectedIssue."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_detectedissue_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     identified = models.DateTimeField()
     deleted = models.BooleanField()
     originator = models.ForeignKey(
@@ -26,28 +25,25 @@ class DetectedIssue(models.Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="detected_issues", null=True
     )
-    code = models.CharField()
-    status = models.CharField()
-    severity = models.CharField()
-    reference = models.CharField()
-    issue_identifier = models.CharField()
-    issue_identifier_system = models.CharField()
+    code = models.CharField(max_length=20)
+    status = models.CharField(max_length=16)
+    severity = models.CharField(max_length=10)
+    reference = models.CharField(max_length=200)
+    issue_identifier = models.CharField(max_length=255)
+    issue_identifier_system = models.CharField(max_length=255)
     detail = models.TextField()
 
 
-class DetectedIssueEvidence(models.Model):
+class DetectedIssueEvidence(IdentifiableModel):
     """DetectedIssueEvidence."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_detectedissueevidence_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
     detected_issue = models.ForeignKey(
         DetectedIssue,

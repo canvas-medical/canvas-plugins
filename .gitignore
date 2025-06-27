@@ -13,3 +13,7 @@ dist/
 
 # JetBrains
 .idea/
+
+
+# SQLite databases
+*.sqlite3

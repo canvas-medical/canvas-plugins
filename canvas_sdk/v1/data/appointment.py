@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
+
 
 class AppointmentProgressStatus(models.TextChoices):
     """AppointmentProgressStatus."""
@@ -14,15 +16,12 @@ class AppointmentProgressStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
-class Appointment(models.Model):
+class Appointment(IdentifiableModel):
     """Appointment."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_appointment_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     patient = models.ForeignKey(
         "v1.Patient",
@@ -56,21 +55,18 @@ class Appointment(models.Model):
     description = models.TextField(null=True, blank=True)
 
 
-class AppointmentExternalIdentifier(models.Model):
+class AppointmentExternalIdentifier(IdentifiableModel):
     """AppointmentExternalIdentifier."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_appointmentexternalidentifier_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    use = models.CharField()
-    identifier_type = models.CharField()
-    system = models.CharField()
-    value = models.CharField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    use = models.CharField(max_length=255)
+    identifier_type = models.CharField(max_length=255)
+    system = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
     issued_date = models.DateField()
     expiration_date = models.DateField()
     appointment = models.ForeignKey(

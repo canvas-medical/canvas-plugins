@@ -1,6 +1,8 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
+
 
 class NoteTypeCategories(models.TextChoices):
     """Note type categories."""
@@ -111,35 +113,34 @@ class NoteStates(models.TextChoices):
     CONFIRM_IMPORT = "CNF", "Confirmed"
 
 
-class NoteType(models.Model):
+class NoteType(IdentifiableModel):
     """NoteType."""
 
     objects: models.Manager["NoteType"]
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_notetype_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
-    name = models.CharField()
-    icon = models.CharField()
-    category = models.CharField(choices=NoteTypeCategories.choices)
+    name = models.CharField(max_length=250)
+    icon = models.CharField(max_length=250)
+    category = models.CharField(choices=NoteTypeCategories.choices, max_length=50)
     rank = models.PositiveIntegerField()
     is_default_appointment_type = models.BooleanField()
     is_scheduleable = models.BooleanField()
     is_telehealth = models.BooleanField()
     is_billable = models.BooleanField()
     defer_place_of_service_to_practice_location = models.BooleanField()
-    available_places_of_service = ArrayField(models.CharField(choices=PracticeLocationPOS.choices))
-    default_place_of_service = models.CharField(choices=PracticeLocationPOS.choices)
+    available_places_of_service = ArrayField(
+        models.CharField(choices=PracticeLocationPOS.choices, max_length=5)
+    )
+    default_place_of_service = models.CharField(choices=PracticeLocationPOS.choices, max_length=5)
     is_system_managed = models.BooleanField()
     is_visible = models.BooleanField()
     is_active = models.BooleanField()
@@ -151,24 +152,21 @@ class NoteType(models.Model):
     online_duration = models.IntegerField()
 
 
-class Note(models.Model):
+class Note(IdentifiableModel):
     """Note."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_note_001"
 
-    id = models.CharField(max_length=32)
-    dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
     provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
-    note_type = models.CharField(choices=NoteTypes.choices, null=True)
+    note_type = models.CharField(choices=NoteTypes.choices, null=True, max_length=50)
     note_type_version = models.ForeignKey(
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
@@ -176,14 +174,14 @@ class Note(models.Model):
     body = models.JSONField()
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
-    checksum = models.CharField()
+    checksum = models.CharField(max_length=32)
     billing_note = models.TextField()
     # TODO -implement InpatientStay model
     # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
     related_data = models.JSONField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField()
-    place_of_service = models.CharField()
+    place_of_service = models.CharField(max_length=255)
 
 
 class NoteStateChangeEvent(models.Model):
