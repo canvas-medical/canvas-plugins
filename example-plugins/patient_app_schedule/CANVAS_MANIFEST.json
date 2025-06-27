@@ -2,12 +2,12 @@
   "sdk_version": "0.1.4",
   "plugin_version": "0.0.1",
   "name": "patient_app_schedule",
-  "description": "Edit the description in CANVAS_MANIFEST.json",
+  "description": "protocols for filtering providers based on care team membership and locations based on appointment history",
   "components": {
     "protocols": [
       {
-        "class": "patient_app_schedule.protocols.my_protocol:Providers",
-        "description": "A protocol that does xyz...",
+        "class": "patient_app_schedule.protocols.filters:Providers",
+        "description": "filter providers based on care team membership",
         "data_access": {
           "event": "",
           "read": [],
@@ -15,8 +15,8 @@
         }
       },
       {
-        "class": "patient_app_schedule.protocols.my_protocol:Locations",
-        "description": "A protocol that does xyz...",
+        "class": "patient_app_schedule.protocols.filters:Locations",
+        "description": "filter locations based on appointment history",
         "data_access": {
           "event": "",
           "read": [],
