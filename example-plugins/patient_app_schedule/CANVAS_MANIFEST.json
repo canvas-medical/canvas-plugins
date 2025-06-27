@@ -1,0 +1,38 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.1",
+  "name": "patient_app_schedule",
+  "description": "protocols for filtering providers based on care team membership and locations based on appointment history",
+  "components": {
+    "protocols": [
+      {
+        "class": "patient_app_schedule.protocols.filters:Providers",
+        "description": "filter providers based on care team membership",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      },
+      {
+        "class": "patient_app_schedule.protocols.filters:Locations",
+        "description": "filter locations based on appointment history",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
