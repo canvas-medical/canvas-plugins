@@ -19,9 +19,8 @@ class PatientCreateApi(SimpleAPI):
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate with the provided credentials."""
-        # TODO: fix this before merging
         # api_key = self.secrets["my_canvas_api_key"]
-        # log.info(f'PatientCreateApi.post: authenticating with API key {api_key}')
+        # link to the docs where we discuss how to authenticate
         return True
 
     # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/

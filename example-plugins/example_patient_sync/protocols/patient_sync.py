@@ -2,7 +2,6 @@ from typing import Any
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
-from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.utils import Http
@@ -73,23 +72,25 @@ class PatientSync(BaseProtocol):
         http = Http()
 
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
+        # by default assume we don't yet have a system patient ID
+        # and that we need to update the patient in Canvas to add one
+        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, SYSTEM_URL)
+        update_patient_external_identifier = system_patient_id is None
 
         # Here we check if the patient already has an external ID in Canvas for the partner platform
-        # And set some default values
-        existing_partner_id = self.lookup_external_id_by_system_url(canvas_patient, SYSTEM_URL)
-        system_patient_id = None
-        update_patient_external_identifier = False
+        if not system_patient_id:
+            log.info(f">>> No external ID found for Canvas Patient ID {canvas_patient_id}:")
 
-        if not existing_partner_id:
             # Get the system external ID by making a GET request to the partner platform
             system_patient = self.get_patient_from_system_api(canvas_patient_id)
 
             system_patient_id = (
                 system_patient.json()["id"] if system_patient.status_code == 200 else None
             )
-            # if we have a system patient ID now but we didn't before,
-            # we know we need to update the patient in Canvas
-            update_patient_external_identifier = bool(system_patient_id)
+            log.info(
+                f">>>System patient ID for Canvas Patient ID {canvas_patient_id} is {system_patient_id}"
+            )
+            log.info(f">>> Need to update patient? {update_patient_external_identifier}")
 
         # Great, now we know if the patient is assigned a system external ID with the partner
         # platform, and if we need to update it. At this point the system_patient_id can be 3 values:
@@ -123,6 +124,11 @@ class PatientSync(BaseProtocol):
         )
 
         resp = http.post(request_url, json=partner_payload, headers=self.partner_request_headers)
+        log.info(f">>> Partner platform API response: status_code={resp.status_code}, json={resp.json()}")
+
+        # If the request was successful, we should now have a system patient ID if we didn't before
+        if system_patient_id is None:
+            system_patient_id = resp.json().get("id")
 
         partner_patient_exists = resp.status_code == 409
 
