@@ -62,6 +62,7 @@ class Condition(models.Model):
     onset_date = models.DateField()
     resolution_date = models.DateField()
     clinical_status = models.CharField(choices=ClinicalStatus.choices)
+    surgical = models.BooleanField()
 
 
 class ConditionCoding(models.Model):
