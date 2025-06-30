@@ -431,10 +431,8 @@ def list(
 
 def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
     """Parse secrets from the command line, expecting them in the format Key=value."""
-    if not secrets:
-        raise typer.BadParameter("At least one secret must be provided in the format Key=value")
-
     parsed_secrets = []
+
     for secret in secrets:
         if "=" not in secret:
             raise typer.BadParameter(f"Invalid secret format: '{secret}'. Use key=value.")
@@ -443,14 +441,14 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
     return parsed_secrets
 
 
-def configure(
+def set_secrets(
     plugin: str = typer.Argument(..., help="Plugin name to configure"),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
         default=None,
     ),
-    secret: builtins.list[str] = typer.Option(
+    secrets: builtins.list[str] = typer.Argument(
         ..., callback=parse_secrets, help="Secrets to set, e.g. Key=value"
     ),
 ) -> None:
@@ -462,7 +460,7 @@ def configure(
     url = plugin_url(host, plugin)
 
     encoded_pairs = []
-    for pair in secret:
+    for pair in secrets:
         encoded = base64.b64encode(pair.encode()).decode()
         encoded_pairs.append(("secret", encoded))
 

@@ -21,7 +21,6 @@ app.command(short_help="Uninstall a plugin from a Canvas instance")(plugin.unins
 app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
-app.command(short_help="Configure plugin secrets on a Canvas instance")(plugin.configure)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
 app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
 app.command(
@@ -29,6 +28,13 @@ app.command(
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
+
+# Config app
+config_app = typer.Typer(help="Manage plugin secrets.", rich_markup_mode=None, add_completion=False)
+app.add_typer(config_app, name="config")
+config_app.command(name="set", short_help="Set plugin secrets on a Canvas instance.")(
+    plugin.set_secrets
+)
 
 # Our current version
 __version__ = importlib.metadata.version("canvas")
