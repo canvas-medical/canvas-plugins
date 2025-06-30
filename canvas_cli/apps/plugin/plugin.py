@@ -296,7 +296,7 @@ def enable(
         raise typer.Exit(1) from None
 
     if r.ok:
-        print(f"Plugin {name} installation requested! Check logs for more details.")
+        print(f"Plugin {name} new version uploaded! Check logs for more details.")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
