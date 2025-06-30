@@ -119,7 +119,7 @@ def test_plugin_runner_settings_import() -> None:
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
-    Test that all modules under cavas_sdk have an __exports__ module attribute
+    Test that all modules under canvas_sdk have an __exports__ module attribute
     and that it is a tuple.
     """
     imported_module = importlib.import_module(canvas_module)
