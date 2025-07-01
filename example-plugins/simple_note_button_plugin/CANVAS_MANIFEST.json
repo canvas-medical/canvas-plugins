@@ -4,7 +4,8 @@
     "name": "simple_note_button_plugin",
     "description": "A simple plugin that adds a hello world button to note headers",
     "components": {
-        "commands": [
+        "commands": [],
+        "protocols": [
             {
                 "class": "simple_note_button_plugin.commands.hello_world_button:HelloWorldButton",
                 "description": "A button that shows hello world message",
@@ -15,7 +16,6 @@
                 }
             }
         ],
-        "protocols": [],
         "content": [],
         "effects": [],
         "views": []
