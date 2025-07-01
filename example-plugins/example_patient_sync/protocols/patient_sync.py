@@ -141,7 +141,7 @@ class PatientSync(BaseProtocol):
             # queue up an effect to update the patient in canvas and add the external ID
             external_id = CreatePatientExternalIdentifier(
                 patient_id=canvas_patient.id,
-                system=PARTNER_URL_BASE,
+                system=SYSTEM_URL,
                 value=str(system_patient_id)
             )
             return [external_id.create()]
