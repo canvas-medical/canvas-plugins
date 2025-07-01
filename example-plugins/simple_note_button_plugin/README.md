@@ -8,7 +8,7 @@ A simple Canvas plugin that displays a button in the note header and shows a "he
 
 ```
 simple_note_button_plugin/
-├── commands/
+├── handlers/
 ├── CANVAS_MANIFEST.json
 └── README.md
 ```

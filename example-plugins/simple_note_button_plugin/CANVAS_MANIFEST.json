@@ -7,7 +7,7 @@
         "commands": [],
         "protocols": [
             {
-                "class": "simple_note_button_plugin.commands.hello_world_button:HelloWorldButton",
+                "class": "simple_note_button_plugin.handlers.hello_world_button:HelloWorldButton",
                 "description": "A button that shows hello world message",
                 "data_access": {
                     "event": "SHOW_NOTE_HEADER_BUTTON",
