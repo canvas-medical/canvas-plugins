@@ -16,4 +16,4 @@ simple_note_button_plugin/
 ## Features
 
 - Adds a "Hello World" button to the note header
-- When clicked, opens a simple UI on the right side displaying "hello world"
+- When clicked, opens a modal in the right chart pane displaying "hello world"

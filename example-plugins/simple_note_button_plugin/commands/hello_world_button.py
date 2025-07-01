@@ -1,5 +1,5 @@
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.widgets.portal_widget import PortalWidget
+from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.handlers.action_button import ActionButton
 
 
@@ -14,8 +14,9 @@ class HelloWorldButton(ActionButton):
     def handle(self) -> list[Effect]:
         """Handle button click by showing hello world UI."""
         return [
-            PortalWidget(
+            LaunchModalEffect(
                 content="<h1>Hello World!</h1><p>This is a simple Canvas plugin UI.</p>",
-                size=PortalWidget.Size.MEDIUM
+                target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
+                title="Hello World"
             ).apply()
         ]
