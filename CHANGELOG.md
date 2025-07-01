@@ -1,6 +1,50 @@
 # CHANGELOG
 
 
+## v0.43.0 (2025-07-01)
+
+### Features
+
+- Add can_be_snoozed to ProtocolCard
+  ([#657](https://github.com/canvas-medical/canvas-plugins/pull/657),
+  [`55566dc`](https://github.com/canvas-medical/canvas-plugins/commit/55566dc1596135c0cad49aacb07044be59210d82))
+
+- Add claim and associated data modules
+  ([#638](https://github.com/canvas-medical/canvas-plugins/pull/638),
+  [`bbef4c5`](https://github.com/canvas-medical/canvas-plugins/commit/bbef4c51c6f4b37f12e3908e0e846ec4d0643abb))
+
+- Add missing `surgical` field to Condition model (KOALA-3001)
+  ([#714](https://github.com/canvas-medical/canvas-plugins/pull/714),
+  [`12a9418`](https://github.com/canvas-medical/canvas-plugins/commit/12a94185e519d2b97065307078af76c7de5f6c44))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+- Add new external id creation effect
+  ([#702](https://github.com/canvas-medical/canvas-plugins/pull/702),
+  [`6ff9986`](https://github.com/canvas-medical/canvas-plugins/commit/6ff9986260b82e95aac345f27b3f4ab2a14576d4))
+
+Signed-off-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Add patient external id to patient effect
+  ([#685](https://github.com/canvas-medical/canvas-plugins/pull/685),
+  [`3258054`](https://github.com/canvas-medical/canvas-plugins/commit/3258054819b3a9c93ee7d892e0a3e2bea1f22ac2))
+
+- Expose a pharmacy search view ([#727](https://github.com/canvas-medical/canvas-plugins/pull/727),
+  [`27950eb`](https://github.com/canvas-medical/canvas-plugins/commit/27950ebaf95cdcbdb5092d3792e5bc44efa8fcae))
+
+- Filter not available providers in appointments search form
+  ([#719](https://github.com/canvas-medical/canvas-plugins/pull/719),
+  [`3fcd348`](https://github.com/canvas-medical/canvas-plugins/commit/3fcd348c3c9ed3824e3b2e35919e0cb391d4a582))
+
+### Refactoring
+
+- Update HTTP utils for accessing science and ontologies to use ENV variables
+  ([#717](https://github.com/canvas-medical/canvas-plugins/pull/717),
+  [`c4f7f94`](https://github.com/canvas-medical/canvas-plugins/commit/c4f7f94a58f483278232b30f7a28d88c011ab889))
+
+
 ## v0.42.0 (2025-06-18)
 
 ### Chores
