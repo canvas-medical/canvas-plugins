@@ -147,6 +147,8 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
 
         with open(download_path, "wb") as download_file:
             response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
+            response.raise_for_status()
+
             download_file.write(response.content)
 
         yield download_path
