@@ -1,13 +1,13 @@
 {
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
-    "name": "test_patexid_effect",
+    "name": "patient_portal_search_appointments_slots_plugin",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
         "protocols": [
             {
-                "class": "test_patexid_effect.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz...",
+                "class": "patient_portal_search_appointments_slots_plugin.handlers.search_appointments_slots_handler:SearchAppointmentsSlotsHandler",
+                "description": "",
                 "data_access": {
                     "event": "",
                     "read": [],

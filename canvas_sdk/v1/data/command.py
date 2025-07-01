@@ -13,9 +13,18 @@ class Command(models.Model):
     dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    entered_in_error = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="commands_originated"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="commands_committed"
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        related_name="commands_entered_in_error",
+    )
     state = models.CharField()
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, null=True)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="commands")

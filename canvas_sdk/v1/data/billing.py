@@ -56,7 +56,7 @@ class BillingLineItem(models.Model):
         null=True,
     )
     cpt = models.CharField()
-    charge = models.DecimalField()
+    charge = models.DecimalField(decimal_places=2, max_digits=8)
     description = models.CharField()
     units = models.IntegerField()
     command_type = models.CharField()

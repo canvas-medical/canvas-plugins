@@ -37,4 +37,4 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
         )
 
 
-__exports__ = "CreatePatientExternalIdentifier"
+__exports__ = ("CreatePatientExternalIdentifier",)

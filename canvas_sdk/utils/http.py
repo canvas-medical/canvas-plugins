@@ -281,9 +281,49 @@ class OntologiesHttp(JsonOnlyHttp):
     """
 
     def __init__(self) -> None:
-        super().__init__(base_url="https://ontologies.canvasmedical.com")
+        super().__init__(
+            base_url=os.getenv("ONTOLOGIES_ENDPOINT", "https://ontologies.canvasmedical.com")
+        )
 
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+
+
+class PharmacyHttp:
+    """
+    An HTTP client for the pharmacy service.
+    """
+
+    def __init__(self) -> None:
+        self._http_client = JsonOnlyHttp(
+            base_url=os.getenv("PHARMACY_ENDPOINT", "https://pharmacy.canvasmedical.com")
+        )
+
+        self._http_client._session.headers.update(
+            {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
+        )
+
+    def search_pharmacies(
+        self, search_term: str, latitude: str | None = None, longitude: str | None = None
+    ) -> list[dict]:
+        """Search for pharmacies by term and optional location."""
+        params = {"search": search_term}
+        if latitude and longitude:
+            params.update(
+                {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                }
+            )
+
+        query_string = urllib.parse.urlencode(params)
+        response = self._http_client.get_json(f"/surescripts/pharmacy/?{query_string}")
+        response_json = response.json()
+        return response_json.get("results", []) if response_json else []
+
+    def get_pharmacy_by_ncpdp_id(self, ncpdp_id: str) -> dict[str, Any] | None:
+        """Lookup a pharmacy by its NCPDP ID."""
+        response = self._http_client.get_json(f"/surescripts/pharmacy/ncpdp_id/{ncpdp_id}/")
+        return response.json()
 
 
 class ScienceHttp(JsonOnlyHttp):
@@ -292,18 +332,22 @@ class ScienceHttp(JsonOnlyHttp):
     """
 
     def __init__(self) -> None:
-        super().__init__(base_url="https://science.canvasmedical.com")
+        super().__init__(
+            base_url=os.getenv("SCIENCE_ENDPOINT", "https://science.canvasmedical.com")
+        )
 
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
 ontologies_http = OntologiesHttp()
 science_http = ScienceHttp()
+pharmacy_http = PharmacyHttp()
 
 __all__ = __exports__ = (
     "ThreadPoolExecutor",
     "Http",
     "ontologies_http",
+    "pharmacy_http",
     "science_http",
     "batch_get",
     "batch_post",
