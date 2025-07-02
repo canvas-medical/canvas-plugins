@@ -1,7 +1,7 @@
 import json
 from typing import Dict, List, Any
 
-from canvas_sdk.effects.simple_api import JSONResponse, Response
+from canvas_sdk.effects.simple_api import JSONResponse, HTMLResponse
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
 from canvas_sdk.v1.data import Observation
 
@@ -11,7 +11,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
     
     PATH = "/visualize"
     
-    def get(self) -> list[Response]:
+    def get(self) -> list[HTMLResponse | JSONResponse]:
         """Return the vitals visualization UI and data."""
         patient_id = self.request.query_params.get("patient_id")
         demo_mode = self.request.query_params.get("demo") == "true"
@@ -30,9 +30,8 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             # Generate the HTML with embedded data
             html_content = self._generate_visualization_html(vitals_data)
             
-            return [Response(
-                content=html_content,
-                content_type="text/html"
+            return [HTMLResponse(
+                content=html_content
             )]
             
         except Exception as e:
