@@ -40,162 +40,161 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             return [JSONResponse({"error": str(e)}, status_code=500)]
     
     def _get_vitals_data(self, patient_id: str, debug_mode: bool = False) -> tuple[Dict[str, List[Dict[str, Any]]], Dict[str, Any] | None]:
-        """Get vitals data for the patient."""
+        """Get vitals data for the patient using Canvas vitals structure."""
         debug_info = None
         if debug_mode:
             debug_info = {
-                'total_observations': 0,
-                'observations_found': [],
-                'search_attempts': []
+                'total_panels': 0,
+                'total_vitals': 0,
+                'panels_found': [],
+                'vitals_found': [],
+                'processing_log': []
             }
         
         try:
-            # Get all observations for the patient with related codings
-            observations = Observation.objects.filter(
+            # First, get all Vital Signs Panel observations for the patient
+            # These are the parent observations that contain individual vitals
+            vital_panels = Observation.objects.filter(
                 patient_id=patient_id,
+                category="vital-signs",
+                name="Vital Signs Panel",
                 deleted=False
-            ).prefetch_related('codings', 'components__codings').order_by('effective_datetime')
+            ).exclude(entered_in_error__isnull=False).order_by('effective_datetime')
             
             if debug_mode:
-                debug_info['total_observations'] = observations.count()
+                debug_info['total_panels'] = vital_panels.count()
+                debug_info['processing_log'].append(f"Found {vital_panels.count()} vital sign panels")
             
+            # Get individual vital observations that are members of these panels
+            vital_observations = Observation.objects.filter(
+                patient_id=patient_id,
+                category="vital-signs",
+                effective_datetime__isnull=False,
+                deleted=False
+            ).exclude(
+                name="Vital Signs Panel"
+            ).exclude(
+                entered_in_error__isnull=False
+            ).select_related("is_member_of").order_by('effective_datetime')
+            
+            if debug_mode:
+                debug_info['total_vitals'] = vital_observations.count()
+                debug_info['processing_log'].append(f"Found {vital_observations.count()} individual vital observations")
+            
+            # Initialize vitals data structure
             vitals_data = {
                 'weight': [],
                 'body_temperature': [],
                 'oxygen_saturation': []
             }
             
-            # Common vital signs identifiers - expanded with more variations
-            weight_keywords = [
-                'weight', 'body weight', 'weight measured', 'wt', 'weight (body)', 
-                'bodyweight', 'mass', 'body mass'
-            ]
-            temp_keywords = [
-                'temperature', 'body temperature', 'temp', 'fever', 'body temp',
-                'temperature (body)', 'core temperature', 'oral temperature',
-                'axillary temperature', 'rectal temperature', 'temporal temperature'
-            ]
-            o2_keywords = [
-                'oxygen saturation', 'o2 saturation', 'spo2', 'pulse oximetry', 
-                'oxygen sat', 'o2 sat', 'oximetry', 'pulse ox', 'oxygen (o2) saturation',
-                'pulse oximeter', 'peripheral oxygen saturation'
-            ]
+            # Value ranges for validation (similar to Canvas VitalsCommand)
+            value_ranges = {
+                'weight': (1, 1500),  # in lbs
+                'body_temperature': (85, 107),  # in °F
+                'oxygen_saturation': (60, 100)  # in %
+            }
             
-            # LOINC codes for common vital signs
-            weight_loinc_codes = ['29463-7', '3141-9', '8335-2', '79348-9']  # Body weight codes
-            temp_loinc_codes = ['8310-5', '8331-1', '8332-9', '8333-7', '8334-5']  # Body temperature codes
-            o2_loinc_codes = ['2708-6', '59408-5', '20564-1']  # Oxygen saturation codes
-            
-            for obs in observations:
-                # Skip if no value
-                if not obs.value:
+            # Process each vital observation
+            for obs in vital_observations:
+                if not obs.value or obs.name in ["note", "pulse_rhythm"]:
                     continue
-                
-                # Get all text to search (name, display names from codings)
-                search_texts = []
-                if obs.name:
-                    search_texts.append(obs.name.lower())
-                
-                # Add coding display names and codes
-                coding_codes = []
-                for coding in obs.codings.all():
-                    if coding.display:
-                        search_texts.append(coding.display.lower())
-                    if coding.code:
-                        coding_codes.append(coding.code)
-                
-                # Add component names and codes
-                for component in obs.components.all():
-                    if component.name:
-                        search_texts.append(component.name.lower())
-                    for comp_coding in component.codings.all():
-                        if comp_coding.display:
-                            search_texts.append(comp_coding.display.lower())
-                        if comp_coding.code:
-                            coding_codes.append(comp_coding.code)
-                
-                # Join all search texts
-                combined_text = ' '.join(search_texts)
                 
                 if debug_mode:
                     obs_info = {
                         'name': obs.name,
                         'value': obs.value,
                         'units': obs.units,
-                        'combined_text': combined_text,
-                        'coding_codes': coding_codes,
-                        'date': obs.effective_datetime.isoformat() if obs.effective_datetime else None
+                        'effective_datetime': obs.effective_datetime.isoformat() if obs.effective_datetime else None,
+                        'is_member_of': str(obs.is_member_of.id) if obs.is_member_of else None
                     }
-                    debug_info['observations_found'].append(obs_info)
+                    debug_info['vitals_found'].append(obs_info)
                 
-                # Check for weight
-                is_weight = (
-                    any(keyword in combined_text for keyword in weight_keywords) or
-                    any(code in coding_codes for code in weight_loinc_codes)
-                )
-                
-                if is_weight:
+                # Handle weight - convert from oz to lbs
+                if obs.name == "weight":
                     try:
-                        value = float(obs.value)
-                        # Skip unreasonable weight values
-                        if 1 <= value <= 1500:  # Similar to VitalsCommand constraints
+                        # Weight is stored in oz, convert to lbs
+                        value_oz = float(obs.value)
+                        value_lbs = value_oz / 16
+                        
+                        # Validate range
+                        min_val, max_val = value_ranges['weight']
+                        if min_val <= value_lbs <= max_val:
                             vitals_data['weight'].append({
                                 'date': obs.effective_datetime.isoformat(),
-                                'value': value,
-                                'units': obs.units or 'lbs'
+                                'value': round(value_lbs, 1),
+                                'units': 'lbs'
                             })
                             if debug_mode:
-                                debug_info['search_attempts'].append(f"Added weight: {value} {obs.units or 'lbs'}")
+                                debug_info['processing_log'].append(f"Added weight: {value_oz} oz → {round(value_lbs, 1)} lbs")
+                        else:
+                            if debug_mode:
+                                debug_info['processing_log'].append(f"Skipped weight out of range: {round(value_lbs, 1)} lbs")
                     except (ValueError, TypeError):
                         if debug_mode:
-                            debug_info['search_attempts'].append(f"Failed to parse weight value: {obs.value}")
+                            debug_info['processing_log'].append(f"Failed to parse weight value: {obs.value}")
                         continue
                 
-                # Check for body temperature
-                is_temp = (
-                    any(keyword in combined_text for keyword in temp_keywords) or
-                    any(code in coding_codes for code in temp_loinc_codes)
-                )
-                
-                if is_temp:
+                # Handle body temperature
+                elif obs.name == "body_temperature":
                     try:
                         value = float(obs.value)
-                        # Skip unreasonable temperature values
-                        if 85 <= value <= 107:  # Similar to VitalsCommand constraints
+                        
+                        # Validate range
+                        min_val, max_val = value_ranges['body_temperature']
+                        if min_val <= value <= max_val:
                             vitals_data['body_temperature'].append({
                                 'date': obs.effective_datetime.isoformat(),
                                 'value': value,
                                 'units': obs.units or '°F'
                             })
                             if debug_mode:
-                                debug_info['search_attempts'].append(f"Added temperature: {value} {obs.units or '°F'}")
+                                debug_info['processing_log'].append(f"Added body temperature: {value} {obs.units or '°F'}")
+                        else:
+                            if debug_mode:
+                                debug_info['processing_log'].append(f"Skipped temperature out of range: {value}")
                     except (ValueError, TypeError):
                         if debug_mode:
-                            debug_info['search_attempts'].append(f"Failed to parse temperature value: {obs.value}")
+                            debug_info['processing_log'].append(f"Failed to parse temperature value: {obs.value}")
                         continue
                 
-                # Check for oxygen saturation
-                is_o2 = (
-                    any(keyword in combined_text for keyword in o2_keywords) or
-                    any(code in coding_codes for code in o2_loinc_codes)
-                )
-                
-                if is_o2:
+                # Handle oxygen saturation
+                elif obs.name == "oxygen_saturation":
                     try:
                         value = float(obs.value)
-                        # Skip unreasonable oxygen saturation values
-                        if 60 <= value <= 100:  # Similar to VitalsCommand constraints
+                        
+                        # Validate range
+                        min_val, max_val = value_ranges['oxygen_saturation']
+                        if min_val <= value <= max_val:
                             vitals_data['oxygen_saturation'].append({
                                 'date': obs.effective_datetime.isoformat(),
                                 'value': value,
                                 'units': obs.units or '%'
                             })
                             if debug_mode:
-                                debug_info['search_attempts'].append(f"Added oxygen saturation: {value} {obs.units or '%'}")
+                                debug_info['processing_log'].append(f"Added oxygen saturation: {value} {obs.units or '%'}")
+                        else:
+                            if debug_mode:
+                                debug_info['processing_log'].append(f"Skipped oxygen saturation out of range: {value}")
                     except (ValueError, TypeError):
                         if debug_mode:
-                            debug_info['search_attempts'].append(f"Failed to parse oxygen saturation value: {obs.value}")
+                            debug_info['processing_log'].append(f"Failed to parse oxygen saturation value: {obs.value}")
                         continue
+                
+                # Log other vital types found (for debugging)
+                else:
+                    if debug_mode:
+                        debug_info['processing_log'].append(f"Found other vital type: {obs.name} = {obs.value}")
+            
+            # Store panel information for debug
+            if debug_mode:
+                for panel in vital_panels:
+                    panel_info = {
+                        'id': str(panel.id),
+                        'effective_datetime': panel.effective_datetime.isoformat() if panel.effective_datetime else None,
+                        'value': panel.value
+                    }
+                    debug_info['panels_found'].append(panel_info)
             
             return vitals_data, debug_info
             
@@ -203,6 +202,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             # Return empty data if there's an error
             if debug_mode:
                 debug_info['error'] = str(e)
+                debug_info['processing_log'].append(f"Error occurred: {str(e)}")
             return {
                 'weight': [],
                 'body_temperature': [],
@@ -359,15 +359,22 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         {f'''
         <div class="debug-container" style="margin-top: 30px; background: #f0f0f0; padding: 15px; border-radius: 4px;">
             <h3>Debug Information</h3>
-            <p><strong>Total observations found:</strong> {debug_info.get('total_observations', 0)}</p>
-            <p><strong>Search attempts:</strong></p>
+            <p><strong>Total vital sign panels found:</strong> {debug_info.get('total_panels', 0)}</p>
+            <p><strong>Total individual vitals found:</strong> {debug_info.get('total_vitals', 0)}</p>
+            <p><strong>Processing log:</strong></p>
             <ul>
-                {''.join([f'<li>{attempt}</li>' for attempt in debug_info.get('search_attempts', [])])}
+                {''.join([f'<li>{log_entry}</li>' for log_entry in debug_info.get('processing_log', [])])}
             </ul>
             <details>
-                <summary>All observations (click to expand)</summary>
+                <summary>Vital sign panels (click to expand)</summary>
+                <pre style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+{json.dumps(debug_info.get('panels_found', []), indent=2) if debug_info and debug_info.get('panels_found') else 'No panels found'}
+                </pre>
+            </details>
+            <details>
+                <summary>Individual vitals (click to expand)</summary>
                 <pre style="max-height: 300px; overflow-y: auto; font-size: 12px;">
-{json.dumps(debug_info.get('observations_found', []), indent=2) if debug_info and debug_info.get('observations_found') else 'No observations found'}
+{json.dumps(debug_info.get('vitals_found', []), indent=2) if debug_info and debug_info.get('vitals_found') else 'No individual vitals found'}
                 </pre>
             </details>
         </div>
