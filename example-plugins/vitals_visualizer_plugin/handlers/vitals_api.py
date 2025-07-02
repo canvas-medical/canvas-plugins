@@ -14,13 +14,18 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
     def get(self) -> list[Response]:
         """Return the vitals visualization UI and data."""
         patient_id = self.request.params.get("patient_id")
+        demo_mode = self.request.params.get("demo") == "true"
         
-        if not patient_id:
+        if not patient_id and not demo_mode:
             return [JSONResponse({"error": "Patient ID is required"}, status_code=400)]
         
         try:
-            # Get vitals data for the patient
-            vitals_data = self._get_vitals_data(patient_id)
+            if demo_mode:
+                # Generate demo data for testing
+                vitals_data = self._get_demo_vitals_data()
+            else:
+                # Get real vitals data for the patient
+                vitals_data = self._get_vitals_data(patient_id)
             
             # Generate the HTML with embedded data
             html_content = self._generate_visualization_html(vitals_data)
@@ -35,40 +40,119 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
     
     def _get_vitals_data(self, patient_id: str) -> Dict[str, List[Dict[str, Any]]]:
         """Get vitals data for the patient."""
-        # Get all observations for the patient
-        observations = Observation.objects.filter(
-            patient_id=patient_id,
-            deleted=False
-        ).order_by('effective_datetime')
+        try:
+            # Get all observations for the patient
+            observations = Observation.objects.filter(
+                patient_id=patient_id,
+                deleted=False
+            ).order_by('effective_datetime')
+            
+            vitals_data = {
+                'weight': [],
+                'body_temperature': [],
+                'oxygen_saturation': []
+            }
+            
+            # Common vital signs identifiers
+            weight_keywords = ['weight', 'body weight', 'weight measured']
+            temp_keywords = ['temperature', 'body temperature', 'temp', 'fever']
+            o2_keywords = ['oxygen saturation', 'o2 saturation', 'spo2', 'pulse oximetry', 'oxygen sat']
+            
+            for obs in observations:
+                if not obs.name or not obs.value:
+                    continue
+                    
+                obs_name_lower = obs.name.lower()
+                
+                # Check for weight
+                if any(keyword in obs_name_lower for keyword in weight_keywords):
+                    try:
+                        value = float(obs.value)
+                        vitals_data['weight'].append({
+                            'date': obs.effective_datetime.isoformat(),
+                            'value': value,
+                            'units': obs.units or 'lbs'
+                        })
+                    except (ValueError, TypeError):
+                        continue
+                
+                # Check for body temperature
+                elif any(keyword in obs_name_lower for keyword in temp_keywords):
+                    try:
+                        value = float(obs.value)
+                        vitals_data['body_temperature'].append({
+                            'date': obs.effective_datetime.isoformat(),
+                            'value': value,
+                            'units': obs.units or '°F'
+                        })
+                    except (ValueError, TypeError):
+                        continue
+                
+                # Check for oxygen saturation
+                elif any(keyword in obs_name_lower for keyword in o2_keywords):
+                    try:
+                        value = float(obs.value)
+                        vitals_data['oxygen_saturation'].append({
+                            'date': obs.effective_datetime.isoformat(),
+                            'value': value,
+                            'units': obs.units or '%'
+                        })
+                    except (ValueError, TypeError):
+                        continue
+            
+            return vitals_data
+            
+        except Exception as e:
+            # Return empty data if there's an error
+            return {
+                'weight': [],
+                'body_temperature': [],
+                'oxygen_saturation': []
+            }
+    
+    def _get_demo_vitals_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Generate demo vitals data for testing."""
+        from datetime import datetime, timedelta
+        import random
         
-        vitals_data = {
+        base_date = datetime.now() - timedelta(days=365)
+        demo_data = {
             'weight': [],
             'body_temperature': [],
             'oxygen_saturation': []
         }
         
-        for obs in observations:
-            # Map observation names to our vital signs
-            if 'weight' in obs.name.lower():
-                vitals_data['weight'].append({
-                    'date': obs.effective_datetime.isoformat(),
-                    'value': obs.value,
-                    'units': obs.units or 'lbs'
-                })
-            elif 'temperature' in obs.name.lower():
-                vitals_data['body_temperature'].append({
-                    'date': obs.effective_datetime.isoformat(),
-                    'value': obs.value,
-                    'units': obs.units or '°F'
-                })
-            elif 'oxygen' in obs.name.lower() or 'o2' in obs.name.lower():
-                vitals_data['oxygen_saturation'].append({
-                    'date': obs.effective_datetime.isoformat(),
-                    'value': obs.value,
-                    'units': obs.units or '%'
-                })
+        # Generate demo weight data (150-180 lbs range)
+        for i in range(12):
+            date = base_date + timedelta(days=i*30)
+            weight = 160 + random.uniform(-10, 10)
+            demo_data['weight'].append({
+                'date': date.isoformat(),
+                'value': round(weight, 1),
+                'units': 'lbs'
+            })
         
-        return vitals_data
+        # Generate demo temperature data (97-100°F range)
+        for i in range(8):
+            date = base_date + timedelta(days=i*45)
+            temp = 98.6 + random.uniform(-1.5, 1.5)
+            demo_data['body_temperature'].append({
+                'date': date.isoformat(),
+                'value': round(temp, 1),
+                'units': '°F'
+            })
+        
+        # Generate demo oxygen saturation data (95-100% range)
+        for i in range(10):
+            date = base_date + timedelta(days=i*36)
+            o2 = 97 + random.uniform(0, 3)
+            demo_data['oxygen_saturation'].append({
+                'date': date.isoformat(),
+                'value': round(o2),
+                'units': '%'
+            })
+        
+        return demo_data
     
     def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]]) -> str:
         """Generate the HTML for the vitals visualization."""
@@ -191,23 +275,24 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         }}
         
         function updateChart(vitalType, data) {{
-            const ctx = document.getElementById('vitalsChart').getContext('2d');
+            const chartContainer = document.querySelector('.chart-container');
             
             if (chart) {{
                 chart.destroy();
             }}
             
             if (data.length === 0) {{
-                document.querySelector('.chart-container').innerHTML = 
+                chartContainer.innerHTML = 
                     '<div class="no-data">No data available for this vital sign</div>';
                 return;
             }}
             
             // Restore canvas if it was replaced
             if (!document.getElementById('vitalsChart')) {{
-                document.querySelector('.chart-container').innerHTML = 
-                    '<canvas id="vitalsChart"></canvas>';
+                chartContainer.innerHTML = '<canvas id="vitalsChart"></canvas>';
             }}
+            
+            const ctx = document.getElementById('vitalsChart').getContext('2d');
             
             const labels = data.map(d => new Date(d.date).toLocaleDateString());
             const values = data.map(d => parseFloat(d.value) || 0);
@@ -288,8 +373,19 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             }});
         }}
         
-        // Initialize with weight data
-        updateVisualization();
+        # Initialize with weight data or show message if no data
+        document.addEventListener('DOMContentLoaded', function() {{
+            updateVisualization();
+            
+            // Show a message if no data is available at all
+            const hasData = Object.values(vitalsData).some(arr => arr.length > 0);
+            if (!hasData) {{
+                document.querySelector('.container').innerHTML += 
+                    '<div class="no-data" style="margin-top: 20px; font-size: 16px;">' +
+                    'No vital signs data found for this patient. Vital signs will appear here once they are recorded.' +
+                    '</div>';
+            }}
+        }});
     </script>
 </body>
 </html>
