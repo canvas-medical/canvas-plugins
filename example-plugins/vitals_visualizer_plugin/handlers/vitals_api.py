@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 from canvas_sdk.effects.simple_api import JSONResponse, HTMLResponse
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
 from canvas_sdk.v1.data import Observation
+from logger import log
 
 
 class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
@@ -15,7 +16,6 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         """Return the vitals visualization UI and data."""
         patient_id = self.request.query_params.get("patient_id")
         demo_mode = self.request.query_params.get("demo") == "true"
-        debug_mode = self.request.query_params.get("debug") == "true"
         
         if not patient_id and not demo_mode:
             return [JSONResponse({"error": "Patient ID is required"}, status_code=400)]
@@ -24,34 +24,27 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             if demo_mode:
                 # Generate demo data for testing
                 vitals_data = self._get_demo_vitals_data()
-                debug_info = None
             else:
                 # Get real vitals data for the patient
-                vitals_data, debug_info = self._get_vitals_data(patient_id, debug_mode)
+                vitals_data = self._get_vitals_data(patient_id)
             
             # Generate the HTML with embedded data
-            html_content = self._generate_visualization_html(vitals_data, debug_info)
+            html_content = self._generate_visualization_html(vitals_data)
             
             return [HTMLResponse(
                 content=html_content
             )]
             
         except Exception as e:
+            log.error(f"Error in VitalsVisualizerAPI: {str(e)}")
             return [JSONResponse({"error": str(e)}, status_code=500)]
     
-    def _get_vitals_data(self, patient_id: str, debug_mode: bool = False) -> tuple[Dict[str, List[Dict[str, Any]]], Dict[str, Any] | None]:
+    def _get_vitals_data(self, patient_id: str) -> Dict[str, List[Dict[str, Any]]]:
         """Get vitals data for the patient using Canvas vitals structure."""
-        debug_info = None
-        if debug_mode:
-            debug_info = {
-                'total_panels': 0,
-                'total_vitals': 0,
-                'panels_found': [],
-                'vitals_found': [],
-                'processing_log': []
-            }
         
         try:
+            log.info(f"Starting vitals data collection for patient {patient_id}")
+            
             # First, get all Vital Signs Panel observations for the patient
             # These are the parent observations that contain individual vitals
             vital_panels = Observation.objects.filter(
@@ -61,9 +54,21 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 deleted=False
             ).exclude(entered_in_error__isnull=False).order_by('effective_datetime')
             
-            if debug_mode:
-                debug_info['total_panels'] = vital_panels.count()
-                debug_info['processing_log'].append(f"Found {vital_panels.count()} vital sign panels")
+            log.info(f"Found {vital_panels.count()} vital sign panels")
+            
+            # Log some example panels to understand structure
+            for i, panel in enumerate(vital_panels[:3]):  # Log first 3 panels
+                log.info(f"Panel {i+1} structure: {vars(panel)}")
+                # Check for related observations/components
+                if hasattr(panel, 'observationcomponent_set'):
+                    components = panel.observationcomponent_set.all()
+                    log.info(f"Panel {i+1} has {components.count()} components")
+                    for j, comp in enumerate(components[:5]):  # Log first 5 components
+                        log.info(f"Panel {i+1} Component {j+1}: {vars(comp)}")
+                        if hasattr(comp, 'value_quantity') and comp.value_quantity:
+                            log.info(f"Panel {i+1} Component {j+1} value_quantity: {comp.value_quantity}")
+                        if hasattr(comp, 'value_quantity_unit') and comp.value_quantity_unit:
+                            log.info(f"Panel {i+1} Component {j+1} value_quantity_unit: {comp.value_quantity_unit}")
             
             # Get individual vital observations that are members of these panels
             vital_observations = Observation.objects.filter(
@@ -77,9 +82,21 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 entered_in_error__isnull=False
             ).select_related("is_member_of").order_by('effective_datetime')
             
-            if debug_mode:
-                debug_info['total_vitals'] = vital_observations.count()
-                debug_info['processing_log'].append(f"Found {vital_observations.count()} individual vital observations")
+            log.info(f"Found {vital_observations.count()} individual vital observations")
+            
+            # Log some example observations to understand structure
+            for i, obs in enumerate(vital_observations[:5]):  # Log first 5 observations
+                log.info(f"Observation {i+1} structure: {vars(obs)}")
+                # Check for related components
+                if hasattr(obs, 'observationcomponent_set'):
+                    components = obs.observationcomponent_set.all()
+                    log.info(f"Observation {i+1} has {components.count()} components")
+                    for j, comp in enumerate(components[:3]):  # Log first 3 components
+                        log.info(f"Observation {i+1} Component {j+1}: {vars(comp)}")
+                        if hasattr(comp, 'value_quantity') and comp.value_quantity:
+                            log.info(f"Observation {i+1} Component {j+1} value_quantity: {comp.value_quantity}")
+                        if hasattr(comp, 'value_quantity_unit') and comp.value_quantity_unit:
+                            log.info(f"Observation {i+1} Component {j+1} value_quantity_unit: {comp.value_quantity_unit}")
             
             # Initialize vitals data structure
             vitals_data = {
@@ -97,18 +114,11 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             
             # Process each vital observation
             for obs in vital_observations:
-                if not obs.value or obs.name in ["note", "pulse_rhythm"]:
-                    continue
+                log.info(f"Processing observation: name='{obs.name}', value='{obs.value}', units='{obs.units}'")
                 
-                if debug_mode:
-                    obs_info = {
-                        'name': obs.name,
-                        'value': obs.value,
-                        'units': obs.units,
-                        'effective_datetime': obs.effective_datetime.isoformat() if obs.effective_datetime else None,
-                        'is_member_of': str(obs.is_member_of.id) if obs.is_member_of else None
-                    }
-                    debug_info['vitals_found'].append(obs_info)
+                if not obs.value or obs.name in ["note", "pulse_rhythm"]:
+                    log.info(f"Skipping observation due to no value or excluded name: {obs.name}")
+                    continue
                 
                 # Handle weight - convert from oz to lbs
                 if obs.name == "weight":
@@ -125,14 +135,11 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                                 'value': round(value_lbs, 1),
                                 'units': 'lbs'
                             })
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Added weight: {value_oz} oz → {round(value_lbs, 1)} lbs")
+                            log.info(f"Added weight: {value_oz} oz → {round(value_lbs, 1)} lbs")
                         else:
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Skipped weight out of range: {round(value_lbs, 1)} lbs")
+                            log.info(f"Skipped weight out of range: {round(value_lbs, 1)} lbs")
                     except (ValueError, TypeError):
-                        if debug_mode:
-                            debug_info['processing_log'].append(f"Failed to parse weight value: {obs.value}")
+                        log.error(f"Failed to parse weight value: {obs.value}")
                         continue
                 
                 # Handle body temperature
@@ -148,14 +155,11 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                                 'value': value,
                                 'units': obs.units or '°F'
                             })
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Added body temperature: {value} {obs.units or '°F'}")
+                            log.info(f"Added body temperature: {value} {obs.units or '°F'}")
                         else:
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Skipped temperature out of range: {value}")
+                            log.info(f"Skipped temperature out of range: {value}")
                     except (ValueError, TypeError):
-                        if debug_mode:
-                            debug_info['processing_log'].append(f"Failed to parse temperature value: {obs.value}")
+                        log.error(f"Failed to parse temperature value: {obs.value}")
                         continue
                 
                 # Handle oxygen saturation
@@ -171,43 +175,29 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                                 'value': value,
                                 'units': obs.units or '%'
                             })
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Added oxygen saturation: {value} {obs.units or '%'}")
+                            log.info(f"Added oxygen saturation: {value} {obs.units or '%'}")
                         else:
-                            if debug_mode:
-                                debug_info['processing_log'].append(f"Skipped oxygen saturation out of range: {value}")
+                            log.info(f"Skipped oxygen saturation out of range: {value}")
                     except (ValueError, TypeError):
-                        if debug_mode:
-                            debug_info['processing_log'].append(f"Failed to parse oxygen saturation value: {obs.value}")
+                        log.error(f"Failed to parse oxygen saturation value: {obs.value}")
                         continue
                 
                 # Log other vital types found (for debugging)
                 else:
-                    if debug_mode:
-                        debug_info['processing_log'].append(f"Found other vital type: {obs.name} = {obs.value}")
+                    log.info(f"Found other vital type: {obs.name} = {obs.value}")
             
-            # Store panel information for debug
-            if debug_mode:
-                for panel in vital_panels:
-                    panel_info = {
-                        'id': str(panel.id),
-                        'effective_datetime': panel.effective_datetime.isoformat() if panel.effective_datetime else None,
-                        'value': panel.value
-                    }
-                    debug_info['panels_found'].append(panel_info)
+            log.info(f"Final vitals data collected: {len(vitals_data['weight'])} weight, {len(vitals_data['body_temperature'])} temperature, {len(vitals_data['oxygen_saturation'])} oxygen saturation measurements")
             
-            return vitals_data, debug_info
+            return vitals_data
             
         except Exception as e:
+            log.error(f"Error in _get_vitals_data: {str(e)}")
             # Return empty data if there's an error
-            if debug_mode:
-                debug_info['error'] = str(e)
-                debug_info['processing_log'].append(f"Error occurred: {str(e)}")
             return {
                 'weight': [],
                 'body_temperature': [],
                 'oxygen_saturation': []
-            }, debug_info
+            }
     
     def _get_demo_vitals_data(self) -> Dict[str, List[Dict[str, Any]]]:
         """Generate demo vitals data for testing."""
@@ -253,7 +243,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         
         return demo_data
     
-    def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]], debug_info: Dict[str, Any] = None) -> str:
+    def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]]) -> str:
         """Generate the HTML for the vitals visualization."""
         
         return f"""
@@ -356,29 +346,6 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 </tbody>
             </table>
         </div>
-        {f'''
-        <div class="debug-container" style="margin-top: 30px; background: #f0f0f0; padding: 15px; border-radius: 4px;">
-            <h3>Debug Information</h3>
-            <p><strong>Total vital sign panels found:</strong> {debug_info.get('total_panels', 0)}</p>
-            <p><strong>Total individual vitals found:</strong> {debug_info.get('total_vitals', 0)}</p>
-            <p><strong>Processing log:</strong></p>
-            <ul>
-                {''.join([f'<li>{log_entry}</li>' for log_entry in debug_info.get('processing_log', [])])}
-            </ul>
-            <details>
-                <summary>Vital sign panels (click to expand)</summary>
-                <pre style="max-height: 200px; overflow-y: auto; font-size: 12px;">
-{json.dumps(debug_info.get('panels_found', []), indent=2) if debug_info and debug_info.get('panels_found') else 'No panels found'}
-                </pre>
-            </details>
-            <details>
-                <summary>Individual vitals (click to expand)</summary>
-                <pre style="max-height: 300px; overflow-y: auto; font-size: 12px;">
-{json.dumps(debug_info.get('vitals_found', []), indent=2) if debug_info and debug_info.get('vitals_found') else 'No individual vitals found'}
-                </pre>
-            </details>
-        </div>
-        ''' if debug_info else ''}
     </div>
 
     <script>
