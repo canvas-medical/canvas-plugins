@@ -36,15 +36,20 @@ class QuestionnaireCommand(_BaseCommand):
 
     @cached_property
     def _questionnaire(self) -> Questionnaire | None:
-        if not self.questionnaire_id and (command_uuid := self.command_uuid):
-            # If the questionnaire is not set, try to fetch it from the command
-            try:
-                command_data = Command.objects.values_list("data", flat=True).get(id=command_uuid)
-                if questionnaire_dbid := command_data.get("questionnaire", {}).get("value"):
-                    questionnaire = Questionnaire.objects.get(dbid=questionnaire_dbid)
-                    self.questionnaire_id = str(questionnaire.id)
-                    return questionnaire
-            except (Command.DoesNotExist, Questionnaire.DoesNotExist):
+        if not self.questionnaire_id:
+            if command_uuid := self.command_uuid:
+                # If the questionnaire is not set, try to fetch it from the command
+                try:
+                    command_data = Command.objects.values_list("data", flat=True).get(
+                        id=command_uuid
+                    )
+                    if questionnaire_dbid := command_data.get("questionnaire", {}).get("value"):
+                        questionnaire = Questionnaire.objects.get(dbid=questionnaire_dbid)
+                        self.questionnaire_id = str(questionnaire.id)
+                        return questionnaire
+                except (Command.DoesNotExist, Questionnaire.DoesNotExist):
+                    return None
+            else:
                 return None
 
         return Questionnaire.objects.get(id=self.questionnaire_id)  # type: ignore[misc]
