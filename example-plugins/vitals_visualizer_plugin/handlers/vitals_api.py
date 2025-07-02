@@ -373,7 +373,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             }});
         }}
         
-        # Initialize with weight data or show message if no data
+        // Initialize with weight data or show message if no data
         document.addEventListener('DOMContentLoaded', function() {{
             updateVisualization();
             
