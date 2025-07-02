@@ -13,8 +13,8 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
     
     def get(self) -> list[Response]:
         """Return the vitals visualization UI and data."""
-        patient_id = self.request.params.get("patient_id")
-        demo_mode = self.request.params.get("demo") == "true"
+        patient_id = self.request.query_params.get("patient_id")
+        demo_mode = self.request.query_params.get("demo") == "true"
         
         if not patient_id and not demo_mode:
             return [JSONResponse({"error": "Patient ID is required"}, status_code=400)]
