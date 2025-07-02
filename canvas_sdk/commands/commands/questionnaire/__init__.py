@@ -63,6 +63,7 @@ class QuestionnaireCommand(_BaseCommand):
 
         for question in self._questionnaire.questions.all():
             qdata: dict[str, Any] = {
+                "id": question.pk,
                 "name": f"question-{question.pk}",
                 "label": question.name,
                 "coding": {
