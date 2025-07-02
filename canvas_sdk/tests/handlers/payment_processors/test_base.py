@@ -9,7 +9,7 @@ from canvas_sdk.handlers.payment_processors.base import PaymentProcessor
 from canvas_sdk.tests.handlers.payment_processors.utils import create_event
 
 
-class DummyPaymentrocessor(PaymentProcessor):
+class DummyPaymentProcessor(PaymentProcessor):
     """A dummy payment processor for testing purposes."""
 
     TYPE = PaymentProcessorMetadata.PaymentProcessorType.CARD
@@ -26,7 +26,7 @@ class DummyPaymentrocessor(PaymentProcessor):
 )
 def test_list_event_returns_metadata(context: dict, expected_nr_results: int) -> None:
     """Test that the list event returns the processor metadata."""
-    processor = DummyPaymentrocessor(
+    processor = DummyPaymentProcessor(
         event=create_event(
             type=EventType.REVENUE__PAYMENT_PROCESSOR__LIST,
             context=context,
