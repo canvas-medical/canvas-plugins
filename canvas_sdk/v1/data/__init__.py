@@ -3,6 +3,7 @@ from .appointment import Appointment, AppointmentExternalIdentifier
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
+from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
 from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue
 from .claim_line_item import ClaimLineItem
@@ -24,7 +25,11 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
-from .line_item_transaction import LineItemTransfer, NewLineItemAdjustment, NewLineItemPayment
+from .line_item_transaction import (
+    LineItemTransfer,
+    NewLineItemAdjustment,
+    NewLineItemPayment,
+)
 from .medication import Medication, MedicationCoding
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import Note, NoteType
@@ -44,7 +49,13 @@ from .patient import (
     PatientMetadata,
     PatientSetting,
 )
+from .patient_consent import (
+    PatientConsent,
+    PatientConsentCoding,
+    PatientConsentRejectionCoding,
+)
 from .payment_collection import PaymentCollection
+from .payor_specific_charge import PayorSpecificCharge
 from .posting import (
     BasePosting,
     BaseRemittanceAdvice,
@@ -80,6 +91,7 @@ __all__ = __exports__ = (
     "BaseRemittanceAdvice",
     "BillingLineItem",
     "BillingLineItemModifier",
+    "BusinessLine",
     "BulkPatientPosting",
     "CanvasUser",
     "CareTeamMembership",
@@ -136,6 +148,10 @@ __all__ = __exports__ = (
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
+    "PatientConsent",
+    "PatientConsentCoding",
+    "PatientConsentRejectionCoding",
+    "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationSetting",
