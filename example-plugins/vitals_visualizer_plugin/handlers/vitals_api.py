@@ -57,13 +57,23 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             
             # Log some example panels to understand structure
             for i, panel in enumerate(vital_panels[:3]):  # Log first 3 panels
-                log.info(f"Panel {i+1} structure: {vars(panel)}")
+                try:
+                    panel_dict = panel.__dict__ if hasattr(panel, '__dict__') else str(panel)
+                    log.info(f"Panel {i+1} structure: {panel_dict}")
+                except Exception as e:
+                    log.info(f"Panel {i+1} structure: Could not log panel structure - {e}")
+                
                 # Check for related observations/components
                 if hasattr(panel, 'observationcomponent_set'):
                     components = panel.observationcomponent_set.all()
                     log.info(f"Panel {i+1} has {components.count()} components")
                     for j, comp in enumerate(components[:5]):  # Log first 5 components
-                        log.info(f"Panel {i+1} Component {j+1}: {vars(comp)}")
+                        try:
+                            comp_dict = comp.__dict__ if hasattr(comp, '__dict__') else str(comp)
+                            log.info(f"Panel {i+1} Component {j+1}: {comp_dict}")
+                        except Exception as e:
+                            log.info(f"Panel {i+1} Component {j+1}: Could not log component structure - {e}")
+                        
                         if hasattr(comp, 'value_quantity') and comp.value_quantity:
                             log.info(f"Panel {i+1} Component {j+1} value_quantity: {comp.value_quantity}")
                         if hasattr(comp, 'value_quantity_unit') and comp.value_quantity_unit:
@@ -84,13 +94,23 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             
             # Log some example observations to understand structure
             for i, obs in enumerate(vital_observations[:5]):  # Log first 5 observations
-                log.info(f"Observation {i+1} structure: {vars(obs)}")
+                try:
+                    obs_dict = obs.__dict__ if hasattr(obs, '__dict__') else str(obs)
+                    log.info(f"Observation {i+1} structure: {obs_dict}")
+                except Exception as e:
+                    log.info(f"Observation {i+1} structure: Could not log observation structure - {e}")
+                
                 # Check for related components
                 if hasattr(obs, 'observationcomponent_set'):
                     components = obs.observationcomponent_set.all()
                     log.info(f"Observation {i+1} has {components.count()} components")
                     for j, comp in enumerate(components[:3]):  # Log first 3 components
-                        log.info(f"Observation {i+1} Component {j+1}: {vars(comp)}")
+                        try:
+                            comp_dict = comp.__dict__ if hasattr(comp, '__dict__') else str(comp)
+                            log.info(f"Observation {i+1} Component {j+1}: {comp_dict}")
+                        except Exception as e:
+                            log.info(f"Observation {i+1} Component {j+1}: Could not log component structure - {e}")
+                        
                         if hasattr(comp, 'value_quantity') and comp.value_quantity:
                             log.info(f"Observation {i+1} Component {j+1} value_quantity: {comp.value_quantity}")
                         if hasattr(comp, 'value_quantity_unit') and comp.value_quantity_unit:
