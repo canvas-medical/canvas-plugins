@@ -21,12 +21,9 @@
         .prescriptions-widget {
             border-radius: 12px;
             border: 1px solid #e5e7eb;
-            padding-bottom: 16px;
-            height: calc(100% - 16px - 2px);
-            max-height: calc(100% - 16px - 2px);
+            height: calc(100% - 2px);
+            max-height: calc(100% - 2px);
             /* Adjust for border and padding */
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
             font-family: sans-serif;
             display: flex;
             flex-direction: column;
@@ -48,15 +45,14 @@
         .prescriptions-list {
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
-            gap: 1rem;
+            justify-content: space-evenly;
             width: 100%;
             flex: 1;
         }
 
         .prescription-row {
             display: flex;
-            padding: .75rem 1rem;
+            padding: 0 1.5rem;
             align-items: center;
         }
 
@@ -164,13 +160,84 @@
                     </svg>
                 </div>
                 <div class="prescription-content">
-                    <div class="prescription-title">Request a refill</div>
-                    <div class="prescription-desc">Send a message requesting a refill be sent to your pharmacy</div>
+                    <div class="prescription-title"><button id="request-refill">Request</button> a refill</div>
+                    <div class="prescription-desc">
+                        Send a message requesting a refill be sent to your pharmacy
+                    </div>
                 </div>
             </div>
         </div>
 
     </div>
+
+    <script>
+        const patientId = "{{ patient_id }}";
+
+        console.log('Patient ID:', patientId);
+
+        window.postMessage({
+            type: 'info',
+            message: 'Prescriptions widget locally loaded successfully.',
+            details: { patientId: patientId }
+        }, '*');
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const requestRefillButton = document.getElementById('request-refill');
+                requestRefillButton.addEventListener('click', function() {
+                    window.postMessage({
+                        type: 'info',
+                        message: 'click',
+                        details: { patientId: patientId }
+                    }, '*');
+
+                    const request = new XMLHttpRequest()
+
+                    request.open('GET', `/plugin-io/api/patient_portal_plugin/medications/${patientId}`, true);
+                    request.setRequestHeader('Content-Type', 'application/json');
+                    request.onload = function() {
+                        if (request.status >= 200 && request.status < 300) {
+                            
+                                window.postMessage({
+                                    type: 'success',
+                                    message: 'Refill request sent successfully.',
+                                    details: request.responseText
+                                }, '*');
+                            }
+                    };
+                    request.onprogress = function(event) {
+                            window.postMessage({
+                                type: 'progress',
+                                message: 'Sending refill request...',
+                            }, '*');
+                        
+                    };
+                    request.ontimeout = function() {
+                        window.postMessage({
+                            type: 'error',
+                            message: 'Request timed out while sending refill request.',
+                            details: 'Please try again later.'
+                        }, '*');
+                    };
+                    request.onabort = function() {
+                        window.postMessage({
+                            type: 'error',
+                            message: 'Refill request was aborted.',
+                            details: 'Please try again.'
+                        }, '*');
+                    };
+                    request.onerror = function() {
+                        window.postMessage({
+                            type: 'error',
+                            message: 'Network error while sending refill request.',
+                            details: 'Please check your internet connection.'
+                        }, '*');
+                    };
+                    request.timeout = 10000; // Set timeout to 10 seconds
+                    request.send();
+                });
+            });
+        
+    </script>
 </body>
 
 </html>
