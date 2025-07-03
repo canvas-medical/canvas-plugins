@@ -1,6 +1,55 @@
 # CHANGELOG
 
 
+## v0.44.0 (2025-07-03)
+
+### Chores
+
+- Create patient portal appointment filter plugin example
+  ([#718](https://github.com/canvas-medical/canvas-plugins/pull/718),
+  [`0d5ec9d`](https://github.com/canvas-medical/canvas-plugins/commit/0d5ec9dd1d6a77bf6af9f3cdc962a7208b75b8ce))
+
+Signed-off-by: Nuno Silva <nuno.silva@glazedsolutions.com>
+
+Co-authored-by: Mary Dickson <mdickson@gmail.com>
+
+### Features
+
+- Add businessline, patientconsent, payorspecificcharge to data module
+  ([#704](https://github.com/canvas-medical/canvas-plugins/pull/704),
+  [`4409ee8`](https://github.com/canvas-medical/canvas-plugins/commit/4409ee890bf8d2ac5aa1811e3ec913997fa7af39))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Add Patient Portal Plugin with Header Widget
+  ([#697](https://github.com/canvas-medical/canvas-plugins/pull/697),
+  [`db9f33d`](https://github.com/canvas-medical/canvas-plugins/commit/db9f33df972985010197487a0be4f26772f48589))
+
+- Add simple Canvas plugin example with note header button and hello world UI
+  ([#740](https://github.com/canvas-medical/canvas-plugins/pull/740),
+  [`c13fed1`](https://github.com/canvas-medical/canvas-plugins/commit/c13fed14ef0377c42c8670f965f02f1b8ea21b4b))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+- Add user last invite date time field
+  ([#646](https://github.com/canvas-medical/canvas-plugins/pull/646),
+  [`849be63`](https://github.com/canvas-medical/canvas-plugins/commit/849be63ff7ed3207fe10012662146fe85b3ce80b))
+
+- Implement effects for updating and deleting/cancelling notes, appointments, and schedule events
+  ([#712](https://github.com/canvas-medical/canvas-plugins/pull/712),
+  [`61df2ac`](https://github.com/canvas-medical/canvas-plugins/commit/61df2acaf385f95f1506d80c684c9f2074ac5ebf))
+
+Signed-off-by: Nuno Silva <nuno.silva@glazedsolutions.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+- **cli**: Replace keyring with file-based token storage
+  ([#725](https://github.com/canvas-medical/canvas-plugins/pull/725),
+  [`70c0c77`](https://github.com/canvas-medical/canvas-plugins/commit/70c0c77d97e3bf9f48f2a41d3919405e9d68f82f))
+
+
 ## v0.43.0 (2025-07-01)
 
 ### Features
