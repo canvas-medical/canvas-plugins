@@ -1,0 +1,52 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "1.0.0",
+    "name": "male_bp_screening_plugin",
+    "description": "Blood pressure screening protocol for male patients aged 18-39 years, following USPSTF guidelines. Displays protocol cards recommending BP screening when due.",
+    "components": {
+        "protocols": [
+            {
+                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
+                "description": "Primary protocol for blood pressure screening recommendations in male patients 18-39 years old. Triggers on patient updates and generates protocol cards when screening is due per USPSTF guidelines.",
+                "data_access": {
+                    "event": "PATIENT_UPDATED",
+                    "read": [
+                        "patient",
+                        "vital_signs"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            },
+            {
+                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningEncounterProtocol", 
+                "description": "Encounter-based protocol for blood pressure screening reminders. Triggers during encounters to remind clinicians about BP screening for eligible male patients.",
+                "data_access": {
+                    "event": "ENCOUNTER_CREATED",
+                    "read": [
+                        "patient",
+                        "encounter"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": [
+        "preventive-care",
+        "blood-pressure",
+        "screening",
+        "uspstf",
+        "male-health"
+    ],
+    "secrets": [],
+    "license": "MIT",
+    "readme": "./README.md"
+}
