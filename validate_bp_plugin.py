@@ -12,6 +12,23 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Try to import logger, fallback to print if not available
+try:
+    from logger import log
+except ImportError:
+    # Fallback logger for validation script when running standalone
+    class FallbackLogger:
+        def info(self, message):
+            print(f"INFO: {message}")
+        
+        def error(self, message):
+            print(f"ERROR: {message}")
+        
+        def warning(self, message):
+            print(f"WARNING: {message}")
+    
+    log = FallbackLogger()
+
 
 def validate_plugin_structure():
     """Validate that the plugin has the correct file structure."""
@@ -31,10 +48,10 @@ def validate_plugin_structure():
             missing_files.append(file_path)
     
     if missing_files:
-        print(f"❌ Missing required files: {missing_files}")
+        log.error(f"Missing required files: {missing_files}")
         return False
     
-    print("✅ Plugin structure is valid")
+    log.info("Plugin structure is valid")
     return True
 
 
@@ -50,23 +67,23 @@ def validate_manifest():
         required_fields = ["sdk_version", "plugin_version", "name", "description", "components"]
         for field in required_fields:
             if field not in manifest:
-                print(f"❌ Missing required field in manifest: {field}")
+                log.error(f"Missing required field in manifest: {field}")
                 return False
         
         # Check protocols
         protocols = manifest["components"]["protocols"]
         if len(protocols) != 2:
-            print(f"❌ Expected 2 protocols, found {len(protocols)}")
+            log.error(f"Expected 2 protocols, found {len(protocols)}")
             return False
         
-        print("✅ CANVAS_MANIFEST.json is valid")
+        log.info("CANVAS_MANIFEST.json is valid")
         return True
         
     except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in manifest: {e}")
+        log.error(f"Invalid JSON in manifest: {e}")
         return False
     except Exception as e:
-        print(f"❌ Error validating manifest: {e}")
+        log.error(f"Error validating manifest: {e}")
         return False
 
 
@@ -81,20 +98,20 @@ def validate_protocol_syntax():
         # Parse the AST to check syntax
         ast.parse(code)
         
-        print("✅ Protocol code syntax is valid")
+        log.info("Protocol code syntax is valid")
         return True
         
     except SyntaxError as e:
-        print(f"❌ Syntax error in protocol: {e}")
+        log.error(f"Syntax error in protocol: {e}")
         return False
     except Exception as e:
-        print(f"❌ Error validating protocol syntax: {e}")
+        log.error(f"Error validating protocol syntax: {e}")
         return False
 
 
 def test_age_calculation_logic():
     """Test the age calculation logic without importing the full SDK."""
-    print("🧪 Testing age calculation logic...")
+    log.info("Testing age calculation logic...")
     
     def calculate_age(birth_date_str):
         """Simplified age calculation matching the protocol logic."""
@@ -135,9 +152,9 @@ def test_age_calculation_logic():
         is_eligible = is_eligible_age(calculated_age)
         
         if is_eligible == expected:
-            print(f"  ✅ {description}")
+            log.info(f"  {description}")
         else:
-            print(f"  ❌ {description} (got {is_eligible}, expected {expected})")
+            log.error(f"  {description} (got {is_eligible}, expected {expected})")
             all_passed = False
     
     return all_passed
@@ -145,8 +162,8 @@ def test_age_calculation_logic():
 
 def main():
     """Run all validation checks."""
-    print("🔍 Validating Male BP Screening Plugin...")
-    print()
+    log.info("Validating Male BP Screening Plugin...")
+    log.info("")
     
     checks = [
         ("Plugin Structure", validate_plugin_structure),
@@ -157,23 +174,23 @@ def main():
     
     all_passed = True
     for check_name, check_func in checks:
-        print(f"🔍 {check_name}:")
+        log.info(f"{check_name}:")
         if not check_func():
             all_passed = False
-        print()
+        log.info("")
     
     if all_passed:
-        print("🎉 All validation checks passed!")
-        print()
-        print("Plugin Summary:")
-        print("- Targets male patients aged 18-39")
-        print("- Follows USPSTF blood pressure screening guidelines")
-        print("- Recommends screening every 2-3 years")
-        print("- Generates protocol cards with actionable recommendations")
-        print("- Ready for installation in Canvas")
+        log.info("All validation checks passed!")
+        log.info("")
+        log.info("Plugin Summary:")
+        log.info("- Targets male patients aged 18-39")
+        log.info("- Follows USPSTF blood pressure screening guidelines")
+        log.info("- Recommends screening every 2-3 years")
+        log.info("- Generates protocol cards with actionable recommendations")
+        log.info("- Ready for installation in Canvas")
         return 0
     else:
-        print("❌ Some validation checks failed")
+        log.error("Some validation checks failed")
         return 1
 
 
