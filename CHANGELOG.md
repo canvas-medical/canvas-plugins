@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.44.1 (2025-07-03)
+
+### Bug Fixes
+
+- Fix InstallmentPlan data model ([#755](https://github.com/canvas-medical/canvas-plugins/pull/755),
+  [`c6b1f58`](https://github.com/canvas-medical/canvas-plugins/commit/c6b1f583c73bead98e0040b46df424ed02b23a86))
+
+
 ## v0.44.0 (2025-07-03)
 
 ### Chores
