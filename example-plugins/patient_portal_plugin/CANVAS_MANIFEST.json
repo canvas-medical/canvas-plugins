@@ -3,11 +3,35 @@
     "plugin_version": "0.0.1",
     "name": "patient_portal_plugin",
     "description": "Patient Portal Plugin for Canvas",
+    "url_permissions": [
+        {
+            "url": "http://localhost:8000/app",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS", "MICROPHONE", "CAMERA"]
+        }
+    ],
     "components": {
         "protocols": [
             {
                 "class": "patient_portal_plugin.handlers.patient_portal_handler:PatientPortalHandler",
                 "description": "The handler that listens for the patient portal `PATIENT_PORTAL__WIDGET_CONFIGURATION` and responds with the patient portal widgets",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "patient_portal_plugin.handlers.medications_handler:MedicationsHandler",
+                "description": "Handles the Medications plugin functionality",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "patient_portal_plugin.handlers.refill_form_handler:RefillFormHandler",
+                "description": "Handles the Refill Form functionality",
                 "data_access": {
                     "event": "",
                     "read": [],
@@ -22,7 +46,8 @@
     },
     "secrets": [
         "BACKGROUND_COLOR",
-        "EMERGENCY_CONTACT"
+        "EMERGENCY_CONTACT",
+        "simpleapi-api-key"
     ],
     "tags": {},
     "references": [],

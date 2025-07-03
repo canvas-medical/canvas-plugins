@@ -1,11 +1,12 @@
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.widgets import PortalWidget
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipStatus
-from canvas_sdk.v1.data.medication import Medication
+from canvas_sdk.v1.data.medication import Medication, Status
 from logger import log
 
 
@@ -28,6 +29,7 @@ class PatientPortalHandler(BaseHandler):
             self.care_team_widget,
             self.prescriptions_widget,
             self.footer_widget,
+            self.launch_modal,
         ]
 
     @property
@@ -99,12 +101,17 @@ class PatientPortalHandler(BaseHandler):
     @property
     def prescriptions_widget(self) -> Effect:
         """Constructs the prescriptions widget for the patient portal."""
-        prescriptions = Medication.objects.for_patient(self.target)
+        prescriptions = Medication.objects.filter(
+            patient__id=self.target,
+            deleted=False,
+            status=Status.ACTIVE,
+        )
         patient = Patient.objects.get(id=self.target)
         preferred_pharmacy = patient.preferred_pharmacy
-        log.info(preferred_pharmacy)
+        log.info(prescriptions)
 
         payload = {
+            "patient_id": self.target,
             "prescriptions": prescriptions,
             "preferred_pharmacy": preferred_pharmacy,
             "title_color": self.background_color,
@@ -139,3 +146,15 @@ class PatientPortalHandler(BaseHandler):
     def emergency_contact(self) -> str:
         """Get the emergency contact from secrets, defaulting to a specific contact if not set."""
         return self.secrets.get("EMERGENCY_CONTACT") or self.DEFAULT_EMERGENCY_CONTACT
+
+    @property
+    def launch_modal(self) -> Effect:
+        """Creates a LaunchModalEffect for patient portal info."""
+        log.info("Creating LaunchModalEffect for patient portal info.")
+        modal_effect = LaunchModalEffect(
+            url="https://example.com/info",
+            content=None,
+            target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE_LARGE,
+            title="Example Info"
+        )
+        return modal_effect.apply()
