@@ -47,8 +47,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             
             # First, get all Vital Signs Panel observations for the patient
             # These are the parent observations that contain individual vitals
-            vital_panels = Observation.objects.filter(
-                patient_id=patient_id,
+            vital_panels = Observation.objects.for_patient(patient_id).filter(
                 category="vital-signs",
                 name="Vital Signs Panel",
                 deleted=False
@@ -71,8 +70,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                             log.info(f"Panel {i+1} Component {j+1} value_quantity_unit: {comp.value_quantity_unit}")
             
             # Get individual vital observations that are members of these panels
-            vital_observations = Observation.objects.filter(
-                patient_id=patient_id,
+            vital_observations = Observation.objects.for_patient(patient_id).filter(
                 category="vital-signs",
                 effective_datetime__isnull=False,
                 deleted=False
