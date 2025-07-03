@@ -25,17 +25,20 @@ class InstallmentPlan(models.Model):
 
     class Meta:
         managed = False
-        db_table = "canvas_sdk_data_api_installmentplan_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_installmentplan_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
 
     creator = models.ForeignKey("v1.CanvasUser", on_delete=models.CASCADE)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.CASCADE, related_name="installment_plans"
     )
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
-    status = models.CharField(choices=InstallmentPlanStatus.choices)
+    status = models.CharField(choices=InstallmentPlanStatus.choices, max_length=10)
     expected_payoff_date = models.DateField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
 
 
 class ClaimQueueColumns(models.TextChoices):
