@@ -15,18 +15,13 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
     def get(self) -> list[HTMLResponse | JSONResponse]:
         """Return the vitals visualization UI and data."""
         patient_id = self.request.query_params.get("patient_id")
-        demo_mode = self.request.query_params.get("demo") == "true"
         
-        if not patient_id and not demo_mode:
+        if not patient_id:
             return [JSONResponse({"error": "Patient ID is required"}, status_code=400)]
         
         try:
-            if demo_mode:
-                # Generate demo data for testing
-                vitals_data = self._get_demo_vitals_data()
-            else:
-                # Get real vitals data for the patient
-                vitals_data = self._get_vitals_data(patient_id)
+            # Get real vitals data for the patient
+            vitals_data = self._get_vitals_data(patient_id)
             
             # Generate the HTML with embedded data
             html_content = self._generate_visualization_html(vitals_data)
@@ -216,50 +211,6 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 'body_temperature': [],
                 'oxygen_saturation': []
             }
-    
-    def _get_demo_vitals_data(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Generate demo vitals data for testing."""
-        from datetime import datetime, timedelta
-        import random
-        
-        base_date = datetime.now() - timedelta(days=365)
-        demo_data = {
-            'weight': [],
-            'body_temperature': [],
-            'oxygen_saturation': []
-        }
-        
-        # Generate demo weight data (150-180 lbs range)
-        for i in range(12):
-            date = base_date + timedelta(days=i*30)
-            weight = 160 + random.uniform(-10, 10)
-            demo_data['weight'].append({
-                'date': date.isoformat(),
-                'value': round(weight, 1),
-                'units': 'lbs'
-            })
-        
-        # Generate demo temperature data (97-100°F range)
-        for i in range(8):
-            date = base_date + timedelta(days=i*45)
-            temp = 98.6 + random.uniform(-1.5, 1.5)
-            demo_data['body_temperature'].append({
-                'date': date.isoformat(),
-                'value': round(temp, 1),
-                'units': '°F'
-            })
-        
-        # Generate demo oxygen saturation data (95-100% range)
-        for i in range(10):
-            date = base_date + timedelta(days=i*36)
-            o2 = 97 + random.uniform(0, 3)
-            demo_data['oxygen_saturation'].append({
-                'date': date.isoformat(),
-                'value': round(o2),
-                'units': '%'
-            })
-        
-        return demo_data
     
     def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]]) -> str:
         """Generate the HTML for the vitals visualization."""
