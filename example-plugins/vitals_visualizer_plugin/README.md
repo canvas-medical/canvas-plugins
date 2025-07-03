@@ -10,10 +10,12 @@ A Canvas plugin that displays a "Visualize" button in the vitals section of the 
 vitals_visualizer_plugin/
 ├── handlers/
 │   ├── __init__.py
-│   ├── vitals_button.py
-│   └── vitals_api.py
-├── CANVAS_MANIFEST.json
-└── README.md
+│   ├── vitals_button.py      # Action button handler
+│   └── vitals_api.py         # API endpoint with visualization
+├── templates/
+│   └── vitals_visualization.html # HTML template for visualization UI
+├── CANVAS_MANIFEST.json      # Plugin configuration
+└── README.md                 # Documentation
 ```
 
 ## Features
