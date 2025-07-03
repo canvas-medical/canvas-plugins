@@ -21,7 +21,7 @@ vitals_visualizer_plugin/
 - Adds a "Visualize" button to the vitals section of the chart summary
 - When clicked, opens a modal in the right chart pane displaying:
   - Dropdown selector for vital signs (weight, body temperature, o2sat)
-  - Interactive column chart with modern styling and tooltips
+  - Interactive line graph with modern styling and tooltips
   - Tabular display of the same data below the chart
   - Shows all historical vital signs data
 
