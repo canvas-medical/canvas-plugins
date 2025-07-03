@@ -151,7 +151,7 @@
             };
             
             chart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
@@ -159,7 +159,11 @@
                         data: values,
                         backgroundColor: colors[vitalType],
                         borderColor: colors[vitalType].replace('0.8', '1'),
-                        borderWidth: 1
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
