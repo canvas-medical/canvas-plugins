@@ -3,11 +3,11 @@ from enum import Enum
 
 from pydantic import Field, conlist
 
-from canvas_sdk.commands.base import _BaseCommand
+from canvas_sdk.commands.base import _BaseCommand, _SendableCommandMixin
 from canvas_sdk.commands.constants import ClinicalQuantity
 
 
-class PrescribeCommand(_BaseCommand):
+class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
     """A class for managing a Prescribe command within a specific note."""
 
     class Meta:
