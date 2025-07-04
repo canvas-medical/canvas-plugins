@@ -154,6 +154,7 @@ def _get_protocols_with_new_cqm_properties(
 
     return protocol_props if has_updates else None
 
+
 def _load_manifest(plugin_name: Path) -> dict[str, Any]:
     """Load the manifest file from the plugin."""
     manifest: Path = plugin_name / "CANVAS_MANIFEST.json"

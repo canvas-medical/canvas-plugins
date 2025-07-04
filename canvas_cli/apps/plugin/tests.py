@@ -84,6 +84,7 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     assert protocol.exists()
     assert protocol.is_file()
 
+
 def test_load_manifest(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests manifest can be loaded from a plugin."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
@@ -111,7 +112,9 @@ def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
         assert "README.md" in tar.getnames()
 
 
-def test_build_package_with_build_ignore_patterns(cli_runner: CliRunner, init_plugin_name: str) -> None:
+def test_build_package_with_build_ignore_patterns(
+    cli_runner: CliRunner, init_plugin_name: str
+) -> None:
     """Tests that the package is built correctly."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
     assert result.exit_code == 0
