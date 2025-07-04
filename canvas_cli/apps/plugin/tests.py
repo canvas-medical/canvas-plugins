@@ -1,4 +1,6 @@
+import json
 import shutil
+import tarfile
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +12,7 @@ from typer.testing import CliRunner
 
 from canvas_cli.main import app
 
-from .plugin import validate_package
+from .plugin import _build_package, _load_manifest, validate_package
 
 
 def test_validate_package_unexistant_path() -> None:
@@ -36,13 +38,13 @@ def test_validate_package_valid_file(tmp_path: Path) -> None:
     assert result == package_path
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def init_plugin_name() -> str:
     """The plugin name to be used for the canvas cli init test."""
     return f"testing_init-{datetime.now().timestamp()}".replace(".", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True)
 def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
     """Cleans up the plugin directory after the test."""
     yield
@@ -81,3 +83,52 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     protocol = Path(f"./{init_plugin_name}/protocols/my_protocol.py")
     assert protocol.exists()
     assert protocol.is_file()
+
+def test_load_manifest(cli_runner: CliRunner, init_plugin_name: str) -> None:
+    """Tests manifest can be loaded from a plugin."""
+    result = cli_runner.invoke(app, "init", input=init_plugin_name)
+    assert result.exit_code == 0
+
+    manifest = _load_manifest(Path(f"./{init_plugin_name}"))
+
+    assert manifest.get("name") == init_plugin_name
+
+
+def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
+    """Tests that the package is built correctly."""
+    result = cli_runner.invoke(app, "init", input=init_plugin_name)
+    assert result.exit_code == 0
+
+    package = _build_package(Path(f"./{init_plugin_name}"))
+    assert package.exists()
+    assert package.is_file()
+    assert package.name.endswith(".tar.gz")
+
+    # check that the package contains the plugin files
+    with tarfile.open(package, "r:gz") as tar:
+        assert "CANVAS_MANIFEST.json" in tar.getnames()
+        assert "protocols" in tar.getnames()
+        assert "README.md" in tar.getnames()
+
+
+def test_build_package_with_build_ignore_patterns(cli_runner: CliRunner, init_plugin_name: str) -> None:
+    """Tests that the package is built correctly."""
+    result = cli_runner.invoke(app, "init", input=init_plugin_name)
+    assert result.exit_code == 0
+
+    # add a build ignore pattern to the manifest
+    manifest = _load_manifest(Path(f"./{init_plugin_name}"))
+    manifest["build_ignore_patterns"] = ["*.md"]
+    with open(Path(f"./{init_plugin_name}/CANVAS_MANIFEST.json"), "w") as f:
+        json.dump(manifest, f)
+
+    package = _build_package(Path(f"./{init_plugin_name}"))
+    assert package.exists()
+    assert package.is_file()
+    assert package.name.endswith(".tar.gz")
+
+    # check that the package contains the plugin files
+    with tarfile.open(package, "r:gz") as tar:
+        assert "CANVAS_MANIFEST.json" in tar.getnames()
+        assert "protocols" in tar.getnames()
+        assert "README.md" not in tar.getnames()

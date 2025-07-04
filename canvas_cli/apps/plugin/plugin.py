@@ -46,11 +46,22 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
+    manifest = _load_manifest(package)
+    build_ignore_patterns = manifest.get("build_ignore_patterns", [])
+
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
         with tarfile.open(file.name, "w:gz") as tar:
             for root in package.rglob("*"):
-                # Skip hidden files and directories (starting with '.') and symlinks
-                if any(part.startswith(".") for part in root.parts) or root.is_symlink():
+                # Skip hidden files and directories (starting with '.')
+                if any(part.startswith(".") for part in root.parts):
+                    continue
+
+                # Skip symlinks
+                if root.is_symlink():
+                    continue
+
+                # Skip files and directories matching the build ignore patterns
+                if any(root.match(pattern) for pattern in build_ignore_patterns):
                     continue
 
                 tar.add(root, arcname=root.relative_to(package))
@@ -142,6 +153,16 @@ def _get_protocols_with_new_cqm_properties(
             protocol_props.append(p)
 
     return protocol_props if has_updates else None
+
+def _load_manifest(plugin_name: Path) -> dict[str, Any]:
+    """Load the manifest file from the plugin."""
+    manifest: Path = plugin_name / "CANVAS_MANIFEST.json"
+
+    manifest_json = json.loads(manifest.read_text())
+
+    validate_manifest_file(manifest_json)
+
+    return manifest_json
 
 
 def get_base_plugin_template_path(plugin_type: str) -> Path:
