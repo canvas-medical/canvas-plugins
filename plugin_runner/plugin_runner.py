@@ -254,6 +254,26 @@ class PluginRunner(PluginRunnerServicer):
                             log.error(error_line)
 
                     sentry_sdk.capture_exception(e)
+
+                    # Ignore PLUGIN_HANDLE_EVENT_EXCEPTION events to avoid infinite recursion
+                    if event.type != EventType.PLUGIN_HANDLE_EVENT_EXCEPTION:
+                        self.HandleEvent(
+                            EventRequest(
+                                type=EventType.PLUGIN_HANDLE_EVENT_EXCEPTION,
+                                context=json.dumps(
+                                    {
+                                        "error": str(e),
+                                        "event_context": event.context,
+                                        "event_name": event_name,
+                                        "event_type": event_type,
+                                        "plugin_name": plugin_name,
+                                        "traceback": "\n".join(traceback.format_exception(e)),
+                                    }
+                                ),
+                            ),
+                            None,
+                        )
+
                     continue
 
                 effect_list += effects

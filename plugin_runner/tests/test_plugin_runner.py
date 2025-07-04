@@ -424,3 +424,37 @@ def test_simple_api_websocket(
         )
 
     assert result[0].effects == [expected_response]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_handle_exception"], indirect=True)
+def test_plugin_handle_event_exception(
+    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+) -> None:
+    """Test that PLUGIN_HANDLE_EVENT_EXCEPTION triggered when an exception is raised in a plugin."""
+    event = EventRequest(type=EventType.UNKNOWN)
+
+    plugin_runner.HandleEvent = Mock(wraps=plugin_runner.HandleEvent)
+    plugin_runner.HandleEvent.__qualname__ = "HandleEvent"  # play nice with metrics
+
+    result = []
+    for response in plugin_runner.HandleEvent(event, None):
+        result.append(response)
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
+
+    assert plugin_runner.HandleEvent.call_count == 2 # Verify no infinite recursion
+    assert plugin_runner.HandleEvent.call_args_list[0][0][0].type == EventType.UNKNOWN
+
+    exception_event_request: EventRequest = plugin_runner.HandleEvent.call_args_list[1][0][0]
+
+    assert exception_event_request.type == EventType.PLUGIN_HANDLE_EVENT_EXCEPTION
+    assert json.loads(exception_event_request.context).get("error") == "This is a test exception"
+    assert (
+        json.loads(exception_event_request.context).get("plugin_name")
+        == "test_handle_exception:test_handle_exception.protocols.my_protocol:Protocol"
+    )
+    assert json.loads(exception_event_request.context).get("event_name") == EventType.Name(
+        EventType.UNKNOWN
+    )
