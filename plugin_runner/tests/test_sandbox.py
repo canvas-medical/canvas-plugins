@@ -459,9 +459,13 @@ def test_urllib() -> None:
                 obj = StopMedicationCommand(note_uuid="123")
 
                 print(f'{obj.__dict__}')
+                print(f'{vars(obj)}')
 
                 obj.__dict__.get('note_uuid')
                 obj.__dict__.items()
+
+                vars(obj).get('note_uuid')
+                vars(obj).items()
             """,
         }
     ),
@@ -546,6 +550,13 @@ def test_type_is_inaccessible() -> None:
 
                 pvt = client.__dict__["_session"]
             """,
+            "vars_private_attr_connection": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+
+                pvt = vars(client)["_session"]
+            """,
             "private_method": """
                 from canvas_sdk.utils import Http
 
@@ -566,13 +577,6 @@ def test_type_is_inaccessible() -> None:
                 client = Http()
                 pvt = client._session
             """,
-            "dict_private_attr_session": """
-                from canvas_sdk.utils import Http
-
-                client = Http()
-
-                pvt = client.__dict__["_session"]
-            """,
             "private_attr__class__": """
                 from canvas_sdk.utils import Http
 
@@ -588,6 +592,11 @@ def test_type_is_inaccessible() -> None:
                 from canvas_sdk.utils.http import ontologies_http
 
                 ontologies_http.__dict__['_base_url'] = 'evil'
+            """,
+            "ontologies_base_url_vars": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                vars(ontologies_http)['_base_url'] = 'evil'
             """,
             "ontologies_session": """
                 from canvas_sdk.utils.http import ontologies_http
