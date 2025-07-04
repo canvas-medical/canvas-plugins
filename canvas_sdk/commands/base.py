@@ -5,11 +5,13 @@ from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
+from canvas_sdk.v1.data import Command
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -17,6 +19,7 @@ class _BaseCommand(TrackableFieldsModel):
         key = ""
         originate_required_fields = ("note_uuid",)
         edit_required_fields = ("command_uuid",)
+        send_required_fields = ("command_uuid",)
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
@@ -161,4 +164,27 @@ class _BaseCommand(TrackableFieldsModel):
         return Recommendation(title=title, button=button, command=command, context=self.values)
 
 
-__exports__ = ("_BaseCommand",)
+class _SendableCommandMixin:
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+
+        cmd = Command.objects.get(id=self.command_uuid)
+
+        if not cmd.committer_id:
+            errors.append(
+                self._create_error_detail(
+                    "value", "Command needs to be signed first.", self.command_uuid
+                )
+            )
+        return errors
+
+    def send(self) -> Effect:
+        """Fire the send effect the command."""
+        self._validate_before_effect("send")
+        return Effect(
+            type=f"SEND_{self.constantized_key()}_COMMAND",
+            payload=json.dumps({"command": self.command_uuid}),
+        )
+
+
+__exports__ = ("_BaseCommand", "_SendableCommandMixin")
