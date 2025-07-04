@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.44.2 (2025-07-04)
+
+### Bug Fixes
+
+- Env var and default url for pharmacy service
+  ([#770](https://github.com/canvas-medical/canvas-plugins/pull/770),
+  [`bd88b05`](https://github.com/canvas-medical/canvas-plugins/commit/bd88b05f31f8d5798b2a0c2c187fb8dff3100e9c))
+
+
 ## v0.44.1 (2025-07-03)
 
 ### Bug Fixes
