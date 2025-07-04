@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 message ReloadPluginsRequest {
-
+  string plugin = 1; // The name of the plugin to reload. If empty, all plugins will be reloaded.
 }
 
 message ReloadPluginsResponse {
