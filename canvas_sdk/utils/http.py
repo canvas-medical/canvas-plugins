@@ -295,7 +295,9 @@ class PharmacyHttp:
 
     def __init__(self) -> None:
         self._http_client = JsonOnlyHttp(
-            base_url=os.getenv("PHARMACY_ENDPOINT", "https://pharmacy.canvasmedical.com")
+            base_url=os.getenv(
+                "PHARMACY_SERVICE_ENDPOINT", "https://pharmacy-2017071.canvasmedical.com"
+            )
         )
 
         self._http_client._session.headers.update(
