@@ -433,7 +433,7 @@ def test_plugin_handle_event_exception(
     """Test that PLUGIN_HANDLE_EVENT_EXCEPTION triggered when an exception is raised in a plugin."""
     event = EventRequest(type=EventType.UNKNOWN)
 
-    plugin_runner.HandleEvent = Mock(wraps=plugin_runner.HandleEvent)
+    plugin_runner.HandleEvent = Mock(wraps=plugin_runner.HandleEvent)  # type: ignore
     plugin_runner.HandleEvent.__qualname__ = "HandleEvent"  # play nice with metrics
 
     result = []
