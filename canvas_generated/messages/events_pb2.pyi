@@ -807,6 +807,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CLAIM__CONDITIONS: _ClassVar[EventType]
     PLUGIN_CREATED: _ClassVar[EventType]
     PLUGIN_UPDATED: _ClassVar[EventType]
+    PLUGIN_HANDLE_EVENT_EXCEPTION: _ClassVar[EventType]
     APPLICATION__ON_OPEN: _ClassVar[EventType]
     PATIENT_PORTAL__GET_FORMS: _ClassVar[EventType]
     PATIENT_PORTAL__APPOINTMENT_CANCELED: _ClassVar[EventType]
@@ -1640,6 +1641,7 @@ PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH: EventType
 CLAIM__CONDITIONS: EventType
 PLUGIN_CREATED: EventType
 PLUGIN_UPDATED: EventType
+PLUGIN_HANDLE_EVENT_EXCEPTION: EventType
 APPLICATION__ON_OPEN: EventType
 PATIENT_PORTAL__GET_FORMS: EventType
 PATIENT_PORTAL__APPOINTMENT_CANCELED: EventType
