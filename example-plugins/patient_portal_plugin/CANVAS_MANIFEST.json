@@ -5,7 +5,7 @@
     "description": "Patient Portal Plugin for Canvas",
     "url_permissions": [
         {
-            "url": "http://localhost:8000/app",
+            "url": "http://localhost:8000/app/messaging",
             "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS", "MICROPHONE", "CAMERA"]
         }
     ],

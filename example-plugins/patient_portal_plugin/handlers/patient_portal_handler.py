@@ -1,5 +1,4 @@
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.widgets import PortalWidget
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
@@ -29,7 +28,6 @@ class PatientPortalHandler(BaseHandler):
             self.care_team_widget,
             self.prescriptions_widget,
             self.footer_widget,
-            self.launch_modal,
         ]
 
     @property
@@ -147,14 +145,3 @@ class PatientPortalHandler(BaseHandler):
         """Get the emergency contact from secrets, defaulting to a specific contact if not set."""
         return self.secrets.get("EMERGENCY_CONTACT") or self.DEFAULT_EMERGENCY_CONTACT
 
-    @property
-    def launch_modal(self) -> Effect:
-        """Creates a LaunchModalEffect for patient portal info."""
-        log.info("Creating LaunchModalEffect for patient portal info.")
-        modal_effect = LaunchModalEffect(
-            url="https://example.com/info",
-            content=None,
-            target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE_LARGE,
-            title="Example Info"
-        )
-        return modal_effect.apply()

@@ -43,7 +43,7 @@ class MedicationsHandler(PatientSessionAuthMixin, SimpleAPIRoute):
                 "medications": medications_ids,
             }, status_code=HTTPStatus.OK),
             LaunchModalEffect(
-                url="http://localhost:8000/app",
+                url="http://localhost:8000/app/messaging",
                 content=None,
                 target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
                 title="Medications Information",
@@ -93,3 +93,4 @@ class MedicationsHandler(PatientSessionAuthMixin, SimpleAPIRoute):
             },
             status_code=HTTPStatus.OK
         )
+
