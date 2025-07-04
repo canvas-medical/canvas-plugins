@@ -444,7 +444,7 @@ def test_plugin_handle_event_exception(
     assert result[0].success is True
     assert len(result[0].effects) == 0
 
-    assert plugin_runner.HandleEvent.call_count == 2 # Verify no infinite recursion
+    assert plugin_runner.HandleEvent.call_count == 2  # Verify no infinite recursion
     assert plugin_runner.HandleEvent.call_args_list[0][0][0].type == EventType.UNKNOWN
 
     exception_event_request: EventRequest = plugin_runner.HandleEvent.call_args_list[1][0][0]
