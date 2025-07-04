@@ -45,6 +45,7 @@ manifest_schema = {
         "license": {"type": "string"},
         "diagram": {"type": ["boolean", "string"]},
         "readme": {"type": ["boolean", "string"]},
+        "build_ignore_patterns": {"type": "array", "items": {"type": "string"}},
     },
     "required": [
         "sdk_version",
