@@ -304,6 +304,9 @@ class PharmacyHttp:
             {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
         )
 
+        # Disable SSL verification for this session
+        self._http_client._session.verify = False
+
     def search_pharmacies(
         self, search_term: str, latitude: str | None = None, longitude: str | None = None
     ) -> list[dict]:
