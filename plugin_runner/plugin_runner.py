@@ -192,7 +192,7 @@ class PluginRunner(PluginRunnerServicer):
                 plugin_name = event.context["plugin_name"]
                 relevant_plugins = [p for p in relevant_plugins if p.startswith(f"{plugin_name}:")]
 
-            effect_list = []
+            effect_list: list[Effect] = []
 
             for plugin_name in relevant_plugins:
                 log.debug(f"Processing {plugin_name}")

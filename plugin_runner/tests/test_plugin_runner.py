@@ -443,8 +443,8 @@ def test_plugin_handle_event_exception(
     assert len(result) == 1
     assert result[0].success is True
     assert len(result[0].effects) == 1
-    assert result[0].effects[0].type == EffectType.LOG  # type: ignore
-    assert result[0].effects[0].payload == "Hello, world!"  # type: ignore
+    assert result[0].effects[0].type == EffectType.LOG
+    assert result[0].effects[0].payload == "Hello, world!"
 
     assert plugin_runner.HandleEvent.call_count == 2
     assert plugin_runner.HandleEvent.call_args_list[0][0][0].type == EventType.UNKNOWN
