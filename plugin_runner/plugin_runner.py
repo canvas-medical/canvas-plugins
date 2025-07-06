@@ -257,7 +257,7 @@ class PluginRunner(PluginRunnerServicer):
 
                     # Ignore PLUGIN_HANDLE_EVENT_EXCEPTION events to avoid infinite recursion
                     if event.type != EventType.PLUGIN_HANDLE_EVENT_EXCEPTION:
-                        self.HandleEvent(
+                        responses = self.HandleEvent(
                             EventRequest(
                                 type=EventType.PLUGIN_HANDLE_EVENT_EXCEPTION,
                                 context=json.dumps(
@@ -273,6 +273,9 @@ class PluginRunner(PluginRunnerServicer):
                             ),
                             None,
                         )
+
+                        for response in responses:
+                            effect_list.extend(response.effects)
 
                     continue
 

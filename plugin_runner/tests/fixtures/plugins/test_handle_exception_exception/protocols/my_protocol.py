@@ -1,4 +1,4 @@
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 
@@ -16,7 +16,4 @@ class Protocol(BaseProtocol):
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        if self.event.type == EventType.PLUGIN_HANDLE_EVENT_EXCEPTION:
-            return [Effect(type=EffectType.LOG, payload="Hello, world!")]
-
         raise Exception("This is a test exception")
