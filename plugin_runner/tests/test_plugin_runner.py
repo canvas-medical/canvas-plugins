@@ -21,7 +21,9 @@ from plugin_runner.plugin_runner import (
     load_or_reload_plugin,
     load_plugins,
     synchronize_plugins,
+    unload_plugin,
 )
+from settings import PLUGIN_DIRECTORY
 
 
 @pytest.fixture
@@ -200,16 +202,56 @@ def test_remove_plugin_should_be_removed_from_loaded_plugins(
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 @pytest.mark.parametrize("load_test_plugins", [None], indirect=True)
-def test_load_plugins_should_refresh_event_protocol_map(
+def test_load_plugins_should_refresh_event_handler_map(
     load_test_plugins: None, install_test_plugin: Path
 ) -> None:
-    """Test that the event protocol map is refreshed when loading plugins."""
+    """Test that the event handler map is refreshed when loading plugins."""
     assert EVENT_HANDLER_MAP == {}
     load_plugins()
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
         "example_plugin:example_plugin.protocols.my_protocol:Protocol"
     ]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_unload_plugin_should_remove_from_loaded_plugins(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading a plugin successfully removes it from loaded plugins."""
+    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert (
+        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        is True
+    )
+    unload_plugin("example_plugin")
+    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_unload_plugin_should_refresh_event_handler_map(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading a plugin should refresh event handler map."""
+
+    class OtherPluginHandler:
+        RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
+
+    LOADED_PLUGINS["other_example_plugin:example_plugin.protocols.my_protocol:Protocol"] = {
+        "active": True,
+        "class": OtherPluginHandler,
+        "sandbox": None,
+        "handler": None,
+        "secrets": {},
+    }
+
+    unload_plugin("example_plugin")
+    assert (
+        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        not in EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]
+    )
+
+    assert len(EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]) == 1
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -230,20 +272,27 @@ def test_handle_plugin_event_returns_expected_result(
     assert result[0].effects[0].payload == "Hello, world!"
 
 
+@pytest.mark.parametrize("plugin_name", [None, "test"])
 def test_reload_plugins_event_handler_successfully_publishes_message(
     plugin_runner: PluginRunner,
+    plugin_name: str | None,
 ) -> None:
-    """Test ReloadPlugins Event handler successfully publishes a message with restart action."""
+    """Test ReloadPlugins Event handler successfully publishes a message with reload action."""
     with patch(
         "plugin_runner.plugin_runner.publish_message", new_callable=Mock
     ) as mock_publish_message:
-        request = ReloadPluginsRequest()
+        request = ReloadPluginsRequest(plugin=plugin_name)
 
         result = []
         for response in plugin_runner.ReloadPlugins(request, None):
             result.append(response)
 
-        mock_publish_message.assert_called_once_with(message={"action": "reload"})
+        if plugin_name:
+            mock_publish_message.assert_called_once_with(
+                message={"action": "reload", "plugin": plugin_name}
+            )
+        else:
+            mock_publish_message.assert_called_once_with(message={"action": "reload"})
 
     assert len(result) == 1
     assert result[0].success is True
@@ -270,6 +319,71 @@ def test_synchronize_plugins_calls_install_and_load_plugins() -> None:
 
         mock_install_plugins.assert_called_once()
         mock_load_plugins.assert_called_once()
+
+
+def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
+    """Test that synchronize_plugins installs and loads only the given enabled plugin."""
+    plugin_name = "my_enabled_plugin"
+
+    with (
+        patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
+        patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
+        patch("plugin_runner.plugin_runner.install_plugin") as mock_install_plugin,
+        patch("plugin_runner.plugin_runner.load_or_reload_plugin") as mock_load_or_reload_plugin,
+        patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
+        patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
+    ):
+        mock_client = Mock()
+        mock_pubsub = Mock()
+        mock_get_client.return_value = (mock_client, mock_pubsub)
+        mock_enabled_plugins.return_value = {plugin_name: {"version": "0.1.0"}}
+
+        mock_pubsub.get_message.return_value = {
+            "type": "pmessage",
+            "data": pickle.dumps({"action": "reload", "plugin": plugin_name}),
+        }
+
+        synchronize_plugins(run_once=True)
+
+        mock_install_plugin.assert_called_once_with(plugin_name, attributes={"version": "0.1.0"})
+
+        expected_path = (Path(PLUGIN_DIRECTORY) / plugin_name).resolve()
+        mock_load_or_reload_plugin.assert_called_once_with(expected_path)
+
+        mock_install_plugins.assert_not_called()
+        mock_load_plugins.assert_not_called()
+
+
+def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
+    """Test that synchronize_plugins uninstalls and unloads the given plugin if disabled."""
+    plugin_name = "my_disabled_plugin"
+
+    with (
+        patch("plugin_runner.plugin_runner.get_client") as mock_get_client,
+        patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
+        patch("plugin_runner.plugin_runner.uninstall_plugin") as mock_uninstall_plugin,
+        patch("plugin_runner.plugin_runner.unload_plugin") as mock_unload_plugin,
+        patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
+        patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
+    ):
+        mock_client = Mock()
+        mock_pubsub = Mock()
+        mock_get_client.return_value = (mock_client, mock_pubsub)
+
+        mock_enabled_plugins.return_value = {}
+
+        mock_pubsub.get_message.return_value = {
+            "type": "pmessage",
+            "data": pickle.dumps({"action": "reload", "plugin": plugin_name}),
+        }
+
+        synchronize_plugins(run_once=True)
+
+        mock_uninstall_plugin.assert_called_once_with(plugin_name)
+        mock_unload_plugin.assert_called_once_with(plugin_name)
+
+        mock_install_plugins.assert_not_called()
+        mock_load_plugins.assert_not_called()
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
