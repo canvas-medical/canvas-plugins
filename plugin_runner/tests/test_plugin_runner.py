@@ -425,6 +425,7 @@ def test_simple_api_websocket(
 
     assert result[0].effects == [expected_response]
 
+
 @pytest.mark.parametrize("install_test_plugin", ["test_handle_exception"], indirect=True)
 def test_plugin_handle_event_exception(
     install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
@@ -442,8 +443,8 @@ def test_plugin_handle_event_exception(
     assert len(result) == 1
     assert result[0].success is True
     assert len(result[0].effects) == 1
-    assert result[0].effects[0].type == EffectType.LOG # type: ignore
-    assert result[0].effects[0].payload == "Hello, world!" # type: ignore
+    assert result[0].effects[0].type == EffectType.LOG  # type: ignore
+    assert result[0].effects[0].payload == "Hello, world!"  # type: ignore
 
     assert plugin_runner.HandleEvent.call_count == 2
     assert plugin_runner.HandleEvent.call_args_list[0][0][0].type == EventType.UNKNOWN
@@ -459,6 +460,7 @@ def test_plugin_handle_event_exception(
     assert json.loads(exception_event_request.context).get("event_name") == EventType.Name(
         EventType.UNKNOWN
     )
+
 
 @pytest.mark.parametrize("install_test_plugin", ["test_handle_exception_exception"], indirect=True)
 def test_plugin_handle_event_exception_does_not_recurse(
