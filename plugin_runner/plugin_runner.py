@@ -311,10 +311,16 @@ class PluginRunner(PluginRunnerServicer):
         self, request: ReloadPluginsRequest, context: Any
     ) -> Iterable[ReloadPluginsResponse]:
         """This is invoked when we need to reload plugins."""
-        if not request.plugin:
+        if request.plugin:
+            message = {
+                "action": "reload",
+                "plugin": request.plugin,
+            }
+        else:
             log.info("Reloading all plugins...")
+            message = {"action": "reload"}
         try:
-            publish_message(message={"action": "reload", "plugin": request.plugin})
+            publish_message(message=message)
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
