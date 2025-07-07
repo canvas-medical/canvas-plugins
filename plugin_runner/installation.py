@@ -241,11 +241,17 @@ def uninstall_plugin(plugin_name: str) -> None:
 def install_plugins() -> None:
     """Install all enabled plugins."""
     log.info("Installing plugins")
+    try:
+        plugins_dir = Path(PLUGIN_DIRECTORY).resolve()
 
-    if Path(PLUGIN_DIRECTORY).exists():
-        shutil.rmtree(PLUGIN_DIRECTORY)
+        if plugins_dir.exists():
+            shutil.rmtree(plugins_dir.as_posix())
 
-    os.mkdir(PLUGIN_DIRECTORY)
+        plugins_dir.mkdir(parents=False, exist_ok=True)
+    except Exception as e:
+        raise PluginInstallationError(
+            f'Failed to reset plugin directory "{PLUGIN_DIRECTORY}: {e}"'
+        ) from e
 
     for plugin_name, attributes in enabled_plugins().items():
         try:
