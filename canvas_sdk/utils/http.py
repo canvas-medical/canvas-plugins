@@ -309,7 +309,7 @@ class PharmacyHttp:
 
     def search_pharmacies(
         self,
-        search_term: str | None = "+",
+        search_term: str | None = " ",
         latitude: str | None = None,
         longitude: str | None = None,
     ) -> list[dict]:
