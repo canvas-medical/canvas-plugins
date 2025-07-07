@@ -250,7 +250,7 @@ def install_plugins() -> None:
         plugins_dir.mkdir(parents=False, exist_ok=True)
     except Exception as e:
         raise PluginInstallationError(
-            f'Failed to reset plugin directory "{PLUGIN_DIRECTORY}: {e}"'
+            f'Failed to reset plugin directory "{PLUGIN_DIRECTORY}": {e}"'
         ) from e
 
     for plugin_name, attributes in enabled_plugins().items():
