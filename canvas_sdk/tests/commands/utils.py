@@ -17,6 +17,9 @@ from canvas_sdk.commands import __all__ as commands_registry
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.tests.shared import MaskedValue, trigger_plugin_event
 
+TEST_PLUGINS_DIR = Path(__file__).parent
+
+
 COMMANDS: list[type[_BaseCommand]] = [
     getattr(commands, attr_name) for attr_name in commands_registry
 ]
@@ -97,7 +100,7 @@ def get_commands_in_note(
 
 def write_protocol_code(
     cli_runner: CliRunner,
-    plugin_name: str,
+    plugin_path: Path,
     commands: list[CommandCode],
 ) -> None:
     """Test that the protocol code is written correctly."""
@@ -156,10 +159,10 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
 
     protocol_code = f"{imports}{''.join(protocol_classes)}"
 
-    with chdir(Path("./custom-plugins")):
-        cli_runner.invoke(app, "init", input=plugin_name)
+    with chdir(plugin_path.parent):
+        cli_runner.invoke(app, "init", input=plugin_path.name)
 
-    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+    with open((plugin_path / "protocols/my_protocol.py").as_posix(), "w") as protocol:
         protocol.write(protocol_code)
 
     protocols = []
@@ -167,17 +170,17 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
     for command in commands:
         command_cls = command["class"]
         originate = {
-            "class": f"{plugin_name}.protocols.my_protocol:Originate{command_cls.__name__}Protocol",
+            "class": f"{plugin_path.name}.protocols.my_protocol:Originate{command_cls.__name__}Protocol",
             "description": "A protocol that does xyz...",
             "data_access": {"event": "", "read": [], "write": []},
         }
         edit = {
-            "class": f"{plugin_name}.protocols.my_protocol:Edit{command_cls.__name__}Protocol",
+            "class": f"{plugin_path.name}.protocols.my_protocol:Edit{command_cls.__name__}Protocol",
             "description": "A protocol that does xyz...",
             "data_access": {"event": "", "read": [], "write": []},
         }
         commit = {
-            "class": f"{plugin_name}.protocols.my_protocol:Commit{command_cls.__name__}Protocol",
+            "class": f"{plugin_path.name}.protocols.my_protocol:Commit{command_cls.__name__}Protocol",
             "description": "A protocol that does xyz...",
             "data_access": {"event": "", "read": [], "write": []},
         }
@@ -188,7 +191,7 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
     manifest = {
         "sdk_version": "0.1.4",
         "plugin_version": "0.0.1",
-        "name": plugin_name,
+        "name": plugin_path.name,
         "description": "Edit the description in CANVAS_MANIFEST.json",
         "components": {
             "protocols": protocols,
@@ -205,7 +208,7 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
         "readme": "./README.md",
     }
 
-    with open(f"./custom-plugins/{plugin_name}/CANVAS_MANIFEST.json", "w") as manifest_file:
+    with open((plugin_path / "CANVAS_MANIFEST.json").as_posix(), "w") as manifest_file:
         json.dump(manifest, manifest_file)
 
 
