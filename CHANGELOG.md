@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.44.3 (2025-07-07)
+
+### Bug Fixes
+
+- Remove cert validation from pharmacy
+  ([#776](https://github.com/canvas-medical/canvas-plugins/pull/776),
+  [`96748e2`](https://github.com/canvas-medical/canvas-plugins/commit/96748e26138f37abdb431240a30e1a95e63bf4ce))
+
+
 ## v0.44.2 (2025-07-04)
 
 ### Bug Fixes
