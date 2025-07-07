@@ -617,6 +617,7 @@ class Sandbox:
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
                 "super": builtins.super,
+                "vars": builtins.vars,
             },
             "__is_plugin__": True,
             "__metaclass__": type,
