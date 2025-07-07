@@ -308,7 +308,7 @@ class PharmacyHttp:
         self._http_client._session.verify = False
 
     def search_pharmacies(
-        self, search_term: str = "+", latitude: str | None = None, longitude: str | None = None
+        self, search_term: str | None = "+", latitude: str | None = None, longitude: str | None = None
     ) -> list[dict]:
         """Search for pharmacies by term and optional location."""
         params = {"search": search_term}
