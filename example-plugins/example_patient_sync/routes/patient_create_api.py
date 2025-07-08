@@ -11,11 +11,10 @@ from canvas_sdk.v1.data.common import PersonSex
 from logger import log
 
 # This is a client specific instance of the third-party software to sync with Canvas
-PARTNER_URL = "https://canvas.app.usebridge.xyz"
-
+PARTNER_URL = "https://your-subdomain.canvas-partner.com"
 
 class PatientCreateApi(SimpleAPI):
-    """API for bidirectional patient sync."""
+    """API endpoint for use by third-party system to create patients in Canvas when that system is the point of origination for that patient record."""
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate with the provided credentials."""
@@ -23,13 +22,12 @@ class PatientCreateApi(SimpleAPI):
         # link to the docs where we discuss how to authenticate
         return True
 
-    # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
-    # https://<instance-name>.canvasmedical.com/plugin-io/api/example_patient_sync/patients
+    # Docs: https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
+    # POST https://<instance-name>.canvasmedical.com/plugin-io/api/example_patient_sync/patients
     @api.post("/patients")
     def post(self) -> list[Response | Effect]:
         """Handle POST requests for patient sync."""
         json_body = self.request.json()
-        log.info(f"PatientCreateApi.post: {json_body}")
 
         if not isinstance(json_body, dict):
             return [
@@ -71,7 +69,6 @@ class PatientCreateApi(SimpleAPI):
             sex_at_birth=sex_at_birth,
             external_identifiers=[external_id],
         )
-        log.info(f"PatientCreateApi.post: patient={patient}")
 
         response = {"external_identifier": {"system": PARTNER_URL, "value": partner_id}}
 

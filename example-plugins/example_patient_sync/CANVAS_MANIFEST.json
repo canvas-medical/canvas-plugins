@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "example_patient_sync.protocols.patient_sync:PatientSync",
+                "class": "example_patient_sync.handlers.patient_sync:PatientSync",
                 "description": "Create or update patients in an external system based on Canvas events",
                 "data_access": {
                     "event": "",

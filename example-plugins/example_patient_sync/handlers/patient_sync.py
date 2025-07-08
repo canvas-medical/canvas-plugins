@@ -3,17 +3,15 @@ from typing import Any
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.utils import Http
 from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
-PARTNER_URL_BASE = "https://app.usebridge.xyz"
-SYSTEM_URL = "https://canvas.app.usebridge.xyz"
+PARTNER_URL_BASE = "https://your-subdomain.canvas-partner.com"
 
-
-class PatientSync(BaseProtocol):
-    """Protocol for synchronizing patient data between systems."""
+class PatientSync(BaseHandler):
+    """Handler for synchronizing patient data between systems."""
 
     RESPONDS_TO = [
         EventType.Name(EventType.PATIENT_CREATED),
@@ -22,12 +20,7 @@ class PatientSync(BaseProtocol):
     @property
     def partner_api_base_url(self) -> str:
         """Return the base URL for the external partner API."""
-        return self.sanitize_url(self.secrets["PARTNER_API_BASE_URL"] or f"{PARTNER_URL_BASE}/api")
-
-    @property
-    def partner_ui_base_url(self) -> str:
-        """Return the base URL for the external partner UI."""
-        return self.sanitize_url(self.secrets["PARTNER_UI_BASE_URL"] or PARTNER_URL_BASE)
+        return self.secrets["PARTNER_API_BASE_URL"] or f"{PARTNER_URL_BASE}/api"
 
     @property
     def partner_request_headers(self) -> dict[str, str]:
@@ -40,7 +33,9 @@ class PatientSync(BaseProtocol):
         """Return metadata for creation of the patient on external partner platform."""
         metadata = {"canvasPatientId": self.target}
 
-        canvas_url = self.secrets["CANVAS_BASE_URL"]
+        subdomain = self.environment["CUSTOMER_IDENTIFIER"]
+        canvas_url = f"https://{subdomain}.canvasmedical.com"
+
         if canvas_url:
             # This sets the canvas URL for the patient in the partner platform metadata
             # Combined with the canvasPatientId, this allows the partner platform to link back to the patient in Canvas
@@ -74,12 +69,11 @@ class PatientSync(BaseProtocol):
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
         # by default assume we don't yet have a system patient ID
         # and that we need to update the patient in Canvas to add one
-        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, SYSTEM_URL)
+        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, PARTNER_URL_BASE)
         update_patient_external_identifier = system_patient_id is None
 
         # Here we check if the patient already has an external ID in Canvas for the partner platform
         if not system_patient_id:
-            log.info(f">>> No external ID found for Canvas Patient ID {canvas_patient_id}:")
 
             # Get the system external ID by making a GET request to the partner platform
             system_patient = self.get_patient_from_system_api(canvas_patient_id)
@@ -87,17 +81,14 @@ class PatientSync(BaseProtocol):
             system_patient_id = (
                 system_patient.json()["id"] if system_patient.status_code == 200 else None
             )
-            log.info(
-                f">>>System patient ID for Canvas Patient ID {canvas_patient_id} is {system_patient_id}"
-            )
-            log.info(f">>> Need to update patient? {update_patient_external_identifier}")
 
         # Great, now we know if the patient is assigned a system external ID with the partner
-        # platform, and if we need to update it. At this point the system_patient_id can be 3 values:
-        # 1. value we already had stored in Canvas,
-        # 2. value we just got from our GET API lookup, or
+        # platform, and if we need to update it. At this point the system_patient_id can be 3 possible values:
+        # 1. value we already had stored in Canvas in an external identifier,
+        # 2. value we just got from our partner GET API lookup, or
         # 3. None
-        # And we have a true/false call to action: `update_patient_external_identifier`
+        # And we have a true/false call to action telling us if we need to add
+        # an external identifier to our Canvas patient: `update_patient_external_identifier`
 
         # Generate the payload for creating or updating the patient in partner platform API
         partner_payload = {
@@ -106,50 +97,33 @@ class PatientSync(BaseProtocol):
             "lastName": canvas_patient.last_name,
             "dateOfBirth": canvas_patient.birth_date.isoformat(),
         }
-        # Add placeholder email when creating the patient if it's required
-        partner_payload["email"] = f"patient_{canvas_patient.id}@canvasmedical.com"
-        partner_payload["metadata"] = self.partner_patient_metadata
 
         base_request_url = f"{self.partner_api_base_url}/patients/v2"
 
-        # If we HAVE a patient's partner external id, we know this is an update, so we'll append it to the request URL
+        # If we have a patient's partner external id, we know this is an update, so we'll append it to the request URL
         request_url = (
             f"{base_request_url}/{system_patient_id}" if system_patient_id else base_request_url
         )
-
-        log.info(f">>> Partner platform API request URL: {request_url}")
-        log.info(f">>> Partner platform API patient payload: json={partner_payload}")
-        log.info(
-            f">>> Partner platform API request headers: headers={self.partner_request_headers}"
-        )
-
         resp = http.post(request_url, json=partner_payload, headers=self.partner_request_headers)
-        log.info(f">>> Partner platform API response: status_code={resp.status_code}, json={resp.json()}")
 
-        # If the request was successful, we should now have a system patient ID if we didn't before
+        # If your system's API returns the ID of the newly created record,
+        # grab it from the response so we can add it to the Canvas patient record
         if system_patient_id is None:
             system_patient_id = resp.json().get("id")
 
-        partner_patient_exists = resp.status_code == 409
+        duplicate_patient_attempt = resp.status_code == 409
 
-        if partner_patient_exists:
-            log.info(
-                f">>> Patient already exists in {PARTNER_URL_BASE} for Canvas Patient ID {canvas_patient_id}"
-            )
+        if duplicate_patient_attempt:
+            # If your system's API can let you know when a duplicate record was attempted to be added,
+            # you can use that information to return early here.
             return []
         elif update_patient_external_identifier:
-            # queue up an effect to update the patient in canvas and add the external ID
+            # Queue up an effect to update the patient in Canvas and add the external identifier
             external_id = CreatePatientExternalIdentifier(
                 patient_id=canvas_patient.id,
-                system=SYSTEM_URL,
+                system=PARTNER_URL_BASE,
                 value=str(system_patient_id)
             )
             return [external_id.create()]
         else:
             return [] # Done!
-
-
-    def sanitize_url(self, url: str) -> str:
-        """Remove a trailing slash from a URL if present."""
-        # Remove a trailing forward slash since our request paths will start with '/'
-        return url[:-1] if url[-1] == "/" else url
