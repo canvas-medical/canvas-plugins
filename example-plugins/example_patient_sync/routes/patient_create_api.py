@@ -6,21 +6,15 @@ import arrow
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import Patient, PatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
-from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
 from logger import log
 
 # This is a client specific instance of the third-party software to sync with Canvas
 PARTNER_URL = "https://your-subdomain.canvas-partner.com"
 
-class PatientCreateApi(SimpleAPI):
+class PatientCreateApi(StaffSessionAuthMixin, SimpleAPI):
     """API endpoint for use by third-party system to create patients in Canvas when that system is the point of origination for that patient record."""
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate with the provided credentials."""
-        # api_key = self.secrets["my_canvas_api_key"]
-        # link to the docs where we discuss how to authenticate
-        return True
 
     # Docs: https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
     # POST https://<instance-name>.canvasmedical.com/plugin-io/api/example_patient_sync/patients
