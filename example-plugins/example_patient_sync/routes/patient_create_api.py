@@ -8,7 +8,6 @@ from canvas_sdk.effects.patient import Patient, PatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
-from logger import log
 
 # This is a client specific instance of the third-party software to sync with Canvas
 PARTNER_URL = "https://your-subdomain.example.com"
