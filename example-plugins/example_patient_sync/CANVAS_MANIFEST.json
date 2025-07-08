@@ -34,7 +34,8 @@
         "PARTNER_UI_BASE_URL",
         "PARTNER_API_BASE_URL",
         "PARTNER_SECRET_API_KEY",
-        "CANVAS_BASE_URL"
+        "CANVAS_BASE_URL",
+        "simpleapi-api-key"
     ],
     "tags": {},
     "references": [],

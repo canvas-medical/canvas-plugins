@@ -8,7 +8,7 @@ from canvas_sdk.utils import Http
 from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
-PARTNER_URL_BASE = "https://your-subdomain.canvas-partner.com"
+PARTNER_URL_BASE = "https://your-subdomain.example.com"
 
 class PatientSync(BaseHandler):
     """Handler for synchronizing patient data between systems."""

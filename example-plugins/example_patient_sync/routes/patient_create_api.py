@@ -6,14 +6,16 @@ import arrow
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import Patient, PatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
-from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
 from logger import log
 
 # This is a client specific instance of the third-party software to sync with Canvas
-PARTNER_URL = "https://your-subdomain.canvas-partner.com"
+PARTNER_URL = "https://your-subdomain.example.com"
 
-class PatientCreateApi(StaffSessionAuthMixin, SimpleAPI):
+# Authentication is handled by the APIKeyAuthMixin, which checks the API key in the request headers
+# https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#api-key-1
+class PatientCreateApi(APIKeyAuthMixin, SimpleAPI):
     """API endpoint for use by third-party system to create patients in Canvas when that system is the point of origination for that patient record."""
 
     # Docs: https://docs.canvasmedical.com/sdk/handlers-simple-api-http/
