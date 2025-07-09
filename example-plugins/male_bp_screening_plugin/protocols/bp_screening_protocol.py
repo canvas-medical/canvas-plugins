@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from canvas_sdk.v1.data import Patient
+from canvas_sdk.v1.data import Patient, Observation
 from logger import log
 
 
@@ -154,22 +154,61 @@ class MaleBPScreeningProtocol(BaseHandler):
         """
         log.info("Checking if screening is due")
         
-        # For now, simplified logic: assume screening is always due for eligible patients
-        # In production, this would check vital signs history via Canvas SDK
-        # Since we don't have access to the patient's vital signs history in this context,
-        # we'll assume screening is due to ensure the protocol card is created
+        # Get the last blood pressure measurement date
+        last_bp_date = self._get_last_bp_measurement_date(patient)
         
-        # This is a simplified implementation that will show the protocol card
-        # for all eligible patients to verify the plugin is working
-        log.info("Screening considered due (simplified logic for testing)")
-        return True
+        if not last_bp_date:
+            log.info("No previous blood pressure measurements found - screening due")
+            return True
         
-        # The production implementation would be:
-        # last_bp_date = self._get_last_bp_measurement_date(patient)
-        # if not last_bp_date:
-        #     return True
-        # cutoff_date = datetime.now() - timedelta(days=730)  # 2 years
-        # return last_bp_date < cutoff_date
+        # Check if it's been more than 2 years since last screening
+        cutoff_date = datetime.now() - timedelta(days=730)  # 2 years
+        is_due = last_bp_date.date() < cutoff_date.date()
+        
+        log.info(f"Last BP measurement: {last_bp_date.date()}, Cutoff date: {cutoff_date.date()}, Screening due: {is_due}")
+        return is_due
+    
+    def _get_last_bp_measurement_date(self, patient: Patient) -> Optional[datetime]:
+        """
+        Get the date of the most recent blood pressure measurement for the patient.
+        
+        Returns the effective_datetime of the most recent blood pressure observation,
+        or None if no blood pressure measurements are found.
+        """
+        log.info(f"Searching for blood pressure measurements for patient {patient.id}")
+        
+        # Common LOINC codes for blood pressure measurements
+        bp_codes = [
+            "85354-9",  # Blood pressure panel
+            "8480-6",   # Systolic blood pressure 
+            "8462-4",   # Diastolic blood pressure
+            "55284-4",  # Blood pressure systolic and diastolic
+        ]
+        
+        try:
+            # Query for blood pressure observations for this patient
+            # Filter by common blood pressure LOINC codes
+            bp_observations = (
+                Observation.objects
+                .filter(patient=patient)
+                .filter(codings__code__in=bp_codes)
+                .filter(deleted=False)
+                .order_by('-effective_datetime')
+            )
+            
+            log.info(f"Found {bp_observations.count()} blood pressure observations")
+            
+            if bp_observations.exists():
+                latest_bp = bp_observations.first()
+                log.info(f"Most recent blood pressure measurement: {latest_bp.effective_datetime}")
+                return latest_bp.effective_datetime
+            else:
+                log.info("No blood pressure measurements found")
+                return None
+                
+        except Exception as e:
+            log.error(f"Error querying blood pressure measurements: {e}")
+            return None
 
 
 class MaleBPScreeningEncounterProtocol(BaseHandler):
@@ -203,6 +242,11 @@ class MaleBPScreeningEncounterProtocol(BaseHandler):
             # Check eligibility 
             if not self._is_eligible_for_screening(patient):
                 log.info("Patient not eligible for encounter-based screening")
+                return []
+            
+            # Check if screening is due
+            if not self._is_screening_due(patient):
+                log.info("Patient not due for screening during encounter")
                 return []
                 
         except Patient.DoesNotExist:
@@ -262,3 +306,68 @@ class MaleBPScreeningEncounterProtocol(BaseHandler):
         except (ValueError, AttributeError) as e:
             log.error(f"Error calculating age: {e}")
             return 0
+    
+    def _is_screening_due(self, patient: Patient) -> bool:
+        """
+        Check if blood pressure screening is due.
+        
+        USPSTF recommends screening every 2-3 years for adults 18-39.
+        This method checks if it's been more than 2 years since last screening.
+        """
+        log.info("Checking if screening is due (encounter context)")
+        
+        # Get the last blood pressure measurement date
+        last_bp_date = self._get_last_bp_measurement_date(patient)
+        
+        if not last_bp_date:
+            log.info("No previous blood pressure measurements found - screening due")
+            return True
+        
+        # Check if it's been more than 2 years since last screening
+        cutoff_date = datetime.now() - timedelta(days=730)  # 2 years
+        is_due = last_bp_date.date() < cutoff_date.date()
+        
+        log.info(f"Last BP measurement: {last_bp_date.date()}, Cutoff date: {cutoff_date.date()}, Screening due: {is_due}")
+        return is_due
+    
+    def _get_last_bp_measurement_date(self, patient: Patient) -> Optional[datetime]:
+        """
+        Get the date of the most recent blood pressure measurement for the patient.
+        
+        Returns the effective_datetime of the most recent blood pressure observation,
+        or None if no blood pressure measurements are found.
+        """
+        log.info(f"Searching for blood pressure measurements for patient {patient.id} (encounter context)")
+        
+        # Common LOINC codes for blood pressure measurements
+        bp_codes = [
+            "85354-9",  # Blood pressure panel
+            "8480-6",   # Systolic blood pressure 
+            "8462-4",   # Diastolic blood pressure
+            "55284-4",  # Blood pressure systolic and diastolic
+        ]
+        
+        try:
+            # Query for blood pressure observations for this patient
+            # Filter by common blood pressure LOINC codes
+            bp_observations = (
+                Observation.objects
+                .filter(patient=patient)
+                .filter(codings__code__in=bp_codes)
+                .filter(deleted=False)
+                .order_by('-effective_datetime')
+            )
+            
+            log.info(f"Found {bp_observations.count()} blood pressure observations")
+            
+            if bp_observations.exists():
+                latest_bp = bp_observations.first()
+                log.info(f"Most recent blood pressure measurement: {latest_bp.effective_datetime}")
+                return latest_bp.effective_datetime
+            else:
+                log.info("No blood pressure measurements found")
+                return None
+                
+        except Exception as e:
+            log.error(f"Error querying blood pressure measurements: {e}")
+            return None

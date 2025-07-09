@@ -112,21 +112,90 @@ class TestMaleBPScreeningProtocol(unittest.TestCase):
         is_eligible = protocol._is_eligible_for_screening(mock_patient)
         self.assertFalse(is_eligible, "Female patients should not be eligible for male-specific screening")
     
-    def test_screening_due_simplified_logic(self):
-        """Test that screening is always due with simplified logic."""
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Observation.objects')
+    def test_screening_due_no_prior_measurements(self, mock_observation_objects):
+        """Test that screening is due when there are no prior blood pressure measurements."""
         if not hasattr(self, 'protocol_class'):
             self.skipTest("Protocol class not available")
             
-        # Create any patient - the simplified logic always returns True
+        # Mock no existing blood pressure observations
+        mock_queryset = Mock()
+        mock_queryset.filter.return_value = mock_queryset
+        mock_queryset.order_by.return_value = mock_queryset
+        mock_queryset.exists.return_value = False
+        mock_observation_objects.filter.return_value = mock_queryset
+        
+        # Create patient
         birth_date = date.today() - timedelta(days=25*365)
         mock_patient = self.create_mock_patient("M", birth_date)
+        mock_patient.id = "patient_123"
         
         mock_event = self.create_mock_event()
         protocol = self.protocol_class(mock_event)
         
-        # Test screening due check (simplified logic always returns True)
+        # Test screening due check
         is_due = protocol._is_screening_due(mock_patient)
-        self.assertTrue(is_due, "Simplified logic should always return True for screening due")
+        self.assertTrue(is_due, "Screening should be due when there are no prior measurements")
+    
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Observation.objects')
+    def test_screening_due_old_measurement(self, mock_observation_objects):
+        """Test that screening is due when last measurement is over 2 years old."""
+        if not hasattr(self, 'protocol_class'):
+            self.skipTest("Protocol class not available")
+            
+        # Mock an old blood pressure observation (3 years ago)
+        old_date = datetime.now() - timedelta(days=3*365)
+        mock_observation = Mock()
+        mock_observation.effective_datetime = old_date
+        
+        mock_queryset = Mock()
+        mock_queryset.filter.return_value = mock_queryset
+        mock_queryset.order_by.return_value = mock_queryset
+        mock_queryset.exists.return_value = True
+        mock_queryset.first.return_value = mock_observation
+        mock_observation_objects.filter.return_value = mock_queryset
+        
+        # Create patient
+        birth_date = date.today() - timedelta(days=25*365)
+        mock_patient = self.create_mock_patient("M", birth_date)
+        mock_patient.id = "patient_123"
+        
+        mock_event = self.create_mock_event()
+        protocol = self.protocol_class(mock_event)
+        
+        # Test screening due check
+        is_due = protocol._is_screening_due(mock_patient)
+        self.assertTrue(is_due, "Screening should be due when last measurement is over 2 years old")
+    
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Observation.objects')
+    def test_screening_not_due_recent_measurement(self, mock_observation_objects):
+        """Test that screening is not due when last measurement is within 2 years."""
+        if not hasattr(self, 'protocol_class'):
+            self.skipTest("Protocol class not available")
+            
+        # Mock a recent blood pressure observation (1 year ago)
+        recent_date = datetime.now() - timedelta(days=365)
+        mock_observation = Mock()
+        mock_observation.effective_datetime = recent_date
+        
+        mock_queryset = Mock()
+        mock_queryset.filter.return_value = mock_queryset
+        mock_queryset.order_by.return_value = mock_queryset
+        mock_queryset.exists.return_value = True
+        mock_queryset.first.return_value = mock_observation
+        mock_observation_objects.filter.return_value = mock_queryset
+        
+        # Create patient
+        birth_date = date.today() - timedelta(days=25*365)
+        mock_patient = self.create_mock_patient("M", birth_date)
+        mock_patient.id = "patient_123"
+        
+        mock_event = self.create_mock_event()
+        protocol = self.protocol_class(mock_event)
+        
+        # Test screening due check
+        is_due = protocol._is_screening_due(mock_patient)
+        self.assertFalse(is_due, "Screening should not be due when last measurement is within 2 years")
     
     def test_calculate_age_accuracy(self):
         """Test age calculation accuracy for edge cases."""
@@ -148,16 +217,25 @@ class TestMaleBPScreeningProtocol(unittest.TestCase):
         age_39 = protocol._calculate_age(mock_patient_39)
         self.assertEqual(age_39, 39, "Age calculation should be accurate for 39-year-old")
     
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Observation.objects')
     @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Patient.find')
-    def test_compute_with_eligible_patient(self, mock_patient_find):
-        """Test compute method with eligible patient."""
+    def test_compute_with_eligible_patient(self, mock_patient_find, mock_observation_objects):
+        """Test compute method with eligible patient who needs screening."""
         if not hasattr(self, 'protocol_class'):
             self.skipTest("Protocol class not available")
             
         # Setup mock patient
         birth_date = date.today() - timedelta(days=25*365)
         mock_patient = self.create_mock_patient("M", birth_date)
+        mock_patient.id = "patient_123"
         mock_patient_find.return_value = mock_patient
+        
+        # Mock no existing blood pressure observations (screening due)
+        mock_queryset = Mock()
+        mock_queryset.filter.return_value = mock_queryset
+        mock_queryset.order_by.return_value = mock_queryset
+        mock_queryset.exists.return_value = False
+        mock_observation_objects.filter.return_value = mock_queryset
         
         mock_event = self.create_mock_event()
         mock_event.target.id = "patient_123"
@@ -172,6 +250,41 @@ class TestMaleBPScreeningProtocol(unittest.TestCase):
         # Should return one effect (protocol card)
         self.assertEqual(len(effects), 1, "Should return one protocol card effect for eligible patient")
         mock_patient_find.assert_called_once_with("patient_123")
+    
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Observation.objects')
+    @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Patient.find')
+    def test_compute_with_eligible_patient_not_due(self, mock_patient_find, mock_observation_objects):
+        """Test compute method with eligible patient who doesn't need screening."""
+        if not hasattr(self, 'protocol_class'):
+            self.skipTest("Protocol class not available")
+            
+        # Setup mock patient
+        birth_date = date.today() - timedelta(days=25*365)
+        mock_patient = self.create_mock_patient("M", birth_date)
+        mock_patient.id = "patient_123"
+        mock_patient_find.return_value = mock_patient
+        
+        # Mock recent blood pressure observation (screening not due)
+        recent_date = datetime.now() - timedelta(days=365)
+        mock_observation = Mock()
+        mock_observation.effective_datetime = recent_date
+        
+        mock_queryset = Mock()
+        mock_queryset.filter.return_value = mock_queryset
+        mock_queryset.order_by.return_value = mock_queryset
+        mock_queryset.exists.return_value = True
+        mock_queryset.first.return_value = mock_observation
+        mock_observation_objects.filter.return_value = mock_queryset
+        
+        mock_event = self.create_mock_event()
+        
+        protocol = self.protocol_class(mock_event)
+        protocol.target = "patient_123"
+        
+        effects = protocol.compute()
+        
+        # Should return no effects for patient not due for screening
+        self.assertEqual(len(effects), 0, "Should return no effects for patient not due for screening")
     
     @patch('male_bp_screening_plugin.protocols.bp_screening_protocol.Patient.find')
     def test_compute_with_ineligible_patient(self, mock_patient_find):
