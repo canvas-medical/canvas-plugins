@@ -107,10 +107,7 @@
             const selectedVital = document.getElementById('vitalSelect').value;
             const data = vitalsData[selectedVital] || [];
             
-            // Update chart
             updateChart(selectedVital, data);
-            
-            // Update table
             updateTable(data);
         }
         
