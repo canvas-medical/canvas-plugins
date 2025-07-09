@@ -16,11 +16,14 @@ class MaleBPScreeningProtocol(BaseHandler):
     - Displays protocol card when screening is due
     - Provides recommendations for blood pressure measurement
     
-    Triggers on: PATIENT_UPDATED, ENCOUNTER_CREATED events
+    Triggers on: PATIENT_CREATED, PATIENT_UPDATED events
     Effects: ProtocolCard with blood pressure screening recommendations
     """
 
-    RESPONDS_TO = EventType.Name(EventType.PATIENT_UPDATED)
+    RESPONDS_TO = [
+        EventType.Name(EventType.PATIENT_CREATED),
+        EventType.Name(EventType.PATIENT_UPDATED)
+    ]
 
     def compute(self) -> List[Effect]:
         """Generate protocol card for eligible male patients needing BP screening."""
