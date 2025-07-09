@@ -8,30 +8,28 @@
             {
                 "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
                 "description": "Primary protocol for blood pressure screening recommendations in male patients 18-39 years old. Triggers on patient creation and updates, generates protocol cards when screening is due per USPSTF guidelines.",
-                "data_access": {
-                    "event": "PATIENT_CREATED",
-                    "read": [
-                        "patient",
-                        "vital_signs"
-                    ],
-                    "write": [
-                        "protocol_cards"
-                    ]
-                }
-            },
-            {
-                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
-                "description": "Primary protocol for blood pressure screening recommendations in male patients 18-39 years old. Triggers on patient creation and updates, generates protocol cards when screening is due per USPSTF guidelines.",
-                "data_access": {
-                    "event": "PATIENT_UPDATED",
-                    "read": [
-                        "patient",
-                        "vital_signs"
-                    ],
-                    "write": [
-                        "protocol_cards"
-                    ]
-                }
+                "data_access": [
+                    {
+                        "event": "PATIENT_CREATED",
+                        "read": [
+                            "patient",
+                            "vital_signs"
+                        ],
+                        "write": [
+                            "protocol_cards"
+                        ]
+                    },
+                    {
+                        "event": "PATIENT_UPDATED",
+                        "read": [
+                            "patient",
+                            "vital_signs"
+                        ],
+                        "write": [
+                            "protocol_cards"
+                        ]
+                    }
+                ]
             },
             {
                 "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningEncounterProtocol", 

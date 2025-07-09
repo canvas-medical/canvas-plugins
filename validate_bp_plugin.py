@@ -72,8 +72,8 @@ def validate_manifest():
         
         # Check protocols
         protocols = manifest["components"]["protocols"]
-        if len(protocols) != 3:
-            log.error(f"Expected 3 protocols, found {len(protocols)}")
+        if len(protocols) != 2:
+            log.error(f"Expected 2 protocols, found {len(protocols)}")
             return False
         
         log.info("CANVAS_MANIFEST.json is valid")
