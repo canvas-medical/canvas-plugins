@@ -5,6 +5,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.v1.data import Patient
 from logger import log
 
 
@@ -31,15 +32,26 @@ class MaleBPScreeningProtocol(BaseHandler):
         
         log.info("MaleBPScreeningProtocol.compute() started")
         
-        # Get patient data from context
-        patient = self.context.get("patient", {})
-        patient_id = patient.get("id")
-        
+        # Get patient ID from event target
+        patient_id = self.target
         log.info(f"Processing patient ID: {patient_id}")
-        log.info(f"Patient data keys: {list(patient.keys()) if patient else 'No patient data'}")
         
         if not patient_id:
-            log.info("No patient ID found in context")
+            log.info("No patient ID found in event target")
+            return []
+        
+        try:
+            # Get patient data using Canvas SDK
+            patient = Patient.find(patient_id)
+            log.info(f"Found patient: {patient.first_name} {patient.last_name}")
+            log.info(f"Patient sex_at_birth: {patient.sex_at_birth}")
+            log.info(f"Patient birth_date: {patient.birth_date}")
+            
+        except Patient.DoesNotExist:
+            log.warning(f"Patient with ID {patient_id} not found")
+            return []
+        except Exception as e:
+            log.error(f"Error retrieving patient {patient_id}: {e}")
             return []
         
         # Check if patient is eligible for screening
@@ -66,7 +78,7 @@ class MaleBPScreeningProtocol(BaseHandler):
             key="male-bp-screening-18-39",
             title="Blood Pressure Screening Recommended",
             narrative=(
-                "This male patient (age 18-39) is due for blood pressure screening "
+                f"This male patient (age {self._calculate_age(patient)}) is due for blood pressure screening "
                 "per USPSTF guidelines. Regular screening helps identify hypertension "
                 "early for timely intervention."
             ),
@@ -93,57 +105,47 @@ class MaleBPScreeningProtocol(BaseHandler):
         log.info("Protocol card created successfully")
         return [protocol_card.apply()]
     
-    def _is_eligible_for_screening(self, patient: dict) -> bool:
+    def _is_eligible_for_screening(self, patient: Patient) -> bool:
         """
         Check if patient is eligible for blood pressure screening.
         
         Criteria:
-        - Male gender
+        - Male sex at birth
         - Age between 18-39 years
         """
-        # Check gender
-        gender = patient.get("gender", "").lower()
-        log.info(f"Patient gender: '{gender}'")
+        # Check sex at birth (M = male)
+        sex_at_birth = patient.sex_at_birth
+        log.info(f"Patient sex_at_birth: '{sex_at_birth}'")
         
-        # Check for various gender representations
-        if gender not in ["male", "m"]:
-            log.info(f"Patient not male (gender: {gender})")
+        if sex_at_birth != "M":
+            log.info(f"Patient not male (sex_at_birth: {sex_at_birth})")
             return False
         
         # Check age
-        birth_date = patient.get("birth_date")
-        log.info(f"Patient birth_date: {birth_date}")
+        age = self._calculate_age(patient)
+        log.info(f"Calculated age: {age}")
+        is_age_eligible = 18 <= age <= 39
+        log.info(f"Age eligibility (18-39): {is_age_eligible}")
         
-        if not birth_date:
-            log.info("No birth date found")
-            return False
-        
+        return is_age_eligible
+    
+    def _calculate_age(self, patient: Patient) -> int:
+        """Calculate patient's current age."""
         try:
-            # Parse birth date and calculate age
-            if isinstance(birth_date, str):
-                birth_date = datetime.fromisoformat(birth_date.replace('Z', '+00:00'))
-            elif hasattr(birth_date, 'date'):
-                birth_date = birth_date.date()
-            
+            birth_date = patient.birth_date
             today = datetime.now().date()
-            if hasattr(birth_date, 'date'):
-                birth_date = birth_date.date()
             
             age = today.year - birth_date.year - (
                 (today.month, today.day) < (birth_date.month, birth_date.day)
             )
             
-            log.info(f"Calculated age: {age}")
-            is_age_eligible = 18 <= age <= 39
-            log.info(f"Age eligibility (18-39): {is_age_eligible}")
-            
-            return is_age_eligible
+            return age
             
         except (ValueError, AttributeError) as e:
             log.error(f"Error calculating age: {e}")
-            return False
+            return 0
     
-    def _is_screening_due(self, patient: dict) -> bool:
+    def _is_screening_due(self, patient: Patient) -> bool:
         """
         Check if blood pressure screening is due.
         
@@ -185,30 +187,39 @@ class MaleBPScreeningEncounterProtocol(BaseHandler):
         
         log.info("MaleBPScreeningEncounterProtocol.compute() started")
         
-        # Get patient ID from encounter context
-        patient_id = self.context.get("patient", {}).get("id")
+        # Get patient ID from event target
+        patient_id = self.target
         log.info(f"Encounter patient ID: {patient_id}")
         
         if not patient_id:
-            log.info("No patient ID found in encounter context")
+            log.info("No patient ID found in encounter target")
+            return []
+        
+        try:
+            # Get patient data using Canvas SDK
+            patient = Patient.find(patient_id)
+            log.info(f"Found patient in encounter: {patient.first_name} {patient.last_name}")
+            
+            # Check eligibility 
+            if not self._is_eligible_for_screening(patient):
+                log.info("Patient not eligible for encounter-based screening")
+                return []
+                
+        except Patient.DoesNotExist:
+            log.warning(f"Patient with ID {patient_id} not found in encounter")
+            return []
+        except Exception as e:
+            log.error(f"Error retrieving patient {patient_id} in encounter: {e}")
             return []
         
         log.info("Creating encounter-based protocol card")
-        
-        # For encounter-based protocol, we would typically:
-        # 1. Look up the full patient record
-        # 2. Apply the same eligibility checks
-        # 3. Generate the protocol card if needed
-        
-        # This would require additional data access permissions
-        # For now, we'll create a simplified version
         
         protocol_card = ProtocolCard(
             patient_id=patient_id,
             key="male-bp-screening-encounter",
             title="Consider Blood Pressure Screening",
             narrative=(
-                "For male patients aged 18-39, consider blood pressure screening "
+                f"For this male patient (age {self._calculate_age(patient)}), consider blood pressure screening "
                 "per USPSTF guidelines if not done within the past 2-3 years."
             ),
             status=ProtocolCard.Status.PENDING
@@ -226,3 +237,28 @@ class MaleBPScreeningEncounterProtocol(BaseHandler):
         
         log.info("Encounter protocol card created successfully")
         return [protocol_card.apply()]
+    
+    def _is_eligible_for_screening(self, patient: Patient) -> bool:
+        """Same eligibility check as main protocol."""
+        sex_at_birth = patient.sex_at_birth
+        if sex_at_birth != "M":
+            return False
+        
+        age = self._calculate_age(patient)
+        return 18 <= age <= 39
+    
+    def _calculate_age(self, patient: Patient) -> int:
+        """Calculate patient's current age."""
+        try:
+            birth_date = patient.birth_date
+            today = datetime.now().date()
+            
+            age = today.year - birth_date.year - (
+                (today.month, today.day) < (birth_date.month, birth_date.day)
+            )
+            
+            return age
+            
+        except (ValueError, AttributeError) as e:
+            log.error(f"Error calculating age: {e}")
+            return 0
