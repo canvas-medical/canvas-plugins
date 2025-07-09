@@ -33,7 +33,42 @@ male_bp_screening_plugin/
 │   └── bp_screening_protocol.py
 ├── CANVAS_MANIFEST.json
 ├── README.md
+├── validate_plugin.py
 └── __init__.py
+```
+
+## Validation
+
+This plugin includes a validation script to verify the plugin structure, manifest, and logic without requiring the full Canvas SDK environment.
+
+### Running Validation
+
+To validate the plugin, navigate to the plugin directory and run:
+
+```bash
+cd example-plugins/male_bp_screening_plugin
+python validate_plugin.py
+```
+
+The validation script checks:
+- Plugin file structure integrity
+- CANVAS_MANIFEST.json validity  
+- Protocol code syntax
+- Age calculation logic accuracy
+
+### Expected Output
+
+When validation passes, you should see:
+
+```
+INFO: All validation checks passed!
+
+Plugin Summary:
+- Targets male patients aged 18-39
+- Follows USPSTF blood pressure screening guidelines
+- Recommends screening every 2-3 years
+- Generates protocol cards with actionable recommendations
+- Ready for installation in Canvas
 ```
 
 ### Important Note!

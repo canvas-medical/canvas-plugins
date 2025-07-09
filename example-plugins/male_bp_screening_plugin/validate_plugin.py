@@ -32,7 +32,7 @@ except ImportError:
 
 def validate_plugin_structure():
     """Validate that the plugin has the correct file structure."""
-    plugin_dir = Path("example-plugins/male_bp_screening_plugin")
+    plugin_dir = Path(".")  # Current directory (plugin folder)
     
     required_files = [
         "CANVAS_MANIFEST.json",
@@ -57,7 +57,7 @@ def validate_plugin_structure():
 
 def validate_manifest():
     """Validate the CANVAS_MANIFEST.json file."""
-    manifest_path = Path("example-plugins/male_bp_screening_plugin/CANVAS_MANIFEST.json")
+    manifest_path = Path("CANVAS_MANIFEST.json")  # In current directory
     
     try:
         with open(manifest_path) as f:
@@ -89,7 +89,7 @@ def validate_manifest():
 
 def validate_protocol_syntax():
     """Validate that the protocol Python code is syntactically correct."""
-    protocol_path = Path("example-plugins/male_bp_screening_plugin/protocols/bp_screening_protocol.py")
+    protocol_path = Path("protocols/bp_screening_protocol.py")  # In current directory
     
     try:
         with open(protocol_path) as f:
