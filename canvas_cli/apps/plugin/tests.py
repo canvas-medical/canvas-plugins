@@ -1,10 +1,10 @@
-import json
 import shutil
 import tarfile
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 import typer
@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from canvas_cli.main import app
 
-from .plugin import _build_package, _load_manifest, validate_package
+from .plugin import _build_package, validate_package
 
 
 def test_validate_package_unexistant_path() -> None:
@@ -85,16 +85,6 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     assert protocol.is_file()
 
 
-def test_load_manifest(cli_runner: CliRunner, init_plugin_name: str) -> None:
-    """Tests manifest can be loaded from a plugin."""
-    result = cli_runner.invoke(app, "init", input=init_plugin_name)
-    assert result.exit_code == 0
-
-    manifest = _load_manifest(Path(f"./{init_plugin_name}"))
-
-    assert manifest.get("name") == init_plugin_name
-
-
 def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the package is built correctly."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
@@ -112,26 +102,25 @@ def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
         assert "README.md" in tar.getnames()
 
 
-def test_build_package_with_build_ignore_patterns(
-    cli_runner: CliRunner, init_plugin_name: str
-) -> None:
+def test_build_package_with_ignore_file(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the package is built correctly."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
     assert result.exit_code == 0
 
-    # add a build ignore pattern to the manifest
-    manifest = _load_manifest(Path(f"./{init_plugin_name}"))
-    manifest["build_ignore_patterns"] = ["*.md"]
-    with open(Path(f"./{init_plugin_name}/CANVAS_MANIFEST.json"), "w") as f:
-        json.dump(manifest, f)
+    with (
+        patch.object(Path, "exists") as mock_exists,
+        patch.object(Path, "read_text") as mock_read_text,
+    ):
+        mock_exists.return_value = True
+        mock_read_text.return_value = "\n".join(["*.md", "!*.json"])
 
-    package = _build_package(Path(f"./{init_plugin_name}"))
-    assert package.exists()
-    assert package.is_file()
-    assert package.name.endswith(".tar.gz")
+        package = _build_package(Path(f"./{init_plugin_name}"))
+        assert package.exists()
+        assert package.is_file()
+        assert package.name.endswith(".tar.gz")
 
-    # check that the package contains the plugin files
-    with tarfile.open(package, "r:gz") as tar:
-        assert "CANVAS_MANIFEST.json" in tar.getnames()
-        assert "protocols" in tar.getnames()
-        assert "README.md" not in tar.getnames()
+        # check that the package contains the plugin files
+        with tarfile.open(package, "r:gz") as tar:
+            assert "CANVAS_MANIFEST.json" in tar.getnames()
+            assert "protocols" in tar.getnames()
+            assert "README.md" not in tar.getnames()

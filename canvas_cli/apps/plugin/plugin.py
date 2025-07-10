@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urljoin
 
+import pathspec
 import requests
 import typer
 from cookiecutter.exceptions import OutputDirExistsException
@@ -15,6 +16,8 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
+
+CANVAS_IGNORE_FILENAME = ".canvasignore"
 
 
 def plugin_url(host: str, *paths: str) -> str:
@@ -46,8 +49,13 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
-    manifest = _load_manifest(package)
-    build_ignore_patterns = manifest.get("build_ignore_patterns", [])
+    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
+    if ignore_file.exists():
+        ignore_patterns = pathspec.PathSpec.from_lines(
+            pathspec.patterns.GitWildMatchPattern, ignore_file.read_text().splitlines()
+        )
+    else:
+        ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
 
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
         with tarfile.open(file.name, "w:gz") as tar:
@@ -60,8 +68,8 @@ def _build_package(package: Path) -> Path:
                 if root.is_symlink():
                     continue
 
-                # Skip files and directories matching the build ignore patterns
-                if any(root.match(pattern) for pattern in build_ignore_patterns):
+                # Skip files and directories matching the ignore patterns
+                if ignore_patterns.match_file(root):
                     continue
 
                 tar.add(root, arcname=root.relative_to(package))
@@ -153,17 +161,6 @@ def _get_protocols_with_new_cqm_properties(
             protocol_props.append(p)
 
     return protocol_props if has_updates else None
-
-
-def _load_manifest(plugin_name: Path) -> dict[str, Any]:
-    """Load the manifest file from the plugin."""
-    manifest: Path = plugin_name / "CANVAS_MANIFEST.json"
-
-    manifest_json = json.loads(manifest.read_text())
-
-    validate_manifest_file(manifest_json)
-
-    return manifest_json
 
 
 def get_base_plugin_template_path(plugin_type: str) -> Path:
