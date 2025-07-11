@@ -127,6 +127,10 @@ STANDARD_LIBRARY_MODULES = {
         "annotations",
     },
     "_strptime": set(),  # gets imported at runtime via datetime.datetime.strptime()
+    "abc": {
+        "ABC",
+        "abstractmethod",
+    },
     "base64": {
         "b64decode",
         "b64encode",
@@ -204,6 +208,7 @@ STANDARD_LIBRARY_MODULES = {
         "Final",
         "Iterable",
         "List",
+        "Literal",
         "NamedTuple",
         "NotRequired",
         "Protocol",
