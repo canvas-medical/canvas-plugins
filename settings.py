@@ -10,6 +10,7 @@ from env_tools import env_to_bool
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.resolve()
+
 FOURTEEN_DAYS = 60 * 60 * 24 * 14
 
 ENV = os.getenv("ENV", "development")
@@ -95,7 +96,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
         }
     }
 
