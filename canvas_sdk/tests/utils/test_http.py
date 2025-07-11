@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 from canvas_sdk.utils import Http
-from canvas_sdk.utils.http import ontologies_http
+from canvas_sdk.utils.http import ontologies_http, pharmacy_http
 
 
 class FakeResponse:
@@ -104,5 +104,29 @@ def test_http_patch(mock_patch: MagicMock) -> None:
         json={"hey": "hi"},
         data="grant-type=client_credentials",
         headers={"Content-type": "application/json"},
+        timeout=30,
+    )
+
+
+@patch("requests.Session.get")
+def test_search_pharmacies_default_search_term(mock_get: MagicMock) -> None:
+    """
+    Test that the PharmacyHttp.search_pharmacies method provides a default search term if one is not provided.
+    """
+    mock_get.return_value = FakeResponse()
+
+    pharmacy_http.search_pharmacies()
+
+    mock_get.assert_called_once_with(
+        "https://pharmacy-2017071.canvasmedical.com/surescripts/pharmacy/?search=+",
+        headers={},
+        timeout=30,
+    )
+
+    pharmacy_http.search_pharmacies("abc123")
+
+    mock_get.assert_called_with(
+        "https://pharmacy-2017071.canvasmedical.com/surescripts/pharmacy/?search=abc123",
+        headers={},
         timeout=30,
     )
