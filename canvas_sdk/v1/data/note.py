@@ -162,10 +162,61 @@ class Note(models.Model):
     place_of_service = models.CharField()
 
 
+class NoteStateChangeEvent(models.Model):
+    """NoteStateChangeEvent."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_notestatechangeevent_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    state = models.CharField()
+    note_state_document = models.CharField()
+    note_state_html = models.TextField()
+
+
+class CurrentNoteStateEvent(models.Model):
+    """
+    CurrentNoteStateEvent is a special model backed by a view which only includes the latest
+    NoteStateChangeEvent for any given note_id.
+    """
+
+    NEW = "NEW"
+    PUSHED = "PSH"
+    LOCKED = "LKD"
+    UNLOCKED = "ULK"
+    DELETED = "DLT"
+    RELOCKED = "RLK"
+    RESTORED = "RST"
+    RECALLED = "RCL"
+    UNDELETED = "UND"
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_current_note_state_001"
+
+    id = models.UUIDField()
+    dbid: models.BigIntegerField = models.BigIntegerField(primary_key=True)
+    state: models.CharField = models.CharField()
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="+")
+
+    def editable(self) -> bool:
+        """Returns a boolean to indicate if the related note can be edited."""
+        return self.state in [self.NEW, self.PUSHED, self.UNLOCKED, self.RESTORED, self.UNDELETED]
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
     "NoteTypes",
     "NoteType",
     "Note",
+    "NoteStateChangeEvent",
+    "CurrentNoteStateEvent",
 )
