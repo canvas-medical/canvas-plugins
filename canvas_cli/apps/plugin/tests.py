@@ -112,7 +112,11 @@ def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
         # 3. Negated path
         (["*.md", "!*.json"], ["CANVAS_MANIFEST.json", "protocols"], ["README.md"]),
         # 4. Commented lines and mixed rules
-        (["*.md", "# this is a comment", "*.tmp"], ["CANVAS_MANIFEST.json", "protocols"], ["README.md"])
+        (
+            ["*.md", "# this is a comment", "*.tmp"],
+            ["CANVAS_MANIFEST.json", "protocols"],
+            ["README.md"],
+        ),
     ],
     ids=[
         "default-ignored-patterns",
@@ -144,11 +148,9 @@ def test_build_package_with_ignore_file(
         assert package.is_file()
         assert package.name.endswith(".tar.gz")
 
-
         with tarfile.open(package, "r:gz") as tar:
             names = set(tar.getnames())
             for name in expected_present:
                 assert name in names, f"Expected {name} to be present"
             for name in expected_ignored:
                 assert name not in names, f"Expected {name} to be ignored"
-
