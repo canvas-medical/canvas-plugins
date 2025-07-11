@@ -32,6 +32,7 @@ dependencies = [
   "grpcio>=1.60.1,<2",
   "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
+  "pathspec>=0.12.1",
   "protobuf>=4.25.3,<5",
   "psycopg[binary,pool]>=3.2.2,<4",
   "pydantic>=2.6.1,<3",
