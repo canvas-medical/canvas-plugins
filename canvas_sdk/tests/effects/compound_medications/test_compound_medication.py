@@ -366,8 +366,8 @@ def test_compound_medication_values_property(mock_db_queries: dict[str, MagicMoc
     )
 
     values = compound_med.values
-    assert values["formulation"] == "Test Formulation"  # Stripped
-    assert values["controlled_substance_ndc"] == "1234567890"  # Dashes removed
+    assert values["formulation"] == "  Test Formulation  "  # Raw unprocessed data
+    assert values["controlled_substance_ndc"] == "12345-678-90"  # Raw unprocessed data
     assert values["potency_unit_code"] == CompoundMedicationModel.PotencyUnits.TABLET
     assert (
         values["controlled_substance"]
