@@ -35,8 +35,8 @@ class InstallmentPlan(Model):
     status = models.CharField(choices=InstallmentPlanStatus.choices, max_length=10)
     expected_payoff_date = models.DateField()
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimQueueColumns(models.TextChoices):
