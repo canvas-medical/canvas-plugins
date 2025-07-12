@@ -76,7 +76,7 @@ class Protocol(BaseProtocol):
 
     plugin_dir = integration_tests_plugins_dir / plugin_name
 
-    with open((plugin_dir / "protocols/my_protocol.py").as_posix(), "w") as protocol:
+    with open(plugin_dir / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
     with open(_build_package(plugin_dir), "rb") as package:

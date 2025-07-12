@@ -1,9 +1,24 @@
 syntax = "proto3";
 
 message ReloadPluginsRequest {
-  string plugin = 1; // The name of the plugin to reload. If empty, all plugins will be reloaded.
 }
 
 message ReloadPluginsResponse {
+  bool success = 1;
+}
+
+message ReloadPluginRequest {
+  string plugin = 1;
+}
+
+message ReloadPluginResponse {
+  bool success = 1;
+}
+
+message UnloadPluginRequest {
+  string plugin = 1;
+}
+
+message UnloadPluginResponse {
   bool success = 1;
 }
