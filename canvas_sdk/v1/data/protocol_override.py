@@ -7,6 +7,7 @@ from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
 )
 
 
@@ -34,19 +35,16 @@ class ProtocolOverrideQuerySet(BaseQuerySet, ForPatientQuerySetMixin, Committabl
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
 
 
-class ProtocolOverride(models.Model):
+class ProtocolOverride(IdentifiableModel):
     """ProtocolOverride."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_protocoloverride_001"
 
     objects = cast(ProtocolOverrideQuerySet, ProtocolOverrideManager())
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -57,7 +55,7 @@ class ProtocolOverride(models.Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="protocol_overrides", null=True
     )
-    protocol_key = models.CharField()
+    protocol_key = models.CharField(max_length=250)
     is_adjustment = models.BooleanField()
     reference_date = models.DateTimeField()
     cycle_in_days = models.IntegerField()
@@ -66,11 +64,11 @@ class ProtocolOverride(models.Model):
     snoozed_days = models.IntegerField()
     # reason_id = models.BigIntegerField()
     snooze_comment = models.TextField()
-    narrative = models.CharField()
+    narrative = models.CharField(max_length=512)
     # note_id = models.BigIntegerField()
     cycle_quantity = models.IntegerField()
-    cycle_unit = models.CharField(choices=IntervalUnit.choices)
-    status = models.CharField(choices=Status.choices)
+    cycle_unit = models.CharField(choices=IntervalUnit.choices, max_length=20)
+    status = models.CharField(choices=Status.choices, max_length=20)
 
 
 __exports__ = (

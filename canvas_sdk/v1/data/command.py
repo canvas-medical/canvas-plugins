@@ -1,18 +1,17 @@
 from django.apps import apps
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
 
-class Command(models.Model):
+
+class Command(IdentifiableModel):
     """Command."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_commands_command_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="commands_originated"
     )
@@ -25,13 +24,13 @@ class Command(models.Model):
         null=True,
         related_name="commands_entered_in_error",
     )
-    state = models.CharField()
+    state = models.CharField(max_length=20)
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, null=True)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="commands")
     schema_key = models.TextField()
     data = models.JSONField()
-    origination_source = models.CharField()
-    anchor_object_type = models.CharField()
+    origination_source = models.CharField(max_length=20)
+    anchor_object_type = models.CharField(max_length=100)
     anchor_object_dbid = models.BigIntegerField()
 
     @property

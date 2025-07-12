@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.coverage import CoverageRelationshipCode, CoverageType
 from canvas_sdk.v1.data.fields import ChoiceArrayField
@@ -20,14 +21,11 @@ class InstallmentPlanStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
-class InstallmentPlan(models.Model):
+class InstallmentPlan(Model):
     """InstallmentPlan."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_installmentplan_001"
-
-    dbid = models.BigIntegerField(primary_key=True)
 
     creator = models.ForeignKey("v1.CanvasUser", on_delete=models.CASCADE)
     patient = models.ForeignKey(
@@ -37,8 +35,8 @@ class InstallmentPlan(models.Model):
     status = models.CharField(choices=InstallmentPlanStatus.choices, max_length=10)
     expected_payoff_date = models.DateField()
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimQueueColumns(models.TextChoices):
@@ -75,23 +73,23 @@ class ClaimQueues(models.IntegerChoices):
     TRASH = 10, "Trash"
 
 
-class ClaimQueue(models.Model):
+class ClaimQueue(Model):
     """ClaimQueue."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_queue_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     queue_sort_ordering = models.IntegerField()
-    name = models.CharField()
-    display_name = models.CharField()
-    description = models.CharField()
+    name = models.CharField(max_length=100)
+    display_name = models.CharField(max_length=100)
+    description = models.CharField(max_length=500)
     show_in_revenue = models.BooleanField()
-    visible_columns = ChoiceArrayField(models.CharField(choices=ClaimQueueColumns.choices))
+    visible_columns = ChoiceArrayField(
+        models.CharField(choices=ClaimQueueColumns.choices, max_length=64)
+    )
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimPayerOrder(models.TextChoices):
@@ -126,16 +124,13 @@ class ClaimCoverageQuerySet(models.QuerySet):
         return self.filter(active=True)
 
 
-class ClaimCoverage(models.Model):
+class ClaimCoverage(Model):
     """A model that represents the link between a claim and a specific insurance coverage."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_claimcoverage_001"
 
     objects = ClaimCoverageQuerySet.as_manager()
-
-    dbid = models.BigIntegerField(primary_key=True)
 
     claim = models.ForeignKey("Claim", on_delete=models.CASCADE, related_name="coverages")
 
@@ -144,75 +139,75 @@ class ClaimCoverage(models.Model):
     )
 
     active = models.BooleanField()
-    payer_name = models.CharField()
-    payer_id = models.CharField()
-    payer_typecode = models.CharField()
-    payer_order = models.CharField(choices=ClaimPayerOrder.choices)
-    payer_addr1 = models.CharField()
-    payer_addr2 = models.CharField()
-    payer_city = models.CharField()
-    payer_state = models.CharField()
-    payer_zip = models.CharField()
-    payer_plan_type = models.CharField(choices=ClaimTypeCode.choices)
-    coverage_type = models.CharField(choices=CoverageType.choices)
+    payer_name = models.CharField(max_length=255)
+    payer_id = models.CharField(max_length=255)
+    payer_typecode = models.CharField(max_length=2)
+    payer_order = models.CharField(choices=ClaimPayerOrder.choices, max_length=10)
+    payer_addr1 = models.CharField(max_length=255)
+    payer_addr2 = models.CharField(max_length=255)
+    payer_city = models.CharField(max_length=255)
+    payer_state = models.CharField(max_length=2)
+    payer_zip = models.CharField(max_length=255)
+    payer_plan_type = models.CharField(choices=ClaimTypeCode.choices, max_length=20)
+    coverage_type = models.CharField(choices=CoverageType.choices, max_length=64)
 
-    subscriber_employer = models.CharField()
-    subscriber_group = models.CharField()
-    subscriber_number = models.CharField()
-    subscriber_plan = models.CharField()
-    subscriber_dob = models.CharField()
-    subscriber_first_name = models.CharField()
-    subscriber_last_name = models.CharField()
-    subscriber_middle_name = models.CharField()
-    subscriber_phone = models.CharField()
-    subscriber_sex = models.CharField(choices=PersonSex.choices)
-    subscriber_addr1 = models.CharField()
-    subscriber_addr2 = models.CharField()
-    subscriber_city = models.CharField()
-    subscriber_state = models.CharField()
-    subscriber_zip = models.CharField()
-    subscriber_country = models.CharField()
-    patient_relationship_to_subscriber = models.CharField(choices=CoverageRelationshipCode.choices)
+    subscriber_employer = models.CharField(max_length=255)
+    subscriber_group = models.CharField(max_length=255)
+    subscriber_number = models.CharField(max_length=100)
+    subscriber_plan = models.CharField(max_length=255)
+    subscriber_dob = models.CharField(max_length=10)
+    subscriber_first_name = models.CharField(max_length=255)
+    subscriber_last_name = models.CharField(max_length=255)
+    subscriber_middle_name = models.CharField(max_length=255)
+    subscriber_phone = models.CharField(max_length=50)
+    subscriber_sex = models.CharField(choices=PersonSex.choices, max_length=3)
+    subscriber_addr1 = models.CharField(max_length=255)
+    subscriber_addr2 = models.CharField(max_length=255)
+    subscriber_city = models.CharField(max_length=255)
+    subscriber_state = models.CharField(max_length=2)
+    subscriber_zip = models.CharField(max_length=255)
+    subscriber_country = models.CharField(max_length=50)
+    patient_relationship_to_subscriber = models.CharField(
+        choices=CoverageRelationshipCode.choices, max_length=2
+    )
 
-    pay_to_addr1 = models.CharField()
-    pay_to_addr2 = models.CharField()
-    pay_to_city = models.CharField()
-    pay_to_state = models.CharField()
-    pay_to_zip = models.CharField()
+    pay_to_addr1 = models.CharField(max_length=255)
+    pay_to_addr2 = models.CharField(max_length=255)
+    pay_to_city = models.CharField(max_length=255)
+    pay_to_state = models.CharField(max_length=2)
+    pay_to_zip = models.CharField(max_length=255)
 
-    resubmission_code = models.CharField()
-    payer_icn = models.CharField()
+    resubmission_code = models.CharField(max_length=1)
+    payer_icn = models.CharField(max_length=250)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
-class ClaimPatient(models.Model):
+class ClaimPatient(Model):
     """ClaimPatient."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_claimpatient_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     claim = models.OneToOneField("v1.Claim", on_delete=models.CASCADE, related_name="patient")
-    photo = models.CharField()
-    dob = models.CharField()
-    first_name = models.CharField()
-    last_name = models.CharField()
-    middle_name = models.CharField()
-    phone = models.CharField()
-    sex = models.CharField(choices=PersonSex.choices)
-    ssn = models.CharField()
-    addr1 = models.CharField()
-    addr2 = models.CharField()
-    city = models.CharField()
-    state = models.CharField()
-    zip = models.CharField()
-    country = models.CharField()
+    photo = models.CharField(max_length=512)
+    dob = models.CharField(max_length=10)
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    middle_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=50)
+    sex = models.CharField(choices=PersonSex.choices, max_length=3)
+    ssn = models.CharField(max_length=10)
+    addr1 = models.CharField(max_length=255)
+    addr2 = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=2)
+    zip = models.CharField(max_length=255)
+    country = models.CharField(max_length=50)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimQueryset(models.QuerySet):
@@ -223,17 +218,14 @@ class ClaimQueryset(models.QuerySet):
         return self.exclude(current_queue__queue_sort_ordering=ClaimQueues.TRASH)
 
 
-class Claim(models.Model):
+class Claim(IdentifiableModel):
     """Claim."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_claim_001"
 
     objects = ClaimQueryset.as_manager()
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     note = models.ForeignKey("v1.Note", on_delete=models.PROTECT, related_name="claims", null=True)
     installment_plan = models.ForeignKey(
         InstallmentPlan, on_delete=models.SET_NULL, related_name="claims", null=True
@@ -246,23 +238,23 @@ class Claim(models.Model):
 
     accept_assign = models.BooleanField()
     auto_accident = models.BooleanField()
-    auto_accident_state = models.CharField()
+    auto_accident_state = models.CharField(max_length=2)
     employment_related = models.BooleanField()
     other_accident = models.BooleanField()
-    accident_code = models.CharField()
+    accident_code = models.CharField(max_length=10)
     illness_date = models.DateField()
-    remote_batch_id = models.CharField()
-    remote_file_id = models.CharField()
-    prior_auth = models.CharField()
+    remote_batch_id = models.CharField(max_length=100)
+    remote_file_id = models.CharField(max_length=100)
+    prior_auth = models.CharField(max_length=100)
 
-    narrative = models.CharField()
-    account_number = models.CharField()
+    narrative = models.CharField(max_length=2500)
+    account_number = models.CharField(max_length=255)
     snoozed_until = models.DateField()
 
     patient_balance = models.DecimalField(max_digits=8, decimal_places=2)
     aggregate_coverage_balance = models.DecimalField(max_digits=8, decimal_places=2)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
     @property
     def total_charges(self) -> Decimal:

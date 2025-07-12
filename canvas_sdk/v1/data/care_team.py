@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
+
 
 class CareTeamMembershipStatus(models.TextChoices):
     """CareTeamMembershipStatus."""
@@ -11,18 +13,16 @@ class CareTeamMembershipStatus(models.TextChoices):
     ENTERED_IN_ERROR = "entered-in-error", "Entered in Error"
 
 
-class CareTeamRole(models.Model):
+class CareTeamRole(Model):
     """CareTeamRole."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_careteamrole_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
     active = models.BooleanField()
 
@@ -30,17 +30,14 @@ class CareTeamRole(models.Model):
         return self.display
 
 
-class CareTeamMembership(models.Model):
+class CareTeamMembership(IdentifiableModel):
     """CareTeamMembership."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_careteammembership_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="care_team_memberships", null=True
     )
@@ -50,11 +47,11 @@ class CareTeamMembership(models.Model):
     role = models.ForeignKey(
         "v1.CareTeamRole", related_name="care_teams", on_delete=models.DO_NOTHING, null=True
     )
-    status = models.CharField(choices=CareTeamMembershipStatus.choices)
+    status = models.CharField(choices=CareTeamMembershipStatus.choices, max_length=20)
     lead = models.BooleanField()
-    role_code = models.CharField()
-    role_system = models.CharField()
-    role_display = models.CharField()
+    role_code = models.CharField(max_length=255)
+    role_system = models.CharField(max_length=255)
+    role_display = models.CharField(max_length=255)
 
     def __str__(self) -> str:
         return f"id={self.id}"

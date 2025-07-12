@@ -7,6 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -15,6 +16,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointSystem,
     ContactPointUse,
 )
+from canvas_sdk.v1.data.utils import create_key
 
 if TYPE_CHECKING:
     from django_stubs_ext.db.models.manager import RelatedManager
@@ -40,47 +42,47 @@ class PatientSettingConstants:
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
 
-class Patient(models.Model):
+class Patient(Model):
     """A class representing a patient."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patient_001"
 
-    id = models.CharField(max_length=32, db_column="key")
-    dbid = models.BigIntegerField(db_column="dbid", primary_key=True)
-    first_name = models.CharField()
-    last_name = models.CharField()
+    id = models.CharField(
+        max_length=32, db_column="key", unique=True, editable=False, default=create_key
+    )
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
     birth_date = models.DateField()
     business_line = models.ForeignKey(
         "v1.BusinessLine", on_delete=models.DO_NOTHING, related_name="patients"
     )
-    sex_at_birth = models.CharField(choices=SexAtBirth.choices)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    prefix = models.CharField()
-    suffix = models.CharField()
-    middle_name = models.CharField()
-    maiden_name = models.CharField()
-    nickname = models.CharField()
-    sexual_orientation_term = models.CharField()
-    sexual_orientation_code = models.CharField()
-    gender_identity_term = models.CharField()
-    gender_identity_code = models.CharField()
-    preferred_pronouns = models.CharField()
-    biological_race_codes = ArrayField(models.CharField())
-    last_known_timezone = models.CharField()
-    mrn = models.CharField()
+    sex_at_birth = models.CharField(choices=SexAtBirth.choices, max_length=3)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    prefix = models.CharField(max_length=100)
+    suffix = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=255)
+    maiden_name = models.CharField(max_length=255)
+    nickname = models.CharField(max_length=255)
+    sexual_orientation_term = models.CharField(max_length=255)
+    sexual_orientation_code = models.CharField(max_length=255)
+    gender_identity_term = models.CharField(max_length=255)
+    gender_identity_code = models.CharField(max_length=255)
+    preferred_pronouns = models.CharField(max_length=255)
+    biological_race_codes = ArrayField(models.CharField(max_length=100))
+    last_known_timezone = models.CharField(max_length=32)
+    mrn = models.CharField(max_length=9)
     active = models.BooleanField()
     deceased = models.BooleanField()
     deceased_datetime = models.DateTimeField()
     deceased_cause = models.TextField()
     deceased_comment = models.TextField()
-    other_gender_description = models.CharField()
-    social_security_number = models.CharField()
+    other_gender_description = models.CharField(max_length=255)
+    social_security_number = models.CharField(max_length=9)
     administrative_note = models.TextField()
     clinical_note = models.TextField()
-    mothers_maiden_name = models.CharField()
+    mothers_maiden_name = models.CharField(max_length=255)
     multiple_birth_indicator = models.BooleanField()
     birth_order = models.BigIntegerField()
     default_location_id = models.BigIntegerField()
@@ -143,53 +145,47 @@ class Patient(models.Model):
         return self.nickname or self.first_name
 
 
-class PatientContactPoint(models.Model):
+class PatientContactPoint(IdentifiableModel):
     """A class representing a patient contact point."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patientcontactpoint_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField(choices=ContactPointSystem.choices)
-    value = models.CharField()
-    use = models.CharField(choices=ContactPointUse.choices)
-    use_notes = models.CharField()
+    system = models.CharField(choices=ContactPointSystem.choices, max_length=20)
+    value = models.CharField(max_length=100)
+    use = models.CharField(choices=ContactPointUse.choices, max_length=20)
+    use_notes = models.CharField(max_length=255)
     rank = models.IntegerField()
-    state = models.CharField(choices=ContactPointState.choices)
+    state = models.CharField(choices=ContactPointState.choices, max_length=20)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="telecom", null=True
     )
     has_consent = models.BooleanField()
     last_verified = models.DateTimeField
-    verification_token = models.CharField()
+    verification_token = models.CharField(max_length=32)
     opted_out = models.BooleanField()
 
 
-class PatientAddress(models.Model):
+class PatientAddress(IdentifiableModel):
     """A class representing a patient address."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patientaddress_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    line1 = models.CharField()
-    line2 = models.CharField()
-    city = models.CharField()
-    district = models.CharField()
-    state_code = models.CharField()
-    postal_code = models.CharField()
-    use = models.CharField(choices=AddressUse.choices)
-    type = models.CharField(choices=AddressType.choices)
+    line1 = models.CharField(max_length=255)
+    line2 = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    district = models.CharField(max_length=255)
+    state_code = models.CharField(max_length=2)
+    postal_code = models.CharField(max_length=255)
+    use = models.CharField(choices=AddressUse.choices, max_length=10)
+    type = models.CharField(choices=AddressType.choices, max_length=10)
     longitude = models.FloatField()
     latitude = models.FloatField()
     start = models.DateField()
     end = models.DateField()
-    country = models.CharField()
-    state = models.CharField(choices=AddressState.choices)
+    country = models.CharField(max_length=255)
+    state = models.CharField(choices=AddressState.choices, max_length=20)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="addresses", null=True
     )
@@ -198,27 +194,24 @@ class PatientAddress(models.Model):
         return f"id={self.id}"
 
 
-class PatientExternalIdentifier(models.Model):
+class PatientExternalIdentifier(IdentifiableModel):
     """A class representing a patient external identifier."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patientexternalidentifier_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient",
         related_name="external_identifiers",
         on_delete=models.DO_NOTHING,
         null=True,
     )
-    use = models.CharField()
-    identifier_type = models.CharField()
-    system = models.CharField()
-    value = models.CharField()
+    use = models.CharField(max_length=255)
+    identifier_type = models.CharField(max_length=255)
+    system = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
     issued_date = models.DateField()
     expiration_date = models.DateField()
 
@@ -226,31 +219,27 @@ class PatientExternalIdentifier(models.Model):
         return f"id={self.id}"
 
 
-class PatientSetting(models.Model):
+class PatientSetting(Model):
     """PatientSetting."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patientsetting_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
-    name = models.CharField()
+    name = models.CharField(max_length=100)
     value = models.JSONField()
 
 
-class PatientMetadata(models.Model):
+class PatientMetadata(Model):
     """A class representing Patient Metadata."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_patientmetadata_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True
     )

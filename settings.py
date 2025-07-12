@@ -10,6 +10,7 @@ from env_tools import env_to_bool
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.resolve()
+
 FOURTEEN_DAYS = 60 * 60 * 24 * 14
 
 ENV = os.getenv("ENV", "development")
@@ -79,7 +80,7 @@ if os.getenv("DATABASE_URL"):
             "PORT": parsed_url.port,
         }
     }
-else:
+elif not IS_SCRIPT:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -89,6 +90,13 @@ else:
             "PASSWORD": CANVAS_SDK_DB_PASSWORD,
             "HOST": CANVAS_SDK_DB_HOST,
             "PORT": CANVAS_SDK_DB_PORT,
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
         }
     }
 
@@ -129,7 +137,7 @@ TEMPLATES = [
 ]
 
 
-if IS_TESTING:
+if IS_SCRIPT:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
