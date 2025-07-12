@@ -5,12 +5,34 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ReloadPluginsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ReloadPluginsResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
+
+class ReloadPluginRequest(_message.Message):
     __slots__ = ("plugin",)
     PLUGIN_FIELD_NUMBER: _ClassVar[int]
     plugin: str
     def __init__(self, plugin: _Optional[str] = ...) -> None: ...
 
-class ReloadPluginsResponse(_message.Message):
+class ReloadPluginResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
+
+class UnloadPluginRequest(_message.Message):
+    __slots__ = ("plugin",)
+    PLUGIN_FIELD_NUMBER: _ClassVar[int]
+    plugin: str
+    def __init__(self, plugin: _Optional[str] = ...) -> None: ...
+
+class UnloadPluginResponse(_message.Message):
     __slots__ = ("success",)
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool

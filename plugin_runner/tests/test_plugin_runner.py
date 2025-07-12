@@ -11,7 +11,11 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest
+from canvas_generated.messages.plugins_pb2 import (
+    ReloadPluginRequest,
+    ReloadPluginsRequest,
+    UnloadPluginRequest,
+)
 from canvas_sdk.effects.simple_api import AcceptConnection, DenyConnection, Response
 from canvas_sdk.events import Event, EventRequest, EventType
 from plugin_runner.plugin_runner import (
@@ -19,6 +23,7 @@ from plugin_runner.plugin_runner import (
     LOADED_PLUGINS,
     PluginRunner,
     load_or_reload_plugin,
+    load_plugin,
     load_plugins,
     synchronize_plugins,
     unload_plugin,
@@ -215,6 +220,20 @@ def test_load_plugins_should_refresh_event_handler_map(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+@pytest.mark.parametrize("load_test_plugins", [None], indirect=True)
+def test_load_plugin_should_refresh_event_handler_map(
+    load_test_plugins: None, install_test_plugin: Path
+) -> None:
+    """Test that the event handler map is refreshed when loading a specific plugin."""
+    assert EVENT_HANDLER_MAP == {}
+    load_plugin(install_test_plugin)
+    assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
+    assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
+        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+    ]
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_unload_plugin_should_remove_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
@@ -272,27 +291,41 @@ def test_handle_plugin_event_returns_expected_result(
     assert result[0].effects[0].payload == "Hello, world!"
 
 
-@pytest.mark.parametrize("plugin_name", [None, "test"])
-def test_reload_plugins_event_handler_successfully_publishes_message(
+@pytest.mark.parametrize(
+    "method_name, plugin_request, expected_message",
+    [
+        (
+            "ReloadPlugins",
+            ReloadPluginsRequest(),
+            {"action": "reload"},
+        ),
+        (
+            "ReloadPlugin",
+            ReloadPluginRequest(plugin="test_plugin"),
+            {"action": "reload", "plugin": "test_plugin"},
+        ),
+        (
+            "UnloadPlugin",
+            UnloadPluginRequest(plugin="test_plugin"),
+            {"action": "unload", "plugin": "test_plugin"},
+        ),
+    ],
+    ids=["reload_all", "reload", "unload"],
+)
+def test_plugin_runner_event_publishes_message(
     plugin_runner: PluginRunner,
-    plugin_name: str | None,
+    method_name: str,
+    plugin_request: ReloadPluginRequest | ReloadPluginsRequest | UnloadPluginRequest,
+    expected_message: dict,
 ) -> None:
-    """Test ReloadPlugins Event handler successfully publishes a message with reload action."""
+    """Test plugin runner methods publish the expected message."""
     with patch(
         "plugin_runner.plugin_runner.publish_message", new_callable=Mock
     ) as mock_publish_message:
-        request = ReloadPluginsRequest(plugin=plugin_name)
+        method = getattr(plugin_runner, method_name)
+        result = list(method(plugin_request, None))
 
-        result = []
-        for response in plugin_runner.ReloadPlugins(request, None):
-            result.append(response)
-
-        if plugin_name:
-            mock_publish_message.assert_called_once_with(
-                message={"action": "reload", "plugin": plugin_name}
-            )
-        else:
-            mock_publish_message.assert_called_once_with(message={"action": "reload"})
+        mock_publish_message.assert_called_once_with(message=expected_message)
 
     assert len(result) == 1
     assert result[0].success is True
@@ -374,7 +407,7 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 
         mock_pubsub.get_message.return_value = {
             "type": "pmessage",
-            "data": pickle.dumps({"action": "reload", "plugin": plugin_name}),
+            "data": pickle.dumps({"action": "unload", "plugin": plugin_name}),
         }
 
         synchronize_plugins(run_once=True)

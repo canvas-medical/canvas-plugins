@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"&\n\x14ReloadPluginsRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"\x16\n\x14ReloadPluginsRequest\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13ReloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14ReloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13UnloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14UnloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,7 +22,15 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'canvas_generated.messages.p
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_RELOADPLUGINSREQUEST']._serialized_start=43
-  _globals['_RELOADPLUGINSREQUEST']._serialized_end=81
-  _globals['_RELOADPLUGINSRESPONSE']._serialized_start=83
-  _globals['_RELOADPLUGINSRESPONSE']._serialized_end=123
+  _globals['_RELOADPLUGINSREQUEST']._serialized_end=65
+  _globals['_RELOADPLUGINSRESPONSE']._serialized_start=67
+  _globals['_RELOADPLUGINSRESPONSE']._serialized_end=107
+  _globals['_RELOADPLUGINREQUEST']._serialized_start=109
+  _globals['_RELOADPLUGINREQUEST']._serialized_end=146
+  _globals['_RELOADPLUGINRESPONSE']._serialized_start=148
+  _globals['_RELOADPLUGINRESPONSE']._serialized_end=187
+  _globals['_UNLOADPLUGINREQUEST']._serialized_start=189
+  _globals['_UNLOADPLUGINREQUEST']._serialized_end=226
+  _globals['_UNLOADPLUGINRESPONSE']._serialized_start=228
+  _globals['_UNLOADPLUGINRESPONSE']._serialized_end=267
 # @@protoc_insertion_point(module_scope)
