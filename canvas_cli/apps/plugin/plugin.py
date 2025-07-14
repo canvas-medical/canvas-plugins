@@ -206,6 +206,18 @@ def get_base_plugin_template_path(plugin_type: str) -> Path:
             return context.plugin_template_dir / context.default_plugin_template_name
 
 
+def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
+    """Parse secrets from the command line, expecting them in the format Key=value."""
+    parsed_secrets = []
+
+    for secret in secrets:
+        if "=" not in secret:
+            raise typer.BadParameter(f"Invalid secret format: '{secret}'. Use key=value.")
+        parsed_secrets.append(secret)
+
+    return parsed_secrets
+
+
 def init(
     plugin_type: str = typer.Argument(
         "protocol",
@@ -224,6 +236,9 @@ def init(
 
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
+    secrets: builtins.list[str] = typer.Option(
+        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -245,6 +260,11 @@ def install(
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
+    encoded_secrets = []
+    for pair in secrets:
+        encoded = base64.b64encode(pair.encode()).decode()
+        encoded_secrets.append(("secret", encoded))
+
     print(f"Installing plugin: {built_package_path} into {host}")
 
     url = plugin_url(host)
@@ -252,10 +272,11 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
+        data = [("is_enabled", True)] + encoded_secrets
         with open(built_package_path, "rb") as package:
             r = requests.post(
                 url,
-                data={"is_enabled": True},
+                data=data,
                 files={"package": package},
                 headers={"Authorization": f"Bearer {token}"},
             )
@@ -272,7 +293,7 @@ def install(
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
         print(f"Plugin {package_name} already exists, updating instead...")
-        update(package_name, built_package_path, is_enabled=True, host=host)
+        update(package_name, built_package_path, is_enabled=True, secrets=secrets, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -429,18 +450,6 @@ def list(
         raise typer.Exit(1)
 
 
-def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
-    """Parse secrets from the command line, expecting them in the format Key=value."""
-    parsed_secrets = []
-
-    for secret in secrets:
-        if "=" not in secret:
-            raise typer.BadParameter(f"Invalid secret format: '{secret}'. Use key=value.")
-        parsed_secrets.append(secret)
-
-    return parsed_secrets
-
-
 def set_secrets(
     plugin: str = typer.Argument(..., help="Plugin name to configure"),
     host: str | None = typer.Option(
@@ -453,34 +462,7 @@ def set_secrets(
     ),
 ) -> None:
     """Configure plugin secrets on a Canvas instance."""
-    if not host:
-        raise typer.BadParameter("Please specify a host or add one to the configuration file")
-
-    token = get_or_request_api_token(host)
-    url = plugin_url(host, plugin)
-
-    encoded_pairs = []
-    for pair in secrets:
-        encoded = base64.b64encode(pair.encode()).decode()
-        encoded_pairs.append(("secret", encoded))
-
-    print(f"Configuring secrets for plugin '{plugin}' on {host} using {url}")
-
-    try:
-        r = requests.patch(
-            url,
-            data=encoded_pairs,
-            headers={"Authorization": f"Bearer {token}"},
-        )
-    except requests.exceptions.RequestException:
-        print(f"Failed to connect to {host}")
-        raise typer.Exit(1) from None
-
-    if r.ok:
-        print(f"Secrets successfully configured for plugin '{plugin}'!")
-    else:
-        print(f"Status code {r.status_code}: {r.text}")
-        raise typer.Exit(1)
+    update(name=plugin, package_path=None, secrets=secrets, host=host, is_enabled=None)
 
 
 def validate_manifest(
@@ -529,6 +511,9 @@ def update(
     is_enabled: bool | None = typer.Option(
         None, "--enable/--disable", show_default=False, help="Enable/disable the plugin"
     ),
+    secrets: builtins.list[str] = typer.Option(
+        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -544,12 +529,27 @@ def update(
 
     token = get_or_request_api_token(host)
 
-    print(f"Updating plugin {name} from {host} with {is_enabled=}, {package_path=}")
+    encoded_secrets = []
+    for pair in secrets:
+        encoded = base64.b64encode(pair.encode()).decode()
+        encoded_secrets.append(("secret", encoded))
+
+    args = [
+        *((f"is_enabled={is_enabled}",) if is_enabled is not None else ()),
+        *((f"package_path={package_path}",) if package_path is not None else ()),
+        *((f"secrets={','.join([s.split('=')[0] for s in secrets])}",) if secrets else ()),
+    ]
+
+    print(f"Updating plugin {name} from {host}" + (f" with {', '.join(args)}" if args else ""))
 
     url = plugin_url(host, name)
 
     try:
-        data = {"is_enabled": is_enabled} if is_enabled is not None else {}
+        data = (
+            [("is_enabled", is_enabled)] + encoded_secrets
+            if is_enabled is not None
+            else encoded_secrets
+        )
         headers = {"Authorization": f"Bearer {token}"}
 
         if package_path:
