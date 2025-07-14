@@ -28,15 +28,6 @@
                     "read": [],
                     "write": []
                 }
-            },
-            {
-                "class": "patient_portal_plugin.handlers.refill_form_handler:RefillFormHandler",
-                "description": "Handles the Refill Form functionality",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
             }
         ],
         "commands": [],

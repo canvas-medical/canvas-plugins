@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Refill Medication</title>
+  <style>
+    body {
+      background: transparent;
+      margin: 0;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 400px;
+      margin: 0 auto;
+      padding-bottom: 32px;
+      box-shadow: 0 4px 24px #0002;
+      box-sizing: border-box;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 32px 32px 0 32px;
+    }
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #18181b;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: #888;
+      cursor: pointer;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      transition: background 0.2s;
+      line-height: 1;
+    }
+    .close-btn:hover {
+      background: #f3f4f6;
+    }
+    .modal-divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 24px 0 0 0;
+    }
+    .modal-desc {
+      color: #6b7280;
+      font-size: 1.08rem;
+      margin: 24px 0 16px 32px;
+    }
+    .medications-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 0 32px;
+    }
+    .medication {
+      background: #fff;
+      border-radius: 12px;
+      border: 1.5px solid #f1f1f3;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border 0.2s, box-shadow 0.2s;
+      margin: 0;
+    }
+    .medication.selected {
+      border: 1.5px solid {{ background_color }};
+      box-shadow: 0 2px 8px {{ background_color }}22;
+      background: #f8fafc;
+    }
+    .medication-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-self: start;
+      flex-grow: 1;
+    }
+    .medication-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: {{ background_color }};
+      margin-bottom: 2px;
+    }
+    .medication.selected .medication-title {
+      color: {{ background_color }};
+    }
+    .medication:not(.selected) .medication-title {
+      color: #18181b;
+    }
+    .medication-company {
+      color: #a1a1aa;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+    .check {
+      font-size: 1.4rem;
+      color: #a1a1aa;
+      margin-left: 16px;
+      transition: color 0.2s;
+    }
+    .medication.selected .check {
+      color: {{ background_color }};
+    }
+    .modal-footer {
+      padding: 0 32px;
+      margin-top: 32px;
+    }
+    .next-btn {
+      width: 100%;
+      background: {{ background_color }};
+      color: #fff;
+      font-size: 1.13rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .next-btn:hover {
+      text-decoration: underline;
+    }
+    .next-btn:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+    .next-btn:disabled:hover {
+      text-decoration: none;
+    }
+    .hidden {
+      display: none;
+    }
+    @media (max-width: 500px) {
+      .modal {
+        width: 98vw;
+        min-width: 0;
+        padding-bottom: 16px;
+      }
+      .modal-header, .modal-footer, .medications-list {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      .modal-desc {
+        margin-left: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Prescribed medications</span>
+      {{!-- <button class="close-btn" aria-label="Close">&times;</button> --}}
+    </div>
+    <hr class="modal-divider">
+    <div class="modal-desc">Select the prescriptions to refill:</div>
+    <div class="medications-list">
+    {% if medications %}
+      {% for medication in medications %}
+        <div class="medication">
+          <div class="medication-info">
+            <span class="medication-title">{{ medication.display }}</span>
+            <span class="medication-company">{{ medication.dosage }}</span>
+          </div>
+          <span class="check hidden">✓</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="medication">
+        <div class="medication-info">
+          <span class="medication-title">No medications found</span>
+        </div>
+      </div>
+    {% endif %}
+    </div>
+    <div class="modal-footer">
+      <button class="next-btn">Request Refill</button>
+    </div>
+  </div>
+
+  <script>
+      window.postMessage({
+        type: 'refill_form_loaded',
+      }, '*');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const medications = document.querySelectorAll('.medication');
+
+  
+      medications.forEach(medication => {
+        medication.addEventListener('click', () => {
+          medication.classList.toggle('selected');
+          const check = medication.querySelector('.check');
+          if (check) {
+            check.classList.toggle('hidden');
+          } else {
+            const newCheck = document.createElement('span');
+            newCheck.className = 'check';
+            newCheck.textContent = '✓';
+            medication.appendChild(newCheck);
+          }
+        });
+      });
+
+        document.querySelector('.next-btn').addEventListener('click', () => {
+      const selectedMedications = Array.from(document.querySelectorAll('.medication.selected .medication-title'))
+        .map(el => el.textContent);
+      if (selectedMedications.length > 0) {
+        alert(`Refill requested for: ${selectedMedications.join(', ')}`);
+      } else {
+        alert('Please select at least one medication to refill.');
+      }
+    });
+    });
+  </script>
+</body>
+</html>
