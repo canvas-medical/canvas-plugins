@@ -52,6 +52,7 @@ def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
     if Path(f"./{init_plugin_name}").exists():
         shutil.rmtree(Path(f"./{init_plugin_name}"))
 
+
 @pytest.fixture
 def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Result:
     """Init the plugin and return the result."""
@@ -64,6 +65,7 @@ def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Result:
     (plugin_dir / "symlink").symlink_to("target")
 
     return result
+
 
 def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the CLI successfully creates a plugin with init."""
