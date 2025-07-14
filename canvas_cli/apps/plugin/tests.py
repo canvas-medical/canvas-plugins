@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 import typer
+from click.testing import Result
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
@@ -51,6 +52,18 @@ def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
     if Path(f"./{init_plugin_name}").exists():
         shutil.rmtree(Path(f"./{init_plugin_name}"))
 
+@pytest.fixture
+def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Result:
+    """Init the plugin and return the result."""
+    result = cli_runner.invoke(app, "init", input=init_plugin_name)
+
+    assert result.exit_code == 0
+
+    Path(f"./{init_plugin_name}/.hidden-dir").mkdir()
+    Path(f"./{init_plugin_name}/.hidden.file").touch()
+    Path(f"./{init_plugin_name}/symlink").symlink_to("target")
+
+    return result
 
 def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the CLI successfully creates a plugin with init."""
@@ -85,11 +98,8 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     assert protocol.is_file()
 
 
-def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
+def test_build_package(init_plugin_name: str, init_plugin: Result) -> None:
     """Tests that the package is built correctly."""
-    result = cli_runner.invoke(app, "init", input=init_plugin_name)
-    assert result.exit_code == 0
-
     package = _build_package(Path(f"./{init_plugin_name}"))
     assert package.exists()
     assert package.is_file()
@@ -126,16 +136,13 @@ def test_build_package(cli_runner: CliRunner, init_plugin_name: str) -> None:
     ],
 )
 def test_build_package_with_ignore_file(
-    cli_runner: CliRunner,
     init_plugin_name: str,
+    init_plugin: Result,
     ignore_lines: list[str],
     expected_present: list[str],
     expected_ignored: list[str],
 ) -> None:
     """Tests that the package is built correctly with ignore file."""
-    result = cli_runner.invoke(app, "init", input=init_plugin_name)
-    assert result.exit_code == 0
-
     with (
         patch.object(Path, "exists") as mock_exists,
         patch.object(Path, "read_text") as mock_read_text,
