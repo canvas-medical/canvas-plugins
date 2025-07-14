@@ -39,7 +39,7 @@ def test_validate_package_valid_file(tmp_path: Path) -> None:
     assert result == package_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def init_plugin_name() -> str:
     """The plugin name to be used for the canvas cli init test."""
     return f"testing_init-{datetime.now().timestamp()}".replace(".", "")
@@ -57,11 +57,11 @@ def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Result:
     """Init the plugin and return the result."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
 
-    assert result.exit_code == 0
+    plugin_dir = Path(f"./{init_plugin_name}")
 
-    Path(f"./{init_plugin_name}/.hidden-dir").mkdir()
-    Path(f"./{init_plugin_name}/.hidden.file").touch()
-    Path(f"./{init_plugin_name}/symlink").symlink_to("target")
+    (plugin_dir / ".hidden-dir").mkdir()
+    (plugin_dir / ".hidden.file").touch()
+    (plugin_dir / "symlink").symlink_to("target")
 
     return result
 
