@@ -177,74 +177,28 @@
   </div>
 
   <script>
-    const patientId = "{{ patient_id }}";
-
-    console.log('Patient ID:', patientId);
-
-    window.postMessage({
-      type: 'info',
-      message: 'Prescriptions widget locally loaded successfully.',
-      details: { patientId: patientId }
-    }, '*');
-
     document.addEventListener('DOMContentLoaded', function () {
       const requestRefillLink = document.getElementById('request-refill');
+      
       requestRefillLink.addEventListener('click', function (event) {
         event.preventDefault();
 
-        window.postMessage({
-          type: 'info',
-          message: 'click',
-          details: { patientId: patientId }
-        }, '*');
+        requestRefillLink.classList.add('loading');
 
-        const request = new XMLHttpRequest()
-
-        request.open('GET', `/plugin-io/api/patient_portal_plugin/medications/${patientId}`, true);
-        request.setRequestHeader('Content-Type', 'application/json');
-        request.onload = function () {
-          if (request.status >= 200 && request.status < 300) {
-
-            window.postMessage({
-              type: 'success',
-              message: 'Refill request sent successfully.',
-              details: request.responseText
-            }, '*');
+        fetch(`{{ api_url }}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
           }
-        };
-        request.onprogress = function (event) {
-          window.postMessage({
-            type: 'progress',
-            message: 'Sending refill request...',
-          }, '*');
-
-        };
-        request.ontimeout = function () {
-          window.postMessage({
-            type: 'error',
-            message: 'Request timed out while sending refill request.',
-            details: 'Please try again later.'
-          }, '*');
-        };
-        request.onabort = function () {
-          window.postMessage({
-            type: 'error',
-            message: 'Refill request was aborted.',
-            details: 'Please try again.'
-          }, '*');
-        };
-        request.onerror = function () {
-          window.postMessage({
-            type: 'error',
-            message: 'Network error while sending refill request.',
-            details: 'Please check your internet connection.'
-          }, '*');
-        };
-        request.timeout = 10000; // Set timeout to 10 seconds
-        request.send();
+        }).finally(() => {
+          requestRefillLink.classList.remove('loading');
+        });
       });
     });
-
   </script>
 </body>
 
