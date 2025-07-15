@@ -85,6 +85,7 @@ dependencies = [
     { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "django-timezone-utils" },
     { name = "env-tools" },
+    { name = "factory-boy" },
     { name = "frozendict" },
     { name = "grpcio" },
     { name = "ipython" },
@@ -104,6 +105,11 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
     { name = "websocket-client" },
+]
+
+[package.optional-dependencies]
+test-utils = [
+    { name = "pytest-canvas" },
 ]
 
 [package.dev-dependencies]
@@ -134,6 +140,7 @@ requires-dist = [
     { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.1.1,<6" },
     { name = "django-timezone-utils", specifier = ">=0.15.0,<0.16" },
     { name = "env-tools", specifier = ">=2.4.0,<3" },
+    { name = "factory-boy", specifier = ">=3.3.3" },
     { name = "frozendict", specifier = ">=2.4.6" },
     { name = "grpcio", specifier = ">=1.60.1,<2" },
     { name = "ipython", specifier = ">=8.21.0,<9" },
@@ -143,6 +150,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.2,<4" },
     { name = "pydantic", specifier = ">=2.6.1,<3" },
     { name = "pyjwt", specifier = "==2.10.1" },
+    { name = "pytest-canvas", marker = "extra == 'test-utils'" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2" },
     { name = "rapidfuzz", specifier = ">=3.10.1,<4" },
     { name = "redis", specifier = ">=5.0.4,<6" },
@@ -154,6 +162,7 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.8,<4.13" },
     { name = "websocket-client", specifier = ">=1.7.0,<2" },
 ]
+provides-extras = ["test-utils"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -162,8 +171,8 @@ dev = [
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "psutil", specifier = ">=7.0.0" },
-    { name = "pytest" },
-    { name = "pytest-django" },
+    { name = "pytest", specifier = ">=8.4,<9" },
+    { name = "pytest-django", specifier = ">=4.11,<5" },
     { name = "pytest-freezegun", specifier = ">=0.4.2" },
     { name = "pytest-mock" },
     { name = "python-semantic-release" },
@@ -503,6 +512,30 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/8c/e3/7d45f492c2c4a0e8e0fad57d081a7c8a0286cdd86372b070cca1ec0caa1e/executing-2.1.0.tar.gz", hash = "sha256:8ea27ddd260da8150fa5a708269c4a10e76161e2496ec3e587da9e3c0fe4b9ab", size = 977485, upload-time = "2024-09-01T12:37:35.708Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b5/fd/afcd0496feca3276f509df3dbd5dae726fcc756f1a08d9e25abe1733f962/executing-2.1.0-py2.py3-none-any.whl", hash = "sha256:8d63781349375b5ebccc3142f4b30350c0cd9c79f921cde38be2be4637e98eaf", size = 25805, upload-time = "2024-09-01T12:37:33.007Z" },
+]
+
+[[package]]
+name = "factory-boy"
+version = "3.3.3"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "faker" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/98/75cacae9945f67cfe323829fc2ac451f64517a8a330b572a06a323997065/factory_boy-3.3.3.tar.gz", hash = "sha256:866862d226128dfac7f2b4160287e899daf54f2612778327dd03d0e2cb1e3d03", size = 164146, upload-time = "2025-02-03T09:49:04.433Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/8d/2bc5f5546ff2ccb3f7de06742853483ab75bf74f36a92254702f8baecc79/factory_boy-3.3.3-py2.py3-none-any.whl", hash = "sha256:1c39e3289f7e667c4285433f305f8d506efc2fe9c73aaea4151ebd5cdea394fc", size = 37036, upload-time = "2025-02-03T09:49:01.659Z" },
+]
+
+[[package]]
+name = "faker"
+version = "37.4.2"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/95/da573e055608e180086e2ac3208f8c15d8b44220912f565a9821b9bff33a/faker-37.4.2.tar.gz", hash = "sha256:8e281bbaea30e5658895b8bea21cc50d27aaf3a43db3f2694409ca5701c56b0a", size = 1902890, upload-time = "2025-07-15T16:38:24.803Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/1c/b909a055be556c11f13cf058cfa0e152f9754d803ff3694a937efe300709/faker-37.4.2-py3-none-any.whl", hash = "sha256:b70ed1af57bfe988cbcd0afd95f4768c51eaf4e1ce8a30962e127ac5c139c93f", size = 1943179, upload-time = "2025-07-15T16:38:23.053Z" },
 ]
 
 [[package]]
@@ -1108,17 +1141,32 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "8.3.4"
+version = "8.4.1"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
+    { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/35/30e0d83068951d90a01852cb1cef56e5d8a09d20c7f511634cc2f7e0372a/pytest-8.3.4.tar.gz", hash = "sha256:965370d062bce11e73868e0335abac31b4d3de0e82f4007408d242b4f8610761", size = 1445919, upload-time = "2024-12-01T12:54:25.98Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/ba/45911d754e8eba3d5a841a5ce61a65a685ff1798421ac054f85aa8747dfb/pytest-8.4.1.tar.gz", hash = "sha256:7c67fd69174877359ed9371ec3af8a3d2b04741818c51e5e99cc1742251fa93c", size = 1517714, upload-time = "2025-06-18T05:48:06.109Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl", hash = "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6", size = 343083, upload-time = "2024-12-01T12:54:19.735Z" },
+    { url = "https://files.pythonhosted.org/packages/29/16/c8a903f4c4dffe7a12843191437d7cd8e32751d5de349d45d3fe69544e87/pytest-8.4.1-py3-none-any.whl", hash = "sha256:539c70ba6fcead8e78eebbf1115e8b589e7565830d7d006a8723f19ac8a0afb7", size = 365474, upload-time = "2025-06-18T05:48:03.955Z" },
+]
+
+[[package]]
+name = "pytest-canvas"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "canvas" },
+    { name = "pytest" },
+    { name = "pytest-django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/89/7f12457542e24edc9b51d0bb669574f9511241019d8ceb66a9271305293c/pytest_canvas-0.1.0.tar.gz", hash = "sha256:e5e5ca0f354ef497c839703231cdda0349484b7a45f572cd21e0f0952cbca36b", size = 1344, upload-time = "2025-07-22T13:45:17.588Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/eb/a43265b34623f6a7bfe2c7d90dcdd38c3f88e76ec1c8c31909e2d5355420/pytest_canvas-0.1.0-py3-none-any.whl", hash = "sha256:edc50b12e618e835d32c44fcbcb1dbe779692e048fc29d559782b9e7c6b247ab", size = 2023, upload-time = "2025-07-22T13:45:16.511Z" },
 ]
 
 [[package]]
