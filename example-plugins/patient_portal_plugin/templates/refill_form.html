@@ -168,7 +168,7 @@
     <hr class="modal-divider">
     <div class="modal-desc">Select the prescriptions to refill:</div>
     <div class="medications-list">
-      <form id="refill-form" method="post" action="/plugin-io/api/patient_portal_plugin/medications/{{ patient_id }}">  
+      <form id="refill-form" method="post">  
       {% if medications %}
         {% for medication in medications %}
         <div class="medication">
