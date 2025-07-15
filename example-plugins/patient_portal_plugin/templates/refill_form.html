@@ -58,8 +58,8 @@
     .medications-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
       padding: 0 32px;
+      overflow-y: scroll;
     }
     .medication {
       background: #fff;
@@ -71,7 +71,7 @@
       justify-content: space-between;
       cursor: pointer;
       transition: border 0.2s, box-shadow 0.2s;
-      margin: 0;
+      margin: 8px 0;
     }
     .medication.selected {
       border: 1.5px solid {{ background_color }};
@@ -97,7 +97,7 @@
     .medication:not(.selected) .medication-title {
       color: #18181b;
     }
-    .medication-company {
+    .medication-description {
       color: #a1a1aa;
       font-size: 1rem;
       font-weight: 400;
@@ -130,6 +130,9 @@
     .next-btn:hover {
       text-decoration: underline;
     }
+    .next-btn:active {
+      background: {{ background_color }}cc;
+    }
     .next-btn:disabled {
       background: #d1d5db;
       cursor: not-allowed;
@@ -160,68 +163,99 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Prescribed medications</span>
-      {{!-- <button class="close-btn" aria-label="Close">&times;</button> --}}
+      <!-- <button class="close-btn" aria-label="Close">&times;</button> -->
     </div>
     <hr class="modal-divider">
     <div class="modal-desc">Select the prescriptions to refill:</div>
     <div class="medications-list">
-    {% if medications %}
-      {% for medication in medications %}
+      <form id="refill-form" method="post" action="/plugin-io/api/patient_portal_plugin/medications/{{ patient_id }}">  
+      {% if medications %}
+        {% for medication in medications %}
         <div class="medication">
           <div class="medication-info">
-            <span class="medication-title">{{ medication.display }}</span>
-            <span class="medication-company">{{ medication.dosage }}</span>
+            <span class="medication-title">{{ medication.coding.display }}</span>
+            <span class="medication-description">{{ medication.coding.sig }}</span>
           </div>
-          <span class="check hidden">✓</span>
+          <input type="hidden" name="medication" value="{{ medication.id }}" disabled>
+          
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="medication">
-        <div class="medication-info">
-          <span class="medication-title">No medications found</span>
-        </div>
+        {% endfor %}
+      {% else %}
+        <div class="medication-title">No medications found</div>
+      {% endif %}
       </div>
-    {% endif %}
-    </div>
-    <div class="modal-footer">
-      <button class="next-btn">Request Refill</button>
-    </div>
+      <div class="modal-footer">
+        <button type="submit" class="next-btn">Request Refill</button>
+      </div>
+    </form>
   </div>
 
   <script>
-      window.postMessage({
-        type: 'refill_form_loaded',
-      }, '*');
+    try {
+      const apiUrl = "{{ api_url }}";
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const medications = document.querySelectorAll('.medication');
+      document.addEventListener('DOMContentLoaded', () => {
+        const medications = document.querySelectorAll('.medication');
+        const submitButton = document.querySelector('.next-btn');
+        const form = document.getElementById('refill-form');
 
-  
-      medications.forEach(medication => {
-        medication.addEventListener('click', () => {
-          medication.classList.toggle('selected');
-          const check = medication.querySelector('.check');
-          if (check) {
-            check.classList.toggle('hidden');
-          } else {
-            const newCheck = document.createElement('span');
-            newCheck.className = 'check';
-            newCheck.textContent = '✓';
-            medication.appendChild(newCheck);
+        if (!form || !submitButton) return;
+
+        if (!medications.length) {
+          submitButton.disabled = true;
+        }
+
+        if (medications.length > 0) {
+          medications.forEach(medication => {
+            medication.addEventListener('click', () => {
+              medication.classList.toggle('selected');
+
+              medication.querySelector('input[type="hidden"]').disabled = !medication.classList.contains('selected');
+            });
+          });
+        }
+
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+
+          const data = new FormData(form);
+          const selectedMedications = Array.from(data.values())
+
+          if (!selectedMedications.length) {
+            return;
           }
+
+          submitButton.disabled = true;
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: selectedMedications.map(medication => `medication=${encodeURIComponent(medication)}`).join('&'),
+          }).then(response => {
+            if (response.ok) {
+              
+            } else {
+              
+            }
+          }).catch(error => {
+            
+          }).finally(() => {
+            submitButton.disabled = false;
+            medications.forEach(medication => {
+              medication.classList.remove('selected');
+              medication.querySelector('input[type="hidden"]').disabled = true;
+            });
+          });
         });
       });
-
-        document.querySelector('.next-btn').addEventListener('click', () => {
-      const selectedMedications = Array.from(document.querySelectorAll('.medication.selected .medication-title'))
-        .map(el => el.textContent);
-      if (selectedMedications.length > 0) {
-        alert(`Refill requested for: ${selectedMedications.join(', ')}`);
-      } else {
-        alert('Please select at least one medication to refill.');
-      }
-    });
-    });
+    } catch (error) {
+      window.postMessage({
+        type: 'error',
+        message: `An error occurred: ${error.message}`,
+        stack: error.stack,
+      }, '*');
+    }
   </script>
 </body>
 </html>

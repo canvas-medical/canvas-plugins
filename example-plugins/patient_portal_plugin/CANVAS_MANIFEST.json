@@ -21,8 +21,8 @@
                 }
             },
             {
-                "class": "patient_portal_plugin.handlers.medications_handler:MedicationsHandler",
-                "description": "Handles the Medications plugin functionality",
+                "class": "patient_portal_plugin.handlers.prescriptions_handler:PrescriptionsHandler",
+                "description": "Handles the prescriptions plugin functionality, which enables patients to request prescription refills through the patient portal.",
                 "data_access": {
                     "event": "",
                     "read": [],
@@ -38,7 +38,7 @@
     "secrets": [
         "BACKGROUND_COLOR",
         "EMERGENCY_CONTACT",
-        "simpleapi-api-key"
+        "ASSIGNED_TEAM"
     ],
     "tags": {},
     "references": [],

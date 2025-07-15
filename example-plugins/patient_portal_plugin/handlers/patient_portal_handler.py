@@ -5,8 +5,7 @@ from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipStatus
-from canvas_sdk.v1.data.medication import Medication, Status
-from logger import log
+from canvas_sdk.v1.data.medication import Medication
 
 
 # Inherit from BaseHandler to properly get registered for events
@@ -99,29 +98,23 @@ class PatientPortalHandler(BaseHandler):
     @property
     def prescriptions_widget(self) -> Effect:
         """Constructs the prescriptions widget for the patient portal."""
-        prescriptions = Medication.objects.filter(
-            patient__id=self.target,
-            deleted=False,
-            status=Status.ACTIVE,
-        )
-        patient = Patient.objects.get(id=self.target)
+        patient_id = self.target
+        patient = Patient.objects.get(id=patient_id)
+        prescriptions = Medication.objects.for_patient(patient_id).count()
         preferred_pharmacy = patient.preferred_pharmacy
-        log.info(prescriptions)
 
         payload = {
-            "patient_id": self.target,
-            "prescriptions": prescriptions,
+            "api_url": f"/plugin-io/api/patient_portal_plugin/prescriptions/{patient.id}",
             "preferred_pharmacy": preferred_pharmacy,
+            "prescriptions": prescriptions,
             "title_color": self.background_color,
         }
 
-        prescriptions_widget = PortalWidget(
+        return PortalWidget(
             content=render_to_string("templates/prescriptions_widget.html", payload),
             size=PortalWidget.Size.MEDIUM,
             priority=21,
-        )
-
-        return prescriptions_widget.apply()
+        ).apply()
 
     @property
     def footer_widget(self) -> Effect:
