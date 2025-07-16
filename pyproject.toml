@@ -9,6 +9,7 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
+  "pytest-django",
   "pytest-freezegun>=0.4.2",
   "pytest-mock",
   "python-semantic-release",

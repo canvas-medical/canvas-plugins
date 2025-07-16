@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import ValueSetTimeframeLookupQuerySet
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, ValueSetTimeframeLookupQuerySet
 from canvas_sdk.value_set.value_set import CodeConstants
 
 if TYPE_CHECKING:
@@ -29,20 +29,17 @@ class BillingLineItemStatus(models.TextChoices):
     REMOVED = "removed", "Removed"
 
 
-class BillingLineItem(models.Model):
+class BillingLineItem(IdentifiableModel):
     """BillingLineItem."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_billinglineitem_001"
 
     # objects = BillingLineItemQuerySet.as_manager()
     objects = models.Manager().from_queryset(BillingLineItemQuerySet)()
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     note = models.ForeignKey(
         "v1.Note",
         on_delete=models.DO_NOTHING,
@@ -55,27 +52,25 @@ class BillingLineItem(models.Model):
         related_name="billing_line_items",
         null=True,
     )
-    cpt = models.CharField()
+    cpt = models.CharField(max_length=10)
     charge = models.DecimalField(decimal_places=2, max_digits=8)
-    description = models.CharField()
+    description = models.CharField(max_length=255)
     units = models.IntegerField()
-    command_type = models.CharField()
+    command_type = models.CharField(max_length=50)
     command_id = models.IntegerField()
-    status = models.CharField(choices=BillingLineItemStatus.choices)
+    status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
 
 
-class BillingLineItemModifier(models.Model):
+class BillingLineItemModifier(Model):
     """BillingLineItemModifier."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_billinglineitemmodifier_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
     line_item = models.ForeignKey(
         "v1.BillingLineItem",

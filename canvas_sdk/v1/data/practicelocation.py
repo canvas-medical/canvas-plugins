@@ -1,5 +1,6 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import TaxIDType
 
 
@@ -52,51 +53,46 @@ class PracticeLocationPOS(models.TextChoices):
     OTHER = "99", "Other Place of Service"
 
 
-class PracticeLocation(models.Model):
+class PracticeLocation(IdentifiableModel):
     """PracticeLocation."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_practicelocation_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     organization = models.ForeignKey(
         "v1.Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
     )
-    place_of_service_code = models.CharField(choices=PracticeLocationPOS.choices)
-    full_name = models.CharField()
-    short_name = models.CharField()
-    background_image_url = models.CharField()
-    background_gradient = models.CharField()
+    place_of_service_code = models.CharField(choices=PracticeLocationPOS.choices, max_length=2)
+    full_name = models.CharField(max_length=255)
+    short_name = models.CharField(max_length=255)
+    background_image_url = models.CharField(max_length=255)
+    background_gradient = models.CharField(max_length=255)
     active = models.BooleanField()
-    npi_number = models.CharField()
+    npi_number = models.CharField(max_length=10)
     bill_through_organization = models.BooleanField()
-    tax_id = models.CharField()
-    tax_id_type = models.CharField(choices=TaxIDType.choices)
-    billing_location_name = models.CharField()
-    group_npi_number = models.CharField()
-    taxonomy_number = models.CharField()
+    tax_id = models.CharField(max_length=25)
+    tax_id_type = models.CharField(choices=TaxIDType.choices, max_length=1)
+    billing_location_name = models.CharField(max_length=255)
+    group_npi_number = models.CharField(max_length=10)
+    taxonomy_number = models.CharField(max_length=10)
     include_zz_qualifier = models.BooleanField()
 
     def __str__(self) -> str:
         return self.full_name
 
 
-class PracticeLocationSetting(models.Model):
+class PracticeLocationSetting(Model):
     """PracticeLocationSetting."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_practicelocationsetting_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     practice_location = models.ForeignKey(
         "v1.PracticeLocation", on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
-    name = models.CharField()
+    name = models.CharField(max_length=100)
     value = models.JSONField()
 
     def __str__(self) -> str:
