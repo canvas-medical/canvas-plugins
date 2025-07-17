@@ -15,7 +15,7 @@ class PanelConfiguration(_BaseEffect):
     class Meta:
         effect_type = EffectType.SHOW_PANEL_SECTIONS
 
-    class Context(Enum):
+    class Page(Enum):
         GLOBAL = "global"
         PATIENT = "patient"
 
@@ -37,9 +37,9 @@ class PanelConfiguration(_BaseEffect):
     class PanelPatientSection(Enum):
         CHANGE_REQUEST = "changeRequest"
         COMMAND = "command"
-        LAB_REPORT = "labReport"
         IMAGING_REPORT = "imagingReport"
         INPATIENT_STAY = "inpatientStay"
+        LAB_REPORT = "labReport"
         PRESCRIPTION_ALERT = "prescriptionAlert"
         REFERRAL_REPORT = "referralReport"
         REFILL_REQUEST = "refillRequest"
@@ -47,7 +47,7 @@ class PanelConfiguration(_BaseEffect):
         UNCATEGORIZED_DOCUMENT = "uncategorizedDocument"
 
     sections: list[PanelPatientSection] | list[PanelGlobalSection] = Field(min_length=1)
-    context: Context
+    page: Page
 
     @property
     def values(self) -> dict[str, Any]:
@@ -62,8 +62,8 @@ class PanelConfiguration(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.context == self.Context.GLOBAL and not all(
-            isinstance(s, self.PanelGlobalSection) for s in self.sections
+        if self.page == PanelConfiguration.Page.GLOBAL and not all(
+            isinstance(s, PanelConfiguration.PanelGlobalSection) for s in self.sections
         ):
             errors.append(
                 self._create_error_detail(
@@ -73,8 +73,8 @@ class PanelConfiguration(_BaseEffect):
                 )
             )
 
-        if self.context == self.Context.PATIENT and not all(
-            isinstance(s, self.PanelPatientSection) for s in self.sections
+        if self.page == PanelConfiguration.Page.PATIENT and not all(
+            isinstance(s, PanelConfiguration.PanelPatientSection) for s in self.sections
         ):
             errors.append(
                 self._create_error_detail(
