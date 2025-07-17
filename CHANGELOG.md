@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.45.0 (2025-07-17)
+
+### Bug Fixes
+
+- Set default pharmacy search term
+  ([#777](https://github.com/canvas-medical/canvas-plugins/pull/777),
+  [`134337a`](https://github.com/canvas-medical/canvas-plugins/commit/134337a08b499aa32a03111e9ac1b4054420970a))
+
+### Features
+
+- Add additional allowed imports for abc and typing
+  ([#765](https://github.com/canvas-medical/canvas-plugins/pull/765),
+  [`78caa9f`](https://github.com/canvas-medical/canvas-plugins/commit/78caa9f3a1247f18941b3de6d97b1f3848dd2ee3))
+
+- Add note state change event models
+  ([#779](https://github.com/canvas-medical/canvas-plugins/pull/779),
+  [`79928a2`](https://github.com/canvas-medical/canvas-plugins/commit/79928a2125aeb3b5f8132f1aa12adbfeb1a5b31b))
+
+- Implement vitals visualizer plugin with interactive chart and table display (koala-3030)
+  ([#752](https://github.com/canvas-medical/canvas-plugins/pull/752),
+  [`eacedb3`](https://github.com/canvas-medical/canvas-plugins/commit/eacedb3b62abac19b12a5b9dd61985a6f81e8f95))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+Co-authored-by: beaugunderson <61791+beaugunderson@users.noreply.github.com>
+
+- **cli**: Add ability to ignore files when packaging
+  ([#773](https://github.com/canvas-medical/canvas-plugins/pull/773),
+  [`09d1ff4`](https://github.com/canvas-medical/canvas-plugins/commit/09d1ff4bfeaa905a16316f553914711e148ab776))
+
+
 ## v0.44.3 (2025-07-07)
 
 ### Bug Fixes
