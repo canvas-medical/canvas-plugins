@@ -87,6 +87,30 @@ class NoteTypes(models.TextChoices):
     CCDA = "ccda", "C-CDA Import"
 
 
+class NoteStates(models.TextChoices):
+    """Note states."""
+
+    NEW = "NEW", "Created"
+    PUSHED = "PSH", "Pushed the charges for"
+    LOCKED = "LKD", "Locked"
+    UNLOCKED = "ULK", "Unlocked"
+    DELETED = "DLT", "Deleted"
+    RELOCKED = "RLK", "Relocked"
+    RESTORED = "RST", "Restored"
+    RECALLED = "RCL", "Recalled"
+    UNDELETED = "UND", "Undeleted"
+    DISCHARGED = "DSC", "Discharged"
+    # Appointment note
+    SCHEDULING = "SCH", "Scheduling"
+    BOOKED = "BKD", "Booked"
+    CONVERTED = "CVD", "Checked in"
+    CANCELLED = "CLD", "Canceled"
+    NOSHOW = "NSW", "No show"
+    REVERTED = "RVT", "Reverted"
+    # C-CDA Import note
+    CONFIRM_IMPORT = "CNF", "Confirmed"
+
+
 class NoteType(models.Model):
     """NoteType."""
 
@@ -162,10 +186,58 @@ class Note(models.Model):
     place_of_service = models.CharField()
 
 
+class NoteStateChangeEvent(models.Model):
+    """NoteStateChangeEvent."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_notestatechangeevent_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
+    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    state = models.CharField(choices=NoteStates.choices)
+    note_state_document = models.CharField()
+    note_state_html = models.TextField()
+
+
+class CurrentNoteStateEvent(models.Model):
+    """
+    CurrentNoteStateEvent is a special model backed by a view which only includes the latest
+    NoteStateChangeEvent for any given note_id.
+    """
+
+    class Meta:
+        managed = False
+        app_label = "canvas_sdk"
+        db_table = "canvas_sdk_data_current_note_state_001"
+
+    id = models.UUIDField()
+    dbid: models.BigIntegerField = models.BigIntegerField(primary_key=True)
+    state: models.CharField = models.CharField(choices=NoteStates.choices)
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="+")
+
+    def editable(self) -> bool:
+        """Returns a boolean to indicate if the related note can be edited."""
+        return self.state in [
+            NoteStates.NEW,
+            NoteStates.PUSHED,
+            NoteStates.UNLOCKED,
+            NoteStates.RESTORED,
+            NoteStates.UNDELETED,
+        ]
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
     "NoteTypes",
     "NoteType",
     "Note",
+    "NoteStates",
+    "NoteStateChangeEvent",
+    "CurrentNoteStateEvent",
 )
