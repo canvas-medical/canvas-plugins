@@ -12,13 +12,11 @@ class PayorSpecificCharge(models.Model):
     transactor = models.ForeignKey(
         "v1.Transactor", related_name="specific_charges", on_delete=models.DO_NOTHING
     )
-    # uncomment this when ChargeDescriptionMaster is added to data module
-    # charge = models.ForeignKey(
-    #     "v1.ChargeDescriptionMaster",
-    #     related_name="transactor_charges",
-    #     on_delete=models.DO_NOTHING,
-    # )
-
+    charge = models.ForeignKey(
+        "v1.ChargeDescriptionMaster",
+        related_name="transactor_charges",
+        on_delete=models.DO_NOTHING,
+    )
     charge_amount = models.DecimalField()
     effective_date = models.DateField()
     end_date = models.DateField()
