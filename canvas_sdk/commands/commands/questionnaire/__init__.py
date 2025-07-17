@@ -12,7 +12,7 @@ from canvas_sdk.commands.commands.questionnaire.question import (
     ResponseOption,
     TextQuestion,
 )
-from canvas_sdk.v1.data import Questionnaire
+from canvas_sdk.v1.data import Command, Questionnaire
 
 QUESTION_CLASSES: dict[str, type[BaseQuestion]] = {
     ResponseOption.TYPE_TEXT: TextQuestion,
@@ -37,8 +37,22 @@ class QuestionnaireCommand(_BaseCommand):
     @cached_property
     def _questionnaire(self) -> Questionnaire | None:
         if not self.questionnaire_id:
-            return None
-        return Questionnaire.objects.get(id=self.questionnaire_id)
+            if command_uuid := self.command_uuid:
+                # If the questionnaire is not set, try to fetch it from the command
+                try:
+                    command_data = Command.objects.values_list("data", flat=True).get(
+                        id=command_uuid
+                    )
+                    if questionnaire_dbid := command_data.get("questionnaire", {}).get("value"):
+                        questionnaire = Questionnaire.objects.get(dbid=questionnaire_dbid)
+                        self.questionnaire_id = str(questionnaire.id)
+                        return questionnaire
+                except (Command.DoesNotExist, Questionnaire.DoesNotExist):
+                    return None
+            else:
+                return None
+
+        return Questionnaire.objects.get(id=self.questionnaire_id)  # type: ignore[misc]
 
     @cached_property
     def questions(self) -> list[BaseQuestion]:
@@ -54,6 +68,7 @@ class QuestionnaireCommand(_BaseCommand):
 
         for question in self._questionnaire.questions.all():
             qdata: dict[str, Any] = {
+                "id": question.pk,
                 "name": f"question-{question.pk}",
                 "label": question.name,
                 "coding": {

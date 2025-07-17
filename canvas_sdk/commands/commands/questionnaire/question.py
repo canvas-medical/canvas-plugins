@@ -38,8 +38,9 @@ class BaseQuestion(ABC):
     type: str
 
     def __init__(
-        self, name: str, label: str, coding: dict[str, str], options: list[ResponseOption]
+        self, id: str, name: str, label: str, coding: dict[str, str], options: list[ResponseOption]
     ) -> None:
+        self.id: str = id
         self.name: str = name
         self.label: str = label
         self.coding: dict[str, str] = coding
@@ -47,7 +48,7 @@ class BaseQuestion(ABC):
         self.response: Any | None = None
 
     def __repr__(self) -> str:
-        return f"Question({self.name=!r}, {self.label=!r}, {self.type=!r}, {self.options=!r}, {self.response=!r})"
+        return f"Question({self.id=!r}, {self.name=!r}, {self.label=!r}, {self.type=!r}, {self.options=!r}, {self.response=!r})"
 
     @abstractmethod
     def add_response(self, *args: Any, **kwargs: Any) -> None:
