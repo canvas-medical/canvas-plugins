@@ -19,6 +19,8 @@ from canvas_cli.utils.validators import validate_manifest_file
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
+ONE_MEGABYTE = 1024 * 1024
+
 
 def plugin_url(host: str, *paths: str) -> str:
     """Generates the plugin url for managing plugins in a Canvas instance."""
@@ -80,6 +82,13 @@ def _build_package(package: Path) -> Path:
                 stat = path.stat()
                 file_size_total += stat.st_size
 
+                if stat.st_size > ONE_MEGABYTE:
+                    print(
+                        f'Warning: >1mb file found: "{path.name}", '
+                        "ensure that unneeded files are not included in the "
+                        "plugin directory"
+                    )
+
                 tar.add(path, arcname=path.relative_to(package))
 
             if file_count > 100:
@@ -89,7 +98,7 @@ def _build_package(package: Path) -> Path:
                     "plugin directory"
                 )
 
-            if file_size_total > (1024 * 1024):
+            if file_size_total > ONE_MEGABYTE:
                 print(
                     "Warning: >1mb of content found when packaging plug, "
                     "ensure that unneeded files are not included in the "
