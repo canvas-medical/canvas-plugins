@@ -57,23 +57,45 @@ def _build_package(package: Path) -> Path:
     else:
         ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
 
-    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
-        with tarfile.open(file.name, "w:gz") as tar:
-            for root in package.rglob("*"):
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
+        with tarfile.open(tar_file.name, "w:gz") as tar:
+            file_count = 0
+            file_size_total = 0
+
+            for path in package.rglob("*"):
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in root.parts):
+                if any(part.startswith(".") for part in path.parts):
                     continue
 
                 # Skip symlinks
-                if root.is_symlink():
+                if path.is_symlink():
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(root):
-                    continue
+                if ignore_patterns.match_file(path):
 
-                tar.add(root, arcname=root.relative_to(package))
-        return Path(file.name)
+                file_count += 1
+
+                stat = path.stat()
+                file_size_total += stat.st_size
+
+                tar.add(path, arcname=path.relative_to(package))
+
+            if file_count > 100:
+                print(
+                    "Warning: >100 files found when packaging plugin, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+            if file_size_total > (1024 * 1024):
+                print(
+                    "Warning: >1mb of content found when packaging plug, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+        return Path(tar_file.name)
 
 
 def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
