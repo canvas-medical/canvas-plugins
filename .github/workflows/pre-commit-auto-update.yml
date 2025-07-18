@@ -6,6 +6,7 @@ on:
 
 jobs:
   pre-commit-auto-update:
+    if: github.repository == 'canvas-medical/canvas-plugins'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
