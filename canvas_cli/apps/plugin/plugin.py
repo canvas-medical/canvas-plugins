@@ -73,6 +73,7 @@ def _build_package(package: Path) -> Path:
 
                 # Skip files and directories matching the ignore patterns
                 if ignore_patterns.match_file(path):
+                    continue
 
                 file_count += 1
 
