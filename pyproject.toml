@@ -25,6 +25,7 @@ authors = [{email = "engineering@canvasmedical.com", name = "Canvas Team"}]
 dependencies = [
   "cookiecutter",
   "cron-converter>=1.2.1,<2",
+  "cryptography>=45.0.5",
   "deprecation>=2.1.0,<3",
   "django-stubs[compatible-mypy]>=5.1.1,<6",
   "django-timezone-utils>=0.15.0,<0.16",
