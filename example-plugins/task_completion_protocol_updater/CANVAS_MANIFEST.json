@@ -1,0 +1,36 @@
+{
+    "sdk_version": "0.45.0",
+    "plugin_version": "1.0.0",
+    "name": "task_completion_protocol_updater",
+    "description": "Updates ProtocolCard status when affiliated task is completed",
+    "components": {
+        "protocols": [
+            {
+                "class": "task_completion_protocol_updater.protocols.task_completion_protocol:Protocol",
+                "description": "Updates protocol card status to SATISFIED when a linked task is completed",
+                "data_access": {
+                    "event": "TASK_COMPLETED",
+                    "read": [
+                        "tasks",
+                        "task_labels"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": [
+        "tasks",
+        "protocol-cards",
+        "automation"
+    ],
+    "secrets": [],
+    "license": "MIT",
+    "readme": "Updates protocol card status when linked tasks are completed"
+}
