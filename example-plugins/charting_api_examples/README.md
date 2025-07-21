@@ -1,13 +1,13 @@
 # Charting API Examples
 
-This example plugin provides several examples of how you can automate charting
-in Canvas.
+This example plugin provides several examples of APIs you might define when
+automating charting in Canvas.
 
 - Notes
   - Creating a note
   - Getting information about a note
   - Searching for notes by patient, type, and date of service
-  - Adding or removing a note's billing line items
+  - Adding billing line items to a note
 - Commands
   - Creating a command
   - Creating multiple commands from a single request
