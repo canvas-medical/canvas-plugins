@@ -2,8 +2,10 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 from urllib import parse
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 from env_tools import env_to_bool
 
@@ -63,50 +65,61 @@ CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "app")
 CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
+CANVAS_SDK_DB_URL = os.getenv("DATABASE_URL")
+CANVAS_SDK_DB_BACKEND = os.getenv(
+    "CANVAS_SDK_DB_BACKEND", "postgres" if CANVAS_SDK_DB_URL or not IS_SCRIPT else "sqlite3"
+)
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
 
-if os.getenv("DATABASE_URL"):
-    parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
+if CANVAS_SDK_DB_BACKEND == "postgres":
+    db_config: dict[str, Any] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+    }
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
-            "NAME": parsed_url.path[1:],
-            "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
-            "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
-            "HOST": parsed_url.hostname,
-            "PORT": parsed_url.port,
-        }
-    }
-elif not IS_SCRIPT:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
-            "NAME": CANVAS_SDK_DB_NAME,
-            "USER": CANVAS_SDK_DB_USERNAME,
-            "PASSWORD": CANVAS_SDK_DB_PASSWORD,
-            "HOST": CANVAS_SDK_DB_HOST,
-            "PORT": CANVAS_SDK_DB_PORT,
-        }
-    }
-else:
+    if CANVAS_SDK_DB_URL:
+        parsed_url = parse.urlparse(CANVAS_SDK_DB_URL)
+        db_config.update(
+            {
+                "NAME": parsed_url.path[1:],
+                "USER": os.getenv("CANVAS_SDK_DATABASE_ROLE"),
+                "PASSWORD": os.getenv("CANVAS_SDK_DATABASE_ROLE_PASSWORD"),
+                "HOST": parsed_url.hostname,
+                "PORT": parsed_url.port,
+            }
+        )
+    else:
+        db_config.update(
+            {
+                "NAME": CANVAS_SDK_DB_NAME,
+                "USER": CANVAS_SDK_DB_USERNAME,
+                "PASSWORD": CANVAS_SDK_DB_PASSWORD,
+                "HOST": CANVAS_SDK_DB_HOST,
+                "PORT": CANVAS_SDK_DB_PORT,
+            }
+        )
+
+    DATABASES = {"default": db_config}
+
+elif CANVAS_SDK_DB_BACKEND == "sqlite3":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": f"file:{str(BASE_DIR / 'db.sqlite3')}?mode=ro",
-            "OPTIONS": {
-                "uri": True,
-            },
+            "OPTIONS": {"uri": True},
         },
-        # this is only used for running migrate command
         "default-write": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": str(BASE_DIR / "db.sqlite3"),
         },
     }
+
+else:
+    raise ImproperlyConfigured(
+        "Unsupported database backend specified in 'CANVAS_SDK_DB_BACKEND' setting. "
+        "Supported values are 'postgres' and 'sqlite3'."
+    )
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
