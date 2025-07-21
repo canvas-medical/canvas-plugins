@@ -73,7 +73,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.44.3"
+version = "0.45.0"
 source = { editable = "." }
 dependencies = [
     { name = "cookiecutter" },
@@ -87,6 +87,7 @@ dependencies = [
     { name = "grpcio" },
     { name = "ipython" },
     { name = "jsonschema" },
+    { name = "pathspec" },
     { name = "protobuf" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
@@ -132,6 +133,7 @@ requires-dist = [
     { name = "grpcio", specifier = ">=1.60.1,<2" },
     { name = "ipython", specifier = ">=8.21.0,<9" },
     { name = "jsonschema", specifier = ">=4.21.1,<5" },
+    { name = "pathspec", specifier = ">=0.12.1" },
     { name = "protobuf", specifier = ">=4.25.3,<5" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.2,<4" },
     { name = "pydantic", specifier = ">=2.6.1,<3" },
@@ -764,6 +766,15 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/66/94/68e2e17afaa9169cf6412ab0f28623903be73d1b32e208d9e8e541bb086d/parso-0.8.4.tar.gz", hash = "sha256:eb3a7b58240fb99099a345571deecc0f9540ea5f4dd2fe14c2a99d6b281ab92d", size = 400609 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/ac/dac4a63f978e4dcb3c6d3a78c4d8e0192a113d288502a1216950c41b1027/parso-0.8.4-py2.py3-none-any.whl", hash = "sha256:a418670a20291dacd2dddc80c377c5c3791378ee1e8d12bffc35420643d43f18", size = 103650 },
+]
+
+[[package]]
+name = "pathspec"
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple/" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191 },
 ]
 
 [[package]]
