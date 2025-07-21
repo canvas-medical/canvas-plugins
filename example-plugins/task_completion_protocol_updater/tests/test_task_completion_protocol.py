@@ -111,7 +111,7 @@ class TestTaskCompletionProtocol:
         assert len(result) == 1
         effect = result[0]
         
-        # Verify it's a protocol card effect with NOT_RELEVANT status
+        # Verify it's a protocol card effect with SATISFIED status
         assert effect.type.name == "ADD_OR_UPDATE_PROTOCOL_CARD"
         
         # Parse the payload to verify the content
@@ -119,7 +119,7 @@ class TestTaskCompletionProtocol:
         payload_data = json.loads(effect.payload)
         assert payload_data["patient"] == "patient-uuid-456"
         assert payload_data["key"] == "annual_wellness"
-        assert payload_data["data"]["status"] == "not_relevant"
+        assert payload_data["data"]["status"] == "satisfied"
 
     def test_compute_handles_multiple_protocol_card_labels(self) -> None:
         """Test that compute uses the first protocol card key when multiple PROTOCOL_CARD_{key} labels exist."""
