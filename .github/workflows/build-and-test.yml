@@ -26,7 +26,9 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: uv run pytest -m "not integtest" --ff --verbosity 2
+        run: |
+          uv run python -m plugin_runner.generate_allowed_imports
+          uv run pytest -m "not integtest" --ff --verbosity 2
 
       - name: Install pipx
         run: pip install pipx
