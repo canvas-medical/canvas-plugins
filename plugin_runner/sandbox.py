@@ -3,11 +3,11 @@ from __future__ import annotations
 import ast
 import builtins
 import importlib
-import pkgutil
+import pickle
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast
@@ -43,25 +43,14 @@ if TYPE_CHECKING:
         names_to_module: dict[str, str]
 
 
-def find_submodules(starting_modules: Iterable[str]) -> list[str]:
-    """
-    Given a list of modules, return a list of those modules and their submodules.
-    """
-    submodules = set(starting_modules)
+try:
+    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.pickle"
 
-    for module_path in starting_modules:
-        try:
-            module = importlib.import_module(module_path)
-
-            if not hasattr(module, "__path__"):
-                continue
-
-            for _, name, _ in pkgutil.walk_packages(module.__path__, prefix=module.__name__ + "."):
-                submodules.add(name)
-        except Exception as e:
-            print(f"could not import {module_path}: {e}")
-
-    return sorted(submodules)
+    with allowed_module_imports_path.open("rb") as allowed_module_imports_file:
+        CANVAS_MODULES = pickle.load(allowed_module_imports_file)
+except FileNotFoundError:
+    print("Error: Unable to load plugin_runner/allowed-module-imports.pickle, aborting")
+    sys.exit(1)
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
@@ -79,48 +68,6 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__init__",
     "__name__",
 }
-
-CANVAS_TOP_LEVEL_MODULES = (
-    "canvas_sdk.caching",
-    "canvas_sdk.commands",
-    "canvas_sdk.effects",
-    "canvas_sdk.events",
-    "canvas_sdk.handlers",
-    "canvas_sdk.protocols",
-    "canvas_sdk.questionnaires",
-    "canvas_sdk.templates",
-    "canvas_sdk.utils",
-    "canvas_sdk.v1",
-    "canvas_sdk.value_set",
-    "canvas_sdk.views",
-    "logger",
-)
-
-CANVAS_SUBMODULE_NAMES = [
-    found_module
-    for found_module in find_submodules(CANVAS_TOP_LEVEL_MODULES)
-    # tests are excluded from the built and distributed module in pyproject.toml
-    if "tests" not in found_module and "test_" not in found_module
-]
-
-CANVAS_MODULES: dict[str, set[str]] = {}
-
-for module_name in CANVAS_SUBMODULE_NAMES:
-    module = importlib.import_module(module_name)
-
-    exports = getattr(module, "__exports__", None)
-
-    if not exports:
-        continue
-
-    if module_name not in CANVAS_MODULES:
-        CANVAS_MODULES[module_name] = set()
-
-    CANVAS_MODULES[module_name].update(exports)
-
-# In use by a current plugin...
-CANVAS_MODULES["canvas_sdk.commands"].add("*")
-
 
 STANDARD_LIBRARY_MODULES = {
     "__future__": {
