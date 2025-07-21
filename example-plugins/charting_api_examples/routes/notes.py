@@ -84,15 +84,60 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
         ]
 
     """
-    POST /plugin-io/api/charting_api_examples/notes
+    POST /plugin-io/api/charting_api_examples/notes/
     Headers: "Authorization <your value for 'simpleapi-api-key'>"
     Body: {
+		"note_type_id": "c5df4f03-58e4-442b-ad6c-0d3dadc6b726",
+        "datetime_of_service": "2025-02-21 23:31:42",
+		"patient_id": "5350cd20de8a470aa570a852859ac87e",
+		"practice_location_id": "306b19f0-231a-4cd4-ad2d-a55c885fd9f8",
+		"provider_id": "6b33e69474234f299a56d480b03476d3",
+		"title": "My Note Title",
     }
     """
     @api.post("/")
     def create(self) -> list[Response | Effect]:
+        required_attributes = {
+            "note_type_id",
+            "datetime_of_service",
+            "patient_id",
+            "practice_location_id",
+            "provider_id",
+            "title",
+        }
+        request_body = self.request.json()
+        missing_attributes = required_attributes - request_body.keys()
+        if len(missing_attributes) > 0:
+            return [
+                JSONResponse(
+                    {"error": f"Missing required attribute(s): {', '.join(missing_attributes)}"},
+                    # Normally you should use a constant, but this status
+                    # code's constant changes in 3.13 from
+                    # UNPROCESSABLE_ENTITY to UNPROCESSABLE_CONTENT. Using the
+                    # number directly here avoids that future breakage.
+                    status_code=422,
+                )
+            ]
+
+        note_type_id = request_body["note_type_id"]
+        datetime_of_service = arrow.get(request_body["datetime_of_service"]).datetime
+        patient_id = request_body["patient_id"]
+        practice_location_id = request_body["practice_location_id"]
+        provider_id = request_body["provider_id"]
+        title = request_body["title"]
+
+        note_effect = NoteEffect(
+            note_type_id=note_type_id,
+            datetime_of_service=datetime_of_service,
+            patient_id=patient_id,
+            practice_location_id=practice_location_id,
+            provider_id=provider_id,
+            title=title,
+        )
+
         return [
-            JSONResponse({"message": "Note create!"})
+            note_effect.create(),
+            JSONResponse({"message": "Note data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
         ]
 
     """
