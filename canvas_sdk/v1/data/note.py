@@ -184,38 +184,31 @@ class Note(IdentifiableModel):
     place_of_service = models.CharField(max_length=255)
 
 
-class NoteStateChangeEvent(models.Model):
+class NoteStateChangeEvent(IdentifiableModel):
     """NoteStateChangeEvent."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_notestatechangeevent_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     created = models.DateTimeField()
     modified = models.DateTimeField()
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    state = models.CharField(choices=NoteStates.choices)
-    note_state_document = models.CharField()
+    state = models.CharField(choices=NoteStates.choices, max_length=3)
+    note_state_document = models.CharField(max_length=100, null=True)
     note_state_html = models.TextField()
 
 
-class CurrentNoteStateEvent(models.Model):
+class CurrentNoteStateEvent(IdentifiableModel):
     """
     CurrentNoteStateEvent is a special model backed by a view which only includes the latest
     NoteStateChangeEvent for any given note_id.
     """
 
     class Meta:
-        managed = False
-        app_label = "canvas_sdk"
         db_table = "canvas_sdk_data_current_note_state_001"
 
-    id = models.UUIDField()
-    dbid: models.BigIntegerField = models.BigIntegerField(primary_key=True)
-    state: models.CharField = models.CharField(choices=NoteStates.choices)
+    state = models.CharField(choices=NoteStates.choices, max_length=3)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="+")
 
     def editable(self) -> bool:

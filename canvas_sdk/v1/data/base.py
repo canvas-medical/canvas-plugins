@@ -4,17 +4,15 @@ from collections.abc import Container
 from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.contrib.postgres.fields import ArrayField
-from django.db import models
+from django.db import connection, models
 from django.db.models import Q
 from django.db.models.base import ModelBase
-
-import settings
 
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSet
 
-IS_SQLITE = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3"
+IS_SQLITE = connection.vendor == "sqlite"
 
 
 class ModelMetaclass(ModelBase):

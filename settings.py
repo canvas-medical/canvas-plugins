@@ -100,7 +100,12 @@ else:
             "OPTIONS": {
                 "uri": True,
             },
-        }
+        },
+        # this is only used for running migrate command
+        "default-write": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
+        },
     }
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")

@@ -34,7 +34,7 @@ from .line_item_transaction import (
 )
 from .medication import Medication, MedicationCoding
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import Note, NoteType
+from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
 from .observation import (
     Observation,
     ObservationCoding,
@@ -109,6 +109,7 @@ __all__ = __exports__ = (
     "ConditionCoding",
     "Coverage",
     "CoveragePosting",
+    "CurrentNoteStateEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -140,6 +141,7 @@ __all__ = __exports__ = (
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteStateChangeEvent",
     "NoteType",
     "Observation",
     "ObservationCoding",
