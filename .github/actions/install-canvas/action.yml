@@ -19,6 +19,11 @@ runs:
       shell: bash
       if: steps.cache-deps.outputs.cache-hit != 'true'
 
+    # Regenerate the allowed imports
+    - name: Regenerate allow imports
+      run: uv run python -m plugin_runner.generate_allowed_imports
+      shell: bash
+
     # Install the project to make sure everything works and is synced.
     - name: Install Canvas
       shell: bash
