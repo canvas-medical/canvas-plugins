@@ -141,10 +141,10 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
         ]
 
     """
-    GET /plugin-io/api/charting_api_examples/notes/<note-id>
+    GET /plugin-io/api/charting_api_examples/notes/<note-id>/
     Headers: "Authorization <your value for 'simpleapi-api-key'>"
     """
-    @api.get("/<id>")
+    @api.get("/<id>/")
     def read(self) -> list[Response | Effect]:
         return [
             JSONResponse({"message": "Note read!"})
