@@ -16,6 +16,10 @@ class CustomBuildHook(BuildHookInterface):
         Verify that the command to generate the allow modules file has been run
         before the build is allowed.
         """
+        # to use `uv run` we first need to install the editable version
+        if version == "editable":
+            return
+
         allowed_modules_path = pathlib.Path(__file__).parent / ALLOWED_MODULE_IMPORTS_PATH
 
         if not allowed_modules_path.exists():
