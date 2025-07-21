@@ -1,5 +1,7 @@
 from typing import Any
 
+from pydantic import Field
+
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import _BaseEffect
 
@@ -10,7 +12,7 @@ class BatchOriginateCommandEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.BATCH_ORIGINATE_COMMANDS
 
-    commands: list
+    commands: list = Field(min_length=1)
 
     @property
     def values(self) -> dict[str, Any]:
