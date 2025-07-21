@@ -29,6 +29,14 @@
       background-color: #fff;
       top: 0;
     }
+    .care-team-warning {
+      flex-wrap: wrap;
+      color: #4b5563;
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 16px 20px;
+      text-align: center;
+    }
     .care-team-list {
       list-style: none;
       margin: 0;
@@ -67,17 +75,22 @@
 <body>
   <div class="care-team-container">
     <div class="care-team-header">Your Care Team</div>
-    <ul class="care-team-list">
-      {% for member in care_team %}
-      <li class="care-team-member">
-        <img class="care-team-avatar" src="{{member.photo_url}}" alt="{{ member.professional_name }}'s photo">
-        <div class="care-team-info">
-          <span class="care-team-name">{{ member.professional_name }}</span>
-          <span class="care-team-role">{{ member.role }}</span>
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
+    {% if care_team|length == 0 %}
+      <div class="care-team-warning">No active Care Team members found.</div>
+    {% endif %}
+    {% if care_team|length > 0 %}
+      <ul class="care-team-list">
+        {% for member in care_team %}
+        <li class="care-team-member">
+          <img class="care-team-avatar" src="{{member.photo_url}}" alt="{{ member.professional_name }}'s photo">
+          <div class="care-team-info">
+            <span class="care-team-name">{{ member.professional_name }}</span>
+            <span class="care-team-role">{{ member.role }}</span>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </div>
 </body>
 </html>
