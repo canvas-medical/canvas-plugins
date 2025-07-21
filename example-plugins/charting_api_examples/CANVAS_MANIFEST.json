@@ -22,6 +22,15 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+                "class": "charting_api_examples.routes.commands:CommandAPI",
+                "description": "Endpoints for interacting with commands on a note.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],
