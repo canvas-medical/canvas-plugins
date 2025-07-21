@@ -1,8 +1,9 @@
 import importlib
-import pickle
+import json
 import pkgutil
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 CANVAS_TOP_LEVEL_MODULES = (
     "canvas_sdk.caching",
@@ -45,7 +46,7 @@ def find_submodules(starting_modules: Iterable[str]) -> list[str]:
 
 def main() -> None:
     """
-    Generate a pickle file of the allowed canvas_sdk imports.
+    Generate a JSON file of the allowed canvas_sdk imports.
     """
     print("Generating allowed canavs_sdk imports...")
 
@@ -74,10 +75,22 @@ def main() -> None:
     # In use by a current plugin...
     CANVAS_MODULES["canvas_sdk.commands"].add("*")
 
-    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.pickle"
+    def default(o: Any) -> Any:
+        if isinstance(o, set):
+            return sorted(o)
 
-    with allowed_module_imports_path.open("wb") as allowed_module_imports_file:
-        pickle.dump(CANVAS_MODULES, allowed_module_imports_file)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.json"
+
+    allowed_module_imports_path.write_text(
+        json.dumps(
+            CANVAS_MODULES,
+            default=default,
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":

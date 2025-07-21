@@ -16,4 +16,5 @@ dist/
 
 # SQLite databases
 *.sqlite3
+
 profile-imports-*.txt

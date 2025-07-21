@@ -3,11 +3,11 @@ from __future__ import annotations
 import ast
 import builtins
 import importlib
-import pickle
+import json
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast
@@ -44,12 +44,15 @@ if TYPE_CHECKING:
 
 
 try:
-    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.pickle"
+    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.json"
 
-    with allowed_module_imports_path.open("rb") as allowed_module_imports_file:
-        CANVAS_MODULES = pickle.load(allowed_module_imports_file)
+    CANVAS_MODULES: dict[str, Iterable[str]] = json.loads(allowed_module_imports_path.read_text())
+
+    for key in CANVAS_MODULES:
+        CANVAS_MODULES[key] = set(CANVAS_MODULES[key])
+
 except FileNotFoundError:
-    print("Error: Unable to load plugin_runner/allowed-module-imports.pickle, aborting")
+    print("Error: Unable to load plugin_runner/allowed-module-imports.json, aborting")
     sys.exit(1)
 
 
