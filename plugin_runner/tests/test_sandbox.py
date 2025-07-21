@@ -7,12 +7,19 @@ from textwrap import dedent
 import pytest
 
 from canvas_sdk.tests.shared import params_from_dict
+from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
-    CANVAS_SUBMODULE_NAMES,
     Sandbox,
     sandbox_from_module,
 )
+
+CANVAS_SUBMODULE_NAMES = [
+    found_module
+    for found_module in find_submodules(CANVAS_TOP_LEVEL_MODULES)
+    # tests are excluded from the built and distributed module in pyproject.toml
+    if "tests" not in found_module and "test_" not in found_module
+]
 
 
 def _sandbox_from_code(
