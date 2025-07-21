@@ -9,8 +9,6 @@ from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
 from canvas_sdk.v1.data.common import PersonSex
 
-# This is a client specific instance of the third-party software to sync with Canvas
-PARTNER_URL = "https://your-subdomain.example.com"
 
 # Authentication is handled by the APIKeyAuthMixin, which checks the API key in the request headers
 # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#api-key-1
@@ -53,7 +51,7 @@ class PatientCreateApi(APIKeyAuthMixin, SimpleAPI):
         partner_id = str(json_body.get("partnerId"))
 
         external_id = PatientExternalIdentifier(
-            system=PARTNER_URL,
+            system=self.secrets['PARTNER_URL_BASE'],
             value=partner_id,
         )
 
@@ -65,7 +63,7 @@ class PatientCreateApi(APIKeyAuthMixin, SimpleAPI):
             external_identifiers=[external_id],
         )
 
-        response = {"external_identifier": {"system": PARTNER_URL, "value": partner_id}}
+        response = {"external_identifier": {"system": self.secrets['PARTNER_URL_BASE'], "value": partner_id}}
 
         return [
             patient.create(),

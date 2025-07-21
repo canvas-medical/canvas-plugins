@@ -8,8 +8,6 @@ from canvas_sdk.utils import Http
 from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
-PARTNER_URL_BASE = "https://your-subdomain.example.com"
-
 class PatientSync(BaseHandler):
     """Handler for synchronizing patient data between systems."""
 
@@ -18,9 +16,14 @@ class PatientSync(BaseHandler):
     ]
 
     @property
+
+    def partner_url_base(self) -> str:
+        """Return the base URL for the external partner platform."""
+        return self.secrets["PARTNER_URL_BASE"]
+
     def partner_api_base_url(self) -> str:
         """Return the base URL for the external partner API."""
-        return self.secrets["PARTNER_API_BASE_URL"] or f"{PARTNER_URL_BASE}/api"
+        return self.secrets["PARTNER_API_BASE_URL"]
 
     @property
     def partner_request_headers(self) -> dict[str, str]:
@@ -36,10 +39,9 @@ class PatientSync(BaseHandler):
         subdomain = self.environment["CUSTOMER_IDENTIFIER"]
         canvas_url = f"https://{subdomain}.canvasmedical.com"
 
-        if canvas_url:
-            # This sets the canvas URL for the patient in the partner platform metadata
-            # Combined with the canvasPatientId, this allows the partner platform to link back to the patient in Canvas
-            metadata["canvasUrl"] = canvas_url
+        # This sets the canvas URL for the patient in the partner platform metadata
+        # Combined with the canvasPatientId, this allows the partner platform to link back to the patient in Canvas
+        metadata["canvasUrl"] = canvas_url
 
         return metadata
 
@@ -69,7 +71,7 @@ class PatientSync(BaseHandler):
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
         # by default assume we don't yet have a system patient ID
         # and that we need to update the patient in Canvas to add one
-        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, PARTNER_URL_BASE)
+        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, self.partner_url_base)
         update_patient_external_identifier = system_patient_id is None
 
         # Here we check if the patient already has an external ID in Canvas for the partner platform
@@ -121,7 +123,7 @@ class PatientSync(BaseHandler):
             # Queue up an effect to update the patient in Canvas and add the external identifier
             external_id = CreatePatientExternalIdentifier(
                 patient_id=canvas_patient.id,
-                system=PARTNER_URL_BASE,
+                system=self.partner_url_base,
                 value=str(system_patient_id)
             )
             return [external_id.create()]
