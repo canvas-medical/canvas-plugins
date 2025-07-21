@@ -70,6 +70,12 @@ class Staff(models.Model):
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
 
+    @property
+    def photo_url(self) -> str:
+        """Return the URL of the staff's first photo."""
+        photo = self.photos.first()
+        return photo.url if photo else "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
 
 class StaffContactPoint(models.Model):
     """StaffContactPoint."""
