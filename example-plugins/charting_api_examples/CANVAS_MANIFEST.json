@@ -13,6 +13,15 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+                "class": "charting_api_examples.routes.billing_line_items:BillingLineItemAPI",
+                "description": "Endpoints for interacting with billing line items on a note.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],

@@ -1,9 +1,13 @@
 import arrow
+from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.note.note import Note as NoteEffect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note
+from canvas_sdk.v1.data.note import Note, CurrentNoteStateEvent
+
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 class NoteAPI(APIKeyAuthMixin, SimpleAPI):
     PREFIX = "/notes"
@@ -146,18 +150,29 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
     """
     @api.get("/<id>/")
     def read(self) -> list[Response | Effect]:
-        return [
-            JSONResponse({"message": "Note read!"})
-        ]
+        note = get_note_from_path_params(self.request.path_params)
+        if not note:
+            return note_not_found_response()
 
-    """
-    POST /plugin-io/api/charting_api_examples/notes/<note-id>/billing_line_items
-    Headers: "Authorization <your value for 'simpleapi-api-key'>"
-    Body: {
-    }
-    """
-    @api.post("/<id>/billing_line_items")
-    def add_billing_line_item(self) -> list[Response | Effect]:
-        return [
-            JSONResponse({"message": "Billing line item create!"})
-        ]
+        status_code = HTTPStatus.OK
+        current_note_state = CurrentNoteStateEvent.objects.get(note=note).state
+        response = {
+            "note": {
+                "id": str(note.id),
+                "patient_id": str(note.patient.id),
+                "provider_id": str(note.provider.id),
+                "datetime_of_service": str(note.datetime_of_service),
+                "state": current_note_state,
+                "note_type": {
+                    "id": str(note.note_type_version.id),
+                    "name": note.note_type_version.name,
+                    "coding": {
+                        "display": note.note_type_version.display,
+                        "code": note.note_type_version.code,
+                        "system": note.note_type_version.system,
+                    },
+                },
+            },
+        }
+
+        return [JSONResponse(response, status_code=status_code)]
