@@ -45,31 +45,68 @@ class TestCreateTestProtocolAPI:
         api.request = Mock()
         api.request.json.return_value = {"patient_id": "12345"}
 
-        # Mock the apply methods
-        with patch.object(ProtocolCard, 'apply') as mock_card_apply, \
-             patch.object(AddTask, 'apply') as mock_task_apply:
-            
-            mock_card_apply.return_value = "mocked_card_effect"
-            mock_task_apply.return_value = "mocked_task_effect"
+        # Call the method without mocking apply methods to check actual task creation
+        responses = api.post()
 
-            # Call the method
-            responses = api.post()
+        # Verify responses
+        assert len(responses) == 3
+        
+        # Check that we have a ProtocolCard effect
+        protocol_card_effect = responses[0]
+        assert hasattr(protocol_card_effect, 'values')
+        
+        # Check that we have an AddTask effect
+        add_task_effect = responses[1] 
+        assert hasattr(add_task_effect, 'values')
+        
+        # Verify AddTask has correct labels
+        task_values = add_task_effect.values
+        assert 'labels' in task_values
+        assert task_values['labels'] == ["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"]
+        
+        # Verify other task properties
+        assert task_values['patient']['id'] == "12345"
+        assert task_values['title'] == "Please close out this protocol card."
+        assert task_values['status'] == "OPEN"
+        
+        # Check JSON response
+        assert isinstance(responses[2], JSONResponse)
+        assert responses[2].content == {"message": "Protocol card and task created"}
 
-            # Verify responses
-            assert len(responses) == 3
-            assert responses[0] == "mocked_card_effect"
-            assert responses[1] == "mocked_task_effect"
-            assert isinstance(responses[2], JSONResponse)
-            assert responses[2].content == {"message": "Protocol card and task created"}
+        # Verify time shift was called correctly
+        mock_now.shift.assert_called_once_with(days=5)
 
-            # Verify ProtocolCard was created with correct parameters
-            mock_card_apply.assert_called_once()
-            
-            # Verify AddTask was created with correct parameters  
-            mock_task_apply.assert_called_once()
+    @patch('arrow.utcnow') 
+    def test_task_labels_are_set_correctly(self, mock_utcnow):
+        """Test that AddTask instance has correct labels set."""
+        # Setup mock time
+        mock_now = Mock()
+        mock_shifted = Mock()
+        mock_shifted.datetime = "2025-01-26T12:00:00Z"
+        mock_now.shift.return_value = mock_shifted  
+        mock_utcnow.return_value = mock_now
 
-            # Verify time shift was called correctly
-            mock_now.shift.assert_called_once_with(days=5)
+        # Setup API instance
+        api = CreateTestProtocolAPI()
+        api.request = Mock()
+        api.request.json.return_value = {"patient_id": "test-patient"}
+
+        # Call the method
+        responses = api.post()
+
+        # Get the AddTask effect (second response)
+        add_task_effect = responses[1]
+        
+        # Check that it's an AddTask instance
+        assert isinstance(add_task_effect.effect, AddTask)
+        
+        # Verify the labels are set correctly on the AddTask instance
+        task = add_task_effect.effect
+        assert task.labels == ["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"]
+        
+        # Also verify in the values dict
+        task_values = task.values
+        assert task_values['labels'] == ["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"]
 
     def test_post_missing_patient_id(self):
         """Test POST with missing patient_id returns error."""

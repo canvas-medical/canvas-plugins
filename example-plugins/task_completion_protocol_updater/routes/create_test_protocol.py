@@ -38,4 +38,19 @@ class CreateTestProtocolAPI(SimpleAPIRoute):
             labels=["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"],
         )
 
-        return [card.apply(), add_task.apply(), JSONResponse({"message": "Protocol card and task created"})]
+        # Debug: Log the task values to help with debugging
+        task_values = add_task.values
+        debug_info = {
+            "task_labels": add_task.labels,
+            "task_values": task_values,
+            "labels_in_values": task_values.get('labels', 'MISSING')
+        }
+
+        return [
+            card.apply(), 
+            add_task.apply(), 
+            JSONResponse({
+                "message": "Protocol card and task created",
+                "debug": debug_info
+            })
+        ]
