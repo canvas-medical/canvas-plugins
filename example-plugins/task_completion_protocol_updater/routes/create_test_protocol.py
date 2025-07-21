@@ -31,12 +31,17 @@ class CreateTestProtocolAPI(SimpleAPIRoute):
             title="Annual exam task"
         )
 
+        # Create labels list explicitly
+        task_labels = ["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"]
+        
         add_task = AddTask(
             patient_id=patient_id,
             title="Please close out this protocol card.",
             due=arrow.utcnow().shift(days=5).datetime,
-            labels=["LINKED_PROTOCOL_CARD", "PROTOCOL_CARD_annual_exam_2025"],
         )
+        
+        # Set labels explicitly after instantiation
+        add_task.labels = task_labels
 
         # Debug: Log the task values to help with debugging
         task_values = add_task.values
