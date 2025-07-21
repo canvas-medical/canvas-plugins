@@ -18,6 +18,18 @@
                         "protocol_cards"
                     ]
                 }
+            },
+            {
+                "class": "task_completion_protocol_updater.routes.create_test_protocol:CreateTestProtocolAPI",
+                "description": "Creates a test protocol card and linked task for testing purposes",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": [
+                        "protocol_cards",
+                        "tasks"
+                    ]
+                }
             }
         ],
         "commands": [],
@@ -30,7 +42,7 @@
         "protocol-cards",
         "automation"
     ],
-    "secrets": [],
+    "secrets": ["api-key"],
     "license": "MIT",
     "readme": "Updates protocol card status when linked tasks are completed"
 }
