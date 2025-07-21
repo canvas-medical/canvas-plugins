@@ -14,7 +14,7 @@ class Protocol(BaseProtocol):
     2. "PROTOCOL_CARD_{key}" label containing the exact protocol key to close
     
     When both labels are found, updates the protocol card with the specified key
-    to status=SATISFIED for the task's patient.
+    to status=NOT_RELEVANT for the task's patient, marking it as inactive.
     """
 
     RESPONDS_TO = EventType.Name(EventType.TASK_COMPLETED)
@@ -62,14 +62,16 @@ class Protocol(BaseProtocol):
             return []
 
         log.info(
-            f"Updating protocol card with key '{protocol_key}' to SATISFIED for patient {patient_id}"
+            f"Updating protocol card with key '{protocol_key}' to NOT_RELEVANT for patient {patient_id}"
         )
 
         # Create and apply the protocol card update
+        # Using NOT_RELEVANT status to ensure the completed protocol card appears as inactive
         protocol_card = ProtocolCard(
             patient_id=patient_id,
             key=protocol_key,
-            status=ProtocolCard.Status.SATISFIED,
+            status=ProtocolCard.Status.NOT_RELEVANT,
+            title="Annual exam task"  # Preserve the original title
         )
 
         return [protocol_card.apply()]

@@ -8,7 +8,7 @@ When a task is marked as complete, this plugin:
 
 1. Checks if the task has a `LINKED_PROTOCOL_CARD` label
 2. Extracts the protocol key from any `PROTOCOL_CARD_{key}` label
-3. Updates the corresponding protocol card status to `SATISFIED`
+3. Updates the corresponding protocol card status to `NOT_RELEVANT` (marking it as inactive)
 
 ## Usage
 
@@ -21,7 +21,7 @@ For example:
 - `LINKED_PROTOCOL_CARD`
 - `PROTOCOL_CARD_annual_wellness_visit`
 
-When this task is completed, the protocol card with key `annual_wellness_visit` will be updated to `SATISFIED` status.
+When this task is completed, the protocol card with key `annual_wellness_visit` will be updated to `NOT_RELEVANT` status, marking it as inactive.
 
 ## Testing Endpoint
 
