@@ -96,7 +96,10 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": str(BASE_DIR / "db.sqlite3"),
+            "NAME": f"file:{str(BASE_DIR / 'db.sqlite3')}?mode=ro",
+            "OPTIONS": {
+                "uri": True,
+            },
         }
     }
 
