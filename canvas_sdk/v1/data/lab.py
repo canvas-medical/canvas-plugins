@@ -7,6 +7,8 @@ from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
+    Model,
     TimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySet,
 )
@@ -30,37 +32,34 @@ class TransmissionType(models.TextChoices):
     MANUAL = "M", "manual"
 
 
-class LabReport(models.Model):
+class LabReport(IdentifiableModel):
     """A class representing a lab report."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_labreport_001"
 
     objects = cast(LabReportQuerySet, LabReportManager())
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    review_mode = models.CharField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    review_mode = models.CharField(max_length=2)
     junked = models.BooleanField()
     requires_signature = models.BooleanField()
     assigned_date = models.DateTimeField()
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_reports", null=True
     )
-    transmission_type = models.CharField(choices=TransmissionType)
+    transmission_type = models.CharField(choices=TransmissionType.choices, max_length=10)
     for_test_only = models.BooleanField()
-    external_id = models.CharField()
+    external_id = models.CharField(max_length=40)
     version = models.IntegerField()
-    requisition_number = models.CharField()
+    requisition_number = models.CharField(max_length=40)
     review = models.ForeignKey(
         "LabReview", on_delete=models.DO_NOTHING, related_name="reports", null=True
     )
     original_date = models.DateTimeField()
     date_performed = models.DateTimeField()
-    custom_document_name = models.CharField()
+    custom_document_name = models.CharField(max_length=500)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
@@ -82,19 +81,16 @@ class LabReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQueryS
 LabReviewManager = BaseModelManager.from_queryset(LabReviewQuerySet)
 
 
-class LabReview(models.Model):
+class LabReview(IdentifiableModel):
     """A class representing a lab review."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_labreview_001"
 
     objects = cast(LabReviewQuerySet, LabReviewManager())
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
@@ -106,12 +102,12 @@ class LabReview(models.Model):
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
     internal_comment = models.TextField()
-    message_to_patient = models.CharField()
-    status = models.CharField()
+    message_to_patient = models.CharField(max_length=2048)
+    status = models.CharField(max_length=50)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_reviews", null=True
     )
-    patient_communication_method = models.CharField()
+    patient_communication_method = models.CharField(max_length=30)
 
 
 class LabValueTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
@@ -129,51 +125,46 @@ class LabValueQuerySet(ValueSetLookupQuerySet, LabValueTimeframeLookupQuerySetMi
     pass
 
 
-class LabValue(models.Model):
+class LabValue(IdentifiableModel):
     """A class representing a lab value."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_labvalue_001"
 
     objects = LabValueQuerySet.as_manager()
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     report = models.ForeignKey(
         "LabReport", on_delete=models.DO_NOTHING, related_name="values", null=True
     )
     value = models.TextField()
-    units = models.CharField()
-    abnormal_flag = models.CharField()
-    reference_range = models.CharField()
-    low_threshold = models.CharField()
-    high_threshold = models.CharField()
+    units = models.CharField(max_length=30)
+    abnormal_flag = models.CharField(max_length=128)
+    reference_range = models.CharField(max_length=128)
+    low_threshold = models.CharField(max_length=30)
+    high_threshold = models.CharField(max_length=30)
     comment = models.TextField()
-    observation_status = models.CharField()
+    observation_status = models.CharField(max_length=24)
 
 
-class LabValueCoding(models.Model):
+class LabValueCoding(Model):
     """A class representing a lab value coding."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_labvaluecoding_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     value = models.ForeignKey(
         LabValue, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
-    code = models.CharField()
-    name = models.CharField()
-    system = models.CharField()
+    code = models.CharField(max_length=128)
+    name = models.CharField(max_length=256)
+    system = models.CharField(max_length=128)
 
 
-class LabOrder(models.Model):
+class LabOrder(IdentifiableModel):
     """A class representing a lab order."""
 
     class SpecimenCollectionType(models.TextChoices):
@@ -199,13 +190,10 @@ class LabOrder(models.Model):
         MANUAL_PROCESSING_STATUS_FLAGGED = "FLAGGED", "Flagged"
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_laborder_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
@@ -219,28 +207,34 @@ class LabOrder(models.Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
     )
-    ontology_lab_partner = models.CharField()
+    ontology_lab_partner = models.CharField(max_length=128)
     # TODO - uncomment when the Note model is finished
     # note = models.ForeignKey("Note", on_delete=models.DO_NOTHING, null=True)
-    comment = models.CharField()
-    requisition_number = models.CharField()
+    comment = models.CharField(max_length=128)
+    requisition_number = models.CharField(max_length=32)
     is_patient_bill = models.BooleanField(null=True)
     date_ordered = models.DateTimeField()
     fasting_status = models.BooleanField(null=True)
-    specimen_collection_type = models.CharField(choices=SpecimenCollectionType, null=True)
-    transmission_type = models.CharField(choices=TransmissionType, null=True)
-    courtesy_copy_type = models.CharField(choices=CourtesyCopyType, null=True)
-    courtesy_copy_number = models.CharField()
-    courtesy_copy_text = models.CharField()
+    specimen_collection_type = models.CharField(
+        choices=SpecimenCollectionType.choices, null=True, max_length=10
+    )
+    transmission_type = models.CharField(choices=TransmissionType.choices, null=True, max_length=10)
+    courtesy_copy_type = models.CharField(
+        choices=CourtesyCopyType.choices, null=True, max_length=10
+    )
+    courtesy_copy_number = models.CharField(max_length=32)
+    courtesy_copy_text = models.CharField(max_length=64)
     ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
     parent_order = models.ForeignKey("LabOrder", on_delete=models.DO_NOTHING, null=True)
-    healthgorilla_id = models.CharField()
-    manual_processing_status = models.CharField(choices=ManualProcessingStatus)
-    manual_processing_comment = models.CharField()
+    healthgorilla_id = models.CharField(max_length=40)
+    manual_processing_status = models.CharField(
+        choices=ManualProcessingStatus.choices, null=True, max_length=16
+    )
+    manual_processing_comment = models.TextField(null=True)
     labcorp_abn_url = models.URLField()
 
 
-class LabOrderReason(models.Model):
+class LabOrderReason(Model):
     """A class representing a lab order reason."""
 
     class LabReasonMode(models.TextChoices):
@@ -252,12 +246,10 @@ class LabOrderReason(models.Model):
         UNKNOWN = "UNK", "unknown"
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_laborderreason_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
@@ -274,16 +266,14 @@ class LabOrderReason(models.Model):
     mode = models.CharField(max_length=30, choices=LabReasonMode)
 
 
-class LabOrderReasonCondition(models.Model):
+class LabOrderReasonCondition(Model):
     """A class representing a lab order reason's condition."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_laborderreasoncondition_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     reason = models.ForeignKey(
         LabOrderReason, on_delete=models.DO_NOTHING, related_name="reason_conditions", null=True
     )
@@ -295,7 +285,7 @@ class LabOrderReasonCondition(models.Model):
     )
 
 
-class LabTest(models.Model):
+class LabTest(IdentifiableModel):
     """A class representing a lab test."""
 
     class LabTestOrderStatus(models.TextChoices):
@@ -312,23 +302,20 @@ class LabTest(models.Model):
         INACTIVE = "IN", "inactive"
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_labtest_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     ontology_test_name = models.CharField(max_length=512, blank=True, default="")
     ontology_test_code = models.CharField(max_length=512, blank=True, default="")
-    status = models.CharField(max_length=30, choices=LabTestOrderStatus)
+    status = models.CharField(max_length=30, choices=LabTestOrderStatus.choices)
     report = models.ForeignKey(
         LabReport, on_delete=models.DO_NOTHING, related_name="tests", null=True
     )
     aoe_code = models.CharField(max_length=10, default="")
     procedure_class = models.CharField(max_length=10, default="")
-    specimen_type = models.CharField()
-    specimen_source_code = models.CharField()
-    specimen_source_description = models.CharField()
-    specimen_source_coding_system = models.CharField()
+    specimen_type = models.CharField(max_length=26)
+    specimen_source_code = models.CharField(max_length=5)
+    specimen_source_description = models.CharField(max_length=255)
+    specimen_source_coding_system = models.CharField(max_length=5)
     order = models.ForeignKey(
         LabOrder, on_delete=models.DO_NOTHING, related_name="tests", null=True
     )
@@ -337,17 +324,14 @@ class LabTest(models.Model):
         return f"{self.ontology_test_name}: f{self.ontology_test_code}"
 
 
-class LabPartner(models.Model):
+class LabPartner(IdentifiableModel):
     """A class representing a lab partner."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_lab_partner_001"
 
     objects: models.Manager["LabPartner"]
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=256)
     active = models.BooleanField()
     electronic_ordering_enabled = models.BooleanField()
@@ -355,17 +339,14 @@ class LabPartner(models.Model):
     default_lab_account_number = models.CharField(max_length=256)
 
 
-class LabPartnerTest(models.Model):
+class LabPartnerTest(IdentifiableModel):
     """A class representing a lab partner's test."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_lab_partner_test_001"
 
     objects: models.Manager["LabPartnerTest"]
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     lab_partner = models.ForeignKey(
         "LabPartner", on_delete=models.DO_NOTHING, related_name="available_tests"
     )
