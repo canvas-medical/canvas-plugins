@@ -347,7 +347,7 @@ class Sandbox:
 
         def visit_AnnAssign(self, node: AnnAssign) -> AnnAssign:
             """Allow type annotations."""
-            return node
+            return self.node_contents_visit(node)
 
         def visit_Match(self, node: ast.Match) -> ast.Match:
             """Allow `match`."""

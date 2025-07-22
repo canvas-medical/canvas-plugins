@@ -172,6 +172,21 @@ def test_support_match_tuple() -> None:
     sandbox.execute()
 
 
+def test_support_type_annotations() -> None:
+    """Test that type annotations work."""
+    sandbox = _sandbox_from_code(
+        """
+            point: int = 5
+            name: str = "name"
+
+            assert point == 5
+            assert name == "name"
+        """
+    )
+
+    sandbox.execute()
+
+
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
