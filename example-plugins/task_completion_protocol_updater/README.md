@@ -1,6 +1,6 @@
 # Task Completion Protocol Updater
 
-This plugin automatically updates ProtocolCard status when affiliated tasks are completed.
+This plugin automatically updates ProtocolCard status when an affiliated task is completed.
 
 ## Overview
 
@@ -31,7 +31,7 @@ This plugin includes a POST endpoint for creating test protocol cards and linked
 
 **Endpoint**: `POST /plugin-io/api/task_completion_protocol_updater/create-test-protocol`
 
-**Headers**: 
+**Headers**:
 ```
 Authorization: <your api-key value>
 Content-Type: application/json
@@ -40,7 +40,9 @@ Content-Type: application/json
 **Body**:
 ```json
 {
-  "patient_id": "123456"
+  "patient_id": "123456",
+  "protocol_card_key": "annual_exam_2025",
+  "title": "Annual Exam 2025"
 }
 ```
 
@@ -52,8 +54,8 @@ Content-Type: application/json
 ```
 
 This endpoint will:
-1. Create a protocol card with key `annual_exam_2025`, status `DUE`, and title "Annual exam task"
-2. Create a task titled "Please close out this protocol card" with labels `LINKED_PROTOCOL_CARD` and `PROTOCOL_CARD_annual_exam_2025`
+1. Create a protocol card for the specified patient with specified key, status `DUE`, and specified title
+2. Create a task titled "Please close out this protocol card" with labels `LINKED_PROTOCOL_CARD` and `PROTOCOL_CARD_{key}`
 3. Set the task due date to 5 days from now
 
 ## Requirements
