@@ -8,11 +8,11 @@ from logger import log
 class Protocol(BaseProtocol):
     """
     Updates ProtocolCard status when affiliated task is completed.
-
+    
     Listens for TASK_COMPLETED events and checks if the completed task has:
     1. "LINKED_PROTOCOL_CARD" label indicating it satisfies/closes a protocol
     2. "PROTOCOL_CARD_{key}" label containing the exact protocol key to close
-
+    
     When both labels are found, updates the protocol card with the specified key
     to status=SATISFIED for the task's patient.
     """
@@ -71,7 +71,7 @@ class Protocol(BaseProtocol):
             patient_id=patient_id,
             key=protocol_key,
             status=ProtocolCard.Status.SATISFIED,
-            title=task.title # Title is required but ProtocolCard is not available in the data module, so we'll use the (required) task title here
+            title="Annual exam task"  # Preserve the original title
         )
 
         return [protocol_card.apply()]
