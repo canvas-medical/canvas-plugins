@@ -13,25 +13,29 @@ class PatientPortalHandler(BaseHandler):
 
     RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__WIDGET_CONFIGURATION)
 
-    BACKGROUND_COLOR = "#17634d"  # Default background color if not set in secrets
+    # Default background and title color for the portal's widgets if not provided in secrets
+    DEFAULT_BACKGROUND_COLOR = "#17634d"
+
+    # Default emergency contact number if not provided in secrets
+    DEFAULT_EMERGENCY_CONTACT = "1-888-555-5555"
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         return [
-            self._create_header_widget(),
-            self._create_care_team_widget()
+            self.header_widget,
+            self.care_team_widget,
+            self.footer_widget,
         ]
 
-    def _create_header_widget(self) -> Effect:
+    @property
+    def header_widget(self) -> Effect:
         """Constructs the header widget for the patient portal."""
         # Get the patient needed fields to generate the preferred full name
         patient = Patient.objects.only("first_name", "last_name", "suffix", "nickname").get(id=self.target)
-        # Get the background color from secrets, defaulting to a specific color if not set
-        background_color = self.secrets.get("BACKGROUND_COLOR") or self.BACKGROUND_COLOR
 
         payload = {
             "preferred_full_name": patient.preferred_full_name,
-            "background_color": background_color,
+            "background_color": self.background_color,
         }
 
         header_widget = PortalWidget(
@@ -42,7 +46,8 @@ class PatientPortalHandler(BaseHandler):
 
         return header_widget.apply()
 
-    def _create_care_team_widget(self) -> Effect:
+    @property
+    def care_team_widget(self) -> Effect:
         """Constructs the care team widget for the patient portal."""
         patient_care_team = CareTeamMembership.objects.values(
             "staff__first_name",
@@ -55,9 +60,6 @@ class PatientPortalHandler(BaseHandler):
             patient__id=self.target,
             status=CareTeamMembershipStatus.ACTIVE,
         )
-
-        # Get the background color from secrets, defaulting to a specific color if not set
-        title_color = self.secrets.get("BACKGROUND_COLOR") or self.BACKGROUND_COLOR
 
         care_team = []
         for member in patient_care_team:
@@ -80,7 +82,7 @@ class PatientPortalHandler(BaseHandler):
 
         payload = {
             "care_team": care_team,
-            "title_color": title_color,
+            "title_color": self.background_color,
         }
 
         care_team_widget = PortalWidget(
@@ -90,3 +92,25 @@ class PatientPortalHandler(BaseHandler):
         )
 
         return care_team_widget.apply()
+
+    @property
+    def footer_widget(self) -> Effect:
+        """This method gets called when an event of the type RESPONDS_TO is fired."""
+        return PortalWidget(
+            content=render_to_string("templates/footer_widget.html", {
+                "background_color": self.background_color,
+                "emergency_contact": self.emergency_contact,
+            }),
+            size=PortalWidget.Size.EXPANDED,
+            priority=12,
+        ).apply()
+
+    @property
+    def background_color(self) -> str:
+        """Get the background color from secrets, defaulting to a specific color if not set."""
+        return self.secrets.get("BACKGROUND_COLOR") or self.DEFAULT_BACKGROUND_COLOR
+
+    @property
+    def emergency_contact(self) -> str:
+        """Get the emergency contact from secrets, defaulting to a specific contact if not set."""
+        return self.secrets.get("EMERGENCY_CONTACT") or self.DEFAULT_EMERGENCY_CONTACT
