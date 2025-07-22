@@ -1,13 +1,19 @@
 import json
+import logging
 from typing import Any
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
+from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
+from canvas_sdk.v1.data import Appointment as DataAppointment
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
+
+logger = logging.getLogger(__name__)
 
 
 class ScheduleEvent(AppointmentABC):
@@ -127,6 +133,7 @@ class Appointment(AppointmentABC):
         appointment_note_type_id (UUID | str | None): The ID of the appointment note type.
         meeting_link (str | None): The meeting link for the appointment, if any.
         patient_id (str | None): The ID of the patient.
+        labels (list[str] | None): A list of label names to apply to the appointment.
     """
 
     class Meta:
@@ -135,6 +142,7 @@ class Appointment(AppointmentABC):
     appointment_note_type_id: UUID | str | None = None
     meeting_link: str | None = None
     patient_id: str | None = None
+    labels: list[str] | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -230,4 +238,95 @@ class Appointment(AppointmentABC):
         )
 
 
-__exports__ = ("ScheduleEvent", "Appointment")
+class AddAppointmentLabel(_BaseEffect):
+    """
+    Effect to add one or more labels to an appointment.
+
+    Attributes:
+        appointment_id (UUID | str): The ID of the appointment to add labels to.
+        labels (list[str]): A list of label names to add.
+    """
+
+    class Meta:
+        effect_type = "ADD_APPOINTMENT_LABEL"
+        apply_required_fields = ("appointment_id", "labels")
+
+    appointment_id: str | None = None
+    labels: list[str] | None = None
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Validate that the appointment does not exceed the 3-label limit."""
+        errors = super()._get_error_details(method)
+        try:
+            appointment = DataAppointment.objects.get(id=self.appointment_id)
+            existing_label_count = appointment.labels.count()
+            if existing_label_count + len(self.labels) > 3:
+                errors.append(
+                    self._create_error_detail(
+                        "value_error",
+                        "Limit reached: Only 3 appointment labels allowed.",
+                        None,
+                    )
+                )
+        except DataAppointment.DoesNotExist:
+            errors.append(
+                self._create_error_detail(
+                    "value_error",
+                    f"Appointment with ID {self.appointment_id} not found.",
+                    None,
+                )
+            )
+        return errors
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The BannerAlert's values."""
+        return {
+            "appointment_id": self.appointment_id,
+            "labels": self.labels,
+        }
+
+    @property
+    def effect_payload(self) -> dict[str, Any]:
+        """The payload of the effect."""
+        return {
+            "data": self.values,
+        }
+
+class RemoveAppointmentLabel(TrackableFieldsModel, _BaseEffect):
+    """
+    Effect to remove one or more labels from an appointment.
+
+    Attributes:
+        appointment_id (UUID | str): The ID of the appointment to remove labels from.
+        labels (list[str]): A list of label names to remove.
+    """
+
+    class Meta:
+        effect_type = "REMOVE_APPOINTMENT_LABEL"
+        apply_required_fields = ("appointment_id", "labels")
+
+    appointment_id: UUID | str
+    labels: list[str]
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The BannerAlert's values."""
+        return {
+            "appointment_id": self.appointment_id,
+            "labels": self.labels,
+        }
+
+    @property
+    def effect_payload(self) -> dict[str, Any]:
+        """The payload of the effect."""
+        return {
+            "data": self.values,
+        }
+
+__exports__ = (
+    "ScheduleEvent",
+    "Appointment",
+    "AddAppointmentLabel",
+    "RemoveAppointmentLabel",
+)

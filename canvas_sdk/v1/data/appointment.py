@@ -78,8 +78,42 @@ class AppointmentExternalIdentifier(models.Model):
     )
 
 
+class AppointmentLabel(models.Model):
+    """AppointmentLabel."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_userselectedappointmentlabel_001"
+
+    id = models.UUIDField()
+    dbid = models.BigIntegerField(primary_key=True)
+    appointments = models.ManyToManyField(
+        Appointment, related_name="labels", through="AppointmentAppointmentLabel"
+    )
+    position = models.IntegerField()
+    color = models.CharField(max_length=50)
+    name = models.CharField(max_length=255)
+    active = models.BooleanField()
+
+
+class AppointmentAppointmentLabel(models.Model):
+    """M2M for Appointment -> AppointmentLabels."""
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_appointment_labels_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    userselectedappointmentlabel = models.ForeignKey(
+        AppointmentLabel, on_delete=models.DO_NOTHING, null=True
+    )
+    appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, null=True)
+
+
 __exports__ = (
     "AppointmentProgressStatus",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
+    "AppointmentAppointmentLabel",
 )
