@@ -192,3 +192,44 @@ def test_enter_in_error_raises_error_when_required_fields_not_set() -> None:
 
     with pytest.raises(ValueError, match="command_uuid"):
         cmd.enter_in_error()
+
+
+def test_chaining_originate_and_commit_with_user_set_uuid() -> None:
+    """Test that originate() and commit() can be chained when command_uuid is set manually."""
+    # Create command with note_uuid required for originate
+    cmd = DummyCommand(str_field="test")
+    cmd.note_uuid = "note-123"
+    
+    # Set command_uuid manually for chaining
+    test_uuid = str(uuid.uuid4())
+    cmd.command_uuid = test_uuid
+    
+    # Both methods should work without raising errors
+    originate_effect = cmd.originate()
+    commit_effect = cmd.commit()
+    
+    # Verify originate effect
+    assert originate_effect.type == EffectType.ORIGINATE_PLAN_COMMAND
+    originate_payload = json.loads(originate_effect.payload)
+    assert originate_payload["command"] == test_uuid
+    assert originate_payload["note"] == "note-123"
+    
+    # Verify commit effect
+    assert commit_effect.type == EffectType.COMMIT_PLAN_COMMAND
+    commit_payload = json.loads(commit_effect.payload)
+    assert commit_payload["command"] == test_uuid
+
+
+def test_chaining_originate_and_commit_without_command_uuid_fails() -> None:
+    """Test that commit() fails when command_uuid is not set, even if originate() would work."""
+    cmd = DummyCommand(str_field="test")
+    cmd.note_uuid = "note-123"
+    # Don't set command_uuid
+    
+    # originate() should work
+    originate_effect = cmd.originate()
+    assert originate_effect is not None
+    
+    # But commit() should fail
+    with pytest.raises(ValueError, match="command_uuid"):
+        cmd.commit()

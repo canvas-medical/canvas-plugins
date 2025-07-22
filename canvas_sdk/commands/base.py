@@ -13,6 +13,40 @@ from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(TrackableFieldsModel):
+    """Base class for Canvas SDK commands.
+    
+    Commands represent clinical actions that can be originated, edited, committed,
+    and deleted within a note. This base class provides the core functionality
+    for all command types.
+    
+    Chaining Methods with User-Set UUIDs:
+        A common pattern is to originate and commit a command in a single plugin action.
+        Since originate() operates asynchronously and doesn't return the command_uuid,
+        you must set the command_uuid manually to enable chaining.
+        
+        Example:
+            from uuid import uuid4
+            from canvas_sdk.commands import DiagnoseCommand
+            
+            # Create the command
+            command = DiagnoseCommand(
+                note_uuid="note-123",
+                icd10_code="E11.9"
+            )
+            
+            # Set UUID manually for chaining
+            command.command_uuid = str(uuid4())
+            
+            # Chain originate and commit
+            effects = [
+                command.originate(),
+                command.commit()
+            ]
+            
+        This pattern is essential when you need to both create and finalize a command
+        within the same plugin action, such as in API endpoints that should complete
+        the full command lifecycle.
+    """
     class Meta:
         key = ""
         originate_required_fields = ("note_uuid",)
@@ -102,7 +136,42 @@ class _BaseCommand(TrackableFieldsModel):
         }
 
     def originate(self, line_number: int = -1) -> Effect:
-        """Originate a new command in the note body."""
+        """Originate a new command in the note body.
+        
+        Args:
+            line_number: The line number where the command should be inserted in the note. 
+                        Defaults to -1 (append to end).
+                        
+        Returns:
+            Effect: An originate effect that can be applied to create the command.
+            
+        Note:
+            This method requires note_uuid to be set on the command instance.
+            
+        Chaining with commit():
+            To originate and commit a command in a single plugin action, you must set 
+            the command_uuid manually before calling both methods, since originate() 
+            operates asynchronously and doesn't return the generated command_uuid.
+            
+            Example:
+                from uuid import uuid4
+                from canvas_sdk.commands import DiagnoseCommand
+                
+                # Create the command with required data
+                diagnose_command = DiagnoseCommand(
+                    note_uuid="your-note-uuid",
+                    icd10_code="E11.9"
+                )
+                
+                # Set a UUID manually to enable chaining
+                diagnose_command.command_uuid = str(uuid4())
+                
+                # Now you can chain originate and commit effects
+                effects = [
+                    diagnose_command.originate(),
+                    diagnose_command.commit()
+                ]
+        """
         self._validate_before_effect("originate")
         return Effect(
             type=f"ORIGINATE_{self.constantized_key()}_COMMAND",
@@ -138,7 +207,19 @@ class _BaseCommand(TrackableFieldsModel):
         )
 
     def commit(self) -> Effect:
-        """Commit the command."""
+        """Commit the command.
+        
+        Returns:
+            Effect: A commit effect that finalizes the command.
+            
+        Note:
+            This method requires command_uuid to be set on the command instance.
+            
+        Chaining with originate():
+            When chaining with originate() in a single plugin action, you must set
+            the command_uuid manually before calling both methods. See the originate()
+            method documentation for a complete example.
+        """
         self._validate_before_effect("commit")
         return Effect(
             type=f"COMMIT_{self.constantized_key()}_COMMAND",
