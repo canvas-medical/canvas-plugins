@@ -44,7 +44,7 @@ dependencies = [
   "redis>=5.0.4,<6",
   "requests",
   "restrictedpython>=8.0",
-  "sentry-sdk>=2.33.1",
+  "sentry-sdk>=2.33.2",
   "statsd>=4.0.1,<5",
   "typer",
   "typing-extensions>=4.8,<4.13",
