@@ -61,6 +61,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TASK_UPDATED: _ClassVar[EventType]
     VITAL_SIGN_CREATED: _ClassVar[EventType]
     VITAL_SIGN_UPDATED: _ClassVar[EventType]
+    APPOINTMENT_LABEL_ADDED: _ClassVar[EventType]
+    APPOINTMENT_LABEL_REMOVED: _ClassVar[EventType]
     CRON: _ClassVar[EventType]
     CARE_TEAM_MEMBERSHIP_CREATED: _ClassVar[EventType]
     CARE_TEAM_MEMBERSHIP_UPDATED: _ClassVar[EventType]
@@ -894,6 +896,8 @@ TASK_LABELS_ADJUSTED: EventType
 TASK_UPDATED: EventType
 VITAL_SIGN_CREATED: EventType
 VITAL_SIGN_UPDATED: EventType
+APPOINTMENT_LABEL_ADDED: EventType
+APPOINTMENT_LABEL_REMOVED: EventType
 CRON: EventType
 CARE_TEAM_MEMBERSHIP_CREATED: EventType
 CARE_TEAM_MEMBERSHIP_UPDATED: EventType
@@ -1695,3 +1699,19 @@ class EventResponse(_message.Message):
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
     def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
+
+class AppointmentLabelAddedEvent(_message.Message):
+    __slots__ = ("appointment_id", "label")
+    APPOINTMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    appointment_id: str
+    label: str
+    def __init__(self, appointment_id: _Optional[str] = ..., label: _Optional[str] = ...) -> None: ...
+
+class AppointmentLabelRemovedEvent(_message.Message):
+    __slots__ = ("appointment_id", "label")
+    APPOINTMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    appointment_id: str
+    label: str
+    def __init__(self, appointment_id: _Optional[str] = ..., label: _Optional[str] = ...) -> None: ...
