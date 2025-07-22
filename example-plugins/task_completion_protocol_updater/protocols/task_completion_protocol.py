@@ -7,9 +7,9 @@ from logger import log
 
 class Protocol(BaseProtocol):
     """
-    Updates ProtocolCard status when affiliated task is completed/closed.
+    Updates ProtocolCard status when affiliated task is completed.
     
-    Listens for TASK_CLOSED events and checks if the completed task has:
+    Listens for TASK_COMPLETED events and checks if the completed task has:
     1. "LINKED_PROTOCOL_CARD" label indicating it satisfies/closes a protocol
     2. "PROTOCOL_CARD_{key}" label containing the exact protocol key to close
     
@@ -17,12 +17,12 @@ class Protocol(BaseProtocol):
     to status=SATISFIED for the task's patient.
     """
 
-    RESPONDS_TO = EventType.Name(EventType.TASK_CLOSED)
+    RESPONDS_TO = EventType.Name(EventType.TASK_COMPLETED)
 
     def compute(self) -> list[Effect]:
         """Process task completion and update linked protocol cards."""
         # Get the task information from the event target
-        task = self.target.instance
+        task = self.event.target.instance
         if not task:
             log.warning("No task instance found in event")
             return []
