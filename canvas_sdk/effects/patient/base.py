@@ -47,6 +47,21 @@ class PatientExternalIdentifier:
         }
 
 
+@dataclass
+class PatientPreferredPharmacy:
+    """A class representing a preferred pharmacy."""
+
+    ncpdp_id: str
+    default: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the preferred pharmacy to a dictionary."""
+        return {
+            "ncpdp_id": self.ncpdp_id,
+            "default": self.default,
+        }
+
+
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
@@ -69,6 +84,7 @@ class Patient(TrackableFieldsModel):
     previous_names: list[str] | None = None
     contact_points: list[PatientContactPoint] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
+    preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -93,6 +109,9 @@ class Patient(TrackableFieldsModel):
             else None,
             "external_identifiers": [ids.to_dict() for ids in self.external_identifiers]
             if self.external_identifiers
+            else None,
+            "preferred_pharmacies": [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
+            if self.preferred_pharmacies
             else None,
         }
 
@@ -139,4 +158,9 @@ class Patient(TrackableFieldsModel):
         )
 
 
-__exports__ = ("Patient", "PatientContactPoint", "PatientExternalIdentifier")
+__exports__ = (
+    "Patient",
+    "PatientContactPoint",
+    "PatientExternalIdentifier",
+    "PatientPreferredPharmacy",
+)

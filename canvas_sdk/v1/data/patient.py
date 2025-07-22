@@ -159,6 +159,20 @@ class Patient(Model):
         return pharmacy_setting
 
     @property
+    def preferred_pharmacies(self) -> list[dict[str, Any]] | None:
+        """
+        Returns the pharmacy patient setting, a list of dicts of the patient's preferred pharmacies.
+        If the pharmacy setting is currently a dict, make it the default and a list.
+        """
+        pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or []
+        if isinstance(pharmacy_setting, dict):
+            return [{**pharmacy_setting, "default": True}]
+        elif isinstance(pharmacy_setting, list):
+            return pharmacy_setting
+
+        return None
+
+    @property
     def preferred_full_name(self) -> str:
         """Returns the patient's preferred full name, taking nickname into consideration."""
         return " ".join(n for n in (self.preferred_first_name, self.last_name, self.suffix) if n)
