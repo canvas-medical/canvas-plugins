@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import Model
+
 
 class InvoiceRecipients(models.TextChoices):
     """Choices for invoice recipients."""
@@ -31,14 +33,12 @@ class InvoiceSentMeans(models.TextChoices):
     EMAIL = "e-mail", "E-mail"
 
 
-class Invoice(models.Model):
+class Invoice(Model):
     """Represents a full invoice for a patient."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_invoicefull_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.PROTECT, related_name="generated_invoices"
     )

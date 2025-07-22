@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
+
 
 class TransmissionChannel(models.TextChoices):
     """Transmission channel."""
@@ -10,17 +12,14 @@ class TransmissionChannel(models.TextChoices):
     NOOP = "noop", "No-op"
 
 
-class Message(models.Model):
+class Message(IdentifiableModel):
     """Message."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_message_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     content = models.TextField()
     sender = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="sent_messages", null=True
@@ -34,15 +33,12 @@ class Message(models.Model):
     read = models.BooleanField()
 
 
-class MessageAttachment(models.Model):
+class MessageAttachment(IdentifiableModel):
     """Message attachment."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_messageattachment_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     file = models.TextField()
     content_type = models.CharField(max_length=255)
     message = models.ForeignKey(
@@ -50,24 +46,21 @@ class MessageAttachment(models.Model):
     )
 
 
-class MessageTransmission(models.Model):
+class MessageTransmission(IdentifiableModel):
     """Message Transmission."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_messagetransmission_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     message = models.ForeignKey(
         "v1.Message", on_delete=models.DO_NOTHING, related_name="transmissions", null=True
     )
     delivered = models.BooleanField()
     failed = models.BooleanField()
 
-    contact_point_system = models.CharField(choices=TransmissionChannel.choices)
+    contact_point_system = models.CharField(choices=TransmissionChannel.choices, max_length=20)
     contact_point_value = models.CharField(max_length=255)
 
     comment = models.TextField()
