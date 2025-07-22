@@ -8,6 +8,7 @@ dev = [
   "httpretty>=1.1.4",
   "mypy",
   "pre-commit",
+  "psutil>=7.0.0",
   "pytest",
   "pytest-django",
   "pytest-freezegun>=0.4.2",
@@ -43,7 +44,7 @@ dependencies = [
   "redis>=5.0.4,<6",
   "requests",
   "restrictedpython>=8.0",
-  "sentry-sdk>=2.25.1",
+  "sentry-sdk>=2.33.2",
   "statsd>=4.0.1,<5",
   "typer",
   "typing-extensions>=4.8,<4.13",
@@ -63,6 +64,7 @@ canvas = "canvas_cli.main:app"
 django_settings_module = "settings"
 
 [tool.hatch.build.targets.sdist]
+artifacts = ["plugin_runner/allowed-module-imports.json"]
 exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",
@@ -75,6 +77,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
+artifacts = ["plugin_runner/allowed-module-imports.json"]
 exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
 include = [
   "canvas_cli",

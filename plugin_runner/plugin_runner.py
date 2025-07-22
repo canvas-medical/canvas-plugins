@@ -53,11 +53,20 @@ from settings import (
 )
 
 if SENTRY_DSN:
+    # Lazy import for faster reload time in dev
+    from sentry_sdk.integrations.executing import ExecutingIntegration
+    from sentry_sdk.integrations.pure_eval import PureEvalIntegration
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=ENV,
+        integrations=[
+            ExecutingIntegration(),
+            PureEvalIntegration(),
+        ],
         release=os.getenv("CANVAS_PLUGINS_REPO_VERSION", "unknown"),
         send_default_pii=True,
+        spotlight=False,
         traces_sample_rate=0.0,
         profiles_sample_rate=0.0,
     )
