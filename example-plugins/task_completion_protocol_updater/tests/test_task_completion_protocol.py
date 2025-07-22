@@ -13,15 +13,15 @@ class TestTaskCompletionProtocol:
     def setup_method(self) -> None:
         """Set up test fixtures."""
         self.event_request = EventRequest(
-            type=EventType.TASK_COMPLETED,
+            type=EventType.TASK_CLOSED,
             target="task-uuid-123",
             target_type="Task",
             context="{}",
         )
 
-    def test_protocol_responds_to_task_completed_event(self) -> None:
-        """Test that the protocol responds to TASK_COMPLETED events."""
-        assert Protocol.RESPONDS_TO == EventType.Name(EventType.TASK_COMPLETED)
+    def test_protocol_responds_to_task_closed_event(self) -> None:
+        """Test that the protocol responds to TASK_CLOSED events."""
+        assert Protocol.RESPONDS_TO == EventType.Name(EventType.TASK_CLOSED)
 
     def test_compute_returns_empty_when_no_task_found(self) -> None:
         """Test that compute returns empty list when no task instance is found."""
