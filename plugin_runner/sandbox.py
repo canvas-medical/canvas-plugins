@@ -349,6 +349,46 @@ class Sandbox:
             """Allow type annotations."""
             return node
 
+        def visit_Match(self, node: ast.Match) -> ast.Match:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchAs(self, node: ast.MatchAs) -> ast.MatchAs:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchClass(self, node: ast.MatchClass) -> ast.MatchClass:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchMapping(self, node: ast.MatchMapping) -> ast.MatchMapping:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchOr(self, node: ast.MatchOr) -> ast.MatchOr:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchSingleton(self, node: ast.MatchSingleton) -> ast.MatchSingleton:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchSequence(self, node: ast.MatchSequence) -> ast.MatchSequence:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchStar(self, node: ast.MatchStar) -> ast.MatchStar:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchValue(self, node: ast.MatchValue) -> ast.MatchValue:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_match_case(self, node: ast.match_case) -> ast.match_case:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
         def check_import_names(self, node: ast.ImportFrom) -> ast.AST:
             """Check the names being imported.
 

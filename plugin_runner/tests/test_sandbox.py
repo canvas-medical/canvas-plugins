@@ -123,6 +123,55 @@ def test_plugin_runner_settings_import() -> None:
         sandbox.execute()
 
 
+def test_support_match() -> None:
+    """Test that match is supported."""
+    sandbox = _sandbox_from_code(
+        """
+            day = 5
+            month = 12
+
+            success = False
+
+            match day:
+                case 1 | 2 | 3 if month == 1:
+                    success = False
+                case 5 if month == 10:
+                    success = False
+                case 5 if month == 12:
+                    success = True
+                case _:
+                    success = False
+
+            assert success
+        """
+    )
+
+    sandbox.execute()
+
+
+def test_support_match_tuple() -> None:
+    """Test that match is supported."""
+    sandbox = _sandbox_from_code(
+        """
+            point = (0, 5)
+
+            success = False
+
+            match point:
+                case (0, 0):
+                    success = False
+                case (0, x as non_origin):
+                    success = non_origin == 5
+                case (0, *extra):
+                    success = False
+
+            assert success
+        """
+    )
+
+    sandbox.execute()
+
+
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
