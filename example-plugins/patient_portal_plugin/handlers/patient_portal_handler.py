@@ -96,10 +96,6 @@ class PatientPortalHandler(BaseHandler):
     @property
     def footer_widget(self) -> Effect:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
-        emergency_contact = self.secrets["EMERGENCY_CONTACT"]
-        if not emergency_contact:
-            emergency_contact = self.DEFAULT_EMERGENCY_CONTACT
-
         return PortalWidget(
             content=render_to_string("templates/footer_widget.html", {
                 "background_color": self.background_color,
