@@ -17,7 +17,7 @@ Once the API endpoint POST action is created, test it is working with the follow
 curl --request POST \
   --url https://training.canvasmedical.com/plugin-io/api/example_patient_sync/patients \
   --header 'content-type: application/json' \
-  --header 'authorization: Bearer 97f2a0f033666d29ff09ee42b3afd7e4'
+  --header 'authorization: 97f2a0f033666d29ff09ee42b3afd7e4'
   --data '{
   "firstName": "Alice",
   "lastName": "Example",
