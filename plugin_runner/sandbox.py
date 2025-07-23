@@ -167,6 +167,7 @@ STANDARD_LIBRARY_MODULES = {
         "Tuple",
         "Type",
         "TypedDict",
+        "Union",
     },
     "urllib": {
         "parse",
