@@ -10,7 +10,7 @@ from canvas_sdk.commands.base import _SendableCommandMixin
 from canvas_sdk.v1.data.lab import LabPartner, LabPartnerTest
 
 
-class LabOrderCommand(BaseCommand, _SendableCommandMixin):
+class LabOrderCommand(_SendableCommandMixin, BaseCommand):
     """A class for managing a Lab Order command within a specific note."""
 
     class Meta:
