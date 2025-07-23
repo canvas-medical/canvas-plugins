@@ -86,6 +86,9 @@
   "canvas_sdk.commands.commands.imaging_order": [
     "ImagingOrderCommand"
   ],
+  "canvas_sdk.commands.commands.immunization_statement": [
+    "ImmunizationStatementCommand"
+  ],
   "canvas_sdk.commands.commands.instruct": [
     "InstructCommand"
   ],
