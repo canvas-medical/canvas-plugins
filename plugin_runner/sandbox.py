@@ -161,6 +161,7 @@ STANDARD_LIBRARY_MODULES = {
         "Literal",
         "NamedTuple",
         "NotRequired",
+        "Optional",
         "Protocol",
         "Sequence",
         "Tuple",
