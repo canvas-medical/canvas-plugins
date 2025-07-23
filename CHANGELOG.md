@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.47.0 (2025-07-23)
+
+### Features
+
+- Add Optional to imports ([#854](https://github.com/canvas-medical/canvas-plugins/pull/854),
+  [`25e2c52`](https://github.com/canvas-medical/canvas-plugins/commit/25e2c526219905e3e4ed3a131cdc89d946783eff))
+
+
 ## v0.46.0 (2025-07-23)
 
 ### Bug Fixes
