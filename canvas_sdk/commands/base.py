@@ -166,24 +166,26 @@ class _BaseCommand(TrackableFieldsModel):
 
 class _SendableCommandMixin:
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)
+        errors = super()._get_error_details(method)  # type: ignore[misc]
 
-        cmd = Command.objects.get(id=self.command_uuid)
+        cmd = Command.objects.get(id=self.command_uuid)  # type: ignore[attr-defined]
 
         if not cmd.committer_id:
             errors.append(
-                self._create_error_detail(
-                    "value", "Command needs to be signed first.", self.command_uuid
+                self._create_error_detail(  # type: ignore[attr-defined]
+                    "value",
+                    "Command needs to be signed first.",
+                    self.command_uuid,  # type: ignore[attr-defined]
                 )
             )
         return errors
 
     def send(self) -> Effect:
         """Fire the send effect the command."""
-        self._validate_before_effect("send")
+        self._validate_before_effect("send")  # type: ignore[attr-defined]
         return Effect(
-            type=f"SEND_{self.constantized_key()}_COMMAND",
-            payload=json.dumps({"command": self.command_uuid}),
+            type=f"SEND_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
         )
 
 
