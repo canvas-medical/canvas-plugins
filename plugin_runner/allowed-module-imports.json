@@ -86,6 +86,9 @@
   "canvas_sdk.commands.commands.imaging_order": [
     "ImagingOrderCommand"
   ],
+  "canvas_sdk.commands.commands.immunization_statement": [
+    "ImmunizationStatementCommand"
+  ],
   "canvas_sdk.commands.commands.instruct": [
     "InstructCommand"
   ],
@@ -481,6 +484,7 @@
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
     "ClaimLineItem",
@@ -595,6 +599,9 @@
     "CareTeamMembership",
     "CareTeamMembershipStatus",
     "CareTeamRole"
+  ],
+  "canvas_sdk.v1.data.charge_description_master": [
+    "ChargeDescriptionMaster"
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
