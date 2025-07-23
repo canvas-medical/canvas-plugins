@@ -66,9 +66,14 @@ CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 CANVAS_SDK_DB_URL = os.getenv("DATABASE_URL")
-CANVAS_SDK_DB_BACKEND = os.getenv(
-    "CANVAS_SDK_DB_BACKEND", "postgres" if CANVAS_SDK_DB_URL or not IS_SCRIPT else "sqlite3"
-)
+
+if IS_TESTING:
+    CANVAS_SDK_DB_BACKEND = "sqlite3"
+elif CANVAS_SDK_DB_URL:
+    CANVAS_SDK_DB_BACKEND = "postgres"
+else:
+    # Default to sqlite3 for local development if no DATABASE_URL is set
+    CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
 
