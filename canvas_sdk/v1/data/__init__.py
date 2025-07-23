@@ -5,6 +5,7 @@ from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
+from .charge_description_master import ChargeDescriptionMaster
 from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue, InstallmentPlan
 from .claim_line_item import ClaimLineItem
 from .command import Command
@@ -99,6 +100,7 @@ __all__ = __exports__ = (
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
     "ClaimLineItem",

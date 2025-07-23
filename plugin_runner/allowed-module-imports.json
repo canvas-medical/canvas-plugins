@@ -484,6 +484,7 @@
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
     "ClaimLineItem",
@@ -598,6 +599,9 @@
     "CareTeamMembership",
     "CareTeamMembershipStatus",
     "CareTeamRole"
+  ],
+  "canvas_sdk.v1.data.charge_description_master": [
+    "ChargeDescriptionMaster"
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",

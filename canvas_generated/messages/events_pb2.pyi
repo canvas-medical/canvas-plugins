@@ -848,6 +848,9 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_EXTERNAL_IDENTIFIER_DELETED: _ClassVar[EventType]
     PATIENT_METADATA_CREATED: _ClassVar[EventType]
     PATIENT_METADATA_UPDATED: _ClassVar[EventType]
+    DOCUMENT_REFERENCE_CREATED: _ClassVar[EventType]
+    DOCUMENT_REFERENCE_UPDATED: _ClassVar[EventType]
+    DOCUMENT_REFERENCE_DELETED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1687,6 +1690,9 @@ PATIENT_EXTERNAL_IDENTIFIER_UPDATED: EventType
 PATIENT_EXTERNAL_IDENTIFIER_DELETED: EventType
 PATIENT_METADATA_CREATED: EventType
 PATIENT_METADATA_UPDATED: EventType
+DOCUMENT_REFERENCE_CREATED: EventType
+DOCUMENT_REFERENCE_UPDATED: EventType
+DOCUMENT_REFERENCE_DELETED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type")
