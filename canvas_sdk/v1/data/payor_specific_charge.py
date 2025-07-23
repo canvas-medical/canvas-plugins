@@ -17,9 +17,9 @@ class PayorSpecificCharge(Model):
         related_name="transactor_charges",
         on_delete=models.DO_NOTHING,
     )
-    charge_amount = models.DecimalField()
+    charge_amount = models.DecimalField(max_digits=8, decimal_places=2)
     effective_date = models.DateField()
-    end_date = models.DateField()
+    end_date = models.DateField(null=True)
     part_of_capitated_set = models.BooleanField()
 
 

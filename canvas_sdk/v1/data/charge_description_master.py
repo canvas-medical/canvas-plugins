@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import Model
+
 
 class CDMCodeSystem(models.TextChoices):
     """CDMCodeSystem."""
@@ -8,22 +10,20 @@ class CDMCodeSystem(models.TextChoices):
     CPT = "CPT", "CPT"
 
 
-class ChargeDescriptionMaster(models.Model):
+class ChargeDescriptionMaster(Model):
     """Charge Description Master."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_chargedescriptionmaster_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    cpt_code = models.CharField()
-    name = models.CharField()
-    short_name = models.CharField()
-    charge_amount = models.DecimalField()
+    cpt_code = models.CharField(max_length=10)
+    name = models.CharField(max_length=17000)
+    short_name = models.CharField(max_length=17000)
+    charge_amount = models.DecimalField(max_digits=8, decimal_places=2)
     effective_date = models.DateField()
-    end_date = models.DateField()
-    code_system = models.CharField(choices=CDMCodeSystem.choices)
-    ndc_code = models.CharField()
+    end_date = models.DateField(null=True)
+    code_system = models.CharField(choices=CDMCodeSystem.choices, max_length=10)
+    ndc_code = models.CharField(max_length=255)
 
 
 __exports__ = ("ChargeDescriptionMaster",)
