@@ -55,6 +55,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PRESCRIPTION_UPDATED: _ClassVar[EventType]
     REFERRAL_REPORT_CREATED: _ClassVar[EventType]
     REFERRAL_REPORT_UPDATED: _ClassVar[EventType]
+    STAFF_CREATED: _ClassVar[EventType]
+    STAFF_UPDATED: _ClassVar[EventType]
     TASK_COMMENT_CREATED: _ClassVar[EventType]
     TASK_CREATED: _ClassVar[EventType]
     TASK_LABELS_ADJUSTED: _ClassVar[EventType]
@@ -91,6 +93,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TASK_COMPLETED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_CREATED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_UPDATED: _ClassVar[EventType]
+    STAFF_ACTIVATED: _ClassVar[EventType]
+    STAFF_DEACTIVATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -842,9 +846,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_EXTERNAL_IDENTIFIER_CREATED: _ClassVar[EventType]
     PATIENT_EXTERNAL_IDENTIFIER_UPDATED: _ClassVar[EventType]
     PATIENT_EXTERNAL_IDENTIFIER_DELETED: _ClassVar[EventType]
-    DOCUMENT_REFERENCE_CREATED: _ClassVar[EventType]
-    DOCUMENT_REFERENCE_UPDATED: _ClassVar[EventType]
-    DOCUMENT_REFERENCE_DELETED: _ClassVar[EventType]
+    PATIENT_METADATA_CREATED: _ClassVar[EventType]
+    PATIENT_METADATA_UPDATED: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -891,6 +894,8 @@ PRESCRIPTION_CREATED: EventType
 PRESCRIPTION_UPDATED: EventType
 REFERRAL_REPORT_CREATED: EventType
 REFERRAL_REPORT_UPDATED: EventType
+STAFF_CREATED: EventType
+STAFF_UPDATED: EventType
 TASK_COMMENT_CREATED: EventType
 TASK_CREATED: EventType
 TASK_LABELS_ADJUSTED: EventType
@@ -927,6 +932,8 @@ TASK_CLOSED: EventType
 TASK_COMPLETED: EventType
 DETECTED_ISSUE_EVIDENCE_CREATED: EventType
 DETECTED_ISSUE_EVIDENCE_UPDATED: EventType
+STAFF_ACTIVATED: EventType
+STAFF_DEACTIVATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
@@ -1678,9 +1685,8 @@ PATIENT_METADATA__GET_ADDITIONAL_FIELDS: EventType
 PATIENT_EXTERNAL_IDENTIFIER_CREATED: EventType
 PATIENT_EXTERNAL_IDENTIFIER_UPDATED: EventType
 PATIENT_EXTERNAL_IDENTIFIER_DELETED: EventType
-DOCUMENT_REFERENCE_CREATED: EventType
-DOCUMENT_REFERENCE_UPDATED: EventType
-DOCUMENT_REFERENCE_DELETED: EventType
+PATIENT_METADATA_CREATED: EventType
+PATIENT_METADATA_UPDATED: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type")

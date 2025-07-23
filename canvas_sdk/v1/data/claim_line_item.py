@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 
+from canvas_sdk.v1.data.base import Model
 from canvas_sdk.v1.data.note import PracticeLocationPOS
 
 
@@ -105,36 +106,34 @@ class ClaimLineItemQuerySet(models.QuerySet):
         return self.exclude(proc_code=LineItemCodes.UNLINKED.value).apply_ordering()
 
 
-class ClaimLineItem(models.Model):
+class ClaimLineItem(Model):
     """ClaimLineItem."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_claimlineitem_001"
 
     objects = ClaimLineItemQuerySet.as_manager()
 
-    dbid = models.BigIntegerField(primary_key=True)
     billing_line_item = models.ForeignKey("v1.BillingLineItem", on_delete=models.CASCADE, null=True)
     claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="line_items")
-    status = models.CharField(choices=ClaimLineItemStatus.choices)
+    status = models.CharField(choices=ClaimLineItemStatus.choices, max_length=10)
     charge = models.DecimalField(max_digits=8, decimal_places=2)
-    from_date = models.CharField()
-    thru_date = models.CharField()
-    narrative = models.CharField()
-    ndc_code = models.CharField()
-    ndc_dosage = models.CharField()
-    ndc_measure = models.CharField()
-    place_of_service = models.CharField(choices=PracticeLocationPOS.choices)
-    proc_code = models.CharField()
-    display = models.CharField()
-    remote_chg_id = models.CharField()
+    from_date = models.CharField(max_length=10)
+    thru_date = models.CharField(max_length=10)
+    narrative = models.CharField(max_length=2000)
+    ndc_code = models.CharField(max_length=100)
+    ndc_dosage = models.CharField(max_length=100)
+    ndc_measure = models.CharField(max_length=100)
+    place_of_service = models.CharField(choices=PracticeLocationPOS.choices, max_length=2)
+    proc_code = models.CharField(max_length=10)
+    display = models.CharField(max_length=255)
+    remote_chg_id = models.CharField(max_length=100)
     units = models.IntegerField()
-    epsdt = models.CharField()
-    family_planning = models.CharField(choices=FamilyPlanningOptions.choices)
+    epsdt = models.CharField(max_length=2)
+    family_planning = models.CharField(choices=FamilyPlanningOptions.choices, max_length=1)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("ClaimLineItem", "ClaimLineItemStatus", "LineItemCodes", "FamilyPlanningOptions")

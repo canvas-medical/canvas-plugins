@@ -21,7 +21,8 @@
         "views": []
     },
     "secrets": [
-        "BACKGROUND_COLOR"
+        "BACKGROUND_COLOR",
+        "EMERGENCY_CONTACT"
     ],
     "tags": {},
     "references": [],
