@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.48.0 (2025-07-24)
+
+### Chores
+
+- Auto-update pre-commit hooks ([#434](https://github.com/canvas-medical/canvas-plugins/pull/434),
+  [`3393db4`](https://github.com/canvas-medical/canvas-plugins/commit/3393db457f990751a9a9eb19e808b0cd1a7b67c1))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add example patient sync plugin
+  ([#724](https://github.com/canvas-medical/canvas-plugins/pull/724),
+  [`339763c`](https://github.com/canvas-medical/canvas-plugins/commit/339763ca8a766ba22463b6b4e3d60f07577cb76a))
+
+Signed-off-by: Mary Dickson <mdickson@gmail.com>
+
+- Add Union to allowed import list
+  ([#856](https://github.com/canvas-medical/canvas-plugins/pull/856),
+  [`7a44a2d`](https://github.com/canvas-medical/canvas-plugins/commit/7a44a2d5ed55f9d95f8c3285e398786425728bc8))
+
+
 ## v0.47.0 (2025-07-23)
 
 ### Features
