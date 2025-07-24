@@ -10,6 +10,7 @@ dev = [
   "pre-commit",
   "psutil>=7.0.0",
   "pytest",
+  "pytest-cov",
   "pytest-django",
   "pytest-freezegun>=0.4.2",
   "pytest-mock",
