@@ -259,7 +259,7 @@ class AddAppointmentLabel(_BaseEffect):
         errors = super()._get_error_details(method)
         try:
             appointment = DataAppointment.objects.get(id=self.appointment_id)
-            existing_label_count = appointment.labels.count()
+            existing_label_count = appointment.appointment_labels.count()
             if existing_label_count + len(self.labels) > 3:
                 errors.append(
                     self._create_error_detail(

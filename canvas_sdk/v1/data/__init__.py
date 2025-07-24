@@ -1,7 +1,6 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
 from .appointment import (
     Appointment,
-    AppointmentAppointmentLabel,
     AppointmentExternalIdentifier,
     AppointmentLabel,
 )
@@ -90,7 +89,6 @@ from .user import CanvasUser
 
 __all__ = __exports__ = (
     "Appointment",
-    "AppointmentAppointmentLabel",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
     "AllergyIntolerance",
