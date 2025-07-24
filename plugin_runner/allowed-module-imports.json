@@ -281,7 +281,7 @@
   ],
   "canvas_sdk.effects.payment_processor": [
     "AddPaymentMethodResponse",
-    "CreditCardTransaction",
+    "CardTransaction",
     "PaymentMethod",
     "PaymentProcessorForm",
     "PaymentProcessorMetadata",
