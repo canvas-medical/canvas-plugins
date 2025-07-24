@@ -43,7 +43,8 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.base": [
-    "_BaseCommand"
+    "_BaseCommand",
+    "_SendableCommandMixin"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
     "AdjustPrescriptionCommand"
