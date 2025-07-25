@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import Any
 from uuid import UUID
 
@@ -12,9 +11,6 @@ from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import Appointment as DataAppointment
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
-
-logger = logging.getLogger(__name__)
-
 
 class ScheduleEvent(AppointmentABC):
     """

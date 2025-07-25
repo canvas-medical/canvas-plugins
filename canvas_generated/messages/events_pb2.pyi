@@ -1699,19 +1699,3 @@ class EventResponse(_message.Message):
     success: bool
     effects: _containers.RepeatedCompositeFieldContainer[_effects_pb2.Effect]
     def __init__(self, success: bool = ..., effects: _Optional[_Iterable[_Union[_effects_pb2.Effect, _Mapping]]] = ...) -> None: ...
-
-class AppointmentLabelAddedEvent(_message.Message):
-    __slots__ = ("appointment_id", "label")
-    APPOINTMENT_ID_FIELD_NUMBER: _ClassVar[int]
-    LABEL_FIELD_NUMBER: _ClassVar[int]
-    appointment_id: str
-    label: str
-    def __init__(self, appointment_id: _Optional[str] = ..., label: _Optional[str] = ...) -> None: ...
-
-class AppointmentLabelRemovedEvent(_message.Message):
-    __slots__ = ("appointment_id", "label")
-    APPOINTMENT_ID_FIELD_NUMBER: _ClassVar[int]
-    LABEL_FIELD_NUMBER: _ClassVar[int]
-    appointment_id: str
-    label: str
-    def __init__(self, appointment_id: _Optional[str] = ..., label: _Optional[str] = ...) -> None: ...
