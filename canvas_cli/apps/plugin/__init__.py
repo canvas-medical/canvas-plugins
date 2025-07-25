@@ -4,8 +4,18 @@ from canvas_cli.apps.plugin.plugin import (
     init,
     install,
     list,
+    set_secrets,
     uninstall,
     validate_manifest,
 )
 
-__all__ = ("uninstall", "enable", "disable", "init", "validate_manifest", "install", "list")
+__all__ = (
+    "set_secrets",
+    "disable",
+    "enable",
+    "init",
+    "install",
+    "list",
+    "uninstall",
+    "validate_manifest",
+)
