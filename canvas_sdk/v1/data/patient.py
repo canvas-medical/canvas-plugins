@@ -234,7 +234,7 @@ class PatientSetting(Model):
     value = models.JSONField()
 
 
-class PatientMetadata(Model):
+class PatientMetadata(IdentifiableModel):
     """A class representing Patient Metadata."""
 
     class Meta:

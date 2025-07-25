@@ -4,6 +4,7 @@ import pkgutil
 import uuid
 from unittest.mock import patch
 
+import pytest
 from django.contrib.postgres.fields import ArrayField
 from django.core.management import call_command
 from django.db import models as django_models
@@ -12,13 +13,19 @@ from canvas_sdk.v1 import data
 from canvas_sdk.v1.data.base import IdentifiableModel, Model
 
 
-class TestModel(IdentifiableModel):
-    """A test model."""
+@pytest.fixture(scope="module")
+def TestModel() -> type[IdentifiableModel]:
+    """Fixture to create a test model with an ArrayField."""
 
-    array_field = ArrayField(django_models.CharField(max_length=64))
+    class TestModel(IdentifiableModel):
+        """A test model."""
 
-    class Meta:
-        app_label = "tests"
+        array_field = ArrayField(django_models.CharField(max_length=64))
+
+        class Meta:
+            app_label = "tests"
+
+    return TestModel
 
 
 def get_django_model_classes_from_data() -> set[str]:
@@ -57,7 +64,7 @@ def test_all_django_models_are_exported() -> None:
     assert not missing, f"Django models missing from __all__: {sorted(missing)}"
 
 
-def test_postgres_array_field_swapped() -> None:
+def test_postgres_array_field_swapped(TestModel: type[IdentifiableModel]) -> None:
     """Ensure that ArrayField is swapped with JSONField for SQLite."""
     field = TestModel._meta.get_field("array_field")
 
@@ -66,7 +73,9 @@ def test_postgres_array_field_swapped() -> None:
     )
 
 
-def test_model_meta_property_managed_is_populated_correctly() -> None:
+def test_model_meta_property_managed_is_populated_correctly(
+    TestModel: type[IdentifiableModel],
+) -> None:
     """Ensure that the `managed` property is set correctly based on the database type."""
     assert TestModel._meta.managed
 
@@ -88,7 +97,7 @@ def test_model_meta_property_managed_is_populated_correctly() -> None:
     assert not TestModelManagedFalse._meta.managed
 
 
-def test_identifiable_model_has_uuid_field() -> None:
+def test_identifiable_model_has_uuid_field(TestModel: type[IdentifiableModel]) -> None:
     """Ensure that IdentifiableModel generates UUID by default."""
     model = TestModel()
     assert isinstance(model.id, uuid.UUID)
