@@ -143,7 +143,10 @@ def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
     return (
         f"enable {plugin_name}",
         0,
-        [f"Enabling {plugin_name} using ", f"Plugin {plugin_name} successfully enabled!"],
+        [
+            f"Enabling {plugin_name} using ",
+            f"Plugin {plugin_name} new version uploaded! Check logs for more details.",
+        ],
         [],
     )
 
