@@ -3,7 +3,7 @@ from canvas_sdk.effects.note import RemoveAppointmentLabel
 from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.v1.data import Appointment, Patient, Coverage
+from canvas_sdk.v1.data import Appointment, Coverage, Patient
 from logger import log
 
 
@@ -41,7 +41,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             return []
 
         appointments_to_update = Appointment.objects.filter(
-            patient = patient, appointment_labels__name = "MISSING_COVERAGE"
+            patient=patient, appointment_labels__name="MISSING_COVERAGE"
         ).prefetch_related("appointment_labels")
 
         if not appointments_to_update.exists():
@@ -103,9 +103,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
         )
 
         if not appointments_to_label.exists():
-            log.info(
-                f"No appointments needing 'MISSING_COVERAGE' label for patient {patient_id}."
-            )
+            log.info(f"No appointments needing 'MISSING_COVERAGE' label for patient {patient_id}.")
             return []
 
         log.info(

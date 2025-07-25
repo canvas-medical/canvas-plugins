@@ -12,6 +12,7 @@ from canvas_sdk.v1.data import Appointment as DataAppointment
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
+
 class ScheduleEvent(AppointmentABC):
     """
     Effect to create a schedule event.
@@ -289,6 +290,7 @@ class AddAppointmentLabel(_BaseEffect):
             "data": self.values,
         }
 
+
 class RemoveAppointmentLabel(TrackableFieldsModel, _BaseEffect):
     """
     Effect to remove one or more labels from an appointment.
@@ -319,6 +321,7 @@ class RemoveAppointmentLabel(TrackableFieldsModel, _BaseEffect):
         return {
             "data": self.values,
         }
+
 
 __exports__ = (
     "ScheduleEvent",
