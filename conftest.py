@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 BASE_DIR = Path(__file__).parent
 FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
 DATA_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "data" / "plugins"
+INTEGRATION_TESTS_PLUGINS_DIR = BASE_DIR / "integration_tests"
 
 
 @pytest.fixture(scope="session")
@@ -18,10 +19,12 @@ def cli_runner() -> CliRunner:
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_plugins_dir() -> Generator[None, None, None]:
-    """Setup the plugins directory before running tests."""
+    """Set up the plugins directory before running tests."""
     DATA_PLUGIN_DIR.mkdir(exist_ok=True, parents=True)
+    INTEGRATION_TESTS_PLUGINS_DIR.mkdir(exist_ok=True, parents=True)
     yield
     shutil.rmtree(DATA_PLUGIN_DIR.parent)
+    shutil.rmtree(INTEGRATION_TESTS_PLUGINS_DIR)
 
 
 @pytest.fixture
@@ -61,3 +64,9 @@ def load_test_plugins() -> Generator[None, None, None]:
     finally:
         LOADED_PLUGINS.clear()
         EVENT_HANDLER_MAP.clear()
+
+
+@pytest.fixture(scope="session")
+def integration_tests_plugins_dir(setup_plugins_dir: None) -> Path:
+    """Fixture to provide the path to the integration test plugins' directory."""
+    return INTEGRATION_TESTS_PLUGINS_DIR
