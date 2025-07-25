@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import builtins
 import importlib
-import pkgutil
+import json
 import sys
 import types
 from _ast import AnnAssign
@@ -43,25 +43,17 @@ if TYPE_CHECKING:
         names_to_module: dict[str, str]
 
 
-def find_submodules(starting_modules: Iterable[str]) -> list[str]:
-    """
-    Given a list of modules, return a list of those modules and their submodules.
-    """
-    submodules = set(starting_modules)
+try:
+    allowed_module_imports_path = Path(__file__).parent / "allowed-module-imports.json"
 
-    for module_path in starting_modules:
-        try:
-            module = importlib.import_module(module_path)
+    CANVAS_MODULES: dict[str, Iterable[str]] = json.loads(allowed_module_imports_path.read_text())
 
-            if not hasattr(module, "__path__"):
-                continue
+    for key in CANVAS_MODULES:
+        CANVAS_MODULES[key] = set(CANVAS_MODULES[key])
 
-            for _, name, _ in pkgutil.walk_packages(module.__path__, prefix=module.__name__ + "."):
-                submodules.add(name)
-        except Exception as e:
-            print(f"could not import {module_path}: {e}")
-
-    return sorted(submodules)
+except FileNotFoundError:
+    print("Error: Unable to load plugin_runner/allowed-module-imports.json, aborting")
+    sys.exit(1)
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
@@ -80,53 +72,15 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__name__",
 }
 
-CANVAS_TOP_LEVEL_MODULES = (
-    "canvas_sdk.caching",
-    "canvas_sdk.commands",
-    "canvas_sdk.effects",
-    "canvas_sdk.events",
-    "canvas_sdk.handlers",
-    "canvas_sdk.protocols",
-    "canvas_sdk.questionnaires",
-    "canvas_sdk.templates",
-    "canvas_sdk.utils",
-    "canvas_sdk.v1",
-    "canvas_sdk.value_set",
-    "canvas_sdk.views",
-    "logger",
-)
-
-CANVAS_SUBMODULE_NAMES = [
-    found_module
-    for found_module in find_submodules(CANVAS_TOP_LEVEL_MODULES)
-    # tests are excluded from the built and distributed module in pyproject.toml
-    if "tests" not in found_module and "test_" not in found_module
-]
-
-CANVAS_MODULES: dict[str, set[str]] = {}
-
-for module_name in CANVAS_SUBMODULE_NAMES:
-    module = importlib.import_module(module_name)
-
-    exports = getattr(module, "__exports__", None)
-
-    if not exports:
-        continue
-
-    if module_name not in CANVAS_MODULES:
-        CANVAS_MODULES[module_name] = set()
-
-    CANVAS_MODULES[module_name].update(exports)
-
-# In use by a current plugin...
-CANVAS_MODULES["canvas_sdk.commands"].add("*")
-
-
 STANDARD_LIBRARY_MODULES = {
     "__future__": {
         "annotations",
     },
     "_strptime": set(),  # gets imported at runtime via datetime.datetime.strptime()
+    "abc": {
+        "ABC",
+        "abstractmethod",
+    },
     "base64": {
         "b64decode",
         "b64encode",
@@ -204,13 +158,16 @@ STANDARD_LIBRARY_MODULES = {
         "Final",
         "Iterable",
         "List",
+        "Literal",
         "NamedTuple",
         "NotRequired",
+        "Optional",
         "Protocol",
         "Sequence",
         "Tuple",
         "Type",
         "TypedDict",
+        "Union",
     },
     "urllib": {
         "parse",
@@ -392,7 +349,47 @@ class Sandbox:
 
         def visit_AnnAssign(self, node: AnnAssign) -> AnnAssign:
             """Allow type annotations."""
-            return node
+            return self.node_contents_visit(node)
+
+        def visit_Match(self, node: ast.Match) -> ast.Match:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchAs(self, node: ast.MatchAs) -> ast.MatchAs:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchClass(self, node: ast.MatchClass) -> ast.MatchClass:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchMapping(self, node: ast.MatchMapping) -> ast.MatchMapping:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchOr(self, node: ast.MatchOr) -> ast.MatchOr:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchSingleton(self, node: ast.MatchSingleton) -> ast.MatchSingleton:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchSequence(self, node: ast.MatchSequence) -> ast.MatchSequence:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchStar(self, node: ast.MatchStar) -> ast.MatchStar:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_MatchValue(self, node: ast.MatchValue) -> ast.MatchValue:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
+
+        def visit_match_case(self, node: ast.match_case) -> ast.match_case:
+            """Allow `match`."""
+            return self.node_contents_visit(node)
 
         def check_import_names(self, node: ast.ImportFrom) -> ast.AST:
             """Check the names being imported.

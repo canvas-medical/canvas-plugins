@@ -1,6 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
 from canvas_sdk.v1.data.common import ContactPointState, ContactPointSystem, ContactPointUse
 
 
@@ -38,41 +39,37 @@ class TeamResponsibility(models.TextChoices):
     REVIEW_COVERAGES = "REVIEW_COVERAGES", "Review incomplete patient coverages"
 
 
-class Team(models.Model):
+class Team(IdentifiableModel):
     """Team."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_team_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    name = models.CharField()
-    responsibilities = ArrayField(models.CharField(choices=TeamResponsibility.choices))
-    members = models.ManyToManyField(  # type: ignore[var-annotated]
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=200)
+    responsibilities = ArrayField(
+        models.CharField(choices=TeamResponsibility.choices, max_length=64)
+    )
+    members = models.ManyToManyField(
         "v1.Staff",
         related_name="teams",
         db_table="canvas_sdk_data_api_team_members_001",
     )
 
 
-class TeamContactPoint(models.Model):
+class TeamContactPoint(IdentifiableModel):
     """TeamContactPoint."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_teamcontactpoint_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField(choices=ContactPointSystem.choices)
-    value = models.CharField()
-    use = models.CharField(choices=ContactPointUse.choices)
-    use_notes = models.CharField()
+    system = models.CharField(choices=ContactPointSystem.choices, max_length=20)
+    value = models.CharField(max_length=100)
+    use = models.CharField(choices=ContactPointUse.choices, max_length=20)
+    use_notes = models.CharField(max_length=255)
     rank = models.IntegerField()
-    state = models.CharField(choices=ContactPointState.choices)
+    state = models.CharField(choices=ContactPointState.choices, max_length=20)
     team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, related_name="telecom")
 
 

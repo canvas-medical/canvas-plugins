@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urljoin
 
+import pathspec
 import requests
 import typer
 from cookiecutter.exceptions import OutputDirExistsException
@@ -15,6 +16,8 @@ from cookiecutter.main import cookiecutter
 from canvas_cli.apps.auth.utils import get_default_host, get_or_request_api_token
 from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
+
+CANVAS_IGNORE_FILENAME = ".canvasignore"
 
 
 def plugin_url(host: str, *paths: str) -> str:
@@ -46,11 +49,27 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
+    ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
+    if ignore_file.exists():
+        ignore_patterns = pathspec.PathSpec.from_lines(
+            pathspec.patterns.GitWildMatchPattern, ignore_file.read_text().splitlines()
+        )
+    else:
+        ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
+
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
         with tarfile.open(file.name, "w:gz") as tar:
             for root in package.rglob("*"):
-                # Skip hidden files and directories (starting with '.') and symlinks
-                if any(part.startswith(".") for part in root.parts) or root.is_symlink():
+                # Skip hidden files and directories (starting with '.')
+                if any(part.startswith(".") for part in root.parts):
+                    continue
+
+                # Skip symlinks
+                if root.is_symlink():
+                    continue
+
+                # Skip files and directories matching the ignore patterns
+                if ignore_patterns.match_file(root):
                     continue
 
                 tar.add(root, arcname=root.relative_to(package))
