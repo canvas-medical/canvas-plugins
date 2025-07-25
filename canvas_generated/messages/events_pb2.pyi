@@ -63,8 +63,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TASK_UPDATED: _ClassVar[EventType]
     VITAL_SIGN_CREATED: _ClassVar[EventType]
     VITAL_SIGN_UPDATED: _ClassVar[EventType]
-    APPOINTMENT_LABEL_ADDED: _ClassVar[EventType]
-    APPOINTMENT_LABEL_REMOVED: _ClassVar[EventType]
     CRON: _ClassVar[EventType]
     CARE_TEAM_MEMBERSHIP_CREATED: _ClassVar[EventType]
     CARE_TEAM_MEMBERSHIP_UPDATED: _ClassVar[EventType]
@@ -97,6 +95,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DETECTED_ISSUE_EVIDENCE_UPDATED: _ClassVar[EventType]
     STAFF_ACTIVATED: _ClassVar[EventType]
     STAFF_DEACTIVATED: _ClassVar[EventType]
+    APPOINTMENT_LABEL_ADDED: _ClassVar[EventType]
+    APPOINTMENT_LABEL_REMOVED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -907,8 +907,6 @@ TASK_LABELS_ADJUSTED: EventType
 TASK_UPDATED: EventType
 VITAL_SIGN_CREATED: EventType
 VITAL_SIGN_UPDATED: EventType
-APPOINTMENT_LABEL_ADDED: EventType
-APPOINTMENT_LABEL_REMOVED: EventType
 CRON: EventType
 CARE_TEAM_MEMBERSHIP_CREATED: EventType
 CARE_TEAM_MEMBERSHIP_UPDATED: EventType
@@ -941,6 +939,8 @@ DETECTED_ISSUE_EVIDENCE_CREATED: EventType
 DETECTED_ISSUE_EVIDENCE_UPDATED: EventType
 STAFF_ACTIVATED: EventType
 STAFF_DEACTIVATED: EventType
+APPOINTMENT_LABEL_ADDED: EventType
+APPOINTMENT_LABEL_REMOVED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
