@@ -108,17 +108,20 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
     DATABASES = {"default": db_config}
 
 elif CANVAS_SDK_DB_BACKEND == "sqlite3":
+    SQLITE_DB_PATH = BASE_DIR / "canvas_db.sqlite3"
+    SQLITE_WRITE_MODE_DATABASE = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": str(SQLITE_DB_PATH),
+    }
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": f"file:{str(BASE_DIR / 'db.sqlite3')}?mode=ro",
+            "NAME": f"file:{str(SQLITE_DB_PATH)}?mode=ro",
             "OPTIONS": {"uri": True},
-        },
-        "default-write": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": str(BASE_DIR / "db.sqlite3"),
-        },
+        }
     }
+
 
 else:
     raise ImproperlyConfigured(
