@@ -254,6 +254,8 @@ class AddAppointmentLabel(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate that the appointment does not exceed the 3-label limit."""
         errors = super()._get_error_details(method)
+        if not self.appointment_id or not self.labels:
+            return errors
         try:
             appointment = DataAppointment.objects.get(id=self.appointment_id)
             existing_label_count = appointment.appointment_labels.count()
