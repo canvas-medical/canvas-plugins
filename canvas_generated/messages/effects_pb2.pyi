@@ -238,6 +238,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
     UPSERT_PATIENT_METADATA: _ClassVar[EffectType]
     CREATE_PATIENT_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
+    CREATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
+    UPDATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -469,6 +471,8 @@ EDIT_MESSAGE: EffectType
 PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_PATIENT_METADATA: EffectType
 CREATE_PATIENT_EXTERNAL_IDENTIFIER: EffectType
+CREATE_COMPOUND_MEDICATION: EffectType
+UPDATE_COMPOUND_MEDICATION: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")

@@ -9,6 +9,7 @@ from .charge_description_master import ChargeDescriptionMaster
 from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue, InstallmentPlan
 from .claim_line_item import ClaimLineItem
 from .command import Command
+from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
@@ -107,6 +108,7 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimQueue",
     "Command",
+    "CompoundMedication",
     "Condition",
     "ConditionCoding",
     "Coverage",
