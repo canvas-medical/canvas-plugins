@@ -26,7 +26,20 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
-        run: uv run pytest -m "not integtest" --ff --verbosity 2
+        run: |
+          uv run \
+            pytest \
+              -m "not integtest" \
+              --ff \
+              --verbosity 2 \
+              --cov \
+              --cov-branch \
+              --cov-report=xml
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install pipx
         run: pip install pipx
@@ -41,6 +54,7 @@ jobs:
           canvas --version
           rm -rf dist/
         shell: bash
+
   integration-tests:
     runs-on: ubuntu-latest
     steps:
