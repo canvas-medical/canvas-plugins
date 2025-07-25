@@ -1,4 +1,9 @@
-from canvas_sdk.effects.note.appointment import Appointment, ScheduleEvent, AddAppointmentLabel, RemoveAppointmentLabel
+from canvas_sdk.effects.note.appointment import (
+    AddAppointmentLabel,
+    Appointment,
+    RemoveAppointmentLabel,
+    ScheduleEvent,
+)
 from canvas_sdk.effects.note.base import AppointmentIdentifier
 from canvas_sdk.effects.note.note import Note
 

@@ -3,8 +3,8 @@ from canvas_sdk.effects.note import RemoveAppointmentLabel
 from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.v1.data import Appointment, Patient, Coverage
 from logger import log
-from canvas_sdk.v1.data import AppointmentLabel, Appointment, Patient, Coverage
 
 
 class AppointmentLabelsProtocol(BaseProtocol):
@@ -23,7 +23,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
 
     RESPONDS_TO = [
         EventType.Name(EventType.COVERAGE_CREATED),
-        EventType.Name(EventType.APPOINTMENT_CREATED)
+        EventType.Name(EventType.APPOINTMENT_CREATED),
     ]
 
     def handle_coverage_created(self) -> list[Effect]:
@@ -40,14 +40,19 @@ class AppointmentLabelsProtocol(BaseProtocol):
             log.warning(f"Patient with ID {patient_id} not found.")
             return []
 
-        appointments_to_update = (Appointment.objects.filter(patient=patient, appointment_labels__name="MISSING_COVERAGE").
-                                    prefetch_related("appointment_labels"))
+        appointments_to_update = Appointment.objects.filter(
+            patient = patient, appointment_labels__name = "MISSING_COVERAGE"
+        ).prefetch_related("appointment_labels")
 
         if not appointments_to_update.exists():
-            log.info(f"No appointments with 'MISSING_COVERAGE' label found for patient {patient_id}.")
+            log.info(
+                f"No appointments with 'MISSING_COVERAGE' label found for patient {patient_id}."
+            )
             return []
 
-        log.info(f"Found {len(appointments_to_update)} appointments to update for patient {patient_id}.")
+        log.info(
+            f"Found {len(appointments_to_update)} appointments to update for patient {patient_id}."
+        )
 
         effects = []
         for appt in appointments_to_update:
@@ -91,15 +96,21 @@ class AppointmentLabelsProtocol(BaseProtocol):
         # Note: This logic will apply the label to ALL of the patient's
         # appointments that do not currently have it, not just the newly
         # created one.
-        appointments_to_label = (Appointment.objects.filter(patient=patient)
+        appointments_to_label = (
+            Appointment.objects.filter(patient=patient)
             .exclude(appointment_labels__name="MISSING_COVERAGE")
-            .prefetch_related("appointment_labels"))
+            .prefetch_related("appointment_labels")
+        )
 
         if not appointments_to_label.exists():
-            log.info(f"No appointments needing 'MISSING_COVERAGE' label for patient {patient_id}.")
+            log.info(
+                f"No appointments needing 'MISSING_COVERAGE' label for patient {patient_id}."
+            )
             return []
 
-        log.info(f"Found {len(appointments_to_label)} appointments to label for patient {patient_id}.")
+        log.info(
+            f"Found {len(appointments_to_label)} appointments to label for patient {patient_id}."
+        )
 
         effects = []
         for appt in appointments_to_label:
@@ -120,8 +131,8 @@ class AppointmentLabelsProtocol(BaseProtocol):
     def compute(self) -> list[Effect]:
         """Routes the event to the appropriate handler."""
         if self.event.type == EventType.APPOINTMENT_CREATED:
-            return self.handle_appointment_created() # Add Labels
+            return self.handle_appointment_created()  # Add Labels
         elif self.event.type == EventType.COVERAGE_CREATED:
-            return self.handle_coverage_created() # Remove Labels
+            return self.handle_coverage_created()  # Remove Labels
 
         return []
