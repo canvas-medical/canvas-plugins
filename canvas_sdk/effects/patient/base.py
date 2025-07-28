@@ -9,6 +9,7 @@ from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse, PersonSex
+from logger import log
 
 
 @dataclass
@@ -129,6 +130,10 @@ class Patient(TrackableFieldsModel):
         """Create a new Patient."""
         self._validate_before_effect("create")
 
+        log.info(
+            f"Creating patient: {self.first_name} {self.middle_name} {self.last_name} effect ID: {self.effect_id}"
+        )
+
         return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
@@ -136,6 +141,7 @@ class Patient(TrackableFieldsModel):
                     "data": self.values,
                 }
             ),
+            id=str(self.effect_id),
         )
 
 

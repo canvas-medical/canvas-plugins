@@ -302,6 +302,7 @@ message Effect {
   string plugin_name = 3;
   string classname = 4;
   string handler_name = 5;
+  string id = 6;
   //Oneof effect_payload {
   //  ...
   //}

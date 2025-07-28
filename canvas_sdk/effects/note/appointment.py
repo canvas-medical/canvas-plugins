@@ -6,6 +6,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import AppointmentABC
+from canvas_sdk.effects.patient.base import Patient as PatientEffect
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
@@ -134,7 +135,7 @@ class Appointment(AppointmentABC):
 
     appointment_note_type_id: UUID | str | None = None
     meeting_link: str | None = None
-    patient_id: str | None = None
+    patient_id: str | PatientEffect | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -175,7 +176,11 @@ class Appointment(AppointmentABC):
                 )
             )
 
-        if self.patient_id and not Patient.objects.filter(id=self.patient_id).exists():
+        if (
+            self.patient_id
+            and isinstance(self.patient_id, str)
+            and not Patient.objects.filter(id=self.patient_id).exists()
+        ):
             errors.append(
                 self._create_error_detail(
                     "value",

@@ -115,17 +115,55 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
 
         return errors
 
-    def create(self) -> Effect:
-        """Send a CREATE effect for the note or appointment."""
+    def _extract_nested_effects(self) -> list[Effect]:
+        """Extract any nested effects from parameters that need to be sent separately.
+
+        Returns:
+            tuple: (nested_effects, uuid_mapping) where uuid_mapping maps
+                   attribute names to the effect_uuid of their nested effects
+        """
+        nested_effects = []
+
+        # Check all attributes for nested effect objects
+        for attr_name in dir(self):
+            if attr_name.startswith("_"):
+                continue
+            attr_value = getattr(self, attr_name)
+            if isinstance(attr_value, TrackableFieldsModel) and hasattr(attr_value, "create"):
+                # This is a nested effect object, extract it
+                effect = attr_value.create()
+                nested_effects.append(effect)
+
+        return nested_effects
+
+    def create(self) -> Effect | list[Effect]:
+        """Send a CREATE effect for the note or appointment.
+
+        Returns:
+            Effect: If no nested effects are present
+            tuple[list[Effect], Effect]: If nested effects need to be sent first,
+                returns (nested_effects, main_effect)
+        """
         self._validate_before_effect("create")
-        return Effect(
+
+        # Extract any nested effects
+        nested_effects = self._extract_nested_effects()
+
+        print(f"Creating {self.Meta.effect_type} with effect ID: {self.effect_id}")
+        main_effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
                     "data": self.values,
                 }
             ),
+            id=str(self.effect_id),
         )
+
+        if nested_effects:
+            return nested_effects + [main_effect]
+        else:
+            return main_effect
 
     def update(self) -> Effect:
         """Send an UPDATE effect for the note or appointment."""

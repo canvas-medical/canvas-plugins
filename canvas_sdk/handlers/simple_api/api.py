@@ -4,7 +4,7 @@ import re
 import traceback
 from abc import ABC
 from base64 import b64decode
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from functools import cached_property
 from http import HTTPStatus
 from typing import Any, ClassVar, Protocol, TypeVar, cast
@@ -364,6 +364,15 @@ class SimpleAPIBase(BaseHandler, ABC):
         """Route the incoming request to the handler method based on the HTTP method and path."""
         # Handle the request
         effects = cast(RouteHandler, self._handler)(self)
+
+        def flatten(nested_list):
+            for item in nested_list:
+                if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
+                    yield from flatten(item)
+                else:
+                    yield item
+
+        effects = list(flatten(effects))
 
         # Iterate over the returned effects and:
         # 1. Change any response objects to response effects
