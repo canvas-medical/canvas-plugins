@@ -483,7 +483,7 @@ def update(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        print("Plugin new version uploaded! Check logs for more details.")
+        print("New plugin version uploaded! Check logs for more details.")
 
     else:
         print(f"Status code {r.status_code}: {r.text}")

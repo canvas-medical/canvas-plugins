@@ -143,13 +143,14 @@ class Protocol(BaseProtocol):
         protocol.write(protocol_code)
 
     return (
-        f"reinstall {plugin_name}",
+        f"install {plugin_name}",
         0,
         [
             f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file",
             "Installing plugin:",
             "Posting",
-            f"Plugin {plugin_name} new version uploaded! Check logs for more details.",
+            f"Plugin {plugin_name} already exists, updating instead...",
+            "New plugin version uploaded! Check logs for more details.",
         ],
         [],
     )
@@ -218,6 +219,7 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
         (list_empty_plugins),
         (install_new_plugin),
         (list_newly_installed_plugin),
+        (reinstall_plugin),
         (disable_plugin),
         (list_disabled_plugin),
         (enable_plugin),
@@ -235,7 +237,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     step: Callable,
     cli_runner: CliRunner,
 ) -> None:
-    """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin."""
+    """Tests that the Canvas CLI can list, install, reinstall, disable, enable, and uninstall a plugin."""
     mock_get_token.return_value = None
     mock_set_token.return_value = None
 
