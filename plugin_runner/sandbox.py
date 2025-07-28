@@ -216,8 +216,15 @@ THIRD_PARTY_MODULES = {
     "jwt": {
         "decode",
         "encode",
+        "PyJWKClient",
+        "ExpiredSignatureError",
+        "InvalidTokenError",
     },
     "pydantic": {
+        "BaseModel",
+        "conint",
+        "constr",
+        "Field",
         "ValidationError",
     },
     "rapidfuzz": {
