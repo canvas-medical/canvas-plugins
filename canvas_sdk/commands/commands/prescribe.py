@@ -168,7 +168,7 @@ class PrescribeCommand(_BaseCommand):
 
         values["compound_medication_values"] = {}
 
-        if "compound_medication_id" in values:
+        if self.is_dirty("compound_medication_id") and self.compound_medication_id:
             values["compound_medication_values"]["id"] = values.pop("compound_medication_id")
 
         # Handle compound medication data
