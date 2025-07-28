@@ -218,6 +218,10 @@ THIRD_PARTY_MODULES = {
         "encode",
     },
     "pydantic": {
+        "BaseModel",
+        "conint",
+        "constr",
+        "Field",
         "ValidationError",
     },
     "rapidfuzz": {
