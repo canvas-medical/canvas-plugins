@@ -221,6 +221,10 @@ THIRD_PARTY_MODULES = {
         "InvalidTokenError",
     },
     "pydantic": {
+        "BaseModel",
+        "conint",
+        "constr",
+        "Field",
         "ValidationError",
     },
     "rapidfuzz": {
