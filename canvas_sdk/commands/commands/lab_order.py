@@ -6,10 +6,12 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.base import _SendableCommandMixin
+from canvas_sdk.v1.data import Command
 from canvas_sdk.v1.data.lab import LabPartner, LabPartnerTest
 
 
-class LabOrderCommand(BaseCommand):
+class LabOrderCommand(_SendableCommandMixin, BaseCommand):
     """A class for managing a Lab Order command within a specific note."""
 
     class Meta:
@@ -29,7 +31,7 @@ class LabOrderCommand(BaseCommand):
     comment: str | None = None
 
     def _get_error_details(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error", "send"]
     ) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
@@ -43,13 +45,46 @@ class LabOrderCommand(BaseCommand):
             else:
                 query["id"] = self.lab_partner
 
-            lab_partner_obj = LabPartner.objects.filter(**query).values("id", "dbid").first()
+            lab_partner_obj = (
+                LabPartner.objects.filter(**query)
+                .values("id", "dbid", "electronic_ordering_enabled")
+                .first()
+            )
 
             if not lab_partner_obj:
                 errors.append(
                     self._create_error_detail(
                         "value",
                         f"lab partner with Id or Name {self.lab_partner} not found",
+                        self.lab_partner,
+                    )
+                )
+
+        if method == "send" and self.command_uuid:
+            lab_partner = (
+                Command.objects.values_list("data__lab_partner__value", flat=True)
+                .filter(id=self.command_uuid)
+                .first()
+            )
+
+            if not lab_partner:
+                errors.append(
+                    self._create_error_detail(
+                        "value", "lab partner is required to send order", self.lab_partner
+                    )
+                )
+
+            electronic_ordering_enabled = (
+                LabPartner.objects.filter(name=lab_partner)
+                .values_list("electronic_ordering_enabled", flat=True)
+                .first()
+            )
+
+            if not electronic_ordering_enabled:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "lab partner is not enabled for electronic ordering",
                         self.lab_partner,
                     )
                 )
