@@ -8,7 +8,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.commands.commands.prescribe import PrescribeCommand
+from canvas_sdk.commands.commands.prescribe import CompoundMedicationData, PrescribeCommand
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 
@@ -44,11 +44,13 @@ def valid_compound_medication_prescription_data() -> dict[str, Any]:
     """Valid data for creating a compound medication prescription."""
     return {
         "note_uuid": str(uuid4()),
-        "compound_medication_formulation": "Test Compound Formulation",
-        "compound_medication_potency_unit_code": CompoundMedicationModel.PotencyUnits.TABLET,
-        "compound_medication_controlled_substance": CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
-        "compound_medication_controlled_substance_ndc": "",
-        "compound_medication_active": True,
+        "compound_medication_data": CompoundMedicationData(
+            formulation="Test Compound Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+            controlled_substance_ndc="",
+            active=True,
+        ),
         "sig": "Take one tablet by mouth daily",
         "days_supply": 30,
         "quantity_to_dispense": 30,
@@ -61,11 +63,13 @@ def valid_scheduled_compound_medication_prescription_data() -> dict[str, Any]:
     """Valid data for creating a scheduled compound medication prescription."""
     return {
         "note_uuid": str(uuid4()),
-        "compound_medication_formulation": "Scheduled Compound Formulation",
-        "compound_medication_potency_unit_code": CompoundMedicationModel.PotencyUnits.CAPSULE,
-        "compound_medication_controlled_substance": CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
-        "compound_medication_controlled_substance_ndc": "12345-678-90",
-        "compound_medication_active": True,
+        "compound_medication_data": CompoundMedicationData(
+            formulation="Scheduled Compound Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.CAPSULE,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
+            controlled_substance_ndc="12345-678-90",
+            active=True,
+        ),
         "sig": "Take one capsule by mouth daily",
         "days_supply": 30,
         "quantity_to_dispense": 30,
@@ -180,7 +184,7 @@ def test_prescribe_missing_all_medication_types(
     errors = exc_info.value.errors()
     error_messages = [e["msg"] for e in errors]
     assert any(
-        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_formulation'"
+        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data'"
         in msg
         for msg in error_messages
     )
@@ -193,7 +197,11 @@ def test_prescribe_multiple_medication_types(
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
         fdb_code="123456",
-        compound_medication_formulation="Test Compound Formulation",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -205,24 +213,6 @@ def test_prescribe_multiple_medication_types(
     assert any("Cannot specify multiple medication types" in msg for msg in error_messages)
 
 
-def test_prescribe_compound_medication_empty_formulation(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test compound medication prescription with empty formulation."""
-    prescribe_cmd = PrescribeCommand(
-        note_uuid=str(uuid4()),
-        compound_medication_formulation="",
-        sig="Take one tablet by mouth daily",
-    )
-
-    with pytest.raises(ValidationError) as exc_info:
-        prescribe_cmd.originate()
-
-    errors = exc_info.value.errors()
-    error_messages = [e["msg"] for e in errors]
-    assert any("Field 'formulation' cannot be empty" in msg for msg in error_messages)
-
-
 def test_prescribe_compound_medication_formulation_too_long(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
@@ -230,7 +220,11 @@ def test_prescribe_compound_medication_formulation_too_long(
     long_formulation = "A" * 106
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation=long_formulation,
+        compound_medication_data=CompoundMedicationData(
+            formulation=long_formulation,
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -250,9 +244,11 @@ def test_prescribe_compound_medication_strips_formulation_whitespace(
     """Test that formulation whitespace is stripped."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="  Test Formulation  ",
-        compound_medication_potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        compound_medication_data=CompoundMedicationData(
+            formulation="  Test Formulation  ",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
     effect = prescribe_cmd.originate()
@@ -269,8 +265,11 @@ def test_prescribe_compound_medication_invalid_potency_unit(
     """Test compound medication prescription with invalid potency unit."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="Test Formulation",
-        compound_medication_potency_unit_code="INVALID_CODE",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code="INVALID_CODE",
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -288,8 +287,11 @@ def test_prescribe_compound_medication_invalid_controlled_substance(
     """Test compound medication prescription with invalid controlled substance."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="Test Formulation",
-        compound_medication_controlled_substance="INVALID_SCHEDULE",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance="INVALID_SCHEDULE",
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -307,9 +309,12 @@ def test_prescribe_compound_medication_ndc_required_for_scheduled(
     """Test that NDC is required for scheduled substances."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="Test Formulation",
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
-        compound_medication_controlled_substance_ndc="",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
+            controlled_substance_ndc="",
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -329,9 +334,12 @@ def test_prescribe_compound_medication_ndc_cleaning(
     """Test that NDC dashes are removed."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="Test Formulation",
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
-        compound_medication_controlled_substance_ndc="12345-678-90",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+            controlled_substance_ndc="12345-678-90",
+        ),
         sig="Take one tablet by mouth daily",
     )
     effect = prescribe_cmd.originate()
@@ -348,11 +356,12 @@ def test_prescribe_compound_medication_values_property(
     """Test that the values property returns correct data for compound medications."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="  Test Formulation  ",  # With whitespace
-        compound_medication_potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
-        compound_medication_controlled_substance_ndc="12345-678-90",  # With dashes
-        compound_medication_active=True,
+        compound_medication_data=CompoundMedicationData(
+            formulation="  Test Formulation  ",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
+            controlled_substance_ndc="12345-678-90",
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -375,7 +384,12 @@ def test_prescribe_compound_medication_edit_command(
     """Test editing a compound medication prescription."""
     prescribe_cmd = PrescribeCommand(
         command_uuid=str(uuid4()),
-        compound_medication_formulation="Updated Formulation",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Updated Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+            controlled_substance_ndc="12345-678-90",
+        ),
         sig="Take two tablets by mouth daily",
     )
     effect = prescribe_cmd.edit()
@@ -394,9 +408,12 @@ def test_prescribe_compound_medication_multiple_validation_errors(
     """Test that multiple validation errors are collected and reported together."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="",  # Empty formulation
-        compound_medication_potency_unit_code="INVALID_CODE",  # Invalid potency unit
-        compound_medication_controlled_substance="INVALID_SCHEDULE",  # Invalid controlled substance
+        compound_medication_data=CompoundMedicationData(
+            formulation="",
+            potency_unit_code="INVALID_CODE",
+            controlled_substance="INVALID_SCHEDULE",
+            controlled_substance_ndc="",
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -404,14 +421,9 @@ def test_prescribe_compound_medication_multiple_validation_errors(
         prescribe_cmd.originate()
 
     errors = exc_info.value.errors()
-    assert len(errors) == 5  # Five validation errors
+    assert len(errors) == 4  # Five validation errors
 
     error_messages = [e["msg"] for e in errors]
-    assert any(
-        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_formulation'"
-        in msg
-        for msg in error_messages
-    )
     assert any("Field 'formulation' cannot be empty" in msg for msg in error_messages)
     assert any("Invalid potency unit code" in msg for msg in error_messages)
     assert any("Invalid controlled substance" in msg for msg in error_messages)
@@ -427,9 +439,11 @@ def test_prescribe_compound_medication_all_potency_units_valid(
     for potency_unit_code, _ in CompoundMedicationModel.PotencyUnits.choices:
         prescribe_cmd = PrescribeCommand(
             note_uuid=str(uuid4()),
-            compound_medication_formulation="Test Formulation",
-            compound_medication_potency_unit_code=potency_unit_code,
-            compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+            compound_medication_data=CompoundMedicationData(
+                formulation="Test Formulation",
+                potency_unit_code=potency_unit_code,
+                controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+            ),
             sig="Take one tablet by mouth daily",
         )
 
@@ -447,9 +461,12 @@ def test_prescribe_compound_medication_all_controlled_substances_valid(
 
         prescribe_cmd = PrescribeCommand(
             note_uuid=str(uuid4()),
-            compound_medication_formulation="Test Formulation",
-            compound_medication_controlled_substance=controlled_substance,
-            compound_medication_controlled_substance_ndc=ndc,
+            compound_medication_data=CompoundMedicationData(
+                formulation="Test Formulation",
+                potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+                controlled_substance=controlled_substance,
+                controlled_substance_ndc=ndc,
+            ),
             sig="Take one tablet by mouth daily",
         )
 
@@ -465,8 +482,11 @@ def test_prescribe_compound_medication_edge_case_formulation_length(
     formulation_105 = "A" * 105
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation=formulation_105,
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        compound_medication_data=CompoundMedicationData(
+            formulation=formulation_105,
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -486,9 +506,12 @@ def test_prescribe_compound_medication_ndc_whitespace_validation(
     """Test that whitespace-only NDC fails validation for scheduled substances."""
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
-        compound_medication_formulation="Test Formulation",
-        compound_medication_controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
-        compound_medication_controlled_substance_ndc="   ",  # Only whitespace
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_II,
+            controlled_substance_ndc="   ",  # Only whitespace
+        ),
         sig="Take one tablet by mouth daily",
     )
 
@@ -550,7 +573,11 @@ def test_prescribe_compound_medication_id_and_formulation_conflict(
     prescribe_cmd = PrescribeCommand(
         note_uuid=str(uuid4()),
         compound_medication_id=str(uuid4()),
-        compound_medication_formulation="Test Compound Formulation",
+        compound_medication_data=CompoundMedicationData(
+            formulation="Test Formulation",
+            potency_unit_code=CompoundMedicationModel.PotencyUnits.TABLET,
+            controlled_substance=CompoundMedicationModel.ControlledSubstanceOptions.SCHEDULE_NOT_SCHEDULED,
+        ),
         sig="Take one tablet by mouth daily",
     )
 

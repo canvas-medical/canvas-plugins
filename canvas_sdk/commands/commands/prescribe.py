@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -13,6 +14,27 @@ from canvas_sdk.effects.compound_medications.compound_medication import (
     CompoundMedication as CompoundMedicationEffect,
 )
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
+
+
+@dataclass
+class CompoundMedicationData:
+    """Data for creating a compound medication inline within a prescription."""
+
+    formulation: str
+    potency_unit_code: str
+    controlled_substance: str
+    controlled_substance_ndc: str | None = None
+    active: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert dataclass to dictionary, excluding None values."""
+        return {
+            "formulation": self.formulation,
+            "potency_unit_code": self.potency_unit_code,
+            "controlled_substance": self.controlled_substance,
+            "controlled_substance_ndc": self.controlled_substance_ndc,
+            "active": self.active,
+        }
 
 
 class PrescribeCommand(_BaseCommand):
@@ -48,23 +70,8 @@ class PrescribeCommand(_BaseCommand):
     compound_medication_id: str | None = Field(
         default=None, json_schema_extra={"commands_api_name": "compound_medication_id"}
     )
-    compound_medication_formulation: str | None = Field(
-        default=None, json_schema_extra={"commands_api_name": "compound_medication_formulation"}
-    )
-    compound_medication_potency_unit_code: str | None = Field(
-        default=None,
-        json_schema_extra={"commands_api_name": "compound_medication_potency_unit_code"},
-    )
-    compound_medication_controlled_substance: str | None = Field(
-        default=None,
-        json_schema_extra={"commands_api_name": "compound_medication_controlled_substance"},
-    )
-    compound_medication_controlled_substance_ndc: str | None = Field(
-        default=None,
-        json_schema_extra={"commands_api_name": "compound_medication_controlled_substance_ndc"},
-    )
-    compound_medication_active: bool | None = Field(
-        default=None, json_schema_extra={"commands_api_name": "compound_medication_active"}
+    compound_medication_data: CompoundMedicationData | None = Field(
+        default=None, json_schema_extra={"commands_api_name": "compound_medication_data"}
     )
 
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
@@ -78,20 +85,17 @@ class PrescribeCommand(_BaseCommand):
                 self.compound_medication_id is not None
                 and self.compound_medication_id.strip() != ""
             )
-            has_compound_medication_formulation = (
-                self.compound_medication_formulation is not None
-                and self.compound_medication_formulation.strip() != ""
-            )
+            has_compound_medication_data = self.compound_medication_data is not None
 
             medication_types_provided = sum(
-                [has_fdb_code, has_compound_medication_id, has_compound_medication_formulation]
+                [has_fdb_code, has_compound_medication_id, has_compound_medication_data]
             )
 
             if medication_types_provided == 0:
                 errors.append(
                     self._create_error_detail(
                         "missing",
-                        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_formulation' to prescribe a medication.",
+                        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data' to prescribe a medication.",
                         None,
                     )
                 )
@@ -99,7 +103,7 @@ class PrescribeCommand(_BaseCommand):
                 errors.append(
                     self._create_error_detail(
                         "value",
-                        "Cannot specify multiple medication types. Choose one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_formulation'.",
+                        "Cannot specify multiple medication types. Choose one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data'.",
                         None,
                     )
                 )
@@ -120,13 +124,13 @@ class PrescribeCommand(_BaseCommand):
                 )
             )
 
-        # Use static validation method for compound medication fields
-        if self.compound_medication_formulation is not None:
+        # Validate compound medication data if provided
+        if self.compound_medication_data is not None:
             compound_med_errors = CompoundMedicationEffect.validate_compound_medication_fields(
-                formulation=self.compound_medication_formulation,
-                potency_unit_code=self.compound_medication_potency_unit_code,
-                controlled_substance=self.compound_medication_controlled_substance,
-                controlled_substance_ndc=self.compound_medication_controlled_substance_ndc,
+                formulation=self.compound_medication_data.formulation,
+                potency_unit_code=self.compound_medication_data.potency_unit_code,
+                controlled_substance=self.compound_medication_data.controlled_substance,
+                controlled_substance_ndc=self.compound_medication_data.controlled_substance_ndc,
             )
             errors.extend(compound_med_errors)
 
@@ -162,32 +166,19 @@ class PrescribeCommand(_BaseCommand):
                 str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
             )
 
-        # Group compound medication fields under a single key
-        compound_medication_values = {}
+        values["compound_medication_values"] = {}
 
         if "compound_medication_id" in values:
-            compound_medication_values["id"] = values.pop("compound_medication_id")
-        if "compound_medication_formulation" in values:
-            compound_medication_values["formulation"] = values.pop(
-                "compound_medication_formulation"
-            )
-        if "compound_medication_potency_unit_code" in values:
-            compound_medication_values["potency_unit_code"] = values.pop(
-                "compound_medication_potency_unit_code"
-            )
-        if "compound_medication_controlled_substance" in values:
-            compound_medication_values["controlled_substance"] = values.pop(
-                "compound_medication_controlled_substance"
-            )
-        if "compound_medication_controlled_substance_ndc" in values:
-            compound_medication_values["controlled_substance_ndc"] = values.pop(
-                "compound_medication_controlled_substance_ndc"
-            )
-        if "compound_medication_active" in values:
-            compound_medication_values["active"] = values.pop("compound_medication_active")
+            values["compound_medication_values"]["id"] = values.pop("compound_medication_id")
 
-        if compound_medication_values:
-            values["compound_medication_values"] = compound_medication_values
+        # Handle compound medication data
+        elif (
+            "compound_medication_data" in values and values["compound_medication_data"] is not None
+        ):
+            # Convert CompoundMedicationData to the expected nested structure
+            compound_data = values.pop("compound_medication_data")
+            if isinstance(compound_data, CompoundMedicationData):
+                values["compound_medication_values"] = compound_data.to_dict()
 
         return values
 
@@ -232,6 +223,7 @@ class PrescribeCommand(_BaseCommand):
 
 __exports__ = (
     "PrescribeCommand",
+    "CompoundMedicationData",
     # Not defined here but used in a current plugin
     "ClinicalQuantity",
     "Decimal",

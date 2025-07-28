@@ -112,6 +112,7 @@
   ],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
+    "CompoundMedicationData",
     "Decimal",
     "PrescribeCommand"
   ],
