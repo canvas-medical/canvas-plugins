@@ -168,9 +168,9 @@ class _SendableCommandMixin:
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)  # type: ignore[misc]
 
-        cmd = Command.objects.get(id=self.command_uuid)  # type: ignore[attr-defined]
+        state = Command.objects.values_list("state", flat=True).filter(id=self.command_uuid).first()  # type: ignore[attr-defined]
 
-        if not cmd.committer_id:
+        if state != "committed":
             errors.append(
                 self._create_error_detail(  # type: ignore[attr-defined]
                     "value",
