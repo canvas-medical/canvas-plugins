@@ -7,12 +7,19 @@ from textwrap import dedent
 import pytest
 
 from canvas_sdk.tests.shared import params_from_dict
+from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
-    CANVAS_SUBMODULE_NAMES,
     Sandbox,
     sandbox_from_module,
 )
+
+CANVAS_SUBMODULE_NAMES = [
+    found_module
+    for found_module in find_submodules(CANVAS_TOP_LEVEL_MODULES)
+    # tests are excluded from the built and distributed module in pyproject.toml
+    if "tests" not in found_module and "test_" not in found_module
+]
 
 
 def _sandbox_from_code(
@@ -114,6 +121,70 @@ def test_plugin_runner_settings_import() -> None:
 
     with pytest.raises(ImportError, match="'settings' is not an allowed import."):
         sandbox.execute()
+
+
+def test_support_match() -> None:
+    """Test that match is supported."""
+    sandbox = _sandbox_from_code(
+        """
+            day = 5
+            month = 12
+
+            success = False
+
+            match day:
+                case 1 | 2 | 3 if month == 1:
+                    success = False
+                case 5 if month == 10:
+                    success = False
+                case 5 if month == 12:
+                    success = True
+                case _:
+                    success = False
+
+            assert success
+        """
+    )
+
+    sandbox.execute()
+
+
+def test_support_match_tuple() -> None:
+    """Test that match is supported."""
+    sandbox = _sandbox_from_code(
+        """
+            point = (0, 5)
+
+            success = False
+
+            match point:
+                case (0, 0):
+                    success = False
+                case (0, x as non_origin):
+                    success = non_origin == 5
+                case (0, *extra):
+                    success = False
+
+            assert success
+        """
+    )
+
+    sandbox.execute()
+
+
+def test_support_type_annotations() -> None:
+    """Test that type annotations work."""
+    sandbox = _sandbox_from_code(
+        """
+            point: int = 5
+            name: str = "name"
+
+            assert point == 5
+            assert name == "name"
+        """
+    )
+
+    sandbox.execute()
 
 
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
@@ -459,9 +530,13 @@ def test_urllib() -> None:
                 obj = StopMedicationCommand(note_uuid="123")
 
                 print(f'{obj.__dict__}')
+                print(f'{vars(obj)}')
 
                 obj.__dict__.get('note_uuid')
                 obj.__dict__.items()
+
+                vars(obj).get('note_uuid')
+                vars(obj).items()
             """,
         }
     ),
@@ -546,6 +621,13 @@ def test_type_is_inaccessible() -> None:
 
                 pvt = client.__dict__["_session"]
             """,
+            "vars_private_attr_connection": """
+                from canvas_sdk.utils import Http
+
+                client = Http()
+
+                pvt = vars(client)["_session"]
+            """,
             "private_method": """
                 from canvas_sdk.utils import Http
 
@@ -566,13 +648,6 @@ def test_type_is_inaccessible() -> None:
                 client = Http()
                 pvt = client._session
             """,
-            "dict_private_attr_session": """
-                from canvas_sdk.utils import Http
-
-                client = Http()
-
-                pvt = client.__dict__["_session"]
-            """,
             "private_attr__class__": """
                 from canvas_sdk.utils import Http
 
@@ -588,6 +663,11 @@ def test_type_is_inaccessible() -> None:
                 from canvas_sdk.utils.http import ontologies_http
 
                 ontologies_http.__dict__['_base_url'] = 'evil'
+            """,
+            "ontologies_base_url_vars": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                vars(ontologies_http)['_base_url'] = 'evil'
             """,
             "ontologies_session": """
                 from canvas_sdk.utils.http import ontologies_http

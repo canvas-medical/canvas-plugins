@@ -3,6 +3,7 @@ from typing import Self
 
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.utils import quantize
 
 
@@ -14,18 +15,16 @@ class PostingQuerySet(models.QuerySet):
         return self.filter(entered_in_error__isnull=True)
 
 
-class BasePosting(models.Model):
+class BasePosting(Model):
     """
     Base model to aggregate multiple line item transactions on a claim.
     """
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_baseposting_001"
 
     objects = PostingQuerySet.as_manager()
 
-    dbid = models.BigIntegerField(primary_key=True)
     corrected_posting = models.ForeignKey(
         "v1.BasePosting", related_name="correction_postings", on_delete=models.PROTECT, null=True
     )
@@ -41,8 +40,8 @@ class BasePosting(models.Model):
         "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
     )
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
     @property
     def paid_amount(self) -> Decimal:
@@ -93,7 +92,6 @@ class CoveragePosting(BasePosting):
     """Represents an insurance payment/adjustment on a claim level."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_coverageposting_001"
 
     remittance = models.ForeignKey(
@@ -103,9 +101,9 @@ class CoveragePosting(BasePosting):
         "v1.ClaimCoverage", related_name="postings", on_delete=models.PROTECT
     )
 
-    crossover_carrier = models.CharField()
-    crossover_id = models.CharField()
-    payer_icn = models.CharField()
+    crossover_carrier = models.CharField(max_length=255)
+    crossover_id = models.CharField(max_length=255)
+    payer_icn = models.CharField(max_length=255)
     position_in_era = models.PositiveIntegerField()
 
 
@@ -113,7 +111,6 @@ class PatientPosting(BasePosting):
     """A model that represents a patient payment/adjustment on a claim level."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_patientposting_001"
 
     claim_patient = models.ForeignKey(
@@ -152,14 +149,11 @@ class PatientPosting(BasePosting):
         return self.discounted_amount + self.paid_amount
 
 
-class AbstractBulkPosting(models.Model):
+class AbstractBulkPosting(IdentifiableModel):
     """Patient and Insurance bulk posting shared columns."""
 
     class Meta:
         abstract = True
-
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
 
     payment_collection = models.OneToOneField(
         "v1.PaymentCollection", related_name="%(class)s", on_delete=models.PROTECT
@@ -167,15 +161,14 @@ class AbstractBulkPosting(models.Model):
 
     total_paid = models.DecimalField(max_digits=8, decimal_places=2)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class BulkPatientPosting(AbstractBulkPosting):
     """Model to aggregate bulk patient payments on multiple claims."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_bulkpatientposting_001"
 
     discount = models.ForeignKey(
@@ -200,7 +193,6 @@ class BaseRemittanceAdvice(AbstractBulkPosting):
     """Manual and Electronic Shared columns."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_baseremittanceadvice_001"
 
     transactor = models.ForeignKey(

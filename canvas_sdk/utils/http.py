@@ -295,15 +295,23 @@ class PharmacyHttp:
 
     def __init__(self) -> None:
         self._http_client = JsonOnlyHttp(
-            base_url=os.getenv("PHARMACY_ENDPOINT", "https://pharmacy.canvasmedical.com")
+            base_url=os.getenv(
+                "PHARMACY_SERVICE_ENDPOINT", "https://pharmacy-2017071.canvasmedical.com"
+            )
         )
 
         self._http_client._session.headers.update(
             {"Authorization": os.getenv("PRE_SHARED_KEY", "")}
         )
 
+        # Disable SSL verification for this session
+        self._http_client._session.verify = False
+
     def search_pharmacies(
-        self, search_term: str, latitude: str | None = None, longitude: str | None = None
+        self,
+        search_term: str | None = " ",
+        latitude: str | None = None,
+        longitude: str | None = None,
     ) -> list[dict]:
         """Search for pharmacies by term and optional location."""
         params = {"search": search_term}

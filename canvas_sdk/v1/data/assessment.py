@@ -1,5 +1,7 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import IdentifiableModel
+
 
 class AssessmentStatus(models.TextChoices):
     """AssessmentStatus."""
@@ -9,17 +11,14 @@ class AssessmentStatus(models.TextChoices):
     STATUS_DETERIORATING = "deteriorated", "Deteriorated"
 
 
-class Assessment(models.Model):
+class Assessment(IdentifiableModel):
     """Assessment."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_assessment_001"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
     committer = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -38,10 +37,10 @@ class Assessment(models.Model):
         "v1.Condition", on_delete=models.CASCADE, related_name="assessments", null=True
     )
     interview = models.ForeignKey("v1.Interview", on_delete=models.DO_NOTHING, null=True)
-    status = models.CharField(choices=AssessmentStatus.choices)
-    narrative = models.CharField()
-    background = models.CharField()
-    care_team = models.CharField()
+    status = models.CharField(choices=AssessmentStatus.choices, max_length=20)
+    narrative = models.CharField(max_length=2048)
+    background = models.CharField(max_length=2048)
+    care_team = models.CharField(max_length=500)
 
 
 __exports__ = ("AssessmentStatus", "Assessment")

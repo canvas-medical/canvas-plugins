@@ -7,6 +7,8 @@ from canvas_sdk.v1.data.base import (
     BaseModelManager,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
+    Model,
     ValueSetLookupQuerySet,
 )
 
@@ -29,17 +31,14 @@ class MedicationQuerySet(ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPa
 MedicationManager = BaseModelManager.from_queryset(MedicationQuerySet)
 
 
-class Medication(models.Model):
+class Medication(IdentifiableModel):
     """Medication."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_medication_001"
 
     objects = cast(MedicationQuerySet, MedicationManager())
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="medications", null=True
     )
@@ -50,28 +49,26 @@ class Medication(models.Model):
     committer = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
-    status = models.CharField(choices=Status.choices)
+    status = models.CharField(choices=Status.choices, max_length=20)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    quantity_qualifier_description = models.CharField()
-    clinical_quantity_description = models.CharField()
-    potency_unit_code = models.CharField()
-    national_drug_code = models.CharField()
-    erx_quantity = models.CharField()
+    quantity_qualifier_description = models.TextField()
+    clinical_quantity_description = models.TextField()
+    potency_unit_code = models.CharField(max_length=20)
+    national_drug_code = models.CharField(max_length=20)
+    erx_quantity = models.FloatField()
 
 
-class MedicationCoding(models.Model):
+class MedicationCoding(Model):
     """MedicationCoding."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_medicationcoding_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    system = models.CharField()
-    version = models.CharField()
-    code = models.CharField()
-    display = models.CharField()
+    system = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    code = models.CharField(max_length=255)
+    display = models.CharField(max_length=1000)
     user_selected = models.BooleanField()
     medication = models.ForeignKey(
         Medication, on_delete=models.DO_NOTHING, related_name="codings", null=True
