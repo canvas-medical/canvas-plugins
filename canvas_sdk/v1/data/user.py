@@ -11,8 +11,8 @@ class CanvasUser(Model):
 
     email = models.EmailField(db_column="email")
     phone_number = models.CharField(db_column="phone_number", max_length=255)
-    last_invite_date_time = models.DateTimeField()
-    is_portal_registered = models.BooleanField()
+    last_invite_date_time = models.DateTimeField(null=True, blank=True)
+    is_portal_registered = models.BooleanField(default=False)
 
 
 __exports__ = ("CanvasUser",)
