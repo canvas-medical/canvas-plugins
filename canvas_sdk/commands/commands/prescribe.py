@@ -23,7 +23,7 @@ class CompoundMedicationData:
     formulation: str
     potency_unit_code: str
     controlled_substance: str
-    controlled_substance_ndc: str | None = None
+    controlled_substance_ndc: str = ""
     active: bool = True
 
     def to_dict(self) -> dict[str, Any]:
