@@ -500,6 +500,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Goal",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
@@ -666,6 +667,9 @@
   ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
+  ],
+  "canvas_sdk.v1.data.goal": [
+    "Goal"
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",

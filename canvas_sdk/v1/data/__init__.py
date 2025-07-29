@@ -14,6 +14,7 @@ from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
 from .invoice import Invoice
 from .lab import (
@@ -116,6 +117,7 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Goal",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
