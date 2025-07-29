@@ -669,7 +669,10 @@
     "Discount"
   ],
   "canvas_sdk.v1.data.goal": [
-    "Goal"
+    "Goal",
+    "GoalAchievementStatus",
+    "GoalLifecycleStatus",
+    "GoalPriority"
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",

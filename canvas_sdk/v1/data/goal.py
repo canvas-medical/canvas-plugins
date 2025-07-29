@@ -67,4 +67,4 @@ class Goal(IdentifiableModel):
     start_date = models.DateField()
 
 
-__exports__ = ("Goal",)
+__exports__ = ("Goal", "GoalLifecycleStatus", "GoalAchievementStatus", "GoalPriority")
