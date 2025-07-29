@@ -125,7 +125,6 @@ Protocol = TypedDict(
     },
 )
 
-
 ApplicationConfig = TypedDict(
     "ApplicationConfig",
     {
@@ -238,16 +237,33 @@ class PluginRunner(PluginRunnerServicer):
                         },
                     ):
                         _effects = handler.compute()
-                        effects = [
-                            Effect(
-                                type=effect.type,
-                                payload=effect.payload,
-                                plugin_name=base_plugin_name,
-                                classname=classname,
-                                handler_name=handler_name,
-                            )
-                            for effect in _effects
-                        ]
+                        seen_ids = set()
+                        effects = []
+
+                        def flatten(nested_list):
+                            for item in nested_list:
+                                if isinstance(item, Iterable) and not isinstance(
+                                    item, (str, bytes)
+                                ):
+                                    yield from flatten(item)
+                                else:
+                                    yield item
+
+                        for effect in flatten(_effects):
+                            effect_id = getattr(effect, "id", None)
+                            if effect_id is None or effect_id not in seen_ids:
+                                effects.append(
+                                    Effect(
+                                        type=effect.type,
+                                        payload=effect.payload,
+                                        plugin_name=base_plugin_name,
+                                        classname=classname,
+                                        handler_name=handler_name,
+                                        id=effect_id,
+                                    )
+                                )
+                                if effect_id is not None:
+                                    seen_ids.add(effect_id)
 
                         effects = validate_effects(effects)
 
