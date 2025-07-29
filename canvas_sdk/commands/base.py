@@ -168,16 +168,19 @@ class _SendableCommandMixin:
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)  # type: ignore[misc]
 
-        state = Command.objects.values_list("state", flat=True).filter(id=self.command_uuid).first()  # type: ignore[attr-defined]
-
-        if state != "committed":
-            errors.append(
-                self._create_error_detail(  # type: ignore[attr-defined]
-                    "value",
-                    "Command needs to be signed first.",
-                    self.command_uuid,  # type: ignore[attr-defined]
-                )
+        if method == "send":
+            state = (
+                Command.objects.values_list("state", flat=True).filter(id=self.command_uuid).first()  # type: ignore[attr-defined]
             )
+
+            if state != "committed":
+                errors.append(
+                    self._create_error_detail(  # type: ignore[attr-defined]
+                        "value",
+                        "Command needs to be signed first.",
+                        self.command_uuid,  # type: ignore[attr-defined]
+                    )
+                )
         return errors
 
     def send(self) -> Effect:
