@@ -21,12 +21,12 @@ def mock_plugin_caller(
     mocker: "MockerFixture",
     request: "Any",
 ) -> typing.Generator[str, None, None]:
-    """A fixture that mocks plugin_only decorator.
-    It generates a random plugin name and patches the plugin_only to simulate plugin behavior.
+    """A fixture that mocks plugin_context decorator.
+    It generates a random plugin name and patches the plugin_context to simulate plugin behavior.
     """
     plugin_name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
 
-    def patched_plugin_only(
+    def patched_plugin_context(
         func: typing.Callable[..., typing.Any],
     ) -> typing.Callable[..., typing.Any]:
         """A mock decorator to simulate plugin-only behavior."""
@@ -38,7 +38,7 @@ def mock_plugin_caller(
 
         return wrapper
 
-    mocker.patch("canvas_sdk.utils.plugins.plugin_only", side_effect=patched_plugin_only)
+    mocker.patch("canvas_sdk.utils.plugins.plugin_context", side_effect=patched_plugin_context)
 
     import canvas_sdk.caching.plugins
 
@@ -46,7 +46,8 @@ def mock_plugin_caller(
     importlib.reload(canvas_sdk.caching.plugins)
 
     yield plugin_name
-    # Cleanup: Unpatch the plugin_only decorator after the test
+
+    # Cleanup: Unpatch the plugin_context decorator after the test
     mocker.stopall()
     importlib.reload(canvas_sdk.caching.plugins)
 
