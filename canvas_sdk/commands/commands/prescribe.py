@@ -79,34 +79,32 @@ class PrescribeCommand(_BaseCommand):
         errors = super()._get_error_details(method)
 
         # Validate that exactly one medication type is provided
-        if method == "originate":
-            has_fdb_code = self.fdb_code is not None and self.fdb_code.strip() != ""
-            has_compound_medication_id = (
-                self.compound_medication_id is not None
-                and self.compound_medication_id.strip() != ""
-            )
-            has_compound_medication_data = self.compound_medication_data is not None
+        has_fdb_code = self.fdb_code is not None and self.fdb_code.strip() != ""
+        has_compound_medication_id = (
+            self.compound_medication_id is not None and self.compound_medication_id.strip() != ""
+        )
+        has_compound_medication_data = self.compound_medication_data is not None
 
-            medication_types_provided = sum(
-                [has_fdb_code, has_compound_medication_id, has_compound_medication_data]
-            )
+        medication_types_provided = sum(
+            [has_fdb_code, has_compound_medication_id, has_compound_medication_data]
+        )
 
-            if medication_types_provided == 0:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data' to prescribe a medication.",
-                        None,
-                    )
+        if medication_types_provided == 0 and method == "originate":
+            errors.append(
+                self._create_error_detail(
+                    "missing",
+                    "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data' to prescribe a medication.",
+                    None,
                 )
-            elif medication_types_provided > 1:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Cannot specify multiple medication types. Choose one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data'.",
-                        None,
-                    )
+            )
+        elif medication_types_provided > 1:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Cannot specify multiple medication types. Choose one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data'.",
+                    None,
                 )
+            )
 
         # Validate compound medication ID if provided
         if (
