@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v0.49.0 (2025-07-29)
+
+### Chores
+
+- Add test coverage with codecov ([#864](https://github.com/canvas-medical/canvas-plugins/pull/864),
+  [`b2eec06`](https://github.com/canvas-medical/canvas-plugins/commit/b2eec06d24d06cc7636a5dad95139c09dc423c95))
+
+- Auto-update pre-commit hooks ([#865](https://github.com/canvas-medical/canvas-plugins/pull/865),
+  [`49b935c`](https://github.com/canvas-medical/canvas-plugins/commit/49b935cbabb27153f4436d3e6bb182770ebe65b2))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add additional imports from Pydantic
+  ([#871](https://github.com/canvas-medical/canvas-plugins/pull/871),
+  [`d34358d`](https://github.com/canvas-medical/canvas-plugins/commit/d34358d1ba8487834c5af21d7ac5f0c294a2b34c))
+
+Co-authored-by: copilot-swe-agent[bot]
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Add additional jwt imports for verifying tokens
+  ([#863](https://github.com/canvas-medical/canvas-plugins/pull/863),
+  [`5058cf5`](https://github.com/canvas-medical/canvas-plugins/commit/5058cf57aeef2c3c491b7c7e33f12e374838951c))
+
+- Koala-3011 update plugin install text to reflect async process
+  ([#738](https://github.com/canvas-medical/canvas-plugins/pull/738),
+  [`b072182`](https://github.com/canvas-medical/canvas-plugins/commit/b0721825bfd5f1325f6b82219d85a52db1c77a6a))
+
+Signed-off-by: Mary Dickson <mdickson@gmail.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.48.0 (2025-07-24)
 
 ### Chores
