@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models import QuerySet
 
+from canvas_sdk.v1.data.base import Model
+
 
 class AbstractLineItemQuerySet(models.QuerySet):
     """AbstractLineItemQuerySet."""
@@ -10,7 +12,7 @@ class AbstractLineItemQuerySet(models.QuerySet):
         return self.filter(entered_in_error__isnull=True)
 
 
-class AbstractLineItemTransaction(models.Model):
+class AbstractLineItemTransaction(Model):
     """Abstract class with common properties for both payments and adjustments."""
 
     class Meta:
@@ -18,7 +20,6 @@ class AbstractLineItemTransaction(models.Model):
 
     objects = AbstractLineItemQuerySet.as_manager()
 
-    dbid = models.BigIntegerField(primary_key=True)
     posting = models.ForeignKey(
         "v1.BasePosting", related_name="%(class)ss", on_delete=models.PROTECT
     )
@@ -27,15 +28,14 @@ class AbstractLineItemTransaction(models.Model):
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 
 class NewLineItemPayment(AbstractLineItemTransaction):
     """Subclass that represents a payment on a billing line item."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_newlineitempayment_001"
 
     charged = models.DecimalField(max_digits=8, decimal_places=2)
@@ -47,8 +47,8 @@ class AbstractLineItemAdjustment(AbstractLineItemTransaction):
     class Meta:
         abstract = True
 
-    code = models.CharField()
-    group = models.CharField()
+    code = models.CharField(max_length=8)
+    group = models.CharField(max_length=8)
 
     deviated_from_posting_ruleset = models.BooleanField()
 
@@ -57,7 +57,6 @@ class NewLineItemAdjustment(AbstractLineItemAdjustment):
     """Subclass for billing line item adjustments."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_newlineitemadjustment_001"
 
     write_off = models.BooleanField()
@@ -67,7 +66,6 @@ class LineItemTransfer(AbstractLineItemAdjustment):
     """Subclass for billing line item balance transfer to other coverages or patient."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_quality_and_revenue_lineitemtransfer_001"
 
     transfer_to = models.ForeignKey(

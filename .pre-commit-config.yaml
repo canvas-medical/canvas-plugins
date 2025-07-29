@@ -13,7 +13,7 @@ repos:
       - id: end-of-file-fixer
         exclude_types:
           - svg
-        exclude: &generated canvas_generated/
+        exclude: &generated canvas_generated/|plugin_runner/allowed-module-imports.json
       - id: trailing-whitespace
         args: ["--markdown-linebreak-ext=md"]
         exclude_types:
@@ -35,7 +35,7 @@ repos:
           )$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+    rev: v0.12.5
     hooks:
       - id: ruff
         args: [ --fix ]
@@ -43,7 +43,7 @@ repos:
         exclude: *generated
 
   - repo: https://github.com/rtts/djhtml
-    rev: 3.0.7
+    rev: 3.0.8
     hooks:
       - id: djhtml
         # Indent only HTML files in template directories
@@ -82,7 +82,7 @@ repos:
       - id: check-yaml
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.17.0
     hooks:
       - id: mypy
         exclude: |
@@ -103,5 +103,11 @@ repos:
       - id: check-protobufs-definitions
         name: Check Protobufs Definitions
         entry: uv run ./bin/generate-protobufs
+        language: system
+        pass_filenames: false
+
+      - id: update-allowed-imports
+        name: Update allowed imports
+        entry: uv run python -m plugin_runner.generate_allowed_imports
         language: system
         pass_filenames: false

@@ -5,7 +5,8 @@ from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
-from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue
+from .charge_description_master import ChargeDescriptionMaster
+from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue, InstallmentPlan
 from .claim_line_item import ClaimLineItem
 from .command import Command
 from .condition import Condition, ConditionCoding
@@ -19,6 +20,8 @@ from .lab import (
     LabOrder,
     LabOrderReason,
     LabOrderReasonCondition,
+    LabPartner,
+    LabPartnerTest,
     LabReport,
     LabReview,
     LabTest,
@@ -32,7 +35,7 @@ from .line_item_transaction import (
 )
 from .medication import Medication, MedicationCoding
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import Note, NoteType
+from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
 from .observation import (
     Observation,
     ObservationCoding,
@@ -76,8 +79,9 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .staff import Staff, StaffContactPoint
+from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
+from .team import Team, TeamContactPoint
 from .user import CanvasUser
 
 __all__ = __exports__ = (
@@ -96,6 +100,7 @@ __all__ = __exports__ = (
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
+    "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
     "ClaimLineItem",
@@ -106,6 +111,7 @@ __all__ = __exports__ = (
     "ConditionCoding",
     "Coverage",
     "CoveragePosting",
+    "CurrentNoteStateEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -113,6 +119,7 @@ __all__ = __exports__ = (
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
+    "InstallmentPlan",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
@@ -120,6 +127,8 @@ __all__ = __exports__ = (
     "LabOrder",
     "LabOrderReason",
     "LabOrderReasonCondition",
+    "LabPartner",
+    "LabPartnerTest",
     "LabReport",
     "LabReview",
     "LabTest",
@@ -134,6 +143,7 @@ __all__ = __exports__ = (
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteStateChangeEvent",
     "NoteType",
     "Observation",
     "ObservationCoding",
@@ -163,11 +173,15 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "Staff",
+    "StaffAddress",
+    "StaffPhoto",
     "StaffContactPoint",
     "Task",
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "Team",
+    "TeamContactPoint",
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",

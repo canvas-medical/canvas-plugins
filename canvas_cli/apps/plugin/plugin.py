@@ -230,7 +230,7 @@ def install(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.created:
-        print(f"Plugin {plugin_name} successfully installed!")
+        print(f"Plugin {plugin_name} uploaded! Check logs for more details.")
 
     # If we got a conflict, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
@@ -483,7 +483,7 @@ def update(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        print("Plugin successfully updated!")
+        print("New plugin version uploaded! Check logs for more details.")
 
     else:
         print(f"Status code {r.status_code}: {r.text}")

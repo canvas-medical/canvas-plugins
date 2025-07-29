@@ -112,7 +112,7 @@ def install_new_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]
             f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file",
             "Installing plugin:",
             "Posting",
-            f"Plugin {plugin_name} successfully installed!",
+            f"Plugin {plugin_name} uploaded! Check logs for more details.",
         ],
         [],
     )
@@ -123,8 +123,41 @@ def list_newly_installed_plugin(plugin_name: str) -> tuple[str, int, list[str], 
     return ("list", 0, [f"{plugin_name}@0.0.1	enabled"], [])
 
 
+def reinstall_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """Step 4 - make a change and reinstall the plugin."""
+    protocol_code = """
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
+from logger import log
+
+class Protocol(BaseProtocol):
+    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+    NARRATIVE_STRING = "EDITED PROTOCOL: I was inserted from my plugin's protocol."
+
+    def compute(self):
+        log.info(self.NARRATIVE_STRING)
+        return []
+"""
+
+    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+        protocol.write(protocol_code)
+
+    return (
+        f"install {plugin_name}",
+        0,
+        [
+            f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file",
+            "Installing plugin:",
+            "Posting",
+            f"Plugin {plugin_name} already exists, updating instead...",
+            "New plugin version uploaded! Check logs for more details.",
+        ],
+        [],
+    )
+
+
 def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 4 - disable plugin."""
+    """Step 5 - disable plugin."""
     return (
         f"disable {plugin_name}",
         0,
@@ -134,22 +167,25 @@ def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
 
 
 def list_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 5 - list disabled plugin."""
+    """Step 6 - list disabled plugin."""
     return ("list", 0, [f"{plugin_name}@0.0.1	disabled"], [])
 
 
 def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 6 - enable the disabled plugin."""
+    """Step 7 - enable the disabled plugin."""
     return (
         f"enable {plugin_name}",
         0,
-        [f"Enabling {plugin_name} using ", f"Plugin {plugin_name} successfully enabled!"],
+        [
+            f"Enabling {plugin_name} using ",
+            f"Plugin {plugin_name} successfully enabled!",
+        ],
         [],
     )
 
 
 def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 7 - try to uninstall the enabled plugin."""
+    """Step 8 - try to uninstall the enabled plugin."""
     return (
         f"uninstall {plugin_name}",
         1,
@@ -183,6 +219,7 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
         (list_empty_plugins),
         (install_new_plugin),
         (list_newly_installed_plugin),
+        (reinstall_plugin),
         (disable_plugin),
         (list_disabled_plugin),
         (enable_plugin),
@@ -200,7 +237,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     step: Callable,
     cli_runner: CliRunner,
 ) -> None:
-    """Tests that the Canvas CLI can list, install, disable, enable, and uninstall a plugin."""
+    """Tests that the Canvas CLI can list, install, reinstall, disable, enable, and uninstall a plugin."""
     mock_get_token.return_value = None
     mock_set_token.return_value = None
 

@@ -2,6 +2,7 @@ from collections.abc import Generator
 from datetime import date
 from time import sleep
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -78,6 +79,20 @@ def goal() -> dict[str, Any]:
 def chart_section_review() -> dict[str, Any]:
     """Chart Section Review Command for testing."""
     return {"section": ChartSectionReviewCommand.Sections.MEDICATIONS}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def patch_condition() -> Generator[None, None, None]:
+    """Patch the Condition model to return a mock queryset."""
+    with patch.object(Condition.objects, "active") as mock_active:
+        mock_qs = MagicMock()
+        mock_first = MagicMock()
+        mock_first.id = 1
+
+        mock_qs.filter.return_value.first.return_value = mock_first
+        mock_active.return_value = mock_qs
+
+        yield
 
 
 @pytest.fixture(params=COMMANDS)

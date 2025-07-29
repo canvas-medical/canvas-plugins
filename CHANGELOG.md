@@ -1,6 +1,140 @@
 # CHANGELOG
 
 
+## v0.49.0 (2025-07-29)
+
+### Chores
+
+- Add test coverage with codecov ([#864](https://github.com/canvas-medical/canvas-plugins/pull/864),
+  [`b2eec06`](https://github.com/canvas-medical/canvas-plugins/commit/b2eec06d24d06cc7636a5dad95139c09dc423c95))
+
+- Auto-update pre-commit hooks ([#865](https://github.com/canvas-medical/canvas-plugins/pull/865),
+  [`49b935c`](https://github.com/canvas-medical/canvas-plugins/commit/49b935cbabb27153f4436d3e6bb182770ebe65b2))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add additional imports from Pydantic
+  ([#871](https://github.com/canvas-medical/canvas-plugins/pull/871),
+  [`d34358d`](https://github.com/canvas-medical/canvas-plugins/commit/d34358d1ba8487834c5af21d7ac5f0c294a2b34c))
+
+Co-authored-by: copilot-swe-agent[bot]
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Add additional jwt imports for verifying tokens
+  ([#863](https://github.com/canvas-medical/canvas-plugins/pull/863),
+  [`5058cf5`](https://github.com/canvas-medical/canvas-plugins/commit/5058cf57aeef2c3c491b7c7e33f12e374838951c))
+
+- Koala-3011 update plugin install text to reflect async process
+  ([#738](https://github.com/canvas-medical/canvas-plugins/pull/738),
+  [`b072182`](https://github.com/canvas-medical/canvas-plugins/commit/b0721825bfd5f1325f6b82219d85a52db1c77a6a))
+
+Signed-off-by: Mary Dickson <mdickson@gmail.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
+## v0.48.0 (2025-07-24)
+
+### Chores
+
+- Auto-update pre-commit hooks ([#434](https://github.com/canvas-medical/canvas-plugins/pull/434),
+  [`3393db4`](https://github.com/canvas-medical/canvas-plugins/commit/3393db457f990751a9a9eb19e808b0cd1a7b67c1))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add example patient sync plugin
+  ([#724](https://github.com/canvas-medical/canvas-plugins/pull/724),
+  [`339763c`](https://github.com/canvas-medical/canvas-plugins/commit/339763ca8a766ba22463b6b4e3d60f07577cb76a))
+
+Signed-off-by: Mary Dickson <mdickson@gmail.com>
+
+- Add Union to allowed import list
+  ([#856](https://github.com/canvas-medical/canvas-plugins/pull/856),
+  [`7a44a2d`](https://github.com/canvas-medical/canvas-plugins/commit/7a44a2d5ed55f9d95f8c3285e398786425728bc8))
+
+
+## v0.47.0 (2025-07-23)
+
+### Features
+
+- Add Optional to imports ([#854](https://github.com/canvas-medical/canvas-plugins/pull/854),
+  [`25e2c52`](https://github.com/canvas-medical/canvas-plugins/commit/25e2c526219905e3e4ed3a131cdc89d946783eff))
+
+
+## v0.46.0 (2025-07-23)
+
+### Bug Fixes
+
+- Immunization statement allowed_imports
+  ([#853](https://github.com/canvas-medical/canvas-plugins/pull/853),
+  [`4fb2ec9`](https://github.com/canvas-medical/canvas-plugins/commit/4fb2ec92a1ea195ef1673af0eea062b3687297e2))
+
+### Chores
+
+- Make django models compatible with SQLite
+  ([#791](https://github.com/canvas-medical/canvas-plugins/pull/791),
+  [`23569ae`](https://github.com/canvas-medical/canvas-plugins/commit/23569aef5d93fd718c0f1eb0b575c24f74542299))
+
+- Update question toggle tests to patch the correct method
+  ([#852](https://github.com/canvas-medical/canvas-plugins/pull/852),
+  [`851be8f`](https://github.com/canvas-medical/canvas-plugins/commit/851be8f787cf9d26046fcb2d57d651a8d6168e34))
+
+- **ci**: Do not run pre-commit auto update action on forks
+  ([#828](https://github.com/canvas-medical/canvas-plugins/pull/828),
+  [`ec04c90`](https://github.com/canvas-medical/canvas-plugins/commit/ec04c9047fc15c2ac27c96dfdc8a253be0be6717))
+
+- **tests**: Fix test settings ([#851](https://github.com/canvas-medical/canvas-plugins/pull/851),
+  [`9a67afc`](https://github.com/canvas-medical/canvas-plugins/commit/9a67afc126a800131ae559145e0e133b943ab31f))
+
+### Features
+
+- Add cryptography dependency ([#832](https://github.com/canvas-medical/canvas-plugins/pull/832),
+  [`1e4ab18`](https://github.com/canvas-medical/canvas-plugins/commit/1e4ab18b3125860995a08a4d5a68f805e612006a))
+
+- Add support for the match operator
+  ([#850](https://github.com/canvas-medical/canvas-plugins/pull/850),
+  [`bf74559`](https://github.com/canvas-medical/canvas-plugins/commit/bf745592ccf97dad1262cd9c50f2c72d6afe18de))
+
+- Create charge description master data model
+  ([#778](https://github.com/canvas-medical/canvas-plugins/pull/778),
+  [`50e4019`](https://github.com/canvas-medical/canvas-plugins/commit/50e40195998cb12472fe63821da0bd2c8a3ce266))
+
+- Create new staff events ([#723](https://github.com/canvas-medical/canvas-plugins/pull/723),
+  [`9e73635`](https://github.com/canvas-medical/canvas-plugins/commit/9e73635ff81de6ff9a19a322772d1a5ffff24c32))
+
+- Grant access to patientmetadata events
+  ([#830](https://github.com/canvas-medical/canvas-plugins/pull/830),
+  [`2cff0b8`](https://github.com/canvas-medical/canvas-plugins/commit/2cff0b814aaafc35e17fecaf96615369442e18c5))
+
+- Implement immunization statement command
+  ([#829](https://github.com/canvas-medical/canvas-plugins/pull/829),
+  [`91333d0`](https://github.com/canvas-medical/canvas-plugins/commit/91333d0c537d2d0852c2e9919bd8c171ab65439f))
+
+- Implement question toggles for questionnaire based commands
+  ([#746](https://github.com/canvas-medical/canvas-plugins/pull/746),
+  [`c83b34a`](https://github.com/canvas-medical/canvas-plugins/commit/c83b34a916676262b7af7f84291baa97334cc22f))
+
+- Save memory in plugin_runner ([#837](https://github.com/canvas-medical/canvas-plugins/pull/837),
+  [`8c216b1`](https://github.com/canvas-medical/canvas-plugins/commit/8c216b16380329a04cd30c4cc4fcf29740cf1ac1))
+
+- **events**: Add document reference events
+  ([#726](https://github.com/canvas-medical/canvas-plugins/pull/726),
+  [`893ee1d`](https://github.com/canvas-medical/canvas-plugins/commit/893ee1dc2692494e23415eab9acfd2b4e25ed101))
+
+- **plugin**: Add example Footer Widget for the patient portal plugin
+  ([#711](https://github.com/canvas-medical/canvas-plugins/pull/711),
+  [`fb73bc2`](https://github.com/canvas-medical/canvas-plugins/commit/fb73bc2673adc52b208316080628f2f74c6f83d7))
+
+- **plugins**: Add Patient Portal Care Team widget sample
+  ([#716](https://github.com/canvas-medical/canvas-plugins/pull/716),
+  [`f31dd07`](https://github.com/canvas-medical/canvas-plugins/commit/f31dd07b4402e4d8691c1ff1c38bd9792a8f2e5c))
+
+
 ## v0.45.0 (2025-07-17)
 
 ### Bug Fixes
