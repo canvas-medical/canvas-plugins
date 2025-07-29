@@ -93,6 +93,14 @@ Filter to notes occurring before the given datetime.
 
 Filter to notes occurring at or before the given datetime.
 
+#### Example Request
+
+```bash
+curl --request GET \
+  --url 'https://training.canvasmedical.com/plugin-io/api/charting_api_examples/notes/?limit=2&offset=4' \
+  --header 'Authorization: <your-api-key-goes-here>'
+```
+
 #### Example Response
 
 ```json
