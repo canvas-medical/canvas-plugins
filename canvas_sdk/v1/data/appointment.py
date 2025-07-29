@@ -74,8 +74,38 @@ class AppointmentExternalIdentifier(IdentifiableModel):
     )
 
 
+class AppointmentLabel(models.Model):
+    """
+    A denormalized "through" model representing the connection between an Appointment
+    and a TaskLabel, including the label's details.
+    """
+
+    class Meta:
+        managed = False
+        db_table = "canvas_sdk_data_api_appointment_labels_001"
+
+    dbid = models.BigIntegerField(primary_key=True)
+    appointment = models.ForeignKey(
+        Appointment, related_name="appointment_labels", on_delete=models.CASCADE
+    )
+    # This field represents the ID of the TaskLabel.
+    userselectedtasklabel = models.ForeignKey(
+        "v1.TaskLabel",
+        related_name="appointment_links",
+        on_delete=models.CASCADE,
+        db_column="userselectedtasklabel_id",
+    )
+
+    # Denormalized fields from the TaskLabel model.
+    name = models.CharField(max_length=255)
+    color = models.CharField(max_length=50)
+    active = models.BooleanField()
+    position = models.IntegerField()
+
+
 __exports__ = (
     "AppointmentProgressStatus",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
 )
