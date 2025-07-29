@@ -20,6 +20,48 @@
                 }
             },
             {
+                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
+                "description": "Blood pressure screening protocol triggered on patient creation to provide screening recommendations for newly registered male patients aged 18-39.",
+                "data_access": {
+                    "event": "PATIENT_CREATED",
+                    "read": [
+                        "patient",
+                        "vital_signs"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            },
+            {
+                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
+                "description": "Blood pressure screening protocol triggered when vital signs are created to immediately update protocol card status based on new BP measurements.",
+                "data_access": {
+                    "event": "VITAL_SIGN_CREATED",
+                    "read": [
+                        "patient",
+                        "vital_signs"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            },
+            {
+                "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningProtocol",
+                "description": "Blood pressure screening protocol triggered when vital signs are updated to immediately update protocol card status based on modified BP measurements.",
+                "data_access": {
+                    "event": "VITAL_SIGN_UPDATED",
+                    "read": [
+                        "patient",
+                        "vital_signs"
+                    ],
+                    "write": [
+                        "protocol_cards"
+                    ]
+                }
+            },
+            {
                 "class": "male_bp_screening_plugin.protocols.bp_screening_protocol:MaleBPScreeningEncounterProtocol", 
                 "description": "Encounter-based protocol for blood pressure screening reminders. Triggers during encounters to remind clinicians about BP screening for eligible male patients.",
                 "data_access": {

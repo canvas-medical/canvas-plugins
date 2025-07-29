@@ -24,7 +24,9 @@ class MaleBPScreeningProtocol(BaseHandler):
 
     RESPONDS_TO = [
         EventType.Name(EventType.PATIENT_CREATED),
-        EventType.Name(EventType.PATIENT_UPDATED)
+        EventType.Name(EventType.PATIENT_UPDATED),
+        EventType.Name(EventType.VITAL_SIGN_CREATED),
+        EventType.Name(EventType.VITAL_SIGN_UPDATED)
     ]
 
     def compute(self) -> List[Effect]:
@@ -32,12 +34,22 @@ class MaleBPScreeningProtocol(BaseHandler):
         
         log.info("MaleBPScreeningProtocol.compute() started")
         
-        # Get patient ID from event target
+        # Get patient ID from event target or context
         patient_id = self.target
         log.info(f"Processing patient ID: {patient_id}")
         
+        # For vital sign events, we might need to get patient ID differently
+        if not patient_id and hasattr(self, 'context') and self.context:
+            try:
+                import json
+                context_data = json.loads(self.context) if isinstance(self.context, str) else self.context
+                patient_id = context_data.get('patient_id') or context_data.get('patient')
+                log.info(f"Retrieved patient ID from context: {patient_id}")
+            except Exception as e:
+                log.error(f"Error parsing context for patient ID: {e}")
+        
         if not patient_id:
-            log.info("No patient ID found in event target")
+            log.info("No patient ID found in event target or context")
             return []
         
         try:
@@ -67,8 +79,22 @@ class MaleBPScreeningProtocol(BaseHandler):
         log.info(f"Screening due check: {is_due}")
         
         if not is_due:
-            log.info("Screening not due")
-            return []
+            log.info("Screening not due - checking for existing protocol card to mark as satisfied")
+            
+            # Create a protocol card with SATISFIED status to update any existing card
+            protocol_card = ProtocolCard(
+                patient_id=patient_id,
+                key="male-bp-screening-18-39",
+                title="Blood Pressure Screening - Completed",
+                narrative=(
+                    f"This male patient (age {self._calculate_age(patient)}) has recent blood pressure "
+                    "measurements on record. Screening requirements per USPSTF guidelines are satisfied."
+                ),
+                status=ProtocolCard.Status.SATISFIED
+            )
+            
+            log.info("Created SATISFIED protocol card to replace any existing DUE card")
+            return [protocol_card.apply()]
         
         log.info("Creating protocol card for blood pressure screening")
         
