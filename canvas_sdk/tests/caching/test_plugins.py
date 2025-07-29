@@ -64,7 +64,9 @@ def test_get_cache_returns_the_correct_cache_client(
     result = get_cache()
 
     mock_get_cache_client.assert_called_once_with(
-        "plugins", mock_plugin_caller, settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS
+        driver="plugins",
+        prefix=mock_plugin_caller,
+        max_timeout_seconds=settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
     )
 
     # Assert that the result is the same as the mocked cache client
@@ -112,5 +114,7 @@ def test_plugin_caller_name_cannot_be_set(
     get_cache(plugin_name="test_plugin")
 
     mock_get_cache_client.assert_called_once_with(
-        "plugins", mock_plugin_caller, settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS
+        driver="plugins",
+        prefix=mock_plugin_caller,
+        max_timeout_seconds=settings.CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
     )
