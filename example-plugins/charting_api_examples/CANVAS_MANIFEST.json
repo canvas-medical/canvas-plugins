@@ -1,0 +1,47 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "charting_api_examples",
+    "description": "A series of custom API routes that showcase SDK charting functionality",
+    "components": {
+        "protocols": [
+            {
+                "class": "charting_api_examples.routes.notes:NoteAPI",
+                "description": "Endpoints that showcase interactions with notes.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "charting_api_examples.routes.billing_line_items:BillingLineItemAPI",
+                "description": "Endpoints for interacting with billing line items on a note.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "charting_api_examples.routes.commands:CommandAPI",
+                "description": "Endpoints for interacting with commands on a note.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["simpleapi-api-key"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
