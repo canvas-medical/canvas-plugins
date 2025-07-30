@@ -208,14 +208,12 @@
         
         loggedInStaffId = data.logged_in_staff_id;
         
-        // Combine imaging and lab providers
-        const imagingProviders = data.imaging_ordering_providers || [];
-        const labProviders = data.lab_orders_providers || [];
-        
+        const providers = data.providers || [];
+
         // Create maps for providers
         const providerMap = new Map();
-        
-        [...imagingProviders, ...labProviders].forEach(provider => {
+
+        providers.forEach(provider => {
           if (provider.preferred_name && provider.id) {
             providerMap.set(provider.id, provider.preferred_name);
             providerIdToNameMap.set(provider.id, provider.preferred_name);
@@ -260,7 +258,7 @@
           orderingProviderId: order.ordering_provider?.id,
           sentTo: 'Imaging Dept',
           orderedDate: formatDate(order.created_date),
-          priority: 'routine'
+          priority: order.priority || 'Routine',
         }));
         
         const labOrders = (data.lab_orders || []).map(order => ({
@@ -272,10 +270,21 @@
           orderingProviderId: order.ordering_provider?.id,
           sentTo: 'Lab Dept',
           orderedDate: formatDate(order.created_date),
-          priority: 'routine'
+        }));
+
+        const referralOrders = (data.referrals || []).map(order => ({
+          ...order,
+          type: 'Referral',
+          orderName: order.order || 'Referral',
+          patientName: order.patient_name,
+          orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
+          orderingProviderId: order.ordering_provider?.id,
+          sentTo: 'Referral Dept',
+          orderedDate: formatDate(order.created_date),
+          priority: order.priority || 'Routine',
         }));
         
-        allOrders = [...imagingOrders, ...labOrders];
+        allOrders = [...imagingOrders, ...labOrders, ...referralOrders];
         populateOrdersTable();
         updatePaginationControls();
       } catch (error) {
@@ -337,8 +346,8 @@
         return;
       }
 
-      const urgentOrders = allOrders.filter(order => order.priority === 'urgent');
-      const routineOrders = allOrders.filter(order => order.priority === 'routine');
+      const urgentOrders = allOrders.filter(order => order.priority?.toLowerCase() === 'urgent');
+      const routineOrders = allOrders.filter(order => order.priority?.toLowerCase() !== 'urgent');
 
       let html = '';
 
