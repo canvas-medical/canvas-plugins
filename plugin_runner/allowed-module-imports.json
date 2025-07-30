@@ -112,6 +112,7 @@
   ],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
+    "CompoundMedicationData",
     "Decimal",
     "PrescribeCommand"
   ],
@@ -203,6 +204,12 @@
   ],
   "canvas_sdk.effects.billing_line_item.update_billing_line_item": [
     "UpdateBillingLineItem"
+  ],
+  "canvas_sdk.effects.compound_medications": [
+    "CompoundMedication"
+  ],
+  "canvas_sdk.effects.compound_medications.compound_medication": [
+    "CompoundMedication"
   ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
@@ -491,6 +498,7 @@
     "ClaimPatient",
     "ClaimQueue",
     "Command",
+    "CompoundMedication",
     "Condition",
     "ConditionCoding",
     "Coverage",
@@ -639,6 +647,9 @@
     "ReviewPatientCommunicationMethod",
     "ReviewStatus",
     "TaxIDType"
+  ],
+  "canvas_sdk.v1.data.compound_medication": [
+    "CompoundMedication"
   ],
   "canvas_sdk.v1.data.condition": [
     "ClinicalStatus",
