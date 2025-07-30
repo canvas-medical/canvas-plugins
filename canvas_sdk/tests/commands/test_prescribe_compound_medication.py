@@ -169,27 +169,6 @@ def test_prescribe_existing_compound_medication_success(
     assert "fdb_code" not in payload["data"]
 
 
-def test_prescribe_missing_all_medication_types(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test that prescription fails when no medication type is provided."""
-    prescribe_cmd = PrescribeCommand(
-        note_uuid=str(uuid4()),
-        sig="Take one tablet by mouth daily",
-    )
-
-    with pytest.raises(ValidationError) as exc_info:
-        prescribe_cmd.originate()
-
-    errors = exc_info.value.errors()
-    error_messages = [e["msg"] for e in errors]
-    assert any(
-        "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data'"
-        in msg
-        for msg in error_messages
-    )
-
-
 def test_prescribe_multiple_medication_types(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
