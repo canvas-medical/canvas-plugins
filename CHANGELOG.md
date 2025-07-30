@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.50.0 (2025-07-30)
+
+### Documentation
+
+- Add example plugin - Note and Commands API
+  ([#833](https://github.com/canvas-medical/canvas-plugins/pull/833),
+  [`f4d5567`](https://github.com/canvas-medical/canvas-plugins/commit/f4d5567ea2c7ad09f3d76867bc492bb10662fd58))
+
+### Features
+
+- Add compound meds model and effect
+  ([#789](https://github.com/canvas-medical/canvas-plugins/pull/789),
+  [`8f7e6e2`](https://github.com/canvas-medical/canvas-plugins/commit/8f7e6e25a65df7e975b71108b204d29285f602ad))
+
+- Add events for command available actions
+  ([#756](https://github.com/canvas-medical/canvas-plugins/pull/756),
+  [`8c0982a`](https://github.com/canvas-medical/canvas-plugins/commit/8c0982a119c59b259b31365be252a1d99a96faa7))
+
+
 ## v0.49.0 (2025-07-29)
 
 ### Chores
