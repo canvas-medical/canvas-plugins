@@ -40,8 +40,9 @@ class ImagingOrder(IdentifiableModel):
     status = models.CharField(choices=OrderStatus.choices, max_length=30)
     date_time_ordered = models.DateTimeField()
     priority = models.CharField(max_length=255)
-    # TODO - uncomment when Staff model is complete
-    # ordering_provider = models.ForeignKey('v1.Staff', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    ordering_provider = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+    )
     delegated = models.BooleanField(default=False)
 
 
