@@ -98,25 +98,12 @@
     }
 
     @media (max-width: 600px) {
-      .prescriptions-widget {
-        padding: 10px 4px 0 4px;
-      }
-
       .prescriptions-title {
         font-size: 1.1rem;
       }
 
       .prescription-row {
         padding: 8px 0 8px 0;
-      }
-
-      .prescription-icon {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
-        margin-right: 10px;
-        margin-left: 2px;
       }
     }
   </style>
@@ -129,20 +116,23 @@
       <div class="prescription-row">
         <div class="prescription-icon">
           <!-- Plus/Pharmacy SVG Icon -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="12" fill="#7dd6c0" />
-            <path d="M12 7v10M7 12h10" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+            <title>hospital</title>
+            <g id="hospital">
+              <path
+                d="M29,28H28V16a1,1,0,0,0-1-1H21V3a1,1,0,0,0-1-1H5A1,1,0,0,0,4,3V28H3a1,1,0,0,0,0,2H29a1,1,0,0,0,0-2ZM26,17V28H21V17ZM15,28H10V22.05h5Zm2,0V21.05a1,1,0,0,0-1-1H9a1,1,0,0,0-1,1v7H6V4H19V28ZM12.5,11a1,1,0,0,1-1-1V9h-1a1,1,0,0,1,0-2h1V6a1,1,0,0,1,2,0V7h1a1,1,0,0,1,0,2h-1v1A1,1,0,0,1,12.5,11ZM12,14a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,14Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,14Zm-5,3a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,17Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,17Z" />
+            </g>
           </svg>
         </div>
         <div class="prescription-content">
           <div class="prescription-title">
           {% if not preferred_pharmacy %}
-            Choose a preferred pharmacy
+            <a id="choose-pharmacy" href="#">Choose a preferred pharmacy</a>
           {% else %}
-            Update your preferred pharmacy
+            <a id="update-pharmacy" href="#">Update your preferred pharmacy</a>
           {% endif %}
           </div>
-          <div class="prescription-desc">
+          <div id="pharmacy" class="prescription-desc">
           {% if not preferred_pharmacy %}
             Your prescription will be sent here by default.
           {% else %}
@@ -154,13 +144,11 @@
       <div class="prescription-row">
         <div class="prescription-icon">
           <!-- Medication/Refill SVG Icon -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="12" fill="#7dd6c0" />
-            <g>
-              <rect x="8" y="8" width="8" height="8" rx="2" fill="#fff" />
-              <rect x="10.5" y="10.5" width="3" height="1" rx="0.5" fill="#7dd6c0" />
-              <rect x="10.5" y="12.5" width="3" height="1" rx="0.5" fill="#7dd6c0" />
-            </g>
+          <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+            <path
+              d="M61.748 70.68h-4.914v-4.914a1.749 1.749 0 0 0-1.75-1.75h-8.649a1.75 1.75 0 0 0-1.75 1.75v4.914h-4.913a1.75 1.75 0 0 0-1.75 1.75v8.648a1.75 1.75 0 0 0 1.75 1.75h4.913v4.913a1.75 1.75 0 0 0 1.75 1.75h8.649a1.749 1.749 0 0 0 1.75-1.75v-4.913h4.914a1.75 1.75 0 0 0 1.75-1.75V72.43a1.75 1.75 0 0 0-1.75-1.75zM60 79.328h-4.916a1.75 1.75 0 0 0-1.75 1.75v4.913h-5.149v-4.913a1.75 1.75 0 0 0-1.75-1.75h-4.913V74.18h4.913a1.751 1.751 0 0 0 1.75-1.75v-4.914h5.149v4.914a1.751 1.751 0 0 0 1.75 1.75H60z" />
+            <path
+              d="M97.694 93.58H82.223V45.986a8.531 8.531 0 0 0-6.712-8.3l-1.93-.414a5.014 5.014 0 0 1-3.945-4.872v-4.633h3.975a1.75 1.75 0 0 0 1.75-1.75V14.146a1.75 1.75 0 0 0-1.75-1.75h-45.7a1.751 1.751 0 0 0-1.75 1.75v11.871a1.751 1.751 0 0 0 1.75 1.75h3.975V32.4a5.013 5.013 0 0 1-3.944 4.877l-1.931.414a8.53 8.53 0 0 0-6.712 8.3v61.129a8.5 8.5 0 0 0 8.488 8.489h45.948a8.483 8.483 0 0 0 3.379-.712 10.919 10.919 0 0 0 3.847.708h16.733a11.01 11.01 0 0 0 0-22.02zM22.8 59.924h55.923v33.66H22.8zM29.658 15.9h42.2v8.371h-42.2zm-2.917 25.208 1.93-.413a8.529 8.529 0 0 0 6.712-8.3v-4.628h30.753V32.4a8.53 8.53 0 0 0 6.713 8.3l1.929.413a5.016 5.016 0 0 1 3.945 4.878v10.433H22.8V45.986a5.015 5.015 0 0 1 3.941-4.878zM22.8 107.115V97.084h50.134a10.942 10.942 0 0 0 0 15.02h-45.15a4.994 4.994 0 0 1-4.984-4.989zm50.655-2.525a7.528 7.528 0 0 1 7.51-7.51h6.622v15.02h-6.626a7.519 7.519 0 0 1-7.51-7.51zm29.563 5.311a7.5 7.5 0 0 1-5.32 2.2h-6.615V97.08h6.611a7.517 7.517 0 0 1 5.32 12.821z" />
           </svg>
         </div>
         <div class="prescription-content">
@@ -185,7 +173,7 @@
 
         requestRefillLink.classList.add('loading');
 
-        fetch(`{{ api_url }}`, {
+        fetch(`{{ request_refill_url }}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -196,6 +184,91 @@
           }
         }).finally(() => {
           requestRefillLink.classList.remove('loading');
+        });
+      });
+
+      function createPharmacyForm(element) {
+        const pharmacy = document.getElementById('pharmacy');
+        const currentText = pharmacy.textContent.trim();
+
+        pharmacy.innerHTML = `
+          <form id="pharmacy-form" style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="pharmacy-input" value="${currentText}" style="flex: 1; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <button type="submit" style="padding: 4px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
+            <button type="button" id="cancel-btn" style="padding: 4px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+          </form>
+        `;
+
+        const form = document.getElementById('pharmacy-form');
+        const input = document.getElementById('pharmacy-input') ;
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        input.focus();
+
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const newValue = input.value.trim();
+          if (newValue) {
+            pharmacy.textContent = newValue;
+          } else {
+            pharmacy.textContent = currentText;
+          }
+
+
+        });
+
+        cancelBtn.addEventListener('click', function() {
+          pharmacy.textContent = currentText;
+        });
+      });
+
+      function updatePharmacy(element) {
+        element.classList.add('loading');
+
+        fetch(`{{ update_pharmacy_url }}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+        }).finally(() => {
+          updatePharmacyLink.classList.remove('loading');
+        });
+      }
+
+      const choosePharmacyLink = document.getElementById('choose-pharmacy');
+      choosePharmacyLink.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        window.prompt('Please enter your preferred pharmacy name and address:', '').then((input) => {
+          if (input) {
+            const pharmacy = document.getElementById('pharmacy');
+            pharmacy.textContent = input;
+          }
+        });
+
+        updatePharmacy(choosePharmacyLink).then(() => {
+          choosePharmacyLink.classList.remove('loading');
+        }).catch(error => {
+          console.error('Error updating pharmacy:', error);
+          choosePharmacyLink.classList.remove('loading');
+        });
+      });
+
+      const updatePharmacyLink = document.getElementById('update-pharmacy');      
+      updatePharmacyLink.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        updatePharmacyLink.classList.add('loading');
+
+        updatePharmacy(updatePharmacyLink).then(() => {
+          updatePharmacyLink.classList.remove('loading');
+        }).catch(error => {
+          console.error('Error updating pharmacy:', error);
+          updatePharmacyLink.classList.remove('loading');
         });
       });
     });
