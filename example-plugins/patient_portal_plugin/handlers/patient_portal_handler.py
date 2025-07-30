@@ -104,7 +104,8 @@ class PatientPortalHandler(BaseHandler):
         preferred_pharmacy = patient.preferred_pharmacy
 
         payload = {
-            "api_url": f"/plugin-io/api/patient_portal_plugin/prescriptions/{patient.id}",
+            "request_refill_url": f"/plugin-io/api/patient_portal_plugin/{patient.id}/request-refill",
+            "update_pharmacy_url": f"/plugin-io/api/patient_portal_plugin/{patient.id}/update-pharmacy",
             "preferred_pharmacy": preferred_pharmacy,
             "prescriptions": prescriptions,
             "title_color": self.background_color,
