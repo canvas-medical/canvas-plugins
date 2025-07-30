@@ -30,11 +30,9 @@ class ImagingOrder(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
-    # TODO - uncomment when Note model is complete
-    #  note = models.ForeigneKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     imaging = models.CharField(max_length=1024)
-    # TODO - uncomment when ServiceProvider model is complete
-    # imaging_center = models.ForeignKey('v1.ServiceProvider', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    imaging_center = models.ForeignKey('v1.ServiceProvider', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
     note_to_radiologist = models.CharField(max_length=1024)
     internal_comment = models.CharField(max_length=1024)
     status = models.CharField(choices=OrderStatus.choices, max_length=30)
