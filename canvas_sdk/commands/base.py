@@ -5,13 +5,11 @@ from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
-from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
-from canvas_sdk.v1.data import Command
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -165,24 +163,6 @@ class _BaseCommand(TrackableFieldsModel):
 
 
 class _SendableCommandMixin:
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)  # type: ignore[misc]
-
-        if method == "send":
-            state = (
-                Command.objects.values_list("state", flat=True).filter(id=self.command_uuid).first()  # type: ignore[attr-defined]
-            )
-
-            if state != "committed":
-                errors.append(
-                    self._create_error_detail(  # type: ignore[attr-defined]
-                        "value",
-                        "Command needs to be signed first.",
-                        self.command_uuid,  # type: ignore[attr-defined]
-                    )
-                )
-        return errors
-
     def send(self) -> Effect:
         """Fire the send effect the command."""
         self._validate_before_effect("send")  # type: ignore[attr-defined]
