@@ -1,0 +1,40 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.1",
+  "name": "coverage_status_sync",
+  "description": "A plugin that keeps a patient's 'Coverage status' metadata field in sync with the 'MISSING_COVERAGE' appointment label.",
+  "components": {
+    "protocols": [
+      {
+        "class": "coverage_status_sync.protocols.coverage_status_sync:CoverageStatusSyncProtocol",
+        "description": "Listens for label events and synchronizes the 'Coverage status' metadata field.",
+        "data_access": {
+          "event": "read",
+          "read": [],
+          "write": [
+            "PATIENT_METADATA"
+          ]
+        },
+        "meta": {
+          "RESPONDS_TO": [
+            "APPOINTMENT_LABEL_ADDED",
+            "APPOINTMENT_LABEL_REMOVED"
+          ]
+        }
+      }
+    ],
+    "commands":[],
+    "content":[],
+    "effects":[],
+    "views":[]
+  },
+  "secrets":[],
+  "tags":{
+    "use-case":"Appointments"
+  },
+  "references":[],
+  "license":"UNLICENSED",
+  "diagram":false,
+  "readme":"./README.md"
+}
+
