@@ -89,15 +89,7 @@ class PrescribeCommand(_BaseCommand):
             [has_fdb_code, has_compound_medication_id, has_compound_medication_data]
         )
 
-        if medication_types_provided == 0 and method == "originate":
-            errors.append(
-                self._create_error_detail(
-                    "missing",
-                    "Must provide one of: 'fdb_code', 'compound_medication_id', or 'compound_medication_data' to prescribe a medication.",
-                    None,
-                )
-            )
-        elif medication_types_provided > 1:
+        if medication_types_provided > 1:
             errors.append(
                 self._create_error_detail(
                     "value",
