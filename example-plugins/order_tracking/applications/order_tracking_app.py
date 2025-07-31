@@ -22,6 +22,67 @@ class OrderTrackingApplication(Application):
 
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
+
+    def _create_imaging_order_payload(self, imaging_order: ImagingOrder, include_type: bool = False) -> dict:
+        """Create standardized payload for imaging order."""
+        payload = {
+            "patient_name": imaging_order.patient.preferred_full_name,
+            "patient_id": str(imaging_order.patient.id),
+            "dob": arrow.get(imaging_order.patient.birth_date).format("YYYY-MM-DD"),
+            "status": imaging_order.patient.status,
+            "order": imaging_order.imaging,
+            "created_date": imaging_order.created.isoformat() if imaging_order.created else None,
+            "priority": imaging_order.priority,
+            "sent_to": imaging_order.imaging_center.full_name_and_specialty if imaging_order.imaging_center else None,
+            "ordering_provider": {
+                "preferred_name": imaging_order.ordering_provider.credentialed_name,
+                "id": str(imaging_order.ordering_provider.id),
+            }
+        }
+        if include_type:
+            payload["type"] = "imaging"
+            payload["sort_key"] = imaging_order.created
+        return payload
+
+    def _create_lab_order_payload(self, lab_order: LabOrder, include_type: bool = False) -> dict:
+        """Create standardized payload for lab order."""
+        payload = {
+            "patient_name": lab_order.patient.preferred_full_name,
+            "patient_id": str(lab_order.patient.id),
+            "dob": arrow.get(lab_order.patient.birth_date).format("YYYY-MM-DD"),
+            "order": lab_order.ontology_lab_partner,
+            "created_date": lab_order.created.isoformat() if lab_order.created else None,
+            "sent_to": lab_order.ontology_lab_partner,
+            "ordering_provider": {
+                "preferred_name": lab_order.ordering_provider.credentialed_name,
+                "id": str(lab_order.ordering_provider.id),
+            }
+        }
+        if include_type:
+            payload["type"] = "lab"
+            payload["sort_key"] = lab_order.created
+        return payload
+
+    def _create_referral_order_payload(self, referral_order: Referral, include_type: bool = False) -> dict:
+        """Create standardized payload for referral order."""
+        payload = {
+            "patient_name": referral_order.patient.preferred_full_name,
+            "patient_id": str(referral_order.patient.id),
+            "dob": arrow.get(referral_order.patient.birth_date).format("YYYY-MM-DD"),
+            "order": referral_order.internal_comment,
+            "created_date": referral_order.created.isoformat() if referral_order.created else None,
+            "priority": referral_order.priority,
+            "sent_to": referral_order.service_provider.full_name_and_specialty if referral_order.service_provider else None,
+            "ordering_provider": {
+                "preferred_name": referral_order.note.provider.credentialed_name,
+                "id": str(referral_order.note.provider.id),
+            }
+        }
+        if include_type:
+            payload["type"] = "referral"
+            payload["sort_key"] = referral_order.created
+        return payload
+
     @api.get("/providers")
     def providers(self) -> list[Response | Effect]:
         logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
@@ -45,7 +106,6 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             }
             for staff in Staff.objects.filter(id__in=all_ordering_staff_ids)
         ]
-
 
         return [JSONResponse({
             "logged_in_staff_id": logged_in_staff,
@@ -119,52 +179,16 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         if order_type and order_type.lower() == "imaging":
             # Only imaging orders - use database slicing
             imaging_slice = imaging_orders_queryset[start_index:end_index]
-            imaging_orders_data = [
-                {
-                    "patient_name": io.patient.preferred_full_name,
-                    "dob": arrow.get(io.patient.birth_date).format("YYYY-MM-DD"),
-                    "status": io.patient.status,
-                    "order": io.imaging,
-                    "created_date": io.created.isoformat() if io.created else None,
-                    "priority": io.priority,
-                    "ordering_provider": {
-                        "preferred_name": io.ordering_provider.credentialed_name,
-                        "id": str(io.ordering_provider.id),
-                    }
-                } for io in imaging_slice
-            ]
+            imaging_orders_data = [self._create_imaging_order_payload(io) for io in imaging_slice]
 
         elif order_type and order_type.lower() == "lab":
             # Only lab orders - use database slicing
             lab_slice = lab_orders_queryset[start_index:end_index]
-            lab_orders_data = [
-                {
-                    "patient_name": lo.patient.preferred_full_name,
-                    "dob": arrow.get(lo.patient.birth_date).format("YYYY-MM-DD"),
-                    "order": lo.ontology_lab_partner,
-                    "created_date": lo.created.isoformat() if hasattr(lo, 'created') else None,
-                    "ordering_provider": {
-                        "preferred_name": lo.ordering_provider.credentialed_name,
-                        "id": str(lo.ordering_provider.id),
-                    }
-                } for lo in lab_slice
-            ]
+            lab_orders_data = [self._create_lab_order_payload(lo) for lo in lab_slice]
         elif order_type and order_type.lower() == "referral":
             # Only referral orders - use database slicing
             referral_slice = refer_queryset[start_index:end_index]
-            referral_orders_data = [
-                {
-                    "patient_name": ro.patient.preferred_full_name,
-                    "dob": arrow.get(ro.patient.birth_date).format("YYYY-MM-DD"),
-                    "order": ro.internal_comment,
-                    "created_date": ro.created.isoformat() if hasattr(ro, 'created') else None,
-                    "priority": ro.priority,
-                    "ordering_provider": {
-                        "preferred_name": ro.note.provider.credentialed_name,
-                        "id": str(ro.note.provider.id),
-                    }
-                } for ro in referral_slice
-            ]
+            referral_orders_data = [self._create_referral_order_payload(ro) for ro in referral_slice]
 
         else:
             # Mixed orders - need to interleave results efficiently
@@ -180,49 +204,13 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             combined_orders = []
 
             for io in imaging_slice:
-                combined_orders.append({
-                    "patient_name": io.patient.preferred_full_name,
-                    "dob": arrow.get(io.patient.birth_date).format("YYYY-MM-DD"),
-                    "status": io.patient.status,
-                    "order": io.imaging,
-                    "type": "imaging",
-                    "priority": io.priority,
-                    "created_date": io.created.isoformat() if hasattr(io, 'created') else None,
-                    "ordering_provider": {
-                        "preferred_name": io.ordering_provider.credentialed_name,
-                        "id": str(io.ordering_provider.id),
-                    },
-                    "sort_key": io.created
-                })
+                combined_orders.append(self._create_imaging_order_payload(io, include_type=True))
 
             for lo in lab_slice:
-                combined_orders.append({
-                    "patient_name": lo.patient.preferred_full_name,
-                    "dob": arrow.get(lo.patient.birth_date).format("YYYY-MM-DD"),
-                    "order": lo.ontology_lab_partner,
-                    "type": "lab",
-                    "created_date": lo.created.isoformat() if lo.created else None,
-                    "ordering_provider": {
-                        "preferred_name": lo.ordering_provider.credentialed_name,
-                        "id": str(lo.ordering_provider.id),
-                    },
-                    "sort_key": lo.created
-                })
+                combined_orders.append(self._create_lab_order_payload(lo, include_type=True))
 
             for ro in referral_slice:
-                combined_orders.append({
-                    "patient_name": ro.patient.preferred_full_name,
-                    "dob": arrow.get(ro.patient.birth_date).format("YYYY-MM-DD"),
-                    "order": ro.internal_comment,
-                    "type": "referral",
-                    "priority": ro.priority,
-                    "created_date": ro.created.isoformat() if ro.created else None,
-                    "ordering_provider": {
-                        "preferred_name": ro.note.provider.credentialed_name,
-                        "id": str(ro.note.provider.id),
-                    },
-                    "sort_key": ro.created
-                })
+                combined_orders.append(self._create_referral_order_payload(ro, include_type=True))
 
             # Sort and paginate the combined results
             combined_orders.sort(key=lambda x: x.get('sort_key') or '', reverse=True)
