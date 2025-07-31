@@ -734,8 +734,9 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     server = grpc.server(
         thread_pool=executor,
         options=(
-            # set max message length to 64mb
+            # set max message lengths to 64mb
             ("grpc.max_receive_message_length", 64 * 1024 * 1024),
+            ("grpc.max_send_message_length", 64 * 1024 * 1024),
         ),
     )
     server.add_insecure_port("127.0.0.1:" + port)
