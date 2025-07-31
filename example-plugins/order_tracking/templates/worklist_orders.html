@@ -254,9 +254,10 @@
           type: 'Imaging',
           orderName: order.order || 'Imaging Order',
           patientName: order.patient_name,
+          patientId: order.patient_id,
           orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
           orderingProviderId: order.ordering_provider?.id,
-          sentTo: 'Imaging Dept',
+          sentTo: order.sent_to || 'Not specified',
           orderedDate: formatDate(order.created_date),
           priority: order.priority || 'Routine',
         }));
@@ -266,9 +267,10 @@
           type: 'Lab',
           orderName: order.order || 'Lab Order',
           patientName: order.patient_name,
+          patientId: order.patient_id,
           orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
           orderingProviderId: order.ordering_provider?.id,
-          sentTo: 'Lab Dept',
+          sentTo: order.sent_to || 'Not specified',
           orderedDate: formatDate(order.created_date),
         }));
 
@@ -277,9 +279,10 @@
           type: 'Referral',
           orderName: order.order || 'Referral',
           patientName: order.patient_name,
+          patientId: order.patient_id,
           orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
           orderingProviderId: order.ordering_provider?.id,
-          sentTo: 'Referral Dept',
+          sentTo: order.sent_to || 'Not specified',
           orderedDate: formatDate(order.created_date),
           priority: order.priority || 'Routine',
         }));
@@ -434,7 +437,7 @@
 
       return `
         <tr class="${rowClass}">
-          <td>${order.patientName || ''}</td>
+          <td><a href="/patient/${order.patientId}" target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></td>
           <td>${order.dob || ''}</td>
           <td>${order.orderName || ''}</td>
           <td><span class="badge ${badgeClass}">${order.type || ''}</span></td>
@@ -509,6 +512,7 @@
         goToPage(paginationData.current_page + 1);
       }
     });
+
   </script>
 </body>
 </html>
