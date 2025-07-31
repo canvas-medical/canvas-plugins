@@ -358,6 +358,10 @@ class Sandbox:
             """Allow type annotations."""
             return self.node_contents_visit(node)
 
+        def visit_Constant(self, node: ast.Constant) -> ast.Constant:
+            """Allow constants."""
+            return self.node_contents_visit(node)
+
         def visit_Match(self, node: ast.Match) -> ast.Match:
             """Allow `match`."""
             return self.node_contents_visit(node)
