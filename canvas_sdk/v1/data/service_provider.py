@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from django.db import models
+
 from canvas_sdk.v1.data.base import IdentifiableModel
 
 
@@ -21,11 +22,13 @@ class ServiceProvider(IdentifiableModel):
     notes = models.TextField(default="", null=True, blank=True)
 
     @property
-    def full_name(self):
+    def full_name(self) -> str:
+        """Service provider full name."""
         return f"{self.first_name} {self.last_name}"
 
     @cached_property
-    def full_name_and_specialty(self):
+    def full_name_and_specialty(self) -> str:
+        """Service provider full name and specialty."""
         name_components: list[str] = []
 
         # Note 1: if firstName is (TBD) then insert at the end instead of the beginning

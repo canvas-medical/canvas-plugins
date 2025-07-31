@@ -224,7 +224,9 @@ class LabOrder(IdentifiableModel):
     )
     courtesy_copy_number = models.CharField(max_length=32)
     courtesy_copy_text = models.CharField(max_length=64)
-    ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="lab_orders", null=True)
+    ordering_provider = models.ForeignKey(
+        Staff, on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
+    )
     parent_order = models.ForeignKey("LabOrder", on_delete=models.DO_NOTHING, null=True)
     healthgorilla_id = models.CharField(max_length=40)
     manual_processing_status = models.CharField(
