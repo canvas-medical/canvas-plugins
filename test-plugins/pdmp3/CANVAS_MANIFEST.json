@@ -1,0 +1,56 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "pdmp3",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "protocols": [
+            {
+                "class": "pdmp3.protocols.pdmp3_integration:DataDisplayButton",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "pdmp3.protocols.pdmp3_integration:InfoDisplayAPI",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+                    {
+            "class": "pdmp3.protocols.test_pdmp_integration:TestDataButton",
+            "description": "Test PDMP integration with mock data",
+            "data_access": {
+                "event": "",
+                "read": [],
+                "write": []
+            }
+        },
+        {
+            "class": "pdmp3.protocols.test_pdmp_integration:TestDataAPI",
+            "description": "API handler for test PDMP data workflow",
+            "data_access": {
+                "event": "",
+                "read": [],
+                "write": []
+            }
+        }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["pmp_gateway_username", "pmp_gateway_password", "pmp_gateway_api_url"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
