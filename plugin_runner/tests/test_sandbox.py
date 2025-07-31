@@ -172,6 +172,17 @@ def test_support_match_tuple() -> None:
     sandbox.execute()
 
 
+def test_support_ellipsis() -> None:
+    """Test that Ellipsis is supported."""
+    sandbox = _sandbox_from_code(
+        """
+            x: tuple[int, ...] = (1, 2, 3)
+        """
+    )
+
+    sandbox.execute()
+
+
 def test_support_type_annotations() -> None:
     """Test that type annotations work."""
     sandbox = _sandbox_from_code(
