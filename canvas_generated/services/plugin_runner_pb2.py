@@ -16,7 +16,7 @@ from canvas_generated.messages import events_pb2 as canvas__generated_dot_messag
 from canvas_generated.messages import plugins_pb2 as canvas__generated_dot_messages_dot_plugins__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n-canvas_generated/services/plugin_runner.proto\x12\x06\x63\x61nvas\x1a&canvas_generated/messages/events.proto\x1a\'canvas_generated/messages/plugins.proto2\x87\x01\n\x0cPluginRunner\x12\x35\n\x0bHandleEvent\x12\r.canvas.Event\x1a\x15.canvas.EventResponse0\x01\x12@\n\rReloadPlugins\x12\x15.ReloadPluginsRequest\x1a\x16.ReloadPluginsResponse0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n-canvas_generated/services/plugin_runner.proto\x12\x06\x63\x61nvas\x1a&canvas_generated/messages/events.proto\x1a\'canvas_generated/messages/plugins.proto2\x85\x02\n\x0cPluginRunner\x12\x35\n\x0bHandleEvent\x12\r.canvas.Event\x1a\x15.canvas.EventResponse0\x01\x12@\n\rReloadPlugins\x12\x15.ReloadPluginsRequest\x1a\x16.ReloadPluginsResponse0\x01\x12=\n\x0cReloadPlugin\x12\x14.ReloadPluginRequest\x1a\x15.ReloadPluginResponse0\x01\x12=\n\x0cUnloadPlugin\x12\x14.UnloadPluginRequest\x1a\x15.UnloadPluginResponse0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -24,5 +24,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'canvas_generated.services.p
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_PLUGINRUNNER']._serialized_start=139
-  _globals['_PLUGINRUNNER']._serialized_end=274
+  _globals['_PLUGINRUNNER']._serialized_end=400
 # @@protoc_insertion_point(module_scope)
