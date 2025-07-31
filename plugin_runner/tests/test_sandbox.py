@@ -176,8 +176,7 @@ def test_support_ellipsis() -> None:
     """Test that Ellipsis is supported."""
     sandbox = _sandbox_from_code(
         """
-            def func():
-                ...
+            x: tuple[int, ...] = (1, 2, 3)
         """
     )
 
