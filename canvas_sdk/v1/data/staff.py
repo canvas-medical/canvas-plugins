@@ -87,7 +87,7 @@ class Staff(Model):
 
     @cached_property
     def full_name(self) -> str:
-        """Return Staff's first + last name """
+        """Return Staff's first + last name."""
         return f"{self.first_name} {self.last_name}"
 
     @cached_property
@@ -97,7 +97,11 @@ class Staff(Model):
         Returns:
             StaffRole | None: the topmost clinical role of the staff member.
         """
-        roles = [role for role in self.roles.all() if role.domain in StaffRole.RoleDomain.clinical_domains()]
+        roles = [
+            role
+            for role in self.roles.all()
+            if role.domain in StaffRole.RoleDomain.clinical_domains()
+        ]
 
         if not roles:
             return None
@@ -189,6 +193,7 @@ class StaffRole(Model):
 
         @staticmethod
         def clinical_domains() -> list["StaffRole.RoleDomain"]:
+            """Return a list of clinical role domains."""
             return [StaffRole.RoleDomain.CLINICAL, StaffRole.RoleDomain.HYBRID]
 
     class RoleType(TextChoices):
@@ -204,5 +209,6 @@ class StaffRole(Model):
     domain_privilege_level = models.IntegerField(default=0)
     permissions = models.JSONField(default=dict, blank=True, null=True)
     role_type = models.CharField(max_length=50, choices=RoleType.choices, blank=True)
+
 
 __exports__ = ("Staff", "StaffContactPoint", "StaffAddress", "StaffPhoto", "StaffRole")

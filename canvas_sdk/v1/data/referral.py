@@ -24,7 +24,11 @@ class Referral(IdentifiableModel):
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING)
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING)
     service_provider = models.ForeignKey(
-        "v1.ServiceProvider", on_delete=models.CASCADE, related_name="referrals", null=True, blank=True
+        "v1.ServiceProvider",
+        on_delete=models.CASCADE,
+        related_name="referrals",
+        null=True,
+        blank=True,
     )
     assessments = models.ManyToManyField("v1.Assessment", related_name="referrals", blank=True)
     clinical_question = models.CharField(max_length=50)
