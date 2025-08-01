@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Worklist Orders</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2185d0;
+            --primary-hover: #1e40af;
+            --secondary: #64748b;
+            --muted: #f3f4f6;
+            --red-50: #fef2f2;
+            --red-100: #fee2e2;
+            --red-700: #b91c1c;
+            --red-800: #991b1b;
+            --gray-100: #f5f5f5;
+            --gray-700: #374151;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #fafbfc;
+            min-height: 100vh;
+            line-height: 1.5;
+            color: #2c3e50;
+        }
+
+        .header {
+            padding: 16px 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin: 24px;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .filters {
+            padding: 16px 24px;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-dropdown {
+            background-color: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+        }
+
+        .filter-dropdown.open {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .filter-dropdown .selected-value {
+            padding-right: 24px;
+        }
+
+        .filter-dropdown::after {
+            content: '⌄';
+            color: #7f8c8d;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .filter-dropdown.open::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .filter-dropdown:hover {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-options.show {
+            display: block;
+        }
+
+        .dropdown-option {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-option.selected {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .order-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px 24px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            position: relative;
+            transition: box-shadow 0.2s ease;
+            margin-bottom: 6px;
+        }
+
+        .order-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .order-card.urgent {
+            border-left-color: #e74c3c;
+            background-color: #fef2f2;
+        }
+
+        .order-card:hover {
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .order-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #3498db;
+            margin-bottom: 4px;
+        }
+
+        .order-subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .status-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .status-badge {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.delegated {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .status-badge.closed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .urgent-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #e74c3c;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .urgent-badge::before {
+            content: '⚠';
+            font-size: 14px;
+        }
+
+        .order-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 8px;
+            font-size: 14px;
+            align-items: baseline;
+        }
+
+        .detail-label {
+            color: #7f8c8d;
+            font-weight: 500;
+            min-width: 80px;
+            font-size: 13px;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-weight: 400;
+        }
+
+        .section-header {
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c3e50;
+            margin: 20px 0 12px 0;
+            padding: 8px 0;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .section-header.urgent {
+            color: #e74c3c;
+            border-bottom-color: #e74c3c;
+        }
+
+        .section-header:first-child {
+            margin-top: 0;
+        }
+
+        .info-bar {
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            color: var(--gray-700);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding: 0.75rem 0;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--primary);
+            background-color: white;
+            color: var(--primary);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #d1d5db;
+            color: #6b7280;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .error {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            color: #991b1b;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="filters">
+        <div class="filter-group">
+            <label class="filter-label">Status</label>
+            <div class="filter-dropdown" data-value="">
+                <div class="selected-value">All Status</div>
+                <div class="dropdown-options">
+                    <div class="dropdown-option selected" data-value="">All Status</div>
+                    <div class="dropdown-option" data-value="open">Open</div>
+                    <div class="dropdown-option" data-value="closed">Closed</div>
+                    <div class="dropdown-option" data-value="delegated">Delegated</div>
+                </div>
+            </div>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Type</label>
+            <div class="filter-dropdown" data-value="">
+                <div class="selected-value">All Types</div>
+                <div class="dropdown-options">
+                    <div class="dropdown-option selected" data-value="">All Types</div>
+                    <div class="dropdown-option" data-value="lab">Lab</div>
+                    <div class="dropdown-option" data-value="imaging">Imaging</div>
+                    <div class="dropdown-option" data-value="referral">Referral</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div id="orders-container">
+            <div class="loading">Loading orders...</div>
+        </div>
+
+        <div class="info-bar" id="info-bar">
+            Loading...
+        </div>
+
+        <div class="pagination" id="pagination-container" style="display: none;">
+            <div class="pagination-info" id="pagination-info"></div>
+            <div class="pagination-controls">
+                <button id="prev-page">Previous</button>
+                <span id="page-numbers"></span>
+                <button id="next-page">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allOrders = [];
+        let currentPage = 1;
+        let paginationData = null;
+
+        // Configuration - using placeholder endpoint based on your structure
+        const API_BASE_URL = '/plugin-io/api/order_tracking/orders';
+
+        async function fetchOrders(status = null, orderType = null, page = 1) {
+            try {
+                currentPage = page;
+
+                // Build query parameters
+                const params = new URLSearchParams();
+                if (status) {
+                    params.append('status', status);
+                }
+                if (orderType) {
+                    params.append('type', orderType);
+                }
+                params.append('page', page);
+                params.append('page_size', 20);
+
+                const url = `${API_BASE_URL}?${params.toString()}`;
+                console.log('Fetching from:', url); // For debugging
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                paginationData = data.pagination;
+
+                // Transform the data to match our expected format
+                allOrders = transformOrderData(data);
+                populateOrdersTable();
+                updatePaginationControls();
+
+            } catch (error) {
+                console.error('Error fetching orders:', error);
+                document.getElementById('orders-container').innerHTML =
+                    `<div class="error">Error loading orders: ${error.message}</div>`;
+                document.getElementById('info-bar').textContent = 'Error loading orders';
+
+                // For demo purposes, show sample data after error
+                setTimeout(() => {
+                    renderSampleOrders();
+                }, 2000);
+            }
+        }
+
+        function transformOrderData(data) {
+            // Handle different data structures from your API
+            const orders = [];
+
+            // Add imaging orders if they exist
+            if (data.imaging_orders) {
+                orders.push(...data.imaging_orders.map(order => ({
+                    ...order,
+                    type: 'Imaging',
+                    orderName: order.order || 'Imaging Order',
+                    patientName: order.patient_name,
+                    orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
+                    sentTo: 'Imaging Dept',
+                    orderedDate: formatDate(order.created_date),
+                    priority: order.urgent ? 'urgent' : 'routine',
+                    status: order.status || 'Open'
+                })));
+            }
+
+            // Add lab orders if they exist
+            if (data.lab_orders) {
+                orders.push(...data.lab_orders.map(order => ({
+                    ...order,
+                    type: 'Lab',
+                    orderName: order.order || 'Lab Order',
+                    patientName: order.patient_name,
+                    orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
+                    sentTo: 'Lab Dept',
+                    orderedDate: formatDate(order.created_date),
+                    priority: order.urgent ? 'urgent' : 'routine',
+                    status: order.status || 'Open'
+                })));
+            }
+
+            // Add referral orders if they exist
+            if (data.referral_orders) {
+                orders.push(...data.referral_orders.map(order => ({
+                    ...order,
+                    type: 'Referral',
+                    orderName: order.order || 'Referral',
+                    patientName: order.patient_name,
+                    orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
+                    sentTo: order.sent_to || 'Specialist',
+                    orderedDate: formatDate(order.created_date),
+                    priority: order.urgent ? 'urgent' : 'routine',
+                    status: order.status || 'Open'
+                })));
+            }
+
+            return orders;
+        }
+
+        function renderSampleOrders() {
+            // Sample data for demonstration
+            const sampleData = {
+                pagination: {
+                    current_page: 1,
+                    total_pages: 1,
+                    total_count: 3,
+                    page_size: 20,
+                    has_previous: false,
+                    has_next: false
+                },
+                orders: [
+                    {
+                        type: 'Imaging',
+                        orderName: 'Chest X-Ray',
+                        patientName: 'John Doe',
+                        dob: '1985-06-15',
+                        orderingProvider: 'Dr. Michael Chen',
+                        sentTo: 'Radiology Dept',
+                        orderedDate: 'Jan 19, 2025',
+                        priority: 'urgent',
+                        status: 'Delegated'
+                    },
+                    {
+                        type: 'Lab',
+                        orderName: 'Complete Blood Count',
+                        patientName: 'Jane Smith',
+                        dob: '1978-03-22',
+                        orderingProvider: 'Dr. Sarah Johnson',
+                        sentTo: 'Lab Services',
+                        orderedDate: 'Jan 18, 2025',
+                        priority: 'routine',
+                        status: 'Open'
+                    },
+                    {
+                        type: 'Referral',
+                        orderName: 'Cardiology Consultation',
+                        patientName: 'Bob Wilson',
+                        dob: '1960-11-08',
+                        orderingProvider: 'Dr. Emily Davis',
+                        sentTo: 'Cardiology Dept',
+                        orderedDate: 'Jan 17, 2025',
+                        priority: 'routine',
+                        status: 'Open'
+                    }
+                ]
+            };
+
+            paginationData = sampleData.pagination;
+            allOrders = sampleData.orders;
+            populateOrdersTable();
+            updatePaginationControls();
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                return new Date(dateString).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        function populateOrdersTable() {
+            const container = document.getElementById('orders-container');
+            const infoBar = document.getElementById('info-bar');
+
+            if (allOrders.length === 0) {
+                container.innerHTML = '<div class="loading">No orders found</div>';
+                infoBar.textContent = 'No orders available';
+                return;
+            }
+
+            const urgentOrders = allOrders.filter(order => order.priority === 'urgent');
+            const routineOrders = allOrders.filter(order => order.priority === 'routine');
+
+            let html = '';
+
+            if (urgentOrders.length > 0) {
+                html += `<div class="section-header urgent">⚠ Urgent Orders (${urgentOrders.length})</div>`;
+                urgentOrders.forEach(order => {
+                    html += createOrderCard(order, true);
+                });
+            }
+
+            if (routineOrders.length > 0) {
+                html += `<div class="section-header">⏱ Routine Orders (${routineOrders.length})</div>`;
+                routineOrders.forEach(order => {
+                    html += createOrderCard(order, false);
+                });
+            }
+
+            container.innerHTML = html;
+
+            if (paginationData) {
+                const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
+                const end = Math.min(start + allOrders.length - 1, paginationData.total_count);
+                infoBar.textContent = `Showing ${start}-${end} of ${paginationData.total_count} orders (${urgentOrders.length} urgent, ${routineOrders.length} routine)`;
+            } else {
+                infoBar.textContent = `Showing ${allOrders.length} orders (${urgentOrders.length} urgent, ${routineOrders.length} routine)`;
+            }
+        }
+
+        function createOrderCard(order, isUrgent) {
+            const urgentClass = isUrgent ? 'urgent' : '';
+            const urgentBadge = isUrgent ? '<div class="urgent-badge">Urgent</div>' : '';
+            const statusClass = order.status ? order.status.toLowerCase() : '';
+
+            return `
+                <div class="order-card ${urgentClass}">
+                    <div class="order-header">
+                        <div>
+                            <div class="order-title">${order.orderName || ''}</div>
+                            <div class="order-subtitle">${order.type || ''} • ${order.orderingProvider || ''}</div>
+                        </div>
+                        <div class="status-section">
+                            <div class="status-badge ${statusClass}">${order.status || 'Open'}</div>
+                            ${urgentBadge}
+                        </div>
+                    </div>
+
+                    <div class="order-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Ordered by:</span>
+                            <span class="detail-value">${order.orderingProvider || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Sent to:</span>
+                            <span class="detail-value">${order.sentTo || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Ordered:</span>
+                            <span class="detail-value">${order.orderedDate || ''}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updatePaginationControls() {
+            if (!paginationData || paginationData.total_pages <= 1) {
+                document.getElementById('pagination-container').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('pagination-container').style.display = 'flex';
+
+            // Update pagination info
+            document.getElementById('pagination-info').textContent = `Page ${paginationData.current_page} of ${paginationData.total_pages}`;
+
+            // Update prev/next buttons
+            document.getElementById('prev-page').disabled = !paginationData.has_previous;
+            document.getElementById('next-page').disabled = !paginationData.has_next;
+
+            // Update page numbers
+            const pageNumbers = document.getElementById('page-numbers');
+            pageNumbers.innerHTML = '';
+
+            const startPage = Math.max(1, paginationData.current_page - 2);
+            const endPage = Math.min(paginationData.total_pages, paginationData.current_page + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.onclick = () => goToPage(i);
+                if (i === paginationData.current_page) {
+                    button.style.backgroundColor = 'var(--primary)';
+                    button.style.color = 'white';
+                }
+                pageNumbers.appendChild(button);
+            }
+        }
+
+        function goToPage(page) {
+            const statusDropdown = document.querySelector('.filter-dropdown[data-value]:first-child');
+            const typeDropdown = document.querySelector('.filter-dropdown[data-value]:last-child');
+
+            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedType = typeDropdown.getAttribute('data-value');
+
+            fetchOrders(selectedStatus, selectedType, page);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Custom dropdown functionality
+            const dropdowns = document.querySelectorAll('.filter-dropdown');
+
+            dropdowns.forEach(dropdown => {
+                const selectedValue = dropdown.querySelector('.selected-value');
+                const options = dropdown.querySelector('.dropdown-options');
+                const optionItems = dropdown.querySelectorAll('.dropdown-option');
+
+                // Toggle dropdown
+                selectedValue.addEventListener('click', (e) => {
+                    e.stopPropagation();
+
+                    // Close other dropdowns
+                    dropdowns.forEach(otherDropdown => {
+                        if (otherDropdown !== dropdown) {
+                            otherDropdown.classList.remove('open');
+                            otherDropdown.querySelector('.dropdown-options').classList.remove('show');
+                        }
+                    });
+
+                    // Toggle current dropdown
+                    dropdown.classList.toggle('open');
+                    options.classList.toggle('show');
+                });
+
+                // Handle option selection
+                optionItems.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+
+                        // Update selected state
+                        optionItems.forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+
+                        // Update selected value text
+                        selectedValue.textContent = option.textContent;
+
+                        // Update dropdown data-value
+                        const newValue = option.getAttribute('data-value');
+                        dropdown.setAttribute('data-value', newValue);
+
+                        // Close dropdown
+                        dropdown.classList.remove('open');
+                        options.classList.remove('show');
+
+                        // Trigger filter change
+                        handleFilterChange();
+                    });
+                });
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', () => {
+                dropdowns.forEach(dropdown => {
+                    dropdown.classList.remove('open');
+                    dropdown.querySelector('.dropdown-options').classList.remove('show');
+                });
+            });
+
+            // Initial load
+            fetchOrders();
+        });
+
+        function handleFilterChange() {
+            const statusDropdown = document.querySelector('.filter-dropdown[data-value]:first-child');
+            const typeDropdown = document.querySelector('.filter-dropdown[data-value]:last-child');
+
+            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedType = typeDropdown.getAttribute('data-value');
+
+            fetchOrders(selectedStatus, selectedType, 1);
+        }
+
+        document.getElementById('prev-page').addEventListener('click', function() {
+            if (paginationData && paginationData.has_previous) {
+                goToPage(paginationData.current_page - 1);
+            }
+        });
+
+        document.getElementById('next-page').addEventListener('click', function() {
+            if (paginationData && paginationData.has_next) {
+                goToPage(paginationData.current_page + 1);
+            }
+        });
+    </script>
+</body>
+</html>
