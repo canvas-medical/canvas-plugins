@@ -7,12 +7,7 @@
         "protocols": [
             {
                 "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz...",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "A protocol that does xyz..."
             }
         ],
         "commands": [],

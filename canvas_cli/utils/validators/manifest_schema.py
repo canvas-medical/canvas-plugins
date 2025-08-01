@@ -52,6 +52,7 @@ manifest_schema = {
         "name",
         "description",
         "components",
+        "tags",
         "license",
         "readme",
     ],
