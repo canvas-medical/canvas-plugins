@@ -80,6 +80,8 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
+from .referral import Referral
+from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
@@ -172,8 +174,10 @@ __all__ = __exports__ = (
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisitSettingCoding",
+    "Referral",
     "ResponseOption",
     "ResponseOptionSet",
+    "ServiceProvider",
     "Staff",
     "StaffAddress",
     "StaffPhoto",
