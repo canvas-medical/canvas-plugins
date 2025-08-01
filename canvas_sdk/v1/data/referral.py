@@ -47,4 +47,37 @@ class Referral(IdentifiableModel):
         return f"Referral {self.id}"
 
 
-__exports__ = ("Referral",)
+class ReferralReport(IdentifiableModel):
+    """ReferralReport."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralreport_001"
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+
+    review_mode = models.CharField(max_length=2)
+    assigned_by = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    junked = models.BooleanField()
+    requires_signature = models.BooleanField()
+    assigned_date = models.DateTimeField(null=True)
+    team_assigned_date = models.DateTimeField(null=True)
+    team = models.ForeignKey("v1.Team", on_delete=models.DO_NOTHING, null=True)
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="referral_reports"
+    )
+    referral = models.ForeignKey(
+        Referral, on_delete=models.DO_NOTHING, related_name="reports", null=True
+    )
+    specialty = models.CharField(max_length=250)
+    original_date = models.DateField(null=True)
+    comment = models.TextField()
+    priority = models.BooleanField(default=False)
+
+
+__exports__ = ("Referral", "ReferralReport")

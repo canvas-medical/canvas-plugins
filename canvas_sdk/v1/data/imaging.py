@@ -100,7 +100,14 @@ class ImagingReport(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )
-    order = models.ForeignKey(ImagingOrder, on_delete=models.DO_NOTHING, null=True)
+    order = models.ForeignKey(
+        ImagingOrder,
+        on_delete=models.DO_NOTHING,
+        related_name="results",
+        default=None,
+        blank=True,
+        null=True,
+    )
     source = models.CharField(choices=ImagingReportSource.choices, max_length=18)
     name = models.CharField(max_length=255)
     result_date = models.DateField()
