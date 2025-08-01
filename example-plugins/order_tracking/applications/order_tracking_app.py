@@ -128,10 +128,11 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider').filter(
             results__isnull=True
         )
-        lab_orders_queryset = LabOrder.objects.select_related('patient', 'ordering_provider')
         refer_queryset = Referral.objects.select_related('patient', 'note__provider').filter(
             reports__isnull=True
         )
+        lab_orders_queryset = LabOrder.objects.select_related('patient', 'ordering_provider').filter(
+            healthgorilla_id="", reports__isnull=True)
 
         # Apply provider filter if specified
         if provider_id:
