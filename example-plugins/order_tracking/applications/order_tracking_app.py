@@ -124,9 +124,14 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         page_size = int(self.request.query_params.get("page_size", 20))
 
         # Build querysets with filters and select_related for efficiency
-        imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider')
+        # Only show imaging orders that don't have an associated ImagingReport
+        imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider').filter(
+            results__isnull=True
+        )
         lab_orders_queryset = LabOrder.objects.select_related('patient', 'ordering_provider')
-        refer_queryset = Referral.objects.select_related('patient', 'note__provider')
+        refer_queryset = Referral.objects.select_related('patient', 'note__provider').filter(
+            reports__isnull=True
+        )
 
         # Apply provider filter if specified
         if provider_id:
