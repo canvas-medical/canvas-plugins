@@ -799,7 +799,8 @@
     "ReasonForVisitSettingCoding"
   ],
   "canvas_sdk.v1.data.referral": [
-    "Referral"
+    "Referral",
+    "ReferralReport"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
