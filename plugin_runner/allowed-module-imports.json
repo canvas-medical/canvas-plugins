@@ -250,6 +250,10 @@
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
   ],
+  "canvas_sdk.effects.patient_chart_group": [
+    "Group",
+    "PatientChartGroup"
+  ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
   ],
