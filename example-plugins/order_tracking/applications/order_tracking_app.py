@@ -17,7 +17,7 @@ class OrderTrackingApplication(Application):
 
     def on_open(self) -> Effect:
         return LaunchModalEffect(
-            content=render_to_string("templates/worklist_orders.html"),
+            content=render_to_string("templates/worklist_orders.html", context={"patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
             target=LaunchModalEffect.TargetType.PAGE,
         ).apply()
 
@@ -129,13 +129,13 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         # Build querysets with filters and select_related for efficiency
         # Only show imaging orders that don't have an associated ImagingReport
         imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider').filter(
-            results__isnull=True
+            results__isnull=True, deleted=False
         )
         refer_queryset = Referral.objects.select_related('patient', 'note__provider').filter(
-            reports__isnull=True
+            reports__isnull=True, deleted=False
         )
         lab_orders_queryset = LabOrder.objects.select_related('patient', 'ordering_provider').filter(
-            healthgorilla_id="", reports__isnull=True)
+            healthgorilla_id="", reports__isnull=True, deleted=False)
 
         # Apply provider filter if specified
         if provider_id:
