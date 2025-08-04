@@ -364,7 +364,7 @@
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Status</label>
-            <div class="filter-dropdown" data-value="">
+            <div class="filter-dropdown" id="status-dropdown" data-value="">
                 <div class="selected-value">All Status</div>
                 <div class="dropdown-options">
                     <div class="dropdown-option selected" data-value="">All Status</div>
@@ -376,7 +376,7 @@
         </div>
         <div class="filter-group">
             <label class="filter-label">Type</label>
-            <div class="filter-dropdown" data-value="">
+            <div class="filter-dropdown" id="type-dropdown" data-value="">
                 <div class="selected-value">All Types</div>
                 <div class="dropdown-options">
                     <div class="dropdown-option selected" data-value="">All Types</div>
@@ -414,6 +414,7 @@
 
         // Configuration - using placeholder endpoint based on your structure
         const API_BASE_URL = '/plugin-io/api/order_tracking/orders';
+        const PATIENT_ID = '{{patientId}}'
 
         async function fetchOrders(status = null, orderType = null, page = 1) {
             try {
@@ -421,6 +422,7 @@
 
                 // Build query parameters
                 const params = new URLSearchParams();
+                params.append('patient_id', PATIENT_ID);
                 if (status) {
                     params.append('status', status);
                 }
@@ -475,7 +477,7 @@
                   sentTo: order.sent_to || 'Not specified',
                   orderedDate: formatDate(order.created_date),
                   priority: order.priority || 'Routine',
-                    status: order.status || 'Open'
+                  status: order.status || 'Open'
                 })));
             }
 
@@ -690,8 +692,8 @@
         }
 
         function goToPage(page) {
-            const statusDropdown = document.querySelector('.filter-dropdown[data-value]:first-child');
-            const typeDropdown = document.querySelector('.filter-dropdown[data-value]:last-child');
+           const statusDropdown = document.getElementById('status-dropdown');
+           const typeDropdown = document.getElementById('type-dropdown');
 
             const selectedStatus = statusDropdown.getAttribute('data-value');
             const selectedType = typeDropdown.getAttribute('data-value');
@@ -765,8 +767,8 @@
         });
 
         function handleFilterChange() {
-            const statusDropdown = document.querySelector('.filter-dropdown[data-value]:first-child');
-            const typeDropdown = document.querySelector('.filter-dropdown[data-value]:last-child');
+           const statusDropdown = document.getElementById('status-dropdown');
+           const typeDropdown = document.getElementById('type-dropdown');
 
             const selectedStatus = statusDropdown.getAttribute('data-value');
             const selectedType = typeDropdown.getAttribute('data-value');

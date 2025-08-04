@@ -119,6 +119,8 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
         # Get query parameters for filtering and pagination
         provider_id = self.request.query_params.get("provider_id")
+        patient_id = self.request.query_params.get("patient_id")
+        status = self.request.query_params.get("status")
         order_type = self.request.query_params.get("type")
         page = int(self.request.query_params.get("page", 1))
         page_size = int(self.request.query_params.get("page_size", 20))
@@ -139,6 +141,11 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             imaging_orders_queryset = imaging_orders_queryset.filter(ordering_provider__id=provider_id)
             lab_orders_queryset = lab_orders_queryset.filter(ordering_provider__id=provider_id)
             refer_queryset = refer_queryset.filter(note__provider__id=provider_id)
+
+        if patient_id:
+            imaging_orders_queryset = imaging_orders_queryset.filter(patient__id=patient_id)
+            lab_orders_queryset = lab_orders_queryset.filter(patient__id=patient_id)
+            refer_queryset = refer_queryset.filter(patient__id=patient_id)
 
         # Apply ordering for consistent results
         imaging_orders_queryset = imaging_orders_queryset.order_by('-created')
