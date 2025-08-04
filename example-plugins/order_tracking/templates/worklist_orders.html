@@ -298,6 +298,7 @@
     let providerIdToNameMap = new Map();
     let currentPage = 1;
     let paginationData = null;
+    const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
     // Custom dropdown functionality
     function initializeDropdowns() {
@@ -629,7 +630,7 @@
 
       return `
         <tr class="${rowClass}">
-          <td><a href="/patient/${order.patientId}" target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></td>
+          <td><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></td>
           <td>${order.dob || ''}</td>
           <td>${order.orderName || ''}</td>
           <td><span class="badge ${badgeClass}">${order.type || ''}</span></td>

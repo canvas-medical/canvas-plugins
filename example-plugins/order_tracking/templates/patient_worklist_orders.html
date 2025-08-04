@@ -380,9 +380,9 @@
                 <div class="selected-value">All Types</div>
                 <div class="dropdown-options">
                     <div class="dropdown-option selected" data-value="">All Types</div>
-                    <div class="dropdown-option" data-value="lab">Lab</div>
-                    <div class="dropdown-option" data-value="imaging">Imaging</div>
-                    <div class="dropdown-option" data-value="referral">Referral</div>
+                    <div class="dropdown-option" data-value="Lab">Lab</div>
+                    <div class="dropdown-option" data-value="Imaging">Imaging</div>
+                    <div class="dropdown-option" data-value="Referral">Referral</div>
                 </div>
             </div>
         </div>
@@ -455,11 +455,6 @@
                 document.getElementById('orders-container').innerHTML =
                     `<div class="error">Error loading orders: ${error.message}</div>`;
                 document.getElementById('info-bar').textContent = 'Error loading orders';
-
-                // For demo purposes, show sample data after error
-                setTimeout(() => {
-                    renderSampleOrders();
-                }, 2000);
             }
         }
 
@@ -476,7 +471,7 @@
                   orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                   sentTo: order.sent_to || 'Not specified',
                   orderedDate: formatDate(order.created_date),
-                  priority: order.priority || 'Routine',
+                  priority: order.urgent || 'routine',
                   status: order.status || 'Open'
                 })));
             }
@@ -497,8 +492,8 @@
             }
 
             // Add referral orders if they exist
-            if (data.referral_orders) {
-                orders.push(...data.referral_orders.map(order => ({
+            if (data.referrals) {
+                orders.push(...data.referrals.map(order => ({
                     ...order,
                     type: 'Referral',
                     orderName: order.order || 'Referral',
@@ -512,60 +507,6 @@
             }
 
             return orders;
-        }
-
-        function renderSampleOrders() {
-            // Sample data for demonstration
-            const sampleData = {
-                pagination: {
-                    current_page: 1,
-                    total_pages: 1,
-                    total_count: 3,
-                    page_size: 20,
-                    has_previous: false,
-                    has_next: false
-                },
-                orders: [
-                    {
-                        type: 'Imaging',
-                        orderName: 'Chest X-Ray',
-                        patientName: 'John Doe',
-                        dob: '1985-06-15',
-                        orderingProvider: 'Dr. Michael Chen',
-                        sentTo: 'Radiology Dept',
-                        orderedDate: 'Jan 19, 2025',
-                        priority: 'urgent',
-                        status: 'Delegated'
-                    },
-                    {
-                        type: 'Lab',
-                        orderName: 'Complete Blood Count',
-                        patientName: 'Jane Smith',
-                        dob: '1978-03-22',
-                        orderingProvider: 'Dr. Sarah Johnson',
-                        sentTo: 'Lab Services',
-                        orderedDate: 'Jan 18, 2025',
-                        priority: 'routine',
-                        status: 'Open'
-                    },
-                    {
-                        type: 'Referral',
-                        orderName: 'Cardiology Consultation',
-                        patientName: 'Bob Wilson',
-                        dob: '1960-11-08',
-                        orderingProvider: 'Dr. Emily Davis',
-                        sentTo: 'Cardiology Dept',
-                        orderedDate: 'Jan 17, 2025',
-                        priority: 'routine',
-                        status: 'Open'
-                    }
-                ]
-            };
-
-            paginationData = sampleData.pagination;
-            allOrders = sampleData.orders;
-            populateOrdersTable();
-            updatePaginationControls();
         }
 
         function formatDate(dateString) {
