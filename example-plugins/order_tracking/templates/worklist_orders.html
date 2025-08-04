@@ -41,17 +41,109 @@
       gap: 1rem;
       margin-top: 1rem;
     }
-    label {
+
+    .filter-group {
       display: flex;
       flex-direction: column;
-      font-size: 0.875rem;
+      gap: 4px;
+      flex: 1;
+      min-width: 200px;
     }
-    select {
-      padding: 0.5rem;
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-dropdown {
+      background-color: white;
       border: 1px solid #d1d5db;
       border-radius: 0.375rem;
+      padding: 0.5rem;
       font-size: 1rem;
+      color: #2c3e50;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
     }
+
+    .filter-dropdown.open {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+    }
+
+    .filter-dropdown .selected-value {
+      padding-right: 24px;
+    }
+
+    .filter-dropdown::after {
+      content: '⌄';
+      color: #6b7280;
+      font-size: 16px;
+      transition: transform 0.2s ease;
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .filter-dropdown.open::after {
+      transform: translateY(-50%) rotate(180deg);
+    }
+
+    .filter-dropdown:hover {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+    }
+
+    .dropdown-options {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-top: none;
+      border-radius: 0 0 0.375rem 0.375rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .dropdown-options.show {
+      display: block;
+    }
+
+    .dropdown-option {
+      padding: 0.5rem;
+      font-size: 1rem;
+      color: #2c3e50;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-option:hover {
+      background-color: #f3f4f6;
+    }
+
+    .dropdown-option.selected {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+      font-weight: 500;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -141,21 +233,27 @@
     <div class="card-title">Outstanding Orders</div>
 
     <div class="filters">
-      <label>
-        Ordering Provider
-        <select id="provider-filter">
-          <option>All Providers</option>
-        </select>
-      </label>
-      <label>
-        Type
-        <select id="type-filter">
-          <option>All Types</option>
-          <option>Lab</option>
-          <option>Imaging</option>
-          <option>Referral</option>
-        </select>
-      </label>
+      <div class="filter-group">
+        <label class="filter-label">Ordering Provider</label>
+        <div class="filter-dropdown" id="provider-dropdown" data-value="">
+          <div class="selected-value">All Providers</div>
+          <div class="dropdown-options" id="provider-options">
+            <div class="dropdown-option selected" data-value="">All Providers</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Type</label>
+        <div class="filter-dropdown" id="type-dropdown" data-value="">
+          <div class="selected-value">All Types</div>
+          <div class="dropdown-options" id="type-options">
+            <div class="dropdown-option selected" data-value="">All Types</div>
+            <div class="dropdown-option" data-value="Lab">Lab</div>
+            <div class="dropdown-option" data-value="Imaging">Imaging</div>
+            <div class="dropdown-option" data-value="Referral">Referral</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <table>
@@ -201,13 +299,99 @@
     let currentPage = 1;
     let paginationData = null;
 
+    // Custom dropdown functionality
+    function initializeDropdowns() {
+      const dropdowns = document.querySelectorAll('.filter-dropdown');
+
+      dropdowns.forEach(dropdown => {
+        const selectedValue = dropdown.querySelector('.selected-value');
+        const options = dropdown.querySelector('.dropdown-options');
+        const optionItems = dropdown.querySelectorAll('.dropdown-option');
+
+        // Toggle dropdown
+        selectedValue.addEventListener('click', (e) => {
+          e.stopPropagation();
+
+          // Close other dropdowns
+          dropdowns.forEach(otherDropdown => {
+            if (otherDropdown !== dropdown) {
+              otherDropdown.classList.remove('open');
+              otherDropdown.querySelector('.dropdown-options').classList.remove('show');
+            }
+          });
+
+          // Toggle current dropdown
+          dropdown.classList.toggle('open');
+          options.classList.toggle('show');
+        });
+
+        // Handle option selection
+        function setupOptionListeners() {
+          const currentOptions = dropdown.querySelectorAll('.dropdown-option');
+          currentOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+              e.stopPropagation();
+
+              // Update selected state
+              currentOptions.forEach(opt => opt.classList.remove('selected'));
+              option.classList.add('selected');
+
+              // Update selected value text
+              selectedValue.textContent = option.textContent;
+
+              // Update dropdown data-value
+              const newValue = option.getAttribute('data-value');
+              dropdown.setAttribute('data-value', newValue);
+
+              // Close dropdown
+              dropdown.classList.remove('open');
+              options.classList.remove('show');
+
+              // Trigger filter change
+              handleFilterChange();
+            });
+          });
+        }
+
+        setupOptionListeners();
+
+        // Re-setup listeners when options change
+        dropdown.setupOptionListeners = setupOptionListeners;
+      });
+
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', () => {
+        dropdowns.forEach(dropdown => {
+          dropdown.classList.remove('open');
+          dropdown.querySelector('.dropdown-options').classList.remove('show');
+        });
+      });
+    }
+
+    function handleFilterChange() {
+      const providerDropdown = document.getElementById('provider-dropdown');
+      const typeDropdown = document.getElementById('type-dropdown');
+
+      const selectedProvider = providerDropdown.getAttribute('data-value');
+      const selectedType = typeDropdown.getAttribute('data-value');
+
+      // Get provider ID from name
+      let providerId = null;
+      if (selectedProvider && selectedProvider !== '') {
+        providerId = Array.from(providerIdToNameMap.entries())
+          .find(([id, name]) => name === selectedProvider)?.[0];
+      }
+
+      fetchOrders(providerId, selectedType);
+    }
+
     async function fetchProviders() {
       try {
         const response = await fetch('/plugin-io/api/order_tracking/providers');
         const data = await response.json();
-        
+
         loggedInStaffId = data.logged_in_staff_id;
-        
+
         const providers = data.providers || [];
 
         // Create maps for providers
@@ -219,7 +403,7 @@
             providerIdToNameMap.set(provider.id, provider.preferred_name);
           }
         });
-        
+
         allProviders = Array.from(providerMap.values());
         populateProvidersDropdown();
       } catch (error) {
@@ -227,10 +411,45 @@
       }
     }
 
+    function populateProvidersDropdown() {
+      const providerOptions = document.getElementById('provider-options');
+      const providerDropdown = document.getElementById('provider-dropdown');
+
+      // Get the logged-in staff member's name if they exist in providers
+      const loggedInStaffName = loggedInStaffId ? providerIdToNameMap.get(loggedInStaffId) : null;
+
+      const allProvidersSelected = loggedInStaffName && !allProviders.includes(loggedInStaffName);
+
+      let optionsHTML = `<div class="dropdown-option ${allProvidersSelected ? 'selected': ''}" data-value="">All Providers</div>`;
+
+      allProviders.forEach(provider => {
+        const isSelected = loggedInStaffName && provider === loggedInStaffName;
+        optionsHTML += `<div class="dropdown-option ${isSelected ? 'selected' : ''}" data-value="${provider}">${provider}</div>`;
+      });
+
+      providerOptions.innerHTML = optionsHTML;
+
+      // Update selected value if logged-in staff should be auto-selected
+      if (loggedInStaffName && allProviders.includes(loggedInStaffName)) {
+        providerDropdown.querySelector('.selected-value').textContent = loggedInStaffName;
+        providerDropdown.setAttribute('data-value', loggedInStaffName);
+
+        // Fetch orders with their filter applied
+        const providerId = Array.from(providerIdToNameMap.entries())
+          .find(([id, name]) => name === loggedInStaffName)?.[0];
+        if (providerId) {
+          fetchOrders(providerId);
+        }
+      }
+
+      // Re-setup event listeners for new options
+      providerDropdown.setupOptionListeners();
+    }
+
     async function fetchOrders(providerId = null, orderType = null, page = 1) {
       try {
         currentPage = page;
-        
+
         // Build query parameters
         const params = new URLSearchParams();
         if (providerId) {
@@ -309,40 +528,10 @@
       }
     }
 
-    function populateProvidersDropdown() {
-      const providerSelect = document.getElementById('provider-filter');
-      providerSelect.innerHTML = '<option value="">All Providers</option>';
-      
-      // Get the logged-in staff member's name if they exist in providers
-      const loggedInStaffName = loggedInStaffId ? providerIdToNameMap.get(loggedInStaffId) : null;
-      
-      allProviders.forEach(provider => {
-        const option = document.createElement('option');
-        option.value = provider;
-        option.textContent = provider;
-        
-        // Auto-select the logged-in staff member if they're in the provider list
-        if (loggedInStaffName && provider === loggedInStaffName) {
-          option.selected = true;
-        }
-        
-        providerSelect.appendChild(option);
-      });
-      
-      // If logged-in staff was auto-selected, fetch orders with their filter applied
-      if (loggedInStaffName && allProviders.includes(loggedInStaffName)) {
-        const providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === loggedInStaffName)?.[0];
-        if (providerId) {
-          fetchOrders(providerId);
-        }
-      }
-    }
-
     function populateOrdersTable() {
       const tableBody = document.getElementById('orders-table-body');
       const infoBar = document.getElementById('info-bar');
-      
+
       if (allOrders.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="9" class="section-header">No orders found</td></tr>';
         infoBar.textContent = 'No orders available';
@@ -389,21 +578,21 @@
       }
 
       document.getElementById('pagination-container').style.display = 'flex';
-      
+
       // Update pagination info
       document.getElementById('pagination-info').textContent = `Page ${paginationData.current_page} of ${paginationData.total_pages}`;
-      
+
       // Update prev/next buttons
       document.getElementById('prev-page').disabled = !paginationData.has_previous;
       document.getElementById('next-page').disabled = !paginationData.has_next;
-      
+
       // Update page numbers
       const pageNumbers = document.getElementById('page-numbers');
       pageNumbers.innerHTML = '';
-      
+
       const startPage = Math.max(1, paginationData.current_page - 2);
       const endPage = Math.min(paginationData.total_pages, paginationData.current_page + 2);
-      
+
       for (let i = startPage; i <= endPage; i++) {
         const button = document.createElement('button');
         button.textContent = i;
@@ -417,15 +606,18 @@
     }
 
     function goToPage(page) {
-      const selectedProvider = document.getElementById('provider-filter').value;
-      const selectedType = document.getElementById('type-filter').value;
-      
+      const providerDropdown = document.getElementById('provider-dropdown');
+      const typeDropdown = document.getElementById('type-dropdown');
+
+      const selectedProvider = providerDropdown.getAttribute('data-value');
+      const selectedType = typeDropdown.getAttribute('data-value');
+
       let providerId = null;
-      if (selectedProvider && selectedProvider !== 'All Providers') {
+      if (selectedProvider && selectedProvider !== '') {
         providerId = Array.from(providerIdToNameMap.entries())
           .find(([id, name]) => name === selectedProvider)?.[0];
       }
-      
+
       fetchOrders(providerId, selectedType, page);
     }
 
@@ -469,35 +661,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', async function() {
+      initializeDropdowns();
       await Promise.all([fetchProviders(), fetchOrders()]);
-    });
-
-    document.getElementById('provider-filter').addEventListener('change', function() {
-      const selectedProvider = this.value;
-      const selectedType = document.getElementById('type-filter').value;
-      
-      // Get provider ID from name
-      let providerId = null;
-      if (selectedProvider && selectedProvider !== 'All Providers') {
-        providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === selectedProvider)?.[0];
-      }
-      
-      fetchOrders(providerId, selectedType);
-    });
-
-    document.getElementById('type-filter').addEventListener('change', function() {
-      const selectedProvider = document.getElementById('provider-filter').value;
-      const selectedType = this.value;
-      
-      // Get provider ID from name
-      let providerId = null;
-      if (selectedProvider && selectedProvider !== 'All Providers') {
-        providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === selectedProvider)?.[0];
-      }
-      
-      fetchOrders(providerId, selectedType);
     });
 
     // Add event listeners for pagination buttons
