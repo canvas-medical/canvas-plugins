@@ -18,6 +18,7 @@ class OrderTrackingApplication(Application):
     def on_open(self) -> Effect:
         return LaunchModalEffect(
             content=render_to_string("templates/worklist_orders.html"),
+            target=LaunchModalEffect.TargetType.PAGE,
         ).apply()
 
 
