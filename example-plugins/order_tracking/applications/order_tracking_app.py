@@ -332,6 +332,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
         try:
             comments_data = []
+            task_list = []
 
             # Handle referral orders using the task_list property
             if order_type.lower() == "referral":
@@ -342,24 +343,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
                 try:
                     referral = Referral.objects.get(id=referral_id, deleted=False)
-                    task_list = referral.task_list
-
-                    if task_list:
-                        # Get the last (most recent) task
-                        last_task = task_list[-1] if task_list else None
-
-                        if last_task:
-                            # Get comments for this task
-                            task_comments = last_task.comments.all().order_by('created').select_related('creator')
-
-                            for comment in task_comments:
-                                comments_data.append({
-                                    "id": str(comment.id),
-                                    "text": comment.body,
-                                    "author": comment.creator.credentialed_name if comment.creator else "Unknown",
-                                    "date": comment.created.strftime("%Y-%m-%d %H:%M"),
-                                    "task_id": str(last_task.id)
-                                })
+                    task_list = list(referral.get_task_objects().filter(status=TaskStatus.OPEN))
 
                 except Referral.DoesNotExist:
                     return [JSONResponse({"error": "Referral not found"}, status_code=HTTPStatus.NOT_FOUND)]
@@ -373,24 +357,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
                 try:
                     imaging_order = ImagingOrder.objects.get(id=imaging_id, deleted=False)
-                    task_list = imaging_order.task_list
-
-                    if task_list:
-                        # Get the last (most recent) task
-                        last_task = task_list[-1] if task_list else None
-
-                        if last_task:
-                            # Get comments for this task
-                            task_comments = last_task.comments.all().order_by('created').select_related('creator')
-
-                            for comment in task_comments:
-                                comments_data.append({
-                                    "id": str(comment.id),
-                                    "text": comment.body,
-                                    "author": comment.creator.credentialed_name if comment.creator else "Unknown",
-                                    "date": comment.created.strftime("%Y-%m-%d %H:%M"),
-                                    "task_id": str(last_task.id)
-                                })
+                    task_list = list(imaging_order.get_task_objects().filter(status=TaskStatus.OPEN))
 
                 except ImagingOrder.DoesNotExist:
                     return [JSONResponse({"error": "Imaging order not found"}, status_code=HTTPStatus.NOT_FOUND)]
@@ -400,6 +367,23 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                 # For now, return empty comments for lab orders
                 # This could be extended when lab orders get the task_list property
                 pass
+
+            if task_list:
+                # Get the last (most recent) task
+                last_task = task_list[-1] if task_list else None
+
+                if last_task:
+                    # Get comments for this task
+                    task_comments = last_task.comments.all().order_by('created').select_related('creator')
+
+                    for comment in task_comments:
+                        comments_data.append({
+                            "id": str(comment.id),
+                            "text": comment.body,
+                            "author": comment.creator.credentialed_name if comment.creator else "Unknown",
+                            "date": comment.created.strftime("%Y-%m-%d %H:%M"),
+                            "task_id": str(last_task.id)
+                        })
 
             return [JSONResponse({"comments": comments_data}, status_code=HTTPStatus.OK)]
 
