@@ -364,10 +364,10 @@
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Status</label>
-            <div class="filter-dropdown" id="status-dropdown" data-value="">
+            <div class="filter-dropdown" id="status-dropdown" data-value="all">
                 <div class="selected-value">All Status</div>
                 <div class="dropdown-options">
-                    <div class="dropdown-option selected" data-value="">All Status</div>
+                    <div class="dropdown-option selected" data-value="all">All Status</div>
                     <div class="dropdown-option" data-value="open">Open</div>
                     <div class="dropdown-option" data-value="closed">Closed</div>
                     <div class="dropdown-option" data-value="delegated">Delegated</div>
@@ -472,7 +472,7 @@
                   sentTo: order.sent_to || 'Not specified',
                   orderedDate: formatDate(order.created_date),
                   priority: order.urgent || 'routine',
-                  status: order.status || 'Open'
+                  status: order.status
                 })));
             }
 
@@ -487,7 +487,7 @@
                     sentTo: order.sent_to || 'Not specified',
                     orderedDate: formatDate(order.created_date),
                     priority: order.urgent ? 'urgent' : 'routine',
-                    status: order.status || 'Open'
+                    status: order.status
                 })));
             }
 
@@ -502,7 +502,7 @@
                     sentTo: order.sent_to || 'Not specified',
                     orderedDate: formatDate(order.created_date),
                     priority: order.urgent || 'routine',
-                    status: order.status || 'Open'
+                    status: order.status
                 })));
             }
 
@@ -575,7 +575,7 @@
                             <div class="order-subtitle">${order.type || ''} • ${order.orderingProvider || ''}</div>
                         </div>
                         <div class="status-section">
-                            <div class="status-badge ${statusClass}">${order.status || 'Open'}</div>
+                            <div class="status-badge ${statusClass}">${order.status}</div>
                             ${urgentBadge}
                         </div>
                     </div>
@@ -703,8 +703,11 @@
                 });
             });
 
-            // Initial load
-            fetchOrders();
+            const statusDropdown = document.getElementById('status-dropdown');
+            const typeDropdown = document.getElementById('type-dropdown');
+            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedType = typeDropdown.getAttribute('data-value');
+            fetchOrders(selectedStatus, selectedType);
         });
 
         function handleFilterChange() {
