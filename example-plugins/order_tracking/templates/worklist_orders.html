@@ -36,17 +36,22 @@
       font-weight: 600;
     }
     .filters {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 1rem;
       margin-top: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .filters {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     .filter-group {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      flex: 1;
       min-width: 200px;
     }
 
@@ -78,6 +83,39 @@
 
     .filter-dropdown .selected-value {
       padding-right: 24px;
+      min-height: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .selected-tag {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .selected-tag .remove-tag {
+      cursor: pointer;
+      font-weight: bold;
+      color: #1d4ed8;
+      font-size: 0.875rem;
+      line-height: 1;
+    }
+
+    .selected-tag .remove-tag:hover {
+      color: #1e40af;
+    }
+
+    .placeholder-text {
+      color: #9ca3af;
+      font-size: 1rem;
     }
 
     .filter-dropdown::after {
@@ -99,6 +137,26 @@
     .filter-dropdown:hover {
       border-color: #1d4ed8;
       box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+    }
+
+    .filter-input {
+      background-color: white;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+      color: #2c3e50;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .filter-input:focus {
+      outline: none;
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+    }
+
+    .filter-input::placeholder {
+      color: #9ca3af;
     }
 
     .dropdown-options {
@@ -128,6 +186,9 @@
       cursor: pointer;
       transition: background-color 0.15s ease;
       border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .dropdown-option:last-child {
@@ -144,15 +205,43 @@
       font-weight: 500;
     }
 
+    .dropdown-option input[type="checkbox"] {
+      margin: 0;
+      cursor: pointer;
+    }
+
     .accordion {
       width: 100%;
       margin-top: 1rem;
     }
+    .accordion-header-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1.5fr 0.8fr 1.2fr 1.2fr 0.8fr 1fr 40px;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem 0.5rem 0 0;
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0;
+    }
     .accordion-item {
       border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
+      border-top: none;
+      margin-bottom: 0;
       overflow: hidden;
+    }
+    .accordion-item:last-child {
+      border-radius: 0 0 0.5rem 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .accordion-item:first-child {
+      border-top: 1px solid #e5e7eb;
     }
     .accordion-header {
       padding: 0.75rem;
@@ -199,14 +288,6 @@
     }
     .expand-icon.hidden {
       visibility: hidden;
-    }
-    .column-header {
-      font-weight: 500;
-      font-size: 0.75rem;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 0.25rem;
     }
     .column-value {
       font-size: 0.875rem;
@@ -288,23 +369,62 @@
     <div class="filters">
       <div class="filter-group">
         <label class="filter-label">Ordering Provider</label>
-        <div class="filter-dropdown" id="provider-dropdown" data-value="">
-          <div class="selected-value">All Providers</div>
+        <div class="filter-dropdown" id="provider-dropdown" data-values="">
+          <div class="selected-value">
+            <span class="placeholder-text">All Providers</span>
+          </div>
           <div class="dropdown-options" id="provider-options">
-            <div class="dropdown-option selected" data-value="">All Providers</div>
+            <div class="dropdown-option" data-value="">
+              <input type="checkbox" id="provider-all" checked>
+              <label for="provider-all">All Providers</label>
+            </div>
           </div>
         </div>
       </div>
       <div class="filter-group">
         <label class="filter-label">Type</label>
-        <div class="filter-dropdown" id="type-dropdown" data-value="">
-          <div class="selected-value">All Types</div>
-          <div class="dropdown-options" id="type-options">
-            <div class="dropdown-option selected" data-value="">All Types</div>
-            <div class="dropdown-option" data-value="Lab">Lab</div>
-            <div class="dropdown-option" data-value="Imaging">Imaging</div>
-            <div class="dropdown-option" data-value="Referral">Referral</div>
+        <div class="filter-dropdown" id="type-dropdown" data-values="">
+          <div class="selected-value">
+            <span class="placeholder-text">All Types</span>
           </div>
+          <div class="dropdown-options" id="type-options">
+            <div class="dropdown-option" data-value="">
+              <input type="checkbox" id="type-all" checked>
+              <label for="type-all">All Types</label>
+            </div>
+            <div class="dropdown-option" data-value="Lab">
+              <input type="checkbox" id="type-lab">
+              <label for="type-lab">Lab</label>
+            </div>
+            <div class="dropdown-option" data-value="Imaging">
+              <input type="checkbox" id="type-imaging">
+              <label for="type-imaging">Imaging</label>
+            </div>
+            <div class="dropdown-option" data-value="Referral">
+              <input type="checkbox" id="type-referral">
+              <label for="type-referral">Referral</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Sent To</label>
+        <input type="text" id="sent-to-filter" class="filter-input" placeholder="Search by sent to...">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Patient Name</label>
+        <input type="text" id="patient-name-filter" class="filter-input" placeholder="Search by patient name...">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Patient DOB</label>
+        <input type="date" id="patient-dob-filter" class="filter-input">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Order Date Range</label>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <input type="date" id="date-from-filter" class="filter-input" placeholder="From" style="flex: 1;">
+          <span style="color: #6b7280; font-size: 0.875rem;">to</span>
+          <input type="date" id="date-to-filter" class="filter-input" placeholder="To" style="flex: 1;">
         </div>
       </div>
     </div>
@@ -334,6 +454,7 @@
     let providerIdToNameMap = new Map();
     let currentPage = 1;
     let paginationData = null;
+    let searchTimeout = null;
     const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
     // Custom dropdown functionality
@@ -343,7 +464,6 @@
       dropdowns.forEach(dropdown => {
         const selectedValue = dropdown.querySelector('.selected-value');
         const options = dropdown.querySelector('.dropdown-options');
-        const optionItems = dropdown.querySelectorAll('.dropdown-option');
 
         // Toggle dropdown
         selectedValue.addEventListener('click', (e) => {
@@ -362,37 +482,43 @@
           options.classList.toggle('show');
         });
 
-        // Handle option selection
+        // Handle checkbox changes
         function setupOptionListeners() {
-          const currentOptions = dropdown.querySelectorAll('.dropdown-option');
-          currentOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
+          const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+          const allCheckbox = dropdown.querySelector('input[type="checkbox"][id$="-all"]');
+
+          checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
               e.stopPropagation();
 
-              // Update selected state
-              currentOptions.forEach(opt => opt.classList.remove('selected'));
-              option.classList.add('selected');
+              if (checkbox === allCheckbox) {
+                // If "All" is checked, uncheck all others
+                if (checkbox.checked) {
+                  checkboxes.forEach(cb => {
+                    if (cb !== allCheckbox) cb.checked = false;
+                  });
+                }
+              } else {
+                // If any specific option is checked, uncheck "All"
+                if (checkbox.checked && allCheckbox) {
+                  allCheckbox.checked = false;
+                }
 
-              // Update selected value text
-              selectedValue.textContent = option.textContent;
+                // If no specific options are checked, check "All"
+                const specificCheckboxes = Array.from(checkboxes).filter(cb => cb !== allCheckbox);
+                const anyChecked = specificCheckboxes.some(cb => cb.checked);
+                if (!anyChecked && allCheckbox) {
+                  allCheckbox.checked = true;
+                }
+              }
 
-              // Update dropdown data-value
-              const newValue = option.getAttribute('data-value');
-              dropdown.setAttribute('data-value', newValue);
-
-              // Close dropdown
-              dropdown.classList.remove('open');
-              options.classList.remove('show');
-
-              // Trigger filter change
+              updateSelectedDisplay(dropdown);
               handleFilterChange();
             });
           });
         }
 
         setupOptionListeners();
-
-        // Re-setup listeners when options change
         dropdown.setupOptionListeners = setupOptionListeners;
       });
 
@@ -405,21 +531,166 @@
       });
     }
 
+    function updateSelectedDisplay(dropdown) {
+      const selectedValue = dropdown.querySelector('.selected-value');
+      const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+      const allCheckbox = dropdown.querySelector('input[type="checkbox"][id$="-all"]');
+
+      // Get selected values (excluding "All")
+      const selectedValues = [];
+      const selectedLabels = [];
+
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked && checkbox !== allCheckbox) {
+          const label = dropdown.querySelector(`label[for="${checkbox.id}"]`);
+          if (label) {
+            selectedValues.push(checkbox.closest('.dropdown-option').getAttribute('data-value'));
+            selectedLabels.push(label.textContent);
+          }
+        }
+      });
+
+      // Update data-values attribute
+      dropdown.setAttribute('data-values', selectedValues.join(','));
+
+      // Update display
+      selectedValue.innerHTML = '';
+
+      if (selectedLabels.length === 0 || (allCheckbox && allCheckbox.checked)) {
+        // Show placeholder
+        const placeholder = dropdown.id === 'provider-dropdown' ? 'All Providers' : 'All Types';
+        selectedValue.innerHTML = `<span class="placeholder-text">${placeholder}</span>`;
+      } else {
+        // Show selected tags
+        selectedLabels.forEach((label, index) => {
+          const tag = document.createElement('span');
+          tag.className = 'selected-tag';
+          tag.innerHTML = `
+            ${label}
+            <span class="remove-tag" data-value="${selectedValues[index]}">&times;</span>
+          `;
+          selectedValue.appendChild(tag);
+        });
+
+        // Add event listeners to remove tags
+        selectedValue.querySelectorAll('.remove-tag').forEach(removeBtn => {
+          removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const valueToRemove = removeBtn.getAttribute('data-value');
+            const checkbox = dropdown.querySelector(`input[type="checkbox"][data-value="${valueToRemove}"]`) ||
+                           dropdown.querySelector(`.dropdown-option[data-value="${valueToRemove}"] input[type="checkbox"]`);
+            if (checkbox) {
+              checkbox.checked = false;
+              updateSelectedDisplay(dropdown);
+              handleFilterChange();
+            }
+          });
+        });
+      }
+    }
+
+    function initializePatientNameFilter() {
+      const patientNameInput = document.getElementById('patient-name-filter');
+
+      patientNameInput.addEventListener('input', (e) => {
+        // Clear existing timeout
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        // Set new timeout to debounce the search
+        searchTimeout = setTimeout(() => {
+          handleFilterChange();
+        }, 300); // Wait 300ms after user stops typing
+      });
+
+      // Also trigger search on Enter key
+      patientNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          if (searchTimeout) {
+            clearTimeout(searchTimeout);
+          }
+          handleFilterChange();
+        }
+      });
+    }
+
+    function initializeDobFilter() {
+      const dobInput = document.getElementById('patient-dob-filter');
+
+      dobInput.addEventListener('change', (e) => {
+        handleFilterChange();
+      });
+    }
+
+    function initializeSentToFilter() {
+      const sentToInput = document.getElementById('sent-to-filter');
+
+      sentToInput.addEventListener('input', (e) => {
+        // Clear existing timeout
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        // Set new timeout to debounce the search
+        searchTimeout = setTimeout(() => {
+          handleFilterChange();
+        }, 300); // Wait 300ms after user stops typing
+      });
+
+      // Also trigger search on Enter key
+      sentToInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          if (searchTimeout) {
+            clearTimeout(searchTimeout);
+          }
+          handleFilterChange();
+        }
+      });
+    }
+
+    function initializeDateRangeFilter() {
+      const dateFromInput = document.getElementById('date-from-filter');
+      const dateToInput = document.getElementById('date-to-filter');
+
+      dateFromInput.addEventListener('change', (e) => {
+        handleFilterChange();
+      });
+
+      dateToInput.addEventListener('change', (e) => {
+        handleFilterChange();
+      });
+    }
+
     function handleFilterChange() {
       const providerDropdown = document.getElementById('provider-dropdown');
       const typeDropdown = document.getElementById('type-dropdown');
+      const patientNameInput = document.getElementById('patient-name-filter');
+      const dobInput = document.getElementById('patient-dob-filter');
+      const sentToInput = document.getElementById('sent-to-filter');
+      const dateFromInput = document.getElementById('date-from-filter');
+      const dateToInput = document.getElementById('date-to-filter');
 
-      const selectedProvider = providerDropdown.getAttribute('data-value');
-      const selectedType = typeDropdown.getAttribute('data-value');
+      const selectedProviders = providerDropdown.getAttribute('data-values').split(',').filter(v => v);
+      const selectedTypes = typeDropdown.getAttribute('data-values').split(',').filter(v => v);
+      const patientName = patientNameInput.value.trim();
+      const patientDob = dobInput.value;
+      const sentTo = sentToInput.value.trim();
+      const dateFrom = dateFromInput.value;
+      const dateTo = dateToInput.value;
 
-      // Get provider ID from name
-      let providerId = null;
-      if (selectedProvider && selectedProvider !== '') {
-        providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === selectedProvider)?.[0];
+      // Get provider IDs from names
+      let providerIds = [];
+      if (selectedProviders.length > 0) {
+        providerIds = selectedProviders.map(providerName => {
+          return Array.from(providerIdToNameMap.entries())
+            .find(([id, name]) => name === providerName)?.[0];
+        }).filter(id => id);
       }
 
-      fetchOrders(providerId, selectedType);
+      // Reset to page 1 when filters change
+      currentPage = 1;
+      fetchOrders(providerIds, selectedTypes, patientName, patientDob, sentTo, dateFrom, dateTo, currentPage);
     }
 
     async function fetchProviders() {
@@ -455,45 +726,82 @@
       // Get the logged-in staff member's name if they exist in providers
       const loggedInStaffName = loggedInStaffId ? providerIdToNameMap.get(loggedInStaffId) : null;
 
-      const allProvidersSelected = loggedInStaffName && !allProviders.includes(loggedInStaffName);
+      let optionsHTML = `
+        <div class="dropdown-option" data-value="">
+          <input type="checkbox" id="provider-all" checked>
+          <label for="provider-all">All Providers</label>
+        </div>
+      `;
 
-      let optionsHTML = `<div class="dropdown-option ${allProvidersSelected ? 'selected': ''}" data-value="">All Providers</div>`;
-
-      allProviders.forEach(provider => {
+      allProviders.forEach((provider, index) => {
         const isSelected = loggedInStaffName && provider === loggedInStaffName;
-        optionsHTML += `<div class="dropdown-option ${isSelected ? 'selected' : ''}" data-value="${provider}">${provider}</div>`;
+        optionsHTML += `
+          <div class="dropdown-option" data-value="${provider}">
+            <input type="checkbox" id="provider-${index}" ${isSelected ? 'checked' : ''}>
+            <label for="provider-${index}">${provider}</label>
+          </div>
+        `;
       });
 
       providerOptions.innerHTML = optionsHTML;
 
-      // Update selected value if logged-in staff should be auto-selected
+      // Update selected display and trigger filter if logged-in staff should be auto-selected
       if (loggedInStaffName && allProviders.includes(loggedInStaffName)) {
-        providerDropdown.querySelector('.selected-value').textContent = loggedInStaffName;
-        providerDropdown.setAttribute('data-value', loggedInStaffName);
+        const allCheckbox = providerDropdown.querySelector('#provider-all');
+        if (allCheckbox) allCheckbox.checked = false;
+
+        updateSelectedDisplay(providerDropdown);
 
         // Fetch orders with their filter applied
-        const providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === loggedInStaffName)?.[0];
-        if (providerId) {
-          fetchOrders(providerId);
+        const providerIds = [loggedInStaffId];
+        if (providerIds[0]) {
+          fetchOrders(providerIds);
         }
+      } else {
+        updateSelectedDisplay(providerDropdown);
       }
 
       // Re-setup event listeners for new options
       providerDropdown.setupOptionListeners();
     }
 
-    async function fetchOrders(providerId = null, orderType = null, page = 1) {
+    async function fetchOrders(providerIds = [], orderTypes = [], patientName = null, patientDob = null, sentTo = null, dateFrom = null, dateTo = null, page = 1) {
       try {
         currentPage = page;
 
         // Build query parameters
         const params = new URLSearchParams();
-        if (providerId) {
-          params.append('provider_id', providerId);
+
+        // Handle multiple provider IDs as comma-separated string
+        if (providerIds && providerIds.length > 0) {
+          const validProviderIds = providerIds.filter(id => id);
+          if (validProviderIds.length > 0) {
+            params.append('provider_ids', validProviderIds.join(','));
+          }
         }
-        if (orderType && orderType !== 'All Types') {
-          params.append('type', orderType);
+
+        // Handle multiple order types as comma-separated string
+        if (orderTypes && orderTypes.length > 0) {
+          const validOrderTypes = orderTypes.filter(type => type && type !== 'All Types');
+          if (validOrderTypes.length > 0) {
+            params.append('types', validOrderTypes.join(','));
+          }
+        }
+
+        if (patientName && patientName.length > 0) {
+          params.append('patient_name', patientName);
+        }
+        if (patientDob && patientDob.length > 0) {
+          params.append('patient_dob', patientDob);
+        }
+        if (sentTo && sentTo.length > 0) {
+          params.append('sent_to', sentTo);
+        }
+        if (dateFrom && dateFrom.length > 0) {
+          params.append('date_from', dateFrom);
+        }
+        if (dateTo && dateTo.length > 0) {
+          params.append('date_to', dateTo);
         }
         params.append('page', page);
         params.append('page_size', 20);
@@ -582,6 +890,21 @@
 
       let html = '';
 
+      // Add table header
+      html += `
+        <div class="accordion-header-row">
+          <div>Patient</div>
+          <div>DOB</div>
+          <div>Order</div>
+          <div>Type</div>
+          <div>Provider</div>
+          <div>Sent To</div>
+          <div>Status</div>
+          <div>Date</div>
+          <div></div>
+        </div>
+      `;
+
       if (urgentOrders.length > 0) {
         html += `<div class="section-header section-header-urgent">⚠ Urgent Orders (${urgentOrders.length})</div>`;
         urgentOrders.forEach(order => {
@@ -649,17 +972,30 @@
     function goToPage(page) {
       const providerDropdown = document.getElementById('provider-dropdown');
       const typeDropdown = document.getElementById('type-dropdown');
+      const patientNameInput = document.getElementById('patient-name-filter');
+      const dobInput = document.getElementById('patient-dob-filter');
+      const sentToInput = document.getElementById('sent-to-filter');
+      const dateFromInput = document.getElementById('date-from-filter');
+      const dateToInput = document.getElementById('date-to-filter');
 
-      const selectedProvider = providerDropdown.getAttribute('data-value');
-      const selectedType = typeDropdown.getAttribute('data-value');
+      const selectedProviders = providerDropdown.getAttribute('data-values').split(',').filter(v => v);
+      const selectedTypes = typeDropdown.getAttribute('data-values').split(',').filter(v => v);
+      const patientName = patientNameInput.value.trim();
+      const patientDob = dobInput.value;
+      const sentTo = sentToInput.value.trim();
+      const dateFrom = dateFromInput.value;
+      const dateTo = dateToInput.value;
 
-      let providerId = null;
-      if (selectedProvider && selectedProvider !== '') {
-        providerId = Array.from(providerIdToNameMap.entries())
-          .find(([id, name]) => name === selectedProvider)?.[0];
+      // Get provider IDs from names
+      let providerIds = [];
+      if (selectedProviders.length > 0) {
+        providerIds = selectedProviders.map(providerName => {
+          return Array.from(providerIdToNameMap.entries())
+            .find(([id, name]) => name === providerName)?.[0];
+        }).filter(id => id);
       }
 
-      fetchOrders(providerId, selectedType, page);
+      fetchOrders(providerIds, selectedTypes, patientName, patientDob, sentTo, dateFrom, dateTo, page);
     }
 
     function createOrderAccordionItem(order, isUrgent) {
@@ -678,38 +1014,14 @@
       return `
         <div class="accordion-item ${itemClass}">
           <div class="accordion-header ${headerClass}" id="${headerId}" data-target="${orderId}" data-patient-id="${order.patientId}" data-order-type="${order.type}" data-order-id="${order.id}">
-            <div>
-              <div class="column-header">Patient</div>
-              <div class="column-value"><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></div>
-            </div>
-            <div>
-              <div class="column-header">DOB</div>
-              <div class="column-value">${order.dob || ''}</div>
-            </div>
-            <div>
-              <div class="column-header">Order</div>
-              <div class="column-value">${order.orderName || ''}</div>
-            </div>
-            <div>
-              <div class="column-header">Type</div>
-              <div class="column-value"><span class="badge ${badgeClass}">${order.type || ''}</span></div>
-            </div>
-            <div>
-              <div class="column-header">Provider</div>
-              <div class="column-value">${order.orderingProvider || ''}</div>
-            </div>
-            <div>
-              <div class="column-header">Sent To</div>
-              <div class="column-value">${order.sentTo || ''}</div>
-            </div>
-            <div>
-              <div class="column-header">Status</div>
-              <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></div>
-            </div>
-            <div>
-              <div class="column-header">Date</div>
-              <div class="column-value">${order.orderedDate || ''}</div>
-            </div>
+            <div class="column-value"><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_top" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></div>
+            <div class="column-value">${order.dob || ''}</div>
+            <div class="column-value">${order.orderName || ''}</div>
+            <div class="column-value"><span class="badge ${badgeClass}">${order.type || ''}</span></div>
+            <div class="column-value">${order.orderingProvider || ''}</div>
+            <div class="column-value">${order.sentTo || ''}</div>
+            <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></div>
+            <div class="column-value">${order.orderedDate || ''}</div>
             <div class="expand-icon ${iconClass}">▶</div>
           </div>
           <div class="accordion-content" id="${orderId}">
@@ -903,6 +1215,10 @@
 
     document.addEventListener('DOMContentLoaded', async function() {
       initializeDropdowns();
+      initializePatientNameFilter();
+      initializeDobFilter();
+      initializeSentToFilter();
+      initializeDateRangeFilter();
       await Promise.all([fetchProviders(), fetchOrders()]);
     });
 
