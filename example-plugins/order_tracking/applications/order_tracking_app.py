@@ -1,4 +1,5 @@
 import json
+import uuid
 from http import HTTPStatus
 
 import arrow
@@ -8,7 +9,7 @@ from django.db.models import Case, When, Value, Q, CharField
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import Response, JSONResponse
-from canvas_sdk.effects.task import AddTaskComment
+from canvas_sdk.effects.task import AddTaskComment, AddTask
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
@@ -394,10 +395,37 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/task-comments")
     def add_task_comment(self) -> list[Response | Effect]:
         json_body = json.loads(self.request.body)
+        patient_id = json_body.get("patient_id")
         comment = json_body.get("comment")
         task_id = json_body.get("task_id")
+        order_type = json_body.get("order_type")
+        order_id = json_body.get("order_id")
         log.info(f"Received task comment data: {json_body}")
 
-        return [
+        effects: list[Effect] = []
+        if not task_id:
+            task_id = uuid.uuid4()
+            linked_task_type = None
+            if order_type.lower() == "imaging":
+                linked_task_type = AddTask.LinkableObjectType.IMAGING
+            elif order_type.lower() == "referral":
+                linked_task_type = AddTask.LinkableObjectType.REFERRAL
+
+            if not linked_task_type:
+                return [JSONResponse({"error": f"Invalid order type {order_type}"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+            effects.append(
+                AddTask(
+                    id=task_id,
+                    title="New Task",
+                    patient_id=patient_id,
+                    linked_object_id=order_id,
+                    linked_object_type=linked_task_type,
+                ).apply()
+            )
+
+        effects.extend([
             AddTaskComment(task_id=task_id, body=comment).apply(),
-            JSONResponse({}, status_code=HTTPStatus.OK)]
+            JSONResponse({}, status_code=HTTPStatus.OK)])
+
+        return effects

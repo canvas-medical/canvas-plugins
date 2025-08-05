@@ -875,11 +875,6 @@
       const addButton = document.getElementById(`add-btn-${orderId}`);
       const taskId = addButton ? addButton.getAttribute('data-task-id') : null;
 
-      if (!taskId) {
-        console.error('No task_id available for this order');
-        return;
-      }
-
       try {
         const response = await fetch('/plugin-io/api/order_tracking/task-comments', {
           method: 'POST',
@@ -887,8 +882,11 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
+            patient_id: patientId,
             task_id: taskId,
-            comment: comment
+            comment: comment,
+            order_type: orderType,
+            order_id: orderId
           })
         });
 
