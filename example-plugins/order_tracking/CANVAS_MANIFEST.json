@@ -11,14 +11,14 @@
         "name": "Order Tracking",
         "description": "An Application that does xyz...",
         "scope": "global",
-        "icon": "assets/python-logo.png"
+        "icon": "assets/medical-clipboard-icon-64x64.png"
       },
         {
         "class": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication",
         "name": "Patient Order Tracking",
         "description": "An Application that does xyz...",
         "scope": "patient_specific",
-        "icon": "assets/python-logo.png"
+        "icon": "assets/medical-clipboard-icon-64x64.png"
       }
     ],
     "protocols": [
