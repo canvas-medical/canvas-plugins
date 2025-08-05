@@ -1,3 +1,5 @@
+import json
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel
@@ -7,6 +9,7 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
+from canvas_sdk.v1.data.task import Task
 
 
 class ImagingOrder(IdentifiableModel):
@@ -46,6 +49,20 @@ class ImagingOrder(IdentifiableModel):
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
     delegated = models.BooleanField(default=False)
+
+    tasks = models.CharField()
+
+    def get_task_objects(self) -> "models.QuerySet[Task]":
+        """Convert task IDs to Task objects."""
+        if self.tasks:
+            task_ids = json.loads(self.tasks) if isinstance(self.tasks, str) else self.tasks
+            return Task.objects.filter(id__in=task_ids)
+        return Task.objects.none()
+
+    @property
+    def task_list(self) -> list[Task]:
+        """Convenience property to get task objects."""
+        return list(self.get_task_objects())
 
 
 class ImagingReview(IdentifiableModel):
