@@ -1,5 +1,6 @@
 import json
 import uuid
+from datetime import datetime
 from http import HTTPStatus
 
 import arrow
@@ -137,10 +138,23 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             id=self.request.headers["canvas-logged-in-user-id"])
 
         # Get query parameters for filtering and pagination
-        provider_id = self.request.query_params.get("provider_id")
+        provider_ids = self.request.query_params.get("provider_ids")
+        if provider_ids:
+            provider_ids = provider_ids.split(",")
+
         patient_id = self.request.query_params.get("patient_id")
+        patient_name = self.request.query_params.get("patient_name")
+        patient_dob = self.request.query_params.get("patient_dob")
+        sent_to = self.request.query_params.get("sent_to")
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+
         status = self.request.query_params.get("status")
-        order_type = self.request.query_params.get("type")
+        order_types = self.request.query_params.get("types")
+
+        if order_types:
+            order_types = [order_type.lower() for order_type in order_types.split(",")]
+
         page = int(self.request.query_params.get("page", 1))
         page_size = int(self.request.query_params.get("page_size", 20))
 
@@ -194,10 +208,10 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         )
 
         # Apply provider filter if specified
-        if provider_id:
-            imaging_orders_queryset = imaging_orders_queryset.filter(ordering_provider__id=provider_id)
-            lab_orders_queryset = lab_orders_queryset.filter(ordering_provider__id=provider_id)
-            refer_queryset = refer_queryset.filter(note__provider__id=provider_id)
+        if provider_ids:
+            imaging_orders_queryset = imaging_orders_queryset.filter(ordering_provider__id__in=provider_ids)
+            lab_orders_queryset = lab_orders_queryset.filter(ordering_provider__id__in=provider_ids)
+            refer_queryset = refer_queryset.filter(note__provider__id__in=provider_ids)
 
         if patient_id:
             imaging_orders_queryset = imaging_orders_queryset.filter(patient__id=patient_id)
@@ -216,15 +230,69 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             refer_queryset = refer_queryset.exclude(order_status="closed")
             lab_orders_queryset = lab_orders_queryset.exclude(order_status="closed")
 
+        if patient_name and not patient_id:
+            name_filter = (
+                Q(patient__first_name__icontains=patient_name) |
+                Q(patient__last_name__icontains=patient_name)
+            )
+            imaging_orders_queryset = imaging_orders_queryset.filter(name_filter)
+            lab_orders_queryset = lab_orders_queryset.filter(name_filter)
+            refer_queryset = refer_queryset.filter(name_filter)
+
+        if patient_dob:
+            try:
+                dob_date = datetime.strptime(patient_dob, '%Y-%m-%d').date()
+                imaging_orders_queryset = imaging_orders_queryset.filter(patient__birth_date=dob_date)
+                lab_orders_queryset = lab_orders_queryset.filter(patient__birth_date=dob_date)
+                refer_queryset = refer_queryset.filter(patient__birth_date=dob_date)
+            except ValueError:
+                pass  # Invalid date format, skip filter
+
+        if sent_to:
+            imaging_orders_queryset = imaging_orders_queryset.filter(
+                Q(imaging_center__first_name__icontains=sent_to)|
+                Q(imaging_center__last_name__icontains=sent_to)|
+                Q(imaging_center__specialty__icontains=sent_to) |
+                Q(imaging_center__practice_name__icontains=sent_to)
+            )
+            lab_orders_queryset = lab_orders_queryset.filter(
+                ontology_lab_partner__icontains=sent_to
+            )
+            refer_queryset = refer_queryset.filter(
+                Q(service_provider__first_name__icontains=sent_to)|
+                Q(service_provider__last_name__icontains=sent_to)|
+                Q(service_provider__specialty__icontains=sent_to) |
+                Q(service_provider__practice_name__icontains=sent_to)
+            )
+
+        if date_from:
+            try:
+                from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+                imaging_orders_queryset = imaging_orders_queryset.filter(date_time_ordered__gte=from_date)
+                lab_orders_queryset = lab_orders_queryset.filter(date_ordered__gte=from_date)
+                refer_queryset = refer_queryset.filter(date_referred__gte=from_date)
+            except ValueError:
+                pass
+
+        if date_to:
+            try:
+                to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+                imaging_orders_queryset = imaging_orders_queryset.filter(date_time_ordered__lte=to_date)
+                lab_orders_queryset = lab_orders_queryset.filter(date_ordered__lte=to_date)
+                refer_queryset = refer_queryset.filter(date_referred__lte=to_date)
+            except ValueError:
+                pass
+
+
         # Apply ordering for consistent results
         imaging_orders_queryset = imaging_orders_queryset.order_by('-created')
         lab_orders_queryset = lab_orders_queryset.order_by('-created')
         refer_queryset = refer_queryset.order_by('-created')
 
         # Handle type filtering and pagination efficiently
-        include_imaging = order_type is None or order_type.lower() == "imaging"
-        include_lab = order_type is None or order_type.lower() == "lab"
-        include_referrals = order_type is None or order_type.lower() == "referral"
+        include_imaging = order_types is None or "imaging" in order_types
+        include_lab = order_types is None or "lab" in order_types
+        include_referrals = order_types is None or "referral" in order_types
 
         # Calculate total counts using database COUNT queries
         imaging_count = imaging_orders_queryset.count() if include_imaging else 0
@@ -258,21 +326,22 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         lab_orders_data = []
         referral_orders_data = []
 
-        if order_type and order_type.lower() == "imaging":
+        if order_types and "imaging" in order_types:
             # Only imaging orders - use database slicing
             imaging_slice = imaging_orders_queryset[start_index:end_index]
             imaging_orders_data = [self._create_imaging_order_payload(io) for io in imaging_slice]
 
-        elif order_type and order_type.lower() == "lab":
+        if order_types and "lab" in order_types:
             # Only lab orders - use database slicing
             lab_slice = lab_orders_queryset[start_index:end_index]
             lab_orders_data = [self._create_lab_order_payload(lo) for lo in lab_slice]
-        elif order_type and order_type.lower() == "referral":
+
+        if order_types and "referral" in order_types:
             # Only referral orders - use database slicing
             referral_slice = refer_queryset[start_index:end_index]
             referral_orders_data = [self._create_referral_order_payload(ro) for ro in referral_slice]
 
-        else:
+        if not order_types:
             # Mixed orders - need to interleave results efficiently
             # Fetch enough records from each to ensure we can fill the page
             # This is a compromise for mixed sorting while avoiding loading all records
@@ -308,6 +377,10 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                     lab_orders_data.append(order)
                 elif order_type == 'referral':
                     referral_orders_data.append(order)
+
+        log.info(f"################## imaging_orders_data: {imaging_orders_data}")
+        log.info(f"################## lab_orders_data: {lab_orders_data}")
+        log.info(f"################## referral_orders_data: {referral_orders_data}")
 
         return [JSONResponse({
             "logged_in_staff_id": logged_in_staff,
