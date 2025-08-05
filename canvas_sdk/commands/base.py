@@ -77,7 +77,8 @@ class _BaseCommand(TrackableFieldsModel):
             annotation_args = get_args(annotation)
             # Filter out NoneType and take the first valid type
             annotation = next(
-                (arg for arg in annotation_args if arg is not NoneType), annotation_args[0]
+                (arg for arg in annotation_args if arg is not NoneType),
+                annotation_args[0],
             )
 
         if type(annotation) is EnumType:
@@ -159,7 +160,12 @@ class _BaseCommand(TrackableFieldsModel):
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
         command = self.Meta.key.lower()
-        return Recommendation(title=title, button=button, command=command, context=self.values)
+        return Recommendation(
+            title=title,
+            button=button,
+            command=command,
+            context=self.values | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
+        )
 
 
 class _SendableCommandMixin:
