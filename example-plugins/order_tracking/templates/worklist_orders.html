@@ -160,7 +160,7 @@
       cursor: pointer;
       transition: background-color 0.2s ease;
       display: grid;
-      grid-template-columns: 2fr 1fr 1.5fr 0.8fr 1.2fr 1.2fr 0.8fr 1fr 0.5fr;
+      grid-template-columns: 2fr 1fr 1.5fr 0.8fr 1.2fr 1.2fr 0.8fr 1fr 40px;
       gap: 0.75rem;
       align-items: center;
       font-size: 0.875rem;
@@ -171,6 +171,9 @@
     .accordion-header.expanded {
       background-color: #e0f2fe;
       border-bottom: 1px solid #e5e7eb;
+    }
+    .accordion-header.disabled {
+      cursor: initial;
     }
     .accordion-content {
       display: none;
@@ -185,9 +188,17 @@
       transition: transform 0.2s ease;
       font-size: 0.75rem;
       color: #6b7280;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
     }
     .expand-icon.rotated {
       transform: rotate(90deg);
+    }
+    .expand-icon.hidden {
+      visibility: hidden;
     }
     .column-header {
       font-weight: 500;
@@ -305,7 +316,7 @@
     <div class="info-bar" id="info-bar">
       Loading...
     </div>
-    
+
     <div class="pagination" id="pagination-container" style="display: none;">
       <div class="pagination-info" id="pagination-info"></div>
       <div class="pagination-controls">
@@ -486,13 +497,13 @@
         }
         params.append('page', page);
         params.append('page_size', 20);
-        
+
         const url = `/plugin-io/api/order_tracking/orders?${params.toString()}`;
         const response = await fetch(url);
         const data = await response.json();
-        
+
         paginationData = data.pagination;
-        
+
         // Combine imaging and lab orders
         const imagingOrders = (data.imaging_orders || []).map(order => ({
           ...order,
@@ -507,7 +518,7 @@
           orderedDate: formatDate(order.created_date),
           priority: order.priority || 'Routine',
         }));
-        
+
         const labOrders = (data.lab_orders || []).map(order => ({
           ...order,
           type: 'Lab',
@@ -533,7 +544,7 @@
           orderedDate: formatDate(order.created_date),
           priority: order.priority || 'Routine',
         }));
-        
+
         allOrders = [...imagingOrders, ...labOrders, ...referralOrders];
         populateOrdersTable();
         updatePaginationControls();
@@ -659,9 +670,14 @@
       const orderId = `${order.id}`;
       const headerId = `header-${orderId}`;
 
+      // Check if this is a Lab order
+      const isLabOrder = order.type && order.type.toLowerCase() === 'lab';
+      const headerClass = isLabOrder ? 'disabled' : '';
+      const iconClass = isLabOrder ? 'hidden' : '';
+
       return `
         <div class="accordion-item ${itemClass}">
-          <div class="accordion-header" id="${headerId}" data-target="${orderId}" data-patient-id="${order.patientId}" data-order-type="${order.type}" data-order-id="${order.id}">
+          <div class="accordion-header ${headerClass}" id="${headerId}" data-target="${orderId}" data-patient-id="${order.patientId}" data-order-type="${order.type}" data-order-id="${order.id}">
             <div>
               <div class="column-header">Patient</div>
               <div class="column-value"><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></div>
@@ -694,7 +710,7 @@
               <div class="column-header">Date</div>
               <div class="column-value">${order.orderedDate || ''}</div>
             </div>
-            <div class="expand-icon">▶</div>
+            <div class="expand-icon ${iconClass}">▶</div>
           </div>
           <div class="accordion-content" id="${orderId}">
             <div style="margin-bottom: 1rem;">
@@ -735,16 +751,26 @@
     function setupAccordionListeners() {
       // Get all accordion headers and add individual listeners
       const accordionHeaders = document.querySelectorAll('.accordion-header');
-      
+
       accordionHeaders.forEach(header => {
         const headerId = header.id;
         if (!headerId) return; // Skip if no ID
-        
+
+        // Skip if this is a disabled header (Lab orders)
+        if (header.classList.contains('disabled')) {
+          return;
+        }
+
         // Create a unique click handler for this specific header
         const clickHandler = function(event) {
+          // Allow links to work normally
+          if (event.target.tagName === 'A') {
+            return; // Don't prevent default for links
+          }
+
           event.preventDefault();
           event.stopPropagation();
-          
+
           const targetId = this.getAttribute('data-target');
           const content = document.getElementById(targetId);
           const icon = this.querySelector('.expand-icon');
@@ -758,7 +784,7 @@
               const otherTargetId = otherHeader.getAttribute('data-target');
               const otherContent = document.getElementById(otherTargetId);
               const otherIcon = otherHeader.querySelector('.expand-icon');
-              
+
               if (otherContent && otherContent.classList.contains('show')) {
                 otherContent.classList.remove('show');
                 otherHeader.classList.remove('expanded');
@@ -769,7 +795,7 @@
 
           // Toggle current accordion item
           const isCurrentlyOpen = content.classList.contains('show');
-          
+
           if (isCurrentlyOpen) {
             content.classList.remove('show');
             this.classList.remove('expanded');
@@ -778,7 +804,7 @@
             content.classList.add('show');
             this.classList.add('expanded');
             icon.classList.add('rotated');
-            
+
             // Get order data from the data attributes
             const patientId = this.getAttribute('data-patient-id');
             const orderType = this.getAttribute('data-order-type');
@@ -786,10 +812,10 @@
             loadComments({ patientId, type: orderType, id: orderId });
           }
         };
-        
+
         // Remove any existing listeners on this header
         header.removeEventListener('click', header._accordionClickHandler);
-        
+
         // Store the handler reference and add the listener
         header._accordionClickHandler = clickHandler;
         header.addEventListener('click', clickHandler);
@@ -800,16 +826,14 @@
       const commentsDiv = document.getElementById(`comments-${order.id}`);
       try {
         let url = `/plugin-io/api/order_tracking/task-comments?order_type=${order.type}`;
-        
+
         // Add specific ID parameters based on order type
         if (order.type.toLowerCase() === 'referral') {
           url += `&referral_id=${order.id}`;
         } else if (order.type.toLowerCase() === 'imaging') {
           url += `&imaging_id=${order.id}`;
-        } else if (order.patientId) {
-          url += `&patient_id=${order.patientId}`;
         }
-        
+
         const response = await fetch(url);
         const data = await response.json();
 
@@ -829,7 +853,7 @@
         } else {
           commentsDiv.innerHTML = '<div style="color: #6b7280; font-style: italic; text-align: center; padding: 2rem;">No comments yet</div>';
         }
-        
+
         // Store the task_id in a data attribute for the add comment button
         const addButton = document.getElementById(`add-btn-${order.id}`);
         if (addButton && taskId) {
