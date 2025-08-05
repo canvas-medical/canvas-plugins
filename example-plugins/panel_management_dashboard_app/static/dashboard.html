@@ -1,0 +1,22 @@
+<div class="sidebar">
+  <div class="search-box">
+      <input type="text" class="search-input" placeholder="Search Populations">
+  </div>
+
+  <div
+      class="nav-item {{ active }}"
+      hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"      
+  >All Patients</div>
+
+  {% for location in locations %}
+      <div
+          class="nav-item {{ location.is_active }}"
+          hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?location_id={{ location.id }}"
+      >{{ location.short_name }}</div>
+  {% endfor %}
+</div>
+
+<div id="table" hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ page }}&limit={{ limit }}&location_id={{ current_location.id }}"
+  hx-trigger="load" hx-target="#table" hx-swap="innerHTML" class="content-area">
+  <!-- Table will be loaded here -->
+</div>
