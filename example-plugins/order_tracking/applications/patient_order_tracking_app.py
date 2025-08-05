@@ -10,7 +10,11 @@ class PatientOrderTrackingApplication(Application):
 
     def on_open(self) -> Effect:
         patient_id = self.context["patient"]["id"]
+        context = {
+            "patientId": patient_id,
+            "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"
+        }
         return LaunchModalEffect(
             target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
-            content=render_to_string("templates/patient_worklist_orders.html", context={"patientId": patient_id}),
+            content=render_to_string("templates/patient_worklist_orders.html", context=context),
         ).apply()
