@@ -26,6 +26,9 @@ class OrderTrackingApplication(Application):
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
+    def _get_permalink_for_command(self, order: LabOrder | ImagingOrder | Referral, commandType: str) -> str:
+        return f"noteId={order.note.dbid}&commandId={order.dbid}&commandType={commandType}"
+
     def _create_imaging_order_payload(self, imaging_order: ImagingOrder, include_type: bool = False) -> dict:
         """Create standardized payload for imaging order."""
         payload = {
@@ -37,6 +40,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "created_date": imaging_order.created.isoformat() if imaging_order.created else None,
             "priority": imaging_order.priority,
             "sent_to": imaging_order.imaging_center.full_name_and_specialty if imaging_order.imaging_center else None,
+            "permalink": self._get_permalink_for_command(imaging_order, "imagingOrder"),
             "ordering_provider": {
                 "preferred_name": imaging_order.ordering_provider.credentialed_name,
                 "id": str(imaging_order.ordering_provider.id),
@@ -57,6 +61,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "order": lab_order.ontology_lab_partner,
             "created_date": lab_order.created.isoformat() if lab_order.created else None,
             "sent_to": lab_order.ontology_lab_partner,
+            "permalink": self._get_permalink_for_command(lab_order, "labOrder"),
             "ordering_provider": {
                 "preferred_name": lab_order.ordering_provider.credentialed_name,
                 "id": str(lab_order.ordering_provider.id),
@@ -78,6 +83,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "created_date": referral_order.created.isoformat() if referral_order.created else None,
             "priority": referral_order.priority,
             "sent_to": referral_order.service_provider.full_name_and_specialty if referral_order.service_provider else None,
+            "permalink": self._get_permalink_for_command(referral_order, "referral"),
             "ordering_provider": {
                 "preferred_name": referral_order.note.provider.credentialed_name,
                 "id": str(referral_order.note.provider.id),

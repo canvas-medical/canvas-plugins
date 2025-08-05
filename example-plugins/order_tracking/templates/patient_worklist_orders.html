@@ -415,6 +415,7 @@
         // Configuration - using placeholder endpoint based on your structure
         const API_BASE_URL = '/plugin-io/api/order_tracking/orders';
         const PATIENT_ID = '{{patientId}}'
+        const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
         async function fetchOrders(status = null, orderType = null, page = 1) {
             try {
@@ -472,7 +473,8 @@
                   sentTo: order.sent_to || 'Not specified',
                   orderedDate: formatDate(order.created_date),
                   priority: order.urgent || 'routine',
-                  status: order.status
+                  status: order.status,
+                  permalink: order.permalink
                 })));
             }
 
@@ -487,7 +489,8 @@
                     sentTo: order.sent_to || 'Not specified',
                     orderedDate: formatDate(order.created_date),
                     priority: order.urgent ? 'urgent' : 'routine',
-                    status: order.status
+                    status: order.status,
+                    permalink: order.permalink
                 })));
             }
 
@@ -502,7 +505,8 @@
                     sentTo: order.sent_to || 'Not specified',
                     orderedDate: formatDate(order.created_date),
                     priority: order.urgent || 'routine',
-                    status: order.status
+                    status: order.status,
+                    permalink: order.permalink
                 })));
             }
 
@@ -571,7 +575,7 @@
                 <div class="order-card ${urgentClass}">
                     <div class="order-header">
                         <div>
-                            <div class="order-title">${order.orderName || ''}</div>
+                            <a href='/patient/${PATIENT_ID}/#${order.permalink}&application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.orderName || ''}</a>
                             <div class="order-subtitle">${order.type || ''} • ${order.orderingProvider || ''}</div>
                         </div>
                         <div class="status-section">
