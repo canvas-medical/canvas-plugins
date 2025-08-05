@@ -144,20 +144,62 @@
       font-weight: 500;
     }
 
-    table {
+    .accordion {
       width: 100%;
-      border-collapse: collapse;
       margin-top: 1rem;
     }
-    th, td {
-      padding: 0.75rem;
-      border-top: 1px solid #e5e7eb;
-      text-align: left;
+    .accordion-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
     }
-    th {
-      background-color: var(--muted);
-      font-weight: 500;
+    .accordion-header {
+      padding: 0.75rem;
+      background-color: #f9fafb;
       cursor: pointer;
+      transition: background-color 0.2s ease;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1.5fr 0.8fr 1.2fr 1.2fr 0.8fr 1fr 0.5fr;
+      gap: 0.75rem;
+      align-items: center;
+      font-size: 0.875rem;
+    }
+    .accordion-header:hover {
+      background-color: #f3f4f6;
+    }
+    .accordion-header.expanded {
+      background-color: #e0f2fe;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .accordion-content {
+      display: none;
+      padding: 1rem;
+      background-color: white;
+      border-top: 1px solid #e5e7eb;
+    }
+    .accordion-content.show {
+      display: block;
+    }
+    .expand-icon {
+      transition: transform 0.2s ease;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .expand-icon.rotated {
+      transform: rotate(90deg);
+    }
+    .column-header {
+      font-weight: 500;
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+    .column-value {
+      font-size: 0.875rem;
+      color: #374151;
     }
     .bg-red-50 { background-color: var(--red-50); }
     .bg-red-100 { background-color: var(--red-100); }
@@ -256,26 +298,9 @@
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Patient Name</th>
-          <th>DOB</th>
-          <th>Order</th>
-          <th>Type</th>
-          <th>Ordering Provider</th>
-          <th>Sent To</th>
-          <th>Status</th>
-          <th>Ordered Date</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="orders-table-body">
-        <tr>
-          <td colspan="9" class="section-header">Loading orders...</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="accordion" id="orders-accordion">
+      <div class="section-header">Loading orders...</div>
+    </div>
 
     <div class="info-bar" id="info-bar">
       Loading...
@@ -475,6 +500,7 @@
           orderName: order.order || 'Imaging Order',
           patientName: order.patient_name,
           patientId: order.patient_id,
+          id: order.id,
           orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
           orderingProviderId: order.ordering_provider?.id,
           sentTo: order.sent_to || 'Not specified',
@@ -500,6 +526,7 @@
           orderName: order.order || 'Referral',
           patientName: order.patient_name,
           patientId: order.patient_id,
+          id: order.id,
           orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
           orderingProviderId: order.ordering_provider?.id,
           sentTo: order.sent_to || 'Not specified',
@@ -512,7 +539,7 @@
         updatePaginationControls();
       } catch (error) {
         console.error('Error fetching orders:', error);
-        document.getElementById('orders-table-body').innerHTML = '<tr><td colspan="9" class="section-header">Error loading orders</td></tr>';
+        document.getElementById('orders-accordion').innerHTML = '<div class="section-header">Error loading orders</div>';
       }
     }
 
@@ -530,11 +557,11 @@
     }
 
     function populateOrdersTable() {
-      const tableBody = document.getElementById('orders-table-body');
+      const accordion = document.getElementById('orders-accordion');
       const infoBar = document.getElementById('info-bar');
 
       if (allOrders.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="section-header">No orders found</td></tr>';
+        accordion.innerHTML = '<div class="section-header">No orders found</div>';
         infoBar.textContent = 'No orders available';
         return;
       }
@@ -545,24 +572,26 @@
       let html = '';
 
       if (urgentOrders.length > 0) {
-        html += `<tr><td colspan="9" class="section-header section-header-urgent">⚠ Urgent Orders (${urgentOrders.length})</td></tr>`;
+        html += `<div class="section-header section-header-urgent">⚠ Urgent Orders (${urgentOrders.length})</div>`;
         urgentOrders.forEach(order => {
-          html += createOrderRow(order, true);
+          html += createOrderAccordionItem(order, true);
         });
       }
 
       if (routineOrders.length > 0) {
-        html += `<tr><td colspan="9" class="section-header text-gray-700">⏱ Routine Orders (${routineOrders.length})</td></tr>`;
+        html += `<div class="section-header text-gray-700">⏱ Routine Orders (${routineOrders.length})</div>`;
         routineOrders.forEach(order => {
-          html += createOrderRow(order, false);
+          html += createOrderAccordionItem(order, false);
         });
       }
 
       if (html === '') {
-        html = '<tr><td colspan="9" class="section-header">No orders found</td></tr>';
+        html = '<div class="section-header">No orders found</div>';
       }
 
-      tableBody.innerHTML = html;
+      accordion.innerHTML = html;
+      setupAccordionListeners();
+
       if (paginationData) {
         const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
         const end = Math.min(start + allOrders.length - 1, paginationData.total_count);
@@ -622,24 +651,66 @@
       fetchOrders(providerId, selectedType, page);
     }
 
-    function createOrderRow(order, isUrgent) {
-      const rowClass = isUrgent ? 'bg-red-50' : '';
+    function createOrderAccordionItem(order, isUrgent) {
+      const itemClass = isUrgent ? 'bg-red-50' : '';
       const badgeClass = getBadgeClass(order.type);
       const statusBadgeClass = getStatusBadgeClass(order.status);
       const actions = order.actions ? `<button>${order.actions}</button>` : '';
+      const orderId = `${order.id}`;
+      const headerId = `header-${orderId}`;
 
       return `
-        <tr class="${rowClass}">
-          <td><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></td>
-          <td>${order.dob || ''}</td>
-          <td>${order.orderName || ''}</td>
-          <td><span class="badge ${badgeClass}">${order.type || ''}</span></td>
-          <td>${order.orderingProvider || ''}</td>
-          <td>${order.sentTo || ''}</td>
-          <td><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></td>
-          <td>${order.orderedDate || ''}</td>
-          <td>${actions}</td>
-        </tr>
+        <div class="accordion-item ${itemClass}">
+          <div class="accordion-header" id="${headerId}" data-target="${orderId}" data-patient-id="${order.patientId}" data-order-type="${order.type}" data-order-id="${order.id}">
+            <div>
+              <div class="column-header">Patient</div>
+              <div class="column-value"><a href='/patient/${order.patientId}/#application=${PATIENT_CHART_APPLICATION}' target="_blank" style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.patientName || ''}</a></div>
+            </div>
+            <div>
+              <div class="column-header">DOB</div>
+              <div class="column-value">${order.dob || ''}</div>
+            </div>
+            <div>
+              <div class="column-header">Order</div>
+              <div class="column-value">${order.orderName || ''}</div>
+            </div>
+            <div>
+              <div class="column-header">Type</div>
+              <div class="column-value"><span class="badge ${badgeClass}">${order.type || ''}</span></div>
+            </div>
+            <div>
+              <div class="column-header">Provider</div>
+              <div class="column-value">${order.orderingProvider || ''}</div>
+            </div>
+            <div>
+              <div class="column-header">Sent To</div>
+              <div class="column-value">${order.sentTo || ''}</div>
+            </div>
+            <div>
+              <div class="column-header">Status</div>
+              <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></div>
+            </div>
+            <div>
+              <div class="column-header">Date</div>
+              <div class="column-value">${order.orderedDate || ''}</div>
+            </div>
+            <div class="expand-icon">▶</div>
+          </div>
+          <div class="accordion-content" id="${orderId}">
+            <div style="margin-bottom: 1rem;">
+              <h4 style="margin: 0 0 0.5rem 0; font-weight: 600;">Task Comments</h4>
+              <div id="comments-${orderId}" style="margin-bottom: 1rem; padding: 0.5rem; background-color: #f9fafb; border-radius: 0.375rem; min-height: 60px;">
+                Loading comments...
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="comment-input-${orderId}" placeholder="Add a comment..." style="flex: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                <button id="add-btn-${orderId}" onclick="addComment('${order.patientId}', '${order.type}', '${order.id}')" style="padding: 0.5rem 1rem; background-color: var(--primary); color: white; border: none; border-radius: 0.375rem; cursor: pointer;">Add</button>
+
+              </div>
+            </div>
+            ${actions ? `<div>${actions}</div>` : ''}
+          </div>
+        </div>
       `;
     }
 
@@ -658,6 +729,153 @@
         case 'sent': return 'badge-default';
         case 'delegated': return 'badge-secondary';
         default: return 'badge-outline';
+      }
+    }
+
+    function setupAccordionListeners() {
+      // Get all accordion headers and add individual listeners
+      const accordionHeaders = document.querySelectorAll('.accordion-header');
+      
+      accordionHeaders.forEach(header => {
+        const headerId = header.id;
+        if (!headerId) return; // Skip if no ID
+        
+        // Create a unique click handler for this specific header
+        const clickHandler = function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          
+          const targetId = this.getAttribute('data-target');
+          const content = document.getElementById(targetId);
+          const icon = this.querySelector('.expand-icon');
+
+          if (!content || !icon) return;
+
+          // Close all other accordion items first (single open behavior)
+          const allHeaders = document.querySelectorAll('.accordion-header');
+          allHeaders.forEach(otherHeader => {
+            if (otherHeader.id !== headerId) {
+              const otherTargetId = otherHeader.getAttribute('data-target');
+              const otherContent = document.getElementById(otherTargetId);
+              const otherIcon = otherHeader.querySelector('.expand-icon');
+              
+              if (otherContent && otherContent.classList.contains('show')) {
+                otherContent.classList.remove('show');
+                otherHeader.classList.remove('expanded');
+                if (otherIcon) otherIcon.classList.remove('rotated');
+              }
+            }
+          });
+
+          // Toggle current accordion item
+          const isCurrentlyOpen = content.classList.contains('show');
+          
+          if (isCurrentlyOpen) {
+            content.classList.remove('show');
+            this.classList.remove('expanded');
+            icon.classList.remove('rotated');
+          } else {
+            content.classList.add('show');
+            this.classList.add('expanded');
+            icon.classList.add('rotated');
+            
+            // Get order data from the data attributes
+            const patientId = this.getAttribute('data-patient-id');
+            const orderType = this.getAttribute('data-order-type');
+            const orderId = this.getAttribute('data-order-id');
+            loadComments({ patientId, type: orderType, id: orderId });
+          }
+        };
+        
+        // Remove any existing listeners on this header
+        header.removeEventListener('click', header._accordionClickHandler);
+        
+        // Store the handler reference and add the listener
+        header._accordionClickHandler = clickHandler;
+        header.addEventListener('click', clickHandler);
+      });
+    }
+
+    async function loadComments(order) {
+      const commentsDiv = document.getElementById(`comments-${order.id}`);
+      try {
+        let url = `/plugin-io/api/order_tracking/task-comments?order_type=${order.type}`;
+        
+        // Add specific ID parameters based on order type
+        if (order.type.toLowerCase() === 'referral') {
+          url += `&referral_id=${order.id}`;
+        } else if (order.type.toLowerCase() === 'imaging') {
+          url += `&imaging_id=${order.id}`;
+        } else if (order.patientId) {
+          url += `&patient_id=${order.patientId}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Store task_id for adding comments
+        let taskId = null;
+        if (data.comments && data.comments.length > 0) {
+          taskId = data.comments[0].task_id; // All comments belong to the same task
+          commentsDiv.innerHTML = data.comments.map(comment =>
+            `<div style="margin-bottom: 0.75rem; padding: 0.75rem; background-color: white; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid #f3f4f6;">
+                <div style="font-weight: 500; color: #374151; font-size: 0.875rem;">${comment.author}</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">${comment.date}</div>
+              </div>
+              <div style="color: #1f2937; line-height: 1.5; white-space: pre-wrap;">${comment.text}</div>
+            </div>`
+          ).join('');
+        } else {
+          commentsDiv.innerHTML = '<div style="color: #6b7280; font-style: italic; text-align: center; padding: 2rem;">No comments yet</div>';
+        }
+        
+        // Store the task_id in a data attribute for the add comment button
+        const addButton = document.getElementById(`add-btn-${order.id}`);
+        if (addButton && taskId) {
+          addButton.setAttribute('data-task-id', taskId);
+        }
+      } catch (error) {
+        console.error('Error loading comments:', error);
+        commentsDiv.innerHTML = '<div style="color: #dc2626;">Error loading comments</div>';
+      }
+    }
+
+    async function addComment(patientId, orderType, orderId) {
+      const input = document.getElementById(`comment-input-${orderId}`);
+      const comment = input.value.trim();
+
+      if (!comment) return;
+
+      // Get the task_id from the button's data attribute
+      const addButton = document.getElementById(`add-btn-${orderId}`);
+      const taskId = addButton ? addButton.getAttribute('data-task-id') : null;
+
+      if (!taskId) {
+        console.error('No task_id available for this order');
+        return;
+      }
+
+      try {
+        const response = await fetch('/plugin-io/api/order_tracking/task-comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            task_id: taskId,
+            comment: comment
+          })
+        });
+
+        if (response.ok) {
+          input.value = '';
+          loadComments({patientId, type: orderType, id: orderId});
+        } else {
+          console.error('Failed to add comment');
+        }
+      } catch (error) {
+        console.error('Error adding comment:', error);
       }
     }
 

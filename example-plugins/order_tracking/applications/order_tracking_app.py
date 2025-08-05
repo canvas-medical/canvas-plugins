@@ -1,16 +1,20 @@
-import arrow
+import json
 from http import HTTPStatus
+
+import arrow
 
 from django.db.models import Case, When, Value, Q, CharField
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.effects.simple_api import Response, JSONResponse
+from canvas_sdk.effects.task import AddTaskComment
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral
 from canvas_sdk.v1.data.staff import Staff
+from canvas_sdk.v1.data.task import Task, TaskComment, TaskType, TaskStatus
 from logger import log
 
 
@@ -19,7 +23,8 @@ class OrderTrackingApplication(Application):
 
     def on_open(self) -> Effect:
         return LaunchModalEffect(
-            content=render_to_string("templates/worklist_orders.html", context={"patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
+            content=render_to_string("templates/worklist_orders.html", context={
+                "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
             target=LaunchModalEffect.TargetType.PAGE,
         ).apply()
 
@@ -32,6 +37,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
     def _create_imaging_order_payload(self, imaging_order: ImagingOrder, include_type: bool = False) -> dict:
         """Create standardized payload for imaging order."""
         payload = {
+            "id": str(imaging_order.id),
             "patient_name": imaging_order.patient.preferred_full_name,
             "patient_id": str(imaging_order.patient.id),
             "dob": arrow.get(imaging_order.patient.birth_date).format("YYYY-MM-DD"),
@@ -75,6 +81,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
     def _create_referral_order_payload(self, referral_order: Referral, include_type: bool = False) -> dict:
         """Create standardized payload for referral order."""
         payload = {
+            "id": str(referral_order.id),
             "patient_name": referral_order.patient.preferred_full_name,
             "patient_id": str(referral_order.patient.id),
             "dob": arrow.get(referral_order.patient.birth_date).format("YYYY-MM-DD"),
@@ -315,3 +322,98 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                 "has_previous": page > 1,
             }
         }, status_code=HTTPStatus.OK)]
+
+    @api.get("/task-comments")
+    def get_task_comments(self) -> list[Response | Effect]:
+        order_type = self.request.query_params.get("order_type")
+
+        if not order_type:
+            return [JSONResponse({"error": "order_type is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+        try:
+            comments_data = []
+
+            # Handle referral orders using the task_list property
+            if order_type.lower() == "referral":
+                referral_id = self.request.query_params.get("referral_id")
+
+                if not referral_id:
+                    return [JSONResponse({"error": "referral_id is required for referral orders"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+                try:
+                    referral = Referral.objects.get(id=referral_id, deleted=False)
+                    task_list = referral.task_list
+
+                    if task_list:
+                        # Get the last (most recent) task
+                        last_task = task_list[-1] if task_list else None
+
+                        if last_task:
+                            # Get comments for this task
+                            task_comments = last_task.comments.all().order_by('created').select_related('creator')
+
+                            for comment in task_comments:
+                                comments_data.append({
+                                    "id": str(comment.id),
+                                    "text": comment.body,
+                                    "author": comment.creator.credentialed_name if comment.creator else "Unknown",
+                                    "date": comment.created.strftime("%Y-%m-%d %H:%M"),
+                                    "task_id": str(last_task.id)
+                                })
+
+                except Referral.DoesNotExist:
+                    return [JSONResponse({"error": "Referral not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+            # Handle imaging orders using the task_list property
+            elif order_type.lower() == "imaging":
+                imaging_id = self.request.query_params.get("imaging_id")
+
+                if not imaging_id:
+                    return [JSONResponse({"error": "imaging_id is required for imaging orders"}, status_code=HTTPStatus.BAD_REQUEST)]
+
+                try:
+                    imaging_order = ImagingOrder.objects.get(id=imaging_id, deleted=False)
+                    task_list = imaging_order.task_list
+
+                    if task_list:
+                        # Get the last (most recent) task
+                        last_task = task_list[-1] if task_list else None
+
+                        if last_task:
+                            # Get comments for this task
+                            task_comments = last_task.comments.all().order_by('created').select_related('creator')
+
+                            for comment in task_comments:
+                                comments_data.append({
+                                    "id": str(comment.id),
+                                    "text": comment.body,
+                                    "author": comment.creator.credentialed_name if comment.creator else "Unknown",
+                                    "date": comment.created.strftime("%Y-%m-%d %H:%M"),
+                                    "task_id": str(last_task.id)
+                                })
+
+                except ImagingOrder.DoesNotExist:
+                    return [JSONResponse({"error": "Imaging order not found"}, status_code=HTTPStatus.NOT_FOUND)]
+
+            # For lab orders, we could implement similar logic if they get the task_list property
+            elif order_type.lower() == "lab":
+                # For now, return empty comments for lab orders
+                # This could be extended when lab orders get the task_list property
+                pass
+
+            return [JSONResponse({"comments": comments_data}, status_code=HTTPStatus.OK)]
+
+        except Exception as e:
+            return [JSONResponse({"error": f"Failed to load comments: {str(e)}"},
+                                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
+
+    @api.post("/task-comments")
+    def add_task_comment(self) -> list[Response | Effect]:
+        json_body = json.loads(self.request.body)
+        comment = json_body.get("comment")
+        task_id = json_body.get("task_id")
+        log.info(f"Received task comment data: {json_body}")
+
+        return [
+            AddTaskComment(task_id=task_id, body=comment).apply(),
+            JSONResponse({}, status_code=HTTPStatus.OK)]
