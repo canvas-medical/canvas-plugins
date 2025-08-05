@@ -38,6 +38,9 @@ class PatientSettingConstants:
     CONTACT_METHOD = "contactMethod"
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
+class PatientConstants:
+    """PatientConstants."""
+    DEFAULT_AVATAR = "https://cdn.canvasmedical.com/canvas-sdk/default-avatar.png"
 
 class Patient(Model):
     """A class representing a patient."""
@@ -181,6 +184,14 @@ class Patient(Model):
     def preferred_first_name(self) -> str:
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
+
+    @property
+    def photo_url(self) -> str:
+        """Returns the URL of the patient's photo."""
+        photo = self.photos.first()
+        if photo and str(photo.url).startswith("patient-avatars"):
+            return photo
+        return PatientConstants.DEFAULT_AVATAR
 
 
 class PatientContactPoint(IdentifiableModel):

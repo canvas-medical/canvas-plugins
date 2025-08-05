@@ -1,0 +1,62 @@
+<div class="main-header">
+    <h1>{{ location.short_name }}</h1>
+</div>
+
+<div class="filters">
+  <input type="text" class="filter-input" placeholder="Name">
+  <select class="filter-select">
+    <option>Care team: Any</option>
+    {% for member in staff %}
+      <option value="{{ member.id }}">{{ member.first_name }} {{ member.last_name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<table class="patient-table">
+  <thead>
+    <tr>
+      <th>Patient</th>
+      <th>Care Team</th>
+      <th>Last Visit</th>
+      <th>Triage</th>
+      <th>Tasks</th>
+      <th>Gaps</th>
+      <th>Primary Ins</th>
+      <th>Sticky Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for patient in patients %}
+    <tr>
+      <td>
+        <div class="patient-info">
+          <div class="patient-avatar">
+            <img src="{{ patient.photo_url }}" alt="{{ patient.name }}'s photo">
+          </div>
+          <div>
+            <div class="patient-name">{{ patient.name }}</div>
+            <div class="patient-details">{{ patient.age }} - {{ patient.gender }} - {{ patient.telecom }}</div>
+          </div>
+        </div>
+      </td>
+      <td class="care-team">{{ patient.provider.first_name }} {{ patient.provider.last_name }} (Primary Care Physician)</td>
+      <td class="visit-date overdue">{{ patient.last_visit }}</td>
+      <td class="triage">
+        <input type="checkbox" class="triage-input" placeholder="Triage">
+      </td>
+      <td class="fraction">{{ patient.tasks.open }}/{{ patient.tasks.all }}</td>
+      <td class="fraction">2/4</td>
+      <td><span class="icon-symbol">🏥</span></td>
+      <td class="sticky-notes">
+        <input name="sticky_note-{{ patient.id }}" type="text" class="sticky-note-input" placeholder="Type">
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination">
+  <button class="pagination-button" hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ pagination.previous_page }}&limit={{ pagination.limit }}" hx-target="#table" hx-swap="innerHTML" {% if pagination.current_page == 1 %}disabled{% endif %}>Previous</button>
+  <span class="pagination-info">Page {{ pagination.current_page }} of {{ pagination.total_pages }}</span>
+  <button class="pagination-button" hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ pagination.next_page }}&limit={{ pagination.limit }}" hx-target="#table" hx-swap="innerHTML" {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}>Next</button>
+</div>
