@@ -16,5 +16,6 @@ class PatientOrderTrackingApplication(Application):
         }
         return LaunchModalEffect(
             target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
+            title="Order Tracking Application",
             content=render_to_string("templates/patient_worklist_orders.html", context=context),
         ).apply()
