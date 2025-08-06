@@ -30,6 +30,15 @@
           "read": [],
           "write": []
         }
+      },
+      {
+        "class": "order_tracking.applications.order_tracking_app:StaffFilterAPI",
+        "description": "Provides api for the filters functionality",
+        "data_access": {
+          "event": "",
+          "read": [],
+          "write": []
+        }
       }
     ],
     "commands": [],

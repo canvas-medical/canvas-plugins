@@ -9,15 +9,17 @@ from django.db.models import Case, When, Value, Q, CharField
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
-from canvas_sdk.effects.simple_api import Response, JSONResponse
+from canvas_sdk.effects.simple_api import Response, JSONResponse, HTMLResponse
 from canvas_sdk.effects.task import AddTaskComment, AddTask
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral
 from canvas_sdk.v1.data.staff import Staff
-from canvas_sdk.v1.data.task import Task, TaskComment, TaskType, TaskStatus
+from canvas_sdk.v1.data.task import TaskStatus
 from logger import log
+from canvas_sdk.caching.plugins import get_cache
+
 
 
 class OrderTrackingApplication(Application):
@@ -32,6 +34,24 @@ class OrderTrackingApplication(Application):
 
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
+
+    @api.get("/main.js")
+    def get_main_js(self) -> list[Response | Effect]:
+        return [
+            Response(
+                render_to_string("scripts/main.js").encode(),
+                status_code=HTTPStatus.OK,
+                content_type="text/javascript",
+            )
+        ]
+
+    @api.get("/debug")
+    def debug(self) -> list[HTMLResponse]:
+        return [HTMLResponse(
+                render_to_string("templates/worklist_orders.html", context={
+                "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
+                status_code=HTTPStatus.OK,
+            )]
 
     def _get_permalink_for_command(self, order: LabOrder | ImagingOrder | Referral, commandType: str) -> str:
         return f"noteId={order.note.dbid}&commandId={order.dbid}&commandType={commandType}"
@@ -378,10 +398,6 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                 elif order_type == 'referral':
                     referral_orders_data.append(order)
 
-        log.info(f"################## imaging_orders_data: {imaging_orders_data}")
-        log.info(f"################## lab_orders_data: {lab_orders_data}")
-        log.info(f"################## referral_orders_data: {referral_orders_data}")
-
         return [JSONResponse({
             "logged_in_staff_id": logged_in_staff,
             "imaging_orders": imaging_orders_data,
@@ -502,3 +518,56 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             JSONResponse({}, status_code=HTTPStatus.OK)])
 
         return effects
+
+
+class StaffFilterAPI(StaffSessionAuthMixin, SimpleAPI):
+
+    cache_key = "FILTERS-"
+
+    @api.post("/filter")
+    def create_filters(self) -> list[Response | Effect]:
+        logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
+
+        cache = get_cache()
+        user_cache_key = f"{self.cache_key}-{logged_in_staff}"
+
+        # get current filters
+        user_filters = cache.get_or_set(user_cache_key, default=[])
+
+        # get filters passed by in the URL
+        new_filters = self.request.json()
+        user_filters.append(new_filters)
+
+        cache.set(user_cache_key, user_filters)
+
+        return [JSONResponse({"filter": new_filters}, status_code=HTTPStatus.OK)]
+
+
+    @api.get("/filters")
+    def get_filters(self) -> list[Response | Effect]:
+        logged_in_staff = Staff.objects.values_list("id", flat=True).get(
+            id=self.request.headers["canvas-logged-in-user-id"])
+
+        cache = get_cache()
+        user_cache_key = f"{self.cache_key}-{logged_in_staff}"
+        # get current filters
+        user_filters = cache.get(user_cache_key)
+
+        return [JSONResponse({"filters": user_filters}, status_code=HTTPStatus.OK)]
+
+
+    @api.delete("/filter/<id>")
+    def delete_filters(self) -> list[Response | Effect]:
+        logged_in_staff = Staff.objects.values_list("id", flat=True).get(
+            id=self.request.headers["canvas-logged-in-user-id"])
+
+        filter_id = self.request.path_params["id"]
+
+        cache = get_cache()
+        user_cache_key = f"{self.cache_key}-{logged_in_staff}"
+        # get current filters
+        user_filters = cache.get(user_cache_key)
+        user_filters = [ _filter for _filter in user_filters if _filter["id"] != filter_id ]
+        cache.set(user_cache_key, user_filters)
+
+        return [JSONResponse({"filters": user_filters}, status_code=HTTPStatus.OK)]
