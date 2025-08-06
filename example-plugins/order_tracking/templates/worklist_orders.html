@@ -670,6 +670,7 @@
       padding: 0.75rem;
       background-color: #f3f4f6;
       text-align: left;
+      margin-top: 8px;
     }
     .section-header-urgent {
       background-color: var(--red-50);
@@ -789,16 +790,16 @@
           </div>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Sent To</label>
-          <input type="text" id="sent-to-filter" class="filter-input" placeholder="Search by sent to...">
-        </div>
-        <div class="filter-group">
           <label class="filter-label">Patient Name</label>
           <input type="text" id="patient-name-filter" class="filter-input" placeholder="Search by patient name...">
         </div>
         <div class="filter-group">
           <label class="filter-label">Patient DOB</label>
           <input type="date" id="patient-dob-filter" class="filter-input">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Sent To</label>
+          <input type="text" id="sent-to-filter" class="filter-input" placeholder="Search by sent to...">
         </div>
         <div class="filter-group">
           <label class="filter-label">Order Date Range</label>
@@ -1070,11 +1071,9 @@ function renderSavedFilters() {
         const filterId = pill.getAttribute('data-filter-id');
 
         pill.addEventListener('click', (e) => {
-            console.log("###########  clicking the pillll")
             if (e.target.classList.contains('remove-filter')) {
                 return; // Let the remove handler handle this
             }
-            console.log("############ loading save filter")
             loadSavedFilter(filterId);
         });
     });

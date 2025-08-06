@@ -34,14 +34,7 @@ class OrderTrackingApplication(Application):
 
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
-    @api.get("/debug")
-    def debug(self) -> list[HTMLResponse]:
-        return [HTMLResponse(
-                render_to_string("templates/worklist_orders.html", context={
-                "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
-                status_code=HTTPStatus.OK,
-            )]
-
+    """Order Tracking API."""
     def _get_permalink_for_command(self, order: LabOrder | ImagingOrder | Referral, commandType: str) -> str:
         return f"noteId={order.note.dbid}&commandId={order.dbid}&commandType={commandType}"
 
@@ -70,12 +63,13 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
     def _create_lab_order_payload(self, lab_order: LabOrder, include_type: bool = False) -> dict:
         """Create standardized payload for lab order."""
+        lab_tests = list(lab_order.tests.values_list("ontology_test_name", flat=True).all())
         payload = {
             "patient_name": lab_order.patient.preferred_full_name,
             "patient_id": str(lab_order.patient.id),
             "dob": arrow.get(lab_order.patient.birth_date).format("YYYY-MM-DD"),
             "status": lab_order.order_status,
-            "order": lab_order.ontology_lab_partner,
+            "order": ", ".join(lab_tests),
             "created_date": lab_order.created.isoformat() if lab_order.created else None,
             "sent_to": lab_order.ontology_lab_partner,
             "permalink": self._get_permalink_for_command(lab_order, "labOrder"),
@@ -91,12 +85,17 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
     def _create_referral_order_payload(self, referral_order: Referral, include_type: bool = False) -> dict:
         """Create standardized payload for referral order."""
+
+        order = ["Referral"]
+        if referral_order.service_provider and referral_order.service_provider.specialty:
+            order.append(f"to {referral_order.service_provider.specialty}")
+
         payload = {
             "id": str(referral_order.id),
             "patient_name": referral_order.patient.preferred_full_name,
             "patient_id": str(referral_order.patient.id),
             "dob": arrow.get(referral_order.patient.birth_date).format("YYYY-MM-DD"),
-            "order": referral_order.internal_comment,
+            "order": " ".join(order),
             "status": referral_order.order_status,
             "created_date": referral_order.created.isoformat() if referral_order.created else None,
             "priority": referral_order.priority,
@@ -244,10 +243,6 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             imaging_orders_queryset = imaging_orders_queryset.filter(note__location__id=location_id)
             lab_orders_queryset = lab_orders_queryset.filter(note__location__id=location_id)
             refer_queryset = refer_queryset.filter(note__location__id=location_id)
-
-        log.info(f"################### lab_orders: {len(lab_orders_queryset)}")
-        log.info(f"################### lab_orders: {list(lab_orders_queryset)}")
-
 
         if status and status != "all":
             imaging_orders_queryset = imaging_orders_queryset.filter(order_status=status)
