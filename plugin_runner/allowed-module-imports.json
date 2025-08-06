@@ -563,12 +563,16 @@
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisitSettingCoding",
+    "Referral",
+    "ReferralReport",
     "ResponseOption",
     "ResponseOptionSet",
+    "ServiceProvider",
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
     "StaffPhoto",
+    "StaffRole",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -796,11 +800,19 @@
   "canvas_sdk.v1.data.reason_for_visit": [
     "ReasonForVisitSettingCoding"
   ],
+  "canvas_sdk.v1.data.referral": [
+    "Referral",
+    "ReferralReport"
+  ],
+  "canvas_sdk.v1.data.service_provider": [
+    "ServiceProvider"
+  ],
   "canvas_sdk.v1.data.staff": [
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
-    "StaffPhoto"
+    "StaffPhoto",
+    "StaffRole"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
