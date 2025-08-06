@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v0.52.0 (2025-08-06)
+
+### Features
+
+- Add `getattr` to sandbox ([#893](https://github.com/canvas-medical/canvas-plugins/pull/893),
+  [`af653d1`](https://github.com/canvas-medical/canvas-plugins/commit/af653d1b59eb850b2fc9b6a2736c175bdd1c953a))
+
+- Order tracking example app ([#879](https://github.com/canvas-medical/canvas-plugins/pull/879),
+  [`3e99263`](https://github.com/canvas-medical/canvas-plugins/commit/3e992638558f412b55f80476061fc73a8269429e))
+
+
+## v0.51.0 (2025-08-05)
+
+### Features
+
+- Add support for ast.Constant (ellipsis)
+  ([#880](https://github.com/canvas-medical/canvas-plugins/pull/880),
+  [`c089285`](https://github.com/canvas-medical/canvas-plugins/commit/c089285d2eb4d94b4051f28e2fefa410e78de774))
+
+- Remove unused manifest data_access requirement
+  ([#882](https://github.com/canvas-medical/canvas-plugins/pull/882),
+  [`0282e00`](https://github.com/canvas-medical/canvas-plugins/commit/0282e004e387d8a9eecab06751a29d8f3cd7d014))
+
+
 ## v0.50.0 (2025-07-30)
 
 ### Documentation

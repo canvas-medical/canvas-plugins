@@ -1,3 +1,5 @@
+import json
+
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel
@@ -7,6 +9,7 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
+from canvas_sdk.v1.data.task import Task
 
 
 class ImagingOrder(IdentifiableModel):
@@ -30,19 +33,38 @@ class ImagingOrder(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
-    # TODO - uncomment when Note model is complete
-    #  note = models.ForeigneKey(Note, on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    note = models.ForeignKey(
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+    )
     imaging = models.CharField(max_length=1024)
-    # TODO - uncomment when ServiceProvider model is complete
-    # imaging_center = models.ForeignKey('v1.ServiceProvider', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    imaging_center = models.ForeignKey(
+        "v1.ServiceProvider", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+    )
     note_to_radiologist = models.CharField(max_length=1024)
     internal_comment = models.CharField(max_length=1024)
     status = models.CharField(choices=OrderStatus.choices, max_length=30)
     date_time_ordered = models.DateTimeField()
     priority = models.CharField(max_length=255)
-    # TODO - uncomment when Staff model is complete
-    # ordering_provider = models.ForeignKey('v1.Staff', on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True)
+    ordering_provider = models.ForeignKey(
+        "v1.Staff", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
+    )
     delegated = models.BooleanField(default=False)
+
+    task_ids = models.CharField(max_length=1024)
+
+    def get_task_objects(self) -> "models.QuerySet[Task]":
+        """Convert task IDs to Task objects."""
+        if self.task_ids:
+            task_ids = (
+                json.loads(self.task_ids) if isinstance(self.task_ids, str) else self.task_ids
+            )
+            return Task.objects.filter(id__in=task_ids)
+        return Task.objects.none()
+
+    @property
+    def task_list(self) -> list[Task]:
+        """Convenience property to get task objects."""
+        return list(self.get_task_objects())
 
 
 class ImagingReview(IdentifiableModel):
@@ -97,7 +119,14 @@ class ImagingReport(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_results", null=True
     )
-    order = models.ForeignKey(ImagingOrder, on_delete=models.DO_NOTHING, null=True)
+    order = models.ForeignKey(
+        ImagingOrder,
+        on_delete=models.DO_NOTHING,
+        related_name="results",
+        default=None,
+        blank=True,
+        null=True,
+    )
     source = models.CharField(choices=ImagingReportSource.choices, max_length=18)
     name = models.CharField(max_length=255)
     result_date = models.DateField()

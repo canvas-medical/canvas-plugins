@@ -208,8 +208,8 @@ class LabOrder(IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
     )
     ontology_lab_partner = models.CharField(max_length=128)
-    # TODO - uncomment when the Note model is finished
-    # note = models.ForeignKey("Note", on_delete=models.DO_NOTHING, null=True)
+
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, null=True)
     comment = models.CharField(max_length=128)
     requisition_number = models.CharField(max_length=32)
     is_patient_bill = models.BooleanField(null=True)
@@ -224,14 +224,18 @@ class LabOrder(IdentifiableModel):
     )
     courtesy_copy_number = models.CharField(max_length=32)
     courtesy_copy_text = models.CharField(max_length=64)
-    ordering_provider = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, null=True)
-    parent_order = models.ForeignKey("LabOrder", on_delete=models.DO_NOTHING, null=True)
+    ordering_provider = models.ForeignKey(
+        Staff, on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
+    )
+    parent_order = models.ForeignKey("v1.LabOrder", on_delete=models.DO_NOTHING, null=True)
     healthgorilla_id = models.CharField(max_length=40)
     manual_processing_status = models.CharField(
         choices=ManualProcessingStatus.choices, null=True, max_length=16
     )
     manual_processing_comment = models.TextField(null=True)
     labcorp_abn_url = models.URLField()
+
+    reports = models.ManyToManyField("v1.LabReport", through="v1.LabTest")
 
 
 class LabOrderReason(Model):

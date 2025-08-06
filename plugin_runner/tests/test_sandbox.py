@@ -587,6 +587,64 @@ def test_sandbox_dictionary_and_list_access() -> None:
     sandbox.execute()
 
 
+def test_aug_assign() -> None:
+    """
+    Test that augmented assignment (AugAssign) works correctly.
+    """
+    sandbox = _sandbox_from_code("""
+        a = 2
+        a += 1
+        assert a == 3
+
+        a -= 1
+        assert a == 2
+
+        a *= -10
+        assert a == -20
+
+        a /= 2
+        assert a == -10
+    """)
+
+    sandbox.execute()
+
+
+def test_safe_getattr() -> None:
+    """
+    Test that getattr works correctly and is safe.
+    """
+    sandbox = _sandbox_from_code("""
+        class A:
+            def __init__(self):
+                self.a = 'test'
+                self._a = 'also works'
+
+
+        a = A()
+
+        assert getattr(a, 'a') == 'test'
+        assert getattr(a, '_a') == 'also works'
+    """)
+
+    sandbox.execute()
+
+
+def test_safe_getattr_fails_when_needed() -> None:
+    """
+    Test that getattr does not allow access to private attributes from outside the plugin.
+    """
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.utils import Http
+
+        client = Http()
+
+        pvt = getattr(client, '_session')
+    """)
+
+    with pytest.raises(AttributeError, match="invalid attribute name"):
+        sandbox.execute()
+
+
 def test_sandbox_allows_access_to_sub_modules() -> None:
     """
     Ensure we can import from allowed sub-modules.
