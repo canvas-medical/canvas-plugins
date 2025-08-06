@@ -50,7 +50,7 @@ class ImagingOrder(IdentifiableModel):
     )
     delegated = models.BooleanField(default=False)
 
-    task_ids = models.CharField()
+    task_ids = models.CharField(max_length=1024)
 
     def get_task_objects(self) -> "models.QuerySet[Task]":
         """Convert task IDs to Task objects."""
