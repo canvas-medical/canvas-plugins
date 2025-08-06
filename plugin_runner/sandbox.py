@@ -4,6 +4,7 @@ import ast
 import builtins
 import importlib
 import json
+import operator
 import sys
 import types
 from _ast import AnnAssign
@@ -262,6 +263,34 @@ def _is_known_module(name: str) -> bool:
 def _unrestricted(_ob: Any, *args: Any, **kwargs: Any) -> Any:
     """Return the given object, unmodified."""
     return _ob
+
+
+def _inplacevar(op: Any, val: Any, expr: Any) -> Any:
+    """
+    Apply the specified operation to the value and expression.
+
+    NOTE: Does not yet support += concatenation for sequences.
+    """
+    ops = {
+        "-=": operator.isub,
+        "@=": operator.imatmul,
+        "**=": operator.ipow,
+        "*=": operator.imul,
+        "//=": operator.ifloordiv,
+        "/=": operator.itruediv,
+        "&=": operator.iand,
+        "%=": operator.imod,
+        "^=": operator.ixor,
+        "+=": operator.iadd,
+        "<<=": operator.ilshift,
+        ">>=": operator.irshift,
+        "|=": operator.ior,
+    }
+
+    if op not in ops:
+        raise ValueError(f"Invalid inplace operation: {op}")
+
+    return ops[op](val, expr)
 
 
 def _apply(_ob: Any, *args: Any, **kwargs: Any) -> Any:
@@ -635,7 +664,7 @@ class Sandbox:
             "_getattr_": self._safe_getattr,
             "_getitem_": self._safe_getitem,
             "_getiter_": _unrestricted,
-            "_inplacevar_": _unrestricted,
+            "_inplacevar_": _inplacevar,
             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
             "_print_": PrintCollector,
             "_unpack_sequence_": guarded_unpack_sequence,

@@ -587,6 +587,28 @@ def test_sandbox_dictionary_and_list_access() -> None:
     sandbox.execute()
 
 
+def test_aug_assign() -> None:
+    """
+    Test that augmented assignment (AugAssign) works correctly.
+    """
+    sandbox = _sandbox_from_code("""
+        a = 2
+        a += 1
+        assert a == 3
+
+        a -= 1
+        assert a == 2
+
+        a *= -10
+        assert a == -20
+
+        a /= 2
+        assert a == -10
+    """)
+
+    sandbox.execute()
+
+
 def test_safe_getattr() -> None:
     """
     Test that getattr works correctly and is safe.
