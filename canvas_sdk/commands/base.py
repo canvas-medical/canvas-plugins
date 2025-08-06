@@ -159,7 +159,7 @@ class _BaseCommand(TrackableFieldsModel):
         """Returns a command recommendation to be inserted via Protocol Card."""
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
-        command = self.Meta.key.lower()
+        command = self.Meta.key
         return Recommendation(
             title=title,
             button=button,
