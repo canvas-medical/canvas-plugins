@@ -46,12 +46,14 @@ class Referral(IdentifiableModel):
     )
     ignored = models.BooleanField()
 
-    tasks = models.CharField()
+    task_ids = models.CharField()
 
     def get_task_objects(self) -> "models.QuerySet[Task]":
         """Convert task IDs to Task objects."""
-        if self.tasks:
-            task_ids = json.loads(self.tasks) if isinstance(self.tasks, str) else self.tasks
+        if self.task_ids:
+            task_ids = (
+                json.loads(self.task_ids) if isinstance(self.task_ids, str) else self.task_ids
+            )
             return Task.objects.filter(id__in=task_ids)
         return Task.objects.none()
 
