@@ -14,7 +14,7 @@ from canvas_sdk.effects.task import AddTaskComment, AddTask
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral
+from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral, PracticeLocation
 from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.task import TaskStatus
 from logger import log
@@ -34,17 +34,6 @@ class OrderTrackingApplication(Application):
 
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
-
-    @api.get("/main.js")
-    def get_main_js(self) -> list[Response | Effect]:
-        return [
-            Response(
-                render_to_string("scripts/main.js").encode(),
-                status_code=HTTPStatus.OK,
-                content_type="text/javascript",
-            )
-        ]
-
     @api.get("/debug")
     def debug(self) -> list[HTMLResponse]:
         return [HTMLResponse(
@@ -152,6 +141,18 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "providers": ordering_providers,
         }, status_code=HTTPStatus.OK)]
 
+    @api.get("/locations")
+    def locations(self) -> list[Response | Effect]:
+        logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
+
+        locations = PracticeLocation.objects.values("id", "full_name").filter(active=True)
+        locations = [{ "name": location["full_name"], "value": str(location["id"]) } for location in locations]
+
+        return [JSONResponse({
+            "logged_in_staff_id": logged_in_staff,
+            "locations": locations,
+        }, status_code=HTTPStatus.OK)]
+
     @api.get("/orders")
     def orders(self) -> list[Response | Effect]:
         logged_in_staff = Staff.objects.values_list("id", flat=True).get(
@@ -165,6 +166,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         patient_id = self.request.query_params.get("patient_id")
         patient_name = self.request.query_params.get("patient_name")
         patient_dob = self.request.query_params.get("patient_dob")
+        location_id = self.request.query_params.get("location")
         sent_to = self.request.query_params.get("sent_to")
         date_from = self.request.query_params.get("date_from")
         date_to = self.request.query_params.get("date_to")
@@ -238,6 +240,15 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             lab_orders_queryset = lab_orders_queryset.filter(patient__id=patient_id)
             refer_queryset = refer_queryset.filter(patient__id=patient_id)
 
+        if location_id:
+            imaging_orders_queryset = imaging_orders_queryset.filter(note__location__id=location_id)
+            lab_orders_queryset = lab_orders_queryset.filter(note__location__id=location_id)
+            refer_queryset = refer_queryset.filter(note__location__id=location_id)
+
+        log.info(f"################### lab_orders: {len(lab_orders_queryset)}")
+        log.info(f"################### lab_orders: {list(lab_orders_queryset)}")
+
+
         if status and status != "all":
             imaging_orders_queryset = imaging_orders_queryset.filter(order_status=status)
             refer_queryset = refer_queryset.filter(order_status=status)
@@ -306,7 +317,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
         # Apply ordering for consistent results
         imaging_orders_queryset = imaging_orders_queryset.order_by('-created')
-        lab_orders_queryset = lab_orders_queryset.order_by('-created')
+        lab_orders_queryset = lab_orders_queryset.order_by('-created', "id").distinct("id", "created")
         refer_queryset = refer_queryset.order_by('-created')
 
         # Handle type filtering and pagination efficiently
