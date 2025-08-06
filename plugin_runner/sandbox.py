@@ -614,6 +614,7 @@ class Sandbox:
                 "dict": builtins.dict,
                 "enumerate": builtins.enumerate,
                 "filter": builtins.filter,
+                "getattr": self._safe_getattr,
                 "hasattr": builtins.hasattr,
                 "iter": builtins.iter,
                 "list": builtins.list,
