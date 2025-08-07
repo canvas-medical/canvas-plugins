@@ -228,6 +228,7 @@ THIRD_PARTY_MODULES = {
         "conint",
         "constr",
         "Field",
+        "RootModel",
         "ValidationError",
     },
     "rapidfuzz": {
