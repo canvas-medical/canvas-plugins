@@ -24,7 +24,14 @@ from sentry_sdk.integrations.logging import ignore_logger
 
 import settings
 from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_generated.messages.plugins_pb2 import ReloadPluginsRequest, ReloadPluginsResponse
+from canvas_generated.messages.plugins_pb2 import (
+    ReloadPluginRequest,
+    ReloadPluginResponse,
+    ReloadPluginsRequest,
+    ReloadPluginsResponse,
+    UnloadPluginRequest,
+    UnloadPluginResponse,
+)
 from canvas_generated.services.plugin_runner_pb2_grpc import (
     PluginRunnerServicer,
     add_PluginRunnerServicer_to_server,
@@ -38,7 +45,13 @@ from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
 from logger import log
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.installation import install_plugins
+from plugin_runner.exceptions import PluginInstallationError, PluginUninstallationError
+from plugin_runner.installation import (
+    enabled_plugins,
+    install_plugin,
+    install_plugins,
+    uninstall_plugin,
+)
 from plugin_runner.sandbox import Sandbox, sandbox_from_module
 from settings import (
     CHANNEL_NAME,
@@ -305,13 +318,50 @@ class PluginRunner(PluginRunnerServicer):
         self, request: ReloadPluginsRequest, context: Any
     ) -> Iterable[ReloadPluginsResponse]:
         """This is invoked when we need to reload plugins."""
-        log.info("Reloading plugins...")
+        log.info("Reloading all plugins...")
+
+        message = {"action": "reload"}
+
         try:
-            publish_message(message={"action": "reload"})
+            publish_message(message=message)
         except ImportError:
             yield ReloadPluginsResponse(success=False)
         else:
             yield ReloadPluginsResponse(success=True)
+
+    def ReloadPlugin(
+        self, request: ReloadPluginRequest, context: Any
+    ) -> Iterable[ReloadPluginResponse]:
+        """This is invoked when we need to reload a specific plugin."""
+        log.info(f'Reloading plugin "{request.plugin}"...')
+
+        message = {
+            "action": "reload",
+            "plugin": request.plugin,
+        }
+        try:
+            publish_message(message=message)
+        except ImportError:
+            yield ReloadPluginResponse(success=False)
+        else:
+            yield ReloadPluginResponse(success=True)
+
+    def UnloadPlugin(
+        self, request: UnloadPluginRequest, context: Any
+    ) -> Iterable[UnloadPluginResponse]:
+        """This is invoked when we need to reload a specific plugin."""
+        log.info(f'Unloading plugin "{request.plugin}"...')
+
+        message = {
+            "action": "unload",
+            "plugin": request.plugin,
+        }
+        try:
+            publish_message(message=message)
+        except ImportError:
+            yield UnloadPluginResponse(success=False)
+        else:
+            yield UnloadPluginResponse(success=True)
 
 
 STOP_SYNCHRONIZER = threading.Event()
@@ -346,20 +396,40 @@ def synchronize_plugins(run_once: bool = False) -> None:
         if "action" not in data:
             continue
 
-        if data["action"] == "reload":
-            log.info("synchronize_plugins: installing/reloading plugins for action=reload")
+        plugin_name = data.get("plugin", None)
+        try:
+            if data["action"] == "reload":
+                if plugin_name:
+                    plugin = enabled_plugins([plugin_name]).get(plugin_name, None)
 
-            try:
-                install_plugins()
-            except Exception as e:
-                log.error(f"synchronize_plugins: install_plugins failed: {e}")
-                sentry_sdk.capture_exception(e)
+                    if plugin:
+                        log.info(
+                            f'synchronize_plugins: installing/reloading plugin "{plugin_name}" for action=reload'
+                        )
+                        install_plugin(plugin_name, attributes=plugin)
+                        plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
+                        load_plugin(plugin_dir.resolve())
+                else:
+                    log.info("synchronize_plugins: installing/reloading plugins for action=reload")
+                    install_plugins()
+                    load_plugins()
+            elif data["action"] == "unload" and plugin_name:
+                log.info(f'synchronize_plugins: uninstalling plugin "{plugin_name}"')
+                unload_plugin(plugin_name)
+                uninstall_plugin(plugin_name)
+        except Exception as e:
+            if isinstance(e, PluginInstallationError):
+                message = "install_plugins failed"
+            elif isinstance(e, PluginUninstallationError):
+                message = "uninstall_plugin failed"
+            else:
+                message = "load_plugins failed"
 
-            try:
-                load_plugins()
-            except Exception as e:
-                log.error(f"synchronize_plugins: load_plugins failed: {e}")
-                sentry_sdk.capture_exception(e)
+            if plugin_name:
+                message += f' for plugin "{plugin_name}"'
+
+            log.error(f"synchronize_plugins: {message}: {e}")
+            sentry_sdk.capture_exception(e)
 
         if run_once:
             break
@@ -523,7 +593,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
-                log.info(f"Reloading plugin '{name_and_class}'")
+                log.info(f"Reloading handler '{name_and_class}'")
 
                 LOADED_PLUGINS[name_and_class]["active"] = True
 
@@ -531,7 +601,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
             else:
-                log.info(f"Loading plugin '{name_and_class}'")
+                log.info(f'Loading handler "{name_and_class}"')
 
                 LOADED_PLUGINS[name_and_class] = {
                     "active": True,
@@ -551,6 +621,23 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             any_failed = True
 
     return not any_failed
+
+
+def unload_plugin(name: str) -> None:
+    """Unload a plugin by its name."""
+    handlers_removed = False
+
+    for handler_name in LOADED_PLUGINS.copy():
+        if handler_name.startswith(f"{name}:"):
+            log.info(f'Unloading handler "{handler_name}"')
+            del LOADED_PLUGINS[handler_name]
+            handlers_removed = True
+
+    if handlers_removed:
+        # Refresh the event type map to remove any handlers for the unloaded plugin
+        refresh_event_type_map()
+    else:
+        log.warning(f"No handlers found for plugin '{name}' to unload.")
 
 
 def refresh_event_type_map() -> None:
@@ -605,6 +692,13 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
         if not plugin["active"]:
             del LOADED_PLUGINS[name]
 
+    refresh_event_type_map()
+
+
+@measured
+def load_plugin(path: pathlib.Path) -> None:
+    """Load a plugin from the specified path."""
+    load_or_reload_plugin(path)
     refresh_event_type_map()
 
 
