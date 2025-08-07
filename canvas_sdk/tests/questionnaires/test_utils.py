@@ -59,7 +59,8 @@ def test_from_yaml_forbidden_questionnaire(
 
 def test_from_yaml_non_plugin_caller() -> None:
     """Test that the from_yaml function returns None when called outside a plugin."""
-    assert questionnaire_from_yaml("questionnaires/example_questionnaire.yml") is None
+    with pytest.raises(RuntimeError):
+        questionnaire_from_yaml("questionnaires/example_questionnaire.yml")
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_load_questionnaire"], indirect=True)
