@@ -47,6 +47,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "dob": arrow.get(imaging_order.patient.birth_date).format("YYYY-MM-DD"),
             "status": imaging_order.order_status,
             "order": imaging_order.imaging,
+            "ordered_date": imaging_order.date_time_ordered.isoformat() if imaging_order.date_time_ordered else None,
             "created_date": imaging_order.created.isoformat() if imaging_order.created else None,
             "priority": imaging_order.priority,
             "sent_to": imaging_order.imaging_center.full_name_and_specialty if imaging_order.imaging_center else None,
@@ -71,6 +72,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "status": lab_order.order_status,
             "order": ", ".join(lab_tests),
             "created_date": lab_order.created.isoformat() if lab_order.created else None,
+            "ordered_date": lab_order.date_ordered.isoformat() if lab_order.date_ordered else None,
             "sent_to": lab_order.ontology_lab_partner,
             "permalink": self._get_permalink_for_command(lab_order, "labOrder"),
             "ordering_provider": {
@@ -101,6 +103,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "priority": referral_order.priority,
             "sent_to": referral_order.service_provider.full_name_and_specialty if referral_order.service_provider else None,
             "permalink": self._get_permalink_for_command(referral_order, "referral"),
+            "ordered_date": referral_order.date_referred.isoformat() if referral_order.date_referred else None,
             "ordering_provider": {
                 "preferred_name": referral_order.note.provider.credentialed_name,
                 "id": str(referral_order.note.provider.id),

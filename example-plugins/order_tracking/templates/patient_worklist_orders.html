@@ -466,13 +466,12 @@
             // Add imaging orders if they exist
             if (data.imaging_orders) {
                 orders.push(...data.imaging_orders.map(order => ({
-                  ...order,
                   type: 'Imaging',
                   orderName: order.order || 'Imaging Order',
                   orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                   sentTo: order.sent_to || 'Not specified',
-                  orderedDate: formatDate(order.created_date),
-                  priority: order.urgent || 'routine',
+                  orderedDate: formatDate(order.date_ordered),
+                  priority: order.priority || 'routine',
                   status: order.status,
                   permalink: order.permalink
                 })));
@@ -481,14 +480,13 @@
             // Add lab orders if they exist
             if (data.lab_orders) {
                 orders.push(...data.lab_orders.map(order => ({
-                    ...order,
                     type: 'Lab',
                     orderName: order.order || 'Lab Order',
                     patientId: order.patient_id,
                     orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                     sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.created_date),
-                    priority: order.urgent ? 'urgent' : 'routine',
+                    orderedDate: formatDate(order.date_ordered),
+                    priority: order.priority || 'routine',
                     status: order.status,
                     permalink: order.permalink
                 })));
@@ -497,18 +495,19 @@
             // Add referral orders if they exist
             if (data.referrals) {
                 orders.push(...data.referrals.map(order => ({
-                    ...order,
                     type: 'Referral',
                     orderName: order.order || 'Referral',
                     patientId: order.patient_id,
                     orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                     sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.created_date),
-                    priority: order.urgent || 'routine',
+                    orderedDate: formatDate(order.date_ordered),
+                    priority: order.priority || 'routine',
                     status: order.status,
                     permalink: order.permalink
                 })));
             }
+
+            console.log("########### ORDERS: ", orders)
 
             return orders;
         }
@@ -536,8 +535,8 @@
                 return;
             }
 
-            const urgentOrders = allOrders.filter(order => order.priority === 'urgent');
-            const routineOrders = allOrders.filter(order => order.priority === 'routine');
+            const urgentOrders = allOrders.filter(order => order.priority.toLowerCase() === 'urgent');
+            const routineOrders = allOrders.filter(order => order.priority.toLowerCase() === 'routine');
 
             let html = '';
 
