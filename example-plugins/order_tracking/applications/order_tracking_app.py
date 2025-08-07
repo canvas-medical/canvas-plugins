@@ -504,10 +504,15 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         if not task_id:
             task_id = uuid.uuid4()
             linked_task_type = None
+            title = ""
             if order_type.lower() == "imaging":
                 linked_task_type = AddTask.LinkableObjectType.IMAGING
+                order = ImagingOrder.objects.get(id=order_id)
+                title = f"Complete patient's imaging order to {order.imaging}" if order.imaging else "Complete patient's imaging order"
             elif order_type.lower() == "referral":
                 linked_task_type = AddTask.LinkableObjectType.REFERRAL
+                order = Referral.objects.get(id=order_id)
+                title = f"Refer patient to {order.service_provider.full_name_and_specialty}" if order.service_provider else "Complete patient referral"
 
             if not linked_task_type:
                 return [JSONResponse({"error": f"Invalid order type {order_type}"}, status_code=HTTPStatus.BAD_REQUEST)]
@@ -515,7 +520,8 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             effects.append(
                 AddTask(
                     id=task_id,
-                    title="New Task",
+                    author_id=self.request.headers["canvas-logged-in-user-id"],
+                    title=title,
                     patient_id=patient_id,
                     linked_object_id=order_id,
                     linked_object_type=linked_task_type,
@@ -523,7 +529,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             )
 
         effects.extend([
-            AddTaskComment(task_id=task_id, body=comment).apply(),
+            AddTaskComment(task_id=task_id, body=comment, author_id=self.request.headers["canvas-logged-in-user-id"]).apply(),
             JSONResponse({}, status_code=HTTPStatus.OK)])
 
         return effects
