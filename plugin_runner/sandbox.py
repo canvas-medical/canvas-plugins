@@ -197,6 +197,8 @@ THIRD_PARTY_MODULES = {
         "BigIntegerField",
         "Case",
         "CharField",
+        "Count",
+        "F",
         "IntegerField",
         "Model",  # remove when hyperscribe no longer needs it
         "Q",

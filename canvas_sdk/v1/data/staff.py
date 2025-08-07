@@ -1,5 +1,8 @@
+from functools import cached_property
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
 from canvas_sdk.v1.data.base import IdentifiableModel, Model
@@ -82,6 +85,47 @@ class Staff(Model):
         photo = self.photos.first()
         return photo.url if photo else "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
 
+    @cached_property
+    def full_name(self) -> str:
+        """Return Staff's first + last name."""
+        return f"{self.first_name} {self.last_name}"
+
+    @cached_property
+    def top_clinical_role(self) -> "StaffRole | None":
+        """Returns the topmost clinical role to assist in determining privilege levels.
+
+        Returns:
+            StaffRole | None: the topmost clinical role of the staff member.
+        """
+        roles = [
+            role
+            for role in self.roles.all()
+            if role.domain in StaffRole.RoleDomain.clinical_domains()
+        ]
+
+        if not roles:
+            return None
+
+        return roles[0]
+
+    @cached_property
+    def top_role_abbreviation(self) -> str | None:
+        """Returns the abbreviation string for the topmost role that the Staff object has.
+
+        Returns:
+            Optional[str]: The abbreviation for the topmost role, if available.
+        """
+        return self.top_clinical_role.public_abbreviation if self.top_clinical_role else None
+
+    @cached_property
+    def credentialed_name(self) -> str:
+        """Returns the full name of the staff member, suffixed with their topmost credential.
+
+        Returns:
+            str: The credentialed full name of the staff member.
+        """
+        return " ".join(filter(bool, [self.full_name, self.top_role_abbreviation or ""]))
+
 
 class StaffContactPoint(IdentifiableModel):
     """StaffContactPoint."""
@@ -136,4 +180,35 @@ class StaffPhoto(Model):
     title = models.CharField(max_length=255, blank=True, default="")
 
 
-__exports__ = ("Staff", "StaffContactPoint", "StaffAddress", "StaffPhoto")
+class StaffRole(Model):
+    """StaffRole."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_staffrole_001"
+
+    class RoleDomain(TextChoices):
+        CLINICAL = "CLI", "Clinical"
+        ADMINISTRATIVE = "ADM", "Administrative"
+        HYBRID = "HYB", "Hybrid"
+
+        @staticmethod
+        def clinical_domains() -> list["StaffRole.RoleDomain"]:
+            """Return a list of clinical role domains."""
+            return [StaffRole.RoleDomain.CLINICAL, StaffRole.RoleDomain.HYBRID]
+
+    class RoleType(TextChoices):
+        NON_LICENSED = "NON-LICENSED", "Non-Licensed"
+        LICENSED = "LICENSED", "Licensed"
+        PROVIDER = "PROVIDER", "Provider"
+
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="roles")
+    internal_code = models.CharField(max_length=10)
+    public_abbreviation = models.CharField(max_length=10, default="", blank=True)
+    domain = models.CharField(max_length=3, choices=RoleDomain.choices, db_index=True)
+    name = models.CharField(max_length=50)
+    domain_privilege_level = models.IntegerField(default=0)
+    permissions = models.JSONField(default=dict, blank=True, null=True)
+    role_type = models.CharField(max_length=50, choices=RoleType.choices, blank=True)
+
+
+__exports__ = ("Staff", "StaffContactPoint", "StaffAddress", "StaffPhoto", "StaffRole")
