@@ -1,6 +1,11 @@
 from django.db import models
+from typing import TYPE_CHECKING
 
 from canvas_sdk.v1.data.base import IdentifiableModel
+
+if TYPE_CHECKING:
+    from canvas_sdk.v1.data.command import Command
+    from canvas_sdk.v1.data.reason_for_visit import ReasonForVisitSettingCoding
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -53,6 +58,85 @@ class Appointment(IdentifiableModel):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
+
+    @property
+    def reason_for_visit(self) -> "ReasonForVisitSettingCoding | None":
+        """
+        Get the primary reason for visit coding for this appointment.
+        
+        Returns the first reason for visit coding found in the appointment's note commands,
+        or None if no reason for visit is found.
+        
+        Returns:
+            ReasonForVisitSettingCoding instance or None
+        """
+        reasons = self.get_reasons_for_visit()
+        return reasons[0] if reasons else None
+
+    def get_reasons_for_visit(self) -> list["ReasonForVisitSettingCoding"]:
+        """
+        Get all reason for visit codings for this appointment.
+        
+        Looks through the appointment's associated note commands to find all
+        reason for visit commands and returns the associated ReasonForVisitSettingCoding objects.
+        
+        Returns:
+            List of ReasonForVisitSettingCoding instances
+        """
+        if not self.note_id:
+            return []
+        
+        from canvas_sdk.v1.data.command import Command
+        from canvas_sdk.v1.data.reason_for_visit import ReasonForVisitSettingCoding
+        
+        # Get all reason for visit commands for this appointment's note
+        rfv_commands = Command.objects.filter(
+            note_id=self.note_id,
+            schema_key="reasonForVisit"
+        ).exclude(entered_in_error__isnull=False)
+        
+        reasons = []
+        for command in rfv_commands:
+            coding_data = command.data.get("coding")
+            if coding_data:
+                try:
+                    # Handle both UUID strings and coding objects
+                    if isinstance(coding_data, str):
+                        # Direct reference by ID
+                        reason_coding = ReasonForVisitSettingCoding.objects.get(id=coding_data)
+                        reasons.append(reason_coding)
+                    elif isinstance(coding_data, dict):
+                        # Coding object with code and system
+                        reason_coding = ReasonForVisitSettingCoding.objects.get(
+                            code=coding_data.get("code"),
+                            system=coding_data.get("system")
+                        )
+                        reasons.append(reason_coding)
+                except ReasonForVisitSettingCoding.DoesNotExist:
+                    # Skip invalid references
+                    continue
+        
+        return reasons
+
+    def get_reason_for_visit_commands(self) -> list["Command"]:
+        """
+        Get all reason for visit commands for this appointment.
+        
+        Returns the raw Command objects that contain reason for visit data,
+        allowing access to additional fields like comment, structured flag, etc.
+        
+        Returns:
+            List of Command instances with schema_key="reasonForVisit"
+        """
+        if not self.note_id:
+            return []
+        
+        from canvas_sdk.v1.data.command import Command
+        
+        return list(Command.objects.filter(
+            note_id=self.note_id,
+            schema_key="reasonForVisit"
+        ).exclude(entered_in_error__isnull=False))
 
 
 class AppointmentExternalIdentifier(IdentifiableModel):
