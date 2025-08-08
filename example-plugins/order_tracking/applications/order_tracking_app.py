@@ -21,6 +21,9 @@ from logger import log
 from canvas_sdk.caching.plugins import get_cache
 
 
+ROUTINE = "routine"
+URGENT = "urgent"
+
 
 class OrderTrackingApplication(Application):
     """An embeddable application that can be registered to Canvas."""
@@ -49,7 +52,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "order": imaging_order.imaging,
             "ordered_date": imaging_order.date_time_ordered.isoformat() if imaging_order.date_time_ordered else None,
             "created_date": imaging_order.created.isoformat() if imaging_order.created else None,
-            "priority": imaging_order.priority,
+            "priority": imaging_order.priority or ROUTINE,
             "sent_to": imaging_order.imaging_center.full_name_and_specialty if imaging_order.imaging_center else None,
             "permalink": self._get_permalink_for_command(imaging_order, "imagingOrder"),
             "ordering_provider": {
@@ -75,6 +78,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "ordered_date": lab_order.date_ordered.isoformat() if lab_order.date_ordered else None,
             "sent_to": lab_order.ontology_lab_partner,
             "permalink": self._get_permalink_for_command(lab_order, "labOrder"),
+            "priority": ROUTINE,
             "ordering_provider": {
                 "preferred_name": lab_order.ordering_provider.credentialed_name,
                 "id": str(lab_order.ordering_provider.id),
@@ -100,7 +104,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "order": " ".join(order),
             "status": referral_order.order_status,
             "created_date": referral_order.created.isoformat() if referral_order.created else None,
-            "priority": referral_order.priority,
+            "priority": referral_order.priority or ROUTINE,
             "sent_to": referral_order.service_provider.full_name_and_specialty if referral_order.service_provider else None,
             "permalink": self._get_permalink_for_command(referral_order, "referral"),
             "ordered_date": referral_order.date_referred.isoformat() if referral_order.date_referred else None,
@@ -329,6 +333,12 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         referral_count = refer_queryset.count() if include_referrals else 0
         total_count = imaging_count + lab_count + referral_count
 
+        # Count urgent orders. Lab orders don't have priority so always routine
+        imaging_urgent_count = imaging_orders_queryset.filter(priority="Urgent").count() if include_imaging else 0
+        referral_urgent_count = refer_queryset.filter(priority="Urgent").count() if include_referrals else 0
+        urgent_order_count = imaging_urgent_count + referral_urgent_count
+        routine_order_count = total_count - urgent_order_count
+
         if total_count == 0:
             return [JSONResponse({
                 "logged_in_staff_id": logged_in_staff,
@@ -412,6 +422,10 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "imaging_orders": imaging_orders_data,
             "lab_orders": lab_orders_data,
             "referrals": referral_orders_data,
+            "count": {
+                "urgent": urgent_order_count,
+                "routine": routine_order_count
+            },
             "pagination": {
                 "current_page": page,
                 "page_size": page_size,
