@@ -798,7 +798,7 @@
           <input type="text" id="sent-to-filter" class="filter-input" placeholder="Search by sent to...">
         </div>
         <div class="filter-group">
-          <label class="filter-label">Order Date Range</label>
+          <label class="filter-label">Order Date</label>
           <div class="date-range-container">
             <input type="date" id="date-from-filter" class="filter-input" placeholder="From">
             <span class="date-range-separator">to</span>
@@ -850,17 +850,19 @@
     </div>
   </div>
 <script>
-  let allProviders = [];
+  const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
+
+let allProviders = [];
 let allLocations = [];
 let allOrders = [];
 let loggedInStaffId = null;
 let providerIdToNameMap = new Map();
 let currentPage = 1;
 let paginationData = null;
+let ordersCount = null;
 let searchTimeout = null;
 let savedFilters = [];
 let activeFilterId = null;
-const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
 // Load saved filters from backend on startup
 async function loadSavedFilters() {
@@ -1466,6 +1468,10 @@ function initializeDateRangeFilter() {
     const dateFromInput = document.getElementById('date-from-filter');
     const dateToInput = document.getElementById('date-to-filter');
 
+    const today = new Date();
+    const defaultDate = new Date(new Date().setDate(today.getDate() - 30));
+    dateFromInput.defaultValue = defaultDate.toISOString().split('T')[0];
+
     dateFromInput.addEventListener('change', (e) => {
         handleFilterChange();
     });
@@ -1658,6 +1664,7 @@ async function fetchOrders(providerIds = [], orderTypes = [], patientName = null
         const data = await response.json();
 
         paginationData = data.pagination;
+        ordersCount = data.count
 
         // Combine imaging and lab orders
         const imagingOrders = (data.imaging_orders || []).map(order => ({
@@ -1670,7 +1677,7 @@ async function fetchOrders(providerIds = [], orderTypes = [], patientName = null
             orderingProviderId: order.ordering_provider?.id,
             sentTo: order.sent_to || 'Not specified',
             orderedDate: formatDate(order.created_date),
-            priority: order.priority || 'Routine',
+            priority: order.priority,
             permalink: order.permalink
         }));
 
@@ -1683,7 +1690,8 @@ async function fetchOrders(providerIds = [], orderTypes = [], patientName = null
             orderingProviderId: order.ordering_provider?.id,
             sentTo: order.sent_to || 'Not specified',
             orderedDate: formatDate(order.created_date),
-            permalink: order.permalink
+            permalink: order.permalink,
+            priority: order.priority
         }));
 
         const referralOrders = (data.referrals || []).map(order => ({
@@ -1696,7 +1704,7 @@ async function fetchOrders(providerIds = [], orderTypes = [], patientName = null
             orderingProviderId: order.ordering_provider?.id,
             sentTo: order.sent_to || 'Not specified',
             orderedDate: formatDate(order.created_date),
-            priority: order.priority || 'Routine',
+            priority: order.priority,
             permalink: order.permalink
         }));
 
@@ -1753,14 +1761,14 @@ function populateOrdersTable() {
     `;
 
     if (urgentOrders.length > 0) {
-        html += `<div class="section-header section-header-urgent">⚠ Urgent Orders (${urgentOrders.length})</div>`;
+        html += `<div class="section-header section-header-urgent">⚠ Urgent Orders (${ordersCount.urgent})</div>`;
         urgentOrders.forEach(order => {
             html += createOrderAccordionItem(order, true);
         });
     }
 
     if (routineOrders.length > 0) {
-        html += `<div class="section-header text-gray-700">⏱ Routine Orders (${routineOrders.length})</div>`;
+        html += `<div class="section-header text-gray-700">⏱ Routine Orders (${ordersCount.routine})</div>`;
         routineOrders.forEach(order => {
             html += createOrderAccordionItem(order, false);
         });
@@ -1776,9 +1784,9 @@ function populateOrdersTable() {
     if (paginationData) {
         const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
         const end = Math.min(start + allOrders.length - 1, paginationData.total_count);
-        infoBar.textContent = `Showing ${start}-${end} of ${paginationData.total_count} orders (${urgentOrders.length} urgent, ${routineOrders.length} routine)`;
+        infoBar.textContent = `Showing ${start}-${end} of ${paginationData.total_count} orders (${ordersCount.urgent} urgent, ${ordersCount.routine} routine)`;
     } else {
-        infoBar.textContent = `Showing ${allOrders.length} orders (${urgentOrders.length} urgent, ${routineOrders.length} routine)`;
+        infoBar.textContent = `Showing ${allOrders.length} orders (${ordersCount.urgent} urgent, ${ordersCount.routine} routine)`;
     }
 }
 
