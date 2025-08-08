@@ -192,6 +192,42 @@
             color: #999;
         }
 
+        /* Pagination styles */
+        .pagination-container {
+            background-color: #f8f9fa;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 0 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #f0f0f0;
+            border-color: #a0a0a0;
+        }
+
+        .pagination-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #666;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .worklist-table {
@@ -201,6 +237,20 @@
             .worklist-table th,
             .worklist-table td {
                 padding: 8px 12px;
+            }
+
+            .pagination-container {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .pagination-info {
+                order: 2;
+            }
+
+            .pagination-controls {
+                order: 1;
             }
         }
     </style>
@@ -252,6 +302,15 @@
             <tbody id="worklistBody">
             </tbody>
         </table>
+        
+        <div class="pagination-container" id="paginationContainer" style="padding: 16px 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls">
+                <button id="prevButton" class="pagination-btn" style="padding: 8px 12px; margin: 0 4px; border: 1px solid #d0d0d0; background: white; border-radius: 4px; cursor: pointer;">Previous</button>
+                <span id="pageNumbers" style="margin: 0 16px;"></span>
+                <button id="nextButton" class="pagination-btn" style="padding: 8px 12px; margin: 0 4px; border: 1px solid #d0d0d0; background: white; border-radius: 4px; cursor: pointer;">Next</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -268,12 +327,20 @@
             billable_only: false
         };
         let sortConfig = { key: null, direction: 'asc' };
+        let paginationData = {
+            current_page: 1,
+            total_pages: 1,
+            total_count: 0,
+            page_size: 25,
+            has_previous: false,
+            has_next: false
+        };
 
         // API helper functions
-        async function fetchEncounters(filters = {}) {
+        async function fetchEncounters(filters = {}, page = 1) {
             try {
                 const params = new URLSearchParams();
-                Object.entries({...currentFilters, ...filters}).forEach(([key, value]) => {
+                Object.entries({...currentFilters, ...filters, page, page_size: 25}).forEach(([key, value]) => {
                     if (value !== null && value !== undefined && value !== '') {
                         params.append(key, value);
                     }
@@ -284,6 +351,9 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+                
+                // Update pagination data
+                paginationData = data.pagination;
                 
                 // Transform API data to match expected format
                 encounterData = data.encounters.map(encounter => ({
@@ -310,7 +380,7 @@
             } catch (error) {
                 console.error('Error fetching encounters:', error);
                 // Return empty data on error
-                return { encounters: [], total_count: 0 };
+                return { encounters: [], pagination: { current_page: 1, total_pages: 1, total_count: 0, page_size: 25, has_previous: false, has_next: false } };
             }
         }
 
@@ -400,7 +470,9 @@
 
         function updateEncounterCount() {
             const countElement = document.getElementById('encounterCount');
-            countElement.textContent = `${encounterData.length} encounters`;
+            const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
+            const end = Math.min(start + encounterData.length - 1, paginationData.total_count);
+            countElement.textContent = `${start}-${end} of ${paginationData.total_count} encounters`;
         }
 
         // Sorting functionality
@@ -504,16 +576,83 @@
                 // Show loading state
                 document.getElementById('encounterCount').textContent = 'Loading encounters...';
                 
-                // Fetch filtered data
-                await fetchEncounters(currentFilters);
+                // Reset to page 1 when applying filters
+                await fetchEncounters(currentFilters, 1);
                 
                 // Re-render the table with filtered data
                 renderTable();
                 updateEncounterCount();
+                updatePaginationControls();
             } catch (error) {
                 console.error('Error applying filters:', error);
                 document.getElementById('encounterCount').textContent = 'Error loading encounters';
             }
+        }
+
+        // Pagination functions
+        function updatePaginationControls() {
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            const pageNumbers = document.getElementById('pageNumbers');
+            const paginationInfo = document.getElementById('paginationInfo');
+
+            // Update button states
+            prevButton.disabled = !paginationData.has_previous;
+            nextButton.disabled = !paginationData.has_next;
+            
+            // Update button styles based on state
+            prevButton.style.opacity = paginationData.has_previous ? '1' : '0.5';
+            nextButton.style.opacity = paginationData.has_next ? '1' : '0.5';
+            prevButton.style.cursor = paginationData.has_previous ? 'pointer' : 'not-allowed';
+            nextButton.style.cursor = paginationData.has_next ? 'pointer' : 'not-allowed';
+
+            // Update page numbers display
+            pageNumbers.textContent = `Page ${paginationData.current_page} of ${paginationData.total_pages}`;
+
+            // Update pagination info
+            if (paginationData.total_count === 0) {
+                paginationInfo.textContent = 'No encounters found';
+            } else {
+                const start = (paginationData.current_page - 1) * paginationData.page_size + 1;
+                const end = Math.min(start + encounterData.length - 1, paginationData.total_count);
+                paginationInfo.textContent = `Showing ${start}-${end} of ${paginationData.total_count} encounters`;
+            }
+        }
+
+        async function goToPage(page) {
+            if (page < 1 || page > paginationData.total_pages) {
+                return;
+            }
+
+            try {
+                // Show loading state
+                document.getElementById('encounterCount').textContent = 'Loading encounters...';
+                
+                await fetchEncounters(currentFilters, page);
+                renderTable();
+                updateEncounterCount();
+                updatePaginationControls();
+            } catch (error) {
+                console.error('Error loading page:', error);
+                document.getElementById('encounterCount').textContent = 'Error loading encounters';
+            }
+        }
+
+        function setupPaginationEventListeners() {
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+
+            prevButton.addEventListener('click', () => {
+                if (paginationData.has_previous) {
+                    goToPage(paginationData.current_page - 1);
+                }
+            });
+
+            nextButton.addEventListener('click', () => {
+                if (paginationData.has_next) {
+                    goToPage(paginationData.current_page + 1);
+                }
+            });
         }
 
         // Initialize the worklist
@@ -536,15 +675,20 @@
                 // Setup sorting listeners
                 setupSortingListeners();
 
+                // Setup pagination listeners
+                setupPaginationEventListeners();
+
                 // Render the initial table
                 renderTable();
                 updateEncounterCount();
+                updatePaginationControls();
                 
                 // Setup refresh functionality
                 window.refreshEncounters = async () => {
-                    await fetchEncounters(currentFilters);
+                    await fetchEncounters(currentFilters, paginationData.current_page);
                     renderTable();
                     updateEncounterCount();
+                    updatePaginationControls();
                 };
 
             } catch (error) {

@@ -10,9 +10,8 @@ from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder
-from canvas_sdk.v1.data.note import NoteStates
+from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 from canvas_sdk.v1.data.task import TaskStatus
-from logger import log
 
 
 class MyApplication(Application):
@@ -31,12 +30,19 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.get("/encounters")
     def get_encounters(self) -> list[Response | Effect]:
-        """Get list of open encounters."""
+        """Get list of open encounters with pagination."""
         provider_id = self.request.query_params.get("provider_id")
         location_id = self.request.query_params.get("location_id")
         billable_only = self.request.query_params.get("billable_only") == "true"
 
+        # Pagination parameters
+        page = int(self.request.query_params.get("page", 1))
+        page_size = int(self.request.query_params.get("page_size", 25))
+
         note_queryset = Note.objects.filter(current_state__state__in=(NoteStates.NEW, NoteStates.UNLOCKED))
+
+        note_queryset = note_queryset.exclude(note_type_version__category__in=(NoteTypeCategories.MESSAGE,
+                                                               NoteTypeCategories.LETTER,))
 
         if provider_id:
             note_queryset = note_queryset.filter(provider__id=provider_id)
@@ -56,9 +62,26 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         if billable_only:
             note_queryset = note_queryset.filter(is_billable=True)
 
+        # Order by creation date for consistent pagination
+        note_queryset = note_queryset.order_by('-created')
+
+        # Manual pagination - get total count first
+        total_count = note_queryset.count()
+        total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+
+        # Validate page number
+        if page < 1:
+            page = 1
+        elif page > total_pages and total_pages > 0:
+            page = total_pages
+
+        # Calculate offset and apply slicing
+        offset = (page - 1) * page_size
+        paginated_notes = note_queryset[offset:offset + page_size]
+
         # Convert queryset to encounter data
         encounters = []
-        for note in note_queryset:
+        for note in paginated_notes:
             claim_queue = note.get_claim().current_queue.name if note.get_claim() else None
 
             delegated_commands = 0
@@ -105,7 +128,14 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
 
         return [JSONResponse({
             "encounters": encounters,
-            "total_count": len(encounters)
+            "pagination": {
+                "current_page": page,
+                "total_pages": total_pages,
+                "total_count": total_count,
+                "page_size": page_size,
+                "has_previous": page > 1,
+                "has_next": page < total_pages,
+            }
         }, status_code=HTTPStatus.OK)]
 
     @api.get("/providers")
