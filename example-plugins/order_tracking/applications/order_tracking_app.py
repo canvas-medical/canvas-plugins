@@ -37,7 +37,27 @@ class OrderTrackingApplication(Application):
 
 
 class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
-    """Order Tracking API."""
+
+    @api.get("/main.css")
+    def get_main_css(self) -> list[Response | Effect]:
+        return [
+            Response(
+                render_to_string("static/main.css").encode(),
+                status_code=HTTPStatus.OK,
+                content_type="text/css",
+            )
+        ]
+
+    @api.get("/main.js")
+    def get_main_js(self) -> list[Response | Effect]:
+        return [
+            Response(
+                render_to_string("static/main.js").encode(),
+                status_code=HTTPStatus.OK,
+                content_type="text/javascript",
+            )
+        ]
+
     def _get_permalink_for_command(self, order: LabOrder | ImagingOrder | Referral, commandType: str) -> str:
         return f"noteId={order.note.dbid}&commandId={order.dbid}&commandType={commandType}"
 
@@ -179,6 +199,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
         status = self.request.query_params.get("status")
         order_types = self.request.query_params.get("types")
+        priority = self.request.query_params.get("priority", "all")
 
         if order_types:
             order_types = [order_type.lower() for order_type in order_types.split(",")]
@@ -316,6 +337,17 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             except ValueError:
                 pass
 
+        if priority == 'urgent':
+            # Filter for urgent orders only
+            imaging_orders_queryset = imaging_orders_queryset.filter(priority="Urgent")
+            refer_queryset = refer_queryset.filter(priority="Urgent")
+            # Lab orders don't have a priority, so exclude them for urgent
+            lab_orders_queryset = lab_orders_queryset.none()  # Empty queryset
+        elif priority == 'routine':
+            # Filter for routine orders
+            imaging_orders_queryset = imaging_orders_queryset.exclude(priority="Urgent")
+            refer_queryset = refer_queryset.exclude(priority="Urgent")
+            # Lab orders are always routine (keep as is)
 
         # Apply ordering for consistent results
         imaging_orders_queryset = imaging_orders_queryset.order_by('-created')
@@ -333,11 +365,17 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         referral_count = refer_queryset.count() if include_referrals else 0
         total_count = imaging_count + lab_count + referral_count
 
-        # Count urgent orders. Lab orders don't have priority so always routine
-        imaging_urgent_count = imaging_orders_queryset.filter(priority="Urgent").count() if include_imaging else 0
-        referral_urgent_count = refer_queryset.filter(priority="Urgent").count() if include_referrals else 0
-        urgent_order_count = imaging_urgent_count + referral_urgent_count
-        routine_order_count = total_count - urgent_order_count
+        if priority == 'urgent':
+            urgent_order_count = total_count
+            routine_order_count = 0
+        elif priority == 'routine':
+            urgent_order_count = 0
+            routine_order_count = total_count
+        else:
+            imaging_urgent_count = imaging_orders_queryset.filter(priority="Urgent").count() if include_imaging else 0
+            referral_urgent_count = refer_queryset.filter(priority="Urgent").count() if include_referrals else 0
+            urgent_order_count = imaging_urgent_count + referral_urgent_count
+            routine_order_count = total_count - urgent_order_count
 
         if total_count == 0:
             return [JSONResponse({
@@ -365,57 +403,76 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         lab_orders_data = []
         referral_orders_data = []
 
-        if order_types and "imaging" in order_types:
-            # Only imaging orders - use database slicing
-            imaging_slice = imaging_orders_queryset[start_index:end_index]
-            imaging_orders_data = [self._create_imaging_order_payload(io) for io in imaging_slice]
+        if priority in ['urgent', 'routine']:
+            if include_imaging:
+                imaging_slice = imaging_orders_queryset[start_index:min(end_index, start_index + page_size)]
+                imaging_orders_data = [self._create_imaging_order_payload(io) for io in imaging_slice]
+                page_size -= len(imaging_orders_data)
+                start_index = max(0, start_index - imaging_count)
+                end_index = start_index + page_size
 
-        if order_types and "lab" in order_types:
-            # Only lab orders - use database slicing
-            lab_slice = lab_orders_queryset[start_index:end_index]
-            lab_orders_data = [self._create_lab_order_payload(lo) for lo in lab_slice]
+            if include_lab and page_size > 0:
+                lab_slice = lab_orders_queryset[start_index:min(end_index, start_index + page_size)]
+                lab_orders_data = [self._create_lab_order_payload(lo) for lo in lab_slice]
+                page_size -= len(lab_orders_data)
+                start_index = max(0, start_index - lab_count)
+                end_index = start_index + page_size
 
-        if order_types and "referral" in order_types:
-            # Only referral orders - use database slicing
-            referral_slice = refer_queryset[start_index:end_index]
-            referral_orders_data = [self._create_referral_order_payload(ro) for ro in referral_slice]
+            if include_referrals and page_size > 0:
+                referral_slice = refer_queryset[start_index:min(end_index, start_index + page_size)]
+                referral_orders_data = [self._create_referral_order_payload(ro) for ro in referral_slice]
+        else:
+            if order_types and "imaging" in order_types:
+                # Only imaging orders - use database slicing
+                imaging_slice = imaging_orders_queryset[start_index:end_index]
+                imaging_orders_data = [self._create_imaging_order_payload(io) for io in imaging_slice]
 
-        if not order_types:
-            # Mixed orders - need to interleave results efficiently
-            # Fetch enough records from each to ensure we can fill the page
-            # This is a compromise for mixed sorting while avoiding loading all records
-            fetch_size = min(page_size * page, 100)  # Cap at 100 to avoid excessive queries
+            if order_types and "lab" in order_types:
+                # Only lab orders - use database slicing
+                lab_slice = lab_orders_queryset[start_index:end_index]
+                lab_orders_data = [self._create_lab_order_payload(lo) for lo in lab_slice]
 
-            imaging_slice = list(imaging_orders_queryset[:fetch_size])
-            lab_slice = list(lab_orders_queryset[:fetch_size])
-            referral_slice = list(refer_queryset[:fetch_size])
+            if order_types and "referral" in order_types:
+                # Only referral orders - use database slicing
+                referral_slice = refer_queryset[start_index:end_index]
+                referral_orders_data = [self._create_referral_order_payload(ro) for ro in referral_slice]
 
-            # Create combined list with sort keys
-            combined_orders = []
+            if not order_types:
+                # Mixed orders - need to interleave results efficiently
+                # Fetch enough records from each to ensure we can fill the page
+                # This is a compromise for mixed sorting while avoiding loading all records
+                fetch_size = min(page_size * page, 100)  # Cap at 100 to avoid excessive queries
 
-            for io in imaging_slice:
-                combined_orders.append(self._create_imaging_order_payload(io, include_type=True))
+                imaging_slice = list(imaging_orders_queryset[:fetch_size])
+                lab_slice = list(lab_orders_queryset[:fetch_size])
+                referral_slice = list(refer_queryset[:fetch_size])
 
-            for lo in lab_slice:
-                combined_orders.append(self._create_lab_order_payload(lo, include_type=True))
+                # Create combined list with sort keys
+                combined_orders = []
 
-            for ro in referral_slice:
-                combined_orders.append(self._create_referral_order_payload(ro, include_type=True))
+                for io in imaging_slice:
+                    combined_orders.append(self._create_imaging_order_payload(io, include_type=True))
 
-            # Sort and paginate the combined results
-            combined_orders.sort(key=lambda x: x.get('sort_key') or '', reverse=True)
-            paginated_orders = combined_orders[start_index:end_index]
+                for lo in lab_slice:
+                    combined_orders.append(self._create_lab_order_payload(lo, include_type=True))
 
-            # Separate back into imaging, lab, and referral orders
-            for order in paginated_orders:
-                order.pop('sort_key', None)  # Remove sort key
-                order_type = order.pop('type', None)
-                if order_type == 'imaging':
-                    imaging_orders_data.append(order)
-                elif order_type == 'lab':
-                    lab_orders_data.append(order)
-                elif order_type == 'referral':
-                    referral_orders_data.append(order)
+                for ro in referral_slice:
+                    combined_orders.append(self._create_referral_order_payload(ro, include_type=True))
+
+                # Sort and paginate the combined results
+                combined_orders.sort(key=lambda x: x.get('sort_key') or '', reverse=True)
+                paginated_orders = combined_orders[start_index:end_index]
+
+                # Separate back into imaging, lab, and referral orders
+                for order in paginated_orders:
+                    order.pop('sort_key', None)  # Remove sort key
+                    order_type = order.pop('type', None)
+                    if order_type == 'imaging':
+                        imaging_orders_data.append(order)
+                    elif order_type == 'lab':
+                        lab_orders_data.append(order)
+                    elif order_type == 'referral':
+                        referral_orders_data.append(order)
 
         return [JSONResponse({
             "logged_in_staff_id": logged_in_staff,
