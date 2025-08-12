@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.53.1 (2025-08-12)
+
+### Bug Fixes
+
+- Prevent an issue where the prescribe command effects send compound medication values where not
+  desired ([#908](https://github.com/canvas-medical/canvas-plugins/pull/908),
+  [`b65ece4`](https://github.com/canvas-medical/canvas-plugins/commit/b65ece4baa539516a74db1a749c14867cb12555a))
+
+
 ## v0.53.0 (2025-08-07)
 
 ### Features
