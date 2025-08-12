@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Refill Medication</title>
+  <style>
+    body {
+      background: transparent;
+      margin: 0 auto;
+      font-family: sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      margin: 0 auto;
+      padding-bottom: 32px;
+      box-shadow: 0 4px 24px #0002;
+      box-sizing: border-box;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 32px 32px 0 32px;
+    }
+    .modal-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 32px;
+    }
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #18181b;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: #888;
+      cursor: pointer;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      transition: background 0.2s;
+      line-height: 1;
+    }
+    .close-btn:hover {
+      background: #f3f4f6;
+    }
+    .modal-divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 24px 0 0 0;
+    }
+    .modal-desc {
+      color: #6b7280;
+      font-size: 1.08rem;
+      margin: 24px 0 16px 32px;
+    }
+    .medications-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0 32px;
+      overflow-y: scroll;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .medication {
+      background: #fff;
+      border-radius: 12px;
+      border: 1.5px solid #f1f1f3;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border 0.2s, box-shadow 0.2s;
+      margin: 8px 0;
+    }
+    .medication.selected {
+      border: 1.5px solid {{ background_color }};
+      box-shadow: 0 2px 8px {{ background_color }}22;
+      background: #f8fafc;
+    }
+    .medication-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-self: start;
+      flex-grow: 1;
+    }
+    .medication-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: {{ background_color }};
+      margin-bottom: 2px;
+    }
+    .medication.selected .medication-title {
+      color: {{ background_color }};
+    }
+    .medication:not(.selected) .medication-title {
+      color: #18181b;
+    }
+    .medication-description {
+      color: #a1a1aa;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+    .check {
+      font-size: 1.4rem;
+      color: #a1a1aa;
+      margin-left: 16px;
+      transition: color 0.2s;
+    }
+    .medication.selected .check {
+      color: {{ background_color }};
+    }
+    .modal-footer {
+      margin-top: 32px;
+    }
+    .next-btn {
+      width: 100%;
+      background: {{ background_color }};
+      color: #fff;
+      font-size: 1.13rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .next-btn:hover {
+      text-decoration: underline;
+    }
+    .next-btn:active {
+      background: {{ background_color }}cc;
+    }
+    .next-btn:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+    .next-btn:disabled:hover {
+      text-decoration: none;
+    }
+    .hidden {
+      display: none;
+    }
+    @media (max-width: 500px) {
+      .modal {
+        width: 98vw;
+        min-width: 0;
+        padding-bottom: 16px;
+      }
+      .modal-header, .modal-footer, .medications-list {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      .modal-desc {
+        margin-left: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Prescribed medications</span>
+      <!-- <button class="close-btn" aria-label="Close">&times;</button> -->
+    </div>
+    <div class="modal-content">
+    <hr class="modal-divider">
+    <div class="modal-desc">Select the prescriptions to refill:</div>
+      <div class="medications-list">
+        <form id="refill-form" method="post">  
+        {% if medications %}
+          {% for medication in medications %}
+          <div class="medication">
+            <div class="medication-info">
+              <span class="medication-title">{{ medication.coding.display }}</span>
+              <span class="medication-description">{{ medication.coding.sig }}</span>
+            </div>
+            <input type="hidden" name="medication" value="{{ medication.id }}" disabled>
+            
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="medication-title">No medications found</div>
+        {% endif %}
+        <div class="modal-footer">
+          <button type="submit" class="next-btn">Request Refill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    try {
+      const apiUrl = "{{ api_url }}";
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const medications = document.querySelectorAll('.medication');
+        const submitButton = document.querySelector('.next-btn');
+        const form = document.getElementById('refill-form');
+
+        if (!form || !submitButton) return;
+
+        if (!medications.length) {
+          submitButton.disabled = true;
+        }
+
+        if (medications.length > 0) {
+          medications.forEach(medication => {
+            medication.addEventListener('click', () => {
+              medication.classList.toggle('selected');
+
+              medication.querySelector('input[type="hidden"]').disabled = !medication.classList.contains('selected');
+            });
+          });
+        }
+
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+
+          const data = new FormData(form);
+          const selectedMedications = Array.from(data.values())
+
+          if (!selectedMedications.length) {
+            return;
+          }
+
+          submitButton.disabled = true;
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: selectedMedications.map(medication => `medication=${encodeURIComponent(medication)}`).join('&'),
+          }).then(response => {
+            if (response.ok) {
+              
+            } else {
+              
+            }
+          }).catch(error => {
+            
+          }).finally(() => {
+            submitButton.disabled = false;
+            medications.forEach(medication => {
+              medication.classList.remove('selected');
+              medication.querySelector('input[type="hidden"]').disabled = true;
+            });
+          });
+        });
+      });
+    } catch (error) {
+      window.postMessage({
+        type: 'error',
+        message: `An error occurred: ${error.message}`,
+        stack: error.stack,
+      }, '*');
+    }
+  </script>
+</body>
+</html>
