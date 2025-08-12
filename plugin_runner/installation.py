@@ -147,6 +147,8 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
 
         with open(download_path, "wb") as download_file:
             response = requests.request(method=method, url=f"https://{host}{path}", headers=headers)
+            response.raise_for_status()
+
             download_file.write(response.content)
 
         yield download_path
@@ -168,7 +170,8 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as e:
-        log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
+        log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}: {e}')
+
         sentry_sdk.capture_exception(e)
 
         raise PluginInstallationError() from e
