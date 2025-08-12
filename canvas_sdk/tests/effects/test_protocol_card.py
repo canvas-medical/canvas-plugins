@@ -176,7 +176,7 @@ def test_add_recommendations_from_commands(
     p.add_recommendation(
         title="yeehaw",
         button="click here",
-        command=cmd.Meta.key.lower(),
+        command=cmd.Meta.key,
         context=init_params,
     )
 
@@ -187,7 +187,7 @@ def test_add_recommendations_from_commands(
     assert rec1["context"] == cmd.values | {
         "effect_type": f"ORIGINATE_{cmd.constantized_key()}_COMMAND"
     }
-    assert rec1["command"]["type"] == cmd.Meta.key.lower()
+    assert rec1["command"]["type"] == cmd.Meta.key
 
     assert rec2["title"] == "hello"
     assert rec2["button"] == "click"
@@ -195,11 +195,11 @@ def test_add_recommendations_from_commands(
     assert rec2["context"] == cmd.values | {
         "effect_type": f"ORIGINATE_{cmd.constantized_key()}_COMMAND"
     }
-    assert rec2["command"]["type"] == cmd.Meta.key.lower()
+    assert rec2["command"]["type"] == cmd.Meta.key
 
     assert rec3["title"] == "yeehaw"
     assert rec3["button"] == "click here"
     assert rec3["href"] is None
-    assert rec3["command"]["type"] == cmd.Meta.key.lower()
+    assert rec3["command"]["type"] == cmd.Meta.key
     for k, v in init_params.items():
         assert rec3["context"][k] == v
