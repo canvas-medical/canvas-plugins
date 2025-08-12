@@ -249,9 +249,8 @@ def test_canvas_list_install_disable_enable_uninstall(
     mock_get_token.return_value = None
     mock_set_token.return_value = None
 
-    (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
-
     with chdir(integration_tests_plugins_dir):
+        (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
         result = cli_runner.invoke(app, command)
 
         assert result.exit_code == expected_exit_code
