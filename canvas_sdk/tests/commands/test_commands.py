@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import date
+from pathlib import Path
 from time import sleep
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -105,22 +106,23 @@ def command_cls(request: Any) -> type[_BaseCommand]:
 def install_plugin_commands(
     cli_runner: CliRunner,
     token: MaskedValue,
+    integration_tests_plugins_dir: Path,
 ) -> Generator[None, None, None]:
     """Write the protocol code, install the plugin, and clean up after the test."""
-    plugin_name = "commands"
+    plugin_path = integration_tests_plugins_dir / "commands"
     commands: list[CommandCode] = []
     for command_cls in COMMANDS:
         get_command_data = globals().get(command_cls.Meta.key)
         data = extract_return_statement(get_command_data) if get_command_data else "{}"
         commands.append(CommandCode(**{"data": data, "class": command_cls}))
 
-    write_protocol_code(cli_runner, plugin_name, commands)
-    install_plugin(plugin_name, token)
+    write_protocol_code(cli_runner, plugin_path, commands)
+    install_plugin(plugin_path, token)
     sleep(10)  # Wait for the plugin to be installed
 
     yield
 
-    clean_up_files_and_plugins(plugin_name, token)
+    clean_up_files_and_plugins(plugin_path, token)
 
 
 @pytest.fixture(scope="module")

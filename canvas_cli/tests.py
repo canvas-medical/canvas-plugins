@@ -1,6 +1,7 @@
 import os
 import shutil
 from collections.abc import Callable, Generator
+from contextlib import chdir
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -71,9 +72,14 @@ def create_or_update_config_auth_file_for_testing(plugin_name: str) -> Generator
 
 
 @pytest.fixture(autouse=True, scope="session")
-def write_plugin(cli_runner: CliRunner, plugin_name: str) -> Generator[Any, Any, Any]:
+def write_plugin(
+    cli_runner: CliRunner,
+    integration_tests_plugins_dir: Path,
+    plugin_name: str,
+) -> Generator[Any, Any, Any]:
     """Writes a plugin to the file system."""
-    cli_runner.invoke(app, "init", input=plugin_name)
+    with chdir(integration_tests_plugins_dir):
+        cli_runner.invoke(app, "init", input=plugin_name)
 
     protocol_code = """
 from canvas_sdk.events import EventType
@@ -88,14 +94,15 @@ class Protocol(BaseProtocol):
         log.info(self.NARRATIVE_STRING)
         return []
 """
+    plugin_dir = integration_tests_plugins_dir / plugin_name
 
-    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+    with open(plugin_dir / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
     yield
 
-    if Path(f"./{plugin_name}").exists():
-        shutil.rmtree(Path(f"./{plugin_name}"))
+    if plugin_dir.exists():
+        shutil.rmtree(plugin_dir)
 
 
 def list_empty_plugins(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
@@ -232,6 +239,7 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
 def test_canvas_list_install_disable_enable_uninstall(
     mock_get_token: MagicMock,
     mock_set_token: MagicMock,
+    integration_tests_plugins_dir: Path,
     plugin_name: str,
     create_or_update_config_auth_file_for_testing: None,
     step: Callable,
@@ -241,12 +249,12 @@ def test_canvas_list_install_disable_enable_uninstall(
     mock_get_token.return_value = None
     mock_set_token.return_value = None
 
-    (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
+    with chdir(integration_tests_plugins_dir):
+        (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
+        result = cli_runner.invoke(app, command)
 
-    result = cli_runner.invoke(app, command)
-
-    assert result.exit_code == expected_exit_code
-    for expected_output in expected_outputs:
-        assert expected_output in result.stdout
-    for expected_no_output in expected_no_outputs:
-        assert expected_no_output not in result.stdout
+        assert result.exit_code == expected_exit_code
+        for expected_output in expected_outputs:
+            assert expected_output in result.stdout
+        for expected_no_output in expected_no_outputs:
+            assert expected_no_output not in result.stdout
