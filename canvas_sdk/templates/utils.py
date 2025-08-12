@@ -3,12 +3,14 @@ from typing import Any
 
 from django.template import Context, Template
 
-from canvas_sdk.utils.plugins import plugin_only
+from canvas_sdk.utils.plugins import plugin_context
 
 
-@plugin_only
+@plugin_context
 def render_to_string(
-    template_name: str, context: dict[str, Any] | None = None, **kwargs: Any
+    template_name: str,
+    context: dict[str, Any] | None = None,
+    **kwargs: Any,
 ) -> str | None:
     """Load a template and render it with the given context.
 
