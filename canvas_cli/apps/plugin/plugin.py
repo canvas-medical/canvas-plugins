@@ -100,7 +100,7 @@ def _build_package(package: Path) -> Path:
 
             if file_size_total > ONE_MEGABYTE:
                 print(
-                    "Warning: >1mb of content found when packaging plug, "
+                    "Warning: >1mb of content found when packaging plugin, "
                     "ensure that unneeded files are not included in the "
                     "plugin directory"
                 )
