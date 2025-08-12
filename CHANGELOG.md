@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.53.2 (2025-08-12)
+
+### Bug Fixes
+
+- Add support for installing/uninstalling and loading/reloading a specific plugin
+  ([#775](https://github.com/canvas-medical/canvas-plugins/pull/775),
+  [`dcc3252`](https://github.com/canvas-medical/canvas-plugins/commit/dcc32524f5caf8d37edb45fd9f3d888dbaced066))
+
+
 ## v0.53.1 (2025-08-12)
 
 ### Bug Fixes
