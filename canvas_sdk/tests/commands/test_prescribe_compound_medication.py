@@ -357,6 +357,21 @@ def test_prescribe_compound_medication_values_property(
     assert compound_med_values["active"] is True
 
 
+def test_prescribe_compound_medication_values_property_is_ommitted_if_fdb_code_is_present(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that the values property does not return data for compound medications when an fdb_code is provided."""
+    prescribe_cmd = PrescribeCommand(
+        note_uuid=str(uuid4()),
+        fdb_code="abc123",
+        sig="Take one tablet by mouth daily",
+    )
+
+    values = prescribe_cmd.values
+    assert "compound_medication_values" not in values
+    assert values["fdb_code"] == "abc123"
+
+
 def test_prescribe_compound_medication_edit_command(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:

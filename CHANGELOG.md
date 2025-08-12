@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.53.2 (2025-08-12)
+
+### Bug Fixes
+
+- Add support for installing/uninstalling and loading/reloading a specific plugin
+  ([#775](https://github.com/canvas-medical/canvas-plugins/pull/775),
+  [`dcc3252`](https://github.com/canvas-medical/canvas-plugins/commit/dcc32524f5caf8d37edb45fd9f3d888dbaced066))
+
+
+## v0.53.1 (2025-08-12)
+
+### Bug Fixes
+
+- Prevent an issue where the prescribe command effects send compound medication values where not
+  desired ([#908](https://github.com/canvas-medical/canvas-plugins/pull/908),
+  [`b65ece4`](https://github.com/canvas-medical/canvas-plugins/commit/b65ece4baa539516a74db1a749c14867cb12555a))
+
+
+## v0.53.0 (2025-08-07)
+
+### Features
+
+- Add pydantic.RootModel to sandbox
+  ([#898](https://github.com/canvas-medical/canvas-plugins/pull/898),
+  [`780fc15`](https://github.com/canvas-medical/canvas-plugins/commit/780fc15924380cb30bc9f1a0b6920dec83aaa868))
+
+- Add task and task comment author_id
+  ([#900](https://github.com/canvas-medical/canvas-plugins/pull/900),
+  [`a9fa76b`](https://github.com/canvas-medical/canvas-plugins/commit/a9fa76b2ccfadbe159ddc07535c14df47986121c))
+
+
 ## v0.52.0 (2025-08-06)
 
 ### Features

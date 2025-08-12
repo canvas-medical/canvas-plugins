@@ -17,7 +17,11 @@ from psycopg.rows import dict_row
 
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
-from plugin_runner.exceptions import InvalidPluginFormat, PluginInstallationError
+from plugin_runner.exceptions import (
+    InvalidPluginFormat,
+    PluginInstallationError,
+    PluginUninstallationError,
+)
 from settings import (
     AWS_ACCESS_KEY_ID,
     AWS_REGION,
@@ -68,15 +72,28 @@ class PluginAttributes(TypedDict):
     secrets: dict[str, str]
 
 
-def enabled_plugins() -> dict[str, PluginAttributes]:
-    """Returns a dictionary of enabled plugins and their attributes."""
+def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAttributes]:
+    """Returns a dictionary of enabled plugins and their attributes.
+
+    If `plugin_names` is provided, only returns those plugins (if enabled).
+    """
     conn = open_database_connection()
 
     with conn.cursor(row_factory=dict_row) as cursor:
-        cursor.execute(
-            "SELECT name, package, version, key, value FROM plugin_io_plugin p "
-            "LEFT JOIN plugin_io_pluginsecret s ON p.id = s.plugin_id WHERE is_enabled"
+        base_query = (
+            "SELECT name, package, version, key, value "
+            "FROM plugin_io_plugin p "
+            "LEFT JOIN plugin_io_pluginsecret s ON p.id = s.plugin_id "
+            "WHERE is_enabled"
         )
+
+        params = []
+        if plugin_names:
+            placeholders = ",".join(["%s"] * len(plugin_names))
+            base_query += f" AND name IN ({placeholders})"
+            params.extend(plugin_names)
+
+        cursor.execute(base_query, params)
         rows = cursor.fetchall()
         plugins = _extract_rows_to_dict(rows)
 
@@ -210,22 +227,31 @@ def disable_plugin(plugin_name: str) -> None:
 
 def uninstall_plugin(plugin_name: str) -> None:
     """Remove the plugin from the filesystem."""
-    log.info(f'Uninstalling plugin "{plugin_name}"')
+    try:
+        log.info(f'Uninstalling plugin "{plugin_name}"')
 
-    plugin_path = Path(PLUGIN_DIRECTORY) / plugin_name
+        plugin_path = Path(PLUGIN_DIRECTORY) / plugin_name
 
-    if plugin_path.exists():
-        shutil.rmtree(plugin_path)
+        if plugin_path.exists():
+            shutil.rmtree(plugin_path)
+    except Exception as e:
+        raise PluginUninstallationError() from e
 
 
 def install_plugins() -> None:
     """Install all enabled plugins."""
     log.info("Installing plugins")
+    try:
+        plugins_dir = Path(PLUGIN_DIRECTORY).resolve()
 
-    if Path(PLUGIN_DIRECTORY).exists():
-        shutil.rmtree(PLUGIN_DIRECTORY)
+        if plugins_dir.exists():
+            shutil.rmtree(plugins_dir.as_posix())
 
-    os.mkdir(PLUGIN_DIRECTORY)
+        plugins_dir.mkdir(parents=False, exist_ok=True)
+    except Exception as e:
+        raise PluginInstallationError(
+            f'Failed to reset plugin directory "{PLUGIN_DIRECTORY}": {e}"'
+        ) from e
 
     for plugin_name, attributes in enabled_plugins().items():
         try:

@@ -24,9 +24,9 @@ class MaskedValue:
         return "*******"
 
 
-def install_plugin(plugin_name: str, token: MaskedValue) -> None:
+def install_plugin(plugin_path: Path, token: MaskedValue) -> None:
     """Install a plugin."""
-    with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+    with open(_build_package(plugin_path), "rb") as package:
         response = requests.post(
             plugin_url(cast(str, settings.INTEGRATION_TEST_URL)),
             data={"is_enabled": True},
@@ -52,15 +52,15 @@ def trigger_plugin_event(event: Event, token: MaskedValue) -> None:
     response.raise_for_status()
 
 
-def clean_up_files_and_plugins(plugin_name: str, token: MaskedValue) -> None:
+def clean_up_files_and_plugins(plugin_path: Path, token: MaskedValue) -> None:
     """Clean up the files and plugins."""
     # clean up
-    if Path(f"./custom-plugins/{plugin_name}").exists():
-        shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
+    if Path(plugin_path).exists():
+        shutil.rmtree(plugin_path)
 
     # delete
     response = requests.delete(
-        plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_name),
+        plugin_url(cast(str, settings.INTEGRATION_TEST_URL), plugin_path.name),
         params={"force": True},
         headers={"Authorization": f"Bearer {token.value}"},
     )

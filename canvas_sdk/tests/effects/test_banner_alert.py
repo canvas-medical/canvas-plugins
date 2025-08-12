@@ -41,14 +41,18 @@ def plugin_name() -> str:
 
 @pytest.fixture(scope="session")
 def write_and_install_protocol_and_clean_up(
-    cli_runner: CliRunner, first_patient_id: str, plugin_name: str, token: MaskedValue
+    cli_runner: CliRunner,
+    first_patient_id: str,
+    integration_tests_plugins_dir: Path,
+    plugin_name: str,
+    token: MaskedValue,
 ) -> Generator[Any, Any, Any]:
     """Write the protocol code, install the plugin, and clean up after the test."""
     if not settings.INTEGRATION_TEST_URL:
         raise ImproperlyConfigured("INTEGRATION_TEST_URL is not set")
 
     # write the protocol
-    with chdir(Path("./custom-plugins")):
+    with chdir(integration_tests_plugins_dir):
         cli_runner.invoke(app, "init", input=plugin_name)
 
     protocol_code = f"""
@@ -70,10 +74,12 @@ class Protocol(BaseProtocol):
         ]
 """
 
-    with open(f"./custom-plugins/{plugin_name}/protocols/my_protocol.py", "w") as protocol:
+    plugin_dir = integration_tests_plugins_dir / plugin_name
+
+    with open(plugin_dir / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
-    with open(_build_package(Path(f"./custom-plugins/{plugin_name}")), "rb") as package:
+    with open(_build_package(plugin_dir), "rb") as package:
         # install the plugin
         response = requests.post(
             plugin_url(settings.INTEGRATION_TEST_URL),
@@ -87,8 +93,8 @@ class Protocol(BaseProtocol):
     yield
 
     # clean up
-    if Path(f"./custom-plugins/{plugin_name}").exists():
-        shutil.rmtree(Path(f"./custom-plugins/{plugin_name}"))
+    if Path(plugin_dir).exists():
+        shutil.rmtree(plugin_dir)
 
     # disable
     response = requests.patch(

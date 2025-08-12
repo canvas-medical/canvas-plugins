@@ -170,6 +170,9 @@ class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
             if isinstance(compound_data, CompoundMedicationData):
                 values["compound_medication_values"] = compound_data.to_dict()
 
+        if values.get("fdb_code") is not None and values.get("compound_medication_values") == {}:
+            del values["compound_medication_values"]
+
         return values
 
     def originate(self, line_number: int = -1) -> Effect:
