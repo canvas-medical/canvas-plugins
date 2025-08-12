@@ -141,6 +141,7 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/providers")
     def get_providers(self) -> list[Response | Effect]:
         """Get list of providers who have notes."""
+        logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
 
         providers = [{"id": n.provider.id, "name": n.provider.credentialed_name}
                      for n in
@@ -148,6 +149,7 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                          "provider__id")]
 
         return [JSONResponse({
+            "logged_in_staff_id": logged_in_staff,
             "providers": providers
         }, status_code=HTTPStatus.OK)]
 
