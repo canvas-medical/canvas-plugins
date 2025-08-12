@@ -236,6 +236,9 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
+  "canvas_sdk.effects.panel_configuration": [
+    "PanelConfiguration"
+  ],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
     "Patient",
