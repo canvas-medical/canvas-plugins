@@ -1,9 +1,24 @@
 syntax = "proto3";
 
 message ReloadPluginsRequest {
-
 }
 
 message ReloadPluginsResponse {
+  bool success = 1;
+}
+
+message ReloadPluginRequest {
+  string plugin = 1;
+}
+
+message ReloadPluginResponse {
+  bool success = 1;
+}
+
+message UnloadPluginRequest {
+  string plugin = 1;
+}
+
+message UnloadPluginResponse {
   bool success = 1;
 }
