@@ -9,7 +9,7 @@ from canvas_sdk.effects.simple_api import Response, JSONResponse
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder
+from canvas_sdk.v1.data import Note, Command, Referral, ImagingOrder, Staff
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 from canvas_sdk.v1.data.task import TaskStatus
 
@@ -143,10 +143,10 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         """Get list of providers who have notes."""
         logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
 
-        providers = [{"id": n.provider.id, "name": n.provider.credentialed_name}
-                     for n in
-                     Note.objects.filter(current_state__state__in=(NoteStates.NEW, NoteStates.UNLOCKED)).distinct(
-                         "provider__id")]
+        providers = [{"id": s.id, "name": s.credentialed_name}
+                     for s in
+                     Staff.objects.filter(active=True).order_by("first_name", "last_name")]
+
 
         return [JSONResponse({
             "logged_in_staff_id": logged_in_staff,
