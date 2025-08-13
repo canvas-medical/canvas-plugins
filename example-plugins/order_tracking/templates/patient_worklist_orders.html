@@ -31,6 +31,8 @@
             min-height: 100vh;
             line-height: 1.5;
             color: #2c3e50;
+            /* chat tab */
+            padding-bottom: 22px;
         }
 
         .header {
@@ -59,6 +61,7 @@
             flex-direction: row;
             gap: 12px;
             border-bottom: 1px solid #e5e7eb;
+            flex-wrap: wrap;
         }
 
         .filter-group {
@@ -66,6 +69,11 @@
             flex-direction: column;
             gap: 4px;
             flex: 1;
+            min-width: 140px;
+        }
+
+        .filter-group.date-range {
+            flex: 1.5;
         }
 
         .filter-label {
@@ -87,6 +95,7 @@
             position: relative;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
             user-select: none;
+            height: 44px;
         }
 
         .filter-dropdown.open {
@@ -117,6 +126,42 @@
         .filter-dropdown:hover {
             border-color: #3498db;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .filter-input {
+            background-color: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #2c3e50;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            height: 44px;
+            width: 100%;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .date-range-container {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .date-range-container .filter-input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .date-range-separator {
+            color: #7f8c8d;
+            font-size: 12px;
+            white-space: nowrap;
+            font-weight: 500;
         }
 
         .dropdown-options {
@@ -218,24 +263,51 @@
         }
 
         .status-badge {
-            background-color: #ecf0f1;
-            color: #2c3e50;
             padding: 6px 12px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            border: 1px solid;
+        }
+
+        /* Status badge colors matching main worklist */
+        .status-badge.uncommitted {
+            border-color: #d1d5db;
+            background-color: #fff;
+            color: #374151;
+        }
+
+        .status-badge.open {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-color: #e0f2fe;
+        }
+
+        .status-badge.sent {
+            background-color: #d1fae5;
+            color: #065f46;
+            border-color: #d1fae5;
         }
 
         .status-badge.delegated {
             background-color: #e0f2fe;
             color: #0369a1;
+            border-color: #e0f2fe;
         }
 
         .status-badge.closed {
             background-color: #d1fae5;
             color: #065f46;
+            border-color: #d1fae5;
+        }
+
+        /* Default fallback for unknown statuses */
+        .status-badge:not(.uncommitted):not(.open):not(.sent):not(.delegated):not(.closed) {
+            border-color: #d1d5db;
+            background-color: #fff;
+            color: #374151;
         }
 
         .urgent-badge {
@@ -358,19 +430,42 @@
             color: #991b1b;
             margin-top: 1rem;
         }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .filter-group {
+                min-width: auto;
+            }
+
+            .date-range-container {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .date-range-separator {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Status</label>
-            <div class="filter-dropdown" id="status-dropdown" data-value="all">
+            <div class="filter-dropdown" id="status-dropdown" data-value="">
                 <div class="selected-value">All Status</div>
                 <div class="dropdown-options">
-                    <div class="dropdown-option selected" data-value="all">All Status</div>
+                    <div class="dropdown-option selected" data-value="">All Status</div>
+                    <div class="dropdown-option" data-value="uncommitted">Uncommitted</div>
                     <div class="dropdown-option" data-value="open">Open</div>
-                    <div class="dropdown-option" data-value="closed">Closed</div>
+                    <div class="dropdown-option" data-value="sent">Sent</div>
                     <div class="dropdown-option" data-value="delegated">Delegated</div>
+                    <div class="dropdown-option" data-value="closed">Closed</div>
                 </div>
             </div>
         </div>
@@ -384,6 +479,14 @@
                     <div class="dropdown-option" data-value="Imaging">Imaging</div>
                     <div class="dropdown-option" data-value="Referral">Referral</div>
                 </div>
+            </div>
+        </div>
+        <div class="filter-group date-range">
+            <label class="filter-label">Order Date Range</label>
+            <div class="date-range-container">
+                <input type="date" id="date-from-filter" class="filter-input" placeholder="From">
+                <span class="date-range-separator">to</span>
+                <input type="date" id="date-to-filter" class="filter-input" placeholder="To">
             </div>
         </div>
     </div>
@@ -411,13 +514,14 @@
         let allOrders = [];
         let currentPage = 1;
         let paginationData = null;
+        let searchTimeout = null;
 
         // Configuration - using placeholder endpoint based on your structure
         const API_BASE_URL = '/plugin-io/api/order_tracking/orders';
         const PATIENT_ID = '{{patientId}}'
         const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
-        async function fetchOrders(status = null, orderType = null, page = 1) {
+        async function fetchOrders(status = null, orderType = null, dateFrom = null, dateTo = null, page = 1) {
             try {
                 currentPage = page;
 
@@ -428,7 +532,13 @@
                     params.append('status', status);
                 }
                 if (orderType) {
-                    params.append('type', orderType);
+                    params.append('types', orderType);
+                }
+                if (dateFrom) {
+                    params.append('date_from', dateFrom);
+                }
+                if (dateTo) {
+                    params.append('date_to', dateTo);
                 }
                 params.append('page', page);
                 params.append('page_size', 20);
@@ -470,7 +580,7 @@
                   orderName: order.order || 'Imaging Order',
                   orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                   sentTo: order.sent_to || 'Not specified',
-                  orderedDate: formatDate(order.date_ordered),
+                  orderedDate: formatDate(order.date_ordered || order.created_date),
                   priority: order.priority || 'routine',
                   status: order.status,
                   permalink: order.permalink
@@ -485,7 +595,7 @@
                     patientId: order.patient_id,
                     orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                     sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.date_ordered),
+                    orderedDate: formatDate(order.date_ordered || order.created_date),
                     priority: order.priority || 'routine',
                     status: order.status,
                     permalink: order.permalink
@@ -500,7 +610,7 @@
                     patientId: order.patient_id,
                     orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
                     sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.date_ordered),
+                    orderedDate: formatDate(order.date_ordered || order.created_date),
                     priority: order.priority || 'routine',
                     status: order.status,
                     permalink: order.permalink
@@ -636,17 +746,53 @@
         }
 
         function goToPage(page) {
-           const statusDropdown = document.getElementById('status-dropdown');
-           const typeDropdown = document.getElementById('type-dropdown');
+            const statusDropdown = document.getElementById('status-dropdown');
+            const typeDropdown = document.getElementById('type-dropdown');
+            const dateFromInput = document.getElementById('date-from-filter');
+            const dateToInput = document.getElementById('date-to-filter');
 
             const selectedStatus = statusDropdown.getAttribute('data-value');
             const selectedType = typeDropdown.getAttribute('data-value');
+            const dateFrom = dateFromInput.value;
+            const dateTo = dateToInput.value;
 
-            fetchOrders(selectedStatus, selectedType, page);
+            fetchOrders(selectedStatus, selectedType, dateFrom, dateTo, page);
+        }
+
+        function handleFilterChange() {
+            const statusDropdown = document.getElementById('status-dropdown');
+            const typeDropdown = document.getElementById('type-dropdown');
+            const dateFromInput = document.getElementById('date-from-filter');
+            const dateToInput = document.getElementById('date-to-filter');
+
+            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedType = typeDropdown.getAttribute('data-value');
+            const dateFrom = dateFromInput.value;
+            const dateTo = dateToInput.value;
+
+            fetchOrders(selectedStatus, selectedType, dateFrom, dateTo, 1);
+        }
+
+        function initializeDateFilters() {
+            const dateFromInput = document.getElementById('date-from-filter');
+            const dateToInput = document.getElementById('date-to-filter');
+
+            // Set default date range (last 30 days)
+            const today = new Date();
+            const defaultFromDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+            dateFromInput.value = defaultFromDate.toISOString().split('T')[0];
+
+            // Add event listeners for date changes
+            dateFromInput.addEventListener('change', handleFilterChange);
+            dateToInput.addEventListener('change', handleFilterChange);
         }
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize date filters first
+            initializeDateFilters();
+
             // Custom dropdown functionality
             const dropdowns = document.querySelectorAll('.filter-dropdown');
 
@@ -706,22 +852,9 @@
                 });
             });
 
-            const statusDropdown = document.getElementById('status-dropdown');
-            const typeDropdown = document.getElementById('type-dropdown');
-            const selectedStatus = statusDropdown.getAttribute('data-value');
-            const selectedType = typeDropdown.getAttribute('data-value');
-            fetchOrders(selectedStatus, selectedType);
+            // Initial load with current filter values
+            handleFilterChange();
         });
-
-        function handleFilterChange() {
-           const statusDropdown = document.getElementById('status-dropdown');
-           const typeDropdown = document.getElementById('type-dropdown');
-
-            const selectedStatus = statusDropdown.getAttribute('data-value');
-            const selectedType = typeDropdown.getAttribute('data-value');
-
-            fetchOrders(selectedStatus, selectedType, 1);
-        }
 
         document.getElementById('prev-page').addEventListener('click', function() {
             if (paginationData && paginationData.has_previous) {

@@ -104,13 +104,6 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                 "id": str(lab_order.ordering_provider.id),
             }
         }
-        log.info(f"################### lab order ##################")
-        log.info(f"################### health_gorilla_id: {lab_order.healthgorilla_id}")
-        log.info(f"################### requisition number: {lab_order.requisition_number}")
-        log.info(f"################### manual_processing_status: {lab_order.manual_processing_status}")
-        log.info(f"################### manual_processing_comment: {lab_order.manual_processing_comment}")
-        log.info(f"################### status: {lab_order.order_status}")
-        log.info(f"#####################################")
 
         if include_type:
             payload["type"] = "lab"
@@ -223,7 +216,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommited"),
+                    then=Value("uncommitted"),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=False),
@@ -245,7 +238,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommited"),
+                    then=Value("uncommitted"),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=False),
@@ -267,7 +260,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommited"),
+                    then=Value("uncommitted"),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(reports__isnull=True) & (
@@ -392,9 +385,9 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             # Lab orders are always routine (keep as is)
 
         # Apply ordering for consistent results
-        imaging_orders_queryset = imaging_orders_queryset.order_by('-created')
-        lab_orders_queryset = lab_orders_queryset.order_by('-created', "id").distinct("id", "created")
-        refer_queryset = refer_queryset.order_by('-created')
+        imaging_orders_queryset = imaging_orders_queryset.order_by('-date_time_ordered')
+        lab_orders_queryset = lab_orders_queryset.order_by('-date_ordered', "id").distinct("id", "date_ordered")
+        refer_queryset = refer_queryset.order_by('-date_referred')
 
         # Handle type filtering and pagination efficiently
         include_imaging = order_types is None or "imaging" in order_types

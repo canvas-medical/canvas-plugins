@@ -895,7 +895,7 @@ function processOrdersData(data) {
         orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
         orderingProviderId: order.ordering_provider?.id,
         sentTo: order.sent_to || 'Not specified',
-        orderedDate: formatDate(order.created_date),
+        orderedDate: formatDate(order.ordered_date),
         priority: order.priority,
         status: order.status || 'Open',
         permalink: order.permalink
@@ -910,7 +910,7 @@ function processOrdersData(data) {
         orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
         orderingProviderId: order.ordering_provider?.id,
         sentTo: order.sent_to || 'Not specified',
-        orderedDate: formatDate(order.created_date),
+        orderedDate: formatDate(order.ordered_date),
         status: order.status || 'Open',
         permalink: order.permalink,
         priority: order.priority
@@ -926,7 +926,7 @@ function processOrdersData(data) {
         orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
         orderingProviderId: order.ordering_provider?.id,
         sentTo: order.sent_to || 'Not specified',
-        orderedDate: formatDate(order.created_date),
+        orderedDate: formatDate(order.ordered_date),
         priority: order.priority,
         status: order.status || 'Open',
         permalink: order.permalink
@@ -1070,7 +1070,7 @@ function updateLoadMoreButton(priority, isLoading) {
         spinner.style.display = 'block';
     } else {
         button.disabled = false;
-        text.textContent = priority === 'urgent' ? 'Load More Urgent Orders' : 'Load More Routine Orders';
+        text.textContent = priority === 'urgent' ? 'Load More...' : 'Load More...';
         spinner.style.display = 'none';
     }
 }
