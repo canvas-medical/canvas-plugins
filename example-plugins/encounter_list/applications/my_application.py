@@ -161,7 +161,8 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                      for n in
                      Note.objects.filter(current_state__state__in=(NoteStates.NEW, NoteStates.UNLOCKED))
                      .filter(location__isnull=False)
-                     .distinct("location__id")]
+                     .order_by("location__full_name", "location__id")
+                     .distinct("location__id", "location__full_name")]
 
         return [JSONResponse({
             "locations": locations

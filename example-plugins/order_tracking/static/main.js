@@ -1,4 +1,4 @@
-const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
+
 
 let allProviders = [];
 let allLocations = [];
@@ -1027,24 +1027,15 @@ function populateOrdersTable() {
         html += '</div>';
     }
 
-    if (html === `
-      <div class="accordion-header-row">
-        <div>Patient</div>
-        <div>DOB</div>
-        <div>Order</div>
-        <div>Type</div>
-        <div>Provider</div>
-        <div>Sent To</div>
-        <div>Status</div>
-        <div>Date</div>
-        <div></div>
-      </div>
-    `) {
+    if (urgentOrdersState.total + routineOrdersState.total === 0) {
         html = '<div class="section-header">No orders found</div>';
     }
 
     accordion.innerHTML = html;
-    setupAccordionListeners();
+    if (ENABLE_TASK_COMMENTS) {
+        setupAccordionListeners();
+    }
+
 
     // Update info bar
     const totalUrgent = urgentOrdersState.total;
@@ -1099,7 +1090,7 @@ function createOrderAccordionItem(order, isUrgent) {
       <div class="column-value">${order.sentTo || ''}</div>
       <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></div>
       <div class="column-value">${order.orderedDate || ''}</div>
-      <div class="expand-icon ${iconClass}">▶</div>
+      <div class="expand-icon ${!ENABLE_TASK_COMMENTS ? 'hidden' : ''} ${iconClass}">▶</div>
     </div>
     <div class="accordion-content" id="${orderId}">
       <div style="margin-bottom: 1rem;">

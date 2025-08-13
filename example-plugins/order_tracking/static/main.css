@@ -343,6 +343,10 @@
       }
     }
 
+    .hidden {
+        visibility: hidden;
+    }
+
     .filter-group {
       display: flex;
       flex-direction: column;
@@ -405,7 +409,7 @@
       cursor: pointer;
       font-weight: bold;
       color: #1d4ed8;
-      font-size: 0.75rem;
+      font-size: 13px;
       line-height: 1;
     }
 

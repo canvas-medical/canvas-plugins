@@ -46,7 +46,7 @@
     "effects": [],
     "views": []
   },
-  "secrets": [],
+  "secrets": ["ENABLE_TASK_COMMENTS"],
   "tags": {},
   "references": [],
   "license": "",

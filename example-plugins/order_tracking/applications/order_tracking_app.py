@@ -29,9 +29,11 @@ class OrderTrackingApplication(Application):
     """An embeddable application that can be registered to Canvas."""
 
     def on_open(self) -> Effect:
+        enable_task_comments = self.secrets.get("ENABLE_TASK_COMMENTS", "true")
+
         return LaunchModalEffect(
             content=render_to_string("templates/worklist_orders.html", context={
-                "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication"}),
+                "patientChartApplication": "order_tracking.applications.patient_order_tracking_app:PatientOrderTrackingApplication", "enableTaskComments": enable_task_comments}),
             target=LaunchModalEffect.TargetType.PAGE,
         ).apply()
 
@@ -177,7 +179,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
     def locations(self) -> list[Response | Effect]:
         logged_in_staff = self.request.headers["canvas-logged-in-user-id"]
 
-        locations = PracticeLocation.objects.values("id", "full_name").filter(active=True)
+        locations = PracticeLocation.objects.values("id", "full_name").filter(active=True).order_by("full_name")
         locations = [{ "name": location["full_name"], "value": str(location["id"]) } for location in locations]
 
         return [JSONResponse({
