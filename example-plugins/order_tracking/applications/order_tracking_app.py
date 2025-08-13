@@ -9,7 +9,7 @@ from django.db.models import Case, When, Value, Q, CharField
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
-from canvas_sdk.effects.simple_api import Response, JSONResponse, HTMLResponse
+from canvas_sdk.effects.simple_api import Response, JSONResponse
 from canvas_sdk.effects.task import AddTaskComment, AddTask
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
@@ -152,15 +152,20 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             lab_orders__isnull=False
         ).values_list('id', flat=True).distinct())
 
+        # for referral, we have to get the note provider
+        referral_note_provider_ids = Referral.objects.values_list("note__provider__id", flat=True).order_by("note__provider__id").distinct(
+            'note__provider__id')
+        referral_staff_ids = set(Staff.objects.filter(id__in=referral_note_provider_ids).values_list('id', flat=True).distinct())
+
         # Combine the sets to get all staff with either type of order
-        all_ordering_staff_ids = imaging_staff_ids | lab_staff_ids
+        all_ordering_staff_ids = imaging_staff_ids | lab_staff_ids | referral_staff_ids
 
         ordering_providers = [
             {
                 "preferred_name": staff.credentialed_name,
                 "id": str(staff.id),
             }
-            for staff in Staff.objects.filter(id__in=all_ordering_staff_ids)
+            for staff in Staff.objects.filter(id__in=all_ordering_staff_ids).order_by("first_name", "last_name")
         ]
 
         return [JSONResponse({
@@ -215,16 +220,16 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider').annotate(
             order_status=Case(
                 When(
+                    Q(results__isnull=True) & Q(delegated=True),
+                    then=Value("delegated"),
+                ),
+                When(
                     Q(committer__isnull=True),
                     then=Value("uncommitted"),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=False),
                     then=Value("open")
-                ),
-                When(
-                    Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=True),
-                    then=Value("delegated"),
                 ),
                 default=Value("closed"),
                 output_field=CharField()
@@ -237,16 +242,16 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         refer_queryset = Referral.objects.select_related('patient', 'note__provider').annotate(
             order_status=Case(
                 When(
+                    Q(reports__isnull=True) & Q(forwarded=True),
+                    then=Value("delegated"),
+                ),
+                When(
                     Q(committer__isnull=True),
                     then=Value("uncommitted"),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=False),
                     then=Value("open"),
-                ),
-                When(
-                    Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=True),
-                    then=Value("delegated"),
                 ),
                 default=Value("closed"),
                 output_field=CharField()
@@ -301,18 +306,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
         if status:
             imaging_orders_queryset = imaging_orders_queryset.filter(order_status__in=status)
             refer_queryset = refer_queryset.filter(order_status__in=status)
-
-            # lab order don't have delegated status
-            if "delegated" in status:
-                status = [s for s in status if s != "delegated"]
-
-            # user maybe filtering by delegated only
-            if status:
-                lab_orders_queryset = lab_orders_queryset.filter(order_status__in=status)
-            # in this particular case, we'll want to exclude closed lab orders since it shouldn't show since the user selected a delegated filter.
-            else:
-                lab_orders_queryset = lab_orders_queryset.exclude(order_status="closed")
-
+            lab_orders_queryset = lab_orders_queryset.filter(order_status__in=status)
         # by default we exclude closed orders
         elif not status:
             imaging_orders_queryset = imaging_orders_queryset.exclude(order_status="closed")
@@ -320,13 +314,24 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             lab_orders_queryset = lab_orders_queryset.exclude(order_status="closed")
 
         if patient_name and not patient_id:
-            name_filter = (
-                Q(patient__first_name__icontains=patient_name) |
-                Q(patient__last_name__icontains=patient_name)
-            )
-            imaging_orders_queryset = imaging_orders_queryset.filter(name_filter)
-            lab_orders_queryset = lab_orders_queryset.filter(name_filter)
-            refer_queryset = refer_queryset.filter(name_filter)
+
+            def _full_name_filter(_patient_name: str):
+                terms = _patient_name.strip().split()
+                q_filter = Q()
+
+                for term in terms:
+                    term_q = (
+                            Q(**{'patient__first_name__icontains': term}) |
+                            Q(**{'patient__last_name__icontains': term}) |
+                            Q(**{'patient__middle_name__icontains': term})
+                    )
+                    q_filter &= term_q
+
+                return q_filter
+
+            imaging_orders_queryset = imaging_orders_queryset.filter(_full_name_filter(patient_name))
+            lab_orders_queryset = lab_orders_queryset.filter(_full_name_filter(patient_name))
+            refer_queryset = refer_queryset.filter(_full_name_filter(patient_name))
 
         if patient_dob:
             try:

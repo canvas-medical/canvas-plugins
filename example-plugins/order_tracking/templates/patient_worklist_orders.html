@@ -31,8 +31,6 @@
             min-height: 100vh;
             line-height: 1.5;
             color: #2c3e50;
-            /* chat tab */
-            padding-bottom: 22px;
         }
 
         .header {
@@ -105,6 +103,41 @@
 
         .filter-dropdown .selected-value {
             padding-right: 24px;
+            min-height: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .selected-tag {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.2;
+        }
+
+        .selected-tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            color: #1976d2;
+            font-size: 14px;
+            line-height: 1;
+            margin-left: 2px;
+        }
+
+        .selected-tag .remove-tag:hover {
+            color: #1565c0;
+        }
+
+        .placeholder-text {
+            color: #7f8c8d;
+            font-size: 14px;
         }
 
         .filter-dropdown::after {
@@ -191,6 +224,20 @@
             cursor: pointer;
             transition: background-color 0.15s ease;
             border-bottom: 1px solid #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+            transform: scale(0.9);
+        }
+
+        .dropdown-option label {
+            cursor: pointer;
+            flex: 1;
         }
 
         .dropdown-option:last-child {
@@ -443,7 +490,7 @@
             }
 
             .date-range-container {
-                flex-direction: column;
+                flex-direction: row;
                 gap: 8px;
             }
 
@@ -457,15 +504,38 @@
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Status</label>
-            <div class="filter-dropdown" id="status-dropdown" data-value="">
-                <div class="selected-value">All Status</div>
+            <div class="filter-dropdown" id="status-dropdown" data-values="uncommitted,open,sent,delegated">
+                <div class="selected-value">
+                    <span class="selected-tag">Uncommitted <span class="remove-tag" data-value="uncommitted">&times;</span></span>
+                    <span class="selected-tag">Open <span class="remove-tag" data-value="open">&times;</span></span>
+                    <span class="selected-tag">Sent <span class="remove-tag" data-value="sent">&times;</span></span>
+                    <span class="selected-tag">Delegated <span class="remove-tag" data-value="delegated">&times;</span></span>
+                </div>
                 <div class="dropdown-options">
-                    <div class="dropdown-option selected" data-value="">All Status</div>
-                    <div class="dropdown-option" data-value="uncommitted">Uncommitted</div>
-                    <div class="dropdown-option" data-value="open">Open</div>
-                    <div class="dropdown-option" data-value="sent">Sent</div>
-                    <div class="dropdown-option" data-value="delegated">Delegated</div>
-                    <div class="dropdown-option" data-value="closed">Closed</div>
+                    <div class="dropdown-option" data-value="">
+                        <input type="checkbox" id="status-all">
+                        <label for="status-all">All Statuses</label>
+                    </div>
+                    <div class="dropdown-option" data-value="uncommitted">
+                        <input type="checkbox" id="status-uncommitted" checked>
+                        <label for="status-uncommitted">Uncommitted</label>
+                    </div>
+                    <div class="dropdown-option" data-value="open">
+                        <input type="checkbox" id="status-open" checked>
+                        <label for="status-open">Open</label>
+                    </div>
+                    <div class="dropdown-option" data-value="sent">
+                        <input type="checkbox" id="status-sent" checked>
+                        <label for="status-sent">Sent</label>
+                    </div>
+                    <div class="dropdown-option" data-value="delegated">
+                        <input type="checkbox" id="status-delegated" checked>
+                        <label for="status-delegated">Delegated</label>
+                    </div>
+                    <div class="dropdown-option" data-value="closed">
+                        <input type="checkbox" id="status-closed">
+                        <label for="status-closed">Closed</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -521,15 +591,15 @@
         const PATIENT_ID = '{{patientId}}'
         const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
-        async function fetchOrders(status = null, orderType = null, dateFrom = null, dateTo = null, page = 1) {
+        async function fetchOrders(statuses = null, orderType = null, dateFrom = null, dateTo = null, page = 1) {
             try {
                 currentPage = page;
 
                 // Build query parameters
                 const params = new URLSearchParams();
                 params.append('patient_id', PATIENT_ID);
-                if (status) {
-                    params.append('status', status);
+                if (statuses && statuses.length > 0) {
+                    params.append('status', statuses.join(','));
                 }
                 if (orderType) {
                     params.append('types', orderType);
@@ -751,12 +821,12 @@
             const dateFromInput = document.getElementById('date-from-filter');
             const dateToInput = document.getElementById('date-to-filter');
 
-            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedStatuses = statusDropdown.getAttribute('data-values').split(',').filter(v => v);
             const selectedType = typeDropdown.getAttribute('data-value');
             const dateFrom = dateFromInput.value;
             const dateTo = dateToInput.value;
 
-            fetchOrders(selectedStatus, selectedType, dateFrom, dateTo, page);
+            fetchOrders(selectedStatuses, selectedType, dateFrom, dateTo, page);
         }
 
         function handleFilterChange() {
@@ -765,23 +835,17 @@
             const dateFromInput = document.getElementById('date-from-filter');
             const dateToInput = document.getElementById('date-to-filter');
 
-            const selectedStatus = statusDropdown.getAttribute('data-value');
+            const selectedStatuses = statusDropdown.getAttribute('data-values').split(',').filter(v => v);
             const selectedType = typeDropdown.getAttribute('data-value');
             const dateFrom = dateFromInput.value;
             const dateTo = dateToInput.value;
 
-            fetchOrders(selectedStatus, selectedType, dateFrom, dateTo, 1);
+            fetchOrders(selectedStatuses, selectedType, dateFrom, dateTo, 1);
         }
 
         function initializeDateFilters() {
             const dateFromInput = document.getElementById('date-from-filter');
             const dateToInput = document.getElementById('date-to-filter');
-
-            // Set default date range (last 30 days)
-            const today = new Date();
-            const defaultFromDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
-
-            dateFromInput.value = defaultFromDate.toISOString().split('T')[0];
 
             // Add event listeners for date changes
             dateFromInput.addEventListener('change', handleFilterChange);
@@ -793,60 +857,16 @@
             // Initialize date filters first
             initializeDateFilters();
 
-            // Custom dropdown functionality
-            const dropdowns = document.querySelectorAll('.filter-dropdown');
+            // Initialize multiselect status dropdown
+            initializeStatusDropdown();
 
-            dropdowns.forEach(dropdown => {
-                const selectedValue = dropdown.querySelector('.selected-value');
-                const options = dropdown.querySelector('.dropdown-options');
-                const optionItems = dropdown.querySelectorAll('.dropdown-option');
-
-                // Toggle dropdown
-                selectedValue.addEventListener('click', (e) => {
-                    e.stopPropagation();
-
-                    // Close other dropdowns
-                    dropdowns.forEach(otherDropdown => {
-                        if (otherDropdown !== dropdown) {
-                            otherDropdown.classList.remove('open');
-                            otherDropdown.querySelector('.dropdown-options').classList.remove('show');
-                        }
-                    });
-
-                    // Toggle current dropdown
-                    dropdown.classList.toggle('open');
-                    options.classList.toggle('show');
-                });
-
-                // Handle option selection
-                optionItems.forEach(option => {
-                    option.addEventListener('click', (e) => {
-                        e.stopPropagation();
-
-                        // Update selected state
-                        optionItems.forEach(opt => opt.classList.remove('selected'));
-                        option.classList.add('selected');
-
-                        // Update selected value text
-                        selectedValue.textContent = option.textContent;
-
-                        // Update dropdown data-value
-                        const newValue = option.getAttribute('data-value');
-                        dropdown.setAttribute('data-value', newValue);
-
-                        // Close dropdown
-                        dropdown.classList.remove('open');
-                        options.classList.remove('show');
-
-                        // Trigger filter change
-                        handleFilterChange();
-                    });
-                });
-            });
+            // Custom dropdown functionality for type dropdown (single select)
+            const typeDropdown = document.getElementById('type-dropdown');
+            initializeSingleSelectDropdown(typeDropdown);
 
             // Close dropdowns when clicking outside
             document.addEventListener('click', () => {
-                dropdowns.forEach(dropdown => {
+                document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
                     dropdown.classList.remove('open');
                     dropdown.querySelector('.dropdown-options').classList.remove('show');
                 });
@@ -855,6 +875,178 @@
             // Initial load with current filter values
             handleFilterChange();
         });
+
+        function initializeStatusDropdown() {
+            const dropdown = document.getElementById('status-dropdown');
+            const selectedValue = dropdown.querySelector('.selected-value');
+            const options = dropdown.querySelector('.dropdown-options');
+            const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+            const allCheckbox = dropdown.querySelector('#status-all');
+
+            // Toggle dropdown
+            selectedValue.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Close other dropdowns
+                document.querySelectorAll('.filter-dropdown').forEach(otherDropdown => {
+                    if (otherDropdown !== dropdown) {
+                        otherDropdown.classList.remove('open');
+                        otherDropdown.querySelector('.dropdown-options').classList.remove('show');
+                    }
+                });
+
+                // Toggle current dropdown
+                dropdown.classList.toggle('open');
+                options.classList.toggle('show');
+            });
+
+            // Handle checkbox changes
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    e.stopPropagation();
+
+                    if (checkbox === allCheckbox) {
+                        // If "All" is checked, uncheck all others
+                        if (checkbox.checked) {
+                            checkboxes.forEach(cb => {
+                                if (cb !== allCheckbox) cb.checked = false;
+                            });
+                        }
+                    } else {
+                        // If any specific option is checked, uncheck "All"
+                        if (checkbox.checked && allCheckbox) {
+                            allCheckbox.checked = false;
+                        }
+
+                        // If no specific options are checked, check "All"
+                        const specificCheckboxes = Array.from(checkboxes).filter(cb => cb !== allCheckbox);
+                        const anyChecked = specificCheckboxes.some(cb => cb.checked);
+                        if (!anyChecked && allCheckbox) {
+                            allCheckbox.checked = true;
+                        }
+                    }
+
+                    updateStatusDisplay();
+                    handleFilterChange();
+                });
+            });
+
+            // Setup remove tag functionality
+            setupRemoveTagListeners();
+        }
+
+        function updateStatusDisplay() {
+            const dropdown = document.getElementById('status-dropdown');
+            const selectedValue = dropdown.querySelector('.selected-value');
+            const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+            const allCheckbox = dropdown.querySelector('#status-all');
+
+            // Get selected values (excluding "All")
+            const selectedValues = [];
+            const selectedLabels = [];
+
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked && checkbox !== allCheckbox) {
+                    const label = dropdown.querySelector(`label[for="${checkbox.id}"]`);
+                    if (label) {
+                        selectedValues.push(checkbox.closest('.dropdown-option').getAttribute('data-value'));
+                        selectedLabels.push(label.textContent);
+                    }
+                }
+            });
+
+            // Update data-values attribute
+            dropdown.setAttribute('data-values', selectedValues.join(','));
+
+            // Update display
+            selectedValue.innerHTML = '';
+
+            if (selectedLabels.length === 0 || (allCheckbox && allCheckbox.checked)) {
+                // Show placeholder
+                selectedValue.innerHTML = '<span class="placeholder-text">All Statuses</span>';
+            } else {
+                // Show selected tags
+                selectedLabels.forEach((label, index) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'selected-tag';
+                    tag.innerHTML = `
+                        ${label}
+                        <span class="remove-tag" data-value="${selectedValues[index]}">&times;</span>
+                    `;
+                    selectedValue.appendChild(tag);
+                });
+
+                // Re-setup remove tag listeners
+                setupRemoveTagListeners();
+            }
+        }
+
+        function setupRemoveTagListeners() {
+            const dropdown = document.getElementById('status-dropdown');
+            const removeTags = dropdown.querySelectorAll('.remove-tag');
+
+            removeTags.forEach(removeBtn => {
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const valueToRemove = removeBtn.getAttribute('data-value');
+                    const checkbox = dropdown.querySelector(`.dropdown-option[data-value="${valueToRemove}"] input[type="checkbox"]`);
+
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        updateStatusDisplay();
+                        handleFilterChange();
+                    }
+                });
+            });
+        }
+
+        function initializeSingleSelectDropdown(dropdown) {
+            const selectedValue = dropdown.querySelector('.selected-value');
+            const options = dropdown.querySelector('.dropdown-options');
+            const optionItems = dropdown.querySelectorAll('.dropdown-option');
+
+            // Toggle dropdown
+            selectedValue.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Close other dropdowns
+                document.querySelectorAll('.filter-dropdown').forEach(otherDropdown => {
+                    if (otherDropdown !== dropdown) {
+                        otherDropdown.classList.remove('open');
+                        otherDropdown.querySelector('.dropdown-options').classList.remove('show');
+                    }
+                });
+
+                // Toggle current dropdown
+                dropdown.classList.toggle('open');
+                options.classList.toggle('show');
+            });
+
+            // Handle option selection
+            optionItems.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+
+                    // Update selected state
+                    optionItems.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+
+                    // Update selected value text
+                    selectedValue.textContent = option.textContent;
+
+                    // Update dropdown data-value
+                    const newValue = option.getAttribute('data-value');
+                    dropdown.setAttribute('data-value', newValue);
+
+                    // Close dropdown
+                    dropdown.classList.remove('open');
+                    options.classList.remove('show');
+
+                    // Trigger filter change
+                    handleFilterChange();
+                });
+            });
+        }
 
         document.getElementById('prev-page').addEventListener('click', function() {
             if (paginationData && paginationData.has_previous) {
