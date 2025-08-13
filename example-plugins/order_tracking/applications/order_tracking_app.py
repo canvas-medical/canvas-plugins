@@ -104,6 +104,14 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
                 "id": str(lab_order.ordering_provider.id),
             }
         }
+        log.info(f"################### lab order ##################")
+        log.info(f"################### health_gorilla_id: {lab_order.healthgorilla_id}")
+        log.info(f"################### requisition number: {lab_order.requisition_number}")
+        log.info(f"################### manual_processing_status: {lab_order.manual_processing_status}")
+        log.info(f"################### manual_processing_comment: {lab_order.manual_processing_comment}")
+        log.info(f"################### status: {lab_order.order_status}")
+        log.info(f"#####################################")
+
         if include_type:
             payload["type"] = "lab"
             payload["sort_key"] = lab_order.created
@@ -203,50 +211,74 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
 
         if order_types:
             order_types = [order_type.lower() for order_type in order_types.split(",")]
+            
+        if status:
+            status = [s.lower() for s in status.split(",")]
 
         page = int(self.request.query_params.get("page", 1))
         page_size = int(self.request.query_params.get("page_size", 20))
 
         # Build querysets with filters and select_related for efficiency
-        # Only show imaging orders that don't have an associated ImagingReport
         imaging_orders_queryset = ImagingOrder.objects.select_related('patient', 'ordering_provider').annotate(
             order_status=Case(
                 When(
-                    Q(results__isnull=True) & Q(delegated=True),
-                    then=Value("delegated"),
+                    Q(committer__isnull=True),
+                    then=Value("uncommited"),
                 ),
                 When(
-                    Q(results__isnull=True) & Q(delegated=False),
+                    Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=False),
                     then=Value("open")
+                ),
+                When(
+                    Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=True),
+                    then=Value("delegated"),
                 ),
                 default=Value("closed"),
                 output_field=CharField()
             )
         ).filter(
-            deleted=False
+            deleted=False,
+            entered_in_error__isnull=True,
         )
 
         refer_queryset = Referral.objects.select_related('patient', 'note__provider').annotate(
             order_status=Case(
                 When(
-                    Q(reports__isnull=True) & Q(forwarded=True),
-                    then=Value("delegated"),
+                    Q(committer__isnull=True),
+                    then=Value("uncommited"),
                 ),
                 When(
-                    Q(reports__isnull=True) & Q(forwarded=False),
-                    then=Value("open")
+                    Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=False),
+                    then=Value("open"),
+                ),
+                When(
+                    Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=True),
+                    then=Value("delegated"),
                 ),
                 default=Value("closed"),
                 output_field=CharField()
             )
         ).filter(
-           deleted=False
+           deleted=False,
+           entered_in_error__isnull=True,
         )
 
         lab_orders_queryset = LabOrder.objects.select_related('patient', 'ordering_provider').annotate(
             order_status=Case(
                 When(
-                    Q(healthgorilla_id="") & Q(reports__isnull=True),
+                    Q(committer__isnull=True),
+                    then=Value("uncommited"),
+                ),
+                When(
+                    Q(committer__isnull=False) & Q(reports__isnull=True) & (
+                        ~Q(healthgorilla_id="") |
+                        Q(manual_processing_status="IN_PROGRESS") |
+                        (Q(manual_processing_status="NEEDS_REVIEW") & (~Q(manual_processing_comment="") & Q(manual_processing_comment__isnull=False)))
+                    ),
+                    then=Value("sent"),
+                ),
+                When(
+                    Q(committer__isnull=False) & Q(reports__isnull=True),
                     then=Value("open")
                 ),
                 default=Value("closed"),
@@ -254,6 +286,7 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             )
         ).filter(
             deleted=False,
+            entered_in_error__isnull=True,
         )
 
         # Apply provider filter if specified
@@ -272,13 +305,22 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             lab_orders_queryset = lab_orders_queryset.filter(note__location__id=location_id)
             refer_queryset = refer_queryset.filter(note__location__id=location_id)
 
-        if status and status != "all":
-            imaging_orders_queryset = imaging_orders_queryset.filter(order_status=status)
-            refer_queryset = refer_queryset.filter(order_status=status)
+        if status:
+            imaging_orders_queryset = imaging_orders_queryset.filter(order_status__in=status)
+            refer_queryset = refer_queryset.filter(order_status__in=status)
 
             # lab order don't have delegated status
-            if status != "delegated":
-                lab_orders_queryset = lab_orders_queryset.filter(order_status=status)
+            if "delegated" in status:
+                status = [s for s in status if s != "delegated"]
+
+            # user maybe filtering by delegated only
+            if status:
+                lab_orders_queryset = lab_orders_queryset.filter(order_status__in=status)
+            # in this particular case, we'll want to exclude closed lab orders since it shouldn't show since the user selected a delegated filter.
+            else:
+                lab_orders_queryset = lab_orders_queryset.exclude(order_status="closed")
+
+        # by default we exclude closed orders
         elif not status:
             imaging_orders_queryset = imaging_orders_queryset.exclude(order_status="closed")
             refer_queryset = refer_queryset.exclude(order_status="closed")

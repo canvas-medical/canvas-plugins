@@ -1,4 +1,3 @@
-
 const PATIENT_CHART_APPLICATION = btoa("{{patientChartApplication}}")
 
 let allProviders = [];
@@ -87,6 +86,7 @@ async function deleteFilterFromBackend(filterId) {
 function getCurrentFilterState() {
     const providerDropdown = document.getElementById('provider-dropdown');
     const typeDropdown = document.getElementById('type-dropdown');
+    const statusDropdown = document.getElementById('status-dropdown');
     const locationDropdown = document.getElementById('location-dropdown');
     const patientNameInput = document.getElementById('patient-name-filter');
     const dobInput = document.getElementById('patient-dob-filter');
@@ -97,6 +97,7 @@ function getCurrentFilterState() {
     return {
         providers: providerDropdown.getAttribute('data-values').split(',').filter(v => v),
         types: typeDropdown.getAttribute('data-values').split(',').filter(v => v),
+        statuses: statusDropdown.getAttribute('data-values').split(',').filter(v => v),
         location: locationDropdown ? locationDropdown.getAttribute('data-value') || '' : '',
         patientName: patientNameInput.value.trim(),
         patientDob: dobInput.value,
@@ -150,6 +151,27 @@ function applyFilterState(filterState) {
     }
     updateSelectedDisplay(typeDropdown);
 
+    // Apply status filters
+    const statusDropdown = document.getElementById('status-dropdown');
+    const statusCheckboxes = statusDropdown.querySelectorAll('input[type="checkbox"]');
+    const statusAllCheckbox = statusDropdown.querySelector('#status-all');
+
+    // Reset all status checkboxes
+    statusCheckboxes.forEach(cb => cb.checked = false);
+
+    if (!filterState.statuses || filterState.statuses.length === 0) {
+        statusAllCheckbox.checked = true;
+    } else {
+        filterState.statuses.forEach(status => {
+            const checkbox = Array.from(statusCheckboxes).find(cb => {
+                const option = cb.closest('.dropdown-option');
+                return option && option.getAttribute('data-value') === status;
+            });
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    updateSelectedDisplay(statusDropdown);
+
     const locationDropdown = document.getElementById('location-dropdown');
     if (locationDropdown && filterState.location !== undefined) {
         const locationOptions = locationDropdown.querySelectorAll('.dropdown-option');
@@ -194,6 +216,7 @@ function hasActiveFilters() {
     const state = getCurrentFilterState();
     return state.providers.length > 0 ||
         state.types.length > 0 ||
+        state.statuses.length > 0 ||
         state.location ||
         state.patientName ||
         state.patientDob ||
@@ -385,14 +408,17 @@ function updateFilterBadge() {
     // Check dropdown filters
     const providerDropdown = document.getElementById('provider-dropdown');
     const typeDropdown = document.getElementById('type-dropdown');
+    const statusDropdown = document.getElementById('status-dropdown');
     const locationDropdown = document.getElementById('location-dropdown');
 
     const selectedProviders = providerDropdown.getAttribute('data-values').split(',').filter(v => v);
     const selectedTypes = typeDropdown.getAttribute('data-values').split(',').filter(v => v);
+    const selectedStatuses = statusDropdown.getAttribute('data-values').split(',').filter(v => v);
     const selectedLocation = locationDropdown ? locationDropdown.getAttribute('data-value') : '';
 
     if (selectedProviders.length > 0) activeFilterCount++;
     if (selectedTypes.length > 0) activeFilterCount++;
+    if (selectedStatuses.length > 0) activeFilterCount++;
     if (selectedLocation) activeFilterCount++;
 
     // Check text inputs
@@ -525,7 +551,11 @@ function updateSelectedDisplay(dropdown) {
 
     if (selectedLabels.length === 0 || (allCheckbox && allCheckbox.checked)) {
         // Show placeholder
-        const placeholder = dropdown.id === 'provider-dropdown' ? 'All Providers' : 'All Types';
+        let placeholder = 'All Options';
+        if (dropdown.id === 'provider-dropdown') placeholder = 'All Providers';
+        else if (dropdown.id === 'type-dropdown') placeholder = 'All Types';
+        else if (dropdown.id === 'status-dropdown') placeholder = 'All Statuses';
+
         selectedValue.innerHTML = `<span class="placeholder-text">${placeholder}</span>`;
     } else {
         // Show selected tags
@@ -636,7 +666,6 @@ function initializeDateRangeFilter() {
 function handleFilterChange() {
     // Clear active filter when manually changing filters
    renderSavedFilters();
-
 
     // Update filter badge
     updateFilterBadge();
@@ -789,6 +818,7 @@ async function fetchOrders(priority = 'all') {
 function getCurrentFilterParams() {
     const providerDropdown = document.getElementById('provider-dropdown');
     const typeDropdown = document.getElementById('type-dropdown');
+    const statusDropdown = document.getElementById('status-dropdown');
     const locationDropdown = document.getElementById('location-dropdown');
     const patientNameInput = document.getElementById('patient-name-filter');
     const dobInput = document.getElementById('patient-dob-filter');
@@ -798,6 +828,7 @@ function getCurrentFilterParams() {
 
     const selectedProviders = providerDropdown.getAttribute('data-values').split(',').filter(v => v);
     const selectedTypes = typeDropdown.getAttribute('data-values').split(',').filter(v => v);
+    const selectedStatuses = statusDropdown.getAttribute('data-values').split(',').filter(v => v);
     const selectedLocation = locationDropdown ? locationDropdown.getAttribute('data-value') : '';
 
     const params = {};
@@ -819,6 +850,14 @@ function getCurrentFilterParams() {
         const validOrderTypes = selectedTypes.filter(type => type && type !== 'All Types');
         if (validOrderTypes.length > 0) {
             params.types = validOrderTypes.join(',');
+        }
+    }
+
+    // Handle multiple statuses as comma-separated string
+    if (selectedStatuses && selectedStatuses.length > 0) {
+        const validStatuses = selectedStatuses.filter(status => status && status !== 'All Statuses');
+        if (validStatuses.length > 0) {
+            params.status = validStatuses.join(',');
         }
     }
 
@@ -858,6 +897,7 @@ function processOrdersData(data) {
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.created_date),
         priority: order.priority,
+        status: order.status || 'Open',
         permalink: order.permalink
     }));
 
@@ -871,6 +911,7 @@ function processOrdersData(data) {
         orderingProviderId: order.ordering_provider?.id,
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.created_date),
+        status: order.status || 'Open',
         permalink: order.permalink,
         priority: order.priority
     }));
@@ -887,6 +928,7 @@ function processOrdersData(data) {
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.created_date),
         priority: order.priority,
+        status: order.status || 'Open',
         permalink: order.permalink
     }));
 
@@ -1092,12 +1134,16 @@ function getBadgeClass(type) {
 
 function getStatusBadgeClass(status) {
     switch (status?.toLowerCase()) {
-        case 'open':
+        case 'uncommitted':
             return 'badge-outline';
+        case 'open':
+            return 'badge-secondary';
         case 'sent':
             return 'badge-default';
         case 'delegated':
             return 'badge-secondary';
+        case 'closed':
+            return 'badge-default';
         default:
             return 'badge-outline';
     }
@@ -1303,10 +1349,12 @@ function clearAllFilters() {
     // Clear dropdowns - set all to "All" option
     const providerAllCheckbox = document.getElementById('provider-all');
     const typeAllCheckbox = document.getElementById('type-all');
+    const statusAllCheckbox = document.getElementById('status-all');
     const locationDropdown = document.getElementById('location-dropdown');
 
     if (providerAllCheckbox) providerAllCheckbox.checked = true;
     if (typeAllCheckbox) typeAllCheckbox.checked = true;
+    if (statusAllCheckbox) statusAllCheckbox.checked = true;
 
     if (locationDropdown) {
         const locationOptions = locationDropdown.querySelectorAll('.dropdown-option');
@@ -1339,8 +1387,10 @@ function clearAllFilters() {
     // Update dropdown displays
     const providerDropdown = document.getElementById('provider-dropdown');
     const typeDropdown = document.getElementById('type-dropdown');
+    const statusDropdown = document.getElementById('status-dropdown');
     updateSelectedDisplay(providerDropdown);
     updateSelectedDisplay(typeDropdown);
+    updateSelectedDisplay(statusDropdown);
 
     // Trigger filter change
     handleFilterChange();

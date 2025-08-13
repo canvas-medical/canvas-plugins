@@ -76,6 +76,36 @@
           </div>
         </div>
         <div class="filter-group">
+          <label class="filter-label">Status</label>
+          <div class="filter-dropdown" id="status-dropdown" data-values="">
+            <div class="selected-value">
+              <span class="placeholder-text">All Statuses</span>
+            </div>
+            <div class="dropdown-options" id="status-options">
+              <div class="dropdown-option" data-value="">
+                <input type="checkbox" id="status-all" checked>
+                <label for="status-all">All Statuses</label>
+              </div>
+              <div class="dropdown-option" data-value="uncommitted">
+                <input type="checkbox" id="status-uncommitted">
+                <label for="status-uncommitted">Uncommitted</label>
+              </div>
+              <div class="dropdown-option" data-value="open">
+                <input type="checkbox" id="status-open">
+                <label for="status-open">Open</label>
+              </div>
+              <div class="dropdown-option" data-value="delegated">
+                <input type="checkbox" id="status-delegated">
+                <label for="status-delegated">Delegated</label>
+              </div>
+              <div class="dropdown-option" data-value="sent">
+                <input type="checkbox" id="status-sent">
+                <label for="status-sent">Sent</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="filter-group">
           <label class="filter-label">Patient Name</label>
           <input type="text" id="patient-name-filter" class="filter-input" placeholder="Search by patient name...">
         </div>
