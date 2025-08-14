@@ -1,4 +1,5 @@
 {
     "project_name": "My Cool Plugin",
-    "__project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}"
+    "__project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-') }}",
+    "__package_name": "{{ cookiecutter.__project_slug.replace('-', '_') }}"
 }
