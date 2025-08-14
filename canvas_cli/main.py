@@ -32,6 +32,9 @@ app.command(short_help="Run the specified plugin for local development.")(run_pl
 # Config app
 config_app = typer.Typer(help="Manage plugin secrets.", rich_markup_mode=None, add_completion=False)
 app.add_typer(config_app, name="config")
+config_app.command(name="list", short_help="List plugin secrets on a Canvas instance.")(
+    plugin.list_secrets
+)
 config_app.command(name="set", short_help="Set plugin secrets on a Canvas instance.")(
     plugin.set_secrets
 )
