@@ -1,26 +1,12 @@
 from typing import Any
 
-from canvas_sdk.base import Model
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-
-
-class Group(Model):
-    """
-    Class representing a group of items in the Patient Chart.
-    """
-
-    items: list[Any]
-    priority: int
-    name: str
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert the Group object to a dictionary."""
-        return {"items": self.items, "priority": self.priority, "name": self.name}
+from canvas_sdk.effects.group import Group
 
 
 class PatientChartGroup(_BaseEffect):
     """
-    An Effect that will send an invitation for the Patient Portal.
+    An Effect that groups chart items by name and priority.
     """
 
     class Meta:
@@ -30,7 +16,7 @@ class PatientChartGroup(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """The user's id."""
+        """The chart items."""
         return {
             "items": [item.to_dict() for item in self.items.values() if isinstance(item, Group)]
         }
@@ -41,7 +27,4 @@ class PatientChartGroup(_BaseEffect):
         return {"data": self.values}
 
 
-__exports__ = (
-    "PatientChartGroup",
-    "Group",
-)
+__exports__ = ("PatientChartGroup",)
