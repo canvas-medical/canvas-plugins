@@ -29,7 +29,7 @@ class OrderTrackingApplication(Application):
     """An embeddable application that can be registered to Canvas."""
 
     def on_open(self) -> Effect:
-        enable_task_comments = self.secrets.get("ENABLE_TASK_COMMENTS", "true")
+        enable_task_comments = self.secrets.get("ENABLE_TASK_COMMENTS", "true") or "true"
 
         return LaunchModalEffect(
             content=render_to_string("templates/worklist_orders.html", context={
