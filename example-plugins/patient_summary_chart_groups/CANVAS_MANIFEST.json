@@ -16,12 +16,7 @@
             },
             {
                 "class": "patient_summary_chart_groups.protocols.my_protocol:Medications",
-                "description": "A protocol that groups Psychiatry medications",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "A protocol that groups Psychiatry medications"
             }
         ],
         "commands": [],

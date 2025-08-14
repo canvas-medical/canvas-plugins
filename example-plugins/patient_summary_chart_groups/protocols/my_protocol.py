@@ -1,5 +1,6 @@
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.patient_chart_group import PatientChartGroup, Group
+from canvas_sdk.effects.group import Group
+from canvas_sdk.effects.patient_chart_group import PatientChartGroup
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.commands.constants import CodeSystems
