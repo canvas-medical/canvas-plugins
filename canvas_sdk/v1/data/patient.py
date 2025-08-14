@@ -40,7 +40,7 @@ class PatientSettingConstants:
 
 class PatientConstants:
     """PatientConstants."""
-    DEFAULT_AVATAR = "https://cdn.canvasmedical.com/canvas-sdk/default-avatar.png"
+    DEFAULT_AVATAR = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
 
 class Patient(Model):
     """A class representing a patient."""
@@ -189,8 +189,8 @@ class Patient(Model):
     def photo_url(self) -> str:
         """Returns the URL of the patient's photo."""
         photo = self.photos.first()
-        if photo and str(photo.url).startswith("patient-avatars"):
-            return photo
+        if photo:
+            return photo.url
         return PatientConstants.DEFAULT_AVATAR
 
 
@@ -298,6 +298,30 @@ class PatientMetadata(IdentifiableModel):
     key = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
 
+class PatientPhoto(Model):
+    """PatientPhoto."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientphoto_001"
+
+    created = models.DateTimeField()
+    modified = models.DateTimeField()
+    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="photos", null=True)
+    url = models.CharField(
+        default=PatientConstants.DEFAULT_AVATAR, max_length=512
+    )
+
+
+class PatientFacilityAddress(PatientAddress):
+    """PatientFacilityAddress."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientfacilityaddress_001"
+
+    room_number = models.CharField(max_length=100, null=True)
+    facility = models.ForeignKey("v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True)
+    # patientaddress = models.ForeignKey("v1.PatientAddress", on_delete=models.DO_NOTHING, related_name="addresses", null=True)
+
 
 __exports__ = (
     "SexAtBirth",
@@ -305,9 +329,11 @@ __exports__ = (
     "Patient",
     "PatientContactPoint",
     "PatientAddress",
+    "PatientFacilityAddress",
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",
+    "PatientPhoto",
     # not defined here but used by current plugins
     "ContactPointState",
     "ContactPointSystem",
