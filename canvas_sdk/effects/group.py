@@ -5,7 +5,7 @@ from canvas_sdk.base import Model
 
 class Group(Model):
     """
-    Class representing a group of items in the Patient Chart.
+    Class representing a group of items.
     """
 
     items: list[Any]
