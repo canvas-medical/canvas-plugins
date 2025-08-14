@@ -552,12 +552,14 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PaymentCollection",
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
@@ -683,6 +685,9 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.facility": [
+    "Facility"    
+  ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
@@ -752,10 +757,12 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientSetting",
     "PatientSettingConstants",
-    "SexAtBirth"
+    "SexAtBirth",
+    "PatientPhoto"
   ],
   "canvas_sdk.v1.data.patient_consent": [
     "PatientConsent",
@@ -780,6 +787,10 @@
     "PracticeLocation",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
+  ],
+  "canvas_sdk.v1.data.protocol_current": [
+    "ProtocolCurrent",
+    "ProtocolCurrentStatus"
   ],
   "canvas_sdk.v1.data.protocol_override": [
     "IntervalUnit",
