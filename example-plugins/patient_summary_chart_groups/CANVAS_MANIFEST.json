@@ -7,12 +7,7 @@
         "protocols": [
             {
                 "class": "patient_summary_chart_groups.protocols.my_protocol:Protocol",
-                "description": "A protocol that groups Psychiatry conditions",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "A protocol that groups Psychiatry conditions"
             },
             {
                 "class": "patient_summary_chart_groups.protocols.my_protocol:Medications",
