@@ -142,6 +142,7 @@ norecursedirs = [
   ".mypy_cache",
   ".pytest_cache",
   "__pycache__",
+  "canvas_cli/templates",
   "custom-plugins",
   "node_modules",
   "static",
