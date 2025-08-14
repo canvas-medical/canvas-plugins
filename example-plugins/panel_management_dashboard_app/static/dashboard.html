@@ -1,22 +1,45 @@
 <div class="sidebar">
-  <div class="search-box">
-      <input type="text" class="search-input" placeholder="Search Populations">
-  </div>
+    <div class="search-box">
+        <input
+            name="facility_search"
+            type="text"
+            class="filter-input"
+            placeholder="Search facilities..."
+            value="{{ facility_search_query }}"
+            hx-get="/plugin-io/api/panel_management_dashboard_app/app/facilities?facility_id={{ selected_facility.id }}"
+            hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load"
+            hx-target="#facilities"
+        >
+    </div>
 
-  <div
-      class="nav-item {{ active }}"
-      hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"      
-  >All Patients</div>
+    <div
+        {% if not selected_facility %}
+        class="nav-item active"
+        {% else %}
+        class="nav-item"
+        {% endif %}
+        hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"
+    >All Patients</div>
 
-  {% for location in locations %}
-      <div
-          class="nav-item {{ location.is_active }}"
-          hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?location_id={{ location.id }}"
-      >{{ location.short_name }}</div>
-  {% endfor %}
+    <div id="facilities">
+        {% for facility in facilities %}
+        <div
+            {% if facility.id == selected_facility.id %}
+            class="nav-item active"
+            {% else %}
+            class="nav-item"
+            {% endif %}
+            hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?facility_id={{ facility.id }}&facility_search={{ facility_search_query }}"
+        >{{ facility.name }}</div>
+        {% endfor %}
+    </div>
 </div>
 
-<div id="table" hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ page }}&limit={{ limit }}&location_id={{ current_location.id }}"
-  hx-trigger="load" hx-target="#table" hx-swap="innerHTML" class="content-area">
-  <!-- Table will be loaded here -->
-</div>
+<div
+    id="table"
+    class="content-area"
+    hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ page }}&limit={{ limit }}&facility_id={{ selected_facility.id }}"
+    hx-trigger="load"
+    hx-target="#table"
+    hx-swap="innerHTML"
+></div>

@@ -13,10 +13,10 @@
         "applications": [
             {
                 "class": "panel_management_dashboard_app.applications.panel_management:PanelManagementApp",
-                "name": "panel_management_dashboard_app",
+                "name": "Panel Management Dashboard",
                 "description": "An Application that does xyz...",
                 "scope": "global",
-                "icon": "assets/python-logo.png"
+                "icon": "assets/logo-square.png"
             }
         ],
         "protocols": [
@@ -35,7 +35,11 @@
         "effects": [],
         "views": []
     },
-    "secrets": [],
+    "secrets": [
+        "VISIT_THRESHOLD",
+        "PAGE_SIZE",
+        "INSURANCES"
+    ],
     "tags": {},
     "references": [],
     "license": "",

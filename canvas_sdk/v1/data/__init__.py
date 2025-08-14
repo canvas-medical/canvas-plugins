@@ -52,6 +52,7 @@ from .patient import (
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientMetadata,
+    PatientPhoto,
     PatientSetting,
 )
 from .patient_consent import (
@@ -69,6 +70,7 @@ from .posting import (
     PatientPosting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
+from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
     Interview,
@@ -167,10 +169,12 @@ __all__ = __exports__ = (
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientPhoto",
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
