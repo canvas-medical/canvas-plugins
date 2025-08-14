@@ -6,6 +6,7 @@ import tarfile
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
+from pprint import pprint
 from typing import Any, cast
 from urllib.parse import urljoin
 
@@ -445,6 +446,43 @@ def list(
             print(
                 f"{plugin['name']}@{plugin['version']}\t{'enabled' if plugin['is_enabled'] else 'disabled'}"
             )
+    else:
+        print(f"Status code {r.status_code}: {r.text}")
+        raise typer.Exit(1)
+
+
+def list_secrets(
+    plugin: str = typer.Argument(..., help="Plugin name to list secrets for"),
+    host: str | None = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+) -> None:
+    """List all secrets from a plugin on a Canvas instance."""
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    url = plugin_url(host, plugin, "metadata")
+
+    token = get_or_request_api_token(host)
+
+    try:
+        r = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except requests.exceptions.RequestException:
+        print(f"Failed to connect to {host}")
+        raise typer.Exit(1) from None
+
+    if r.status_code == requests.codes.ok:
+        secrets = r.json().get("secrets", [])
+
+        if secrets:
+            pprint(secrets)
+        else:
+            print("No secrets configured.")
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
