@@ -7,6 +7,14 @@ from typing_extensions import TypedDict
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 
 
+class Priority(StrEnum):
+    """The priority of the task."""
+
+    STAT = "STAT"
+    URGENT = "Urgent"
+    ROUTINE = "Routine"
+
+
 class AssigneeType(StrEnum):
     """The type of assigner for a Task command."""
 
@@ -32,12 +40,14 @@ class TaskCommand(BaseCommand):
     title: str = ""
     assign_to: TaskAssigner | None = None
     due_date: date | None = None
+    priority: Priority | None = None
     comment: str | None = None
     labels: list[str] | None = None
     linked_items_urns: list[str] | None = None
 
 
 __exports__ = (
+    "Priority",
     "AssigneeType",
     "TaskAssigner",
     "TaskCommand",
