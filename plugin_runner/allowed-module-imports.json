@@ -797,6 +797,10 @@
     "ProtocolOverride",
     "Status"
   ],
+  "canvas_sdk.v1.data.protocol_result": [
+    "ProtocolResult",
+    "ProtocolResultStatus"
+  ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",
     "InterviewQuerySet",
