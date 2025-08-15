@@ -540,6 +540,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Facility",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
@@ -583,6 +584,7 @@
     "PatientConsentRejectionCoding",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientPhoto",
     "PatientPosting",
@@ -798,10 +800,10 @@
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientMetadata",
+    "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
-    "SexAtBirth",
-    "PatientPhoto"
+    "SexAtBirth"
   ],
   "canvas_sdk.v1.data.patient_consent": [
     "PatientConsent",
