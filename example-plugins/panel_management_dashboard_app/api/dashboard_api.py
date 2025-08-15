@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 import arrow
+from django.db.models import Q
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import HTMLResponse, Response
@@ -12,7 +13,8 @@ from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipS
 from canvas_sdk.v1.data.coverage import CoverageStack
 from canvas_sdk.v1.data.facility import Facility
 from canvas_sdk.v1.data.note import NoteTypeCategories
-from canvas_sdk.v1.data.protocol_current import ProtocolCurrent, ProtocolCurrentStatus
+from canvas_sdk.v1.data.protocol_current import ProtocolCurrent
+from canvas_sdk.v1.data.protocol_result import ProtocolResultStatus
 from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.task import Task, TaskStatus
 from logger import log
@@ -45,9 +47,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
     def get_dashboard(self) -> list[Response | Effect]:
         """Serve the dashboard page with patient data."""
         logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
-        facility_search_query = self.request.query_params.get("facility_search", "").strip()
-        if facility_search_query:
-            facilities = Facility.objects.filter(name__icontains=facility_search_query)
+        facility_search = self.request.query_params.get("facility_search", "").strip()
+        if facility_search:
+            facilities = Facility.objects.filter(name__icontains=facility_search)
         else:
             facilities = Facility.objects.all()
 
@@ -61,7 +63,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             "last_name": logged_in_user.last_name,
             "facilities": facilities,
             "selected_facility": selected_facility,
-            "facility_search_query": facility_search_query,
+            "facility_search": facility_search,
             "page": int(self.request.query_params.get("page", 1)),
             "limit": int(self.request.query_params.get("limit", 10)),
         }
@@ -72,12 +74,13 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                 status_code=HTTPStatus.OK,
             )
         ]
+
     @api.get("/facilities")
     def get_facilities(self) -> list[Response | Effect]:
         """Serve the facilities list."""
-        facility_search_query = self.request.query_params.get("facility_search", "").strip()
-        if facility_search_query:
-            facilities = Facility.objects.filter(name__icontains=facility_search_query)
+        facility_search = self.request.query_params.get("facility_search", "").strip()
+        if facility_search:
+            facilities = Facility.objects.filter(name__icontains=facility_search)
         else:
             facilities = Facility.objects.all()
 
@@ -89,7 +92,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         context = {
             "facilities": facilities,
             "selected_facility": selected_facility,
-            "facility_search_query": facility_search_query,
+            "facility_search": facility_search,
         }
 
         return [
@@ -107,7 +110,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         limit = min(int(self.request.query_params.get("limit", 10)), 10)
 
         # Search query
-        patient_search = self.request.query_params.get("patient_search", None)
+        patient_search = self.request.query_params.get("patient_search", "").strip()
         log.info(f"Patient search query: {patient_search}")
 
         # Facilities
@@ -115,12 +118,12 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         facility = Facility.objects.get(id=facility_id) if facility_id else None
 
         # Staff
-        staff_id = self.request.query_params.get("staff_id")
-        current_staff = self._get_current_staff(staff_id) if staff_id else None
         staff = self._get_staff()
+        current_staff_id = self.request.query_params.get("staff_id")
+        current_staff = [member for member in staff if member["id"] == current_staff_id][0] if current_staff_id else None
 
-        # Insurers
-        insurers = self._get_insurers_icons()
+        # Secrets
+        secrets = self._get_secrets()
 
         # Calculate offset
         offset = (page - 1) * limit
@@ -138,8 +141,13 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         if facility_id:
             patients_query = patients_query.filter(addresses__patientfacilityaddress__facility__id=facility_id)
 
-        if staff_id:
-            patients_query = patients_query.filter(notes__provider__id=staff_id)
+        if current_staff_id:
+            patients_query = patients_query.filter(notes__provider__id=current_staff_id)
+
+        if patient_search:
+            patients_query = patients_query.filter(
+                Q(first_name__icontains=patient_search) | Q(last_name__icontains=patient_search),
+            )
 
         patients_query = patients_query.distinct()
 
@@ -150,9 +158,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
         processed_patients = []
         for patient in patients_page:
-            last_visit = self._get_last_visit(patient, current_staff)
+            last_visit = self._get_last_visit(patient)
             last_visit_staff = (
-                self._get_current_staff(last_visit.provider.id)
+                [member for member in staff if member["id"] == last_visit.provider.id][0]
                 if last_visit and last_visit.provider
                 else None
             )
@@ -175,7 +183,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                     "total": total_gaps,
                 },
                 "insurance": self._get_coverage(patient, last_visit.datetime_of_service if last_visit else None),
-                "insurances": insurers,
+                "insurances": secrets.get("insurances_logos"),
                 "sticky_note": "",
             }
             processed_patients.append(patient_data)
@@ -190,6 +198,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             "staff": staff,
             "facility": facility,
             "current_staff": current_staff,
+            "patient_search": patient_search,
             "pagination": {
                 "current_page": page,
                 "total_pages": total_pages,
@@ -245,34 +254,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             for member in care_team
         ] if care_team else []
 
-    def _get_current_staff(self, staff_id):
-        """Get the currently logged-in staff member."""
-        current_staff = (
-            CareTeamMembership.objects.values(
-                "staff__id",
-                "staff__first_name",
-                "staff__last_name",
-                "role__display",
-            )
-            .filter(
-                status=CareTeamMembershipStatus.ACTIVE,
-                staff__id=staff_id,
-            )
-            .first()
-        )
-
-        if not current_staff:
-            log.warning(f"Staff member with ID {staff_id} not found.")
-            return None
-
-        return {
-            "id": current_staff.get("staff__id"),
-            "first_name": current_staff.get("staff__first_name"),
-            "last_name": current_staff.get("staff__last_name"),
-            "role": current_staff.get("role__display"),
-        }
-
-    def _get_last_visit(self, patient, staff=None):
+    def _get_last_visit(self, patient):
         query = patient.notes.filter(
             note_type_version__category=NoteTypeCategories.ENCOUNTER,
         ).order_by("-datetime_of_service")
@@ -292,15 +274,15 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         """Get gaps in care for a patient."""
         gaps = ProtocolCurrent.objects.filter(
             patient=patient,
-            status=ProtocolCurrentStatus.STATUS_DUE,
+            status=ProtocolResultStatus.STATUS_DUE,
         ).count()
 
         total_gaps = ProtocolCurrent.objects.filter(
             patient=patient,
             status__in=[
-                ProtocolCurrentStatus.STATUS_DUE,
-                ProtocolCurrentStatus.STATUS_SATISFIED,
-                ProtocolCurrentStatus.STATUS_PENDING,
+                ProtocolResultStatus.STATUS_DUE,
+                ProtocolResultStatus.STATUS_SATISFIED,
+                ProtocolResultStatus.STATUS_PENDING,
             ],
         ).count()
 
@@ -314,8 +296,39 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
         return coverage.last().issuer.name if coverage.exists() else None
 
-    def _get_insurers_icons(self):
-        """Get insurers from the secrets."""
-        insurers = self.secrets.get("INSURERS", {})
-        log.info(f"Insurers loaded: {insurers}")
-        return insurers
+    def _get_secrets(self):
+        """Get secrets for the dashboard."""
+        page_size = self.secrets.get('PAGE_SIZE', 10)
+        visit_threshold = self.secrets.get('VISIT_THRESHOLD', '1 day')
+        insurances_logos = self.secrets.get('INSURANCES', {})
+
+        return {
+            "page_size": page_size,
+            "visit_threshold": visit_threshold,
+            "insurances_logos": insurances_logos,
+        }
+
+    # @api.get("/facilities/<facility_id>/patients")
+    # def get_facility_patients(self) -> list[Response | Effect]:
+    #     """Serve the patients for a specific facility."""
+    #     facility_id = self.request.path_params.get("facility_id")
+    #     page = int(self.request.query_params.get("page", 1))
+    #     limit = min(int(self.request.query_params.get("limit", 10)), 10)
+    #     offset = (page - 1) * limit
+
+    #     facility = Facility.objects.get(id=facility_id)
+    #     total = facility.patient_facilities.count()
+    #     patients = [f.patient for f in list(facility.patient_facilities.all())[offset:offset + limit]]
+    #     context = {
+    #         "patients": patients,
+    #         "page": page,
+    #         "limit": limit,
+    #         "total": total,
+    #     }
+
+    #     return [
+    #         Response(
+    #             render_to_string("static/table.html", context).encode(),
+    #             status_code=HTTPStatus.OK,
+    #         )
+    #     ]

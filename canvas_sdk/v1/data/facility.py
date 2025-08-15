@@ -28,3 +28,7 @@ class Facility(IdentifiableModel):
 
     def __str__(self) -> str:
         return self.name
+
+exports = (
+    "Facility",
+)

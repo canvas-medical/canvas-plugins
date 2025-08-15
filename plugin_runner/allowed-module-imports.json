@@ -718,14 +718,14 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.facility": [
+    "Facility"    
+  ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
     "GoalAchievementStatus",
     "GoalLifecycleStatus",
     "GoalPriority"
-  ],
-  "canvas_sdk.v1.data.facility": [
-    "Facility"    
   ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
@@ -835,6 +835,10 @@
     "IntervalUnit",
     "ProtocolOverride",
     "Status"
+  ],
+  "canvas_sdk.v1.data.protocol_result": [
+    "ProtocolResult",
+    "ProtocolResultStatus"
   ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",

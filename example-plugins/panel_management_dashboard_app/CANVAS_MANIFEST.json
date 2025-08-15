@@ -36,7 +36,7 @@
         "views": []
     },
     "secrets": [
-        "VISIT_THRESHOLD",
+        "ALERT_THRESHOLD_DAYS",
         "PAGE_SIZE",
         "INSURANCES"
     ],

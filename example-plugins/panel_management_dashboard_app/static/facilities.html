@@ -1,3 +1,12 @@
+<div
+    {% if not selected_facility %}
+    class="nav-item active"
+    {% else %}
+    class="nav-item"
+    {% endif %}
+    hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"
+>All Patients</div>
+
 {% for facility in facilities %}
 <div
     {% if facility.id == selected_facility.id %}
@@ -5,6 +14,6 @@
     {% else %}
     class="nav-item"
     {% endif %}
-    hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?facility_id={{ facility.id }}&facility_search={{ facility_search_query }}"
+    hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?facility_id={{ facility.id }}&facility_search={{ facility_search }}"
 >{{ facility.name }}</div>
 {% endfor %}
