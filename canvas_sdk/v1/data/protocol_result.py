@@ -36,7 +36,7 @@ class ProtocolResult(models.Model):
     plugin_can_be_snoozed = models.BooleanField(default=False)
 
 
-exports = (
+__exports__ = (
     "ProtocolResult",
     "ProtocolResultStatus",
 )
