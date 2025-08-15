@@ -12,6 +12,7 @@ class Facility(IdentifiableModel):
     Returns:
         models.Model: Facility model instance.
     """
+
     class Meta:
         db_table = "canvas_sdk_data_api_facility_001"
 
@@ -29,6 +30,5 @@ class Facility(IdentifiableModel):
     def __str__(self) -> str:
         return self.name
 
-__exports__ = (
-    "Facility",
-)
+
+__exports__ = ("Facility",)

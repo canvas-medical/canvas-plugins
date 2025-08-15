@@ -24,7 +24,9 @@ class ProtocolResult(models.Model):
     types = ArrayField(base_field=models.TextField())
     protocol_key = models.TextField(default="")
     plugin_name = models.TextField(null=True, blank=True)
-    status = models.TextField(choices=ProtocolResultStatus.choices, default=ProtocolResultStatus.STATUS_NOT_APPLICABLE)
+    status = models.TextField(
+        choices=ProtocolResultStatus.choices, default=ProtocolResultStatus.STATUS_NOT_APPLICABLE
+    )
     due_in = models.IntegerField(null=True, default=-1)
     days_of_notice = models.IntegerField(default=30)
     snoozed = models.BooleanField(default=False)
