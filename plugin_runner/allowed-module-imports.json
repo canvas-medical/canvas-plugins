@@ -155,6 +155,7 @@
   ],
   "canvas_sdk.commands.commands.task": [
     "AssigneeType",
+    "Priority",
     "TaskAssigner",
     "TaskCommand"
   ],
@@ -383,12 +384,14 @@
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],

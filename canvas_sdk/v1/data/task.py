@@ -33,6 +33,14 @@ class TaskLabelModule(models.TextChoices):
     TASKS = "tasks", "Tasks"
 
 
+class TaskPriority(models.TextChoices):
+    """Choices for task priorities."""
+
+    STAT = "stat", "STAT"
+    URGENT = "urgent", "Urgent"
+    ROUTINE = "routine", "Routine"
+
+
 class Task(TimestampedModel, IdentifiableModel):
     """Task."""
 
@@ -45,8 +53,7 @@ class Task(TimestampedModel, IdentifiableModel):
     assignee = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
     )
-    # TODO - uncomment when Team model is created
-    # team = models.ForeignKey('v1.Team', on_delete=models.DO_NOTHING, related_name="tasks", null=True)
+    team = models.ForeignKey('v1.Team', on_delete=models.DO_NOTHING, related_name="tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
@@ -56,6 +63,9 @@ class Task(TimestampedModel, IdentifiableModel):
     due = models.DateTimeField(null=True)
     due_event = models.CharField(choices=EventType.choices, blank=True, max_length=16)
     status = models.CharField(choices=TaskStatus.choices, max_length=9)
+    priority = models.CharField(
+        choices=TaskPriority.choices, max_length=7, null=True, blank=True
+    )
 
 
 class TaskComment(TimestampedModel, IdentifiableModel):
@@ -101,6 +111,7 @@ __exports__ = (
     "EventType",
     "TaskStatus",
     "TaskLabelModule",
+    "TaskPriority",
     "Task",
     "TaskComment",
     "TaskLabel",
