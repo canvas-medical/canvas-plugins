@@ -5,23 +5,23 @@
             type="text"
             class="filter-input"
             placeholder="Search facilities..."
-            value="{{ facility_search_query }}"
+            value="{{ facility_search }}"
             hx-get="/plugin-io/api/panel_management_dashboard_app/app/facilities?facility_id={{ selected_facility.id }}"
-            hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load"
+            hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
             hx-target="#facilities"
         >
     </div>
 
-    <div
-        {% if not selected_facility %}
-        class="nav-item active"
-        {% else %}
-        class="nav-item"
-        {% endif %}
-        hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"
-    >All Patients</div>
-
     <div id="facilities">
+        <div
+            {% if not selected_facility %}
+            class="nav-item active"
+            {% else %}
+            class="nav-item"
+            {% endif %}
+            hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard"
+        >All Patients</div>
+
         {% for facility in facilities %}
         <div
             {% if facility.id == selected_facility.id %}
@@ -29,7 +29,7 @@
             {% else %}
             class="nav-item"
             {% endif %}
-            hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?facility_id={{ facility.id }}&facility_search={{ facility_search_query }}"
+            hx-get="/plugin-io/api/panel_management_dashboard_app/app/dashboard?facility_id={{ facility.id }}&facility_search={{ facility_search }}"
         >{{ facility.name }}</div>
         {% endfor %}
     </div>
@@ -38,7 +38,7 @@
 <div
     id="table"
     class="content-area"
-    hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ page }}&limit={{ limit }}&facility_id={{ selected_facility.id }}"
+    hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ page }}&limit={{ limit }}&facility_id={{ selected_facility.id }}&facility_search={{ facility_search }}"
     hx-trigger="load"
     hx-target="#table"
     hx-swap="innerHTML"
