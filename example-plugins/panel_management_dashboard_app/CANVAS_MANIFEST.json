@@ -14,7 +14,7 @@
             {
                 "class": "panel_management_dashboard_app.applications.panel_management:PanelManagementApp",
                 "name": "Panel Management Dashboard",
-                "description": "An Application that does xyz...",
+                "description": "Launches the Panel Management Dashboard",
                 "scope": "global",
                 "icon": "assets/logo-square.png"
             }
@@ -22,7 +22,7 @@
         "protocols": [
             {
                 "class": "panel_management_dashboard_app.api.dashboard_api:DashboardAPI",
-                "description": "Serves the dashboard application",
+                "description": "API that populates the application",
                 "data_access": {
                     "event": "",
                     "read": [],
