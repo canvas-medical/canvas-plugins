@@ -38,9 +38,12 @@ class PatientSettingConstants:
     CONTACT_METHOD = "contactMethod"
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
+
 class PatientConstants:
     """PatientConstants."""
+
     DEFAULT_AVATAR = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
 
 class Patient(Model):
     """A class representing a patient."""
@@ -284,6 +287,7 @@ class PatientMetadata(IdentifiableModel):
     key = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
 
+
 class PatientPhoto(Model):
     """PatientPhoto."""
 
@@ -292,10 +296,10 @@ class PatientPhoto(Model):
 
     created = models.DateTimeField()
     modified = models.DateTimeField()
-    patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="photos", null=True)
-    url = models.CharField(
-        default=PatientConstants.DEFAULT_AVATAR, max_length=512
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="photos", null=True
     )
+    url = models.CharField(default=PatientConstants.DEFAULT_AVATAR, max_length=512)
 
 
 class PatientFacilityAddress(PatientAddress):
@@ -305,7 +309,9 @@ class PatientFacilityAddress(PatientAddress):
         db_table = "canvas_sdk_data_api_patientfacilityaddress_001"
 
     room_number = models.CharField(max_length=100, null=True)
-    facility = models.ForeignKey("v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True)
+    facility = models.ForeignKey(
+        "v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True
+    )
     # patientaddress = models.ForeignKey("v1.PatientAddress", on_delete=models.DO_NOTHING, related_name="addresses", null=True)
 
 
