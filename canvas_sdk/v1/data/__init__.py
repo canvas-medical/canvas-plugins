@@ -15,6 +15,7 @@ from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .facility import Facility
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
 from .invoice import Invoice
 from .lab import (
@@ -50,7 +51,9 @@ from .patient import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientFacilityAddress,
     PatientMetadata,
+    PatientPhoto,
     PatientSetting,
 )
 from .patient_consent import (
@@ -68,6 +71,7 @@ from .posting import (
     PatientPosting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
+from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
     Interview,
@@ -120,6 +124,7 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Facility",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
@@ -159,16 +164,19 @@ __all__ = __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientPhoto",
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
