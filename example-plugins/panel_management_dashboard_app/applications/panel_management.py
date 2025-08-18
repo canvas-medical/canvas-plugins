@@ -10,5 +10,5 @@ class PanelManagementApp(Application):
         """Handle the on_open event."""
         return LaunchModalEffect(
             url="/plugin-io/api/panel_management_dashboard_app/app/",
-            target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
+            target=LaunchModalEffect.TargetType.PAGE,
         ).apply()
