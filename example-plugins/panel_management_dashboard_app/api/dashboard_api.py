@@ -160,7 +160,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         for patient in patients_page:
             last_visit = self._get_last_visit(patient)
             last_visit_staff = (
-                [member for member in staff if member["id"] == last_visit.provider.id][0]
+                [member for member in staff if member["id"] == last_visit.provider.id]
                 if last_visit and last_visit.provider
                 else None
             )
@@ -176,7 +176,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                 "gender": patient.sex_at_birth,
                 "telecom": patient.telecom.first().value if patient.telecom.exists() else None,
                 "last_visit": last_visit.datetime_of_service if last_visit else None,
-                "provider": last_visit_staff,
+                "provider": last_visit_staff[0] if last_visit_staff else None,
                 "tasks": self._get_patients_tasks(patient),
                 "gaps": {
                     "due": gaps,
