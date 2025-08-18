@@ -162,7 +162,9 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
     with chdir(plugin_path.parent):
         cli_runner.invoke(app, "init", input=plugin_path.name)
 
-    with open(plugin_path / "protocols" / "my_protocol.py", "w") as protocol:
+    package_name = plugin_path.name.replace("-", "_")
+
+    with open(plugin_path / package_name / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
     protocols = []
@@ -208,7 +210,7 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
         "readme": "./README.md",
     }
 
-    with open(plugin_path / "CANVAS_MANIFEST.json", "w") as manifest_file:
+    with open(plugin_path / package_name / "CANVAS_MANIFEST.json", "w") as manifest_file:
         json.dump(manifest, manifest_file)
 
 
