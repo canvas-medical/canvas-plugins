@@ -14,7 +14,7 @@ from canvas_sdk.effects.task import AddTaskComment, AddTask
 from canvas_sdk.handlers.application import Application
 from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral, PracticeLocation
+from canvas_sdk.v1.data import ImagingOrder, LabOrder, Referral, PracticeLocation, NoteType
 from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.task import TaskStatus
 from logger import log
@@ -71,6 +71,20 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
     def _get_permalink_for_command(self, order: LabOrder | ImagingOrder | Referral, commandType: str) -> str:
         return f"noteId={order.note.dbid}&commandId={order.dbid}&commandType={commandType}"
 
+    def _get_note_from_order(self, order: LabOrder | ImagingOrder | Referral) -> dict:
+        try:
+            note_title = order.note.note_type_version.name or "Untitled Note"
+        except:
+            note_title = "Untitled Note"
+
+        date = arrow.get(order.note.datetime_of_service).to('local').format('dddd, M/D/YY [at] h:mm A ZZZ')
+        provider_name = order.note.provider.credentialed_name
+
+        return  {
+            "title": f"{note_title} on {date} with {provider_name}",
+            "permalink": f"noteId={order.note.dbid}",
+        }
+
     def _create_imaging_order_payload(self, imaging_order: ImagingOrder, include_type: bool = False) -> dict:
         """Create standardized payload for imaging order."""
         payload = {
@@ -88,7 +102,8 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "ordering_provider": {
                 "preferred_name": imaging_order.ordering_provider.credentialed_name,
                 "id": str(imaging_order.ordering_provider.id),
-            }
+            },
+            "note": self._get_note_from_order(imaging_order)
         }
         if include_type:
             payload["type"] = "imaging"
@@ -112,7 +127,8 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "ordering_provider": {
                 "preferred_name": lab_order.ordering_provider.credentialed_name,
                 "id": str(lab_order.ordering_provider.id),
-            }
+            },
+            "note": self._get_note_from_order(lab_order),
         }
 
         if include_type:
@@ -142,7 +158,8 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             "ordering_provider": {
                 "preferred_name": referral_order.note.provider.credentialed_name,
                 "id": str(referral_order.note.provider.id),
-            }
+            },
+            "note": self._get_note_from_order(referral_order),
         }
         if include_type:
             payload["type"] = "referral"

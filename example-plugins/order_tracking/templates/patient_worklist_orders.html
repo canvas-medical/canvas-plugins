@@ -642,7 +642,9 @@
                   orderedDate: formatDate(order.date_ordered || order.created_date),
                   priority: order.priority || 'routine',
                   status: order.status,
-                  permalink: order.permalink
+                  permalink: order.permalink,
+                  noteTitle: order.note.title,
+                  notePermalink: order.note.permalink
                 })));
             }
 
@@ -657,7 +659,9 @@
                     orderedDate: formatDate(order.date_ordered || order.created_date),
                     priority: order.priority || 'routine',
                     status: order.status,
-                    permalink: order.permalink
+                    permalink: order.permalink,
+                    noteTitle: order.note.title,
+                    notePermalink: order.note.permalink
                 })));
             }
 
@@ -672,11 +676,11 @@
                     orderedDate: formatDate(order.date_ordered || order.created_date),
                     priority: order.priority || 'routine',
                     status: order.status,
-                    permalink: order.permalink
+                    permalink: order.permalink,
+                    noteTitle: order.note.title,
+                    notePermalink: order.note.permalink
                 })));
             }
-
-            console.log("########### ORDERS: ", orders)
 
             return orders;
         }
@@ -753,6 +757,10 @@
                     </div>
 
                     <div class="order-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Encounter:</span>
+                            <span class="detail-value"> <a href='/patient/${PATIENT_ID}/#${order.notePermalink}&application=${PATIENT_CHART_APPLICATION}' target="_blank " style="color: var(--primary); cursor: pointer; text-decoration: none;">${order.noteTitle}</a></span>
+                        </div>
                         <div class="detail-row">
                             <span class="detail-label">Ordered by:</span>
                             <span class="detail-value">${order.orderingProvider || ''}</span>
