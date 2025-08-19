@@ -99,6 +99,13 @@ class Patient(Model):
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
+    @property
+    def full_name(self) -> str:
+        """Returns the patient's full name."""
+        return " ".join(
+            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
+        )
+
     def age_at(self, time: arrow.Arrow) -> float:
         """Given a datetime, returns what the patient's age would be at that datetime."""
         age = float(0)

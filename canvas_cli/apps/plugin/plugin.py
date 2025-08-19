@@ -19,6 +19,8 @@ from canvas_cli.utils.validators import validate_manifest_file
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
 
+ONE_MEGABYTE = 1024 * 1024
+
 
 def plugin_url(host: str, *paths: str) -> str:
     """Generates the plugin url for managing plugins in a Canvas instance."""
@@ -57,23 +59,53 @@ def _build_package(package: Path) -> Path:
     else:
         ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
 
-    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
-        with tarfile.open(file.name, "w:gz") as tar:
-            for root in package.rglob("*"):
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
+        with tarfile.open(tar_file.name, "w:gz") as tar:
+            file_count = 0
+            file_size_total = 0
+
+            for path in package.rglob("*"):
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in root.parts):
+                if any(part.startswith(".") for part in path.parts):
                     continue
 
                 # Skip symlinks
-                if root.is_symlink():
+                if path.is_symlink():
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(root):
+                if ignore_patterns.match_file(path):
                     continue
 
-                tar.add(root, arcname=root.relative_to(package))
-        return Path(file.name)
+                file_count += 1
+
+                stat = path.stat()
+                file_size_total += stat.st_size
+
+                if stat.st_size > ONE_MEGABYTE:
+                    print(
+                        f'Warning: >1mb file found: "{path.name}", '
+                        "ensure that unneeded files are not included in the "
+                        "plugin directory"
+                    )
+
+                tar.add(path, arcname=path.relative_to(package))
+
+            if file_count > 100:
+                print(
+                    "Warning: >100 files found when packaging plugin, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+            if file_size_total > ONE_MEGABYTE:
+                print(
+                    "Warning: >1mb of content found when packaging plugin, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+        return Path(tar_file.name)
 
 
 def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
@@ -230,7 +262,7 @@ def install(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.created:
-        print(f"Plugin {plugin_name} successfully installed!")
+        print(f"Plugin {plugin_name} uploaded! Check logs for more details.")
 
     # If we got a conflict, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
@@ -483,7 +515,7 @@ def update(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        print("Plugin successfully updated!")
+        print("New plugin version uploaded! Check logs for more details.")
 
     else:
         print(f"Status code {r.status_code}: {r.text}")

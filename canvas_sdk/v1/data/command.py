@@ -40,6 +40,9 @@ class Command(IdentifiableModel):
         """
         # TODO: Is the anchor object type enough here, or do we need a mapping? The home-app model
         #  names might not exactly match the plugins model names.
+        if not self.anchor_object_type or not self.anchor_object_dbid:
+            return None
+
         anchor_model = apps.get_model(
             app_label=self._meta.app_label, model_name=self.anchor_object_type
         )

@@ -6,10 +6,11 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
+from canvas_sdk.commands.base import _SendableCommandMixin
 from canvas_sdk.v1.data.lab import LabPartner, LabPartnerTest
 
 
-class LabOrderCommand(BaseCommand):
+class LabOrderCommand(_SendableCommandMixin, BaseCommand):
     """A class for managing a Lab Order command within a specific note."""
 
     class Meta:
@@ -29,7 +30,7 @@ class LabOrderCommand(BaseCommand):
     comment: str | None = None
 
     def _get_error_details(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
+        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error", "send"]
     ) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
@@ -43,7 +44,11 @@ class LabOrderCommand(BaseCommand):
             else:
                 query["id"] = self.lab_partner
 
-            lab_partner_obj = LabPartner.objects.filter(**query).values("id", "dbid").first()
+            lab_partner_obj = (
+                LabPartner.objects.filter(**query)
+                .values("id", "dbid", "electronic_ordering_enabled")
+                .first()
+            )
 
             if not lab_partner_obj:
                 errors.append(

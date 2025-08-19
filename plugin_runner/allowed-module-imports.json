@@ -43,7 +43,8 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.base": [
-    "_BaseCommand"
+    "_BaseCommand",
+    "_SendableCommandMixin"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
     "AdjustPrescriptionCommand"
@@ -112,6 +113,7 @@
   ],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
+    "CompoundMedicationData",
     "Decimal",
     "PrescribeCommand"
   ],
@@ -204,6 +206,12 @@
   "canvas_sdk.effects.billing_line_item.update_billing_line_item": [
     "UpdateBillingLineItem"
   ],
+  "canvas_sdk.effects.compound_medications": [
+    "CompoundMedication"
+  ],
+  "canvas_sdk.effects.compound_medications.compound_medication": [
+    "CompoundMedication"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
@@ -274,6 +282,14 @@
   ],
   "canvas_sdk.effects.patient_profile_configuration": [
     "PatientProfileConfiguration"
+  ],
+  "canvas_sdk.effects.payment_processor": [
+    "AddPaymentMethodResponse",
+    "CardTransaction",
+    "PaymentMethod",
+    "PaymentProcessorForm",
+    "PaymentProcessorMetadata",
+    "RemovePaymentMethodResponse"
   ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
@@ -359,6 +375,12 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.payment_processors.base": [
+    "PaymentProcessor"
+  ],
+  "canvas_sdk.handlers.payment_processors.card": [
+    "CardPaymentProcessor"
   ],
   "canvas_sdk.handlers.simple_api": [
     "APIKeyAuthMixin",
@@ -496,6 +518,7 @@
     "ClaimPatient",
     "ClaimQueue",
     "Command",
+    "CompoundMedication",
     "Condition",
     "ConditionCoding",
     "Coverage",
@@ -559,12 +582,16 @@
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisitSettingCoding",
+    "Referral",
+    "ReferralReport",
     "ResponseOption",
     "ResponseOptionSet",
+    "ServiceProvider",
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
     "StaffPhoto",
+    "StaffRole",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -645,6 +672,9 @@
     "ReviewPatientCommunicationMethod",
     "ReviewStatus",
     "TaxIDType"
+  ],
+  "canvas_sdk.v1.data.compound_medication": [
+    "CompoundMedication"
   ],
   "canvas_sdk.v1.data.condition": [
     "ClinicalStatus",
@@ -790,11 +820,19 @@
   "canvas_sdk.v1.data.reason_for_visit": [
     "ReasonForVisitSettingCoding"
   ],
+  "canvas_sdk.v1.data.referral": [
+    "Referral",
+    "ReferralReport"
+  ],
+  "canvas_sdk.v1.data.service_provider": [
+    "ServiceProvider"
+  ],
   "canvas_sdk.v1.data.staff": [
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
-    "StaffPhoto"
+    "StaffPhoto",
+    "StaffRole"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",

@@ -12,3 +12,7 @@ class InvalidPluginFormat(PluginValidationError):
 
 class PluginInstallationError(PluginError):
     """An exception raised when a plugin fails to install."""
+
+
+class PluginUninstallationError(PluginError):
+    """An exception raised when a plugin fails to uninstall."""

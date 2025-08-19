@@ -1,6 +1,155 @@
 # CHANGELOG
 
 
+## v0.54.0 (2025-08-19)
+
+### Bug Fixes
+
+- Plugin_only → plugin_context ([#877](https://github.com/canvas-medical/canvas-plugins/pull/877),
+  [`a221cf2`](https://github.com/canvas-medical/canvas-plugins/commit/a221cf2a24e5c67447288af99f3fe1af963cd543))
+
+- Raise on bad status from S3 in `download_plugin`
+  ([#744](https://github.com/canvas-medical/canvas-plugins/pull/744),
+  [`501de93`](https://github.com/canvas-medical/canvas-plugins/commit/501de93aa6f81afc9dd78748cabcc9363fa5f667))
+
+### Documentation
+
+- Add better description of app launch examples
+  ([#906](https://github.com/canvas-medical/canvas-plugins/pull/906),
+  [`0315103`](https://github.com/canvas-medical/canvas-plugins/commit/0315103f70ed07145341a698990faa42684821d9))
+
+### Features
+
+- Add ConfigDict to PyDantic sandbox allowlist (koala-3196)
+  ([#916](https://github.com/canvas-medical/canvas-plugins/pull/916),
+  [`3d3db99`](https://github.com/canvas-medical/canvas-plugins/commit/3d3db99e7df316870298341eb760d398de74b81d))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- Add warnings if many files, large files, or large total size are found
+  ([#831](https://github.com/canvas-medical/canvas-plugins/pull/831),
+  [`ac08059`](https://github.com/canvas-medical/canvas-plugins/commit/ac08059cb3dc31bed317fbac9fdfa684a10995c6))
+
+- Implement custom payment processors
+  ([#701](https://github.com/canvas-medical/canvas-plugins/pull/701),
+  [`9974e53`](https://github.com/canvas-medical/canvas-plugins/commit/9974e53d4bc991f4958ca4ab41f18ba56ee426fc))
+
+Co-authored-by: Miguel Quintas <miguel.quintas@canvasmedical.com>
+
+
+## v0.53.2 (2025-08-12)
+
+### Bug Fixes
+
+- Add support for installing/uninstalling and loading/reloading a specific plugin
+  ([#775](https://github.com/canvas-medical/canvas-plugins/pull/775),
+  [`dcc3252`](https://github.com/canvas-medical/canvas-plugins/commit/dcc32524f5caf8d37edb45fd9f3d888dbaced066))
+
+
+## v0.53.1 (2025-08-12)
+
+### Bug Fixes
+
+- Prevent an issue where the prescribe command effects send compound medication values where not
+  desired ([#908](https://github.com/canvas-medical/canvas-plugins/pull/908),
+  [`b65ece4`](https://github.com/canvas-medical/canvas-plugins/commit/b65ece4baa539516a74db1a749c14867cb12555a))
+
+
+## v0.53.0 (2025-08-07)
+
+### Features
+
+- Add pydantic.RootModel to sandbox
+  ([#898](https://github.com/canvas-medical/canvas-plugins/pull/898),
+  [`780fc15`](https://github.com/canvas-medical/canvas-plugins/commit/780fc15924380cb30bc9f1a0b6920dec83aaa868))
+
+- Add task and task comment author_id
+  ([#900](https://github.com/canvas-medical/canvas-plugins/pull/900),
+  [`a9fa76b`](https://github.com/canvas-medical/canvas-plugins/commit/a9fa76b2ccfadbe159ddc07535c14df47986121c))
+
+
+## v0.52.0 (2025-08-06)
+
+### Features
+
+- Add `getattr` to sandbox ([#893](https://github.com/canvas-medical/canvas-plugins/pull/893),
+  [`af653d1`](https://github.com/canvas-medical/canvas-plugins/commit/af653d1b59eb850b2fc9b6a2736c175bdd1c953a))
+
+- Order tracking example app ([#879](https://github.com/canvas-medical/canvas-plugins/pull/879),
+  [`3e99263`](https://github.com/canvas-medical/canvas-plugins/commit/3e992638558f412b55f80476061fc73a8269429e))
+
+
+## v0.51.0 (2025-08-05)
+
+### Features
+
+- Add support for ast.Constant (ellipsis)
+  ([#880](https://github.com/canvas-medical/canvas-plugins/pull/880),
+  [`c089285`](https://github.com/canvas-medical/canvas-plugins/commit/c089285d2eb4d94b4051f28e2fefa410e78de774))
+
+- Remove unused manifest data_access requirement
+  ([#882](https://github.com/canvas-medical/canvas-plugins/pull/882),
+  [`0282e00`](https://github.com/canvas-medical/canvas-plugins/commit/0282e004e387d8a9eecab06751a29d8f3cd7d014))
+
+
+## v0.50.0 (2025-07-30)
+
+### Documentation
+
+- Add example plugin - Note and Commands API
+  ([#833](https://github.com/canvas-medical/canvas-plugins/pull/833),
+  [`f4d5567`](https://github.com/canvas-medical/canvas-plugins/commit/f4d5567ea2c7ad09f3d76867bc492bb10662fd58))
+
+### Features
+
+- Add compound meds model and effect
+  ([#789](https://github.com/canvas-medical/canvas-plugins/pull/789),
+  [`8f7e6e2`](https://github.com/canvas-medical/canvas-plugins/commit/8f7e6e25a65df7e975b71108b204d29285f602ad))
+
+- Add events for command available actions
+  ([#756](https://github.com/canvas-medical/canvas-plugins/pull/756),
+  [`8c0982a`](https://github.com/canvas-medical/canvas-plugins/commit/8c0982a119c59b259b31365be252a1d99a96faa7))
+
+
+## v0.49.0 (2025-07-29)
+
+### Chores
+
+- Add test coverage with codecov ([#864](https://github.com/canvas-medical/canvas-plugins/pull/864),
+  [`b2eec06`](https://github.com/canvas-medical/canvas-plugins/commit/b2eec06d24d06cc7636a5dad95139c09dc423c95))
+
+- Auto-update pre-commit hooks ([#865](https://github.com/canvas-medical/canvas-plugins/pull/865),
+  [`49b935c`](https://github.com/canvas-medical/canvas-plugins/commit/49b935cbabb27153f4436d3e6bb182770ebe65b2))
+
+Co-authored-by: mbiannaccone <26937791+mbiannaccone@users.noreply.github.com>
+
+### Features
+
+- Add additional imports from Pydantic
+  ([#871](https://github.com/canvas-medical/canvas-plugins/pull/871),
+  [`d34358d`](https://github.com/canvas-medical/canvas-plugins/commit/d34358d1ba8487834c5af21d7ac5f0c294a2b34c))
+
+Co-authored-by: copilot-swe-agent[bot]
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Add additional jwt imports for verifying tokens
+  ([#863](https://github.com/canvas-medical/canvas-plugins/pull/863),
+  [`5058cf5`](https://github.com/canvas-medical/canvas-plugins/commit/5058cf57aeef2c3c491b7c7e33f12e374838951c))
+
+- Koala-3011 update plugin install text to reflect async process
+  ([#738](https://github.com/canvas-medical/canvas-plugins/pull/738),
+  [`b072182`](https://github.com/canvas-medical/canvas-plugins/commit/b0721825bfd5f1325f6b82219d85a52db1c77a6a))
+
+Signed-off-by: Mary Dickson <mdickson@gmail.com>
+
+Co-authored-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+
 ## v0.48.0 (2025-07-24)
 
 ### Chores

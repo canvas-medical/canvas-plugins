@@ -7,7 +7,7 @@ from typing import Any, TypedDict
 import yaml
 from jsonschema import Draft7Validator, validators
 
-from canvas_sdk.utils.plugins import plugin_only
+from canvas_sdk.utils.plugins import plugin_context
 
 
 class Response(TypedDict):
@@ -75,7 +75,7 @@ def extend_with_defaults(validator_class: type[Draft7Validator]) -> type[Draft7V
 ExtendedDraft7Validator = extend_with_defaults(Draft7Validator)
 
 
-@plugin_only
+@plugin_context
 def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | None:
     """Load a Questionnaire configuration from a YAML file.
 
