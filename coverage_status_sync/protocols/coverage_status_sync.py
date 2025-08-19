@@ -2,9 +2,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient_metadata.base import PatientMetadata
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-
 from logger import log
-
 
 # The specific label and metadata key we are working with.
 MONITORED_LABEL = "MISSING_COVERAGE"
@@ -27,7 +25,6 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         Reacts to label events and updates patient metadata. This implementation
         includes safe dictionary access to prevent crashes from malformed event contexts.
         """
-
         patient_id = self.context["patient"]["id"]
         label_in_event = self.context["label"]
 
@@ -63,6 +60,7 @@ class CoverageStatusSyncProtocol(BaseProtocol):
             return [update_effect]
         except Exception as e:
             log.error(
-                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}", exc_info=True
+                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}",
+                exc_info=True,
             )
             return []

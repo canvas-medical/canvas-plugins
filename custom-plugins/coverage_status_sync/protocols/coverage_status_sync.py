@@ -60,6 +60,7 @@ class CoverageStatusSyncProtocol(BaseProtocol):
             return [update_effect]
         except Exception as e:
             log.error(
-                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}", exc_info=True
+                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}",
+                exc_info=True,
             )
             return []
