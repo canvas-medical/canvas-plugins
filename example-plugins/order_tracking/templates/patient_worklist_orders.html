@@ -93,7 +93,7 @@
             position: relative;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
             user-select: none;
-            height: 44px;
+            min-height: 44px;
         }
 
         .filter-dropdown.open {
@@ -327,14 +327,8 @@
         }
 
         .status-badge.open {
-            background-color: #e0f2fe;
-            color: #0369a1;
-            border-color: #e0f2fe;
-        }
-
-        .status-badge.sent {
             background-color: #d1fae5;
-            color: #065f46;
+            color: #0369a1;
             border-color: #d1fae5;
         }
 
@@ -504,11 +498,10 @@
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Status</label>
-            <div class="filter-dropdown" id="status-dropdown" data-values="uncommitted,open,sent,delegated">
+            <div class="filter-dropdown" id="status-dropdown" data-values="uncommitted,open/sent,delegated">
                 <div class="selected-value">
                     <span class="selected-tag">Uncommitted <span class="remove-tag" data-value="uncommitted">&times;</span></span>
-                    <span class="selected-tag">Open <span class="remove-tag" data-value="open">&times;</span></span>
-                    <span class="selected-tag">Sent <span class="remove-tag" data-value="sent">&times;</span></span>
+                    <span class="selected-tag">Open/Sent <span class="remove-tag" data-value="open/sent">&times;</span></span>
                     <span class="selected-tag">Delegated <span class="remove-tag" data-value="delegated">&times;</span></span>
                 </div>
                 <div class="dropdown-options">
@@ -520,13 +513,9 @@
                         <input type="checkbox" id="status-uncommitted" checked>
                         <label for="status-uncommitted">Uncommitted</label>
                     </div>
-                    <div class="dropdown-option" data-value="open">
+                    <div class="dropdown-option" data-value="open/sent">
                         <input type="checkbox" id="status-open" checked>
-                        <label for="status-open">Open</label>
-                    </div>
-                    <div class="dropdown-option" data-value="sent">
-                        <input type="checkbox" id="status-sent" checked>
-                        <label for="status-sent">Sent</label>
+                        <label for="status-open">Open/Sent</label>
                     </div>
                     <div class="dropdown-option" data-value="delegated">
                         <input type="checkbox" id="status-delegated" checked>
@@ -748,7 +737,7 @@
         function createOrderCard(order, isUrgent) {
             const urgentClass = isUrgent ? 'urgent' : '';
             const urgentBadge = isUrgent ? '<div class="urgent-badge">Urgent</div>' : '';
-            const statusClass = order.status ? order.status.toLowerCase() : '';
+            const statusClass = order.status === 'open/sent' ? 'open': (order.status ? order.status.toLowerCase() : '');
 
             return `
                 <div class="order-card ${urgentClass}">

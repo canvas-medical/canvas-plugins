@@ -21,8 +21,16 @@ from logger import log
 from canvas_sdk.caching.plugins import get_cache
 
 
+# priority
 ROUTINE = "routine"
 URGENT = "urgent"
+
+# STATUS
+UNCOMMITTED = "uncommitted"
+DELEGATED = "delegated"
+OPEN = "open/sent"
+CLOSED = "closed"
+
 
 
 class OrderTrackingApplication(Application):
@@ -223,17 +231,17 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(results__isnull=True) & Q(delegated=True),
-                    then=Value("delegated"),
+                    then=Value(DELEGATED),
                 ),
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommitted"),
+                    then=Value(UNCOMMITTED),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(results__isnull=True) & Q(delegated=False),
-                    then=Value("open")
+                    then=Value(OPEN)
                 ),
-                default=Value("closed"),
+                default=Value(CLOSED),
                 output_field=CharField()
             )
         ).filter(
@@ -245,17 +253,17 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(reports__isnull=True) & Q(forwarded=True),
-                    then=Value("delegated"),
+                    then=Value(DELEGATED),
                 ),
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommitted"),
+                    then=Value(UNCOMMITTED),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(reports__isnull=True) & Q(forwarded=False),
-                    then=Value("open"),
+                    then=Value(OPEN),
                 ),
-                default=Value("closed"),
+                default=Value(CLOSED),
                 output_field=CharField()
             )
         ).filter(
@@ -267,21 +275,13 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             order_status=Case(
                 When(
                     Q(committer__isnull=True),
-                    then=Value("uncommitted"),
-                ),
-                When(
-                    Q(committer__isnull=False) & Q(reports__isnull=True) & (
-                        ~Q(healthgorilla_id="") |
-                        Q(manual_processing_status="IN_PROGRESS") |
-                        (Q(manual_processing_status="NEEDS_REVIEW") & (~Q(manual_processing_comment="") & Q(manual_processing_comment__isnull=False)))
-                    ),
-                    then=Value("sent"),
+                    then=Value(UNCOMMITTED),
                 ),
                 When(
                     Q(committer__isnull=False) & Q(reports__isnull=True),
-                    then=Value("open")
+                    then=Value(OPEN)
                 ),
-                default=Value("closed"),
+                default=Value(CLOSED),
                 output_field=CharField()
             )
         ).filter(
@@ -311,9 +311,9 @@ class OrderTrackingApi(StaffSessionAuthMixin, SimpleAPI):
             lab_orders_queryset = lab_orders_queryset.filter(order_status__in=status)
         # by default we exclude closed orders
         elif not status:
-            imaging_orders_queryset = imaging_orders_queryset.exclude(order_status="closed")
-            refer_queryset = refer_queryset.exclude(order_status="closed")
-            lab_orders_queryset = lab_orders_queryset.exclude(order_status="closed")
+            imaging_orders_queryset = imaging_orders_queryset.exclude(order_status=CLOSED)
+            refer_queryset = refer_queryset.exclude(order_status=CLOSED)
+            lab_orders_queryset = lab_orders_queryset.exclude(order_status=CLOSED)
 
         if patient_name and not patient_id:
 

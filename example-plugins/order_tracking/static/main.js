@@ -897,7 +897,7 @@ function processOrdersData(data) {
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.ordered_date),
         priority: order.priority,
-        status: order.status || 'Open',
+        status: order.status,
         permalink: order.permalink
     }));
 
@@ -911,7 +911,7 @@ function processOrdersData(data) {
         orderingProviderId: order.ordering_provider?.id,
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.ordered_date),
-        status: order.status || 'Open',
+        status: order.status,
         permalink: order.permalink,
         priority: order.priority
     }));
@@ -928,7 +928,7 @@ function processOrdersData(data) {
         sentTo: order.sent_to || 'Not specified',
         orderedDate: formatDate(order.ordered_date),
         priority: order.priority,
-        status: order.status || 'Open',
+        status: order.status,
         permalink: order.permalink
     }));
 
@@ -1088,7 +1088,7 @@ function createOrderAccordionItem(order, isUrgent) {
       <div class="column-value"><span class="badge ${badgeClass}">${order.type || ''}</span></div>
       <div class="column-value">${order.orderingProvider || ''}</div>
       <div class="column-value">${order.sentTo || ''}</div>
-      <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status || 'Open'}</span></div>
+      <div class="column-value"><span class="badge ${statusBadgeClass}">${order.status}</span></div>
       <div class="column-value">${order.orderedDate || ''}</div>
       <div class="expand-icon ${!ENABLE_TASK_COMMENTS ? 'hidden' : ''} ${iconClass}">▶</div>
     </div>
@@ -1127,10 +1127,8 @@ function getStatusBadgeClass(status) {
     switch (status?.toLowerCase()) {
         case 'uncommitted':
             return 'badge-outline';
-        case 'open':
+        case 'open/sent':
             return 'badge-secondary';
-        case 'sent':
-            return 'badge-default';
         case 'delegated':
             return 'badge-secondary';
         case 'closed':
