@@ -34,7 +34,9 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         # Check if this is the specific label we want to react to.
         if label_in_event != MONITORED_LABEL:
             # This is a normal, expected case. The log clarifies we are intentionally skipping.
-            log.info(f"Ignoring event for label '{label_in_event}' because it is not the monitored label ('{MONITORED_LABEL}').")
+            log.info(
+                f"Ignoring event for label '{label_in_event}' because it is not the monitored label ('{MONITORED_LABEL}')."
+            )
             return []
 
         if self.event.type == EventType.APPOINTMENT_LABEL_ADDED:
@@ -42,7 +44,9 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         elif self.event.type == EventType.APPOINTMENT_LABEL_REMOVED:
             new_status = "Active"
         else:
-            log.warning(f"Received an unexpected event type '{self.event.type}' that was not handled.")
+            log.warning(
+                f"Received an unexpected event type '{self.event.type}' that was not handled."
+            )
             return []
 
         log.info(
@@ -52,13 +56,13 @@ class CoverageStatusSyncProtocol(BaseProtocol):
 
         try:
             # Create an instance of the PatientMetadata effect.
-            metadata_effect_instance = PatientMetadata(
-                patient_id=patient_id, key=METADATA_KEY
-            )
+            metadata_effect_instance = PatientMetadata(patient_id=patient_id, key=METADATA_KEY)
 
             # Call .upsert() to generate the final Effect object with the new value.
             update_effect = metadata_effect_instance.upsert(value=new_status)
             return [update_effect]
         except Exception as e:
-            log.error(f"Failed to create PatientMetadata effect for patient {patient_id}: {e}", exc_info=True)
+            log.error(
+                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}", exc_info=True
+            )
             return []
