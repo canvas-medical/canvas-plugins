@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.55.0 (2025-08-19)
+
+### Bug Fixes
+
+- Add panel applications ([#841](https://github.com/canvas-medical/canvas-plugins/pull/841),
+  [`98d4899`](https://github.com/canvas-medical/canvas-plugins/commit/98d489919a0152617aa287250c400e1a63c37df4))
+
+### Features
+
+- Add panel sections configuration
+  ([#815](https://github.com/canvas-medical/canvas-plugins/pull/815),
+  [`d080009`](https://github.com/canvas-medical/canvas-plugins/commit/d0800090607db36ae416340b9a4fa1c8d943f239))
+
+- Add patient chart group effect ([#888](https://github.com/canvas-medical/canvas-plugins/pull/888),
+  [`5f5a469`](https://github.com/canvas-medical/canvas-plugins/commit/5f5a46957d8954e8ef30d0a2cc7c87f6837522ca))
+
+
 ## v0.54.0 (2025-08-19)
 
 ### Bug Fixes
