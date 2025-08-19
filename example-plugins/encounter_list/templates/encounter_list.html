@@ -21,7 +21,6 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
         }
 
         .worklist-header {
@@ -228,6 +227,139 @@
             color: #666;
         }
 
+        /* Custom dropdown styling - matching order_tracking */
+        .filter-dropdown {
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            min-height: 36px;
+            box-sizing: border-box;
+            width: 300px;
+        }
+
+        .filter-dropdown.open {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .filter-dropdown .selected-value {
+            padding-right: 20px;
+            min-height: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .selected-tag {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            line-height: 1.2;
+        }
+
+        .selected-tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            color: #1d4ed8;
+            font-size: 13px;
+        }
+
+        .selected-tag .remove-tag:hover {
+            color: #1e40af;
+        }
+
+        .placeholder-text {
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+
+        .filter-dropdown::after {
+            content: '⌄';
+            color: #6b7280;
+            font-size: 14px;
+            transition: transform 0.2s ease;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .filter-dropdown.open::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .filter-dropdown:hover {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+        }
+
+        .dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 0.375rem 0.375rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-options.show {
+            display: block;
+        }
+
+        .dropdown-option {
+            padding: 0.4rem 0.5rem;
+            font-size: 0.875rem;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-option:hover {
+            background-color: #f3f4f6;
+        }
+
+        .dropdown-option.selected {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .dropdown-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+            transform: scale(0.9);
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .worklist-table {
@@ -264,11 +396,19 @@
         
         <div class="filters-section" style="padding: 16px 20px; border-bottom: 1px solid #e0e0e0; background-color: #f8f9fa;">
             <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
-                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 200px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 12px; font-weight: 500; color: #555;">Owner</label>
-                    <select id="providerFilter" style="padding: 8px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px;">
-                        <option value="">All Owners</option>
-                    </select>
+                    <div class="filter-dropdown" id="providerFilter" data-values="">
+                        <div class="selected-value">
+                            <span class="placeholder-text">All Owners</span>
+                        </div>
+                        <div class="dropdown-options" id="provider-options">
+                            <div class="dropdown-option" data-value="">
+                                <input type="checkbox" id="provider-all" checked>
+                                <label for="provider-all">All Owners</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 200px;">
@@ -323,7 +463,7 @@
         let providers = [];
         let locations = [];
         let currentFilters = {
-            provider_id: null,
+            provider_ids: [],
             location_id: null,
             billable_only: false
         };
@@ -341,8 +481,17 @@
         async function fetchEncounters(filters = {}, page = 1) {
             try {
                 const params = new URLSearchParams();
-                Object.entries({...currentFilters, ...filters, page, page_size: 25}).forEach(([key, value]) => {
-                    if (value !== null && value !== undefined && value !== '') {
+                const combinedFilters = {...currentFilters, ...filters, page, page_size: 25};
+                Object.entries(combinedFilters).forEach(([key, value]) => {
+                    if (key === 'provider_ids' && Array.isArray(value)) {
+                        // Handle array of provider IDs as comma-separated string
+                        if (value.length > 0) {
+                            const providerIdsString = value.filter(id => id !== null && id !== undefined && id !== '').join(',');
+                            if (providerIdsString) {
+                                params.append(key, providerIdsString);
+                            }
+                        }
+                    } else if (value !== null && value !== undefined && value !== '') {
                         params.append(key, value);
                     }
                 });
@@ -519,25 +668,32 @@
 
         // Helper functions for filtering and UI updates
         function populateProviderDropdown() {
-            const providerSelect = document.getElementById('providerFilter');
+            const providerDropdown = document.getElementById('providerFilter');
+            const providerOptions = document.getElementById('provider-options');
             
-            // Clear existing options except the first one
-            providerSelect.innerHTML = '<option value="">All Owners</option>';
-
+            // Clear existing options except "All Owners"
+            const allOption = providerOptions.querySelector('[data-value=""]');
+            providerOptions.innerHTML = '';
+            providerOptions.appendChild(allOption);
             
             // Add provider options
             providers.forEach(provider => {
                 const isSelected = provider.id === loggedInStaffId;
-                const option = document.createElement('option');
-                option.value = provider.id;
-                option.textContent = provider.name;
-                option.selected = isSelected;
-                providerSelect.appendChild(option);
+                const option = document.createElement('div');
+                option.className = 'dropdown-option';
+                option.setAttribute('data-value', provider.id);
+                option.innerHTML = `
+                    <input type="checkbox" id="provider-${provider.id}" ${isSelected ? 'checked' : ''}>
+                    <label for="provider-${provider.id}">${provider.name}</label>
+                `;
+                providerOptions.appendChild(option);
 
                 if (isSelected) {
-                    currentFilters.provider_id = provider.id
+                    currentFilters.provider_ids = [provider.id];
                 }
             });
+            
+            updateProviderDisplay();
         }
 
         function populateLocationDropdown() {
@@ -555,16 +711,92 @@
             });
         }
 
+        function updateProviderDisplay() {
+            const providerDropdown = document.getElementById('providerFilter');
+            const selectedValue = providerDropdown.querySelector('.selected-value');
+            const selectedProviders = currentFilters.provider_ids;
+            
+            if (selectedProviders.length === 0) {
+                selectedValue.innerHTML = '<span class="placeholder-text">All Owners</span>';
+            } else {
+                const tags = selectedProviders.map(providerId => {
+                    const provider = providers.find(p => p.id === providerId);
+                    return `<span class="selected-tag">${provider ? provider.name : providerId}<span class="remove-tag" data-provider-id="${providerId}">×</span></span>`;
+                }).join('');
+                selectedValue.innerHTML = tags;
+            }
+        }
+        
+        function setupProviderDropdown() {
+            const providerDropdown = document.getElementById('providerFilter');
+            const providerOptions = document.getElementById('provider-options');
+            
+            // Toggle dropdown
+            providerDropdown.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-tag')) {
+                    // Remove tag
+                    const providerId = e.target.getAttribute('data-provider-id');
+                    currentFilters.provider_ids = currentFilters.provider_ids.filter(id => id !== providerId);
+                    updateProviderDisplay();
+                    applyFilters();
+                    return;
+                }
+                
+                providerDropdown.classList.toggle('open');
+                providerOptions.classList.toggle('show');
+            });
+            
+            // Handle option selection
+            providerOptions.addEventListener('click', (e) => {
+                const option = e.target.closest('.dropdown-option');
+                if (!option) return;
+                
+                const checkbox = option.querySelector('input[type="checkbox"]');
+                const value = option.getAttribute('data-value');
+                
+                if (value === '') {
+                    // "All Owners" option
+                    if (checkbox.checked) {
+                        currentFilters.provider_ids = [];
+                        // Uncheck all other options
+                        providerOptions.querySelectorAll('input[type="checkbox"]:not([id="provider-all"])').forEach(cb => cb.checked = false);
+                    }
+                } else {
+                    // Individual provider option
+                    checkbox.checked = !checkbox.checked;
+                    
+                    if (checkbox.checked) {
+                        // Uncheck "All Owners"
+                        document.getElementById('provider-all').checked = false;
+                        if (!currentFilters.provider_ids.includes(value)) {
+                            currentFilters.provider_ids.push(value);
+                        }
+                    } else {
+                        currentFilters.provider_ids = currentFilters.provider_ids.filter(id => id !== value);
+                        if (currentFilters.provider_ids.length === 0) {
+                            document.getElementById('provider-all').checked = true;
+                        }
+                    }
+                }
+                
+                updateProviderDisplay();
+                applyFilters();
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!providerDropdown.contains(e.target)) {
+                    providerDropdown.classList.remove('open');
+                    providerOptions.classList.remove('show');
+                }
+            });
+        }
+
         function setupFilterEventListeners() {
-            const providerFilter = document.getElementById('providerFilter');
             const locationFilter = document.getElementById('locationFilter');
             const billableFilter = document.getElementById('billableFilter');
 
-            // Provider filter change
-            providerFilter.addEventListener('change', () => {
-                currentFilters.provider_id = providerFilter.value || null;
-                applyFilters();
-            });
+            setupProviderDropdown();
 
             // Location filter change
             locationFilter.addEventListener('change', () => {

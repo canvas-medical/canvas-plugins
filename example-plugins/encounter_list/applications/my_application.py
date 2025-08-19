@@ -31,7 +31,7 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/encounters")
     def get_encounters(self) -> list[Response | Effect]:
         """Get list of open encounters with pagination."""
-        provider_id = self.request.query_params.get("provider_id")
+        provider_ids = self.request.query_params.get("provider_ids")
         location_id = self.request.query_params.get("location_id")
         billable_only = self.request.query_params.get("billable_only") == "true"
 
@@ -44,8 +44,10 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
         note_queryset = note_queryset.exclude(note_type_version__category__in=(NoteTypeCategories.MESSAGE,
                                                                NoteTypeCategories.LETTER,))
 
-        if provider_id:
-            note_queryset = note_queryset.filter(provider__id=provider_id)
+        if provider_ids:
+            clean_ids = [pid.strip() for pid in provider_ids.split(',') if pid.strip()]
+            if clean_ids:
+                note_queryset = note_queryset.filter(provider__id__in=clean_ids)
 
         if location_id:
             note_queryset = note_queryset.filter(location__id=location_id)
@@ -103,6 +105,11 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                 if should_increase and anchor_object.get_task_objects().filter(status=TaskStatus.OPEN).exists():
                     delegated_commands = delegated_commands + 1
 
+            try:
+                note_title = note.note_type_version.name or "Untitled Note"
+            except:
+                note_title = "Untitled Note"
+
             encounter_data = {
                 "id": str(note.id),
                 "dbid": note.dbid,
@@ -112,7 +119,7 @@ class EncounterListApi(StaffSessionAuthMixin, SimpleAPI):
                     "MMM DD, YYYY") if note.patient and note.patient.birth_date else "Unknown",
                 "provider": note.provider.credentialed_name if note.provider else "Unknown Provider",
                 "provider_id": str(note.provider.id) if note.provider else None,
-                "note_title": note.note_type_version.name or "Untitled Note",
+                "note_title": note_title,
                 "dos": arrow.get(note.datetime_of_service).format(
                     "MMM DD, YYYY") if note.datetime_of_service else "Unknown",
                 "dos_iso": note.datetime_of_service.isoformat() if note.datetime_of_service else None,
