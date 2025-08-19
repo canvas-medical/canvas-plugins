@@ -8,7 +8,9 @@ caches: dict[tuple[str, str], Cache] = {}
 
 
 def get_cache(
-    driver: str = "default", prefix: str = "", max_timeout_seconds: int | None = None
+    driver: str = "default",
+    prefix: str = "",
+    max_timeout_seconds: int | None = None,
 ) -> Cache:
     """Get the cache client based on the specified driver."""
     try:
