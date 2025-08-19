@@ -28,18 +28,6 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         includes safe dictionary access to prevent crashes from malformed event contexts.
         """
 
-        # TODO: code refactoring after ./run rebuild in home-app
-        # patient_id = self.context.get("patient", {}).get("id")
-        # if not patient_id:
-        #     log.warning("Received label event but 'patient_id' was missing from the context. Cannot proceed.")
-        #     return []
-        #
-        # # Safely get the label name from the context.
-        # label_in_event = self.context.get("label")
-        # if not label_in_event:
-        #     log.warning(f"Received label event for patient {patient_id} but the 'label' was missing from the context. Cannot proceed.")
-        #     return []
-
         patient_id = self.context["patient"]["id"]
         label_in_event = self.context["label"]
 
