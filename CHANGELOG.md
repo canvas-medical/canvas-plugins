@@ -1,6 +1,46 @@
 # CHANGELOG
 
 
+## v0.54.0 (2025-08-19)
+
+### Bug Fixes
+
+- Plugin_only → plugin_context ([#877](https://github.com/canvas-medical/canvas-plugins/pull/877),
+  [`a221cf2`](https://github.com/canvas-medical/canvas-plugins/commit/a221cf2a24e5c67447288af99f3fe1af963cd543))
+
+- Raise on bad status from S3 in `download_plugin`
+  ([#744](https://github.com/canvas-medical/canvas-plugins/pull/744),
+  [`501de93`](https://github.com/canvas-medical/canvas-plugins/commit/501de93aa6f81afc9dd78748cabcc9363fa5f667))
+
+### Documentation
+
+- Add better description of app launch examples
+  ([#906](https://github.com/canvas-medical/canvas-plugins/pull/906),
+  [`0315103`](https://github.com/canvas-medical/canvas-plugins/commit/0315103f70ed07145341a698990faa42684821d9))
+
+### Features
+
+- Add ConfigDict to PyDantic sandbox allowlist (koala-3196)
+  ([#916](https://github.com/canvas-medical/canvas-plugins/pull/916),
+  [`3d3db99`](https://github.com/canvas-medical/canvas-plugins/commit/3d3db99e7df316870298341eb760d398de74b81d))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- Add warnings if many files, large files, or large total size are found
+  ([#831](https://github.com/canvas-medical/canvas-plugins/pull/831),
+  [`ac08059`](https://github.com/canvas-medical/canvas-plugins/commit/ac08059cb3dc31bed317fbac9fdfa684a10995c6))
+
+- Implement custom payment processors
+  ([#701](https://github.com/canvas-medical/canvas-plugins/pull/701),
+  [`9974e53`](https://github.com/canvas-medical/canvas-plugins/commit/9974e53d4bc991f4958ca4ab41f18ba56ee426fc))
+
+Co-authored-by: Miguel Quintas <miguel.quintas@canvasmedical.com>
+
+
 ## v0.53.2 (2025-08-12)
 
 ### Bug Fixes
