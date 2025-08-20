@@ -573,7 +573,6 @@
         let allOrders = [];
         let currentPage = 1;
         let paginationData = null;
-        let searchTimeout = null;
 
         // Configuration - using placeholder endpoint based on your structure
         const API_BASE_URL = '/plugin-io/api/order_tracking/orders';
@@ -629,60 +628,23 @@
         }
 
         function transformOrderData(data) {
-            // Handle different data structures from your API
-            const orders = [];
-
-            // Add imaging orders if they exist
-            if (data.imaging_orders) {
-                orders.push(...data.imaging_orders.map(order => ({
-                  type: 'Imaging',
-                  orderName: order.order || 'Imaging Order',
-                  orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
-                  sentTo: order.sent_to || 'Not specified',
-                  orderedDate: formatDate(order.date_ordered || order.created_date),
-                  priority: order.priority || 'routine',
-                  status: order.status,
-                  permalink: order.permalink,
-                  noteTitle: order.note.title,
-                  notePermalink: order.note.permalink
-                })));
-            }
-
-            // Add lab orders if they exist
-            if (data.lab_orders) {
-                orders.push(...data.lab_orders.map(order => ({
-                    type: 'Lab',
-                    orderName: order.order || 'Lab Order',
-                    patientId: order.patient_id,
-                    orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
-                    sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.date_ordered || order.created_date),
-                    priority: order.priority || 'routine',
-                    status: order.status,
-                    permalink: order.permalink,
-                    noteTitle: order.note.title,
-                    notePermalink: order.note.permalink
-                })));
-            }
-
-            // Add referral orders if they exist
-            if (data.referrals) {
-                orders.push(...data.referrals.map(order => ({
-                    type: 'Referral',
-                    orderName: order.order || 'Referral',
-                    patientId: order.patient_id,
-                    orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
-                    sentTo: order.sent_to || 'Not specified',
-                    orderedDate: formatDate(order.date_ordered || order.created_date),
-                    priority: order.priority || 'routine',
-                    status: order.status,
-                    permalink: order.permalink,
-                    noteTitle: order.note.title,
-                    notePermalink: order.note.permalink
-                })));
-            }
-
-            return orders;
+            return (data.orders || []).map(order => ({
+                id: order.id,
+                type: order.type,
+                orderName: order.order,
+                patientId: order.patient_id,
+                patientName: order.patient_name,
+                dob: order.dob,
+                orderingProvider: order.ordering_provider?.preferred_name,
+                orderingProviderId: order.ordering_provider?.id,
+                sentTo: order.sent_to,
+                orderedDate: formatDate(order.ordered_date),
+                priority: order.priority,
+                status: order.status,
+                permalink: order.permalink,
+                noteTitle: order.note.title,
+                notePermalink: order.note.permalink,
+            }));
         }
 
         function formatDate(dateString) {

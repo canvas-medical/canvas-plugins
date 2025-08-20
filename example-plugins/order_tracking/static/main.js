@@ -781,7 +781,7 @@ async function fetchOrders(priority = 'all') {
         // Build query parameters
         const params = new URLSearchParams(currentFilters);
         params.append('page', state.page);
-        params.append('page_size', 20);
+        params.append('page_size', 3);
         params.append('priority', priority);
 
         const url = `/plugin-io/api/order_tracking/orders?${params.toString()}`;
@@ -884,55 +884,23 @@ function getCurrentFilterParams() {
 }
 
 function processOrdersData(data) {
-    // Combine imaging and lab orders
-    const imagingOrders = (data.imaging_orders || []).map(order => ({
-        type: 'Imaging',
-        orderName: order.order || 'Imaging Order',
+    return (data.orders || []).map(order => ({
+        id: order.id,
+        type: order.type,
+        orderName: order.order,
+        patientId: order.patient_id,
         patientName: order.patient_name,
         dob: order.dob,
-        patientId: order.patient_id,
-        id: order.id,
-        orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
+        orderingProvider: order.ordering_provider?.preferred_name,
         orderingProviderId: order.ordering_provider?.id,
-        sentTo: order.sent_to || 'Not specified',
+        sentTo: order.sent_to,
         orderedDate: formatDate(order.ordered_date),
         priority: order.priority,
-        status: order.status,
-        permalink: order.permalink
-    }));
-
-    const labOrders = (data.lab_orders || []).map(order => ({
-        type: 'Lab',
-        orderName: order.order || 'Lab Order',
-        patientName: order.patient_name,
-        dob: order.dob,
-        patientId: order.patient_id,
-        orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
-        orderingProviderId: order.ordering_provider?.id,
-        sentTo: order.sent_to || 'Not specified',
-        orderedDate: formatDate(order.ordered_date),
         status: order.status,
         permalink: order.permalink,
-        priority: order.priority
+        noteTitle: order.note.title,
+        notePermalink: order.note.permalink
     }));
-
-    const referralOrders = (data.referrals || []).map(order => ({
-        type: 'Referral',
-        orderName: order.order || 'Referral',
-        patientName: order.patient_name,
-        dob: order.dob,
-        patientId: order.patient_id,
-        id: order.id,
-        orderingProvider: order.ordering_provider?.preferred_name || 'Unknown Provider',
-        orderingProviderId: order.ordering_provider?.id,
-        sentTo: order.sent_to || 'Not specified',
-        orderedDate: formatDate(order.ordered_date),
-        priority: order.priority,
-        status: order.status,
-        permalink: order.permalink
-    }));
-
-    return [...imagingOrders, ...labOrders, ...referralOrders];
 }
 
 function formatDate(dateString) {
