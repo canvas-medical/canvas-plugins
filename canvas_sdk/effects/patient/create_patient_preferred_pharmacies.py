@@ -31,6 +31,16 @@ class CreatePatientPreferredPharmacies(_BaseEffect):
                 )
             )
 
+        default_count = sum(1 for pharmacy in self.pharmacies if pharmacy.default)
+        if default_count > 1:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Only one preferred pharmacy can be set as default.",
+                    None,
+                )
+            )
+
         return errors
 
     @property
