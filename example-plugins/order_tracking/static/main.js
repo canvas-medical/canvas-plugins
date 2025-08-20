@@ -781,7 +781,7 @@ async function fetchOrders(priority = 'all') {
         // Build query parameters
         const params = new URLSearchParams(currentFilters);
         params.append('page', state.page);
-        params.append('page_size', 3);
+        params.append('page_size', 20);
         params.append('priority', priority);
 
         const url = `/plugin-io/api/order_tracking/orders?${params.toString()}`;
