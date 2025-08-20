@@ -2,9 +2,12 @@ import json
 from typing import Any
 from uuid import UUID
 
+from pydantic_core import InitErrorDetails
+
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import _BaseEffect
 from canvas_sdk.effects.patient import PatientPreferredPharmacy
+from canvas_sdk.v1.data import Patient
 
 
 class CreatePatientPreferredPharmacies(_BaseEffect):
@@ -15,6 +18,20 @@ class CreatePatientPreferredPharmacies(_BaseEffect):
 
     pharmacies: list[PatientPreferredPharmacy]
     patient_id: str | UUID
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+
+        if not Patient.objects.filter(id=self.patient_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Patient with ID {self.patient_id} does not exist.",
+                    self.patient_id,
+                )
+            )
+
+        return errors
 
     @property
     def values(self) -> dict[str, Any]:
