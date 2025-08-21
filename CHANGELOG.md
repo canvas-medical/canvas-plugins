@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.56.0 (2025-08-21)
+
+### Features
+
+- Add events and effects for hooking into the SSO authentication flow
+  ([#932](https://github.com/canvas-medical/canvas-plugins/pull/932),
+  [`cb0c283`](https://github.com/canvas-medical/canvas-plugins/commit/cb0c283b1743ee1526907a92c84d40fec3937947))
+
+
 ## v0.55.0 (2025-08-19)
 
 ### Bug Fixes
