@@ -809,3 +809,49 @@ def test_sandbox_denies_setattr_to_protected_resources(
 
     with pytest.raises((AttributeError, TypeError), match=error_message):
         sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "configdict_code",
+    [
+        """
+            from pydantic import BaseModel, ConfigDict
+
+            class MyModel(BaseModel):
+                model_config = ConfigDict(
+                    extra='ignore',
+                )
+                name: str
+
+            # Test that it works
+            instance = MyModel(name="test", unwanted_field="ignored")
+            result = f"Success: {instance.name}"
+        """,
+        """
+            from pydantic import BaseModel, ConfigDict
+
+            class StrictModel(BaseModel):
+                model_config = ConfigDict(
+                    extra='forbid',
+                    str_strip_whitespace=True,
+                    validate_assignment=True,
+                )
+                name: str
+                age: int
+
+            # Test that it works
+            instance = StrictModel(name="  test  ", age=25)
+            result = f"Name: '{instance.name}', Age: {instance.age}"
+        """,
+    ],
+)
+def test_sandbox_allows_configdict_import_and_usage(configdict_code: str) -> None:
+    """Test that ConfigDict can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(configdict_code)
+    scope = sandbox.execute()
+
+    # Check that the code executed successfully and produced expected results
+    assert "result" in scope, "ConfigDict test code did not execute properly"
+    assert "Success:" in scope["result"] or "Name:" in scope["result"], (
+        f"ConfigDict usage failed: {scope.get('result')}"
+    )

@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "patient_summary_chart_groups",
+    "description": "A plugin that groups Psychiatry conditions and medications in the patient summary chart.",
+    "components": {
+        "protocols": [
+            {
+                "class": "patient_summary_chart_groups.protocols.my_protocol:Protocol",
+                "description": "A protocol that groups Psychiatry conditions"
+            },
+            {
+                "class": "patient_summary_chart_groups.protocols.my_protocol:Medications",
+                "description": "A protocol that groups Psychiatry medications"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
