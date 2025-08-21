@@ -846,6 +846,7 @@
     "TaskComment",
     "TaskLabel",
     "TaskLabelModule",
+    "TaskPriority",
     "TaskStatus",
     "TaskTaskLabel",
     "TaskType"

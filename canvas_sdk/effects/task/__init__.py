@@ -1,4 +1,4 @@
-from .task import AddTask, AddTaskComment, TaskStatus, UpdateTask, TaskPriority
+from .task import AddTask, AddTaskComment, TaskPriority, TaskStatus, UpdateTask
 
 __all__ = __exports__ = (
     "AddTask",
