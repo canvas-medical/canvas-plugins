@@ -6,8 +6,8 @@ requires = ["hatchling"]
 dev = [
   "grpcio-tools>=1.60.1,<2",
   "httpretty>=1.1.4",
-  "mypy",
-  "pre-commit",
+  "mypy>=1.17.0,<2",
+  "pre-commit>=4.3.0,<5",
   "psutil>=7.0.0",
   "pytest",
   "pytest-cov",
@@ -181,6 +181,7 @@ version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
 
 [tool.uv]
+required-version = "~=0.8.0"
 
 [[tool.uv.index]]
 default = true
