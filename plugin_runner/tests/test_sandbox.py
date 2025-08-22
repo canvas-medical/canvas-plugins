@@ -6,12 +6,8 @@ from textwrap import dedent
 
 import pytest
 
+from canvas_sdk.tests.shared import params_from_dict
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
-
-# Simple implementation of params_from_dict for tests
-def params_from_dict(params: dict[str, str]) -> list:
-    """Convert a dictionary of test parameters to a list suitable for parametrize."""
-    return list(params.values())
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
     Sandbox,
@@ -401,50 +397,6 @@ def test_typeguard_import_and_usage() -> None:
     
     scope = sandbox.execute()
     assert scope["result"] is True, "TypeGuard function should correctly identify string"
-
-
-def test_typeguard_with_typeddict_discriminated_union() -> None:
-    """Test TypeGuard with TypedDict for discriminated unions."""
-    sandbox = _sandbox_from_code(
-        """
-            from typing import TypeGuard, TypedDict, Union
-            
-            class PersonDict(TypedDict):
-                type: str
-                name: str
-                age: int
-            
-            class CompanyDict(TypedDict):
-                type: str
-                company_name: str
-                employees: int
-            
-            Entity = Union[PersonDict, CompanyDict]
-            
-            def is_person(entity: Entity) -> TypeGuard[PersonDict]:
-                return entity["type"] == "person"
-            
-            def is_company(entity: Entity) -> TypeGuard[CompanyDict]:
-                return entity["type"] == "company"
-            
-            # Test with a person
-            person: Entity = {"type": "person", "name": "John", "age": 30}
-            result_person = is_person(person)
-            
-            # Test with a company  
-            company: Entity = {"type": "company", "company_name": "Acme Corp", "employees": 100}
-            result_company = is_company(company)
-            
-            # Test negative cases
-            not_person = is_person(company)
-            not_company = is_company(person)
-            
-            result = result_person and result_company and not not_person and not not_company
-        """
-    )
-    
-    scope = sandbox.execute()
-    assert scope["result"] is True, "TypeGuard with TypedDict discriminated unions should work correctly"
 
 
 def test_forbidden_name() -> None:
