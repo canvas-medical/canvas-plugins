@@ -385,16 +385,16 @@ def test_typeguard_import_and_usage() -> None:
     sandbox = _sandbox_from_code(
         """
             from typing import TypeGuard
-            
+
             def is_string(val) -> TypeGuard[str]:
                 return isinstance(val, str)
-            
+
             # Test the TypeGuard function
             test_value = "hello"
             result = is_string(test_value)
         """
     )
-    
+
     scope = sandbox.execute()
     assert scope["result"] is True, "TypeGuard function should correctly identify string"
 

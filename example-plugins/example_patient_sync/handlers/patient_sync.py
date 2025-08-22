@@ -6,7 +6,7 @@ from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.utils import Http
 from canvas_sdk.v1.data.patient import Patient
-from logger import log
+
 
 class PatientSync(BaseHandler):
     """Handler for synchronizing patient data between systems."""
@@ -16,7 +16,6 @@ class PatientSync(BaseHandler):
     ]
 
     @property
-
     def partner_url_base(self) -> str:
         """Return the base URL for the external partner platform."""
         return self.secrets["PARTNER_URL_BASE"]
@@ -71,12 +70,13 @@ class PatientSync(BaseHandler):
         canvas_patient = Patient.objects.get(id=canvas_patient_id)
         # by default assume we don't yet have a system patient ID
         # and that we need to update the patient in Canvas to add one
-        system_patient_id = self.lookup_external_id_by_system_url(canvas_patient, self.partner_url_base)
+        system_patient_id = self.lookup_external_id_by_system_url(
+            canvas_patient, self.partner_url_base
+        )
         update_patient_external_identifier = system_patient_id is None
 
         # Here we check if the patient already has an external ID in Canvas for the partner platform
         if not system_patient_id:
-
             # Get the system external ID by making a GET request to the partner platform
             system_patient = self.get_patient_from_system_api(canvas_patient_id)
 
@@ -124,8 +124,8 @@ class PatientSync(BaseHandler):
             external_id = CreatePatientExternalIdentifier(
                 patient_id=canvas_patient.id,
                 system=self.partner_url_base,
-                value=str(system_patient_id)
+                value=str(system_patient_id),
             )
             return [external_id.create()]
         else:
-            return [] # Done!
+            return []  # Done!

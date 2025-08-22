@@ -1,23 +1,20 @@
-import arrow
-
 from http import HTTPStatus
+
+import arrow
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
-from canvas_sdk.effects.simple_api import Response, JSONResponse, HTMLResponse
+from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.effects.task import AddTask, TaskStatus
-
 from canvas_sdk.handlers.application import Application
-from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
-
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
-
 from canvas_sdk.v1.data.staff import Staff
 
 
 class MyChartApplication(Application):
     def on_open(self) -> Effect:
-        patient_id = self.context['patient']['id']
+        patient_id = self.context["patient"]["id"]
         return LaunchModalEffect(
             url=f"/plugin-io/api/example_chart_app/custom-ui?patient={patient_id}",
             target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
@@ -50,8 +47,5 @@ class MyApi(StaffSessionAuthMixin, SimpleAPI):
         )
         return [
             add_task.apply(),
-            JSONResponse(
-                {"message": "Task will be created"},
-                status_code=HTTPStatus.ACCEPTED
-            )
+            JSONResponse({"message": "Task will be created"}, status_code=HTTPStatus.ACCEPTED),
         ]
