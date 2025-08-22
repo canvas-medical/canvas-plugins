@@ -212,6 +212,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.group": [
+    "Group"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
@@ -240,6 +243,9 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
+  "canvas_sdk.effects.panel_configuration": [
+    "PanelConfiguration"
+  ],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
     "Patient",
@@ -253,6 +259,9 @@
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
+  ],
+  "canvas_sdk.effects.patient_chart_group": [
+    "PatientChartGroup"
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
