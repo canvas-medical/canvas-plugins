@@ -246,6 +246,7 @@ class Patient(TrackableFieldsModel):
 
 __exports__ = (
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientPreferredPharmacy",

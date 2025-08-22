@@ -246,12 +246,14 @@
     "CreatePatientExternalIdentifier",
     "CreatePatientPreferredPharmacies",
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientPreferredPharmacy"
