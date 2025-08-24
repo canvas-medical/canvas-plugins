@@ -163,17 +163,17 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
         if isinstance(meta_b.value, ast.Constant):
             value = meta_b.value.value
         elif isinstance(meta_b.value, ast.List):
-            value = [cast(ast.Constant, e).value for e in meta_b.value.elts]
+            value = [cast(ast.Constant, e).value for e in meta_b.value.elts]  # type: ignore[assignment]
         elif isinstance(meta_b.value, ast.Dict):
             keys = meta_b.value.keys
             values = meta_b.value.values
-            value = {
+            value = {  # type: ignore[assignment]
                 cast(ast.Constant, k).value: cast(ast.Constant, values[i]).value
                 for i, k in enumerate(keys)
             }
         else:
             value = None
-        meta[target_id] = value
+        meta[target_id] = value  # type: ignore[assignment]
 
     return meta
 
