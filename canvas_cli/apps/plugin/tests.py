@@ -1,19 +1,21 @@
+import base64
 import shutil
 import tarfile
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
+import requests
 import typer
 from click.testing import Result
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
 
-from .plugin import _build_package, validate_package
+from .plugin import _build_package, install, list_secrets, parse_secrets, update, validate_package
 
 
 def test_validate_package_unexistant_path() -> None:
@@ -163,3 +165,339 @@ def test_build_package_with_ignore_file(
                 assert name in names, f"Expected {name} to be present"
             for name in expected_ignored:
                 assert name not in names, f"Expected {name} to be ignored"
+
+
+def test_parse_secrets_valid_single_secret() -> None:
+    """Test parsing a single valid secret."""
+    secrets = ["API_KEY=secret123"]
+    result = parse_secrets(secrets)
+
+    assert result == ["API_KEY=secret123"]
+    assert len(result) == 1
+
+
+def test_parse_secrets_valid_multiple_secrets() -> None:
+    """Test parsing multiple valid secrets."""
+    secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword", "TOKEN=abcdef123456"]
+    result = parse_secrets(secrets)
+
+    assert result == secrets
+    assert len(result) == 3
+
+
+def test_parse_secrets_empty_list() -> None:
+    """Test parsing an empty list of secrets."""
+    secrets: list[str] = []
+    result = parse_secrets(secrets)
+
+    assert result == []
+    assert len(result) == 0
+
+
+def test_parse_secrets_with_multiple_equals() -> None:
+    """Test parsing secrets with multiple equals signs."""
+    secrets = ["DATABASE_URL=postgres://user:pass=word@host:5432/db"]
+    result = parse_secrets(secrets)
+
+    assert result == ["DATABASE_URL=postgres://user:pass=word@host:5432/db"]
+
+
+def test_parse_secrets_with_empty_value() -> None:
+    """Test parsing secrets with empty values."""
+    secrets = ["EMPTY_SECRET=", "ANOTHER_KEY="]
+    result = parse_secrets(secrets)
+
+    assert result == ["EMPTY_SECRET=", "ANOTHER_KEY="]
+
+
+def test_parse_secrets_invalid_no_equals() -> None:
+    """Test that secrets without equals sign raise BadParameter."""
+    secrets = ["INVALID_SECRET"]
+
+    with pytest.raises(
+        typer.BadParameter, match="Invalid secret format: 'INVALID_SECRET'. Use key=value."
+    ):
+        parse_secrets(secrets)
+
+
+@patch("canvas_cli.apps.plugin.plugin.print")
+@patch("requests.get")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+def test_list_secrets_success_with_secrets(
+    mock_plugin_url: Mock, mock_get_token: Mock, mock_requests_get: Mock, mock_print: Mock
+) -> None:
+    """Test successful listing of secrets when secrets exist."""
+    plugin = "test-plugin"
+    host = "https://example.canvasmedical.com"
+    mock_plugin_url.return_value = (
+        "https://example.canvasmedical.com/api/plugins/test-plugin/metadata"
+    )
+    mock_get_token.return_value = "test-token"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_response.json.return_value = {"secrets": ["API_KEY", "DB_PASSWORD", "SECRET_TOKEN"]}
+    mock_requests_get.return_value = mock_response
+
+    with patch("canvas_cli.apps.plugin.plugin.pprint") as mock_pprint:
+        list_secrets(plugin=plugin, host=host)
+
+        mock_plugin_url.assert_called_once_with(host, plugin, "metadata")
+        mock_get_token.assert_called_once_with(host)
+        mock_pprint.assert_called_once_with(["API_KEY", "DB_PASSWORD", "SECRET_TOKEN"])
+        mock_print.assert_not_called()
+
+
+@patch("canvas_cli.apps.plugin.plugin.print")
+@patch("requests.get")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+def test_list_secrets_success_no_secrets(
+    mock_plugin_url: Mock, mock_get_token: Mock, mock_requests_get: Mock, mock_print: Mock
+) -> None:
+    """Test successful response but no secrets configured."""
+    plugin = "empty-plugin"
+    host = "https://example.canvasmedical.com"
+    mock_plugin_url.return_value = (
+        "https://example.canvasmedical.com/api/plugins/empty-plugin/metadata"
+    )
+    mock_get_token.return_value = "test-token"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_response.json.return_value = {"secrets": []}
+    mock_requests_get.return_value = mock_response
+
+    list_secrets(plugin=plugin, host=host)
+
+    mock_print.assert_called_once_with("No secrets configured.")
+
+
+@patch("builtins.print")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_success_no_secrets(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+    mock_print: Mock,
+) -> None:
+    """Test successful plugin installation without secrets."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    built_path = Path("/tmp/built-plugin.zip")
+    mock_build.return_value = built_path
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.created
+    mock_post.return_value = mock_response
+
+    plugin_path = Path("/fake/plugin")
+    host = "https://example.canvasmesdical.com"
+
+    install(plugin_name=plugin_path, secrets=[], host=host)
+
+    mock_validate.assert_called_once_with(plugin_path)
+    mock_build.assert_called_once_with(plugin_path)
+    mock_plugin_url.assert_called_once_with(host)
+
+    expected_data = [("is_enabled", True)]
+    mock_post.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins",
+        data=expected_data,
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    mock_print.assert_any_call(f"Installing plugin: {built_path} into {host}")
+    mock_print.assert_any_call(
+        f"Posting {built_path.absolute()} to https://example.canvasmedical.com/api/plugins"
+    )
+    mock_print.assert_any_call(f"Plugin {plugin_path} uploaded! Check logs for more details.")
+
+
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.post")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin._build_package")
+@patch("canvas_cli.apps.plugin.plugin.validate_manifest")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+@patch("pathlib.Path.is_dir")
+@patch("pathlib.Path.exists")
+def test_install_success_with_secrets(
+    mock_exists: Mock,
+    mock_is_dir: Mock,
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_build: Mock,
+    mock_plugin_url: Mock,
+    mock_post: Mock,
+    mock_open_file: Mock,
+) -> None:
+    """Test successful plugin installation with secrets."""
+    mock_exists.return_value = True
+    mock_is_dir.return_value = True
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+
+    built_path: Path = Path("/tmp/built-plugin.zip")
+    mock_build.return_value = built_path
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.created
+    mock_post.return_value = mock_response
+
+    plugin_path: Path = Path("/fake/plugin")
+    host = "https://example.canvasmedical.com"
+    secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword"]
+
+    install(plugin_name=plugin_path, secrets=secrets, host=host)
+
+    expected_encoded_secrets = [
+        ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
+        ("secret", base64.b64encode(b"DB_PASSWORD=mypassword").decode()),
+    ]
+    expected_data = [("is_enabled", True)] + expected_encoded_secrets
+
+    mock_post.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins",
+        data=expected_data,
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+@patch("builtins.print")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake package data")
+@patch("requests.patch")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin.validate_package")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+def test_update_with_package(
+    mock_get_token: Mock,
+    mock_validate: Mock,
+    mock_plugin_url: Mock,
+    mock_patch: Mock,
+    mock_open_file: Mock,
+    mock_print: Mock,
+) -> None:
+    """Test updating plugin with a new package."""
+    mock_get_token.return_value = "test-token"
+    mock_validate.return_value = None
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins/test-plugin"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_patch.return_value = mock_response
+
+    name = "test-plugin"
+    host = "https://example.canvasmedical.com"
+    package_path: Path = Path("/path/to/package.tar.gz")
+
+    update(name=name, package_path=package_path, host=host, secrets=[], is_enabled=None)
+
+    mock_validate.assert_called_once_with(package_path)
+
+    mock_patch.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins/test-plugin",
+        data=[],
+        headers={"Authorization": "Bearer test-token"},
+        files={"package": mock_open_file.return_value.__enter__.return_value},
+    )
+
+    mock_print.assert_any_call(
+        "Updating plugin test-plugin from https://example.canvasmedical.com with package_path=/path/to/package.tar.gz"
+    )
+    mock_print.assert_any_call("New plugin version uploaded! Check logs for more details.")
+
+
+@patch("builtins.print")
+@patch("requests.patch")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+def test_update_secrets_only(
+    mock_get_token: Mock, mock_plugin_url: Mock, mock_patch: Mock, mock_print: Mock
+) -> None:
+    """Test updating plugin with secrets only."""
+    mock_get_token.return_value = "test-token"
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins/test-plugin"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_patch.return_value = mock_response
+
+    name = "test-plugin"
+    host = "https://example.canvasmedical.com"
+    secrets = ["API_KEY=secret123", "DB_PASSWORD=mypassword"]
+
+    update(name=name, secrets=secrets, host=host, package_path=None, is_enabled=None)
+
+    mock_get_token.assert_called_once_with(host)
+    mock_plugin_url.assert_called_once_with(host, name)
+
+    expected_encoded_secrets = [
+        ("secret", base64.b64encode(b"API_KEY=secret123").decode()),
+        ("secret", base64.b64encode(b"DB_PASSWORD=mypassword").decode()),
+    ]
+
+    mock_patch.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins/test-plugin",
+        data=expected_encoded_secrets,
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    mock_print.assert_any_call(
+        "Updating plugin test-plugin from https://example.canvasmedical.com with secrets=API_KEY,DB_PASSWORD"
+    )
+    mock_print.assert_any_call("Plugin secrets successfully updated.")
+
+
+@patch("builtins.print")
+@patch("requests.patch")
+@patch("canvas_cli.apps.plugin.plugin.plugin_url")
+@patch("canvas_cli.apps.plugin.plugin.get_or_request_api_token")
+def test_update_enable_disable_only(
+    mock_get_token: Mock, mock_plugin_url: Mock, mock_patch: Mock, mock_print: Mock
+) -> None:
+    """Test updating plugin enable/disable status only."""
+    mock_get_token.return_value = "test-token"
+    mock_plugin_url.return_value = "https://example.canvasmedical.com/api/plugins/test-plugin"
+
+    mock_response = Mock()
+    mock_response.status_code = requests.codes.ok
+    mock_patch.return_value = mock_response
+
+    name = "test-plugin"
+    host = "https://example.canvasmedical.com"
+    is_enabled = True
+
+    update(name=name, is_enabled=is_enabled, host=host, package_path=None, secrets=[])
+
+    expected_data = [("is_enabled", True)]
+
+    mock_patch.assert_called_once_with(
+        "https://example.canvasmedical.com/api/plugins/test-plugin",
+        data=expected_data,
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    mock_print.assert_any_call(
+        "Updating plugin test-plugin from https://example.canvasmedical.com with is_enabled=True"
+    )
