@@ -219,13 +219,17 @@
     "LaunchModalEffect"
   ],
   "canvas_sdk.effects.note": [
+    "AddAppointmentLabel",
     "Appointment",
     "AppointmentIdentifier",
     "Note",
+    "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
   "canvas_sdk.effects.note.appointment": [
+    "AddAppointmentLabel",
     "Appointment",
+    "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
   "canvas_sdk.effects.note.base": [
@@ -504,6 +508,7 @@
     "AllergyIntoleranceCoding",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "Assessment",
     "BannerAlert",
     "BasePosting",
@@ -613,6 +618,7 @@
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AppointmentProgressStatus"
   ],
   "canvas_sdk.v1.data.assessment": [

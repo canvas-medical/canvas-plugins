@@ -31,6 +31,7 @@ class TaskLabelModule(models.TextChoices):
 
     CLAIMS = "claims", "Claims"
     TASKS = "tasks", "Tasks"
+    APPOINTMENTS = "appointments", "Appointments"
 
 
 class Task(IdentifiableModel):
