@@ -6,8 +6,8 @@ requires = ["hatchling"]
 dev = [
   "grpcio-tools>=1.60.1,<2",
   "httpretty>=1.1.4",
-  "mypy",
-  "pre-commit",
+  "mypy>=1.17.0,<2",
+  "pre-commit>=4.3.0,<5",
   "psutil>=7.0.0",
   "pytest",
   "pytest-cov",
@@ -57,7 +57,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.48.0"
+version = "0.57.0"
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
@@ -181,6 +181,7 @@ version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
 
 [tool.uv]
+required-version = "~=0.8.0"
 
 [[tool.uv.index]]
 default = true

@@ -1,6 +1,9 @@
 from datetime import datetime
-from enum import Enum
-from typing import Any, cast
+from enum import Enum, StrEnum
+from typing import Any, Self, cast
+from uuid import UUID
+
+from pydantic import model_validator
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
@@ -18,10 +21,17 @@ class AddTask(_BaseEffect):
     An Effect that will create a Task in Canvas.
     """
 
+    class LinkableObjectType(StrEnum):
+        """Types of objects that can be linked to a Task."""
+
+        REFERRAL = "REFERRAL"
+        IMAGING = "IMAGING"
+
     class Meta:
         effect_type = EffectType.CREATE_TASK
         apply_required_fields = ("title",)
 
+    id: str | UUID | None = None
     assignee_id: str | None = None
     team_id: str | None = None
     patient_id: str | None = None
@@ -29,11 +39,29 @@ class AddTask(_BaseEffect):
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
     labels: list[str] = []
+    linked_object_id: str | UUID | None = None
+    linked_object_type: LinkableObjectType | None = None
+    author_id: str | UUID | None = None
+
+    @model_validator(mode="after")
+    def check_needed_together_fields(self) -> Self:
+        """Check that linked_object_id and linked_object_type are set together."""
+        if self.linked_object_id is not None and self.linked_object_type is None:
+            raise ValueError(
+                "'linked_object_id' must be set with 'linked_object_type' if it is provided"
+            )
+        if self.linked_object_id is None and self.linked_object_type is not None:
+            raise ValueError(
+                "'linked_object_type' must be set with 'linked_object_id' if it is provided"
+            )
+
+        return self
 
     @property
     def values(self) -> dict[str, Any]:
         """The values for Task addition."""
         return {
+            "id": str(self.id) if self.id else None,
             "patient": {"id": self.patient_id},
             "due": self.due.isoformat() if self.due else None,
             "assignee": {"id": self.assignee_id},
@@ -41,6 +69,11 @@ class AddTask(_BaseEffect):
             "title": self.title,
             "status": self.status.value,
             "labels": self.labels,
+            "author_id": str(self.author_id) if self.author_id else None,
+            "linked_object": {
+                "id": str(self.linked_object_id) if self.linked_object_id else None,
+                "type": self.linked_object_type.value if self.linked_object_type else None,
+            },
         }
 
 
@@ -57,12 +90,17 @@ class AddTaskComment(_BaseEffect):
         )
 
     body: str | None = None
-    task_id: str | None = None
+    task_id: str | UUID | None = None
+    author_id: str | UUID | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a task comment."""
-        return {"task": {"id": self.task_id}, "body": self.body}
+        return {
+            "task": {"id": str(self.task_id) if self.task_id else None},
+            "body": self.body,
+            "author_id": str(self.author_id) if self.author_id else None,
+        }
 
 
 class UpdateTask(_BaseEffect):

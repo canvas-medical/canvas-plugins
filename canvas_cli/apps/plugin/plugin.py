@@ -1,9 +1,12 @@
 import ast
+import base64
+import builtins
 import json
 import tarfile
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
+from pprint import pprint
 from typing import Any, cast
 from urllib.parse import urljoin
 
@@ -18,6 +21,8 @@ from canvas_cli.utils.context import context
 from canvas_cli.utils.validators import validate_manifest_file
 
 CANVAS_IGNORE_FILENAME = ".canvasignore"
+
+ONE_MEGABYTE = 1024 * 1024
 
 
 def plugin_url(host: str, *paths: str) -> str:
@@ -57,23 +62,53 @@ def _build_package(package: Path) -> Path:
     else:
         ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
 
-    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as file:
-        with tarfile.open(file.name, "w:gz") as tar:
-            for root in package.rglob("*"):
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
+        with tarfile.open(tar_file.name, "w:gz") as tar:
+            file_count = 0
+            file_size_total = 0
+
+            for path in package.rglob("*"):
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in root.parts):
+                if any(part.startswith(".") for part in path.parts):
                     continue
 
                 # Skip symlinks
-                if root.is_symlink():
+                if path.is_symlink():
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(root):
+                if ignore_patterns.match_file(path):
                     continue
 
-                tar.add(root, arcname=root.relative_to(package))
-        return Path(file.name)
+                file_count += 1
+
+                stat = path.stat()
+                file_size_total += stat.st_size
+
+                if stat.st_size > ONE_MEGABYTE:
+                    print(
+                        f'Warning: >1mb file found: "{path.name}", '
+                        "ensure that unneeded files are not included in the "
+                        "plugin directory"
+                    )
+
+                tar.add(path, arcname=path.relative_to(package))
+
+            if file_count > 100:
+                print(
+                    "Warning: >100 files found when packaging plugin, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+            if file_size_total > ONE_MEGABYTE:
+                print(
+                    "Warning: >1mb of content found when packaging plugin, "
+                    "ensure that unneeded files are not included in the "
+                    "plugin directory"
+                )
+
+        return Path(tar_file.name)
 
 
 def _get_name_from_metadata(host: str, token: str, package: Path) -> str | None:
@@ -128,17 +163,17 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
         if isinstance(meta_b.value, ast.Constant):
             value = meta_b.value.value
         elif isinstance(meta_b.value, ast.List):
-            value = [cast(ast.Constant, e).value for e in meta_b.value.elts]
+            value = [cast(ast.Constant, e).value for e in meta_b.value.elts]  # type: ignore[assignment]
         elif isinstance(meta_b.value, ast.Dict):
             keys = meta_b.value.keys
             values = meta_b.value.values
-            value = {
+            value = {  # type: ignore[assignment]
                 cast(ast.Constant, k).value: cast(ast.Constant, values[i]).value
                 for i, k in enumerate(keys)
             }
         else:
             value = None
-        meta[target_id] = value
+        meta[target_id] = value  # type: ignore[assignment]
 
     return meta
 
@@ -172,6 +207,18 @@ def get_base_plugin_template_path(plugin_type: str) -> Path:
             return context.plugin_template_dir / context.default_plugin_template_name
 
 
+def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
+    """Parse secrets from the command line, expecting them in the format Key=value."""
+    parsed_secrets = []
+
+    for secret in secrets:
+        if "=" not in secret:
+            raise typer.BadParameter(f"Invalid secret format: '{secret}'. Use key=value.")
+        parsed_secrets.append(secret)
+
+    return parsed_secrets
+
+
 def init(
     plugin_type: str = typer.Argument(
         "protocol",
@@ -190,6 +237,9 @@ def init(
 
 def install(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to install"),
+    secrets: builtins.list[str] = typer.Option(
+        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -211,6 +261,11 @@ def install(
     else:
         raise typer.BadParameter(f"Plugin '{plugin_name}' needs to be a valid directory")
 
+    encoded_secrets = []
+    for pair in secrets:
+        encoded = base64.b64encode(pair.encode()).decode()
+        encoded_secrets.append(("secret", encoded))
+
     print(f"Installing plugin: {built_package_path} into {host}")
 
     url = plugin_url(host)
@@ -218,10 +273,11 @@ def install(
     print(f"Posting {built_package_path.absolute()} to {url}")
 
     try:
+        data = [("is_enabled", True)] + encoded_secrets
         with open(built_package_path, "rb") as package:
             r = requests.post(
                 url,
-                data={"is_enabled": True},
+                data=data,
                 files={"package": package},
                 headers={"Authorization": f"Bearer {token}"},
             )
@@ -230,7 +286,7 @@ def install(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.created:
-        print(f"Plugin {plugin_name} successfully installed!")
+        print(f"Plugin {plugin_name} uploaded! Check logs for more details.")
 
     # If we got a conflict, means there's a duplicate plugin and install can't handle that.
     # So we need to get the plugin-name from the package and call `update` directly
@@ -238,7 +294,7 @@ def install(
         package_name := _get_name_from_metadata(host, token, built_package_path)
     ):
         print(f"Plugin {package_name} already exists, updating instead...")
-        update(package_name, built_package_path, is_enabled=True, host=host)
+        update(package_name, built_package_path, is_enabled=True, secrets=secrets, host=host)
     else:
         print(f"Status code {r.status_code}: {r.text}")
         raise typer.Exit(1)
@@ -395,6 +451,58 @@ def list(
         raise typer.Exit(1)
 
 
+def list_secrets(
+    plugin: str = typer.Argument(..., help="Plugin name to list secrets for"),
+    host: str | None = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+) -> None:
+    """List all secrets from a plugin on a Canvas instance."""
+    if not host:
+        raise typer.BadParameter("Please specify a host or add one to the configuration file")
+
+    url = plugin_url(host, plugin, "metadata")
+
+    token = get_or_request_api_token(host)
+
+    try:
+        r = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except requests.exceptions.RequestException:
+        print(f"Failed to connect to {host}")
+        raise typer.Exit(1) from None
+
+    if r.status_code == requests.codes.ok:
+        secrets = r.json().get("secrets", [])
+
+        if secrets:
+            pprint(secrets)
+        else:
+            print("No secrets configured.")
+    else:
+        print(f"Status code {r.status_code}: {r.text}")
+        raise typer.Exit(1)
+
+
+def set_secrets(
+    plugin: str = typer.Argument(..., help="Plugin name to configure"),
+    host: str | None = typer.Option(
+        callback=get_default_host,
+        help="Canvas instance to connect to",
+        default=None,
+    ),
+    secrets: builtins.list[str] = typer.Argument(
+        ..., callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
+) -> None:
+    """Configure plugin secrets on a Canvas instance."""
+    update(name=plugin, package_path=None, secrets=secrets, host=host, is_enabled=None)
+
+
 def validate_manifest(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
@@ -441,6 +549,9 @@ def update(
     is_enabled: bool | None = typer.Option(
         None, "--enable/--disable", show_default=False, help="Enable/disable the plugin"
     ),
+    secrets: builtins.list[str] = typer.Option(
+        [], "--secret", callback=parse_secrets, help="Secrets to set, e.g. Key=value"
+    ),
     host: str | None = typer.Option(
         callback=get_default_host,
         help="Canvas instance to connect to",
@@ -456,12 +567,27 @@ def update(
 
     token = get_or_request_api_token(host)
 
-    print(f"Updating plugin {name} from {host} with {is_enabled=}, {package_path=}")
+    encoded_secrets = []
+    for pair in secrets:
+        encoded = base64.b64encode(pair.encode()).decode()
+        encoded_secrets.append(("secret", encoded))
+
+    args = [
+        *((f"is_enabled={is_enabled}",) if is_enabled is not None else ()),
+        *((f"package_path={package_path}",) if package_path is not None else ()),
+        *((f"secrets={','.join([s.split('=')[0] for s in secrets])}",) if secrets else ()),
+    ]
+
+    print(f"Updating plugin {name} from {host}" + (f" with {', '.join(args)}" if args else ""))
 
     url = plugin_url(host, name)
 
     try:
-        data = {"is_enabled": is_enabled} if is_enabled is not None else {}
+        data = (
+            [("is_enabled", is_enabled)] + encoded_secrets
+            if is_enabled is not None
+            else encoded_secrets
+        )
         headers = {"Authorization": f"Bearer {token}"}
 
         if package_path:
@@ -483,7 +609,10 @@ def update(
         raise typer.Exit(1) from None
 
     if r.status_code == requests.codes.ok:
-        print("Plugin successfully updated!")
+        if package_path:
+            print("New plugin version uploaded! Check logs for more details.")
+        elif secrets:
+            print("Plugin secrets successfully updated.")
 
     else:
         print(f"Status code {r.status_code}: {r.text}")

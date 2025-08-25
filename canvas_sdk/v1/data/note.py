@@ -2,6 +2,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.claim import Claim
 
 
 class NoteTypeCategories(models.TextChoices):
@@ -183,6 +184,13 @@ class Note(IdentifiableModel):
     datetime_of_service = models.DateTimeField()
     place_of_service = models.CharField(max_length=255)
 
+    def get_claim(self) -> Claim | None:
+        """
+        Get the most recent claim for this note.
+        Returns the latest claim ordered by created date, or None if no claims exist.
+        """
+        return self.claims.order_by("-created").first()
+
 
 class NoteStateChangeEvent(IdentifiableModel):
     """NoteStateChangeEvent."""
@@ -209,7 +217,7 @@ class CurrentNoteStateEvent(IdentifiableModel):
         db_table = "canvas_sdk_data_current_note_state_001"
 
     state = models.CharField(choices=NoteStates.choices, max_length=3)
-    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="+")
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="current_state")
 
     def editable(self) -> bool:
         """Returns a boolean to indicate if the related note can be edited."""

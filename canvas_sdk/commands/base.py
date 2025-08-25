@@ -17,6 +17,7 @@ class _BaseCommand(TrackableFieldsModel):
         key = ""
         originate_required_fields = ("note_uuid",)
         edit_required_fields = ("command_uuid",)
+        send_required_fields = ("command_uuid",)
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
@@ -161,4 +162,14 @@ class _BaseCommand(TrackableFieldsModel):
         return Recommendation(title=title, button=button, command=command, context=self.values)
 
 
-__exports__ = ("_BaseCommand",)
+class _SendableCommandMixin:
+    def send(self) -> Effect:
+        """Fire the send effect the command."""
+        self._validate_before_effect("send")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"SEND_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+__exports__ = ("_BaseCommand", "_SendableCommandMixin")
