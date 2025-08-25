@@ -51,7 +51,7 @@ class PatientCreateApi(APIKeyAuthMixin, SimpleAPI):
         partner_id = str(json_body.get("partnerId"))
 
         external_id = PatientExternalIdentifier(
-            system=self.secrets['PARTNER_URL_BASE'],
+            system=self.secrets["PARTNER_URL_BASE"],
             value=partner_id,
         )
 
@@ -63,7 +63,9 @@ class PatientCreateApi(APIKeyAuthMixin, SimpleAPI):
             external_identifiers=[external_id],
         )
 
-        response = {"external_identifier": {"system": self.secrets['PARTNER_URL_BASE'], "value": partner_id}}
+        response = {
+            "external_identifier": {"system": self.secrets["PARTNER_URL_BASE"], "value": partner_id}
+        }
 
         return [
             patient.create(),
