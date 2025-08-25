@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from collections.abc import Callable, Generator
@@ -106,12 +107,12 @@ class Protocol(BaseProtocol):
 
 
 def list_empty_plugins(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 1 - list all plugins."""
+    """List all plugins."""
     return ("list", 0, [], [f"{plugin_name}"])
 
 
 def install_new_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 2 - install a new plugin."""
+    """Install a new plugin."""
     return (
         f"install {plugin_name}",
         0,
@@ -126,12 +127,24 @@ def install_new_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]
 
 
 def list_newly_installed_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 3 - list all plugins, including newly installed one."""
+    """List all plugins, including newly installed one."""
     return ("list", 0, [f"{plugin_name}@0.0.1	enabled"], [])
 
 
+def list_plugin_no_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """List the secrets of the plugin."""
+    return (
+        f"config list {plugin_name}",
+        0,
+        [
+            "No secrets configured",
+        ],
+        [],
+    )
+
+
 def reinstall_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 4 - make a change and reinstall the plugin."""
+    """Make a change and reinstall the plugin."""
     protocol_code = """
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
@@ -163,8 +176,68 @@ class Protocol(BaseProtocol):
     )
 
 
+def reinstall_plugin_invalid_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """Reinstall plugin with invalid secrets."""
+    return (
+        f"install {plugin_name} --secret key=value",
+        1,
+        [
+            'Status code 400: ["Non-existent secret(s): key"]',
+        ],
+        [],
+    )
+
+
+def list_plugin_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """List the secrets of the plugin."""
+    return (
+        f"config list {plugin_name}",
+        0,
+        [
+            "['key']",
+        ],
+        [],
+    )
+
+
+def configure_plugin_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """Configure the plugin secrets."""
+    return (
+        f"config set {plugin_name} key=value1",
+        0,
+        [
+            f"Updating plugin {plugin_name} from http://localhost:8000 with secrets=key",
+            "Plugin secrets successfully updated.",
+        ],
+        [],
+    )
+
+
+def reinstall_plugin_valid_secrets(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
+    """Reinstall plugin with valid secrets."""
+    with open(f"./{plugin_name}/CANVAS_MANIFEST.json", "r+") as manifest_file:
+        manifest_json = json.load(manifest_file)
+        manifest_json["secrets"] = ["key"]
+        manifest_file.seek(0)
+        json.dump(manifest_json, manifest_file)
+        manifest_file.truncate()
+
+    return (
+        f"install {plugin_name} --secret key=value",
+        0,
+        [
+            f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file",
+            "Installing plugin:",
+            "Posting",
+            f"Plugin {plugin_name} already exists, updating instead...",
+            "New plugin version uploaded! Check logs for more details.",
+        ],
+        [],
+    )
+
+
 def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 5 - disable plugin."""
+    """Disable plugin."""
     return (
         f"disable {plugin_name}",
         0,
@@ -174,12 +247,12 @@ def disable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
 
 
 def list_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 6 - list disabled plugin."""
+    """List disabled plugin."""
     return ("list", 0, [f"{plugin_name}@0.0.1	disabled"], [])
 
 
 def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 7 - enable the disabled plugin."""
+    """Enable the disabled plugin."""
     return (
         f"enable {plugin_name}",
         0,
@@ -192,7 +265,7 @@ def enable_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
 
 
 def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 8 - try to uninstall the enabled plugin."""
+    """Try to uninstall the enabled plugin."""
     return (
         f"uninstall {plugin_name}",
         1,
@@ -205,7 +278,7 @@ def uninstall_enabled_plugin(plugin_name: str) -> tuple[str, int, list[str], lis
 
 
 def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
-    """Step 9 - uninstall the plugin."""
+    """Uninstall the plugin."""
     return (
         f"uninstall {plugin_name}",
         0,
@@ -226,7 +299,12 @@ def uninstall_disabled_plugin(plugin_name: str) -> tuple[str, int, list[str], li
         (list_empty_plugins),
         (install_new_plugin),
         (list_newly_installed_plugin),
+        (list_plugin_no_secrets),
         (reinstall_plugin),
+        (reinstall_plugin_invalid_secrets),
+        (reinstall_plugin_valid_secrets),
+        (list_plugin_secrets),
+        (configure_plugin_secrets),
         (disable_plugin),
         (list_disabled_plugin),
         (enable_plugin),

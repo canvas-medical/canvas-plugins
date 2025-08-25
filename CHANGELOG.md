@@ -1,6 +1,125 @@
 # CHANGELOG
 
 
+## v0.57.0 (2025-08-24)
+
+### Chores
+
+- Enable dependabot for uv ([#948](https://github.com/canvas-medical/canvas-plugins/pull/948),
+  [`a8b18f2`](https://github.com/canvas-medical/canvas-plugins/commit/a8b18f2e93575a39b3fc0945450e08622143064e))
+
+- **deps**: Bump actions/checkout from 4 to 5
+  ([#910](https://github.com/canvas-medical/canvas-plugins/pull/910),
+  [`6cb2ade`](https://github.com/canvas-medical/canvas-plugins/commit/6cb2adea02bc0163864bc7ebf652f6ab552fb62e))
+
+- **deps**: Bump amannn/action-semantic-pull-request from 5 to 6
+  ([#926](https://github.com/canvas-medical/canvas-plugins/pull/926),
+  [`dd53f21`](https://github.com/canvas-medical/canvas-plugins/commit/dd53f2158433fbb23858b5926c7fd2c1721a634e))
+
+- **deps**: Bump jsonschema from 4.23.0 to 4.25.1
+  ([#956](https://github.com/canvas-medical/canvas-plugins/pull/956),
+  [`86ea295`](https://github.com/canvas-medical/canvas-plugins/commit/86ea295a50bb13397b75d3380bbbabda9fdd093e))
+
+- **deps**: Bump python-dotenv from 1.0.1 to 1.1.1
+  ([#951](https://github.com/canvas-medical/canvas-plugins/pull/951),
+  [`8a4cca0`](https://github.com/canvas-medical/canvas-plugins/commit/8a4cca09a64820b234c86cfe0ef9c3db4c73a8ac))
+
+- **deps**: Bump rapidfuzz from 3.11.0 to 3.13.0
+  ([#955](https://github.com/canvas-medical/canvas-plugins/pull/955),
+  [`2d5e2f9`](https://github.com/canvas-medical/canvas-plugins/commit/2d5e2f95685779c9886bce12f0e1834fa9c2f24a))
+
+- **deps**: Bump sentry-sdk from 2.33.2 to 2.35.0
+  ([#953](https://github.com/canvas-medical/canvas-plugins/pull/953),
+  [`d28080d`](https://github.com/canvas-medical/canvas-plugins/commit/d28080d844d31a0fc3904813f898c14b956a23d5))
+
+- **deps**: Bump the production-patches group with 2 updates
+  ([#949](https://github.com/canvas-medical/canvas-plugins/pull/949),
+  [`b5d6275`](https://github.com/canvas-medical/canvas-plugins/commit/b5d62752ad5cf36a9137333d22e1d5a1dae3ae35))
+
+- **deps**: Update dev dependencies
+  ([#959](https://github.com/canvas-medical/canvas-plugins/pull/959),
+  [`59d0baf`](https://github.com/canvas-medical/canvas-plugins/commit/59d0baf20fd464b1fd39a293009be46c97643f45))
+
+- **tests**: Add codecov config ([#960](https://github.com/canvas-medical/canvas-plugins/pull/960),
+  [`0f713c3`](https://github.com/canvas-medical/canvas-plugins/commit/0f713c3af0160ce899f84e44b47c46eaf9254ca1))
+
+- **tests**: Add missing ignore dirs to codecov
+  ([#963](https://github.com/canvas-medical/canvas-plugins/pull/963),
+  [`f5288be`](https://github.com/canvas-medical/canvas-plugins/commit/f5288be2deb03b4ad66451d9f3146825341c363e))
+
+### Features
+
+- **cli**: Configure plugin secrets
+  ([#728](https://github.com/canvas-medical/canvas-plugins/pull/728),
+  [`62b231a`](https://github.com/canvas-medical/canvas-plugins/commit/62b231a8b381ba76f8a217b89ad499faf7fb3daa))
+
+
+## v0.56.0 (2025-08-21)
+
+### Features
+
+- Add events and effects for hooking into the SSO authentication flow
+  ([#932](https://github.com/canvas-medical/canvas-plugins/pull/932),
+  [`cb0c283`](https://github.com/canvas-medical/canvas-plugins/commit/cb0c283b1743ee1526907a92c84d40fec3937947))
+
+
+## v0.55.0 (2025-08-19)
+
+### Bug Fixes
+
+- Add panel applications ([#841](https://github.com/canvas-medical/canvas-plugins/pull/841),
+  [`98d4899`](https://github.com/canvas-medical/canvas-plugins/commit/98d489919a0152617aa287250c400e1a63c37df4))
+
+### Features
+
+- Add panel sections configuration
+  ([#815](https://github.com/canvas-medical/canvas-plugins/pull/815),
+  [`d080009`](https://github.com/canvas-medical/canvas-plugins/commit/d0800090607db36ae416340b9a4fa1c8d943f239))
+
+- Add patient chart group effect ([#888](https://github.com/canvas-medical/canvas-plugins/pull/888),
+  [`5f5a469`](https://github.com/canvas-medical/canvas-plugins/commit/5f5a46957d8954e8ef30d0a2cc7c87f6837522ca))
+
+
+## v0.54.0 (2025-08-19)
+
+### Bug Fixes
+
+- Plugin_only → plugin_context ([#877](https://github.com/canvas-medical/canvas-plugins/pull/877),
+  [`a221cf2`](https://github.com/canvas-medical/canvas-plugins/commit/a221cf2a24e5c67447288af99f3fe1af963cd543))
+
+- Raise on bad status from S3 in `download_plugin`
+  ([#744](https://github.com/canvas-medical/canvas-plugins/pull/744),
+  [`501de93`](https://github.com/canvas-medical/canvas-plugins/commit/501de93aa6f81afc9dd78748cabcc9363fa5f667))
+
+### Documentation
+
+- Add better description of app launch examples
+  ([#906](https://github.com/canvas-medical/canvas-plugins/pull/906),
+  [`0315103`](https://github.com/canvas-medical/canvas-plugins/commit/0315103f70ed07145341a698990faa42684821d9))
+
+### Features
+
+- Add ConfigDict to PyDantic sandbox allowlist (koala-3196)
+  ([#916](https://github.com/canvas-medical/canvas-plugins/pull/916),
+  [`3d3db99`](https://github.com/canvas-medical/canvas-plugins/commit/3d3db99e7df316870298341eb760d398de74b81d))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- Add warnings if many files, large files, or large total size are found
+  ([#831](https://github.com/canvas-medical/canvas-plugins/pull/831),
+  [`ac08059`](https://github.com/canvas-medical/canvas-plugins/commit/ac08059cb3dc31bed317fbac9fdfa684a10995c6))
+
+- Implement custom payment processors
+  ([#701](https://github.com/canvas-medical/canvas-plugins/pull/701),
+  [`9974e53`](https://github.com/canvas-medical/canvas-plugins/commit/9974e53d4bc991f4958ca4ab41f18ba56ee426fc))
+
+Co-authored-by: Miguel Quintas <miguel.quintas@canvasmedical.com>
+
+
 ## v0.53.2 (2025-08-12)
 
 ### Bug Fixes
