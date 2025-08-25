@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.57.1 (2025-08-25)
+
+### Bug Fixes
+
+- Set size maximums for gRPC messages
+  ([#914](https://github.com/canvas-medical/canvas-plugins/pull/914),
+  [`82cc22d`](https://github.com/canvas-medical/canvas-plugins/commit/82cc22d834da4420986cfed87f570471c8ff4973))
+
+
 ## v0.57.0 (2025-08-24)
 
 ### Chores
