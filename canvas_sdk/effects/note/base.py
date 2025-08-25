@@ -57,14 +57,6 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         errors = super()._get_error_details(method)
 
         if method == "create":
-            if self.instance_id:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Instance ID should not be provided for create effects.",
-                        self.instance_id,
-                    )
-                )
             if not self.practice_location_id:
                 errors.append(
                     self._create_error_detail(

@@ -1,0 +1,32 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "note_uuid_tester",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "protocols": [
+            {
+                "class": "note_uuid_tester.protocols.buttonone:ButtonOne",
+                "description": "Button to create a note with a plugin generated UUID"
+            },
+            {
+                "class": "note_uuid_tester.protocols.buttontwo:ButtonTwo",
+                "description": "Button to create a note with no UUID"
+            },
+            {
+                "class": "note_uuid_tester.protocols.buttonthree:ButtonThree",
+                "description": "Button to create a note with a static UUID"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
