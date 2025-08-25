@@ -10,7 +10,6 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 import requests
 import typer
-from click.testing import Result
 from typer.testing import CliRunner
 
 from canvas_cli.main import app
@@ -56,55 +55,57 @@ def clean_up_plugin(init_plugin_name: str) -> Generator[Any, Any, Any]:
 
 
 @pytest.fixture
-def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Result:
+def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Path:
     """Init the plugin and return the result."""
-    result = cli_runner.invoke(app, "init", input=init_plugin_name)
+    cli_runner.invoke(app, "init", input=init_plugin_name)
+    package_name = init_plugin_name.replace("-", "_")
 
-    plugin_dir = Path(f"./{init_plugin_name}")
+    plugin_dir = Path(f"./{init_plugin_name}/{package_name}")
 
     (plugin_dir / ".hidden-dir").mkdir()
     (plugin_dir / ".hidden.file").touch()
     (plugin_dir / "symlink").symlink_to("target")
 
-    return result
+    return plugin_dir
 
 
 def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     """Tests that the CLI successfully creates a plugin with init."""
     result = cli_runner.invoke(app, "init", input=init_plugin_name)
+    package_name = init_plugin_name.replace("-", "_")
     assert result.exit_code == 0
 
     # plugin directory exists
-    plugin = Path(f"./{init_plugin_name}")
+    plugin = Path(f"./{init_plugin_name}/{package_name}")
     assert plugin.exists()
     assert plugin.is_dir()
 
     # manifest file exists
-    manifest = Path(f"./{init_plugin_name}/CANVAS_MANIFEST.json")
+    manifest = plugin / "CANVAS_MANIFEST.json"
     assert manifest.exists()
     assert manifest.is_file()
-    manifest_result = cli_runner.invoke(app, f"validate-manifest {init_plugin_name}")
+    manifest_result = cli_runner.invoke(app, f"validate-manifest {plugin}")
     assert manifest_result.exit_code == 0
 
     # readme file exists
-    readme = Path(f"./{init_plugin_name}/README.md")
+    readme = plugin / "README.md"
     assert readme.exists()
     assert readme.is_file()
 
     # protocols dir exists
-    protocols = Path(f"./{init_plugin_name}/protocols")
+    protocols = plugin / "protocols"
     assert protocols.exists()
     assert protocols.is_dir()
 
     # protocol file exists in protocols dir
-    protocol = Path(f"./{init_plugin_name}/protocols/my_protocol.py")
+    protocol = plugin / "protocols" / "my_protocol.py"
     assert protocol.exists()
     assert protocol.is_file()
 
 
-def test_build_package(init_plugin_name: str, init_plugin: Result) -> None:
+def test_build_package(init_plugin: Path) -> None:
     """Tests that the package is built correctly."""
-    package = _build_package(Path(f"./{init_plugin_name}"))
+    package = _build_package(init_plugin)
     assert package.exists()
     assert package.is_file()
     assert package.name.endswith(".tar.gz")
@@ -140,8 +141,7 @@ def test_build_package(init_plugin_name: str, init_plugin: Result) -> None:
     ],
 )
 def test_build_package_with_ignore_file(
-    init_plugin_name: str,
-    init_plugin: Result,
+    init_plugin: Path,
     ignore_lines: list[str],
     expected_present: list[str],
     expected_ignored: list[str],
@@ -154,7 +154,7 @@ def test_build_package_with_ignore_file(
         mock_exists.return_value = True
         mock_read_text.return_value = "\n".join(ignore_lines)
 
-        package = _build_package(Path(f"./{init_plugin_name}"))
+        package = _build_package(init_plugin)
         assert package.exists()
         assert package.is_file()
         assert package.name.endswith(".tar.gz")

@@ -75,11 +75,12 @@ class Protocol(BaseProtocol):
 """
 
     plugin_dir = integration_tests_plugins_dir / plugin_name
+    package_name = plugin_name.replace("-", "_")
 
-    with open(plugin_dir / "protocols" / "my_protocol.py", "w") as protocol:
+    with open(plugin_dir / package_name / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
-    with open(_build_package(plugin_dir), "rb") as package:
+    with open(_build_package(plugin_dir / package_name), "rb") as package:
         # install the plugin
         response = requests.post(
             plugin_url(settings.INTEGRATION_TEST_URL),

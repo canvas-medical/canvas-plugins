@@ -22,7 +22,7 @@ from .main import app
 @pytest.fixture(scope="session")
 def plugin_name() -> str:
     """The plugin name to be used for the canvas cli test."""
-    return f"cli-{datetime.now().timestamp()}".replace(".", "")
+    return f"cli{datetime.now().timestamp()}".replace(".", "")
 
 
 @pytest.fixture(scope="session")
@@ -97,7 +97,7 @@ class Protocol(BaseProtocol):
 """
     plugin_dir = integration_tests_plugins_dir / plugin_name
 
-    with open(plugin_dir / "protocols" / "my_protocol.py", "w") as protocol:
+    with open(plugin_dir / plugin_name / "protocols" / "my_protocol.py", "w") as protocol:
         protocol.write(protocol_code)
 
     yield
@@ -327,7 +327,7 @@ def test_canvas_list_install_disable_enable_uninstall(
     mock_get_token.return_value = None
     mock_set_token.return_value = None
 
-    with chdir(integration_tests_plugins_dir):
+    with chdir(integration_tests_plugins_dir / plugin_name):
         (command, expected_exit_code, expected_outputs, expected_no_outputs) = step(plugin_name)
         result = cli_runner.invoke(app, command)
 
