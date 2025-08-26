@@ -55,7 +55,7 @@
                     </div>
                 </td>
                 {% if patient.provider %}
-                <td class="care-team">{{ patient.provider.first_name }} {{ patient.provider.last_name }} ({{ patient.provider.role }})</td>
+                <td class="care-team">{{ patient.provider.first_name }} {{ patient.provider.last_name }} ({{ patient.provider_role }})</td>
                 {% else %}
                 <td class="care-team">No assigned care team</td>
                 {% endif %}

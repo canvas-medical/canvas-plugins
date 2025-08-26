@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 import arrow
-from django.db.models import Q
+from django.db.models import Count, Q
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import HTMLResponse, Response
@@ -25,20 +25,19 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
     PREFIX = "/app"
 
+    DEFAULT_PAGE_SIZE = 10
+
+    DEFAULT_VISIT_THRESHOLD = "1 day"
+
+    DEFAULT_AVATAR = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
+
     # Serve templated HTML
     @api.get("/")
     def index(self) -> list[Response | Effect]:
         """Serve the main dashboard page."""
-        logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
-
-        context = {
-            "first_name": logged_in_user.first_name,
-            "last_name": logged_in_user.last_name,
-        }
-
         return [
             HTMLResponse(
-                render_to_string("static/index.html", context),
+                render_to_string("static/index.html", self._current_logged_staff),
                 status_code=HTTPStatus.OK,
             )
         ]
@@ -46,7 +45,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/dashboard")
     def get_dashboard(self) -> list[Response | Effect]:
         """Serve the dashboard page with patient data."""
-        logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
+        page_size = self._page_size
         facility_search = self.request.query_params.get("facility_search", "").strip()
         if facility_search:
             facilities = Facility.objects.filter(name__icontains=facility_search)
@@ -59,13 +58,11 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         )
 
         context = {
-            "first_name": logged_in_user.first_name,
-            "last_name": logged_in_user.last_name,
             "facilities": facilities,
             "selected_facility": selected_facility,
             "facility_search": facility_search,
             "page": int(self.request.query_params.get("page", 1)),
-            "limit": int(self.request.query_params.get("limit", 10)),
+            "limit": page_size,
         }
 
         return [
@@ -107,7 +104,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         """Serve the contents of a table with pagination."""
         # Get pagination parameters from query string
         page = int(self.request.query_params.get("page", 1))
-        limit = min(int(self.request.query_params.get("limit", 10)), 10)
+        page_size = self._page_size
 
         # Search query
         patient_search = self.request.query_params.get("patient_search", "").strip()
@@ -120,26 +117,32 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         # Staff
         staff = self._get_staff()
         current_staff_id = self.request.query_params.get("staff_id")
-        current_staff = [member for member in staff if member["id"] == current_staff_id][0] if current_staff_id else None
+        current_staff = (
+            [member for member in staff if member["id"] == current_staff_id]
+            if current_staff_id
+            else None
+        )
+        current_staff = current_staff[0] if current_staff else None
 
         # Secrets
         secrets = self._get_secrets()
 
         # Calculate offset
-        offset = (page - 1) * limit
+        offset = (page - 1) * page_size
 
         # Get patients with prefetched relationships
         patients_query = Patient.objects.prefetch_related(
             "telecom",
             "addresses",
-            "photos",
             "notes",
             "notes__provider",
             "notes__note_type_version",
         )
 
         if facility_id:
-            patients_query = patients_query.filter(addresses__patientfacilityaddress__facility__id=facility_id)
+            patients_query = patients_query.filter(
+                addresses__patientfacilityaddress__facility__id=facility_id
+            )
 
         if current_staff_id:
             patients_query = patients_query.filter(notes__provider__id=current_staff_id)
@@ -154,42 +157,43 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         # Get total count for pagination info
         total_count = patients_query.count()
         # Apply pagination
-        patients_page = patients_query[offset : offset + limit]
+        patients_page = patients_query[offset : offset + page_size]
 
         processed_patients = []
         for patient in patients_page:
             last_visit = self._get_last_visit(patient)
-            last_visit_staff = (
-                [member for member in staff if member["id"] == last_visit.provider.id]
-                if last_visit and last_visit.provider
-                else None
-            )
-
             gaps, total_gaps = self._get_gaps(patient)
 
+            log.info(f"patient photo: {patient.photo_url}")
             # Create patient data object
             patient_data = {
                 "id": patient.id,
-                "photo_url": patient.photo_url,
+                # TODO investigate if patient avatars can be used in this context
+                "photo_url": self.DEFAULT_AVATAR,
                 "name": patient.preferred_full_name,
                 "age": int(patient.age_at(arrow.now())),
                 "gender": patient.sex_at_birth,
                 "telecom": patient.telecom.first().value if patient.telecom.exists() else None,
-                "last_visit": last_visit.datetime_of_service if last_visit else None,
-                "provider": last_visit_staff[0] if last_visit_staff else None,
+                "last_visit": arrow.get(last_visit.datetime_of_service).format("MM.DD.YYYY")
+                if last_visit
+                else None,
+                "provider": last_visit.provider if last_visit else None,
+                "provider_role": self._get_staff_role_for_last_visit(patient, last_visit.provider)
+                if last_visit and last_visit.provider
+                else None,
                 "tasks": self._get_patients_tasks(patient),
                 "gaps": {
                     "due": gaps,
                     "total": total_gaps,
                 },
-                "insurance": self._get_coverage(patient, last_visit.datetime_of_service if last_visit else None),
+                "insurance": self._get_coverage(patient=patient),
                 "insurances": secrets.get("insurances_logos"),
                 "sticky_note": "",
             }
             processed_patients.append(patient_data)
 
         # Calculate pagination metadata
-        total_pages = (total_count + limit - 1) // limit
+        total_pages = (total_count + page_size - 1) // page_size
         has_next = page < total_pages
         has_previous = page > 1
 
@@ -203,7 +207,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                 "current_page": page,
                 "total_pages": total_pages,
                 "total_count": total_count,
-                "limit": limit,
+                "page_size": page_size,
                 "has_next": has_next,
                 "has_previous": has_previous,
                 "next_page": page + 1 if has_next else None,
@@ -231,28 +235,11 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         ]
 
     def _get_staff(self):
-        care_team = (
-            CareTeamMembership.objects.values(
-                "staff__id",
-                "staff__first_name",
-                "staff__last_name",
-                "role__display",
-            )
-            .filter(
-                status=CareTeamMembershipStatus.ACTIVE,
-            )
-            .distinct()
+        return Staff.objects.filter(active=True).values(
+            "id",
+            "first_name",
+            "last_name",
         )
-
-        return [
-            {
-                "id": member["staff__id"],
-                "first_name": member["staff__first_name"],
-                "last_name": member["staff__last_name"],
-                "role": member["role__display"],
-            }
-            for member in care_team
-        ] if care_team else []
 
     def _get_last_visit(self, patient):
         query = patient.notes.filter(
@@ -262,13 +249,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         return query.first() if query.exists() else None
 
     def _get_patients_tasks(self, patient) -> dict[str, int]:
-        return {
-            "all": Task.objects.filter(patient=patient).count(),
-            "open": Task.objects.filter(
-                patient=patient,
-                status=TaskStatus.OPEN,
-            ).count(),
-        }
+        return Task.objects.filter(patient=patient).aggregate(
+            all=Count("id"), open=Count("id", filter=Q(status=TaskStatus.OPEN))
+        )
 
     def _get_gaps(self, patient):
         """Get gaps in care for a patient."""
@@ -288,7 +271,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
         return (gaps, total_gaps) if total_gaps > 0 else (0, 0)
 
-    def _get_coverage(self, patient, last_visit_date=None) -> str | None:
+    def _get_coverage(self, patient) -> str | None:
         """Get coverage information for a patient."""
         coverage = patient.coverages.filter(
             stack=CoverageStack.IN_USE,
@@ -298,37 +281,42 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
     def _get_secrets(self):
         """Get secrets for the dashboard."""
-        page_size = self.secrets.get('PAGE_SIZE', 10)
-        visit_threshold = self.secrets.get('VISIT_THRESHOLD', '1 day')
-        insurances_logos = self.secrets.get('INSURANCES', {})
+        page_size = self.secrets.get("PAGE_SIZE")
+        visit_threshold = self.secrets.get("VISIT_THRESHOLD")
+        insurances_logos = self.secrets.get("INSURANCES", {})
+
+        log.info(f"Secrets - Page Size: {page_size}, Visit Threshold: {visit_threshold}")
 
         return {
-            "page_size": page_size,
-            "visit_threshold": visit_threshold,
+            "page_size": self.DEFAULT_PAGE_SIZE if not page_size else int(page_size),
+            "visit_threshold": visit_threshold if visit_threshold else self.DEFAULT_VISIT_THRESHOLD,
             "insurances_logos": insurances_logos,
         }
 
-    # @api.get("/facilities/<facility_id>/patients")
-    # def get_facility_patients(self) -> list[Response | Effect]:
-    #     """Serve the patients for a specific facility."""
-    #     facility_id = self.request.path_params.get("facility_id")
-    #     page = int(self.request.query_params.get("page", 1))
-    #     limit = min(int(self.request.query_params.get("limit", 10)), 10)
-    #     offset = (page - 1) * limit
+    @property
+    def _current_logged_staff(self):
+        """Get the currently logged staff member."""
+        logged_in_user = Staff.objects.values("first_name", "last_name").get(
+            id=self.request.headers["canvas-logged-in-user-id"]
+        )
 
-    #     facility = Facility.objects.get(id=facility_id)
-    #     total = facility.patient_facilities.count()
-    #     patients = [f.patient for f in list(facility.patient_facilities.all())[offset:offset + limit]]
-    #     context = {
-    #         "patients": patients,
-    #         "page": page,
-    #         "limit": limit,
-    #         "total": total,
-    #     }
+        return {
+            "first_name": logged_in_user["first_name"],
+            "last_name": logged_in_user["last_name"],
+        }
 
-    #     return [
-    #         Response(
-    #             render_to_string("static/table.html", context).encode(),
-    #             status_code=HTTPStatus.OK,
-    #         )
-    #     ]
+    @property
+    def _page_size(self):
+        """Get the page size for pagination."""
+        return int(self.request.query_params.get("page_size", self.DEFAULT_PAGE_SIZE))
+
+    def _get_staff_role_for_last_visit(self, patient, provider):
+        return (
+            CareTeamMembership.objects.filter(
+                patient=patient,
+                staff=provider,
+                status=CareTeamMembershipStatus.ACTIVE,
+            )
+            .values_list("role__display", flat=True)
+            .first()
+        )
