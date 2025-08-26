@@ -1,12 +1,12 @@
 {
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
-    "name": "{{ cookiecutter.__project_slug }}",
+    "name": "{{ cookiecutter.__package_name }}",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
         "protocols": [
             {
-                "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol:Protocol",
+                "class": "{{ cookiecutter.__package_name }}.protocols.my_protocol:Protocol",
                 "description": "A protocol that does xyz..."
             }
         ],
