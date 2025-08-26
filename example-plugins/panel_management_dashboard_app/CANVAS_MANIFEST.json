@@ -3,12 +3,7 @@
     "plugin_version": "0.0.1",
     "name": "panel_management_dashboard_app",
     "description": "Edit the description in CANVAS_MANIFEST.json",
-    "url_permissions": [
-        {
-            "url": "https://www.canvasmedical.com/extensions",
-            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS", "MICROPHONE", "CAMERA"]
-        }
-    ],
+    "url_permissions": [],
     "components": {
         "applications": [
             {
