@@ -39,12 +39,6 @@ class PatientSettingConstants:
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
 
-class PatientConstants:
-    """PatientConstants."""
-
-    DEFAULT_AVATAR = "https://d3hn0m4rbsz438.cloudfront.net/avatar1.png"
-
-
 class Patient(Model):
     """A class representing a patient."""
 
@@ -188,14 +182,6 @@ class Patient(Model):
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
 
-    @property
-    def photo_url(self) -> str:
-        """Returns the URL of the patient's photo."""
-        photo = self.photos.first()
-        if photo and photo.url:
-            return photo.url.url
-        return PatientConstants.DEFAULT_AVATAR
-
 
 class PatientContactPoint(IdentifiableModel):
     """A class representing a patient contact point."""
@@ -302,20 +288,6 @@ class PatientMetadata(IdentifiableModel):
     value = models.CharField(max_length=255)
 
 
-class PatientPhoto(Model):
-    """PatientPhoto."""
-
-    class Meta:
-        db_table = "canvas_sdk_data_api_patientphoto_001"
-
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
-    patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="photos", null=True
-    )
-    url = models.FileField(default=PatientConstants.DEFAULT_AVATAR)
-
-
 class PatientFacilityAddress(PatientAddress):
     """PatientFacilityAddress."""
 
@@ -338,7 +310,6 @@ __exports__ = (
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",
-    "PatientPhoto",
     # not defined here but used by current plugins
     "ContactPointState",
     "ContactPointSystem",
