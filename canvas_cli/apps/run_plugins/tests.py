@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -10,6 +11,7 @@ from canvas_cli.apps.run_plugins.run_plugins import (
     _reset_db,
     _run_plugins,
 )
+from canvas_cli.main import app
 
 
 @patch("django.db.connections")
@@ -116,3 +118,20 @@ def test_raises_error_on_db_backend_not_supported(mock_settings: Mock) -> None:
 
     with pytest.raises(typer.BadParameter, match="Database backend must be 'sqlite3'"):
         _run_plugins(["some_dir"], db_seed_file=None, reset_db=False)
+
+
+@patch("canvas_cli.apps.run_plugins.run_plugins.run_server")
+@patch("canvas_cli.apps.run_plugins.run_plugins._reset_db")
+def test_run_plugins_reset_db_is_called(
+    mock_reset_db: Mock, mock_run_server: Mock, cli_runner: CliRunner
+) -> None:
+    """Test that reset_db is called when db_seed_file or reset_db options are passed to run_plugins command."""
+    cli_runner.invoke(app, "run-plugins some_dir --reset-db")
+    mock_reset_db.assert_called_once_with(seed_file=None)
+    mock_run_server.assert_called_once()
+
+    mock_reset_db.reset_mock()
+
+    with tempfile.NamedTemporaryFile(suffix=".py") as tmp:
+        cli_runner.invoke(app, f"run-plugins some_dir --db-seed-file {Path(tmp.name)}")
+        mock_reset_db.assert_called_once_with(seed_file=Path(tmp.name))
