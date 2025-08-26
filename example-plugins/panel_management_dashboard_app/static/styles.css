@@ -130,7 +130,7 @@ body {
 
 .patient-table th {
   position: sticky;
-  top: 0;
+  top: -5px;
   background: #f8f9fa;
   padding: 12px;
   text-align: left;
