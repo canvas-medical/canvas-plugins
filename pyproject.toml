@@ -84,6 +84,9 @@ include = [
   "settings.py"
 ]
 
+[tool.hatch.build.targets.sdist.force-include]
+"canvas_cli/templates" = "canvas_cli/templates"
+
 [tool.hatch.build.targets.wheel]
 artifacts = ["plugin_runner/allowed-module-imports.json"]
 exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
@@ -96,6 +99,9 @@ include = [
   "pubsub",
   "settings.py"
 ]
+
+[tool.hatch.build.targets.wheel.force-include]
+"canvas_cli/templates" = "canvas_cli/templates"
 
 [tool.mypy]
 check_untyped_defs = true
