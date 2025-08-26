@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.58.1 (2025-08-26)
+
+### Bug Fixes
+
+- **cli**: Include plugin template test package
+  ([#967](https://github.com/canvas-medical/canvas-plugins/pull/967),
+  [`3e40473`](https://github.com/canvas-medical/canvas-plugins/commit/3e40473cf0f7251f3269c9aa904a87ce93f37c65))
+
+
 ## v0.58.0 (2025-08-26)
 
 ### Features
