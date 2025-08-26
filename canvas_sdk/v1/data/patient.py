@@ -192,8 +192,8 @@ class Patient(Model):
     def photo_url(self) -> str:
         """Returns the URL of the patient's photo."""
         photo = self.photos.first()
-        if photo:
-            return photo.url
+        if photo and photo.url:
+            return photo.url.url
         return PatientConstants.DEFAULT_AVATAR
 
 
@@ -313,7 +313,7 @@ class PatientPhoto(Model):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="photos", null=True
     )
-    url = models.CharField(default=PatientConstants.DEFAULT_AVATAR, max_length=512)
+    url = models.FileField(default=PatientConstants.DEFAULT_AVATAR)
 
 
 class PatientFacilityAddress(PatientAddress):
@@ -326,7 +326,6 @@ class PatientFacilityAddress(PatientAddress):
     facility = models.ForeignKey(
         "v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True
     )
-    # patientaddress = models.ForeignKey("v1.PatientAddress", on_delete=models.DO_NOTHING, related_name="addresses", null=True)
 
 
 __exports__ = (
