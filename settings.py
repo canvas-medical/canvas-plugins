@@ -117,7 +117,7 @@ elif CANVAS_SDK_DB_BACKEND == "sqlite3":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": f"file:{str(SQLITE_DB_PATH)}?mode=ro",
+            "NAME": f"file:{SQLITE_DB_PATH}?mode=ro",
             "OPTIONS": {"uri": True},
         }
     }
