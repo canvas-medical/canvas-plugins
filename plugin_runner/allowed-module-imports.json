@@ -578,7 +578,6 @@
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientMetadata",
-    "PatientPhoto",
     "PatientPosting",
     "PatientSetting",
     "PaymentCollection",
@@ -791,7 +790,6 @@
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
     "PatientMetadata",
-    "PatientPhoto",
     "PatientSetting",
     "PatientSettingConstants",
     "SexAtBirth"
