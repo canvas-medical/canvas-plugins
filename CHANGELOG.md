@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.58.0 (2025-08-26)
+
+### Features
+
+- **cli**: Add local database support to the run-plugin cli command
+  ([#859](https://github.com/canvas-medical/canvas-plugins/pull/859),
+  [`8c6417a`](https://github.com/canvas-medical/canvas-plugins/commit/8c6417acdaf6b11cdb6d2e96ce169adf6810d10d))
+
+- **tests**: Add test utilities package
+  ([#842](https://github.com/canvas-medical/canvas-plugins/pull/842),
+  [`ba7f406`](https://github.com/canvas-medical/canvas-plugins/commit/ba7f406a62844432103d740ea74e02737e2b2bcf))
+
+
 ## v0.57.1 (2025-08-25)
 
 ### Bug Fixes
