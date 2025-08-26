@@ -160,7 +160,7 @@ class Patient(TrackableFieldsModel):
                         self.patient_id,
                     )
                 )
-            if not PatientModel.objects.filter(id=self.patient_id).exists():
+            elif not PatientModel.objects.filter(id=self.patient_id).exists():
                 errors.append(
                     self._create_error_detail(
                         "value",
