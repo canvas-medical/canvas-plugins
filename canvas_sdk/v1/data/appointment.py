@@ -29,6 +29,11 @@ class Appointment(IdentifiableModel):
         related_name="appointments",
         null=True,
     )
+
+    parent_appointment = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
+    )
+
     appointment_rescheduled_from = models.ForeignKey(
         "self",
         on_delete=models.DO_NOTHING,
