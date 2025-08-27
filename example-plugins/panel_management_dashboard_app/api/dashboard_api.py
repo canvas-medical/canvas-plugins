@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from urllib.parse import urlencode
 
 import arrow
 from django.db.models import Count, Q
@@ -12,7 +13,7 @@ from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipStatus
 from canvas_sdk.v1.data.coverage import CoverageStack
 from canvas_sdk.v1.data.facility import Facility
-from canvas_sdk.v1.data.note import NoteTypeCategories
+from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 from canvas_sdk.v1.data.protocol_current import ProtocolCurrent
 from canvas_sdk.v1.data.protocol_result import ProtocolResultStatus
 from canvas_sdk.v1.data.staff import Staff
@@ -45,7 +46,6 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/dashboard")
     def get_dashboard(self) -> list[Response | Effect]:
         """Serve the dashboard page with patient data."""
-        page_size = self._page_size
         facility_search = self.request.query_params.get("facility_search", "").strip()
         if facility_search:
             facilities = Facility.objects.filter(name__icontains=facility_search)
@@ -62,7 +62,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             "selected_facility": selected_facility,
             "facility_search": facility_search,
             "page": int(self.request.query_params.get("page", 1)),
-            "limit": page_size,
+            "table_url": self._create_paginated_table_url(
+                1, selected_facility_id, None, facility_search, None
+            ),
         }
 
         return [
@@ -137,6 +139,7 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             "notes",
             "notes__provider",
             "notes__note_type_version",
+            "notes__current_state",
         )
 
         if facility_id:
@@ -149,7 +152,10 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
         if patient_search:
             patients_query = patients_query.filter(
-                Q(first_name__icontains=patient_search) | Q(last_name__icontains=patient_search),
+                Q(*[
+                    Q(first_name__icontains=search_chunk) | Q(last_name__icontains=search_chunk)
+                    for search_chunk in patient_search.split()
+                ])
             )
 
         patients_query = patients_query.distinct()
@@ -164,12 +170,12 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             last_visit = self._get_last_visit(patient)
             gaps, total_gaps = self._get_gaps(patient)
 
-            log.info(f"patient photo: {patient.photo_url}")
             # Create patient data object
             patient_data = {
                 "id": patient.id,
                 # TODO investigate if patient avatars can be used in this context
                 "photo_url": self.DEFAULT_AVATAR,
+                "url": f"/patients/{patient.id}",
                 "name": patient.preferred_full_name,
                 "age": int(patient.age_at(arrow.now())),
                 "gender": patient.sex_at_birth,
@@ -197,6 +203,21 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         has_next = page < total_pages
         has_previous = page > 1
 
+        previous_page = (
+            self._create_paginated_table_url(
+                page - 1, facility_id, current_staff_id, None, patient_search
+            )
+            if has_previous
+            else None
+        )
+        next_page = (
+            self._create_paginated_table_url(
+                page + 1, facility_id, current_staff_id, None, patient_search
+            )
+            if has_next
+            else None
+        )
+
         context = {
             "patients": processed_patients,
             "staff": staff,
@@ -207,11 +228,10 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                 "current_page": page,
                 "total_pages": total_pages,
                 "total_count": total_count,
-                "page_size": page_size,
                 "has_next": has_next,
                 "has_previous": has_previous,
-                "next_page": page + 1 if has_next else None,
-                "previous_page": page - 1 if has_previous else None,
+                "next_page": next_page,
+                "previous_page": previous_page,
             },
         }
 
@@ -242,11 +262,17 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         )
 
     def _get_last_visit(self, patient):
-        query = patient.notes.filter(
-            note_type_version__category=NoteTypeCategories.ENCOUNTER,
-        ).order_by("-datetime_of_service")
-
-        return query.first() if query.exists() else None
+        return (
+            patient.notes.filter(
+                note_type_version__category=NoteTypeCategories.ENCOUNTER,
+            )
+            .exclude(
+                Q(current_state__state=NoteStates.DELETED)
+                | Q(current_state__state=NoteStates.CANCELLED)
+            )
+            .order_by("-datetime_of_service")
+            .first()
+        )
 
     def _get_patients_tasks(self, patient) -> dict[str, int]:
         return Task.objects.filter(patient=patient).aggregate(
@@ -255,21 +281,19 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
 
     def _get_gaps(self, patient):
         """Get gaps in care for a patient."""
-        gaps = ProtocolCurrent.objects.filter(
-            patient=patient,
-            status=ProtocolResultStatus.STATUS_DUE,
-        ).count()
-
-        total_gaps = ProtocolCurrent.objects.filter(
+        result = ProtocolCurrent.objects.filter(
             patient=patient,
             status__in=[
                 ProtocolResultStatus.STATUS_DUE,
                 ProtocolResultStatus.STATUS_SATISFIED,
                 ProtocolResultStatus.STATUS_PENDING,
-            ],
-        ).count()
+            ]
+        ).aggregate(
+            gaps=Count('id', filter=Q(status=ProtocolResultStatus.STATUS_DUE)),
+            total=Count('id')
+        )
 
-        return (gaps, total_gaps) if total_gaps > 0 else (0, 0)
+        return result.get("gaps", 0), result.get("total", 0)
 
     def _get_coverage(self, patient) -> str | None:
         """Get coverage information for a patient."""
@@ -306,9 +330,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
         }
 
     @property
-    def _page_size(self):
+    def _page_size(self) -> int:
         """Get the page size for pagination."""
-        return int(self.request.query_params.get("page_size", self.DEFAULT_PAGE_SIZE))
+        return int(self._get_secrets().get("page_size", self.DEFAULT_PAGE_SIZE))
 
     def _get_staff_role_for_last_visit(self, patient, provider):
         return (
@@ -320,3 +344,25 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
             .values_list("role__display", flat=True)
             .first()
         )
+
+    # Builds the pagination url
+    def _create_paginated_table_url(
+        self,
+        page: int,
+        facility_id: str | None,
+        staff_id: str | None,
+        facility_search: str | None,
+        patient_search: str | None,
+    ) -> str:
+        """Get the URL for the next page of results."""
+        url = "/plugin-io/api/panel_management_dashboard_app/app/table"
+        query_params = {
+            "page": page,
+            "facility_id": facility_id,
+            "staff_id": staff_id,
+            "facility_search": facility_search,
+            "patient_search": patient_search,
+        }
+        # Remove None values from query_params
+        query_params = {k: v for k, v in query_params.items() if v is not None}
+        return f"{url}?{urlencode(query_params)}"
