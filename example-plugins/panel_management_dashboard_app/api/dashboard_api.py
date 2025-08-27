@@ -287,10 +287,9 @@ class DashboardAPI(StaffSessionAuthMixin, SimpleAPI):
                 ProtocolResultStatus.STATUS_DUE,
                 ProtocolResultStatus.STATUS_SATISFIED,
                 ProtocolResultStatus.STATUS_PENDING,
-            ]
+            ],
         ).aggregate(
-            gaps=Count('id', filter=Q(status=ProtocolResultStatus.STATUS_DUE)),
-            total=Count('id')
+            gaps=Count("id", filter=Q(status=ProtocolResultStatus.STATUS_DUE)), total=Count("id")
         )
 
         return result.get("gaps", 0), result.get("total", 0)
