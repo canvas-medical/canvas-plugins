@@ -55,7 +55,7 @@
                     </div>
                 </td>
                 {% if patient.provider %}
-                <td class="care-team">{{ patient.provider.first_name }} {{ patient.provider.last_name }} ({{ patient.provider_role }})</td>
+                <td class="care-team">{{ patient.provider.first_name }} {{ patient.provider.last_name }} {% if patient.provider_role %}({{ patient.provider_role }}){% endif %}</td>
                 {% else %}
                 <td class="care-team">No assigned care team</td>
                 {% endif %}
@@ -88,7 +88,7 @@
     <div class="pagination">
         <button
             class="pagination-button"
-            hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ pagination.previous_page }}&limit={{ pagination.limit }}&facility_id={{ facility.id }}&staff_id={{ current_staff.id }}&patient_search={{ patient_search }}"
+            hx-get="{{ pagination.previous_page }}"
             hx-target="#table"
             hx-swap="innerHTML"
             {% if pagination.current_page == 1 %}disabled{% endif %}
@@ -96,7 +96,7 @@
         <span class="pagination-info">Page {{ pagination.current_page }} of {{ pagination.total_pages }}</span>
         <button
             class="pagination-button"
-            hx-get="/plugin-io/api/panel_management_dashboard_app/app/table?page={{ pagination.next_page }}&limit={{ pagination.limit }}&facility_id={{ facility.id }}&staff_id={{ current_staff.id }}&patient_search={{ patient_search }}"
+            hx-get="{{ pagination.next_page }}"
             hx-target="#table"
             hx-swap="innerHTML"
             {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}
