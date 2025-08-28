@@ -14,7 +14,6 @@ from canvas_sdk.effects.patient.base import (
     PatientExternalIdentifier,
 )
 from canvas_sdk.v1.data.common import (
-    AddressState,
     AddressType,
     AddressUse,
     ContactPointSystem,
@@ -91,7 +90,6 @@ def test_patient_address_to_dict_with_all_fields(patient_address: PatientAddress
         "postal_code": "10001",
         "longitude": None,
         "latitude": None,
-        "state": AddressState.ACTIVE.value,
     }
 
 
@@ -112,7 +110,6 @@ def test_patient_address_to_dict_minimal_fields() -> None:
         "postal_code": None,
         "longitude": None,
         "latitude": None,
-        "state": AddressState.ACTIVE.value,
     }
 
 
