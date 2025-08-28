@@ -71,11 +71,15 @@ class UrgentTaskBannerProtocol(BaseProtocol):
         urgent_value = TaskPriority.URGENT.value.casefold()
 
         if new_priority == urgent_value and old_priority != urgent_value:
-            log.info(f"Task {task.id} priority changed TO URGENT. Adding banner and updating metadata.")
+            log.info(
+                f"Task {task.id} priority changed TO URGENT. Adding banner and updating metadata."
+            )
             return self._add_urgent_effects(task)
 
         if old_priority == urgent_value and new_priority != urgent_value:
-            log.info(f"Task {task.id} priority changed FROM URGENT. Removing banner and updating metadata to 'No'.")
+            log.info(
+                f"Task {task.id} priority changed FROM URGENT. Removing banner and updating metadata to 'No'."
+            )
             # This line now calls the correctly named helper function.
             return self._remove_urgent_effects(task)
 
@@ -120,9 +124,9 @@ class UrgentTaskBannerProtocol(BaseProtocol):
             intent=AddBannerAlert.Intent.INFO,
         ).apply()
 
-        metadata_effect = PatientMetadata(
-            patient_id=patient_id, key=self._METADATA_KEY
-        ).upsert(value=self._METADATA_VALUE_YES)
+        metadata_effect = PatientMetadata(patient_id=patient_id, key=self._METADATA_KEY).upsert(
+            value=self._METADATA_VALUE_YES
+        )
 
         return [add_banner_effect, metadata_effect]
 
@@ -140,7 +144,8 @@ class UrgentTaskBannerProtocol(BaseProtocol):
         ).apply()
 
         metadata_effect = PatientMetadata(
-            patient_id=patient_id, key=self._METADATA_KEY
-        ).upsert(value=self._METADATA_VALUE_NO)
+            patient_id=patient_id, key=self._METADATA_KEY).upsert(
+            value=self._METADATA_VALUE_NO
+        )
 
         return [remove_banner_effect, metadata_effect]
