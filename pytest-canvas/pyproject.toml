@@ -1,0 +1,38 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas",
+  "pytest-django>=4.11,<5",
+  "pytest>=8.4,<9"
+]
+description = "A minimal pytest plugin that streamlines testing for projects using the Canvas SDK."
+license = "MIT"
+name = "pytest-canvas"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[project.entry-points.pytest11]
+canvas = "pytest_canvas.plugin"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "pytest_canvas"
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "pytest_canvas"
+]
+
+[[tool.uv.index]]
+explicit = true
+name = "testpypi"
+publish-url = "https://test.pypi.org/legacy/"
+url = "https://test.pypi.org/simple/"

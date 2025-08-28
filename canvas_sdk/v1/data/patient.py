@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import arrow
 from django.contrib.postgres.fields import ArrayField
@@ -16,10 +16,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointSystem,
     ContactPointUse,
 )
-from canvas_sdk.v1.data.utils import create_key
-
-if TYPE_CHECKING:
-    from django_stubs_ext.db.models.manager import RelatedManager
+from canvas_sdk.v1.data.utils import create_key, generate_mrn
 
 
 class SexAtBirth(TextChoices):
@@ -51,45 +48,65 @@ class Patient(Model):
     id = models.CharField(
         max_length=32, db_column="key", unique=True, editable=False, default=create_key
     )
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255, default="", blank=True)
+    middle_name = models.CharField(max_length=255, default="", blank=True)
+    last_name = models.CharField(max_length=255, default="", blank=True)
+    maiden_name = models.CharField(max_length=255, default="", blank=True)
     birth_date = models.DateField()
     business_line = models.ForeignKey(
-        "v1.BusinessLine", on_delete=models.DO_NOTHING, related_name="patients"
+        "v1.BusinessLine",
+        on_delete=models.DO_NOTHING,
+        related_name="patients",
+        null=True,
     )
     sex_at_birth = models.CharField(choices=SexAtBirth.choices, max_length=3)
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    prefix = models.CharField(max_length=100)
-    suffix = models.CharField(max_length=100)
-    middle_name = models.CharField(max_length=255)
-    maiden_name = models.CharField(max_length=255)
+
+    prefix = models.CharField(max_length=100, blank=True, default="")
+    suffix = models.CharField(max_length=100, blank=True, default="")
     nickname = models.CharField(max_length=255)
-    sexual_orientation_term = models.CharField(max_length=255)
-    sexual_orientation_code = models.CharField(max_length=255)
-    gender_identity_term = models.CharField(max_length=255)
-    gender_identity_code = models.CharField(max_length=255)
-    preferred_pronouns = models.CharField(max_length=255)
-    biological_race_codes = ArrayField(models.CharField(max_length=100))
-    last_known_timezone = models.CharField(max_length=32)
-    mrn = models.CharField(max_length=9)
-    active = models.BooleanField()
-    deceased = models.BooleanField()
-    deceased_datetime = models.DateTimeField()
-    deceased_cause = models.TextField()
-    deceased_comment = models.TextField()
-    other_gender_description = models.CharField(max_length=255)
-    social_security_number = models.CharField(max_length=9)
-    administrative_note = models.TextField()
-    clinical_note = models.TextField()
-    mothers_maiden_name = models.CharField(max_length=255)
-    multiple_birth_indicator = models.BooleanField()
-    birth_order = models.BigIntegerField()
-    default_location_id = models.BigIntegerField()
-    default_provider_id = models.BigIntegerField()
+    sexual_orientation_term = models.CharField(max_length=255, default="", blank=True)
+    sexual_orientation_code = models.CharField(max_length=255, default="", blank=True)
+    gender_identity_term = models.CharField(max_length=255, default="", blank=True)
+    gender_identity_code = models.CharField(max_length=255, default="", blank=True)
+    preferred_pronouns = models.CharField(max_length=255, default="", blank=True)
+    biological_race_codes = ArrayField(
+        models.CharField(max_length=100, default="", blank=True), default=list, blank=True
+    )
+    last_known_timezone = models.CharField(max_length=32, null=True, blank=True)
+    mrn = models.CharField(max_length=9, unique=True, default=generate_mrn)
+    active = models.BooleanField(default=True)
+    deceased = models.BooleanField(default=False)
+    deceased_datetime = models.DateTimeField(null=True, blank=True)
+    deceased_cause = models.TextField(default="", blank=True)
+    deceased_comment = models.TextField(default="", blank=True)
+    other_gender_description = models.CharField(max_length=255, blank=True, default="")
+    social_security_number = models.CharField(max_length=9, blank=True, default="")
+    administrative_note = models.TextField(null=True, blank=True)
+    clinical_note = models.TextField(default="", blank=True)
+    mothers_maiden_name = models.CharField(max_length=255, blank=True, default="")
+    multiple_birth_indicator = models.BooleanField(null=True, blank=True)
+    birth_order = models.BigIntegerField(null=True, blank=True)
+
+    default_location = models.ForeignKey(
+        "v1.PracticeLocation",
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="default_patients",
+    )
+    default_provider = models.ForeignKey(
+        "v1.Staff",
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="default_patients",
+    )
     user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
-    settings: RelatedManager[PatientSetting]
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
     @classmethod
     def find(cls, id: str) -> Patient:
@@ -179,20 +196,23 @@ class PatientAddress(IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_patientaddress_001"
 
-    line1 = models.CharField(max_length=255)
-    line2 = models.CharField(max_length=255)
+    line1 = models.CharField(max_length=255, default="", blank=True)
+    line2 = models.CharField(max_length=255, default="", blank=True)
     city = models.CharField(max_length=255)
-    district = models.CharField(max_length=255)
+    district = models.CharField(max_length=255, blank=True, default="")
     state_code = models.CharField(max_length=2)
     postal_code = models.CharField(max_length=255)
-    use = models.CharField(choices=AddressUse.choices, max_length=10)
-    type = models.CharField(choices=AddressType.choices, max_length=10)
-    longitude = models.FloatField()
-    latitude = models.FloatField()
-    start = models.DateField()
-    end = models.DateField()
+    use = models.CharField(choices=AddressUse.choices, max_length=10, default=AddressUse.HOME)
+    type = models.CharField(choices=AddressType.choices, max_length=10, default=AddressType.BOTH)
+    longitude = models.FloatField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    start = models.DateField(null=True, blank=True)
+    end = models.DateField(null=True, blank=True)
     country = models.CharField(max_length=255)
-    state = models.CharField(choices=AddressState.choices, max_length=20)
+    state = models.CharField(
+        choices=AddressState.choices, max_length=20, default=AddressState.ACTIVE
+    )
+
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="addresses", null=True
     )
