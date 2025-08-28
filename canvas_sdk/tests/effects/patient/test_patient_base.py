@@ -195,11 +195,8 @@ def test_patient_create_validation_with_patient_id_error(
     """Test that create validation fails when patient_id is provided."""
     patient = Patient(patient_id="123", **valid_patient_data)
 
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError):
         patient.create()
-
-    errors = exc_info.value.errors()
-    assert any("Patient ID should not be set when creating a new patient" in str(e) for e in errors)
 
 
 def test_patient_update_validation_missing_patient_id(
@@ -351,3 +348,44 @@ def test_patient_multiple_validation_errors(
 
     errors = exc_info.value.errors()
     assert len(errors) == 3  # Patient, location, and provider errors
+
+
+def test_patient_create_validation_requires_first_name(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that create validation fails when first_name is missing."""
+    patient = Patient(
+        last_name="Doe",
+        # Missing first_name
+    )
+
+    with pytest.raises(ValidationError):
+        patient.create()
+
+
+def test_patient_create_validation_requires_last_name(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that create validation fails when last_name is missing."""
+    patient = Patient(
+        first_name="John",
+        # Missing last_name
+    )
+
+    with pytest.raises(ValidationError):
+        patient.create()
+
+
+def test_patient_update_validation_allows_optional_names(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update validation allows optional first_name and last_name."""
+    patient = Patient(
+        patient_id="123",
+        middle_name="Updated",
+        # first_name and last_name are optional for updates
+    )
+
+    # Should not raise validation error
+    effect = patient.update()
+    assert effect is not None

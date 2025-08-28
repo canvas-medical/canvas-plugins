@@ -109,8 +109,8 @@ class Patient(TrackableFieldsModel):
         effect_type = "PATIENT"
 
     patient_id: str | None = None
-    first_name: str
-    last_name: str
+    first_name: str | None = None
+    last_name: str | None = None
     middle_name: str | None = None
     birthdate: datetime.date | None = None
     prefix: str | None = None
@@ -163,15 +163,37 @@ class Patient(TrackableFieldsModel):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if method == "create" and self.patient_id:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Patient ID should not be set when creating a new patient.",
-                    self.patient_id,
+        # Validate create-specific requirements
+        if method == "create":
+            if self.patient_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Patient ID should not be set when creating a new patient.",
+                        self.patient_id,
+                    )
                 )
-            )
 
+            # first_name and last_name are required for create
+            if not self.first_name:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "First name is required when creating a new patient.",
+                        self.first_name,
+                    )
+                )
+
+            if not self.last_name:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Last name is required when creating a new patient.",
+                        self.last_name,
+                    )
+                )
+
+        # Validate update-specific requirements
         if method == "update":
             if not self.patient_id:
                 errors.append(
