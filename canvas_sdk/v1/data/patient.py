@@ -7,6 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
+from canvas_sdk.utils.formatters import format_phone
 from canvas_sdk.v1.data.base import IdentifiableModel, Model
 from canvas_sdk.v1.data.common import (
     AddressState,
@@ -181,6 +182,27 @@ class Patient(Model):
     def preferred_first_name(self) -> str:
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
+
+    def primary_phone_contact_point(self) -> PatientContactPoint | None:
+        """Returns the patient's primary phone contact point, if available."""
+        phone_number = None
+        if hasattr(self, "prefetched_phone_numbers"):
+            phone_numbers = self.prefetched_phone_numbers
+            phone_number = phone_numbers[0] if phone_numbers else None
+        else:
+            phone_number = (
+                self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")
+            ).first()  # yapf: disable
+        return phone_number
+
+    @property
+    def primary_phone_number(self) -> str | None:
+        """Returns the patient's primary phone number, if available."""
+        phone_number = self.primary_phone_contact_point()
+        if not phone_number:
+            return None
+
+        return format_phone(phone_number.value)
 
 
 class PatientContactPoint(IdentifiableModel):
