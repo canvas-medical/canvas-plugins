@@ -10,7 +10,6 @@ from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import (
-    AddressState,
     AddressType,
     AddressUse,
     ContactPointSystem,
@@ -85,7 +84,6 @@ class PatientAddress:
     postal_code: str | None = None
     longitude: float | None = None
     latitude: float | None = None
-    state: AddressState = AddressState.ACTIVE
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the address to a dictionary."""
@@ -101,7 +99,6 @@ class PatientAddress:
             "postal_code": self.postal_code,
             "longitude": self.longitude,
             "latitude": self.latitude,
-            "state": self.state.value,
         }
 
 
@@ -138,19 +135,21 @@ class Patient(TrackableFieldsModel):
 
         if self.is_dirty("contact_points"):
             values["contact_points"] = (
-                [cp.to_dict() for cp in self.contact_points] if self.contact_points else None
+                [cp.to_dict() for cp in self.contact_points]
+                if self.contact_points is not None
+                else None
             )
 
         if self.is_dirty("external_identifiers"):
             values["external_identifiers"] = (
                 [ids.to_dict() for ids in self.external_identifiers]
-                if self.external_identifiers
+                if self.external_identifiers is not None
                 else None
             )
 
         if self.is_dirty("addresses"):
             values["addresses"] = (
-                [addr.to_dict() for addr in self.addresses] if self.addresses else None
+                [addr.to_dict() for addr in self.addresses] if self.addresses is not None else None
             )
 
         if self.is_dirty("preferred_pharmacies"):
