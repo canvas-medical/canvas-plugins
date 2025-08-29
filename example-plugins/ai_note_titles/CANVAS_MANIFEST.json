@@ -6,8 +6,8 @@
     "components": {
         "protocols": [
             {
-                "class": "ai_note_titles.protocols.rename_note:Protocol",
-                "description": "Protocol that renames Notes when locked using OpenAI and the contents of the Note"
+                "class": "ai_note_titles.protocols.rename_note:Handler",
+                "description": "Renames Notes when locked using OpenAI and the contents of the Note"
             }
         ],
         "commands": [],
