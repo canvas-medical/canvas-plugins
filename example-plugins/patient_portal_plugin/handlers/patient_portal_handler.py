@@ -5,6 +5,7 @@ from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipStatus
+from canvas_sdk.v1.data.medication import Medication
 
 
 # Inherit from BaseHandler to properly get registered for events
@@ -24,6 +25,7 @@ class PatientPortalHandler(BaseHandler):
         return [
             self.header_widget,
             self.care_team_widget,
+            self.prescriptions_widget,
             self.footer_widget,
         ]
 
@@ -88,10 +90,32 @@ class PatientPortalHandler(BaseHandler):
         care_team_widget = PortalWidget(
             content=render_to_string("templates/care_team_widget.html", payload),
             size=PortalWidget.Size.COMPACT,
-            priority=11,
+            priority=20,
         )
 
         return care_team_widget.apply()
+
+    @property
+    def prescriptions_widget(self) -> Effect:
+        """Constructs the prescriptions widget for the patient portal."""
+        patient_id = self.target
+        patient = Patient.objects.get(id=patient_id)
+        prescriptions = Medication.objects.for_patient(patient_id).count()
+        preferred_pharmacy = patient.preferred_pharmacy
+
+        payload = {
+            "request_refill_url": f"/plugin-io/api/patient_portal_plugin/{patient.id}/request-refill",
+            "update_pharmacy_url": f"/plugin-io/api/patient_portal_plugin/{patient.id}/update-pharmacy",
+            "preferred_pharmacy": preferred_pharmacy,
+            "prescriptions": prescriptions,
+            "title_color": self.background_color,
+        }
+
+        return PortalWidget(
+            content=render_to_string("templates/prescriptions_widget.html", payload),
+            size=PortalWidget.Size.MEDIUM,
+            priority=21,
+        ).apply()
 
     @property
     def footer_widget(self) -> Effect:
@@ -102,7 +126,7 @@ class PatientPortalHandler(BaseHandler):
                 "emergency_contact": self.emergency_contact,
             }),
             size=PortalWidget.Size.EXPANDED,
-            priority=12,
+            priority=30,
         ).apply()
 
     @property
@@ -114,3 +138,4 @@ class PatientPortalHandler(BaseHandler):
     def emergency_contact(self) -> str:
         """Get the emergency contact from secrets, defaulting to a specific contact if not set."""
         return self.secrets.get("EMERGENCY_CONTACT") or self.DEFAULT_EMERGENCY_CONTACT
+
