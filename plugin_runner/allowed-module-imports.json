@@ -532,6 +532,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Facility",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
@@ -574,6 +575,7 @@
     "PatientConsentRejectionCoding",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientPosting",
     "PatientSetting",
@@ -581,6 +583,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
@@ -706,6 +709,9 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.facility": [
+    "Facility"
+  ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
@@ -775,6 +781,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientSetting",
     "PatientSettingConstants",
@@ -804,10 +811,18 @@
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
+  "canvas_sdk.v1.data.protocol_current": [
+    "ProtocolCurrent",
+    "ProtocolCurrentStatus"
+  ],
   "canvas_sdk.v1.data.protocol_override": [
     "IntervalUnit",
     "ProtocolOverride",
     "Status"
+  ],
+  "canvas_sdk.v1.data.protocol_result": [
+    "ProtocolResult",
+    "ProtocolResultStatus"
   ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",
