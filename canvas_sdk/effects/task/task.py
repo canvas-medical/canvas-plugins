@@ -16,6 +16,14 @@ class TaskStatus(Enum):
     OPEN = "OPEN"
 
 
+class TaskPriority(Enum):
+    """TaskPriority."""
+
+    STAT = "STAT"
+    URGENT = "Urgent"
+    ROUTINE = "Routine"
+
+
 class AddTask(_BaseEffect):
     """
     An Effect that will create a Task in Canvas.
@@ -38,6 +46,7 @@ class AddTask(_BaseEffect):
     title: str | None = None
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
+    priority: TaskPriority | None = None
     labels: list[str] = []
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
@@ -68,6 +77,7 @@ class AddTask(_BaseEffect):
             "team": {"id": self.team_id},
             "title": self.title,
             "status": self.status.value,
+            "priority": self.priority.value if self.priority else None,
             "labels": self.labels,
             "author_id": str(self.author_id) if self.author_id else None,
             "linked_object": {
@@ -119,6 +129,7 @@ class UpdateTask(_BaseEffect):
     title: str | None = None
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
+    priority: TaskPriority | None = None
     labels: list[str] = []
 
     @property
@@ -135,6 +146,8 @@ class UpdateTask(_BaseEffect):
                 value_dict[field] = cast(datetime, val).isoformat()
             elif field == "status":
                 value_dict[field] = cast(TaskStatus, val).value
+            elif field == "priority":
+                value_dict[field] = val.value if val else None
             else:
                 value_dict[field] = getattr(self, field)
         return value_dict
@@ -144,5 +157,6 @@ __exports__ = (
     "AddTask",
     "AddTaskComment",
     "TaskStatus",
+    "TaskPriority",
     "UpdateTask",
 )
