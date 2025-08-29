@@ -84,18 +84,18 @@ def test_create_note_missing_required_fields(mock_db_queries: dict[str, MagicMoc
     assert "Field 'patient_id' is required to create a note." in error_fields
 
 
-def test_create_note_with_instance_id_fails(
+def test_create_note_with_instance_id_passes(
     mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
 ) -> None:
-    """Test that providing instance_id for create raises error."""
+    """Test that providing instance_id for create does not raise error."""
     valid_note_data["instance_id"] = str(uuid4())
     note = Note(**valid_note_data)
 
-    with pytest.raises(ValidationError) as exc_info:
-        note.create()
+    effect = note.create()
+    assert effect.type == EffectType.CREATE_NOTE
 
-    errors = exc_info.value.errors()
-    assert any("Instance ID should not be provided" in str(e) for e in errors)
+    payload = json.loads(effect.payload)
+    assert payload["data"]["instance_id"] == note.instance_id
 
 
 def test_note_update_success(mock_db_queries: dict[str, MagicMock]) -> None:
