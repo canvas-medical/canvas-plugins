@@ -3,15 +3,15 @@ import json
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note import Note as NoteEffect
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.utils.http import Http
 from canvas_sdk.v1.data.command import Command
 from canvas_sdk.v1.data.note import CurrentNoteStateEvent, NoteStates
 from logger import log
 
 
-class Protocol(BaseProtocol):
-    """Protocol that renames Notes when locked using OpenAI and the contents of the Note."""
+class Handler(BaseHandler):
+    """Renames Notes when locked using OpenAI and the contents of the Note."""
 
     RESPONDS_TO: list[str] = [
         EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED),
@@ -89,6 +89,6 @@ class Protocol(BaseProtocol):
 
     def is_locked_note_event(self) -> bool:
         """Check if the note is locked."""
-        return CurrentNoteStateEvent.objects.get(id=self.event.target.id).state == NoteStates.LOCKED
+        return CurrentNoteStateEvent.objects.values_list('state', flat=True).get(id=self.event.target.id) == NoteStates.LOCKED
 
 
