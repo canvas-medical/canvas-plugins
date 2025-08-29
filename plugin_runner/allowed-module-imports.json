@@ -532,6 +532,7 @@
     "AllergyIntoleranceCoding",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "Assessment",
     "BannerAlert",
     "BasePosting",
@@ -646,6 +647,7 @@
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "AppointmentProgressStatus"
   ],
   "canvas_sdk.v1.data.assessment": [
