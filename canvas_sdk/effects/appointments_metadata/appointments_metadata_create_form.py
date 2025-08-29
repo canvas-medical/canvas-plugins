@@ -25,6 +25,7 @@ class FormField:
     editable: bool = True
     type: InputType = InputType.TEXT
     options: list[str] | None = None
+    value: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Field to a dictionary."""
@@ -35,6 +36,7 @@ class FormField:
             "editable": self.editable,
             "type": self.type.value,
             "options": self.options,
+            "value": self.value,
         }
 
 
