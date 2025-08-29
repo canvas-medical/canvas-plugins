@@ -380,6 +380,25 @@ def test_allowed_import() -> None:
     assert scope["result"] == '{"key": "value"}', "JSON encoding should work with allowed imports."
 
 
+def test_typeguard_import_and_usage() -> None:
+    """Test that TypeGuard can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from typing import TypeGuard
+
+            def is_string(val) -> TypeGuard[str]:
+                return isinstance(val, str)
+
+            # Test the TypeGuard function
+            test_value = "hello"
+            result = is_string(test_value)
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is True, "TypeGuard function should correctly identify string"
+
+
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
     sandbox = _sandbox_from_code("builtins = {}")
