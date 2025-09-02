@@ -1,4 +1,5 @@
 from datetime import date
+from enum import StrEnum
 from typing import NotRequired
 
 from typing_extensions import TypedDict
