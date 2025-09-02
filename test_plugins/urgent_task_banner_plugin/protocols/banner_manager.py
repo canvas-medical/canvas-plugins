@@ -1,18 +1,11 @@
-import json
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert, RemoveBannerAlert
 from canvas_sdk.effects.patient_metadata import PatientMetadata
-from canvas_sdk.effects.task import TaskPriority
+from canvas_sdk.common.enums import TaskPriority
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Task
 from logger import log
-
-
-def json_default_serializer(o):
-    """Best-effort serializer for objects that aren't JSON serializable."""
-    return str(o)
 
 
 class UrgentTaskBannerProtocol(BaseProtocol):
@@ -22,7 +15,7 @@ class UrgentTaskBannerProtocol(BaseProtocol):
 
     RESPONDS_TO = [
         EventType.Name(EventType.TASK_CREATED),
-        EventType.Name(EventType.TASK_PRIORITY_CHANGED),
+        EventType.Name(EventType.TASK_PRIORITY_UPDATED),
     ]
 
     # Constants
@@ -45,7 +38,7 @@ class UrgentTaskBannerProtocol(BaseProtocol):
 
         if self.event.type == EventType.TASK_CREATED:
             return self._handle_created(task)
-        elif self.event.type == EventType.TASK_PRIORITY_CHANGED:
+        elif self.event.type == EventType.TASK_PRIORITY_UPDATED:
             return self._handle_priority_changed(task)
 
         log.warning(f"Unhandled event type: {self.event.type}")
@@ -80,7 +73,6 @@ class UrgentTaskBannerProtocol(BaseProtocol):
             log.info(
                 f"Task {task.id} priority changed FROM URGENT. Removing banner and updating metadata to 'No'."
             )
-            # This line now calls the correctly named helper function.
             return self._remove_urgent_effects(task)
 
         log.info(f"Task {task.id} priority changed, but no banner/metadata update required.")
@@ -94,12 +86,10 @@ class UrgentTaskBannerProtocol(BaseProtocol):
         """Fetch a task by ID with error handling."""
         try:
             task = Task.objects.get(id=task_id)
-            log.info(f"Fetched task: {json.dumps(task, indent=2, default=json_default_serializer)}")
+            log.info(f"Task: id={task.id}, title='{task.title}', priority='{task.priority}', patient_id={task.patient.id}")
             return task
-        except getattr(Task, "DoesNotExist", Exception):
+        except Task.DoesNotExist:
             log.error("Task with id=%s does not exist.", task_id)
-        except Exception as e:
-            log.exception("Unexpected error fetching task id=%s: %s", task_id, e)
         return None
 
     @staticmethod
