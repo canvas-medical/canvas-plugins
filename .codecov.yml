@@ -1,0 +1,10 @@
+ignore:
+  - "canvas_cli/templates/**"
+  - "canvas_generated/**"
+  - "canvas_sdk/tests/**"
+  - "example-plugins/**"
+  - "import_tracing/**"
+  - "protobufs/**"
+  - "**/test_*.py"
+  - "**/tests.py"
+  - "**/conftest.py"

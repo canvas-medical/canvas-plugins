@@ -109,20 +109,21 @@ def install_plugin_commands(
     integration_tests_plugins_dir: Path,
 ) -> Generator[None, None, None]:
     """Write the protocol code, install the plugin, and clean up after the test."""
-    plugin_path = integration_tests_plugins_dir / "commands"
+    plugin_dir = integration_tests_plugins_dir / "commands"
+    package_name = plugin_dir.name.replace("-", "_")
     commands: list[CommandCode] = []
     for command_cls in COMMANDS:
         get_command_data = globals().get(command_cls.Meta.key)
         data = extract_return_statement(get_command_data) if get_command_data else "{}"
         commands.append(CommandCode(**{"data": data, "class": command_cls}))
 
-    write_protocol_code(cli_runner, plugin_path, commands)
-    install_plugin(plugin_path, token)
+    write_protocol_code(cli_runner, plugin_dir, commands)
+    install_plugin(plugin_dir / package_name, token)
     sleep(10)  # Wait for the plugin to be installed
 
     yield
 
-    clean_up_files_and_plugins(plugin_path, token)
+    clean_up_files_and_plugins(plugin_dir, token)
 
 
 @pytest.fixture(scope="module")
