@@ -44,4 +44,4 @@ class MedicationStatement(IdentifiableModel):
     sig_original_input = models.CharField(max_length=255)
 
 
-__exports__ = "MedicationStatement"
+__exports__ = ("MedicationStatement",)

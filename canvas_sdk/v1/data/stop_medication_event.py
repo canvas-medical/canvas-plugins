@@ -30,4 +30,4 @@ class StopMedicationEvent(IdentifiableModel):
     rationale = models.CharField(max_length=1024)
 
 
-__exports__ = "StopMedicationEvent"
+__exports__ = ("StopMedicationEvent",)

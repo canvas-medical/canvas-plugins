@@ -745,17 +745,7 @@
     "Status"
   ],
   "canvas_sdk.v1.data.medication_statement": [
-    "M",
-    "S",
-    "a",
-    "c",
-    "d",
-    "e",
-    "i",
-    "m",
-    "n",
-    "o",
-    "t"
+    "MedicationStatement"
   ],
   "canvas_sdk.v1.data.message": [
     "Message",
@@ -853,19 +843,7 @@
     "StaffRole"
   ],
   "canvas_sdk.v1.data.stop_medication_event": [
-    "E",
-    "M",
-    "S",
-    "a",
-    "c",
-    "d",
-    "e",
-    "i",
-    "n",
-    "o",
-    "p",
-    "t",
-    "v"
+    "StopMedicationEvent"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
