@@ -7,7 +7,7 @@
         "protocols": [
             {
                 "class": "urgent_task_banner_plugin.protocols.banner_manager:UrgentTaskBannerProtocol",
-                "description": "Listens for task creation and priority changes. On TASK_CREATED, adds a banner if the task is 'Urgent'. On TASK_PRIORITY_CHANGED, adds or removes the banner based on the before/after state of the priority."
+                "description": "Listens for task creation and priority changes. On TASK_CREATED, adds a banner if the task is 'Urgent'. On TASK_PRIORITY_UPDATED, adds or removes the banner based on the before/after state of the priority."
             }
         ],
         "commands": [],
