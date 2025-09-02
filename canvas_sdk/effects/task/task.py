@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import model_validator
 
+from canvas_sdk.common.enums import TaskPriority
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
@@ -14,14 +15,6 @@ class TaskStatus(Enum):
     COMPLETED = "COMPLETED"
     CLOSED = "CLOSED"
     OPEN = "OPEN"
-
-
-class TaskPriority(Enum):
-    """TaskPriority."""
-
-    STAT = "STAT"
-    URGENT = "Urgent"
-    ROUTINE = "Routine"
 
 
 class AddTask(_BaseEffect):

@@ -97,7 +97,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     STAFF_DEACTIVATED: _ClassVar[EventType]
     COMPOUND_MEDICATION_CREATED: _ClassVar[EventType]
     COMPOUND_MEDICATION_UPDATED: _ClassVar[EventType]
-    TASK_PRIORITY_CHANGED: _ClassVar[EventType]
+    TASK_PRIORITY_UPDATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -998,7 +998,7 @@ STAFF_ACTIVATED: EventType
 STAFF_DEACTIVATED: EventType
 COMPOUND_MEDICATION_CREATED: EventType
 COMPOUND_MEDICATION_UPDATED: EventType
-TASK_PRIORITY_CHANGED: EventType
+TASK_PRIORITY_UPDATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType

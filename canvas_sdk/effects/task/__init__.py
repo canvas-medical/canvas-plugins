@@ -1,4 +1,5 @@
-from .task import AddTask, AddTaskComment, TaskPriority, TaskStatus, UpdateTask
+from .task import AddTask, AddTaskComment, TaskStatus, UpdateTask
+from canvas_sdk.common.enums import TaskPriority
 
 __all__ = __exports__ = (
     "AddTask",
