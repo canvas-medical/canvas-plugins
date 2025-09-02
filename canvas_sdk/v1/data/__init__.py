@@ -35,6 +35,7 @@ from .line_item_transaction import (
     NewLineItemPayment,
 )
 from .medication import Medication, MedicationCoding
+from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
 from .observation import (
@@ -83,6 +84,7 @@ from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto, StaffRole
+from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .user import CanvasUser
@@ -141,6 +143,7 @@ __all__ = __exports__ = (
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -184,6 +187,7 @@ __all__ = __exports__ = (
     "StaffPhoto",
     "StaffRole",
     "StaffContactPoint",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
