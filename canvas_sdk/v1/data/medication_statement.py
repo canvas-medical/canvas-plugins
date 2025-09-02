@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import Model
 
 
-class MedicationStatement(IdentifiableModel):
+class MedicationStatement(Model):
     """MedicationStatement."""
 
     class Meta:
