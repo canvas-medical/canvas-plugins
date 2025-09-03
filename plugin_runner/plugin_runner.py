@@ -731,7 +731,14 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
     port = "50051"
 
     executor = ThreadPoolExecutor(max_workers=settings.PLUGIN_RUNNER_MAX_WORKERS)
-    server = grpc.server(thread_pool=executor)
+    server = grpc.server(
+        thread_pool=executor,
+        options=(
+            # set max message lengths to 64mb
+            ("grpc.max_receive_message_length", 64 * 1024 * 1024),
+            ("grpc.max_send_message_length", 64 * 1024 * 1024),
+        ),
+    )
     server.add_insecure_port("127.0.0.1:" + port)
 
     add_PluginRunnerServicer_to_server(PluginRunner(), server)

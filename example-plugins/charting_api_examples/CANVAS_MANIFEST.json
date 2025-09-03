@@ -7,30 +7,15 @@
         "protocols": [
             {
                 "class": "charting_api_examples.routes.notes:NoteAPI",
-                "description": "Endpoints that showcase interactions with notes.",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Endpoints that showcase interactions with notes."
             },
             {
                 "class": "charting_api_examples.routes.billing_line_items:BillingLineItemAPI",
-                "description": "Endpoints for interacting with billing line items on a note.",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Endpoints for interacting with billing line items on a note."
             },
             {
                 "class": "charting_api_examples.routes.commands:CommandAPI",
-                "description": "Endpoints for interacting with commands on a note.",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Endpoints for interacting with commands on a note."
             }
         ],
         "commands": [],

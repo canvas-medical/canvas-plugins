@@ -9,11 +9,11 @@ dev = [
   "mypy>=1.17.0,<2",
   "pre-commit>=4.3.0,<5",
   "psutil>=7.0.0",
-  "pytest",
   "pytest-cov",
-  "pytest-django",
+  "pytest-django>=4.11,<5",
   "pytest-freezegun>=0.4.2",
   "pytest-mock",
+  "pytest>=8.4,<9",
   "python-semantic-release",
   "requests-mock",
   "ruff",
@@ -32,6 +32,7 @@ dependencies = [
   "django-timezone-utils>=0.15.0,<0.16",
   "django>=5.1.1,<6",
   "env-tools>=2.4.0,<3",
+  "factory-boy>=3.3.3",
   "frozendict>=2.4.6",
   "grpcio>=1.60.1,<2",
   "ipython>=8.21.0,<9",
@@ -57,7 +58,12 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.57.0"
+version = "0.58.1"
+
+[project.optional-dependencies]
+test-utils = [
+  "pytest-canvas"
+]
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
@@ -78,6 +84,9 @@ include = [
   "settings.py"
 ]
 
+[tool.hatch.build.targets.sdist.force-include]
+"canvas_cli/templates" = "canvas_cli/templates"
+
 [tool.hatch.build.targets.wheel]
 artifacts = ["plugin_runner/allowed-module-imports.json"]
 exclude = ["**/tests/*", "conftest.py", "test_*.py", "tests.py"]
@@ -90,6 +99,9 @@ include = [
   "pubsub",
   "settings.py"
 ]
+
+[tool.hatch.build.targets.wheel.force-include]
+"canvas_cli/templates" = "canvas_cli/templates"
 
 [tool.mypy]
 check_untyped_defs = true
@@ -111,6 +123,7 @@ strict_equality = true
 strict_optional = true
 untyped_calls_exclude = [
   "canvas_generated",
+  "factory",
   "redis"
 ] # https://github.com/python/typeshed/issues/10592
 warn_no_return = true
@@ -135,6 +148,7 @@ norecursedirs = [
   ".mypy_cache",
   ".pytest_cache",
   "__pycache__",
+  "canvas_cli/templates",
   "custom-plugins",
   "node_modules",
   "static",
