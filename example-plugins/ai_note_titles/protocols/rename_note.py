@@ -47,10 +47,14 @@ class Handler(BaseHandler):
             "model": self.get_model(),
             "temperature": 0,
         }
-        response = Http().post("https://api.openai.com/v1/responses", headers=headers, data=json.dumps(payload))
+        response = Http().post(
+            "https://api.openai.com/v1/responses", headers=headers, data=json.dumps(payload)
+        )
 
         if not response.ok:
-            log.error(f"Generate note title request failed: {response.status_code} - {response.text}")
+            log.error(
+                f"Generate note title request failed: {response.status_code} - {response.text}"
+            )
             return None
 
         response_json = response.json()
@@ -69,7 +73,9 @@ class Handler(BaseHandler):
 
     def get_input(self, note_id: str) -> str:
         """Stringified commands within note to be used as input for OpenAI."""
-        commands = Command.objects.filter(note__id=note_id)
+        commands = Command.objects.filter(
+            note__id=note_id, entered_in_error__isnull=True, committer__isnull=False
+        )
 
         return json.dumps(list(commands.values("schema_key", "data")))
 
@@ -89,6 +95,9 @@ class Handler(BaseHandler):
 
     def is_locked_note_event(self) -> bool:
         """Check if the note is locked."""
-        return CurrentNoteStateEvent.objects.values_list('state', flat=True).get(id=self.event.target.id) == NoteStates.LOCKED
-
-
+        return (
+            CurrentNoteStateEvent.objects.values_list("state", flat=True).get(
+                id=self.event.target.id
+            )
+            == NoteStates.LOCKED
+        )
