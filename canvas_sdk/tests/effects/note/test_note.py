@@ -88,6 +88,8 @@ def test_create_note_with_instance_id_passes(
     mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
 ) -> None:
     """Test that providing instance_id for create does not raise error."""
+    mock_db_queries["note"].filter.return_value.exists.return_value = False
+
     valid_note_data["instance_id"] = str(uuid4())
     note = Note(**valid_note_data)
 
@@ -187,6 +189,22 @@ def test_note_nonexistent_note_type(
 
     errors = exc_info.value.errors()
     assert any("Note type with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def test_note_create_existing_note(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test creating a note that already exists."""
+    mock_db_queries["note"].filter.return_value.exists.return_value = True
+
+    note = Note(instance_id=str(uuid4()))
+    note.title = "New Note"
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.create()
+
+    errors = exc_info.value.errors()
+    assert any("Note with ID" in str(e) and "already exists" in str(e) for e in errors)
 
 
 def test_note_update_nonexistent_note(
