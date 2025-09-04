@@ -1,6 +1,36 @@
 # CHANGELOG
 
 
+## v0.59.0 (2025-09-03)
+
+### Bug Fixes
+
+- Ensure CONVERTED notes are considered editable
+  ([#991](https://github.com/canvas-medical/canvas-plugins/pull/991),
+  [`0119518`](https://github.com/canvas-medical/canvas-plugins/commit/0119518d1d58ab67009f40a4b6d2a47c0d1a4366))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+### Chores
+
+- Add image to example patient portal plugin
+  ([#983](https://github.com/canvas-medical/canvas-plugins/pull/983),
+  [`73bae45`](https://github.com/canvas-medical/canvas-plugins/commit/73bae45b07c760c123d38ea794fd37b38f2a1fb0))
+
+Signed-off-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Remove data_access from example manifests
+  ([#986](https://github.com/canvas-medical/canvas-plugins/pull/986),
+  [`73068c8`](https://github.com/canvas-medical/canvas-plugins/commit/73068c8275d9ec82138fda94b0df4c77686302f3))
+
+### Features
+
+- Add goal to data module ([#873](https://github.com/canvas-medical/canvas-plugins/pull/873),
+  [`8fd0933`](https://github.com/canvas-medical/canvas-plugins/commit/8fd0933eabaed62822292cc7cd435b6480fbe2d3))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
 ## v0.58.1 (2025-08-26)
 
 ### Bug Fixes
