@@ -223,6 +223,7 @@ class CurrentNoteStateEvent(IdentifiableModel):
         """Returns a boolean to indicate if the related note can be edited."""
         return self.state in [
             NoteStates.NEW,
+            NoteStates.CONVERTED,
             NoteStates.PUSHED,
             NoteStates.UNLOCKED,
             NoteStates.RESTORED,

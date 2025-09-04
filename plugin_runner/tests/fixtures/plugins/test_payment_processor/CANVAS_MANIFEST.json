@@ -1,13 +1,18 @@
 {
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
-    "name": "{{ cookiecutter.__project_slug }}",
+    "name": "test_payment_processor",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
         "protocols": [
             {
-                "class": "{{ cookiecutter.__project_slug }}.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz..."
+                "class": "test_payment_processor.protocols.my_protocol:CustomPaymentProcessor",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],

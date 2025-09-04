@@ -7,21 +7,11 @@
         "protocols": [
             {
                 "class": "api_samples.routes.hello_world:HelloWorldAPI",
-                "description": "Returns a json message",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Returns a json message"
             },
             {
                 "class": "api_samples.routes.email_bounce:EmailBounceAPI",
-                "description": "Creates a task to confirm patient contact info",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Creates a task to confirm patient contact info"
             }
         ],
         "commands": [],

@@ -135,6 +135,8 @@ manifest_schema = {
                         "enum": ["top", "bottom"],
                     },
                     "menu_order": {"type": "integer"},
+                    "show_in_panel": {"type": "boolean"},
+                    "panel_priority": {"type": "integer"},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,

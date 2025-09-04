@@ -9,4 +9,8 @@ service PluginRunner {
   rpc HandleEvent (Event) returns (stream EventResponse);
 
   rpc ReloadPlugins (ReloadPluginsRequest) returns (stream ReloadPluginsResponse);
+
+  rpc ReloadPlugin (ReloadPluginRequest) returns (stream ReloadPluginResponse);
+
+  rpc UnloadPlugin (UnloadPluginRequest) returns (stream UnloadPluginResponse);
 }

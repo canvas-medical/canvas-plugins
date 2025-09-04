@@ -3,7 +3,7 @@ example_provider_page
 
 ## Description
 
-A description of this plugin
+Embed custom tools directly into clinical interface
 
 ### Important Note!
 

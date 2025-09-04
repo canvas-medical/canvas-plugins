@@ -225,9 +225,11 @@ THIRD_PARTY_MODULES = {
     },
     "pydantic": {
         "BaseModel",
+        "ConfigDict",
         "conint",
         "constr",
         "Field",
+        "RootModel",
         "ValidationError",
     },
     "rapidfuzz": {

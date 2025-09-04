@@ -41,6 +41,7 @@ class AddTask(_BaseEffect):
     labels: list[str] = []
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
+    author_id: str | UUID | None = None
 
     @model_validator(mode="after")
     def check_needed_together_fields(self) -> Self:
@@ -68,6 +69,7 @@ class AddTask(_BaseEffect):
             "title": self.title,
             "status": self.status.value,
             "labels": self.labels,
+            "author_id": str(self.author_id) if self.author_id else None,
             "linked_object": {
                 "id": str(self.linked_object_id) if self.linked_object_id else None,
                 "type": self.linked_object_type.value if self.linked_object_type else None,
@@ -89,11 +91,16 @@ class AddTaskComment(_BaseEffect):
 
     body: str | None = None
     task_id: str | UUID | None = None
+    author_id: str | UUID | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a task comment."""
-        return {"task": {"id": str(self.task_id) if self.task_id else None}, "body": self.body}
+        return {
+            "task": {"id": str(self.task_id) if self.task_id else None},
+            "body": self.body,
+            "author_id": str(self.author_id) if self.author_id else None,
+        }
 
 
 class UpdateTask(_BaseEffect):

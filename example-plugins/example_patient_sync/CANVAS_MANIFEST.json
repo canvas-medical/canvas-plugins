@@ -7,21 +7,11 @@
         "protocols": [
             {
                 "class": "example_patient_sync.handlers.patient_sync:PatientSync",
-                "description": "Create or update patients in an external system based on Canvas events",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Create or update patients in an external system based on Canvas events"
             },
             {
                 "class": "example_patient_sync.routes.patient_create_api:PatientCreateApi",
-                "description": "Create a patient in Canvas when a user is created in an external system",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Create a patient in Canvas when a user is created in an external system"
             }
         ],
 
