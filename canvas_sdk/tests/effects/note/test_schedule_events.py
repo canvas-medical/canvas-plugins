@@ -352,3 +352,44 @@ def test_schedule_event_without_optional_fields(mock_db_queries: dict[str, Magic
     assert "description" not in payload["data"]
     assert "patient_id" not in payload["data"]
     assert effect.type == EffectType.CREATE_SCHEDULE_EVENT
+
+
+def test_create_schedule_event_parent_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_schedule_event_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on creation."""
+    same_id = str(uuid4())
+    schedule_event_data = {
+        **valid_schedule_event_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    event = ScheduleEvent(**schedule_event_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    assert any("parent_appointment_id cannot be the same as instance_id" in str(e) for e in errors)
+
+
+def test_update_schedule_event_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_schedule_event_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on update."""
+    same_id = str(uuid4())
+    schedule_event_data = {
+        **valid_schedule_event_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    event = ScheduleEvent(**schedule_event_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    assert any(
+        "parent_appointment_id can only be set when creating an appointment." in str(e)
+        for e in errors
+    )
