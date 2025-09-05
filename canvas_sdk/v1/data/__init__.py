@@ -1,5 +1,9 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment, AppointmentExternalIdentifier
+from .appointment import (
+    Appointment,
+    AppointmentExternalIdentifier,
+    AppointmentLabel,
+)
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
@@ -91,6 +95,7 @@ from .user import CanvasUser
 __all__ = __exports__ = (
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
