@@ -53,6 +53,29 @@
                         "description": "Determines if the response should be shown in the Social History (SHX) section.",
                         "default": false
                     },
+                    "enabled_behavior": {
+                        "type": "string",
+                        "enum": ["all", "any"],
+                        "description": "Specifies if all or any of the conditions must be met to enable this question."
+                    },
+                    "enabled_conditions": {
+                        "type": "array",
+                        "description": "List of conditions that enable this question.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question_code": { "type": "string", "description": "Code of the question to check." },
+                                "operator": {
+                                    "type": "string",
+                                    "enum": ["=", "!=", "exists", "not_exists"],
+                                    "description": "Operator for condition."
+                                },
+                                "value_code": { "type": ["string", "null"], "description": "Response option code to match, if applicable." },
+                                "value_string": { "type": ["string", "null"], "description": "Free text value to match, if applicable." }
+                            },
+                            "required": ["question_code", "operator"]
+                        }
+                    },
                     "responses": {
                         "type": "array",
                         "minItems": 1,
@@ -69,7 +92,7 @@
                         }
                     }
                 },
-                "required": ["code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
+                    "required": ["code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
             }
         }
     },
