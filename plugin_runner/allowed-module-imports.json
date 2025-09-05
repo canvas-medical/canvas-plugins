@@ -245,11 +245,13 @@
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier"
   ],
