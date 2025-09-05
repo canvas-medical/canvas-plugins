@@ -64,7 +64,11 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
                 "button": "click this",
                 "href": "https://canvasmedical.com/",
             },
-            {"title": "second link", "button": "don't click this", "href": "https://google.com/"},
+            {
+                "title": "second link",
+                "button": "don't click this",
+                "href": "https://google.com/",
+            },
         ),
         (
             {
@@ -109,7 +113,9 @@ def test_apply_method_raises_error_without_patient_id_and_key() -> None:
     ],
 )
 def test_add_recommendations(
-    init_params: dict[Any, Any], rec1_params: dict[Any, Any], rec2_params: dict[Any, Any]
+    init_params: dict[Any, Any],
+    rec1_params: dict[Any, Any],
+    rec2_params: dict[Any, Any],
 ) -> None:
     """Test that the add_recommendation method adds recommendations to the ProtocolCard."""
     p = ProtocolCard(**init_params)
@@ -123,7 +129,7 @@ def test_add_recommendations(
                 "title": rec1_params.get("title"),
                 "button": rec1_params.get("button"),
                 "href": rec1_params.get("href"),
-                "command": {"type": rec1_params["command"]} if "command" in rec1_params else {},
+                "command": ({"type": rec1_params["command"]} if "command" in rec1_params else {}),
                 "context": rec1_params.get("context", {}),
                 "key": 0,
             },
@@ -131,7 +137,7 @@ def test_add_recommendations(
                 "title": rec2_params.get("title"),
                 "button": rec2_params.get("button"),
                 "href": rec2_params.get("href"),
-                "command": {"type": rec2_params["command"]} if "command" in rec2_params else {},
+                "command": ({"type": rec2_params["command"]} if "command" in rec2_params else {}),
                 "context": rec2_params.get("context", {}),
                 "key": 1,
             },
@@ -168,25 +174,32 @@ def test_add_recommendations_from_commands(
     p.recommendations.append(cmd.recommend())
     p.recommendations.append(cmd.recommend(title="hello", button="click"))
     p.add_recommendation(
-        title="yeehaw", button="click here", command=cmd.Meta.key.lower(), context=init_params
+        title="yeehaw",
+        button="click here",
+        command=cmd.Meta.key,
+        context=init_params,
     )
 
     rec1, rec2, rec3 = p.values["recommendations"]
     assert rec1["title"] == ""
     assert rec1["button"] == cmd.constantized_key().lower().replace("_", " ")
     assert rec1["href"] is None
-    assert rec1["context"] == cmd.values
-    assert rec1["command"]["type"] == cmd.Meta.key.lower()
+    assert rec1["context"] == cmd.values | {
+        "effect_type": f"ORIGINATE_{cmd.constantized_key()}_COMMAND"
+    }
+    assert rec1["command"]["type"] == cmd.Meta.key
 
     assert rec2["title"] == "hello"
     assert rec2["button"] == "click"
     assert rec2["href"] is None
-    assert rec2["context"] == cmd.values
-    assert rec2["command"]["type"] == cmd.Meta.key.lower()
+    assert rec2["context"] == cmd.values | {
+        "effect_type": f"ORIGINATE_{cmd.constantized_key()}_COMMAND"
+    }
+    assert rec2["command"]["type"] == cmd.Meta.key
 
     assert rec3["title"] == "yeehaw"
     assert rec3["button"] == "click here"
     assert rec3["href"] is None
-    assert rec3["command"]["type"] == cmd.Meta.key.lower()
+    assert rec3["command"]["type"] == cmd.Meta.key
     for k, v in init_params.items():
         assert rec3["context"][k] == v
