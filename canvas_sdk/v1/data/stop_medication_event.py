@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import IdentifiableModel
 
 
-class StopMedicationEvent(Model):
+class StopMedicationEvent(IdentifiableModel):
     """StopMedicationEvent."""
 
     class Meta:
