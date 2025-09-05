@@ -1,13 +1,14 @@
-import arrow
 from http import HTTPStatus
+
+import arrow
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.note import Note as NoteEffect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note, CurrentNoteStateEvent
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note
 
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 class NoteAPI(APIKeyAuthMixin, SimpleAPI):
     PREFIX = "/notes"
@@ -16,9 +17,12 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
     GET /plugin-io/api/charting_api_examples/notes/
     Headers: "Authorization <your value for 'simpleapi-api-key'>"
     """
+
     @api.get("/")
     def index(self) -> list[Response | Effect]:
-        notes = Note.objects.select_related('patient', 'provider', 'note_type_version').order_by("dbid")
+        notes = Note.objects.select_related("patient", "provider", "note_type_version").order_by(
+            "dbid"
+        )
         query_params = self.request.query_params
 
         # User specified, default 10, min 1, max 100
@@ -53,38 +57,43 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
         # If there aren't any more results, return None so the client can tell
         # that there are no more results to fetch.
         link_to_next = None
-        if notes[offset+limit:].count() > 0:
+        if notes[offset + limit :].count() > 0:
             requested_uri = self.context.get("absolute_uri")
             if "offset" in query_params:
-                link_to_next = requested_uri.replace(f"offset={offset}", f"offset={offset+limit}")
+                link_to_next = requested_uri.replace(f"offset={offset}", f"offset={offset + limit}")
             else:
                 param_separator = "?" if len(query_params) == 0 else "&"
-                link_to_next = requested_uri + f"{param_separator}offset={offset+limit}"
+                link_to_next = requested_uri + f"{param_separator}offset={offset + limit}"
 
         # Apply limit and offset
-        notes = notes[offset:offset+limit]
+        notes = notes[offset : offset + limit]
 
         count = len(notes)
         return [
-            JSONResponse({
-                "next_page": link_to_next,
-                "count": count,
-                "notes": [{
-                    "id": str(note.id),
-                    "patient_id": str(note.patient.id),
-                    "provider_id": str(note.provider.id),
-                    "datetime_of_service": str(note.datetime_of_service),
-                    "note_type": {
-                        "id": str(note.note_type_version.id),
-                        "name": note.note_type_version.name,
-                        "coding": {
-                            "display": note.note_type_version.display,
-                            "code": note.note_type_version.code,
-                            "system": note.note_type_version.system,
-                        },
-                    },
-                } for note in notes]
-            })
+            JSONResponse(
+                {
+                    "next_page": link_to_next,
+                    "count": count,
+                    "notes": [
+                        {
+                            "id": str(note.id),
+                            "patient_id": str(note.patient.id),
+                            "provider_id": str(note.provider.id),
+                            "datetime_of_service": str(note.datetime_of_service),
+                            "note_type": {
+                                "id": str(note.note_type_version.id),
+                                "name": note.note_type_version.name,
+                                "coding": {
+                                    "display": note.note_type_version.display,
+                                    "code": note.note_type_version.code,
+                                    "system": note.note_type_version.system,
+                                },
+                            },
+                        }
+                        for note in notes
+                    ],
+                }
+            )
         ]
 
     """
@@ -99,6 +108,7 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
 		"title": "My Note Title",
     }
     """
+
     @api.post("/")
     def create(self) -> list[Response | Effect]:
         required_attributes = {
@@ -141,13 +151,16 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
 
         return [
             note_effect.create(),
-            JSONResponse({"message": "Note data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Note data accepted for creation"}, status_code=HTTPStatus.ACCEPTED
+            ),
         ]
 
     """
     GET /plugin-io/api/charting_api_examples/notes/<note-id>/
     Headers: "Authorization <your value for 'simpleapi-api-key'>"
     """
+
     @api.get("/<id>/")
     def read(self) -> list[Response | Effect]:
         note = get_note_from_path_params(self.request.path_params)
