@@ -601,6 +601,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
     "Task",
@@ -847,6 +848,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole"
   ],
