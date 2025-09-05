@@ -241,9 +241,9 @@ class StaffLicense(IdentifiableModel):
 
 __exports__ = (
     "Staff",
-    "StaffContactPoint",
     "StaffAddress",
+    "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
-    "StaffLicense",
 )
