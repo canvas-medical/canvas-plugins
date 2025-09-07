@@ -703,6 +703,7 @@
     "CoverageStack",
     "CoverageState",
     "CoverageType",
+    "EligibilitySummary",
     "Transactor",
     "TransactorAddress",
     "TransactorCoverageType",

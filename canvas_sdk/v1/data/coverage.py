@@ -287,12 +287,25 @@ class TransactorPhone(IdentifiableModel):
     def __str__(self) -> str:
         return f"id={self.id}"
 
+class EligibilitySummary(IdentifiableModel):
+    """EligibilitySummary."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_eligibilitysummary_001"
+
+    coverage = models.ForeignKey(
+        Coverage, on_delete=models.DO_NOTHING, null=True, related_name="eligibility_summary"
+    )
+    copay_cents = models.IntegerField(null=True)
+    coinsurance = models.IntegerField(null=True)
+
 
 __exports__ = (
     "CoverageStack",
     "CoverageState",
     "CoverageType",
     "CoverageRelationshipCode",
+    "EligibilitySummary",
     "TransactorCoverageType",
     "TransactorType",
     "Coverage",
