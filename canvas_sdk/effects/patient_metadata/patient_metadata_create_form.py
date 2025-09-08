@@ -1,5 +1,5 @@
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.shared_components import BaseCreateFormEffect, FormField, InputType  # noqa
+from canvas_sdk.effects.form import BaseCreateFormEffect, FormField, InputType  # noqa
 
 
 class PatientMetadataCreateFormEffect(BaseCreateFormEffect):

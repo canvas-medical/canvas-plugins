@@ -1,21 +1,18 @@
-import json
 from typing import Any
 
 from pydantic_core import InitErrorDetails
 
-from canvas_generated.messages.effects_pb2 import Effect
-from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.metadata import BaseMetadata
 from canvas_sdk.v1.data import Patient
 
 
-class PatientMetadata(TrackableFieldsModel):
+class PatientMetadata(BaseMetadata):
     """Effect to upsert a Patient Metadata record."""
 
     class Meta:
         effect_type = "PATIENT_METADATA"
 
     patient_id: str
-    key: str
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -30,19 +27,6 @@ class PatientMetadata(TrackableFieldsModel):
             )
 
         return errors
-
-    def upsert(self, value: str) -> Effect:
-        """Upsert the patient metadata."""
-        self._validate_before_effect("upsert")
-
-        return Effect(
-            type=f"UPSERT_{self.Meta.effect_type}",
-            payload=json.dumps(
-                {
-                    "data": {**self.values, "value": value},
-                }
-            ),
-        )
 
 
 __exports__ = ("PatientMetadata",)
