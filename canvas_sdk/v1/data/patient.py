@@ -116,13 +116,6 @@ class Patient(Model):
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
-    @property
-    def full_name(self) -> str:
-        """Returns the patient's full name."""
-        return " ".join(
-            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
-        )
-
     def age_at(self, time: arrow.Arrow) -> float:
         """Given a datetime, returns what the patient's age would be at that datetime."""
         age = float(0)
@@ -146,6 +139,13 @@ class Patient(Model):
             return self.settings.get(name=name).value
         except PatientSetting.DoesNotExist:
             return None
+
+    @property
+    def full_name(self) -> str:
+        """Returns the patient's full name."""
+        return " ".join(
+            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
+        )
 
     @property
     def preferred_pharmacy(self) -> dict[str, str] | None:
@@ -181,6 +181,11 @@ class Patient(Model):
     def preferred_first_name(self) -> str:
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
+
+    @property
+    def primary_phone_number(self) -> PatientContactPoint | None:
+        """Returns the patient's primary phone number, if available."""
+        return (self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")).first()
 
 
 class PatientContactPoint(IdentifiableModel):
@@ -288,12 +293,25 @@ class PatientMetadata(IdentifiableModel):
     value = models.CharField(max_length=255)
 
 
+class PatientFacilityAddress(PatientAddress):
+    """PatientFacilityAddress."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientfacilityaddress_001"
+
+    room_number = models.CharField(max_length=100, null=True)
+    facility = models.ForeignKey(
+        "v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True
+    )
+
+
 __exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
     "Patient",
     "PatientContactPoint",
     "PatientAddress",
+    "PatientFacilityAddress",
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",
