@@ -229,11 +229,11 @@ class StaffLicense(IdentifiableModel):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="licenses")
     issuing_authority_long_name = models.CharField(max_length=200, null=True, blank=True)
     issuing_authority_url = models.URLField(blank=True, null=True)
-    license_or_certification_identifier = models.CharField(max_length=50, db_index=True)
+    license_or_certification_identifier = models.CharField(max_length=50)
     issuance_date = models.DateField()
-    expiration_date = models.DateField(db_index=True)
+    expiration_date = models.DateField()
     license_type = models.CharField(
-        max_length=50, choices=LicenseType.choices, null=True, db_index=True, blank=True
+        max_length=50, choices=LicenseType.choices, null=True, blank=True
     )
     primary = models.BooleanField(default=False)
     state = models.CharField(max_length=2, blank=True, null=True)
