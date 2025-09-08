@@ -287,6 +287,7 @@ class TransactorPhone(IdentifiableModel):
     def __str__(self) -> str:
         return f"id={self.id}"
 
+
 class EligibilitySummary(IdentifiableModel):
     """EligibilitySummary."""
 

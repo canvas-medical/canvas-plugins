@@ -540,6 +540,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "EligibilitySummary",
     "Facility",
     "Goal",
     "ImagingOrder",
