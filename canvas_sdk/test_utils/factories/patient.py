@@ -1,9 +1,9 @@
 import datetime
 
-from canvas_sdk.test_utils.factories.facility import FacilityFactory
 import factory
 from factory.fuzzy import FuzzyDate
 
+from canvas_sdk.test_utils.factories.facility import FacilityFactory
 from canvas_sdk.test_utils.factories.user import CanvasUserFactory
 from canvas_sdk.v1.data import Patient, PatientAddress, PatientFacilityAddress
 
@@ -22,6 +22,7 @@ class PatientAddressFactory(factory.django.DjangoModelFactory[PatientAddress]):
     postal_code = "94112"
     country = "USA"
 
+
 class PatientFactory(factory.django.DjangoModelFactory[Patient]):
     """Factory for creating a Patient."""
 
@@ -37,6 +38,7 @@ class PatientFactory(factory.django.DjangoModelFactory[Patient]):
     last_name = factory.Faker("last_name")
     addresses = factory.RelatedFactory(PatientAddressFactory, "patient")
     user = factory.SubFactory(CanvasUserFactory)
+
 
 class PatientFacilityAddressFactory(factory.django.DjangoModelFactory[PatientFacilityAddress]):
     """Factory for creating a PatientFacilityAddress."""
