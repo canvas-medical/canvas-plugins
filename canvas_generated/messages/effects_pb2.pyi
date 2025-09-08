@@ -236,6 +236,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_SCHEDULE_EVENT: _ClassVar[EffectType]
     DELETE_SCHEDULE_EVENT: _ClassVar[EffectType]
     CREATE_PATIENT: _ClassVar[EffectType]
+    UPDATE_PATIENT: _ClassVar[EffectType]
     CREATE_MESSAGE: _ClassVar[EffectType]
     SEND_MESSAGE: _ClassVar[EffectType]
     CREATE_AND_SEND_MESSAGE: _ClassVar[EffectType]
@@ -484,6 +485,7 @@ CREATE_SCHEDULE_EVENT: EffectType
 UPDATE_SCHEDULE_EVENT: EffectType
 DELETE_SCHEDULE_EVENT: EffectType
 CREATE_PATIENT: EffectType
+UPDATE_PATIENT: EffectType
 CREATE_MESSAGE: EffectType
 SEND_MESSAGE: EffectType
 CREATE_AND_SEND_MESSAGE: EffectType

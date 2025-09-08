@@ -7,8 +7,15 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
-from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse, PersonSex
+from canvas_sdk.v1.data.common import (
+    AddressType,
+    AddressUse,
+    ContactPointSystem,
+    ContactPointUse,
+    PersonSex,
+)
 
 
 @dataclass
@@ -62,14 +69,48 @@ class PatientPreferredPharmacy:
         }
 
 
+@dataclass
+class PatientAddress:
+    """A class representing a patient address."""
+
+    line1: str
+    country: str
+    line2: str | None = None
+    use: AddressUse = AddressUse.HOME
+    type: AddressType = AddressType.BOTH
+    city: str | None = None
+    district: str | None = None
+    state_code: str | None = None
+    postal_code: str | None = None
+    longitude: float | None = None
+    latitude: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the address to a dictionary."""
+        return {
+            "line1": self.line1,
+            "line2": self.line2,
+            "country": self.country,
+            "use": self.use.value,
+            "type": self.type.value,
+            "city": self.city,
+            "district": self.district,
+            "state_code": self.state_code,
+            "postal_code": self.postal_code,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
+        }
+
+
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
     class Meta:
         effect_type = "PATIENT"
 
-    first_name: str
-    last_name: str
+    patient_id: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     middle_name: str | None = None
     birthdate: datetime.date | None = None
     prefix: str | None = None
@@ -85,38 +126,92 @@ class Patient(TrackableFieldsModel):
     contact_points: list[PatientContactPoint] | None = None
     external_identifiers: list[PatientExternalIdentifier] | None = None
     preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
+    addresses: list[PatientAddress] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """Return the values of the patient as a dictionary."""
-        return {
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "middle_name": self.middle_name,
-            "previous_names": self.previous_names or [],
-            "birthdate": self.birthdate.isoformat() if self.birthdate else None,
-            "prefix": self.prefix,
-            "suffix": self.suffix,
-            "sex_at_birth": self.sex_at_birth.value if self.sex_at_birth else None,
-            "nickname": self.nickname,
-            "social_security_number": self.social_security_number,
-            "administrative_note": self.administrative_note,
-            "clinical_note": self.clinical_note,
-            "default_location": self.default_location_id,
-            "default_provider": self.default_provider_id,
-            "contact_points": [cp.to_dict() for cp in self.contact_points]
-            if self.contact_points
-            else None,
-            "external_identifiers": [ids.to_dict() for ids in self.external_identifiers]
-            if self.external_identifiers
-            else None,
-            "preferred_pharmacies": [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
-            if self.preferred_pharmacies
-            else None,
-        }
+        values = super().values
+
+        if self.is_dirty("contact_points"):
+            values["contact_points"] = (
+                [cp.to_dict() for cp in self.contact_points]
+                if self.contact_points is not None
+                else None
+            )
+
+        if self.is_dirty("external_identifiers"):
+            values["external_identifiers"] = (
+                [ids.to_dict() for ids in self.external_identifiers]
+                if self.external_identifiers is not None
+                else None
+            )
+
+        if self.is_dirty("addresses"):
+            values["addresses"] = (
+                [addr.to_dict() for addr in self.addresses] if self.addresses is not None else None
+            )
+
+        if self.is_dirty("preferred_pharmacies"):
+            values["preferred_pharmacies"] = (
+                [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
+                if self.preferred_pharmacies
+                else None
+            )
+
+        return values
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+
+        # Validate create-specific requirements
+        if method == "create":
+            if self.patient_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Patient ID should not be set when creating a new patient.",
+                        self.patient_id,
+                    )
+                )
+
+            # first_name and last_name are required for create
+            if not self.first_name:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "First name is required when creating a new patient.",
+                        self.first_name,
+                    )
+                )
+
+            if not self.last_name:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Last name is required when creating a new patient.",
+                        self.last_name,
+                    )
+                )
+
+        # Validate update-specific requirements
+        if method == "update":
+            if not self.patient_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Patient ID must be set when updating an existing patient.",
+                        self.patient_id,
+                    )
+                )
+            elif not PatientModel.objects.filter(id=self.patient_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Patient with ID {self.patient_id} does not exist.",
+                        self.patient_id,
+                    )
+                )
 
         if (
             self.default_location_id
@@ -157,9 +252,23 @@ class Patient(TrackableFieldsModel):
             ),
         )
 
+    def update(self) -> Effect:
+        """Update an existing Patient."""
+        self._validate_before_effect("update")
+
+        return Effect(
+            type=f"UPDATE_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
 
 __exports__ = (
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientPreferredPharmacy",
