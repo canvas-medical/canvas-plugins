@@ -83,7 +83,7 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
-from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto, StaffRole
+from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .user import CanvasUser
@@ -183,6 +183,7 @@ __all__ = __exports__ = (
     "ServiceProvider",
     "Staff",
     "StaffAddress",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
     "StaffContactPoint",
