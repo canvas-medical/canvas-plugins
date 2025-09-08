@@ -244,17 +244,23 @@
   ],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
+    "CreatePatientPreferredPharmacies",
     "Patient",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
+  ],
+  "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
+    "CreatePatientPreferredPharmacies"
   ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
