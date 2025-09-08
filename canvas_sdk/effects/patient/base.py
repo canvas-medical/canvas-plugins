@@ -155,7 +155,8 @@ class Patient(TrackableFieldsModel):
         if self.is_dirty("preferred_pharmacies"):
             values["preferred_pharmacies"] = (
                 [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
-                if self.preferred_pharmacies else None
+                if self.preferred_pharmacies
+                else None
             )
 
         return values
