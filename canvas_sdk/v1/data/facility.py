@@ -4,14 +4,7 @@ from canvas_sdk.v1.data.base import IdentifiableModel
 
 
 class Facility(IdentifiableModel):
-    """Facility model representing a healthcare facility.
-
-    Args:
-        IdentifiableModel (models.Model): Base model with an ID field.
-
-    Returns:
-        models.Model: Facility model instance.
-    """
+    """Facility model representing a healthcare facility."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_facility_001"

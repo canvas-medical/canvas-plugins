@@ -36,7 +36,8 @@ class ProtocolResult(models.Model):
     next_review = models.DateTimeField(null=True)
     feedback_enabled = models.BooleanField(default=False)
     plugin_can_be_snoozed = models.BooleanField(default=False)
-
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
 __exports__ = (
     "ProtocolResult",
