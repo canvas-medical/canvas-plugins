@@ -3,7 +3,7 @@ from .patient import PatientAddressFactory, PatientFacilityAddressFactory, Patie
 from .protocol_current import ProtocolCurrentFactory
 from .user import CanvasUserFactory
 
-__all__ = __exports__ = (
+__all__ = (
     "CanvasUserFactory",
     "FacilityFactory",
     "PatientAddressFactory",
