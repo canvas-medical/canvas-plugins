@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatientRequest xmlns="http://xml.appriss.com/gateway/v5_1">
+  <Requester>
+    <LicenseeRequestId>identifier</LicenseeRequestId>
+    <!-- Optional as normal. -->
+    <SenderSoftware>
+      <Developer>Software Inc.</Developer>
+      <Product>Product Name</Product>
+      <Version>Version Info</Version>
+    </SenderSoftware>
+    <RequestDestinations><!-- Optional. If ommitted, the request will be sent to the default PMPs that are configured for the Licensee. -->
+      <Pmp>KS</Pmp>
+    </RequestDestinations>
+    <!-- Provider section will now be optional in patient request. -->
+    <Provider>
+      <Role>Physician</Role>
+      <FirstName>Jon</FirstName>
+      <LastName>Doe</LastName>
+      <!-- At least one identifier is required: DEANumber, NPINumber, or ProfessionalLicenseNumber. -->
+      <!-- <DEANumber>AB1234579</DEANumber> -->
+      <DEANumber>AB1234577-12345</DEANumber> <!-- with or without a suffix, suffix used for interns -->
+      <NPINumber>1212345671</NPINumber>
+      <ProfessionalLicenseNumber>
+        <Type>String</Type>
+        <Value>A1231xbzy-bx</Value>
+        <StateCode>KY</StateCode>
+      </ProfessionalLicenseNumber>
+    </Provider>
+    <Location>
+      <Name>Store #123</Name>
+      <!-- At least one identifier is required: DEANumber, NPINumber, or NCPDPNumber. -->
+      <DEANumber>AB1234579</DEANumber>
+      <NPINumber>1234567890</NPINumber>
+      <NCPDPNumber>1234567</NCPDPNumber>
+      <Address>
+        <Street>Street 1</Street>
+        <Street>Street 2</Street>
+        <City>City</City>
+        <StateCode>KS</StateCode>
+        <ZipCode>40242</ZipCode>
+        <ZipPlusFour>4242</ZipPlusFour>
+      </Address>
+    </Location>
+  </Requester>
+  <PrescriptionRequest>
+    <!-- note in schema annotation that DateRange will normally be ignored and fixed to 2 years of data. Only used in some scenarios.-->
+    <DateRange>
+      <Begin>2008-11-01</Begin>
+      <End>2010-11-30</End>
+    </DateRange>
+    <Coverage></Coverage><!-- "xs:any" for later definition of content. Optional. If you want specific coverage detail in the response then it is required. -->
+    <ContinuityOfCare></ContinuityOfCare><!--"xs:any" for later definition of content. Optional. If you want specific care documentation detail in the response then it is required. -->
+    <RxCodes><!-- Optional. If you want specific Rx detail in the response then it is required. -->
+      <Code>
+        <RxCurrent>
+          <CodeType>NDC</CodeType>
+          <CodeValue>0777310507</CodeValue>
+          <Quantity>1</Quantity><!-- Optional -->
+          <DaysSupply>60</DaysSupply><!-- Optional -->
+          <FillDate>2017-08-05</FillDate><!-- Optional -->
+          <Sig>Take one tablet by mouth two times a day with meals</Sig><!-- Optional -->
+        </RxCurrent>
+      </Code>
+      <Code>
+        <RxPending>
+          <CodeType>NDC</CodeType>
+          <CodeValue>0798319515</CodeValue>
+          <Quantity>2</Quantity><!-- Optional -->
+          <DaysSupply>30</DaysSupply><!-- Optional -->
+          <FillDate>2017-09-12</FillDate><!-- Optional -->
+          <Sig>Take two tablets by mouth once a day with meals</Sig><!-- Optional -->
+        </RxPending>
+      </Code>
+    </RxCodes>
+    <DiagnosisCodes><!-- Optional. If you want specific diagnosis detail in the response then it is required. -->
+      <Code>
+        <CodeType>ICD</CodeType>
+        <CodeVersion>10</CodeVersion>
+        <CodeValue>F31.2</CodeValue>
+      </Code>
+    </DiagnosisCodes>
+    <Patient>
+      <Name>
+        <First>Bob</First>
+        <Middle>Dylan</Middle><!-- Optional -->
+        <Last>Testpatient</Last>
+      </Name>
+      <Birthdate>1900-01-01</Birthdate>
+      <SexCode>M</SexCode>
+      <Address>
+        <Street>123 Main St</Street>
+        <Street>Apt B</Street>
+        <City>Wichita</City>
+        <StateCode>KS</StateCode>
+        <ZipCode>67203</ZipCode>
+        <ZipPlusFour>4321</ZipPlusFour>
+      </Address>
+      <Phone>1234567890</Phone>
+      <SSN>123-45-6789</SSN>
+      <DriversLicenseIdentifier>
+        <Value>S01-45-6789</Value>
+        <StateCode>KS</StateCode>
+      </DriversLicenseIdentifier>
+      <VeterinaryPrescription>
+        <AnimalName>String</AnimalName>
+      </VeterinaryPrescription>
+      <PharmacyBenefitsMemberID>String</PharmacyBenefitsMemberID>
+      <MedicalBenefitsMemberID>String</MedicalBenefitsMemberID>
+      <MedicalRecordID>XX-1234-AnyString</MedicalRecordID><!-- Optional. If you want historical scores in NARxCHECK reports then it is required. -->
+    </Patient>
+  </PrescriptionRequest>
+</PatientRequest>
