@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.61.0 (2025-09-09)
+
+### Features
+
+- Include effect type in the protocol card recommendation context
+  ([#891](https://github.com/canvas-medical/canvas-plugins/pull/891),
+  [`4d756be`](https://github.com/canvas-medical/canvas-plugins/commit/4d756be60b526133de4c8d4476c08518e07de36e))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
 ## v0.60.0 (2025-09-08)
 
 ### Chores
