@@ -1,0 +1,32 @@
+name: PDMP Check
+form_type: SA
+code_system: INTERNAL
+code: STRUCTURED_ASSESSMENT_PDMP_CHECK
+can_originate_in_charting: true
+display_results_in_social_history_section: false
+prologue: 'PDMP prescription monitoring check performed'
+questions:
+- content: PDMP checked by
+  code_system: INTERNAL
+  code: STRUCTURED_ASSESSMENT_PDMP_CHECK_001
+  code_description: 'Practitioner who performed PDMP check'
+  display_result_in_social_history_section: false
+  responses_code_system: INTERNAL
+  responses_type: TXT
+  responses:
+  - name: PDMP checked by
+    code: STRUCTURED_ASSESSMENT_PDMP_CHECK_002
+    code_description: 'Name of practitioner who performed PDMP check'
+    value: ''
+- content: Date checked
+  code_system: INTERNAL
+  code: STRUCTURED_ASSESSMENT_PDMP_CHECK_003
+  code_description: 'Date when PDMP check was performed'
+  display_result_in_social_history_section: false
+  responses_code_system: INTERNAL
+  responses_type: TXT
+  responses:
+  - name: Date checked
+    code: STRUCTURED_ASSESSMENT_PDMP_CHECK_004
+    code_description: 'Date of PDMP check'
+    value: ''

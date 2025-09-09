@@ -1,0 +1,91 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.15",
+    "name": "pdmp_bamboo",
+    "description": "PDMP Bamboo Plugin - Extracts Canvas patient and practitioner data and sends PDMP requests to BambooHealth PMP Gateway",
+    "components": {
+        "protocols": [
+            {
+                "class": "pdmp_bamboo.protocols.my_protocol:PDMPRequestProtocol",
+                "description": "PDMP Request button that extracts Canvas data and sends PDMP requests to BambooHealth Gateway (Production with certificates)",
+                "data_access": {
+                    "event": "SHOW_NOTE_HEADER_BUTTON",
+                    "read": [
+                        "v1.Note",
+                        "v1.Patient",
+                        "v1.Staff",
+                        "v1.Organization",
+                        "v1.PracticeLocation",
+                        "v1.Questionnaire"
+                    ],
+                    "write": [
+                        "StructuredAssessmentCommand"
+                    ]
+                }
+            },
+            {
+                "class": "pdmp_bamboo.protocols.my_protocol:PDMPTestRequestProtocol",
+                "description": "PDMP Test Request button for testing environment without certificates",
+                "data_access": {
+                    "event": "SHOW_NOTE_HEADER_BUTTON",
+                    "read": [
+                        "v1.Note",
+                        "v1.Patient",
+                        "v1.Staff",
+                        "v1.Organization",
+                        "v1.PracticeLocation",
+                        "v1.Questionnaire"
+                    ],
+                    "write": [
+                        "StructuredAssessmentCommand"
+                    ]
+                }
+            },
+            {
+                "class": "pdmp_bamboo.protocols.my_protocol:PDMPMockRequestProtocol",
+                "description": "PDMP Mock Request button that uses template mock data for testing plugin functionality",
+                "data_access": {
+                    "event": "SHOW_NOTE_HEADER_BUTTON",
+                    "read": [
+                        "v1.Note",
+                        "v1.Patient",
+                        "v1.Staff",
+                        "v1.Organization",
+                        "v1.PracticeLocation",
+                        "v1.Questionnaire"
+                    ],
+                    "write": [
+                        "StructuredAssessmentCommand"
+                    ]
+                }
+            },
+            {
+                "class": "pdmp_bamboo.utils.report_api:ReportAPI",
+                "description": "API endpoint for generating PDMP reports"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": [],
+        "questionnaires": [
+            {
+                "template": "templates/pdmp_check_questionnaire.yml"
+            }
+        ]
+    },
+    "secrets": [
+        "PDMP_API_URL",
+        "PDMP_API_USERNAME", 
+        "PDMP_API_PASSWORD",
+        "TEST_PDMP_API_URL",
+        "TEST_PDMP_API_USERNAME",
+        "TEST_PDMP_API_PASSWORD",
+        "all_secrets"
+    ],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
