@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.62.0 (2025-09-09)
+
+### Features
+
+- Remove restriction on setting UUID for note
+  ([#881](https://github.com/canvas-medical/canvas-plugins/pull/881),
+  [`a3a6aa9`](https://github.com/canvas-medical/canvas-plugins/commit/a3a6aa946debb02a80a22d7cb86a2cab598b0ea0))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.61.0 (2025-09-09)
 
 ### Features
