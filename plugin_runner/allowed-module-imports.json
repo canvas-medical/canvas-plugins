@@ -244,17 +244,25 @@
   ],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
+    "CreatePatientPreferredPharmacies",
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
+  ],
+  "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
+    "CreatePatientPreferredPharmacies"
   ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
@@ -532,6 +540,8 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Facility",
+    "Goal",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
@@ -574,6 +584,7 @@
     "PatientConsentRejectionCoding",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientPosting",
     "PatientSetting",
@@ -581,6 +592,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
@@ -594,6 +606,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
     "Task",
@@ -706,6 +719,15 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.facility": [
+    "Facility"
+  ],
+  "canvas_sdk.v1.data.goal": [
+    "Goal",
+    "GoalAchievementStatus",
+    "GoalLifecycleStatus",
+    "GoalPriority"
+  ],
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
@@ -775,6 +797,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientSetting",
     "PatientSettingConstants",
@@ -804,10 +827,18 @@
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
+  "canvas_sdk.v1.data.protocol_current": [
+    "ProtocolCurrent",
+    "ProtocolCurrentStatus"
+  ],
   "canvas_sdk.v1.data.protocol_override": [
     "IntervalUnit",
     "ProtocolOverride",
     "Status"
+  ],
+  "canvas_sdk.v1.data.protocol_result": [
+    "ProtocolResult",
+    "ProtocolResultStatus"
   ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",
@@ -834,6 +865,7 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole"
   ],

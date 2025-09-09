@@ -15,6 +15,8 @@ from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .facility import Facility
+from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
 from .invoice import Invoice
 from .lab import (
@@ -50,6 +52,7 @@ from .patient import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientFacilityAddress,
     PatientMetadata,
     PatientSetting,
 )
@@ -68,6 +71,7 @@ from .posting import (
     PatientPosting,
 )
 from .practicelocation import PracticeLocation, PracticeLocationSetting
+from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
     Interview,
@@ -82,7 +86,7 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
-from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto, StaffRole
+from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .user import CanvasUser
@@ -120,6 +124,8 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Facility",
+    "Goal",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
@@ -159,6 +165,7 @@ __all__ = __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
@@ -169,6 +176,7 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
@@ -181,6 +189,7 @@ __all__ = __exports__ = (
     "ServiceProvider",
     "Staff",
     "StaffAddress",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
     "StaffContactPoint",

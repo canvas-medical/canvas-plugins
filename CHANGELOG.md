@@ -1,6 +1,97 @@
 # CHANGELOG
 
 
+## v0.60.0 (2025-09-08)
+
+### Chores
+
+- **deps**: Bump the production-patches group across 1 directory with 2 updates
+  ([#1006](https://github.com/canvas-medical/canvas-plugins/pull/1006),
+  [`ab6beeb`](https://github.com/canvas-medical/canvas-plugins/commit/ab6beebcc942913f3a27d3ecdfd47e04d03e9ee4))
+
+### Features
+
+- Add ProtocolCurrent, Facility, and PatientFacilityAddress to data module
+  ([#890](https://github.com/canvas-medical/canvas-plugins/pull/890),
+  [`d13a382`](https://github.com/canvas-medical/canvas-plugins/commit/d13a3827016c9519517a152313dc1449d57d9fa9))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Implement CreatePatientPreferredPharmacies effect
+  ([#843](https://github.com/canvas-medical/canvas-plugins/pull/843),
+  [`3ad5975`](https://github.com/canvas-medical/canvas-plugins/commit/3ad597558f67d4da8a6409176d74b51969b4f0b8))
+
+- Implement update patient effect
+  ([#874](https://github.com/canvas-medical/canvas-plugins/pull/874),
+  [`083339a`](https://github.com/canvas-medical/canvas-plugins/commit/083339aed76a5629edee722ad7f3dae9c1ca8ea4))
+
+- Staff license ([#1012](https://github.com/canvas-medical/canvas-plugins/pull/1012),
+  [`636a2df`](https://github.com/canvas-medical/canvas-plugins/commit/636a2df004dba0ff8fe2ac484f7e4da64000a944))
+
+
+## v0.59.0 (2025-09-03)
+
+### Bug Fixes
+
+- Ensure CONVERTED notes are considered editable
+  ([#991](https://github.com/canvas-medical/canvas-plugins/pull/991),
+  [`0119518`](https://github.com/canvas-medical/canvas-plugins/commit/0119518d1d58ab67009f40a4b6d2a47c0d1a4366))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+### Chores
+
+- Add image to example patient portal plugin
+  ([#983](https://github.com/canvas-medical/canvas-plugins/pull/983),
+  [`73bae45`](https://github.com/canvas-medical/canvas-plugins/commit/73bae45b07c760c123d38ea794fd37b38f2a1fb0))
+
+Signed-off-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Remove data_access from example manifests
+  ([#986](https://github.com/canvas-medical/canvas-plugins/pull/986),
+  [`73068c8`](https://github.com/canvas-medical/canvas-plugins/commit/73068c8275d9ec82138fda94b0df4c77686302f3))
+
+### Features
+
+- Add goal to data module ([#873](https://github.com/canvas-medical/canvas-plugins/pull/873),
+  [`8fd0933`](https://github.com/canvas-medical/canvas-plugins/commit/8fd0933eabaed62822292cc7cd435b6480fbe2d3))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
+## v0.58.1 (2025-08-26)
+
+### Bug Fixes
+
+- **cli**: Include plugin template test package
+  ([#967](https://github.com/canvas-medical/canvas-plugins/pull/967),
+  [`3e40473`](https://github.com/canvas-medical/canvas-plugins/commit/3e40473cf0f7251f3269c9aa904a87ce93f37c65))
+
+
+## v0.58.0 (2025-08-26)
+
+### Features
+
+- **cli**: Add local database support to the run-plugin cli command
+  ([#859](https://github.com/canvas-medical/canvas-plugins/pull/859),
+  [`8c6417a`](https://github.com/canvas-medical/canvas-plugins/commit/8c6417acdaf6b11cdb6d2e96ce169adf6810d10d))
+
+- **tests**: Add test utilities package
+  ([#842](https://github.com/canvas-medical/canvas-plugins/pull/842),
+  [`ba7f406`](https://github.com/canvas-medical/canvas-plugins/commit/ba7f406a62844432103d740ea74e02737e2b2bcf))
+
+
+## v0.57.1 (2025-08-25)
+
+### Bug Fixes
+
+- Set size maximums for gRPC messages
+  ([#914](https://github.com/canvas-medical/canvas-plugins/pull/914),
+  [`82cc22d`](https://github.com/canvas-medical/canvas-plugins/commit/82cc22d834da4420986cfed87f570471c8ff4973))
+
+
 ## v0.57.0 (2025-08-24)
 
 ### Chores
