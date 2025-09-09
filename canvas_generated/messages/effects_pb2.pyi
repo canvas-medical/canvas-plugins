@@ -236,6 +236,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_SCHEDULE_EVENT: _ClassVar[EffectType]
     DELETE_SCHEDULE_EVENT: _ClassVar[EffectType]
     CREATE_PATIENT: _ClassVar[EffectType]
+    UPDATE_PATIENT: _ClassVar[EffectType]
     CREATE_MESSAGE: _ClassVar[EffectType]
     SEND_MESSAGE: _ClassVar[EffectType]
     CREATE_AND_SEND_MESSAGE: _ClassVar[EffectType]
@@ -243,6 +244,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
     UPSERT_PATIENT_METADATA: _ClassVar[EffectType]
     CREATE_PATIENT_EXTERNAL_IDENTIFIER: _ClassVar[EffectType]
+    CREATE_PATIENT_PREFERRED_PHARMACIES: _ClassVar[EffectType]
     CREATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
     UPDATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
     PATIENT_CHART__GROUP_ITEMS: _ClassVar[EffectType]
@@ -483,6 +485,7 @@ CREATE_SCHEDULE_EVENT: EffectType
 UPDATE_SCHEDULE_EVENT: EffectType
 DELETE_SCHEDULE_EVENT: EffectType
 CREATE_PATIENT: EffectType
+UPDATE_PATIENT: EffectType
 CREATE_MESSAGE: EffectType
 SEND_MESSAGE: EffectType
 CREATE_AND_SEND_MESSAGE: EffectType
@@ -490,6 +493,7 @@ EDIT_MESSAGE: EffectType
 PATIENT_METADATA__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_PATIENT_METADATA: EffectType
 CREATE_PATIENT_EXTERNAL_IDENTIFIER: EffectType
+CREATE_PATIENT_PREFERRED_PHARMACIES: EffectType
 CREATE_COMPOUND_MEDICATION: EffectType
 UPDATE_COMPOUND_MEDICATION: EffectType
 PATIENT_CHART__GROUP_ITEMS: EffectType

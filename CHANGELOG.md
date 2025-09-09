@@ -1,6 +1,36 @@
 # CHANGELOG
 
 
+## v0.60.0 (2025-09-08)
+
+### Chores
+
+- **deps**: Bump the production-patches group across 1 directory with 2 updates
+  ([#1006](https://github.com/canvas-medical/canvas-plugins/pull/1006),
+  [`ab6beeb`](https://github.com/canvas-medical/canvas-plugins/commit/ab6beebcc942913f3a27d3ecdfd47e04d03e9ee4))
+
+### Features
+
+- Add ProtocolCurrent, Facility, and PatientFacilityAddress to data module
+  ([#890](https://github.com/canvas-medical/canvas-plugins/pull/890),
+  [`d13a382`](https://github.com/canvas-medical/canvas-plugins/commit/d13a3827016c9519517a152313dc1449d57d9fa9))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Implement CreatePatientPreferredPharmacies effect
+  ([#843](https://github.com/canvas-medical/canvas-plugins/pull/843),
+  [`3ad5975`](https://github.com/canvas-medical/canvas-plugins/commit/3ad597558f67d4da8a6409176d74b51969b4f0b8))
+
+- Implement update patient effect
+  ([#874](https://github.com/canvas-medical/canvas-plugins/pull/874),
+  [`083339a`](https://github.com/canvas-medical/canvas-plugins/commit/083339aed76a5629edee722ad7f3dae9c1ca8ea4))
+
+- Staff license ([#1012](https://github.com/canvas-medical/canvas-plugins/pull/1012),
+  [`636a2df`](https://github.com/canvas-medical/canvas-plugins/commit/636a2df004dba0ff8fe2ac484f7e4da64000a944))
+
+
 ## v0.59.0 (2025-09-03)
 
 ### Bug Fixes
