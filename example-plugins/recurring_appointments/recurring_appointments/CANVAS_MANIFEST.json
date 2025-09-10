@@ -2,20 +2,16 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "recurring_appointments",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "Adds recurring appointment functionality with daily, weekly, and monthly recurrence options that automatically creates follow-up appointments",
     "components": {
         "protocols": [
             {
                 "class": "recurring_appointments.handlers.recurrence:AppointmentRecurrence",
-                "description": "A protocol that does xyz..."
+                "description": "Automatically creates recurring appointments based on recurrence metadata when an appointment is created"
             },
             {
                 "class": "recurring_appointments.handlers.form:AppointmentFormFields",
-                "description": "A protocol that does xyz..."
-            },
-            {
-                "class": "recurring_appointments.handlers.form:AppointmentProviderFormField",
-                "description": "A protocol that does xyz..."
+                "description": "Adds a recurrence dropdown field to appointment forms with daily, weekly, and monthly options"
             }
         ],
         "commands": [],
