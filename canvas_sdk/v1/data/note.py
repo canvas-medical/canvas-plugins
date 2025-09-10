@@ -183,6 +183,7 @@ class Note(IdentifiableModel):
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     datetime_of_service = models.DateTimeField()
     place_of_service = models.CharField(max_length=255)
+    encounter_uuid = models.UUIDField()
 
     def get_claim(self) -> Claim | None:
         """
