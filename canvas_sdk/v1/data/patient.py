@@ -72,6 +72,9 @@ class Patient(Model):
     biological_race_codes = ArrayField(
         models.CharField(max_length=100, default="", blank=True), default=list, blank=True
     )
+    cultural_ethnicity_codes = ArrayField(
+        models.CharField(max_length=100, default="", blank=True), default=list, blank=True
+    )
     last_known_timezone = models.CharField(max_length=32, null=True, blank=True)
     mrn = models.CharField(max_length=9, unique=True, default=generate_mrn)
     active = models.BooleanField(default=True)
