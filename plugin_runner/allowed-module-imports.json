@@ -540,6 +540,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Encounter",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -718,6 +719,11 @@
   ],
   "canvas_sdk.v1.data.discount": [
     "Discount"
+  ],
+  "canvas_sdk.v1.data.encounter": [
+    "Encounter",
+    "EncounterMedium",
+    "EncounterState"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"
