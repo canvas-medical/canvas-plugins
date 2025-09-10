@@ -18,6 +18,12 @@ from .discount import Discount
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .immunization import (
+    Immunization,
+    ImmunizationCoding,
+    ImmunizationStatement,
+    ImmunizationStatementCoding,
+)
 from .invoice import Invoice
 from .lab import (
     LabOrder,
@@ -130,6 +136,10 @@ __all__ = __exports__ = (
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
+    "Immunization",
+    "ImmunizationCoding",
+    "ImmunizationStatement",
+    "ImmunizationStatementCoding",
     "InstallmentPlan",
     "Interview",
     "InterviewQuestionnaireMap",
