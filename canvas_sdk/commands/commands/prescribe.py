@@ -156,10 +156,8 @@ class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
                 str(Decimal(self.quantity_to_dispense)) if self.quantity_to_dispense else None
             )
 
-        values["compound_medication_values"] = {}
-
         if self.is_dirty("compound_medication_id") and self.compound_medication_id:
-            values["compound_medication_values"]["id"] = values.pop("compound_medication_id")
+            values["compound_medication_values"] = {"id": values.pop("compound_medication_id")}
 
         # Handle compound medication data
         elif (
@@ -169,9 +167,6 @@ class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
             compound_data = values.pop("compound_medication_data")
             if isinstance(compound_data, CompoundMedicationData):
                 values["compound_medication_values"] = compound_data.to_dict()
-
-        if values.get("fdb_code") is not None and values.get("compound_medication_values") == {}:
-            del values["compound_medication_values"]
 
         return values
 
