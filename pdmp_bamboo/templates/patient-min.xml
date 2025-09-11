@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatientRequest xmlns="http://xml.appriss.com/gateway/v5_1">
+  <Requester>
+    <Provider>
+      <Role>Physician</Role>
+    </Provider>
+    <Location>
+      <Name>Canvas Test Site</Name>
+      <DEANumber>AB1234579</DEANumber>
+      <NPINumber>0123456789</NPINumber>
+      <Address>
+        <StateCode>KS</StateCode>
+      </Address>
+    </Location>
+  </Requester>
+  <PrescriptionRequest>
+    <Patient>
+      <Name>
+        <First>Alice</First>
+        <Last>Testpatient</Last>
+      </Name>
+      <Birthdate>1950-01-01</Birthdate>
+      <Address>
+        <ZipCode>67203</ZipCode>
+      </Address>
+    </Patient>
+  </PrescriptionRequest>
+</PatientRequest>
