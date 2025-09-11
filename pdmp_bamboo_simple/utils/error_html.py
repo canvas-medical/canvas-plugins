@@ -20,8 +20,6 @@ def create_error_html(errors: List[str], title: str = "PDMP Request Errors") -> 
     Returns:
         HTML string with simple error display
     """
-    log.info(f"PDMP-ErrorHTML: Creating error HTML with {len(errors)} errors")
-
     if not errors:
         return create_simple_message_html("No errors to display", "✅", "#2e7d32")
 
@@ -130,7 +128,6 @@ def create_data_validation_html(missing_data: List[str], available_data: dict = 
     </div>
     """
 
-    log.info(f"PDMP-ErrorHTML: Created data validation HTML ({len(html)} characters)")
     return html
 
 

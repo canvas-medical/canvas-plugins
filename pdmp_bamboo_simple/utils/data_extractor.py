@@ -28,24 +28,14 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
     errors = []
 
     try:
-        log.info(
-            f"PDMP-DataExtractor: Starting patient data extraction for patient_id={patient_id}"
-        )
-
         patient = Patient.objects.get(id=patient_id)
-        log.info(f"PDMP-DataExtractor: Successfully retrieved patient: {patient}")
-
-        # Get patient address (sandbox-safe)
         address = None
         try:
             addresses = patient.addresses
             if addresses.all():
                 address = addresses.first()
-                log.info(f"PDMP-DataExtractor: Found patient address: {address}")
         except AttributeError:
             log.info("PDMP-DataExtractor: Patient has no addresses attribute")
-
-        # Normalize sex code for PDMP (sandbox-safe)
         try:
             sex_code = patient.sex_at_birth or ""
         except AttributeError:
@@ -58,9 +48,8 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
         elif sex_code.upper() in ["FEMALE", "F"]:
             sex_code = "F"
         else:
-            sex_code = "U"  # Default to unknown for PDMP
+            sex_code = "U"
 
-        # Build patient data for PDMP XML (sandbox-safe attribute access)
         patient_data = {
             "id": _safe_get_attr(patient, "id", ""),
             "first_name": _safe_get_attr(patient, "first_name", "") or "",
@@ -74,7 +63,6 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
             "mrn": _safe_get_attr(patient, "mrn", "") or "",
         }
 
-        # Check for required fields (based on PDMP working sample requirements)
         if not patient_data["first_name"]:
             errors.append(
                 "❌ Patient first name is REQUIRED - Please update patient demographics in Canvas"
@@ -147,14 +135,8 @@ def extract_practitioner_data(
         return None, errors
 
     try:
-        log.info(
-            f"PDMP-DataExtractor: Starting practitioner data extraction for practitioner_id={practitioner_id}"
-        )
-
         staff = Staff.objects.get(id=practitioner_id)
-        log.info(f"PDMP-DataExtractor: Successfully retrieved staff: {staff}")
 
-        # Get DEA number - try multiple possible field names (sandbox-safe)
         dea_number = ""
         try:
             nadean_number = staff.nadean_number
@@ -171,7 +153,6 @@ def extract_practitioner_data(
             except AttributeError:
                 pass
 
-        # Try to extract license information (sandbox-safe)
         license_number = ""
         license_type = ""
         license_state = ""
@@ -210,7 +191,6 @@ def extract_practitioner_data(
             "license_state": license_state,
         }
 
-        # Check for required fields (based on PDMP working sample requirements)
         has_identifier = bool(practitioner_data["npi_number"] or practitioner_data["dea_number"])
 
         if not has_identifier:
@@ -236,9 +216,6 @@ def extract_practitioner_data(
                 "ℹ️ INFO: DEA found but no NPI number - Consider adding NPI to practitioner profile"
             )
 
-        log.info(
-            f"PDMP-DataExtractor: Practitioner data extracted: {practitioner_data['first_name']} {practitioner_data['last_name']} (NPI: {practitioner_data['npi_number']})"
-        )
         return practitioner_data, errors
 
     except Staff.DoesNotExist:
@@ -265,8 +242,6 @@ def extract_organization_data() -> Tuple[Optional[Dict[str, Any]], List[str]]:
     errors = []
 
     try:
-        log.info("PDMP-DataExtractor: Starting organization data extraction")
-
         # Try to get the main organization first
         organization = Organization.objects.filter(active=True).first()
         if not organization:
@@ -344,10 +319,6 @@ def extract_all_data_for_pdmp(
         - all_data: Dict with all extracted data (None if critical extraction fails)
         - errors: List of all validation error messages
     """
-    log.info(
-        f"PDMP-DataExtractor: Starting comprehensive data extraction for PDMP request - patient_id={patient_id}, practitioner_id={practitioner_id}"
-    )
-
     all_errors = []
 
     try:

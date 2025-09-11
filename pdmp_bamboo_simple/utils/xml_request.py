@@ -12,7 +12,7 @@ import time
 from typing import Dict, Any, Optional
 from logger import log
 
-from pdmp_bamboo.utils.secrets_helper import get_secrets_for_environment
+from pdmp_bamboo_simple.utils.secrets_helper import get_secrets_for_environment
 
 
 def send_pdmp_request(
