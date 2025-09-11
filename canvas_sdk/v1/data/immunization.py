@@ -118,7 +118,9 @@ class ImmunizationStatement(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="immunization_statements", null=True
     )
-    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="immunization_statements")
+    note = models.ForeignKey(
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="immunization_statements"
+    )
     date_original = models.CharField(max_length=50, blank=True, default="")
     date = models.DateField(null=True)
     evidence = models.CharField(max_length=255, blank=True, default="")
@@ -129,6 +131,7 @@ class ImmunizationStatement(IdentifiableModel):
         default=ImmunizationReasonsNotGiven.NA,
     )
     deleted = models.BooleanField()
+
 
 class ImmunizationStatementCoding(Model):
     """ImmunizationStatementCoding."""
