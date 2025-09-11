@@ -583,8 +583,8 @@
     "ImmunizationStatementCoding",
     "InstallmentPlan",
     "Interview",
-    "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
+    "InterviewQuestionnaireMap",
     "Invoice",
     "LabOrder",
     "LabOrderReason",
@@ -769,6 +769,14 @@
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview"
+  ],
+  "canvas_sdk.v1.data.immunization": [
+    "Immunization",
+    "ImmunizationCoding",
+    "ImmunizationReasonsNotGiven",
+    "ImmunizationStatement",
+    "ImmunizationStatementCoding",
+    "ImmunizationStatus"
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
