@@ -50,7 +50,7 @@ class AppointmentProviderFormField(BaseHandler):
             provider_options = []
 
             for provider in providers:
-                if staff_provider := Staff.objects.filter(dbid=provider["value"]).first():
+                if staff_provider := Staff.objects.filter(id=provider["value"]).first():
                     if staff_provider.licenses.filter(state=state_selected).exists():
                          provider_options.append(provider)
 
