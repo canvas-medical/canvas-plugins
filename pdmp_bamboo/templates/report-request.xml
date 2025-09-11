@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReportRequest xmlns="http://xml.appriss.com/gateway/v5_1">
+  <Requester>
+    <Provider>
+      <Role>Physician</Role>
+      <FirstName>Jon</FirstName>
+      <LastName>Doe</LastName>
+      <DEANumber>AB1234579</DEANumber>
+    </Provider>
+    <Location>
+      <Name>Canvas Test Site</Name>
+      <DEANumber>AB1234579</DEANumber>
+      <Address>
+        <StateCode>KS</StateCode>
+      </Address>
+    </Location>
+  </Requester>
+</ReportRequest>
