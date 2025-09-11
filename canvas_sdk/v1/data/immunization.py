@@ -116,9 +116,9 @@ class ImmunizationStatement(IdentifiableModel):
     objects = cast(ImmunizationStatementQuerySet, ImmunizationStatementManager())
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="immunizations", null=True
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="immunization_statements", null=True
     )
-    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="immunizations")
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="immunization_statements")
     date_original = models.CharField(max_length=50, blank=True, default="")
     date = models.DateField(null=True)
     evidence = models.CharField(max_length=255, blank=True, default="")
