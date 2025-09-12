@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.note.appointment import Appointment
+from canvas_sdk.effects.note.appointment import Appointment, AppointmentExternalIdentifier
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPIRoute
 from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
@@ -26,15 +26,24 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
         appointments = AppointmentData.objects.filter(note_id=note_dbid)
         # or this can be a UUID if you have it
         # appointment = AppointmentData.objects.get(note__id=note_uuid)
-        if not appointments:
-            return [Response(status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"})]
-
         # the current appointment is the last one after any reschedules / updates
         appointment = appointments.last()
+
         if not appointment:
             return [Response(status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"})]
 
+        # set up the meeting effect to update the appointment
         appointment_effect = Appointment(instance_id=appointment.id)
+
+        # add the meeting link to the appointment
         appointment_effect.meeting_link = meeting_link
+
+        # let's also add some external identifiers for fun
+        # for example, this could be an ID from an external scheduling system
+        external_identifiers=[
+            AppointmentExternalIdentifier(system="https://www.example.com", value="123TEST")
+        ]
+
+        appointment_effect.external_identifiers = external_identifiers
 
         return [appointment_effect.update(), Response(status_code=HTTPStatus.ACCEPTED)]
