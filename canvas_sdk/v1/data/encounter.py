@@ -17,10 +17,10 @@ class EncounterMedium(models.TextChoices):
 class EncounterState(models.TextChoices):
     """Encounter state."""
 
-    ENCOUNTER_STATE_STARTED = "STA", "Started"
-    ENCOUNTER_STATE_PLANNED = "PLA", "Planned"
-    ENCOUNTER_STATE_CONCLUDED = "CON", "Concluded"
-    ENCOUNTER_STATE_CANCELLED = "CAN", "Cancelled"
+    STARTED = "STA", "Started"
+    PLANNED = "PLA", "Planned"
+    CONCLUDED = "CON", "Concluded"
+    CANCELLED = "CAN", "Cancelled"
 
 
 class Encounter(IdentifiableModel):
