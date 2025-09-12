@@ -3,17 +3,17 @@ from http import HTTPStatus
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.appointment import Appointment
 from canvas_sdk.effects.simple_api import Response
-from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, Credentials, SimpleAPIRoute
+from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPIRoute
 from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
 
-# PUT /plugin-io/api/appointment_updater/appointments/<id>
+# PUT /plugin-io/api/api_samples/appointments/<id>
 # Headers: "Authorization <your value for 'my-api-key'>"
 
 # Authentication is handled by the APIKeyAuthMixin, which checks the API key in the request headers
 # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#api-key-1
 
 class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
-    """API for managing appointments."""
+    """API for managing appointment updates."""
     PATH = "/appointments/<id>"
 
     def put(self) -> list[Response | Effect]:
