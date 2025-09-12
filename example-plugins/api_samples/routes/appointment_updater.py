@@ -1,7 +1,8 @@
 from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.note.appointment import Appointment, AppointmentExternalIdentifier
+from canvas_sdk.effects.note.appointment import Appointment
+from canvas_sdk.effects.note.base import AppointmentIdentifier
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPIRoute
 from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
@@ -41,7 +42,7 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
         # let's also add some external identifiers for fun
         # for example, this could be an ID from an external scheduling system
         external_identifiers=[
-            AppointmentExternalIdentifier(system="https://www.example.com", value="123TEST")
+            AppointmentIdentifier(system="https://www.example.com", value="123TEST")
         ]
 
         appointment_effect.external_identifiers = external_identifiers
