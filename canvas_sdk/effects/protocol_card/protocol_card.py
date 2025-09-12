@@ -22,13 +22,15 @@ class Recommendation(BaseModel):
     @property
     def values(self) -> dict:
         """The ProtocolCard recommendation's values."""
-        return {
+        base = {
             "title": self.title,
             "button": self.button,
             "href": self.href,
-            "command": {"type": self.command} if self.command else {},
             "context": self.context or {},
         }
+        if self.command:
+            base["command"] = {"type": self.command}
+        return base
 
 
 class ProtocolCard(_BaseEffect):
