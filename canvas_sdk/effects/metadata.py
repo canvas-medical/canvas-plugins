@@ -21,3 +21,6 @@ class BaseMetadata(TrackableFieldsModel):
                 }
             ),
         )
+
+
+__exports__ = ()
