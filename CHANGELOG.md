@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v0.63.0 (2025-09-15)
+
+### Features
+
+- Add Immunization related models
+  ([#1019](https://github.com/canvas-medical/canvas-plugins/pull/1019),
+  [`f6c6531`](https://github.com/canvas-medical/canvas-plugins/commit/f6c6531c91999f1ab279ed464534ed2829b23c79))
+
+- Appointment metadata, form fields and recurrence
+  ([#1004](https://github.com/canvas-medical/canvas-plugins/pull/1004),
+  [`e9b794c`](https://github.com/canvas-medical/canvas-plugins/commit/e9b794cdf5d5e0cbb00dfb26a5ba5cd6d9960615))
+
+Co-authored-by: Miguel Quintas <miguel.quintas@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Generate full chart pdf effect ([#980](https://github.com/canvas-medical/canvas-plugins/pull/980),
+  [`12fb52f`](https://github.com/canvas-medical/canvas-plugins/commit/12fb52ff77061c5b088de71336cddfe330c25eb6))
+
+- Implement context change events for plugin applications
+  ([#995](https://github.com/canvas-medical/canvas-plugins/pull/995),
+  [`8dcd36b`](https://github.com/canvas-medical/canvas-plugins/commit/8dcd36b3258a450907c30910457971c38f904ef4))
+
+- **example-plugins**: Ai note titles KOALA-3178
+  ([#897](https://github.com/canvas-medical/canvas-plugins/pull/897),
+  [`046af73`](https://github.com/canvas-medical/canvas-plugins/commit/046af73be5844de98fabfe5391ac2671f38842b8))
+
+
 ## v0.62.0 (2025-09-09)
 
 ### Features
