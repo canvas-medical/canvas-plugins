@@ -2,21 +2,21 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from canvas_sdk.effects import _BaseEffect
+from canvas_sdk.effects import EffectType, _BaseEffect
 
 
 class CalendarType(StrEnum):
     """Calendar type."""
 
     Clinic = "Clinic"
-    Admnistrative = "Admin"
+    Administrative = "Admin"
 
 
 class CreateCalendar(_BaseEffect):
     """Effect to create a Calendar."""
 
     class Meta:
-        effect_type = "CALENDAR__CREATE"
+        effect_type = EffectType.CALENDAR__CREATE
 
     id: str | UUID | None = None
     provider: str | UUID
@@ -32,3 +32,9 @@ class CreateCalendar(_BaseEffect):
             "type": self.type,
             "description": self.description,
         }
+
+
+__exports__ = (
+    "CreateCalendar",
+    "CalendarType",
+)

@@ -212,6 +212,14 @@
     "CreateEvent",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.calendar.create_calendar": [
+    "CalendarType",
+    "CreateCalendar"
+  ],
+  "canvas_sdk.effects.calendar.create_event": [
+    "CreateEvent",
+    "EventRecurrence"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],

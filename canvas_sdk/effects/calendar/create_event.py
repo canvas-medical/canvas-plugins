@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from canvas_sdk.effects import _BaseEffect
+from canvas_sdk.effects import EffectType, _BaseEffect
 
 
 class EventRecurrence(StrEnum):
@@ -17,7 +17,7 @@ class CreateEvent(_BaseEffect):
     """Effect to create a Calendar event."""
 
     class Meta:
-        effect_type = "CALENDAR__EVENT__CREATE"
+        effect_type = EffectType.CALENDAR__EVENT__CREATE
 
     calendar_id: str | UUID
     title: str
@@ -35,3 +35,9 @@ class CreateEvent(_BaseEffect):
             "ends_at": self.ends_at.isoformat(),
             "recurrence": self.recurrence,
         }
+
+
+__exports__ = (
+    "CreateEvent",
+    "EventRecurrence",
+)
