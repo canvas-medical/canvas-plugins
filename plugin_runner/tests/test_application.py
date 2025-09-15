@@ -13,6 +13,10 @@ class ExampleApplication(Application):
         """Handle the application open event by returning a mock effect."""
         return LaunchModalEffect(url="https://example.com").apply()
 
+    def on_context_change(self) -> Effect | None:
+        """Handle the application context change event by returning a mock effect."""
+        return LaunchModalEffect(url="https://example.com/context").apply()
+
 
 @pytest.fixture
 def app_instance(event: Event) -> ExampleApplication:
@@ -63,3 +67,28 @@ def test_abstract_method_on_open() -> None:
     """Test that the abstract method on_open must be implemented."""
     with pytest.raises(TypeError):
         Application(Event(EventRequest(type=EventType.UNKNOWN)))  # type: ignore[abstract]
+
+
+def test_compute_context_change_event_not_targeted() -> None:
+    """Test that compute filters out context change events not targeted for the app."""
+    request = EventRequest(type=EventType.APPLICATION__ON_CONTEXT_CHANGE, target="some_identifier")
+    event = Event(request)
+    app = ExampleApplication(event)
+
+    result = app.compute()
+
+    assert result == [], "Expected no effects if the event target is not the app identifier"
+
+
+def test_compute_context_change_event_targeted() -> None:
+    """Test that compute processes context change events targeted for the app."""
+    request = EventRequest(
+        type=EventType.APPLICATION__ON_CONTEXT_CHANGE,
+        target=f"{ExampleApplication.__module__}:{ExampleApplication.__qualname__}",
+    )
+    event = Event(request)
+    app = ExampleApplication(event)
+    result = app.compute()
+
+    assert len(result) == 1, "Expected a single effect if the event target is the app identifier"
+    assert isinstance(result[0], Effect), "Effect should be an instance of Effect"
