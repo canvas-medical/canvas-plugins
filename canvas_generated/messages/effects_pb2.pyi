@@ -269,6 +269,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: _ClassVar[EffectType]
     GENERATE_FULL_CHART_PDF: _ClassVar[EffectType]
+    CALENDAR__CREATE: _ClassVar[EffectType]
+    CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -531,6 +533,8 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: EffectType
 GENERATE_FULL_CHART_PDF: EffectType
+CALENDAR__CREATE: EffectType
+CALENDAR__EVENT__CREATE: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
