@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "recurring_appointments",
+    "description": "Adds recurring appointment functionality with daily, weekly, and monthly recurrence options that automatically creates follow-up appointments",
+    "components": {
+        "protocols": [
+            {
+                "class": "recurring_appointments.handlers.recurrence:AppointmentRecurrence",
+                "description": "Automatically creates recurring appointments based on recurrence metadata when an appointment is created"
+            },
+            {
+                "class": "recurring_appointments.handlers.form:AppointmentFormFields",
+                "description": "Adds a recurrence dropdown field to appointment forms with daily, weekly, and monthly options"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

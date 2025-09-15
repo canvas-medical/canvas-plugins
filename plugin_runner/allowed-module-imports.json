@@ -178,6 +178,20 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.appointments_metadata": [
+    "AppointmentsMetadata",
+    "AppointmentsMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.appointments_metadata.appointments_metadata_create_form": [
+    "AppointmentsMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.appointments_metadata.base": [
+    "AppointmentsMetadata"
+  ],
   "canvas_sdk.effects.banner_alert": [
     "AddBannerAlert",
     "RemoveBannerAlert"
@@ -529,6 +543,7 @@
     "AllergyIntoleranceCoding",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "Assessment",
     "BannerAlert",
     "BasePosting",
@@ -643,6 +658,7 @@
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "AppointmentProgressStatus"
   ],
   "canvas_sdk.v1.data.assessment": [
