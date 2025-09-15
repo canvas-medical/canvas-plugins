@@ -116,7 +116,10 @@ class MedicationHistoryResponse(IdentifiableModel):
     modified = models.DateTimeField(auto_now=True)
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="medication_history_responses", null=True
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        related_name="medication_history_responses",
+        null=True,
     )
     staff = models.ForeignKey(
         "v1.Staff",
