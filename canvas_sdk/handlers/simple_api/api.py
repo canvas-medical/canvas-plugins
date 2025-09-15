@@ -1,7 +1,6 @@
 import inspect
 import json
 import re
-import traceback
 from abc import ABC
 from base64 import b64decode
 from collections.abc import Callable
@@ -323,9 +322,7 @@ class SimpleAPIBase(BaseHandler, ABC):
             else:
                 raise AssertionError(f"Cannot handle event type {EventType.Name(self.event.type)}")
         except Exception as exception:
-            for error_line_with_newlines in traceback.format_exception(exception):
-                for error_line in error_line_with_newlines.split("\n"):
-                    log.error(error_line)
+            log.exception(f"Error handling '{EventType.Name(self.event.type)}' event")
 
             sentry_sdk.capture_exception(exception)
 

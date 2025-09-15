@@ -1,27 +1,11 @@
 import logging
-import os
 from typing import Any
 
-import redis
+from django.conf import settings
+from logstash_async.handler import AsynchronousLogstashHandler
 
-from pubsub.pubsub import Publisher
-
-
-class PubSubLogHandler(logging.Handler):
-    """Custom logging handler that publishes logs to a pub/sub channel."""
-
-    def __init__(self) -> None:
-        self.publisher = Publisher()
-        logging.Handler.__init__(self=self)
-
-    def emit(self, record: Any) -> None:
-        """Publishes the log message to the pub/sub channel."""
-        message = self.format(record)
-
-        try:
-            self.publisher.publish(message)
-        except redis.ConnectionError as e:
-            print(f"PubSubLogHandler: failed to log message due to redis error: {e}")
+from logger.logstash import LogstashFormatterV1
+from logger.pubsub import PubSubLogHandler
 
 
 class PluginLogger:
@@ -37,7 +21,7 @@ class PluginLogger:
             log_prefix = f"[{log_prefix}] "
 
         formatter = logging.Formatter(
-            f"plugin_runner {log_prefix}%(levelname)s %(asctime)s %(message)s"
+            f"plugin-runner {log_prefix}%(levelname)s %(asctime)s %(message)s"
         )
 
         streaming_handler = logging.StreamHandler()
@@ -45,29 +29,43 @@ class PluginLogger:
 
         self.logger.addHandler(streaming_handler)
 
-        if os.getenv("REDIS_ENDPOINT"):
+        if settings.REDIS_ENDPOINT:
             pubsub_handler = PubSubLogHandler()
             pubsub_handler.setFormatter(formatter)
 
             self.logger.addHandler(pubsub_handler)
 
-    def debug(self, message: Any) -> None:
+        if settings.LOGSTASH_HOST:
+            logstash_handler = AsynchronousLogstashHandler(
+                host=settings.LOGSTASH_HOST,
+                port=settings.LOGSTASH_PORT,
+                database_path=None,
+                transport=settings.LOGSTASH_PROTOCOL,
+            )
+            logstash_handler.setFormatter(LogstashFormatterV1())
+            self.logger.addHandler(logstash_handler)
+
+    def debug(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a debug message."""
-        self.logger.debug(message)
+        self.logger.debug(message, *args, **kwargs)
 
-    def info(self, message: Any) -> None:
+    def info(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs an info message."""
-        self.logger.info(message)
+        self.logger.info(message, *args, **kwargs)
 
-    def warning(self, message: Any) -> None:
+    def warning(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a warning message."""
-        self.logger.warning(message)
+        self.logger.warning(message, *args, **kwargs)
 
-    def error(self, message: Any) -> None:
+    def error(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs an error message."""
-        self.logger.error(message)
+        self.logger.error(message, *args, **kwargs)
 
-    def critical(self, message: Any) -> None:
+    def exception(self, message: Any, *args: Any, **kwargs: Any) -> None:
+        """Convenience method for logging an ERROR with exception information."""
+        self.logger.exception(message, *args, **kwargs)
+
+    def critical(self, message: Any, *args: Any, **kwargs: Any) -> None:
         """Logs a critical message."""
         self.logger.critical(message)
 
