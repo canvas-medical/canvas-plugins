@@ -93,7 +93,7 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
-from .staff import Staff, StaffAddress, StaffContactPoint, StaffPhoto, StaffRole, StaffRole
+from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
