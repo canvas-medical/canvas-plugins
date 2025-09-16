@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "appointment_state_field",
+    "description": "Adds a US state selection field to appointment forms and filters available providers based on their licensing in the selected state",
+    "components": {
+        "protocols": [
+            {
+                "class": "appointment_state_field.handlers.form:AppointmentFormFields",
+                "description": "Adds a US state dropdown field to appointment forms"
+            },
+            {
+                "class": "appointment_state_field.handlers.form:AppointmentProviderFormField",
+                "description": "Filters available providers based on their licensing in the selected state"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

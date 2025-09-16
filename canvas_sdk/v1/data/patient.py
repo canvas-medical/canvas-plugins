@@ -116,13 +116,6 @@ class Patient(Model):
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
-    @property
-    def full_name(self) -> str:
-        """Returns the patient's full name."""
-        return " ".join(
-            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
-        )
-
     def age_at(self, time: arrow.Arrow) -> float:
         """Given a datetime, returns what the patient's age would be at that datetime."""
         age = float(0)
@@ -148,6 +141,13 @@ class Patient(Model):
             return None
 
     @property
+    def full_name(self) -> str:
+        """Returns the patient's full name."""
+        return " ".join(
+            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
+        )
+
+    @property
     def preferred_pharmacy(self) -> dict[str, str] | None:
         """Returns the patient's preferred pharmacy."""
         pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or {}
@@ -159,6 +159,20 @@ class Patient(Model):
         return pharmacy_setting
 
     @property
+    def preferred_pharmacies(self) -> list[dict[str, Any]] | None:
+        """
+        Returns the pharmacy patient setting, a list of dicts of the patient's preferred pharmacies.
+        If the pharmacy setting is currently a dict, make it the default and a list.
+        """
+        pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or []
+        if isinstance(pharmacy_setting, dict):
+            return [{**pharmacy_setting, "default": True}]
+        elif isinstance(pharmacy_setting, list):
+            return pharmacy_setting
+
+        return None
+
+    @property
     def preferred_full_name(self) -> str:
         """Returns the patient's preferred full name, taking nickname into consideration."""
         return " ".join(n for n in (self.preferred_first_name, self.last_name, self.suffix) if n)
@@ -167,6 +181,11 @@ class Patient(Model):
     def preferred_first_name(self) -> str:
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
+
+    @property
+    def primary_phone_number(self) -> PatientContactPoint | None:
+        """Returns the patient's primary phone number, if available."""
+        return (self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")).first()
 
 
 class PatientContactPoint(IdentifiableModel):
@@ -268,10 +287,22 @@ class PatientMetadata(IdentifiableModel):
         db_table = "canvas_sdk_data_api_patientmetadata_001"
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True
+        "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
-    key = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
+
+
+class PatientFacilityAddress(PatientAddress):
+    """PatientFacilityAddress."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientfacilityaddress_001"
+
+    room_number = models.CharField(max_length=100, null=True)
+    facility = models.ForeignKey(
+        "v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True
+    )
 
 
 __exports__ = (
@@ -280,6 +311,7 @@ __exports__ = (
     "Patient",
     "PatientContactPoint",
     "PatientAddress",
+    "PatientFacilityAddress",
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",

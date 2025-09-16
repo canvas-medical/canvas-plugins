@@ -57,6 +57,7 @@ def valid_appointment_data() -> dict[str, Any]:
         "start_time": datetime.datetime.now(),
         "duration_minutes": 30,
         "meeting_link": "https://example.com/meeting",
+        "parent_appointment_id": str(uuid4()),
     }
 
 
@@ -327,3 +328,44 @@ def test_appointment_update_nonexistent_appointment(mock_db_queries: dict[str, M
 
     errors = exc_info.value.errors()
     assert any("Appointment with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def test_create_appointment_parent_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on creation."""
+    same_id = str(uuid4())
+    appointment_data = {
+        **valid_appointment_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    appointment = Appointment(**appointment_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.create()
+
+    errors = exc_info.value.errors()
+    assert any("parent_appointment_id cannot be the same as instance_id" in str(e) for e in errors)
+
+
+def test_update_appointment_parent_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on update."""
+    same_id = str(uuid4())
+    appointment_data = {
+        **valid_appointment_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    appointment = Appointment(**appointment_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.update()
+
+    errors = exc_info.value.errors()
+    assert any(
+        "parent_appointment_id can only be set when creating an appointment." in str(e)
+        for e in errors
+    )

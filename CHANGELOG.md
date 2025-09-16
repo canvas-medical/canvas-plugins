@@ -1,6 +1,86 @@
 # CHANGELOG
 
 
+## v0.63.0 (2025-09-15)
+
+### Features
+
+- Add Immunization related models
+  ([#1019](https://github.com/canvas-medical/canvas-plugins/pull/1019),
+  [`f6c6531`](https://github.com/canvas-medical/canvas-plugins/commit/f6c6531c91999f1ab279ed464534ed2829b23c79))
+
+- Appointment metadata, form fields and recurrence
+  ([#1004](https://github.com/canvas-medical/canvas-plugins/pull/1004),
+  [`e9b794c`](https://github.com/canvas-medical/canvas-plugins/commit/e9b794cdf5d5e0cbb00dfb26a5ba5cd6d9960615))
+
+Co-authored-by: Miguel Quintas <miguel.quintas@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Generate full chart pdf effect ([#980](https://github.com/canvas-medical/canvas-plugins/pull/980),
+  [`12fb52f`](https://github.com/canvas-medical/canvas-plugins/commit/12fb52ff77061c5b088de71336cddfe330c25eb6))
+
+- Implement context change events for plugin applications
+  ([#995](https://github.com/canvas-medical/canvas-plugins/pull/995),
+  [`8dcd36b`](https://github.com/canvas-medical/canvas-plugins/commit/8dcd36b3258a450907c30910457971c38f904ef4))
+
+- **example-plugins**: Ai note titles KOALA-3178
+  ([#897](https://github.com/canvas-medical/canvas-plugins/pull/897),
+  [`046af73`](https://github.com/canvas-medical/canvas-plugins/commit/046af73be5844de98fabfe5391ac2671f38842b8))
+
+
+## v0.62.0 (2025-09-09)
+
+### Features
+
+- Remove restriction on setting UUID for note
+  ([#881](https://github.com/canvas-medical/canvas-plugins/pull/881),
+  [`a3a6aa9`](https://github.com/canvas-medical/canvas-plugins/commit/a3a6aa946debb02a80a22d7cb86a2cab598b0ea0))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.61.0 (2025-09-09)
+
+### Features
+
+- Include effect type in the protocol card recommendation context
+  ([#891](https://github.com/canvas-medical/canvas-plugins/pull/891),
+  [`4d756be`](https://github.com/canvas-medical/canvas-plugins/commit/4d756be60b526133de4c8d4476c08518e07de36e))
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
+## v0.60.0 (2025-09-08)
+
+### Chores
+
+- **deps**: Bump the production-patches group across 1 directory with 2 updates
+  ([#1006](https://github.com/canvas-medical/canvas-plugins/pull/1006),
+  [`ab6beeb`](https://github.com/canvas-medical/canvas-plugins/commit/ab6beebcc942913f3a27d3ecdfd47e04d03e9ee4))
+
+### Features
+
+- Add ProtocolCurrent, Facility, and PatientFacilityAddress to data module
+  ([#890](https://github.com/canvas-medical/canvas-plugins/pull/890),
+  [`d13a382`](https://github.com/canvas-medical/canvas-plugins/commit/d13a3827016c9519517a152313dc1449d57d9fa9))
+
+Co-authored-by: Rui Batista <rui.batista@canvasmedical.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+- Implement CreatePatientPreferredPharmacies effect
+  ([#843](https://github.com/canvas-medical/canvas-plugins/pull/843),
+  [`3ad5975`](https://github.com/canvas-medical/canvas-plugins/commit/3ad597558f67d4da8a6409176d74b51969b4f0b8))
+
+- Implement update patient effect
+  ([#874](https://github.com/canvas-medical/canvas-plugins/pull/874),
+  [`083339a`](https://github.com/canvas-medical/canvas-plugins/commit/083339aed76a5629edee722ad7f3dae9c1ca8ea4))
+
+- Staff license ([#1012](https://github.com/canvas-medical/canvas-plugins/pull/1012),
+  [`636a2df`](https://github.com/canvas-medical/canvas-plugins/commit/636a2df004dba0ff8fe2ac484f7e4da64000a944))
+
+
 ## v0.59.0 (2025-09-03)
 
 ### Bug Fixes
