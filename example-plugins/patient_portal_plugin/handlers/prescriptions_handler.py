@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import json
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
@@ -15,6 +16,7 @@ from logger import log
 
 class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
     """Handler for the Prescriptions plugin."""
+
     PREFIX = "/<id>"
 
     DEFAULT_BACKGROUND_COLOR = "#17634d"
@@ -27,37 +29,77 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
         log.info(f"PrescriptionsHandler GET request for patient ID: {patient_id})")
 
         if not patient_id:
-            return [JSONResponse({"error": "Patient ID is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [
+                JSONResponse(
+                    {"error": "Patient ID is required"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
 
         try:
-            medications = Medication.objects.for_patient(patient_id)
+            medications = list(
+                Medication.objects.for_patient(patient_id).values(
+                    "id",
+                    "quantity_qualifier_description",
+                    "clinical_quantity_description",
+                    "potency_unit_code",
+                    "start_date",
+                    "end_date",
+                    "codings__code",
+                    "codings__display",
+                )
+            )
 
-            for medication in medications:
-                for coding in medication.codings.all():
-                    log.info(f"system:  {coding.system}")
-                    log.info(f"code:    {coding.code}")
-                    log.info(f"display: {coding.display}")
+            medications = [
+                {
+                    "id": str(med["id"]),
+                    "start_date": str(med["start_date"]),
+                    "end_date": str(med["end_date"]),
+                    "codings": [
+                        {
+                            "code": med["codings__code"],
+                            "display": med["codings__display"],
+                        }
+                    ],
+                    "quantity_qualifier_description": med["quantity_qualifier_description"],
+                    "clinical_quantity_description": med["clinical_quantity_description"],
+                    "potency_unit_code": med["potency_unit_code"],
+                }
+                for med in medications
+                if med["codings__display"]
+            ]
 
         except Patient.DoesNotExist:
             return [JSONResponse({"error": "Patient not found"}, status_code=HTTPStatus.NOT_FOUND)]
         except Medication.DoesNotExist:
-            return [JSONResponse({"error": "No medications found for this patient"}, status_code=HTTPStatus.NOT_FOUND)]
+            return [
+                JSONResponse(
+                    {"error": "No medications found for this patient"},
+                    status_code=HTTPStatus.NOT_FOUND,
+                )
+            ]
 
-        medications = [{ "id": medication.id, "coding": medication.codings.first() } for medication in medications]
+        log.info(f"Medications found for patient {patient_id}: {medications}")
 
         return [
-            LaunchModalEffect(
-                content=render_to_string(
-                    "templates/refill_form_modal.html",
-                    {
-                        "api_url": f"/plugin-io/api/patient_portal_plugin/prescriptions/{patient_id}",
-                        "medications": medications,
-                        "background_color": self.background_color,
-                    }
-                ),
-                target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
-                title="Medications Information",
-                patient_id=patient_id,
+            # LaunchModalEffect(
+            #     content=render_to_string(
+            #         "templates/refill_form_modal.html",
+            #         {
+            #             "api_url": f"/plugin-io/api/patient_portal_plugin/prescriptions/{patient_id}",
+            #             "medications": medications,
+            #             "background_color": self.background_color,
+            #         },
+            #     ),
+            #     target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
+            #     title="Medications Information",
+            #     patient_id=patient_id,
+            # ).apply()
+            JSONResponse(
+                {
+                    "medications": medications,
+                    "patient_id": patient_id,
+                },
+                status_code=HTTPStatus.OK,
             ).apply()
         ]
 
@@ -70,13 +112,23 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
         if not patient_id or not form_data:
             return [JSONResponse({"error": "Invalid request"}, status_code=HTTPStatus.BAD_REQUEST)]
 
-        medication_ids: list[str] = [str(part.value) for name, part in form_data.multi_items() if name == "medication"]
+        medication_ids: list[str] = [
+            str(part.value) for name, part in form_data.multi_items() if name == "medication"
+        ]
         if not medication_ids:
-            return [JSONResponse({"error": "No medications selected"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [
+                JSONResponse(
+                    {"error": "No medications selected"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
 
         medications = Medication.objects.filter(id__in=medication_ids, patient__id=patient_id)
         if not medications:
-            return [JSONResponse({"error": "No valid medications found"}, status_code=HTTPStatus.NOT_FOUND)]
+            return [
+                JSONResponse(
+                    {"error": "No valid medications found"}, status_code=HTTPStatus.NOT_FOUND
+                )
+            ]
 
         tasks = []
         for medication in medications:
@@ -95,10 +147,13 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
         # For now, we just return a success message.
         return [
             *tasks,
-            JSONResponse({
-                "message": "Medication successfully created/updated!",
-                "patient_id": patient_id,
-            }, status_code=HTTPStatus.CREATED),
+            JSONResponse(
+                {
+                    "message": "Medication successfully created/updated!",
+                    "patient_id": patient_id,
+                },
+                status_code=HTTPStatus.CREATED,
+            ),
         ]
 
     @api.get("/update-pharmacy")
@@ -107,7 +162,11 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
         patient_id = self.request.headers.get("canvas-logged-in-user-id", None)
 
         if not patient_id:
-            return [JSONResponse({"error": "Patient ID is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [
+                JSONResponse(
+                    {"error": "Patient ID is required"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
 
         patient = Patient.objects.get(id=patient_id)
         preferred_pharmacy = patient.preferred_pharmacy
@@ -115,10 +174,13 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
         # Logic to update the preferred pharmacy would go here.
         # For now, we just return a success message.
         return [
-            JSONResponse({
-                "message": f"Preferred pharmacy is: {preferred_pharmacy}",
-                "preferred_pharmacy": preferred_pharmacy,
-            }, status_code=HTTPStatus.OK)
+            JSONResponse(
+                {
+                    "message": f"Preferred pharmacy is: {preferred_pharmacy}",
+                    "preferred_pharmacy": preferred_pharmacy,
+                },
+                status_code=HTTPStatus.OK,
+            )
         ]
 
     @api.post("/update-pharmacy")
@@ -132,15 +194,22 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
 
         new_pharmacy = form_data.get("preferred_pharmacy")
         if not new_pharmacy:
-            return [JSONResponse({"error": "Preferred pharmacy is required"}, status_code=HTTPStatus.BAD_REQUEST)]
+            return [
+                JSONResponse(
+                    {"error": "Preferred pharmacy is required"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
 
         # patient = Patient.objects.get(id=patient_id)
 
         return [
-            JSONResponse({
-                "message": "Preferred pharmacy updated successfully!",
-                "preferred_pharmacy": new_pharmacy,
-            }, status_code=HTTPStatus.OK)
+            JSONResponse(
+                {
+                    "message": "Preferred pharmacy updated successfully!",
+                    "preferred_pharmacy": new_pharmacy,
+                },
+                status_code=HTTPStatus.OK,
+            )
         ]
 
     @property

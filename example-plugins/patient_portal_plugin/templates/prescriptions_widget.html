@@ -97,6 +97,96 @@
       font-weight: 400;
     }
 
+    .refill-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0 32px;
+      overflow-y: scroll;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .medication {
+      background: #fff;
+      border-radius: 12px;
+      border: 1.5px solid #f1f1f3;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border 0.2s, box-shadow 0.2s;
+      margin: 8px 0;
+    }
+    .medication.selected {
+      border: 1.5px solid {{ background_color }};
+      box-shadow: 0 2px 8px {{ background_color }}22;
+      background: #f8fafc;
+    }
+    .medication-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-self: start;
+      flex-grow: 1;
+    }
+    .medication-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: {{ background_color }};
+      margin-bottom: 2px;
+    }
+    .medication.selected .medication-title {
+      color: {{ background_color }};
+    }
+    .medication:not(.selected) .medication-title {
+      color: #18181b;
+    }
+    .medication-description {
+      color: #a1a1aa;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+    .check {
+      font-size: 1.4rem;
+      color: #a1a1aa;
+      margin-left: 16px;
+      transition: color 0.2s;
+    }
+    .medication.selected .check {
+      color: {{ background_color }};
+    }
+    .modal-footer {
+      margin-top: 32px;
+    }
+    .next-btn {
+      width: 100%;
+      background: {{ background_color }};
+      color: #fff;
+      font-size: 1.13rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .next-btn:hover {
+      text-decoration: underline;
+    }
+    .next-btn:active {
+      background: {{ background_color }}cc;
+    }
+    .next-btn:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+    .next-btn:disabled:hover {
+      text-decoration: none;
+    }
+    .hidden {
+      display: none;
+    }
+
     @media (max-width: 600px) {
       .prescriptions-title {
         font-size: 1.1rem;
@@ -165,6 +255,32 @@
   </div>
 
   <script>
+    const prescriptionsTemplate = (medications) => `
+      <div class="refill-list">
+          <form id="refill-form" method="post">
+          ${medications.length ? medications.map(medication => `
+            <div class="medication">
+              <div class="medication-info">
+                <span class="medication-title">${medication.codings[0].display}</span>
+                <span class="medication-description">${medication.codings[0].sig}</span>
+              </div>
+              <input type="hidden" name="medication" value="${medication.id}" disabled>
+              <button type="button" class="remove-btn">Remove</button>
+            </div>
+          `).join('') : `
+            <div class="medication-title">No medications found</div>
+          `}
+          <div class="modal-footer">
+            <button type="submit" class="next-btn">Request Refill</button>
+            <button type="button" class="cancel-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const pharmacyTemplate = (pharmacy) => `
+    `;
+
     document.addEventListener('DOMContentLoaded', function () {
       const requestRefillLink = document.getElementById('request-refill');
       
@@ -182,6 +298,17 @@
           if (!response.ok) {
             throw new Error('Network response was not ok');
           }
+
+          return response.json();
+        }).then(data => {
+          if (data.medications && data.medications.length > 0) {
+            console.log('Medications fetched:', data.medications);
+            document.body.innerHTML = prescriptionsTemplate(data.medications);
+          } else {
+            console.log('No medications found.');
+          }
+        }).catch(error => {
+          console.error('Error fetching medications:', error);
         }).finally(() => {
           requestRefillLink.classList.remove('loading');
         });
@@ -205,7 +332,7 @@
 
         input.focus();
 
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', function (e) {
           e.preventDefault();
           const newValue = input.value.trim();
           if (newValue) {
@@ -213,14 +340,12 @@
           } else {
             pharmacy.textContent = currentText;
           }
-
-
         });
 
-        cancelBtn.addEventListener('click', function() {
+        cancelBtn.addEventListener('click', function () {
           pharmacy.textContent = currentText;
         });
-      });
+      }
 
       function updatePharmacy(element) {
         element.classList.add('loading');
@@ -230,7 +355,7 @@
           headers: {
             'Content-Type': 'application/json'
           },
-        }).then(response => {
+        }).then((response) => {
           if (!response.ok) {
             throw new Error('Network response was not ok');
           }
@@ -240,7 +365,7 @@
       }
 
       const choosePharmacyLink = document.getElementById('choose-pharmacy');
-      choosePharmacyLink.addEventListener('click', function (event) {
+      choosePharmacyLink?.addEventListener('click', function (event) {
         event.preventDefault();
 
         window.prompt('Please enter your preferred pharmacy name and address:', '').then((input) => {
@@ -258,8 +383,8 @@
         });
       });
 
-      const updatePharmacyLink = document.getElementById('update-pharmacy');      
-      updatePharmacyLink.addEventListener('click', function (event) {
+      const updatePharmacyLink = document.getElementById('update-pharmacy');
+      updatePharmacyLink?.addEventListener('click', function (event) {
         event.preventDefault();
 
         updatePharmacyLink.classList.add('loading');
