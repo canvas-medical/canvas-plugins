@@ -21,7 +21,7 @@ class PractitionerXMLBuilder(BaseXMLBuilder):
             return self._build_minimal_provider()
 
         # Extract practitioner info
-        role = practitioner_data.get('role', 'Physician')
+        role = practitioner_data.get('role', '')
         first_name = practitioner_data.get('first_name', '')
         last_name = practitioner_data.get('last_name', '')
         dea_number = practitioner_data.get('dea_number', '')

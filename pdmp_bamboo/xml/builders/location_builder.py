@@ -16,12 +16,10 @@ class LocationXMLBuilder(BaseXMLBuilder):
         """Build Location XML section from organization and practice location data."""
         self._log_building("Location", data)
 
-        organization_data = data.get('organization', {})
         practice_location_data = data.get('practice_location', {})
 
         if not practice_location_data:
-            log.warning("LocationXMLBuilder: No practice location data available, creating minimal Location section")
-            return self._build_minimal_location()
+            log.warning("LocationXMLBuilder: No practice location data available")
 
         # Extract location info
         name = practice_location_data.get('name', '')
@@ -87,40 +85,3 @@ class LocationXMLBuilder(BaseXMLBuilder):
             return organization_data['group_npi']
 
         return ""
-
-    # def _build_address_section(self, practice_location_data: Dict[str, Any]) -> str:
-    #     """Build address XML section if address data exists."""
-    #     if not practice_location_data:
-    #         return ""
-    #
-    #     address_data = practice_location_data.get('address', {})
-    #     if not address_data or not any(address_data.values()):
-    #         return ""
-    #
-    #     log.debug(f"LocationXMLBuilder: Building address with data: {address_data}")
-    #
-    #     address_xml = "<Address>"
-    #
-    #     # Add street addresses
-    #     if address_data.get('street'):
-    #         address_xml += f"\n        <Street>{self._escape_xml(address_data['street'])}</Street>"
-    #
-    #     if address_data.get('street2'):
-    #         address_xml += f"\n        <Street2>{self._escape_xml(address_data['street2'])}</Street2>"
-    #
-    #     # Add city, state, zip
-    #     if address_data.get('city'):
-    #         address_xml += f"\n        <City>{self._escape_xml(address_data['city'])}</City>"
-    #
-    #     if address_data.get('state'):
-    #         address_xml += f"\n        <StateCode>{self._escape_xml(address_data['state'].upper())}</StateCode>"
-    #
-    #     if address_data.get('zip_code'):
-    #         address_xml += f"\n        <ZipCode>{self._escape_xml(address_data['zip_code'])}</ZipCode>"
-    #
-    #     if address_data.get('zip_plus_four'):
-    #         address_xml += f"\n        <ZipPlusFour>{self._escape_xml(address_data['zip_plus_four'])}</ZipPlusFour>"
-    #
-    #     address_xml += "\n      </Address>"
-    #
-    #     return address_xml

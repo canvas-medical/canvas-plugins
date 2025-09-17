@@ -7,7 +7,7 @@
         "protocols": [
             {
                 "class": "pdmp_bamboo.protocols.my_protocol:PDMPRequestProtocol",
-                "description": "PDMP Test Request Protocol - Extracts Canvas patient and provider data, generates structured assessment commands, and sends PDMP requests to BambooHealth test environment for prescription drug monitoring",
+                "description": "PDMP Request Protocol - Extracts Canvas patient and provider data, generates structured assessment commands, and sends PDMP requests to BambooHealth test environment for prescription drug monitoring",
                 "data_access": {
                     "event": "SHOW_NOTE_HEADER_BUTTON",
                     "read": [
@@ -15,7 +15,8 @@
                         "v1.Patient",
                         "v1.Staff",
                         "v1.Organization",
-                        "v1.PracticeLocation"
+                        "v1.PracticeLocation",
+                        "v1.Questionnaire"
                     ],
                     "write": [
                         "StructuredAssessmentCommand"
@@ -37,19 +38,9 @@
         "TEST_PDMP_API_USERNAME",
         "TEST_PDMP_API_PASSWORD"
     ],
-    "tags": {
-        "category": "clinical",
-        "integration": "pdmp",
-        "environment": "test",
-        "functionality": "prescription_monitoring"
-    },
-    "references": [
-        "BambooHealth PMP Gateway API Documentation",
-        "Canvas Plugin SDK Documentation"
-    ],
-    "license": "MIT",
+    "tags": {},
+    "references": [],
+    "license": "",
     "diagram": false,
-    "readme": "./README.md",
-    "author": "Canvas Medical",
-    "maintainer": "Canvas Medical Engineering Team"
+    "readme": "./README.md"
 }

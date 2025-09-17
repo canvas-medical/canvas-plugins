@@ -9,7 +9,7 @@ from pdmp_bamboo.xml.builders.base_builder import BaseXMLBuilder
 from logger import log
 
 
-class RequestXMLBuilder(BaseXMLBuilder):
+class PatientRequestXMLBuilder(BaseXMLBuilder):
     """Builds complete PDMP XML requests."""
 
     def build(self, data: Dict[str, Any]) -> str:
@@ -32,14 +32,12 @@ class RequestXMLBuilder(BaseXMLBuilder):
         patient_xml = data.get("patient_xml", "")
         practitioner_xml = data.get("practitioner_xml", "")
         location_xml = data.get("location_xml", "")
-        request_metadata = data.get("request_metadata", {})
 
         # Build the complete XML request
         xml_request = self._build_complete_request(
             patient_xml,
             practitioner_xml,
-            location_xml,
-            request_metadata
+            location_xml
         )
 
         log.info("RequestXMLBuilder: Complete PDMP XML request built successfully")
@@ -48,13 +46,8 @@ class RequestXMLBuilder(BaseXMLBuilder):
     def _build_complete_request(self,
                                 patient_xml: str,
                                 practitioner_xml: str,
-                                location_xml: str,
-                                request_metadata: Dict[str, Any]) -> str:
+                                location_xml: str) -> str:
         """Build the complete PDMP XML request."""
-
-        # Get request metadata
-        timestamp = request_metadata.get("timestamp", "")
-        request_id = request_metadata.get("request_id", "")
 
         # Build the complete XML structure with correct v5.1 schema
         xml_request = f"""<?xml version="1.0" encoding="UTF-8"?>

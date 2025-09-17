@@ -9,10 +9,10 @@ from logger import log
 
 # Import our new XML components
 from pdmp_bamboo.xml.builders import (
+    PatientRequestXMLBuilder,
     PatientXMLBuilder,
     PractitionerXMLBuilder,
-    LocationXMLBuilder,
-    RequestXMLBuilder
+    LocationXMLBuilder
 )
 from pdmp_bamboo.xml.utils import DTOToXMLConverter, XMLUtils
 
@@ -28,7 +28,7 @@ class XMLGenerationService:
         self.patient_builder = PatientXMLBuilder()
         self.practitioner_builder = PractitionerXMLBuilder()
         self.location_builder = LocationXMLBuilder()
-        self.request_builder = RequestXMLBuilder()
+        self.request_builder = PatientRequestXMLBuilder()
 
         # Initialize utilities
         self.data_converter = DTOToXMLConverter()

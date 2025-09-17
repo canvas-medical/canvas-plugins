@@ -11,7 +11,6 @@ from canvas_sdk.effects import Effect
 
 # Import our new components
 from pdmp_bamboo.api.client import PDMPClient, AuthHandler
-from pdmp_bamboo.api.response import ResponseParser, ResponseValidator
 from pdmp_bamboo.services.data_extraction import DataExtractionService
 from pdmp_bamboo.services.ui_service import UIService
 from pdmp_bamboo.services.xml_generation import XMLGenerationService
@@ -33,9 +32,7 @@ class PDMPRequestService:
         # Initialize API components
         self.pdmp_client = PDMPClient()
         self.auth_handler = AuthHandler()
-        self.response_parser = ResponseParser()
-        self.response_validator = ResponseValidator()
-        
+
         log.info("PDMPRequestService: PDMP request service initialized successfully")
 
     def process_pdmp_request(self,

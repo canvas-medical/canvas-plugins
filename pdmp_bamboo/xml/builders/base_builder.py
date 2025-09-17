@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from logger import log
 
-# class BaseXMLBuilder:
 class BaseXMLBuilder(ABC):
     """Abstract base class for XML builders."""
     

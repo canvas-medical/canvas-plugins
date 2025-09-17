@@ -72,11 +72,11 @@ class ReportRequestXMLBuilder(BaseXMLBuilder):
         """Build the complete ReportRequest XML with proper v5.1 schema."""
 
         # Extract practitioner info
-        provider_first = practitioner_data.get("first_name", "Jon")
-        provider_last = practitioner_data.get("last_name", "Doe")
-        provider_dea = practitioner_data.get("dea_number", "AB1234579")
-        provider_role = practitioner_data.get("role", "Physician")
-        provider_npi = practitioner_data.get("npi_number", "")
+        provider_first = practitioner_data.get("first_name")
+        provider_last = practitioner_data.get("last_name")
+        provider_dea = practitioner_data.get("dea_number")
+        provider_role = practitioner_data.get("role")
+        provider_npi = practitioner_data.get("npi_number")
 
         log.info(f"ReportRequestXMLBuilder: Practitioner data:")
         log.info(f"  - First name: {provider_first}")
@@ -86,17 +86,17 @@ class ReportRequestXMLBuilder(BaseXMLBuilder):
         log.info(f"  - Role: {provider_role}")
 
         # Extract location info
-        location_name = practice_location_data.get("name", "Canvas Test Site")
-        location_dea = practice_location_data.get("dea", "")
-        location_npi = practice_location_data.get("npi", "0123456789")  # TODO: HARDCODED
+        location_name = practice_location_data.get("name")
+        location_dea = practice_location_data.get("dea")
+        location_npi = practice_location_data.get("npi")
 
         # Handle nested address data
         address_data = practice_location_data.get("address", {})
         if isinstance(address_data, dict):
-            location_state = address_data.get("state", "KS")
+            location_state = address_data.get("state")
             log.info(f"ReportRequestXMLBuilder: Address data: {address_data}")
         else:
-            location_state = "KS"
+            location_state = ""
             log.info(f"ReportRequestXMLBuilder: Address data is not a dict: {type(address_data)}")
 
         log.info(f"ReportRequestXMLBuilder: Location data:")

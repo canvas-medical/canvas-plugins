@@ -25,7 +25,6 @@ class ReportEndpoint(SimpleAPIRoute):
 
     def get(self) -> list:
         """Handle report requests with clean separation of concerns."""
-
         # Extract and validate parameters
         params = self._extract_parameters()
         validation_error = self._validate_parameters(params)

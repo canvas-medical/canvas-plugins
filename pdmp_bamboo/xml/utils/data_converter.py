@@ -83,7 +83,6 @@ class DTOToXMLConverter:
             'name': organization_dto.name,
             'active': organization_dto.active,
             'group_npi': getattr(organization_dto, 'group_npi', ''),
-            # 'practice_location': self._convert_practice_location_dto(organization_dto.practice_location)
         }
     
     def _convert_practice_location_dto(self, practice_location_dto) -> Dict[str, Any]:
@@ -123,7 +122,7 @@ class DTOToXMLConverter:
         """Build request metadata for XML generation."""
         # Determine PMP destination from practice location state
         practice_location = extracted_data.get('practice_location')
-        pmp_destination = 'CA'  # Default
+        pmp_destination = ''  # Default
         
         if practice_location and hasattr(practice_location, 'address'):
             address = practice_location.address

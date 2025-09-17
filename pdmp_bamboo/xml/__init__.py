@@ -12,10 +12,10 @@ Architecture:
 # Import builders
 from pdmp_bamboo.xml.builders import (
     BaseXMLBuilder,
+    PatientRequestXMLBuilder,
     PatientXMLBuilder,
     PractitionerXMLBuilder,
     LocationXMLBuilder,
-    RequestXMLBuilder,
     ReportRequestXMLBuilder,
 )
 
@@ -34,7 +34,7 @@ __all__ = [
     'PatientXMLBuilder',
     'PractitionerXMLBuilder',
     'LocationXMLBuilder',
-    'RequestXMLBuilder',
+    'PatientRequestXMLBuilder',
     'ReportRequestXMLBuilder',
 
 

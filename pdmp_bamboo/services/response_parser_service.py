@@ -246,7 +246,7 @@ class ResponseParserService:
 
                 // Extract report ID from the end of the URL
                 var reportId = reportUrl.split('/').pop();
-                var apiUrl = `/plugin-io/api/pdmp_bamboo_simple/report?report_id=${{reportId}}&env=${{env}}&patient_id=${{patientId}}&practitioner_id=${{practitionerId}}&organization_id=${{organizationId}}`;
+                var apiUrl = `/plugin-io/api/pdmp_bamboo/report?report_id=${{reportId}}&env=${{env}}&patient_id=${{patientId}}&practitioner_id=${{practitionerId}}&organization_id=${{organizationId}}`;
 
                 btn.disabled = true;
                 btn.innerHTML = '⏳ Opening Report...';

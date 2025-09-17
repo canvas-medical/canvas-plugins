@@ -5,8 +5,6 @@ Main service that integrates all the refactored components into a single workflo
 This replaces the old handle_pdmp_request function with clean, modular architecture.
 """
 
-from typing import Dict, Any, List, Optional
-
 from canvas_sdk.effects import Effect
 from logger import log
 
@@ -33,12 +31,12 @@ class PDMPIntegrationService:
 
         log.info("PDMPIntegrationService: Integration service initialized successfully")
 
-    def process_pdmp_request(self,
-                           target: str,
-                           context: dict,
-                           secrets: dict,
-                           event,
-                           use_test_env: bool = False) -> Effect | list[Effect]:
+    def process_patient_pdmp_request(self,
+                                     target: str,
+                                     context: dict,
+                                     secrets: dict,
+                                     event,
+                                     use_test_env: bool = False) -> Effect | list[Effect]:
         """
         Process a complete PDMP request using the new modular architecture.
 
