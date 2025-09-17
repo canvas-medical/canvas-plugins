@@ -1417,17 +1417,5 @@
   ],
   "logger": [
     "log"
-  ],
-  "xml": [
-    "*"
-  ],
-  "xml.etree.ElementTree": [
-    "Element",
-    "SubElement",
-    "tostring",
-    "register_namespace"
-  ],
-  "xml.dom.minidom": [
-    "minidom"
   ]
 }
