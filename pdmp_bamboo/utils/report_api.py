@@ -1,160 +1,274 @@
 """
-Report API for PDMP Bamboo Plugin
-
-This module provides a Canvas SimpleAPIRoute endpoint to fetch PDMP report HTML 
-from BambooHealth PMP Gateway using authenticated requests with proper certificate handling.
-
-Requirements:
-- Uses self.secrets directly (SimpleAPIRoute pattern)  
-- Supports both test and production environments
-- Reuses authentication logic from xml_request.py
-- Handles client certificates for production environment
-- Validates input parameters (UUID format for report_id)
-
-Secrets Configuration:
-The handler expects secrets in 'all_secrets' JSON field format:
-{
-    "all_secrets": "{
-        \"TEST_PDMP_API_URL\": \"https://prep.pmpgateway.net\",
-        \"TEST_PDMP_API_USERNAME\": \"canvas-prep-1\", 
-        \"TEST_PDMP_API_PASSWORD\": \"test_password\",
-        \"PDMP_API_URL\": \"https://mutualauth.pmpgateway.net\",
-        \"PDMP_API_USERNAME\": \"canvas-prep-2\",
-        \"PDMP_API_PASSWORD\": \"prod_password\"
-    }"
-}
-
-URL Format: 
-GET /plugin-io/api/pdmp_bamboo/report?report_id={UUID}&env={test|prod}
-
-Example:
-http://localhost:8000/plugin-io/api/pdmp_bamboo/report?report_id=fe180397-c07e-4fa4-960c-6ed9574b701d&env=test
+Report API for PDMP Bamboo Simple Plugin
 """
 
-import requests
-import re
-from typing import List
-from http import HTTPStatus
-from canvas_sdk.handlers.simple_api import SimpleAPIRoute, Credentials
-from canvas_sdk.effects.simple_api import HTMLResponse, Response
-from logger import log
-
-from pdmp_bamboo.utils.xml_request import create_pdmp_auth_headers, get_cert_config
-from pdmp_bamboo.utils.secrets_helper import get_secret_value
-
-
-class ReportAPI(SimpleAPIRoute):
-    """
-    Canvas SimpleAPIRoute endpoint that fetches PDMP report HTML from BambooHealth PMP Gateway.
-    
-    This handler proxies authenticated requests to fetch PDMP report URLs, handling both
-    test and production environments with proper authentication headers and client certificates.
-    
-    Path: /report
-    Method: GET (Canvas endpoint) -> POST (to BambooHealth)  
-    Query Parameters:
-        - report_id (required): UUID of the PDMP report to fetch
-        - env (optional): Environment - 'test' or 'prod', defaults to 'prod'
-        
-    Authentication: 
-        - Uses Canvas built-in authentication (SimpleAPIRoute)
-        - Creates BambooHealth auth headers using same pattern as PDMP requests
-        - Supports client certificate authentication for production environment
-        
-    Returns:
-        - 200: HTML content of the PDMP report
-        - 400: Bad request (invalid parameters)  
-        - 500: Internal server error (missing config, API errors)
-    """
-    
-    PATH = "/report"
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        return True
-
-    def get(self) -> List[Response]:
-        """
-        Fetch PDMP report from external URL with authentication headers
-        Query Parameters:
-            report_url: The PDMP report URL to fetch (from query string)
-        """
-        # Get report_id and environment from query parameters
-        report_id = self.request.query_params.get("report_id")
-        env = self.request.query_params.get("env", "prod")  # Default to prod
-        
-        # Debug logging
-        log.info(f"PDMP API: Request path: {self.request.path}")
-        log.info(f"PDMP API: Query params: {self.request.query_params}")
-        log.info(f"PDMP API: Report ID: {report_id}")
-        log.info(f"PDMP API: Environment: {env}")
-
-        if not report_id:
-            error_msg = """
-            <h3>Error: Missing report_id parameter</h3>
-            <p>The report_id query parameter is required to fetch the PDMP report.</p>
-            <p>Example: /plugin-io/api/pdmp_bamboo/report?report_id=8f136ff4-dacf-4f37-ad6c-aa2c06634b49&env=prod</p>
-            """
-            return [HTMLResponse(error_msg, status_code=HTTPStatus.BAD_REQUEST)]
-
-        try:
-            # Use self.secrets directly (same pattern as other SimpleAPIRoute examples)
-            log.info("PDMP API: Using self.secrets")
-            
-            # Build the full report URL from report ID and environment  
-            use_test_env = (env.lower() == "test")
-            log.info(f"PDMP API: use_test_env: {use_test_env}")
-            
-            log.info("PDMP API: About to call get_secret_value...")
-            if use_test_env:
-                base_url = get_secret_value(self.secrets, "TEST_PDMP_API_URL")
-                log.info(f"PDMP API: Retrieved TEST_PDMP_API_URL: {base_url}")
-            else:
-                base_url = get_secret_value(self.secrets, "PDMP_API_URL")
-                log.info(f"PDMP API: Retrieved PDMP_API_URL: {base_url}")
-            
-            if not base_url:
-                log.error(f"PDMP API: No base URL found for {env} environment")
-                error_msg = f"<h3>Error: Missing API URL for {env} environment</h3><p>Please configure the API URL in plugin secrets.</p>"
-                return [HTMLResponse(error_msg, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
-            
-            report_url = f"{base_url}/v5_1/report/{report_id}"
-            log.info(f"PDMP API: Built report URL: {report_url}")
-            
-            # Create auth headers (same pattern as xml_request.py)
-            headers = create_pdmp_auth_headers(self.secrets, use_test_env=use_test_env)
-            headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-            
-            # Get cert config (same pattern as xml_request.py)  
-            cert_config = get_cert_config(use_test_env)
-            
-            log.info("PDMP API: Making authenticated request to report URL")
-            
-            # Make the request directly (same pattern as xml_request.py)
-            # Note: BambooHealth PMP Gateway requires POST for report endpoints
-            response = requests.post(
-                report_url, 
-                headers=headers, 
-                cert=cert_config if cert_config else None,
-                timeout=30, 
-                verify=True
-            )
-            
-            log.info(f"PDMP API: Report fetch response - Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                log.info(f"PDMP API: Successfully fetched report ({len(response.text)} chars)")
-                return [HTMLResponse(response.text, status_code=HTTPStatus.OK)]
-            else:
-                log.error(f"PDMP API: Failed to fetch report - Status: {response.status_code}")
-                error_msg = f"""
-                <h3>Error: Failed to fetch PDMP report</h3>
-                <p><strong>Status Code:</strong> {response.status_code}</p>
-                <p><strong>Response:</strong> {response.text[:500]}</p>
-                """
-                return [HTMLResponse(error_msg, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
-
-        except Exception as e:
-            log.error(f"PDMP API: Failed to fetch report: {e}")
-            error_msg = f"<h3>Error: Failed to fetch PDMP report</h3><p>{str(e)}</p>"
-            return [HTMLResponse(error_msg, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
+# from canvas_sdk.handlers.simple_api import SimpleAPIRoute
+# from canvas_sdk.handlers.simple_api.security import Credentials
+# from canvas_sdk.effects.simple_api import HTMLResponse
+# from http import HTTPStatus
+# from logger import log
+#
+# # Import the same data extraction function used in the main workflow
+# from pdmp_bamboo_simple.utils.data_extractor import extract_all_data_for_pdmp
+# from pdmp_bamboo_simple.utils.xml_mapper import create_report_request_xml
+# from pdmp_bamboo_simple.utils.xml_request import (
+#     create_pdmp_auth_headers,
+#     get_cert_config,
+# )
+# from pdmp_bamboo_simple.utils.secrets_helper import get_secret_value
+# import requests
+#
+#
+# class ReportAPI(SimpleAPIRoute):
+#     """Report API for PDMP requests"""
+#
+#     PATH = "/report"
+#
+#     def authenticate(self, credentials: Credentials) -> bool:
+#         return True
+#
+#     def get(self) -> list:
+#         """Handle report requests using the same data extraction as main workflow"""
+#
+#         # Get parameters
+#         report_id = self.request.query_params.get("report_id")
+#         env = self.request.query_params.get("env", "test")
+#         patient_id = self.request.query_params.get("patient_id")
+#         practitioner_id = self.request.query_params.get("practitioner_id")
+#         organization_id = self.request.query_params.get("organization_id")
+#
+#         # Add comprehensive logging
+#         log.info("=" * 80)
+#         log.info("PDMP-Simple-ReportAPI: Starting report request")
+#         log.info(f"PDMP-Simple-ReportAPI: Report ID: {report_id}")
+#         log.info(f"PDMP-Simple-ReportAPI: Environment: {env}")
+#         log.info("PDMP-Simple-ReportAPI: Canvas Context IDs:")
+#         log.info(f"  - Patient ID: {patient_id}")
+#         log.info(f"  - Practitioner ID: {practitioner_id}")
+#         log.info(f"  - Organization ID: {organization_id}")
+#         log.info("PDMP-Simple-ReportAPI: All query parameters:")
+#         for key, value in self.request.query_params.items():
+#             log.info(f"  - {key}: {value}")
+#         log.info("=" * 80)
+#
+#         # Validate required parameters
+#         if not report_id:
+#             log.error("PDMP-Simple-ReportAPI: Missing report_id parameter")
+#             return [HTMLResponse(
+#                 "<h3>Error: Missing Report ID</h3><p>Report ID is required to fetch the PDMP report.</p>",
+#                 status_code=HTTPStatus.BAD_REQUEST
+#             )]
+#
+#         if not patient_id or not practitioner_id:
+#             log.error("PDMP-Simple-ReportAPI: Missing required Canvas context IDs")
+#             return [HTMLResponse(
+#                 "<h3>Error: Missing Context</h3><p>Patient ID and Practitioner ID are required.</p>",
+#                 status_code=HTTPStatus.BAD_REQUEST
+#             )]
+#
+#         try:
+#             # Use the same data extraction as the main workflow
+#             log.info("PDMP-Simple-ReportAPI: Extracting Canvas data using same method as main workflow")
+#             canvas_data, extraction_errors = extract_all_data_for_pdmp(
+#                 patient_id=patient_id,
+#                 practitioner_id=practitioner_id
+#             )
+#
+#             if not canvas_data:
+#                 log.error("PDMP-Simple-ReportAPI: Failed to extract Canvas data")
+#                 return [HTMLResponse(
+#                     "<h3>Error: Data Extraction Failed</h3><p>Could not extract Canvas data for report request.</p>",
+#                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+#                 )]
+#
+#             log.info("PDMP-Simple-ReportAPI: Canvas data extracted successfully")
+#             log.info(f"PDMP-Simple-ReportAPI: Extracted data keys: {list(canvas_data.keys())}")
+#
+#             # Log detailed extracted data
+#             log.info("PDMP-Simple-ReportAPI: Detailed extracted data:")
+#             for key, value in canvas_data.items():
+#                 if key != "extraction_errors":
+#                     log.info(f"  {key}: {value}")
+#
+#             if extraction_errors:
+#                 log.warning(f"PDMP-Simple-ReportAPI: Extraction errors: {extraction_errors}")
+#
+#             # Create ReportRequest XML using the extracted data
+#             log.info("PDMP-Simple-ReportAPI: Creating ReportRequest XML from extracted data")
+#             report_request_xml = create_report_request_xml(canvas_data)
+#
+#             log.info(f"PDMP-Simple-ReportAPI: Created ReportRequest XML ({len(report_request_xml)} characters)")
+#             log.info("PDMP-Simple-ReportAPI: ReportRequest XML content:")
+#             log.info("=" * 60)
+#             log.info(report_request_xml)
+#             log.info("=" * 60)
+#
+#             # Get API configuration
+#             use_test_env = (env.lower() == "test")
+#             log.info(f"PDMP-Simple-ReportAPI: Using test environment: {use_test_env}")
+#
+#             # Get base URL from secrets
+#             if use_test_env:
+#                 base_url = get_secret_value(self.secrets, "TEST_PDMP_API_URL")
+#                 log.info(f"PDMP-Simple-ReportAPI: Retrieved TEST_PDMP_API_URL: {base_url}")
+#             else:
+#                 base_url = get_secret_value(self.secrets, "PDMP_API_URL")
+#                 log.info(f"PDMP-Simple-ReportAPI: Retrieved PDMP_API_URL: {base_url}")
+#
+#             if not base_url:
+#                 log.error(f"PDMP-Simple-ReportAPI: No base URL found for {env} environment")
+#                 return [HTMLResponse(
+#                     f"<h3>Error: Missing API URL</h3><p>Please configure the API URL in plugin secrets.</p>",
+#                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+#                 )]
+#
+#             # Build report URL
+#             report_url = f"{base_url}/v5_1/report/{report_id}"
+#             log.info(f"PDMP-Simple-ReportAPI: Built report URL: {report_url}")
+#
+#             # Create authentication headers
+#             log.info("PDMP-Simple-ReportAPI: Creating authentication headers")
+#             headers = create_pdmp_auth_headers(self.secrets, use_test_env=use_test_env)
+#             headers["Content-Type"] = "application/xml"
+#             headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+#
+#             log.info("PDMP-Simple-ReportAPI: Request headers:")
+#             for key, value in headers.items():
+#                 # Don't log sensitive auth headers in full
+#                 if "auth" in key.lower() or "password" in key.lower():
+#                     log.info(f"  {key}: {value[:10]}...")
+#                 else:
+#                     log.info(f"  {key}: {value}")
+#
+#             # Get certificate configuration
+#             cert_config = get_cert_config(use_test_env)
+#             log.info(f"PDMP-Simple-ReportAPI: Certificate config: {cert_config}")
+#
+#             log.info("PDMP-Simple-ReportAPI: Making authenticated request to report URL")
+#             log.info(f"PDMP-Simple-ReportAPI: Request details:")
+#             log.info(f"  - URL: {report_url}")
+#             log.info(f"  - Method: POST")
+#             log.info(f"  - Content-Type: {headers['Content-Type']}")
+#             log.info(f"  - Body length: {len(report_request_xml)} characters")
+#
+#             # Make the POST request with ReportRequest XML body
+#             response = requests.post(
+#                 report_url,
+#                 data=report_request_xml.encode("utf-8"),
+#                 headers=headers,
+#                 cert=cert_config if cert_config else None,
+#                 timeout=30,
+#                 verify=True
+#             )
+#
+#             log.info("PDMP-Simple-ReportAPI: Response received")
+#             log.info(f"PDMP-Simple-ReportAPI: Response status code: {response.status_code}")
+#             log.info(f"PDMP-Simple-ReportAPI: Response headers:")
+#             for key, value in response.headers.items():
+#                 log.info(f"  {key}: {value}")
+#
+#             log.info(f"PDMP-Simple-ReportAPI: Response content length: {len(response.text)} characters")
+#             log.info("PDMP-Simple-ReportAPI: Full response content:")
+#             log.info("=" * 60)
+#             log.info(response.text)
+#             log.info("=" * 60)
+#
+#             if response.status_code == 200:
+#                 return [HTMLResponse(response.text, status_code=HTTPStatus.OK)]
+#                 # log.info(f"PDMP-Simple-ReportAPI: Successfully fetched report ({len(response.text)} chars)")
+#                 #
+#                 # # Parse the response to extract the report link
+#                 # report_link = _extract_report_link_from_response(response.text)
+#                 #
+#                 # if report_link:
+#                 #     log.info(f"PDMP-Simple-ReportAPI: Redirecting to report link: {report_link}")
+#                 #
+#                 #     # Return HTML that redirects to the report link
+#                 #     redirect_html = f"""
+#                 #     <!DOCTYPE html>
+#                 #     <html>
+#                 #     <head>
+#                 #         <title>PDMP Report</title>
+#                 #         <meta http-equiv="refresh" content="0; url={report_link}">
+#                 #         <script>
+#                 #             // Immediate redirect
+#                 #             window.location.href = '{report_link}';
+#                 #         </script>
+#                 #     </head>
+#                 #     <body>
+#                 #         <h3>Opening PDMP Report...</h3>
+#                 #         <p>If you are not redirected automatically, <a href="{report_link}" target="_blank">click here</a> to open the report.</p>
+#                 #     </body>
+#                 #     </html>
+#                 #     """
+#                 #
+#                 #     return [HTMLResponse(response.text, status_code=HTTPStatus.OK)]
+#                 # else:
+#                 #     log.error("PDMP-Simple-ReportAPI: Could not extract report link from response")
+#                 #     return [HTMLResponse(
+#                 #         f"""
+#                 #         <h3>Error: Could not extract report link</h3>
+#                 #         <p>Response received but no report link found.</p>
+#                 #         <p><strong>Response:</strong> {response.text[:500]}</p>
+#                 #         """,
+#                 #         status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+#                 #     )]
+#             else:
+#                 log.error(f"PDMP-Simple-ReportAPI: Failed to fetch report - Status: {response.status_code}")
+#                 log.error(f"PDMP-Simple-ReportAPI: Error response: {response.text}")
+#
+#                 # Try to extract more details from the error response
+#                 if "Invalid Report Request" in response.text:
+#                     log.error("PDMP-Simple-ReportAPI: BambooHealth returned 'Invalid Report Request' error")
+#                     log.error("PDMP-Simple-ReportAPI: This usually means:")
+#                     log.error("  1. ReportRequest XML format is incorrect")
+#                     log.error("  2. Missing required fields in ReportRequest")
+#                     log.error("  3. Provider/Location data doesn't match original PatientRequest")
+#                     log.error("  4. Report ID is invalid or expired")
+#
+#                 return [HTMLResponse(
+#                     f"""
+#                     <h3>Error: Failed to fetch PDMP report</h3>
+#                     <p><strong>Status Code:</strong> {response.status_code}</p>
+#                     <p><strong>Error:</strong> {response.text}</p>
+#                     <p><strong>Report ID:</strong> {report_id}</p>
+#                     <p><strong>Environment:</strong> {env}</p>
+#                     """,
+#                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+#                 )]
+#
+#         except Exception as e:
+#             log.error(f"PDMP-Simple-ReportAPI: Exception occurred: {str(e)}")
+#             import traceback
+#             log.error(f"PDMP-Simple-ReportAPI: Full traceback:")
+#             log.error(traceback.format_exc())
+#             return [HTMLResponse(
+#                 f"<h3>Error: Failed to fetch PDMP report</h3><p>{str(e)}</p>",
+#                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+#             )]
+#
+#
+# def _extract_report_link_from_response(response_text: str) -> str:
+#     """
+#     Extract the report link from the BambooHealth response.
+#
+#     The response should contain a report link like:
+#     https://prep.pmpgateway.net/v5_1/report_link/66fcd8ac-f555-4fd1-9de5-00bee6ded9dd
+#     """
+#     import re
+#
+#     log.info("PDMP-Simple-ReportAPI: Extracting report link from response")
+#
+#     # Look for report link pattern
+#     report_link_pattern = r'https://[^/]+/v5_1/report_link/[a-f0-9-]+'
+#     matches = re.findall(report_link_pattern, response_text)
+#
+#     if matches:
+#         report_link = matches[0]
+#         log.info(f"PDMP-Simple-ReportAPI: Found report link: {report_link}")
+#         return report_link
+#     else:
+#         log.warning("PDMP-Simple-ReportAPI: No report link found in response")
+#         log.warning(f"PDMP-Simple-ReportAPI: Response content: {response_text}")
+#         return None
 

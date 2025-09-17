@@ -1,13 +1,13 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.15",
+    "plugin_version": "0.0.1",
     "name": "pdmp_bamboo",
-    "description": "PDMP Bamboo Plugin - Extracts Canvas patient and practitioner data and sends PDMP requests to BambooHealth PMP Gateway",
+    "description": "PDMP Bamboo Plugin - Streamlined integration for PDMP requests with BambooHealth PMP Gateway. Provides structured assessment commands and API endpoints for prescription drug monitoring program data retrieval.",
     "components": {
         "protocols": [
             {
                 "class": "pdmp_bamboo.protocols.my_protocol:PDMPRequestProtocol",
-                "description": "PDMP Request button that extracts Canvas data and sends PDMP requests to BambooHealth Gateway (Production with certificates)",
+                "description": "PDMP Test Request Protocol - Extracts Canvas patient and provider data, generates structured assessment commands, and sends PDMP requests to BambooHealth test environment for prescription drug monitoring",
                 "data_access": {
                     "event": "SHOW_NOTE_HEADER_BUTTON",
                     "read": [
@@ -15,8 +15,7 @@
                         "v1.Patient",
                         "v1.Staff",
                         "v1.Organization",
-                        "v1.PracticeLocation",
-                        "v1.Questionnaire"
+                        "v1.PracticeLocation"
                     ],
                     "write": [
                         "StructuredAssessmentCommand"
@@ -24,68 +23,33 @@
                 }
             },
             {
-                "class": "pdmp_bamboo.protocols.my_protocol:PDMPTestRequestProtocol",
-                "description": "PDMP Test Request button for testing environment without certificates",
-                "data_access": {
-                    "event": "SHOW_NOTE_HEADER_BUTTON",
-                    "read": [
-                        "v1.Note",
-                        "v1.Patient",
-                        "v1.Staff",
-                        "v1.Organization",
-                        "v1.PracticeLocation",
-                        "v1.Questionnaire"
-                    ],
-                    "write": [
-                        "StructuredAssessmentCommand"
-                    ]
-                }
-            },
-            {
-                "class": "pdmp_bamboo.protocols.my_protocol:PDMPMockRequestProtocol",
-                "description": "PDMP Mock Request button that uses template mock data for testing plugin functionality",
-                "data_access": {
-                    "event": "SHOW_NOTE_HEADER_BUTTON",
-                    "read": [
-                        "v1.Note",
-                        "v1.Patient",
-                        "v1.Staff",
-                        "v1.Organization",
-                        "v1.PracticeLocation",
-                        "v1.Questionnaire"
-                    ],
-                    "write": [
-                        "StructuredAssessmentCommand"
-                    ]
-                }
-            },
-            {
-                "class": "pdmp_bamboo.utils.report_api:ReportAPI",
-                "description": "API endpoint for generating PDMP reports"
+                "class": "pdmp_bamboo.api.endpoint.report_endpoint:ReportEndpoint",
+                "description": "PDMP Report API Endpoint - RESTful endpoint for generating and retrieving PDMP reports with patient prescription history and provider information"
             }
         ],
         "commands": [],
         "content": [],
         "effects": [],
-        "views": [],
-        "questionnaires": [
-            {
-                "template": "templates/pdmp_check_questionnaire.yml"
-            }
-        ]
+        "views": []
     },
     "secrets": [
-        "PDMP_API_URL",
-        "PDMP_API_USERNAME", 
-        "PDMP_API_PASSWORD",
         "TEST_PDMP_API_URL",
         "TEST_PDMP_API_USERNAME",
-        "TEST_PDMP_API_PASSWORD",
-        "all_secrets"
+        "TEST_PDMP_API_PASSWORD"
     ],
-    "tags": {},
-    "references": [],
-    "license": "",
+    "tags": {
+        "category": "clinical",
+        "integration": "pdmp",
+        "environment": "test",
+        "functionality": "prescription_monitoring"
+    },
+    "references": [
+        "BambooHealth PMP Gateway API Documentation",
+        "Canvas Plugin SDK Documentation"
+    ],
+    "license": "MIT",
     "diagram": false,
-    "readme": "./README.md"
+    "readme": "./README.md",
+    "author": "Canvas Medical",
+    "maintainer": "Canvas Medical Engineering Team"
 }
