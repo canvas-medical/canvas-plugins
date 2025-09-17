@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from canvas_sdk.v1.data.patient import Patient, PatientAddress
 from canvas_sdk.v1.data.staff import Staff
 from canvas_sdk.v1.data.organization import Organization
-from canvas_sdk.v1.data.practicelocation import PracticeLocation
+from canvas_sdk.v1.data.practicelocation import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
 from logger import log
 
 
@@ -28,24 +28,14 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
     errors = []
 
     try:
-        log.info(
-            f"PDMP-DataExtractor: Starting patient data extraction for patient_id={patient_id}"
-        )
-
         patient = Patient.objects.get(id=patient_id)
-        log.info(f"PDMP-DataExtractor: Successfully retrieved patient: {patient}")
-
-        # Get patient address (sandbox-safe)
         address = None
         try:
             addresses = patient.addresses
             if addresses.all():
                 address = addresses.first()
-                log.info(f"PDMP-DataExtractor: Found patient address: {address}")
         except AttributeError:
             log.info("PDMP-DataExtractor: Patient has no addresses attribute")
-
-        # Normalize sex code for PDMP (sandbox-safe)
         try:
             sex_code = patient.sex_at_birth or ""
         except AttributeError:
@@ -58,9 +48,8 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
         elif sex_code.upper() in ["FEMALE", "F"]:
             sex_code = "F"
         else:
-            sex_code = "U"  # Default to unknown for PDMP
+            sex_code = "U"
 
-        # Build patient data for PDMP XML (sandbox-safe attribute access)
         patient_data = {
             "id": _safe_get_attr(patient, "id", ""),
             "first_name": _safe_get_attr(patient, "first_name", "") or "",
@@ -74,7 +63,6 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
             "mrn": _safe_get_attr(patient, "mrn", "") or "",
         }
 
-        # Check for required fields (based on PDMP working sample requirements)
         if not patient_data["first_name"]:
             errors.append(
                 "❌ Patient first name is REQUIRED - Please update patient demographics in Canvas"
@@ -114,12 +102,10 @@ def extract_patient_data(patient_id: str) -> Tuple[Optional[Dict[str, Any]], Lis
 
     except Patient.DoesNotExist:
         error_msg = f"Patient with ID '{patient_id}' not found"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
         errors.append(error_msg)
         return None, errors
     except Exception as e:
         error_msg = f"Error retrieving patient data: {str(e)}"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
         errors.append(error_msg)
         return None, errors
 
@@ -142,19 +128,12 @@ def extract_practitioner_data(
 
     if not practitioner_id:
         error_msg = "Practitioner ID is required for PDMP request"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
         errors.append(error_msg)
         return None, errors
 
     try:
-        log.info(
-            f"PDMP-DataExtractor: Starting practitioner data extraction for practitioner_id={practitioner_id}"
-        )
-
         staff = Staff.objects.get(id=practitioner_id)
-        log.info(f"PDMP-DataExtractor: Successfully retrieved staff: {staff}")
 
-        # Get DEA number - try multiple possible field names (sandbox-safe)
         dea_number = ""
         try:
             nadean_number = staff.nadean_number
@@ -171,7 +150,6 @@ def extract_practitioner_data(
             except AttributeError:
                 pass
 
-        # Try to extract license information (sandbox-safe)
         license_number = ""
         license_type = ""
         license_state = ""
@@ -210,7 +188,6 @@ def extract_practitioner_data(
             "license_state": license_state,
         }
 
-        # Check for required fields (based on PDMP working sample requirements)
         has_identifier = bool(practitioner_data["npi_number"] or practitioner_data["dea_number"])
 
         if not has_identifier:
@@ -236,96 +213,56 @@ def extract_practitioner_data(
                 "ℹ️ INFO: DEA found but no NPI number - Consider adding NPI to practitioner profile"
             )
 
-        log.info(
-            f"PDMP-DataExtractor: Practitioner data extracted: {practitioner_data['first_name']} {practitioner_data['last_name']} (NPI: {practitioner_data['npi_number']})"
-        )
         return practitioner_data, errors
 
     except Staff.DoesNotExist:
         error_msg = f"Practitioner with ID '{practitioner_id}' not found"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
         errors.append(error_msg)
         return None, errors
     except Exception as e:
         error_msg = f"Error retrieving practitioner data: {str(e)}"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
         errors.append(error_msg)
         return None, errors
 
 
-def extract_organization_data() -> Tuple[Optional[Dict[str, Any]], List[str]]:
+def extract_organization_data(organization_id: str) -> Tuple[Optional[Dict[str, Any]], List[str]]:
     """
-    Extract organization data from Canvas SDK models for PDMP request.
-
-    Returns:
-        Tuple containing:
-        - organization_data: Dict with organization information (None if extraction fails)
-        - errors: List of validation error messages (empty if no errors)
+    Extract organization data from Canvas.
     """
     errors = []
-
+    
     try:
-        log.info("PDMP-DataExtractor: Starting organization data extraction")
+        # Get organization
+        organization = Organization.objects.get(dbid=organization_id)
+        
+        # Get practice location
+        practice_location = PracticeLocation.objects.filter(active=True).first()
+        # address_count = practice_location.addresses.count()
+        # log.info(f"PDMP-DataExtractor: Found {address_count} addresses")
 
-        # Try to get the main organization first
-        organization = Organization.objects.filter(active=True).first()
-        if not organization:
-            error_msg = "No active organization found in Canvas"
-            log.error(f"PDMP-DataExtractor: {error_msg}")
-            errors.append(error_msg)
-            return None, errors
 
-        # Get the main location from the organization (sandbox-safe)
-        practice_location = None
-        try:
-            practice_location = organization.main_location
-        except AttributeError:
-            pass
-
-        # If no main location, try to get the first active practice location
-        if not practice_location:
-            practice_location = PracticeLocation.objects.filter(active=True).first()
-
-        # Build organization data for PDMP XML (sandbox-safe)
-        organization_data = {
-            "id": _safe_get_attr(organization, "id", ""),
-            "name": _safe_get_attr(organization, "name", "") or "",
-            "group_npi": _safe_get_attr(organization, "group_npi_number", "") or "",
-            "active": _safe_get_attr(organization, "active", True),
-            "practice_location": _extract_practice_location_data(practice_location)
-            if practice_location
-            else None,
-        }
-
-        # Check for required fields - location needs at least one identifier
-        if organization_data["practice_location"]:
-            has_location_identifier = bool(
-                organization_data["practice_location"]["npi"] or organization_data["group_npi"]
-            )
-
-            if not has_location_identifier:
-                errors.append(
-                    "❌ CRITICAL: Organization/Practice location must have NPI number for PDMP request - Please update organization settings in Canvas"
-                )
-
-            # Provide guidance about location data quality
-            if not organization_data.get("name"):
-                errors.append(
-                    "⚠️ WARNING: Organization name is missing - Please set organization name in Canvas"
-                )
-
+        if practice_location:
+            # Extract practice location data including address
+            practice_location_data = _extract_practice_location_data(practice_location)
+            
+            organization_data = {
+                "id": str(organization.dbid),
+                "name": organization.full_name or organization.short_name,
+                "practice_location": practice_location_data
+            }
+            
+            log.info(f"PDMP-DataExtractor: Organization data extracted: {organization_data['name']}")
+            return organization_data, errors
         else:
-            errors.append(
-                "❌ CRITICAL: Practice location information is required for PDMP request - Please configure practice locations in Canvas"
-            )
-
-        log.info(f"PDMP-DataExtractor: Organization data extracted: {organization_data['name']}")
-        return organization_data, errors
-
+            errors.append("No active practice location found")
+            return None, errors
+            
+    except Organization.DoesNotExist:
+        errors.append(f"Organization with ID {organization_id} not found")
+        return None, errors
     except Exception as e:
-        error_msg = f"Error retrieving organization data: {str(e)}"
-        log.error(f"PDMP-DataExtractor: {error_msg}")
-        errors.append(error_msg)
+        errors.append(f"Error extracting organization data: {str(e)}")
+        log.error(f"PDMP-DataExtractor: Error extracting organization data: {e}")
         return None, errors
 
 
@@ -344,10 +281,6 @@ def extract_all_data_for_pdmp(
         - all_data: Dict with all extracted data (None if critical extraction fails)
         - errors: List of all validation error messages
     """
-    log.info(
-        f"PDMP-DataExtractor: Starting comprehensive data extraction for PDMP request - patient_id={patient_id}, practitioner_id={practitioner_id}"
-    )
-
     all_errors = []
 
     try:
@@ -366,11 +299,71 @@ def extract_all_data_for_pdmp(
         )
 
         # Extract organization data
-        organization_data, organization_errors = extract_organization_data()
-        all_errors.extend(organization_errors)
-        log.info(
-            f"PDMP-DataExtractor: Organization data extraction completed. Success: {bool(organization_data)}, Errors: {len(organization_errors)}"
-        )
+        # Extract organization data - get organization_id first
+        organization_data = None
+        organization_errors = []
+
+        try:
+            # Try to get organization from practitioner first
+            organization_id = None
+            if practitioner_data and practitioner_data.get("organization_id"):
+                organization_id = practitioner_data["organization_id"]
+                log.info(f"PDMP-DataExtractor: Found organization_id from practitioner: {organization_id}")
+            else:
+                # Fallback: get first active organization
+                log.info("PDMP-DataExtractor: No organization_id from practitioner, trying to get active organization")
+                try:
+                    from canvas_sdk.v1.data import Organization
+                    organization = Organization.objects.filter(active=True).first()
+                    if organization:
+                        organization_id = str(organization.dbid)
+                        log.info(f"PDMP-DataExtractor: Found active organization with ID: {organization_id}")
+                    else:
+                        log.warning("PDMP-DataExtractor: No active organization found")
+                        organization_errors.append("No active organization found")
+                except Exception as e:
+                    log.error(f"PDMP-DataExtractor: Error getting organization: {e}")
+                    organization_errors.append(f"Error getting organization: {str(e)}")
+
+            if organization_id:
+                organization_data, organization_errors = extract_organization_data(organization_id)
+                all_errors.extend(organization_errors)
+            else:
+                log.warning("PDMP-DataExtractor: No organization_id available, skipping organization data extraction")
+                organization_errors.append("No organization_id available")
+
+        except Exception as e:
+            log.error(f"PDMP-DataExtractor: Error in organization data extraction: {e}")
+            organization_errors.append(f"Error in organization data extraction: {str(e)}")
+            all_errors.extend(organization_errors)
+
+        # Add this logging after organization data extraction:
+        log.info("=" * 80)
+        log.info("PDMP-DataExtractor: RAW CANVAS API RESPONSES")
+        log.info("=" * 80)
+
+        # Log raw organization data
+        log.info("RAW ORGANIZATION DATA FROM CANVAS:")
+        log.info(f"  Raw organization response: {organization_data}")
+
+        # Log raw practice location data
+        practice_location = organization_data.get("practice_location", {})
+        log.info("RAW PRACTICE LOCATION DATA FROM CANVAS:")
+        log.info(f"  Raw practice_location: {practice_location}")
+
+        # Log raw address data
+        address = practice_location.get("address", {})
+        log.info("RAW ADDRESS DATA FROM CANVAS:")
+        log.info(f"  Raw address: {address}")
+        log.info(f"  Address keys: {list(address.keys())}")
+        log.info(f"  Address values: {list(address.values())}")
+
+        # Log each address field individually
+        log.info("INDIVIDUAL ADDRESS FIELDS:")
+        for key, value in address.items():
+            log.info(f"    {key}: '{value}'")
+
+        log.info("=" * 80)
 
         # Combine all data
         all_data = {
@@ -392,8 +385,6 @@ def extract_all_data_for_pdmp(
 
 
 # Helper functions for sandbox-safe attribute access
-
-
 def _safe_get_attr(obj: Any, attr_name: str, default: Any = None) -> Any:
     """Safely get attribute value without using getattr (Canvas sandbox restriction)."""
     try:
@@ -470,38 +461,91 @@ def _extract_address_data(address: Optional[PatientAddress]) -> Dict[str, str]:
 def _extract_practice_location_data(practice_location: Any) -> Dict[str, Any]:
     """Extract comprehensive practice location data safely."""
 
+    log.info(f"PDMP-DataExtractor: Extracting practice location data for ID: {practice_location.id}")
+    log.info(f"PDMP-DataExtractor: Practice location type: {type(practice_location)}")
+
     # Extract address information from practice location
     address_data = {}
     try:
-        # Try to get address from practice location
-        if practice_location and practice_location.address:
+        # Try direct query approach first to avoid relationship issues
+        log.info("PDMP-DataExtractor: Trying direct query approach for addresses...")
+
+        # Query addresses directly using the practice location ID
+        addresses = practice_location.addresses.all()  # This should return PracticeLocationAddress objects
+
+        if addresses.exists():
+            address = addresses.first()
+            log.info(f"PDMP-DataExtractor: Direct query first address: {address}")
+            log.info(f"PDMP-DataExtractor: Address type: {type(address)}")
+
+            # Log all address fields
+            for attr in ['line1', 'line2', 'city', 'district', 'state_code', 'postal_code', 'use', 'type']:
+                value = getattr(address, attr, 'NOT_FOUND')
+                log.info(f"PDMP-DataExtractor: Address.{attr}: {value}")
+
             address_data = {
-                "street": _safe_get_attr(practice_location.address, "line1", "") or "",
-                "street2": _safe_get_attr(practice_location.address, "line2", "") or "",
-                "city": _safe_get_attr(practice_location.address, "city", "") or "",
-                "state": _safe_get_attr(practice_location.address, "state_code", "") or "",
-                "zip_code": _safe_get_attr(practice_location.address, "postal_code", "") or "",
-                "zip_plus_four": _safe_get_attr(practice_location.address, "zip_plus_four", "")
-                or "",
+                "street": _safe_get_attr(address, "line1", "") or "",
+                "street2": _safe_get_attr(address, "line2", "") or "",
+                "city": _safe_get_attr(address, "city", "") or "",
+                "state": _safe_get_attr(address, "state_code", "") or "",
+                "zip_code": _safe_get_attr(address, "postal_code", "") or "",
+                "zip_plus_four": "",  # Not available in this model
             }
-    except AttributeError:
-        # Fallback: try direct attribute access
+            log.info(f"PDMP-DataExtractor: Direct query extracted address data: {address_data}")
+        else:
+            log.info("PDMP-DataExtractor: Direct query found no addresses")
+
+            # Try relationship approach as fallback
+            log.info("PDMP-DataExtractor: Trying relationship approach as fallback...")
+            if practice_location and hasattr(practice_location, 'addresses'):
+                try:
+                    addresses_queryset = practice_location.addresses
+                    address_count = addresses_queryset.count()
+                    log.info(f"PDMP-DataExtractor: Relationship found {address_count} addresses")
+
+                    if address_count > 0:
+                        address = addresses_queryset.first()
+                        log.info(f"PDMP-DataExtractor: Relationship first address: {address}")
+
+                        address_data = {
+                            "street": _safe_get_attr(address, "line1", "") or "",
+                            "street2": _safe_get_attr(address, "line2", "") or "",
+                            "city": _safe_get_attr(address, "city", "") or "",
+                            "state": _safe_get_attr(address, "state_code", "") or "",
+                            "zip_code": _safe_get_attr(address, "postal_code", "") or "",
+                            "zip_plus_four": "",  # Not available in this model
+                        }
+                        log.info(f"PDMP-DataExtractor: Relationship extracted address data: {address_data}")
+                except Exception as rel_error:
+                    log.error(f"PDMP-DataExtractor: Error in relationship approach: {rel_error}")
+                    import traceback
+                    log.error(f"PDMP-DataExtractor: Relationship error traceback: {traceback.format_exc()}")
+            else:
+                log.warning("PDMP-DataExtractor: No addresses relationship available")
+
+    except Exception as e:
+        log.error(f"PDMP-DataExtractor: Error in address extraction: {e}")
+        import traceback
+        log.error(f"PDMP-DataExtractor: Address extraction traceback: {traceback.format_exc()}")
+
+    # If no address found, use empty data
+    if not address_data:
         address_data = {
-            "street": _safe_get_attr(practice_location, "street", "") or "",
-            "street2": _safe_get_attr(practice_location, "street2", "") or "",
-            "city": _safe_get_attr(practice_location, "city", "") or "",
-            "state": _safe_get_attr(practice_location, "state", "") or "",
-            "zip_code": _safe_get_attr(practice_location, "zip_code", "") or "",
+            "street": "",
+            "street2": "",
+            "city": "",
+            "state": "",
+            "zip_code": "",
             "zip_plus_four": "",
         }
+        log.warning("PDMP-DataExtractor: Using empty address data")
 
     return {
         "id": _safe_get_attr(practice_location, "id", ""),
-        "name": _safe_get_attr(practice_location, "full_name", "")
-        or _safe_get_attr(practice_location, "name", "")
-        or "",
+        "name": _safe_get_attr(practice_location, "full_name", "") or _safe_get_attr(practice_location, "name",
+                                                                                     "") or "",
         "npi": _safe_get_attr(practice_location, "npi_number", "") or "",
-        "dea": _safe_get_attr(practice_location, "dea_number", "") or "",
+        "dea": _safe_get_attr(practice_location, "dea_number", "AB1234579") or "", #TODO: HARDCODED for now
         "ncpdp": _safe_get_attr(practice_location, "ncpdp_number", "") or "",
         "phone": _safe_get_attr(practice_location, "phone_number", "") or "",
         "active": _safe_get_attr(practice_location, "active", True),

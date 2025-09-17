@@ -70,7 +70,7 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
-from .practicelocation import PracticeLocation, PracticeLocationSetting
+from .practicelocation import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -175,6 +175,7 @@ __all__ = __exports__ = (
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
+    "PracticeLocationAddress",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
