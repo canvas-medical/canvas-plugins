@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
@@ -14,7 +15,7 @@ class SendContactVerificationEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.PATIENT_PORTAL__SEND_CONTACT_VERIFICATION
 
-    contact_point_id: str
+    contact_point_id: str | UUID
 
     @property
     def values(self) -> dict[str, Any]:
