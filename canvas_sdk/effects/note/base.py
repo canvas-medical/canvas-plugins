@@ -57,14 +57,6 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         errors = super()._get_error_details(method)
 
         if method == "create":
-            if self.instance_id:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Instance ID should not be provided for create effects.",
-                        self.instance_id,
-                    )
-                )
             if not self.practice_location_id:
                 errors.append(
                     self._create_error_detail(
@@ -167,10 +159,34 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
     duration_minutes: int | None = None
     status: AppointmentProgressStatus | None = None
     external_identifiers: list[AppointmentIdentifier] | None = None
+    parent_appointment_id: str | UUID | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validates the appointment instance and returns a list of error details if validation fails."""
         errors = super()._get_error_details(method)
+
+        if method != "create" and self.parent_appointment_id:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "parent_appointment_id can only be set when creating an appointment.",
+                    self.parent_appointment_id,
+                )
+            )
+
+        # parent_appointment_id needs to be a different appointment
+        if (
+            self.parent_appointment_id
+            and self.instance_id
+            and self.parent_appointment_id == self.instance_id
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "parent_appointment_id cannot be the same as instance_id",
+                    self.parent_appointment_id,
+                )
+            )
 
         if method == "create":
             # Additional required fields for appointment creation
