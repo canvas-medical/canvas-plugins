@@ -203,36 +203,58 @@ def generate_messages_html(messages: List[Dict[str, Any]]) -> str:
     return messages_html
 
 
-def generate_report_button_html(report_url: str, expiration_date: str, env: str = "prod") -> str:
-    """Generate HTML for the clickable report button that calls the API endpoint."""
+def generate_report_button_html(report_url: str, expiration_date: str, env: str = "prod", 
+                               patient_id: str = None, practitioner_id: str = None, organization_id: str = None) -> str:
+    """
+    Generate HTML for the PDMP report button with Canvas context IDs.
+    """
+    log.info("PDMP-Parser: Generating report button HTML")
+    log.info(f"PDMP-Parser: Report URL: {report_url}")
+    log.info(f"PDMP-Parser: Environment: {env}")
+    log.info(f"PDMP-Parser: Canvas Context IDs:")
+    log.info(f"  - Patient ID: {patient_id}")
+    log.info(f"  - Practitioner ID: {practitioner_id}")
+    log.info(f"  - Organization ID: {organization_id}")
+    
     if not report_url:
+        log.warning("PDMP-Parser: No report URL provided, skipping button generation")
         return ""
-
+    
+    # Build URL parameters for Canvas context
+    context_params = ""
+    if patient_id and practitioner_id and organization_id:
+        context_params = f"&patient_id={patient_id}&practitioner_id={practitioner_id}&organization_id={organization_id}"
+    
     return f"""
-        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 4px; margin: 15px 0; border: 1px solid #bbdefb;">
-            <h4 style="margin-top: 0; color: #1976d2;">📄 Full PDMP Report</h4>
-            <p style="margin: 10px 0; color: #666;">Click to view the complete PDMP report in a new window:</p>
-            <button 
-                id="reportUrlBtn" 
-                onclick="openPDMPReport('{report_url}', '{env}')"
-                style="background-color: #1976d2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;"
-                onmouseover="this.style.backgroundColor='#1565c0'"
-                onmouseout="this.style.backgroundColor='#1976d2'"
-            >
-                🔗 Open PDMP Report
-            </button>
-            <p style="margin: 10px 0 0 0; font-size: 0.85em; color: #666;">
-                <em>Note: Report expires on {expiration_date}</em>
-            </p>
+    <div style="margin: 10px 0; text-align: center;">
+        <button 
+            id="reportUrlBtn" 
+            onclick="openPDMPReport('{report_url}', '{env}', '{patient_id or ''}', '{practitioner_id or ''}', '{organization_id or ''}')"
+            style="
+                background-color: #2196F3; 
+                color: white; 
+                border: none; 
+                padding: 10px 20px; 
+                border-radius: 5px; 
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+            "
+        >
+            📊 Full PDMP Report
+        </button>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+            Expires: {expiration_date}
         </div>
-        
-        <script>
-        function openPDMPReport(reportUrl, env) {{
+    </div>
+    
+    <script>
+        function openPDMPReport(reportUrl, env, patientId, practitionerId, organizationId) {{
             var btn = document.getElementById('reportUrlBtn');
             
             // Extract report ID from the end of the URL
             var reportId = reportUrl.split('/').pop();
-            var apiUrl = `/plugin-io/api/pdmp_bamboo/report?report_id=${{reportId}}&env=${{env}}`;
+            var apiUrl = `/plugin-io/api/pdmp_bamboo_simple/report?report_id=${{reportId}}&env=${{env}}&patient_id=${{patientId}}&practitioner_id=${{practitionerId}}&organization_id=${{organizationId}}`;
             
             btn.disabled = true;
             btn.innerHTML = '⏳ Opening Report...';
@@ -247,5 +269,5 @@ def generate_report_button_html(report_url: str, expiration_date: str, env: str 
                 btn.style.backgroundColor = '#4caf50';
             }}, 1000);
         }}
-        </script>
+    </script>
     """
