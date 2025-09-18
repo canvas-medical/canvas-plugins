@@ -1,6 +1,8 @@
 from http import HTTPStatus
 from uuid import uuid4
 
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
+
 from canvas_sdk.commands import (
     DiagnoseCommand,
     PhysicalExamCommand,
@@ -10,9 +12,6 @@ from canvas_sdk.commands import (
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note
-
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 
 class CommandAPI(APIKeyAuthMixin, SimpleAPI):
@@ -30,9 +29,12 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
         "committed": false
     }
     """
+
     @api.post("/<id>/diagnose/")
     def add_diagnose_command(self) -> list[Response | Effect]:
-        required_attributes = {"icd10_code",}
+        required_attributes = {
+            "icd10_code",
+        }
         request_body = self.request.json()
         missing_attributes = required_attributes - request_body.keys()
         if len(missing_attributes) > 0:
@@ -67,7 +69,9 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
 
         return [
             *command_effects,
-            JSONResponse({"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED
+            ),
         ]
 
     """
@@ -78,6 +82,7 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
     Body: {
     }
     """
+
     @api.post("/<id>/prechart/")
     def add_precharting_commands(self) -> list[Response | Effect]:
         request_body = self.request.json()
@@ -95,5 +100,7 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
             exam.originate(),
             diagnose.originate(),
             plan.originate(),
-            JSONResponse({"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED
+            ),
         ]
