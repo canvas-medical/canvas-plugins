@@ -1,14 +1,15 @@
 from http import HTTPStatus
-import json
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.launch_modal import LaunchModalEffect
+from canvas_sdk.effects.patient.create_patient_preferred_pharmacies import (
+    CreatePatientPreferredPharmacies,
+)
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.effects.task.task import AddTask
 from canvas_sdk.handlers.simple_api import api
 from canvas_sdk.handlers.simple_api.api import SimpleAPI
 from canvas_sdk.handlers.simple_api.security import PatientSessionAuthMixin
-from canvas_sdk.templates.utils import render_to_string
+from canvas_sdk.utils.http import pharmacy_http
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.patient import Patient
 from logger import log
@@ -37,7 +38,11 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
 
         try:
             medications = list(
-                Medication.objects.for_patient(patient_id).values(
+                Medication.objects.for_patient(patient_id).filter(
+                    committer__isnull=False,
+                    entered_in_error__isnull=True,
+                    deleted=False,
+                ).values(
                     "id",
                     "quantity_qualifier_description",
                     "clinical_quantity_description",
@@ -75,32 +80,19 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
                 JSONResponse(
                     {"error": "No medications found for this patient"},
                     status_code=HTTPStatus.NOT_FOUND,
-                )
+                ),
             ]
 
         log.info(f"Medications found for patient {patient_id}: {medications}")
 
         return [
-            # LaunchModalEffect(
-            #     content=render_to_string(
-            #         "templates/refill_form_modal.html",
-            #         {
-            #             "api_url": f"/plugin-io/api/patient_portal_plugin/prescriptions/{patient_id}",
-            #             "medications": medications,
-            #             "background_color": self.background_color,
-            #         },
-            #     ),
-            #     target=LaunchModalEffect.TargetType.DEFAULT_MODAL,
-            #     title="Medications Information",
-            #     patient_id=patient_id,
-            # ).apply()
             JSONResponse(
                 {
                     "medications": medications,
                     "patient_id": patient_id,
                 },
                 status_code=HTTPStatus.OK,
-            ).apply()
+            ),
         ]
 
     @api.post("/request-refill")
@@ -183,6 +175,40 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
             )
         ]
 
+    @api.post("/search-pharmacy")
+    def post_search_pharmacy(self) -> list[Response | Effect]:
+        """Handle POST requests to search for pharmacies."""
+        form_data = self.request.form_data()
+        search_query = form_data["search_query"] if form_data and "search_query" in form_data else ""
+        patient_id = self.request.headers.get("canvas-logged-in-user-id", None)
+
+        log.info(f"Searching for pharmacies with query: {search_query}")
+
+        if not patient_id:
+            return [
+                JSONResponse(
+                    {"error": "Patient ID is required"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
+
+        patient = Patient.objects.get(id=patient_id)
+        preferred_pharmacies = patient.preferred_pharmacies
+        available_pharmacies = pharmacy_http.search_pharmacies(search_query)
+
+        if not search_query:
+            return [
+                JSONResponse(
+                    {"error": "Search query is required"}, status_code=HTTPStatus.BAD_REQUEST
+                )
+            ]
+
+        return [
+            JSONResponse(
+                {"available_pharmacies": available_pharmacies, "preferred_pharmacies": preferred_pharmacies},
+                status_code=HTTPStatus.OK,
+            )
+        ]
+
     @api.post("/update-pharmacy")
     def post_update_pharmacy(self) -> list[Response | Effect]:
         """Handle POST requests to update the preferred pharmacy."""
@@ -200,7 +226,7 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
                 )
             ]
 
-        # patient = Patient.objects.get(id=patient_id)
+        patient = Patient.objects.get(id=patient_id)
 
         return [
             JSONResponse(
@@ -209,7 +235,11 @@ class PrescriptionsHandler(PatientSessionAuthMixin, SimpleAPI):
                     "preferred_pharmacy": new_pharmacy,
                 },
                 status_code=HTTPStatus.OK,
-            )
+            ),
+            CreatePatientPreferredPharmacies(
+                pharmacies=[new_pharmacy],
+                patient_id=patient_id,
+            ).create(),
         ]
 
     @property

@@ -4,11 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Prescriptions Manager</title>
-  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"
-        integrity="sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm"
-        crossorigin="anonymous"></script>
   <style>
-    html,
     body {
       margin: 0;
       padding: 0;
@@ -19,6 +15,7 @@
       box-sizing: border-box;
       font-family: system-ui, sans-serif;
       display: flex;
+      place-items: center;
     }
 
     .prescriptions-widget {
@@ -34,7 +31,7 @@
     }
 
     .prescriptions-title {
-      color: {{ title_color }};
+      
       font-size: 1.25rem;
       font-weight: 500;
       font-weight: 500;
@@ -158,37 +155,6 @@
     .medication.selected .check {
       color: {{ background_color }};
     }
-    .modal-footer {
-      margin-top: 32px;
-    }
-    .next-btn {
-      width: 100%;
-      background: {{ background_color }};
-      color: #fff;
-      font-size: 1.13rem;
-      font-weight: 500;
-      border: none;
-      border-radius: 10px;
-      padding: 16px 0;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .next-btn:hover {
-      text-decoration: underline;
-    }
-    .next-btn:active {
-      background: {{ background_color }}cc;
-    }
-    .next-btn:disabled {
-      background: #d1d5db;
-      cursor: not-allowed;
-    }
-    .next-btn:disabled:hover {
-      text-decoration: none;
-    }
-    .hidden {
-      display: none;
-    }
 
     @media (max-width: 600px) {
       .prescriptions-title {
@@ -199,207 +165,478 @@
         padding: 8px 0 8px 0;
       }
     }
+
+    :root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-size: 16px;
+      font-family: system-ui, Helvetica, Arial, sans-serif;
+      /* line-height: 1.5; */
+      font-weight: 500;
+
+      color-scheme: light dark;
+      background-color: #fff;
+      color: {{ title_color }};
+    }
+
+    h1 {
+      font-size: 3.2em;
+      line-height: 1.1;
+    }
+
+    #app {
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      background-color: #fff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      flex: 1;
+      height: calc(100% - 2px);
+      overflow: hidden;
+    }
+
+
+    #app>.title {
+      font-size: 1.25rem;
+      padding: 20px 0 8px 20px;
+      top: 0;
+      border-bottom: 1px solid #f3f4f6;
+      text-align: left;
+    }
+
+    #app>.content {
+      display: flex;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .content>.list {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      width: 100%;
+      flex: 1;
+      scrollbar-width: thin;
+    }
+
+    .list>.row {
+      display: flex;
+      padding: .5rem;
+      align-items: flex-start;
+      background: #eeeff4;
+      border-radius: 12px;
+      margin: 0 1.5rem;
+    }
+
+    .row>.icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 4rem;
+      height: 4rem;
+      margin-right: 1.5rem;
+      flex-shrink: 0;
+      background-color: #d1d5db;
+      border-radius: 2rem;
+    }
+    
+    .row>.content {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      flex: 1;
+    }
+
+    .row>.content>.title {
+      font-weight: 700;
+      font-size: 1.08rem;
+      color: #222;
+      margin-bottom: 2px;
+    }
+    .row>.content>.subtitle {
+      font-size: 0.97rem;
+      color: #444;
+      font-weight: 400;
+    }
+
+    #app .panel {
+      display: none;
+    }
+
+    #app .panel.active {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      width: 100%;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    #app .panel-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1rem;
+      overflow: hidden;
+    }
+
+    #app .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #d1d5db;
+    }
+
+    #app .back-button {
+      background: none;
+      border: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+      color: #374151;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    #app .back-button:hover {
+      background-color: #f3f4f6;
+    }
+
+    #app .panel-header h2 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    #app .panel-body {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    #app .pharmacy-content,
+    #app .prescriptions-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    #app .pharmacy-item,
+    #app .prescription-item {
+      background: #ffffff;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #app .pharmacy-item h3,
+    #app .prescription-item h3 {
+      margin: 0 0 0.375rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    #app .pharmacy-item p,
+    #app .prescription-item p {
+      margin: 0.25rem 0;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    #app .primary-button,
+    #app .secondary-button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background-color 0.2s;
+    }
+
+    #app .secondary-button {
+      background-color: #6b7280;
+    }
+
+    #app .primary-button:hover {
+      background-color: #2563eb;
+    }
+
+    #app .secondary-button:hover {
+      background-color: #4b5563;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color: #213547;
+        background-color: #ffffff;
+      }
+
+      a:hover {
+        color: #747bff;
+      }
+
+      button {
+        background-color: #f9f9f9;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <div class="prescriptions-widget">
-    <div class="prescriptions-title">Your Prescriptions</div>
-    <div class="prescriptions-list">
-      <div class="prescription-row">
-        <div class="prescription-icon">
-          <!-- Plus/Pharmacy SVG Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-            <title>hospital</title>
-            <g id="hospital">
-              <path
-                d="M29,28H28V16a1,1,0,0,0-1-1H21V3a1,1,0,0,0-1-1H5A1,1,0,0,0,4,3V28H3a1,1,0,0,0,0,2H29a1,1,0,0,0,0-2ZM26,17V28H21V17ZM15,28H10V22.05h5Zm2,0V21.05a1,1,0,0,0-1-1H9a1,1,0,0,0-1,1v7H6V4H19V28ZM12.5,11a1,1,0,0,1-1-1V9h-1a1,1,0,0,1,0-2h1V6a1,1,0,0,1,2,0V7h1a1,1,0,0,1,0,2h-1v1A1,1,0,0,1,12.5,11ZM12,14a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,14Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,14Zm-5,3a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,17Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,17Z" />
-            </g>
-          </svg>
-        </div>
-        <div class="prescription-content">
-          <div class="prescription-title">
-          {% if not preferred_pharmacy %}
-            <a id="choose-pharmacy" href="#">Choose a preferred pharmacy</a>
-          {% else %}
-            <a id="update-pharmacy" href="#">Update your preferred pharmacy</a>
-          {% endif %}
+  <div id="app" class="widget">
+    <div class="title">Your Prescriptions</div>
+    <div class="content">
+      <div class="list">
+        <div class="row" onclick="handlePreferredPharmacyClick()">
+          <div class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+              <title>hospital</title>
+              <g id="hospital">
+                <path
+                  d="M29,28H28V16a1,1,0,0,0-1-1H21V3a1,1,0,0,0-1-1H5A1,1,0,0,0,4,3V28H3a1,1,0,0,0,0,2H29a1,1,0,0,0,0-2ZM26,17V28H21V17ZM15,28H10V22.05h5Zm2,0V21.05a1,1,0,0,0-1-1H9a1,1,0,0,0-1,1v7H6V4H19V28ZM12.5,11a1,1,0,0,1-1-1V9h-1a1,1,0,0,1,0-2h1V6a1,1,0,0,1,2,0V7h1a1,1,0,0,1,0,2h-1v1A1,1,0,0,1,12.5,11ZM12,14a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,14Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,14Zm-5,3a1,1,0,0,1-1,1H9a1,1,0,0,1,0-2h2A1,1,0,0,1,12,17Zm5,0a1,1,0,0,1-1,1H14a1,1,0,0,1,0-2h2A1,1,0,0,1,17,17Z" />
+              </g>
+            </svg>
           </div>
-          <div id="pharmacy" class="prescription-desc">
-          {% if not preferred_pharmacy %}
-            Your prescription will be sent here by default.
-          {% else %}
-            {{ preferred_pharmacy.pharmacy_name }} @ {{ preferred_pharmacy.pharmacy_address }}
-          {% endif %}
+          <div class="content">
+            <div class="title">
+            {% if not preferred_pharmacy %}
+              Choose a preferred pharmacy
+            {% else %}
+              Update your preferred pharmacy
+            {% endif %}
+            </div>
+            
+            <div class="subtitle">
+            {% if not preferred_pharmacy %}
+              Your prescription will be sent here by default.
+            {% else %}
+              {{ preferred_pharmacy.pharmacy_name }} @ {{ preferred_pharmacy.pharmacy_address }}
+            {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="row" onclick="handleRefillPrescriptionsClick()">
+          <div class="icon">
+            <!-- Medication/Refill SVG Icon -->
+            <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+              <path
+                d="M61.748 70.68h-4.914v-4.914a1.749 1.749 0 0 0-1.75-1.75h-8.649a1.75 1.75 0 0 0-1.75 1.75v4.914h-4.913a1.75 1.75 0 0 0-1.75 1.75v8.648a1.75 1.75 0 0 0 1.75 1.75h4.913v4.913a1.75 1.75 0 0 0 1.75 1.75h8.649a1.749 1.749 0 0 0 1.75-1.75v-4.913h4.914a1.75 1.75 0 0 0 1.75-1.75V72.43a1.75 1.75 0 0 0-1.75-1.75zM60 79.328h-4.916a1.75 1.75 0 0 0-1.75 1.75v4.913h-5.149v-4.913a1.75 1.75 0 0 0-1.75-1.75h-4.913V74.18h4.913a1.751 1.751 0 0 0 1.75-1.75v-4.914h5.149v4.914a1.751 1.751 0 0 0 1.75 1.75H60z" />
+              <path
+                d="M97.694 93.58H82.223V45.986a8.531 8.531 0 0 0-6.712-8.3l-1.93-.414a5.014 5.014 0 0 1-3.945-4.872v-4.633h3.975a1.75 1.75 0 0 0 1.75-1.75V14.146a1.75 1.75 0 0 0-1.75-1.75h-45.7a1.751 1.751 0 0 0-1.75 1.75v11.871a1.751 1.751 0 0 0 1.75 1.75h3.975V32.4a5.013 5.013 0 0 1-3.944 4.877l-1.931.414a8.53 8.53 0 0 0-6.712 8.3v61.129a8.5 8.5 0 0 0 8.488 8.489h45.948a8.483 8.483 0 0 0 3.379-.712 10.919 10.919 0 0 0 3.847.708h16.733a11.01 11.01 0 0 0 0-22.02zM22.8 59.924h55.923v33.66H22.8zM29.658 15.9h42.2v8.371h-42.2zm-2.917 25.208 1.93-.413a8.529 8.529 0 0 0 6.712-8.3v-4.628h30.753V32.4a8.53 8.53 0 0 0 6.713 8.3l1.929.413a5.016 5.016 0 0 1 3.945 4.878v10.433H22.8V45.986a5.015 5.015 0 0 1 3.941-4.878zM22.8 107.115V97.084h50.134a10.942 10.942 0 0 0 0 15.02h-45.15a4.994 4.994 0 0 1-4.984-4.989zm50.655-2.525a7.528 7.528 0 0 1 7.51-7.51h6.622v15.02h-6.626a7.519 7.519 0 0 1-7.51-7.51zm29.563 5.311a7.5 7.5 0 0 1-5.32 2.2h-6.615V97.08h6.611a7.517 7.517 0 0 1 5.32 12.821z" />
+            </svg>
+          </div>
+          <div class="content">
+            <div class="title">Request a refill</div>
+            <div class="subtitle">Send a message requesting a refill be sent to your pharmacy</div>
           </div>
         </div>
       </div>
-      <div class="prescription-row">
-        <div class="prescription-icon">
-          <!-- Medication/Refill SVG Icon -->
-          <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-            <path
-              d="M61.748 70.68h-4.914v-4.914a1.749 1.749 0 0 0-1.75-1.75h-8.649a1.75 1.75 0 0 0-1.75 1.75v4.914h-4.913a1.75 1.75 0 0 0-1.75 1.75v8.648a1.75 1.75 0 0 0 1.75 1.75h4.913v4.913a1.75 1.75 0 0 0 1.75 1.75h8.649a1.749 1.749 0 0 0 1.75-1.75v-4.913h4.914a1.75 1.75 0 0 0 1.75-1.75V72.43a1.75 1.75 0 0 0-1.75-1.75zM60 79.328h-4.916a1.75 1.75 0 0 0-1.75 1.75v4.913h-5.149v-4.913a1.75 1.75 0 0 0-1.75-1.75h-4.913V74.18h4.913a1.751 1.751 0 0 0 1.75-1.75v-4.914h5.149v4.914a1.751 1.751 0 0 0 1.75 1.75H60z" />
-            <path
-              d="M97.694 93.58H82.223V45.986a8.531 8.531 0 0 0-6.712-8.3l-1.93-.414a5.014 5.014 0 0 1-3.945-4.872v-4.633h3.975a1.75 1.75 0 0 0 1.75-1.75V14.146a1.75 1.75 0 0 0-1.75-1.75h-45.7a1.751 1.751 0 0 0-1.75 1.75v11.871a1.751 1.751 0 0 0 1.75 1.75h3.975V32.4a5.013 5.013 0 0 1-3.944 4.877l-1.931.414a8.53 8.53 0 0 0-6.712 8.3v61.129a8.5 8.5 0 0 0 8.488 8.489h45.948a8.483 8.483 0 0 0 3.379-.712 10.919 10.919 0 0 0 3.847.708h16.733a11.01 11.01 0 0 0 0-22.02zM22.8 59.924h55.923v33.66H22.8zM29.658 15.9h42.2v8.371h-42.2zm-2.917 25.208 1.93-.413a8.529 8.529 0 0 0 6.712-8.3v-4.628h30.753V32.4a8.53 8.53 0 0 0 6.713 8.3l1.929.413a5.016 5.016 0 0 1 3.945 4.878v10.433H22.8V45.986a5.015 5.015 0 0 1 3.941-4.878zM22.8 107.115V97.084h50.134a10.942 10.942 0 0 0 0 15.02h-45.15a4.994 4.994 0 0 1-4.984-4.989zm50.655-2.525a7.528 7.528 0 0 1 7.51-7.51h6.622v15.02h-6.626a7.519 7.519 0 0 1-7.51-7.51zm29.563 5.311a7.5 7.5 0 0 1-5.32 2.2h-6.615V97.08h6.611a7.517 7.517 0 0 1 5.32 12.821z" />
-          </svg>
-        </div>
-        <div class="prescription-content">
-          <div class="prescription-title">
-            <a id="request-refill" href="#">Request a refill</a>
-          </div>
-          <div class="prescription-desc">
-            Send a message requesting a refill be sent to your pharmacy
-          </div>
+      <div class="panel" id="panel">
+        <div class="panel-content" id="panel-content">
+          <!-- Dynamic content will be loaded here -->
         </div>
       </div>
     </div>
-
   </div>
-
+    
   <script>
-    const prescriptionsTemplate = (medications) => `
-      <div class="refill-list">
-          <form id="refill-form" method="post">
-          ${medications.length ? medications.map(medication => `
-            <div class="medication">
-              <div class="medication-info">
-                <span class="medication-title">${medication.codings[0].display}</span>
-                <span class="medication-description">${medication.codings[0].sig}</span>
-              </div>
-              <input type="hidden" name="medication" value="${medication.id}" disabled>
-              <button type="button" class="remove-btn">Remove</button>
+    // data
+    const data = {{ data|safe }};
+    const searchPharmacyUrl = "{{ search_pharmacy_url }}";
+    const refillPrescriptionsUrl = "{{ refill_prescriptions_url }}";
+
+    const app = document.querySelector("#app");
+
+    function showPanel(title, content, panelType) {
+      const list = app.querySelector(".list");
+      const panel = app.querySelector(".panel");
+      const panelContent = app.querySelector(".panel-content");
+
+      // Hide the list
+      list.style.display = "none";
+
+      // Show the panel with content
+      panelContent.innerHTML = `
+        <div class="panel-header">
+          <button class="back-button" onclick="showList()">← Back</button>
+          <h2>${title}</h2>
+          <input type="text" class="search-field" placeholder="Search..." oninput="handleSearch(this.value, '${panelType}')" />
+        </div>
+        <div class="panel-body">
+          ${content}
+        </div>
+      `;
+
+      panel.classList.add("active");
+    }
+
+    // Handle search based on panel type
+    window.handleSearch = (searchTerm, panelType) => {
+      if (panelType === "pharmacy") {
+        searchPharmacies(searchTerm);
+      } else if (panelType === "prescriptions") {
+        filterPrescriptions(searchTerm);
+      }
+    };
+
+    // API call for pharmacy search
+    async function searchPharmacies(searchTerm) {
+      try {
+        // Show loading state
+        const pharmacyContent = document.querySelector(".pharmacy-content");
+        if (pharmacyContent) {
+          pharmacyContent.innerHTML =
+            '<div class="loading">Searching pharmacies...</div>';
+        }
+
+        const response = await fetch(searchPharmacyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new FormData().append("search_query", searchTerm),
+        });
+
+        if (!response.ok) {
+          throw new Error("Search failed");
+        }
+
+        const pharmacies = await response.json();
+
+        console.log("Pharmacies found:", pharmacies);
+        
+        // Update content with search results
+        if (pharmacyContent) {
+          pharmacyContent.innerHTML = pharmacies
+            .map(
+              (p) => `
+            <div class="pharmacy-item" onclick="selectPharmacy('${p.pharmacy_ncpdp_id}')" data-id="${p.pharmacy_ncpdp_id}">
+              <h3>${p.pharmacy_name}</h3>
+              <p>${p.pharmacy_address}</p>
+              <p>Phone: ${p.pharmacy_phone_number}</p>
             </div>
-          `).join('') : `
-            <div class="medication-title">No medications found</div>
-          `}
-          <div class="modal-footer">
-            <button type="submit" class="next-btn">Request Refill</button>
-            <button type="button" class="cancel-btn">Cancel</button>
-          </div>
-        </form>
-      </div>
-    `;
+          `
+            )
+            .join("");
+        }
+      } catch (error) {
+        console.error("Pharmacy search error:", error);
+        const pharmacyContent = document.querySelector(".pharmacy-content");
+        if (pharmacyContent) {
+          pharmacyContent.innerHTML =
+            '<div class="error">Search failed. Please try again.</div>';
+        }
+      }
+    }
 
-    const pharmacyTemplate = (pharmacy) => `
-    `;
+    // Local filtering for prescriptions
+    function filterPrescriptions(searchTerm) {
+      const items = document.querySelectorAll(".prescription-item");
+      const lowerSearchTerm = searchTerm.toLowerCase();
 
-    document.addEventListener('DOMContentLoaded', function () {
-      const requestRefillLink = document.getElementById('request-refill');
+      items.forEach((item) => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(lowerSearchTerm)) {
+          item.style.display = "block";
+        } else {
+          item.style.display = "none";
+        }
+      });
+    }
+
+    window.showList = () => {
+      const list = app.querySelector(".list");
+      const panel = app.querySelector(".panel");
+
+      // Show the list
+      list.style.display = "flex";
+
+      // Hide the panel
+      panel.classList.remove("active");
+    };
+
+    window.handlePreferredPharmacyClick = () => {
+      const pharmacies = data["preferred_pharmacies"] || [];
+      const currentPharmacy = data["preferred_pharmacy"];
+
+      showPanel(
+        "Preferred Pharmacy",
+        `
+              <div class="pharmacy-content">
+                ${pharmacies
+                  .map(
+                    (p) => `
+                  <div class="pharmacy-item" onclick="selectPharmacy('${p.pharmacy_ncpdp_id}')" data-id="${p.pharmacy_ncpdp_id}">
+                    <h3>${p.pharmacy_name}</h3>
+                    <p>${p.pharmacy_address}</p>
+                    <p>Phone: ${p.pharmacy_phone_number}</p>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+            `,
+        "pharmacy"
+      );
+    };
+
+    window.handleRefillPrescriptionsClick = () => {
+      const prescriptions = data["medications"] || [];
       
-      requestRefillLink.addEventListener('click', function (event) {
-        event.preventDefault();
+      showPanel(
+        "Refill Prescriptions",
+        `
+              <div class="prescriptions-content">
+                ${prescriptions
+                  .map(
+                    (p) => `
+                  <div class="prescription-item" onclick="requestRefill('${p.id}')" data-id="${p.id}">
+                    <h3>${p.codings[0].display}</h3>
+                    <p>Instructions: ${p.clinical_quantity_description}</p>
+                    <p>Quantity: ${p.quantity_qualifier_description}</p>
+                    <button class="primary-button">Request Refill</button>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+            `,
+        "prescriptions"
+      );
+    };
 
-        requestRefillLink.classList.add('loading');
+    window.selectPharmacy = (id) => {
+      alert(`Selected pharmacy ID: ${id}`);
+      fetch("{{ search_pharmacy_url }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new FormData().append("search_query", "a"),
+      })
+        .then(response => response.json())
+        .then(data => console.log("Pharmacy search results:", data))
+        .catch(error => console.error("Error searching for pharmacies:", error));
+    };
 
-        fetch(`{{ request_refill_url }}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-        }).then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-
-          return response.json();
-        }).then(data => {
-          if (data.medications && data.medications.length > 0) {
-            console.log('Medications fetched:', data.medications);
-            document.body.innerHTML = prescriptionsTemplate(data.medications);
-          } else {
-            console.log('No medications found.');
-          }
-        }).catch(error => {
-          console.error('Error fetching medications:', error);
-        }).finally(() => {
-          requestRefillLink.classList.remove('loading');
-        });
-      });
-
-      function createPharmacyForm(element) {
-        const pharmacy = document.getElementById('pharmacy');
-        const currentText = pharmacy.textContent.trim();
-
-        pharmacy.innerHTML = `
-          <form id="pharmacy-form" style="display: flex; align-items: center; gap: 8px;">
-            <input type="text" id="pharmacy-input" value="${currentText}" style="flex: 1; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;">
-            <button type="submit" style="padding: 4px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
-            <button type="button" id="cancel-btn" style="padding: 4px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-          </form>
-        `;
-
-        const form = document.getElementById('pharmacy-form');
-        const input = document.getElementById('pharmacy-input') ;
-        const cancelBtn = document.getElementById('cancel-btn');
-
-        input.focus();
-
-        form.addEventListener('submit', function (e) {
-          e.preventDefault();
-          const newValue = input.value.trim();
-          if (newValue) {
-            pharmacy.textContent = newValue;
-          } else {
-            pharmacy.textContent = currentText;
-          }
-        });
-
-        cancelBtn.addEventListener('click', function () {
-          pharmacy.textContent = currentText;
-        });
-      }
-
-      function updatePharmacy(element) {
-        element.classList.add('loading');
-
-        fetch(`{{ update_pharmacy_url }}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-        }).then((response) => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-        }).finally(() => {
-          updatePharmacyLink.classList.remove('loading');
-        });
-      }
-
-      const choosePharmacyLink = document.getElementById('choose-pharmacy');
-      choosePharmacyLink?.addEventListener('click', function (event) {
-        event.preventDefault();
-
-        window.prompt('Please enter your preferred pharmacy name and address:', '').then((input) => {
-          if (input) {
-            const pharmacy = document.getElementById('pharmacy');
-            pharmacy.textContent = input;
-          }
-        });
-
-        updatePharmacy(choosePharmacyLink).then(() => {
-          choosePharmacyLink.classList.remove('loading');
-        }).catch(error => {
-          console.error('Error updating pharmacy:', error);
-          choosePharmacyLink.classList.remove('loading');
-        });
-      });
-
-      const updatePharmacyLink = document.getElementById('update-pharmacy');
-      updatePharmacyLink?.addEventListener('click', function (event) {
-        event.preventDefault();
-
-        updatePharmacyLink.classList.add('loading');
-
-        updatePharmacy(updatePharmacyLink).then(() => {
-          updatePharmacyLink.classList.remove('loading');
-        }).catch(error => {
-          console.error('Error updating pharmacy:', error);
-          updatePharmacyLink.classList.remove('loading');
-        });
-      });
-    });
+    window.requestRefill = (id) => {
+      alert(`Requested refill for prescription ID: ${id}`);
+      // Here you would typically send this request to your backend
+      showList();
+    };
   </script>
 </body>
 
