@@ -27,6 +27,7 @@ class Note(NoteOrAppointmentABC):
     datetime_of_service: datetime.datetime | None = None
     patient_id: str | None = None
     title: str | None = None
+    related_data: dict | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
