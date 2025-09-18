@@ -74,12 +74,16 @@ class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
         default=None, json_schema_extra={"commands_api_name": "compound_medication_data"}
     )
 
+    def _has_fdb_code(self) -> bool:
+        """Check if fdb_code is provided and non-empty."""
+        return self.fdb_code is not None and self.fdb_code.strip() != ""
+
     def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         """Add compound medication validation to the base validation."""
         errors = super()._get_error_details(method)
 
         # Validate that exactly one medication type is provided
-        has_fdb_code = self.fdb_code is not None and self.fdb_code.strip() != ""
+        has_fdb_code = self._has_fdb_code()
         has_compound_medication_id = (
             self.compound_medication_id is not None and self.compound_medication_id.strip() != ""
         )
