@@ -23,7 +23,6 @@ class LaunchModalEffect(_BaseEffect):
     content: str | None = None
     target: TargetType = TargetType.DEFAULT_MODAL
     title: str = "Untitled"
-    patient_id: str | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -33,7 +32,6 @@ class LaunchModalEffect(_BaseEffect):
             "content": self.content,
             "target": self.target.value,
             "title": self.title,
-            "patient_id": self.patient_id,
         }
 
     @model_validator(mode="after")
