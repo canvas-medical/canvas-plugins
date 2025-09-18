@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
+    "plugin_version": "0.0.2",
     "name": "api_samples",
     "description": "Example usages of the SimpleAPI handler",
     "components": {
@@ -12,6 +12,10 @@
             {
                 "class": "api_samples.routes.email_bounce:EmailBounceAPI",
                 "description": "Creates a task to confirm patient contact info"
+            },
+            {
+                "class": "api_samples.routes.appointment_updater:AppointmentAPI",
+                "description": "Updates an existing appointment"
             }
         ],
         "commands": [],
