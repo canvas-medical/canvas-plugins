@@ -102,8 +102,8 @@ class MedicationHistoryMedicationCoding(Model):
 class MedicationHistoryResponseStatus(TextChoices):
     """MedicationHistoryResponseStatus."""
 
-    ACTIVE = "active", "active"
-    INACTIVE = "inactive", "inactive"
+    STATUS_APPROVED = "approved"
+    STATUS_DENIED = "denied"
 
 
 class MedicationHistoryResponse(IdentifiableModel):
