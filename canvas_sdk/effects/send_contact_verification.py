@@ -22,11 +22,6 @@ class SendContactVerificationEffect(_BaseEffect):
         """The contact point id."""
         return {"contact_point_id": self.contact_point_id}
 
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
-
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
