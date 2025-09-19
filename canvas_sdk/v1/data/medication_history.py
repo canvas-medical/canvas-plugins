@@ -18,7 +18,10 @@ class MedicationHistoryMedication(IdentifiableModel):
     modified = models.DateTimeField(auto_now=True)
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="medications", null=True
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        related_name="medication_history_medications",
+        null=True,
     )
 
     drug_description = models.TextField()
