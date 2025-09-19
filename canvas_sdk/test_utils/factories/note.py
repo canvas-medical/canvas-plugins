@@ -9,9 +9,6 @@ from canvas_sdk.v1.data.note import (
     PracticeLocationPOS,
 )
 
-from .patient import PatientFactory
-from .user import CanvasUserFactory
-
 
 class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):
     """Factory for creating a NoteType."""
@@ -56,13 +53,13 @@ class NoteFactory(factory.django.DjangoModelFactory[Note]):
 
     created = factory.Faker("date_time_between", start_date="-4d", end_date="-3d")
     modified = factory.Faker("date_time_between", start_date="-1d", end_date="0d")
-    patient = factory.SubFactory(PatientFactory)
+    patient = factory.SubFactory("canvas_sdk.test_utils.factories.patient.PatientFactory")
     # provider = factory.SubFactory(ProviderFactory) # doesn't exist yet
     note_type = FuzzyChoice(NoteTypes.choices, getter=lambda c: c[0])
     note_type_version = factory.SubFactory(NoteTypeFactory)
     title = factory.Faker("sentence", nb_words=4)
     body = factory.Faker("text", max_nb_chars=200)
-    originator = factory.SubFactory(CanvasUserFactory)
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
     checksum = factory.Faker("md5")
     billing_note = factory.Faker("sentence", nb_words=10)
     datetime_of_service = factory.Faker("date_time_between", start_date="-2d", end_date="-1d")
