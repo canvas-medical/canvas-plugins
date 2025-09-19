@@ -6,7 +6,7 @@ from canvas_sdk.effects.appointments_metadata import (
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.effects import Effect
-from recurring_appointments.utils.constants import RecurrenceEnum, FIELD_RECURRENCE_KEY, FIELD_RECURRENCE_INTERVAL_KEY, FIELD_RECURRENCE_STOP_AFTER_KEY
+from recurring_appointments.utils.constants import RecurrenceEnum, FIELD_RECURRENCE_TYPE_KEY, FIELD_RECURRENCE_INTERVAL_KEY, FIELD_RECURRENCE_STOP_AFTER_KEY
 
 
 class AppointmentFormFields(BaseHandler):
@@ -19,13 +19,12 @@ class AppointmentFormFields(BaseHandler):
             type=InputType.SELECT,
             required=False,
             options=[f"{i}" for i in range(1, 9)],
-            value="1"
         )
 
         # recurrence form field
         recurrence_form_field = FormField(
-            key=FIELD_RECURRENCE_KEY,
-            label="",
+            key=FIELD_RECURRENCE_TYPE_KEY,
+            label="Recurrence",
             type=InputType.SELECT,
             required=False,
             options=[item.value for item in RecurrenceEnum if item != RecurrenceEnum.NONE],
@@ -36,7 +35,6 @@ class AppointmentFormFields(BaseHandler):
             label="Ends After X Events",
             type=InputType.TEXT,
             required=False,
-            value="30"
         )
 
         return [
