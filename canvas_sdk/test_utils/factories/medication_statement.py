@@ -1,11 +1,5 @@
 import factory
 
-from canvas_sdk.test_utils.factories import (
-    CanvasUserFactory,
-    MedicationFactory,
-    NoteFactory,
-    PatientFactory,
-)
 from canvas_sdk.v1.data import MedicationStatement
 
 
@@ -15,12 +9,12 @@ class MedicationStatementFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = MedicationStatement
 
-    patient = factory.SubFactory(PatientFactory)
-    note = factory.SubFactory(NoteFactory)
-    medication = factory.SubFactory(MedicationFactory)
-    entered_in_error = factory.SubFactory(CanvasUserFactory)
-    committer = factory.SubFactory(CanvasUserFactory)
-    originator = factory.SubFactory(CanvasUserFactory)
+    patient = factory.SubFactory("canvas_sdk.test_utils.factories.patient.PatientFactory")
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.note.NoteFactory")
+    medication = factory.SubFactory("canvas_sdk.test_utils.factories.medication.MedicationFactory")
+    entered_in_error = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
+    committer = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
     start_date_original_input = factory.Faker("date_this_century")
     start_date = factory.Faker("date_this_century")
     end_date_original_input = factory.Faker("date_this_century")

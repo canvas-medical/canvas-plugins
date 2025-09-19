@@ -1,7 +1,7 @@
 from .facility import FacilityFactory
 from .medication import MedicationFactory
 from .medication_statement import MedicationStatementFactory
-from .note import NoteFactory
+from .note import NoteFactory, NoteTypeFactory
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
 from .protocol_current import ProtocolCurrentFactory
 from .stop_medication_event import StopMedicationEventFactory
@@ -16,6 +16,7 @@ __all__ = (
     "ProtocolCurrentFactory",
     "StopMedicationEventFactory",
     "NoteFactory",
+    "NoteTypeFactory",
     "MedicationFactory",
     "MedicationStatementFactory",
 )
