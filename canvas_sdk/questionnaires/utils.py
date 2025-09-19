@@ -121,4 +121,5 @@ __exports__ = (
     "Draft7Validator",
     "ExtendedDraft7Validator",
     "from_yaml",
+    "QuestionnaireConfig",
 )
