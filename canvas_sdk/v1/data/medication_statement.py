@@ -19,6 +19,7 @@ class MedicationStatement(IdentifiableModel):
         "v1.Medication",
         on_delete=models.DO_NOTHING,
         related_name="medication_statements",
+        null=True,
     )
     indications = models.ManyToManyField(
         "v1.Assessment",
@@ -26,22 +27,24 @@ class MedicationStatement(IdentifiableModel):
         db_table="canvas_sdk_data_api_medicationstatement_indications_001",
     )
     entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+"
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+", null=True
     )
-    committer = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+", null=True
+    )
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
-    start_date_original_input = models.CharField(max_length=255)
-    start_date = models.DateField()
-    end_date_original_input = models.CharField(max_length=255)
-    end_date = models.DateField()
-    dose_quantity = models.FloatField()
-    dose_form = models.CharField(max_length=255)
-    dose_route = models.CharField(max_length=255)
-    dose_frequency = models.FloatField()
-    dose_frequency_interval = models.CharField(max_length=255)
-    sig_original_input = models.CharField(max_length=255)
+    start_date_original_input = models.CharField(max_length=255, default="")
+    start_date = models.DateField(default=None, null=True)
+    end_date_original_input = models.CharField(max_length=255, default="")
+    end_date = models.DateField(default=None, null=True)
+    dose_quantity = models.FloatField(null=True)
+    dose_form = models.CharField(max_length=255, default="")
+    dose_route = models.CharField(max_length=255, default="")
+    dose_frequency = models.FloatField(null=True)
+    dose_frequency_interval = models.CharField(max_length=255, default="")
+    sig_original_input = models.CharField(max_length=255, default="")
 
 
 __exports__ = ("MedicationStatement",)
