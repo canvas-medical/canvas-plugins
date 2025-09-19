@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from canvas_sdk.v1.data.base import IdentifiableModel
 
@@ -30,12 +31,12 @@ class Encounter(IdentifiableModel):
         db_table = "canvas_sdk_data_api_encounter_001"
 
     note = models.OneToOneField("v1.Note", on_delete=models.CASCADE, related_name="encounter")
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
     medium = models.CharField(choices=EncounterMedium.choices, max_length=20)
     state = models.CharField(max_length=3, choices=EncounterState.choices)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    start_time = models.DateTimeField(default=timezone.now, null=True, db_index=True)
+    end_time = models.DateTimeField(default=None, null=True)
 
 
 __exports__ = (
