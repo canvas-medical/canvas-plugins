@@ -1,5 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment, AppointmentExternalIdentifier
+from .appointment import Appointment, AppointmentExternalIdentifier, AppointmentMetadata
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
@@ -19,6 +19,12 @@ from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .immunization import (
+    Immunization,
+    ImmunizationCoding,
+    ImmunizationStatement,
+    ImmunizationStatementCoding,
+)
 from .invoice import Invoice
 from .lab import (
     LabOrder,
@@ -94,6 +100,7 @@ from .user import CanvasUser
 
 __all__ = __exports__ = (
     "Appointment",
+    "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
@@ -131,6 +138,10 @@ __all__ = __exports__ = (
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
+    "Immunization",
+    "ImmunizationCoding",
+    "ImmunizationStatement",
+    "ImmunizationStatementCoding",
     "InstallmentPlan",
     "Interview",
     "InterviewQuestionnaireMap",
