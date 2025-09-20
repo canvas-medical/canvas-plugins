@@ -45,8 +45,7 @@ class Task(TimestampedModel, IdentifiableModel):
     assignee = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
     )
-    # TODO - uncomment when Team model is created
-    # team = models.ForeignKey('v1.Team', on_delete=models.DO_NOTHING, related_name="tasks", null=True)
+    team = models.ForeignKey('v1.Team', on_delete=models.DO_NOTHING, related_name="tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
@@ -95,10 +94,45 @@ class TaskTaskLabel(Model):
     task_label = models.ForeignKey(TaskLabel, on_delete=models.DO_NOTHING, null=True)
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
+class NoteTask(Model):
+    """Note Task."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_notetask_001"
+
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="note_tasks", null=True)
+    task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, related_name="note_tasks", null=True)
+    patient = models.ForeignKey(
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        null=True,
+    )
+    original_title = models.TextField()
+
+    original_assignee = models.ForeignKey(
+        "v1.Staff",
+        on_delete=models.DO_NOTHING,
+        related_name="assignee_note_tasks",
+        null=True,
+    )
+    original_team = models.ForeignKey(
+        "v1.Team",
+        on_delete=models.DO_NOTHING,
+        related_name="note_tasks",
+        null=True,
+    )
+    original_role = models.ForeignKey(
+        "v1.CareTeamRole", related_name="+", on_delete=models.DO_NOTHING, null=True
+    )
+    original_due = models.DateTimeField(blank=True, null=True)
+
+    internal_comment = models.TextField()
+
 
 __exports__ = (
     "TaskType",
     "EventType",
+    "NoteTask",
     "TaskStatus",
     "TaskLabelModule",
     "Task",
