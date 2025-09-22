@@ -1,7 +1,6 @@
 """Staff Status Change Event Handlers."""
 
 import arrow
-import csv
 import io
 from typing import Any
 
@@ -11,6 +10,53 @@ from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data.staff import Staff
 from logger import log
+
+
+def escape_csv_field(field: str) -> str:
+    """Escape a field for CSV format."""
+    if not field:
+        return ""
+    # If field contains comma, quote, or newline, wrap in quotes and escape quotes
+    if "," in field or '"' in field or "\n" in field:
+        return '"' + field.replace('"', '""') + '"'
+    return field
+
+
+def format_csv_row(fields: list) -> str:
+    """Format a list of fields as a CSV row."""
+    return ",".join(escape_csv_field(str(field)) for field in fields)
+
+
+def parse_csv_row(row: str) -> list:
+    """Parse a CSV row into fields."""
+    fields = []
+    current_field = ""
+    in_quotes = False
+    i = 0
+    
+    while i < len(row):
+        char = row[i]
+        
+        if char == '"':
+            if in_quotes and i + 1 < len(row) and row[i + 1] == '"':
+                # Escaped quote
+                current_field += '"'
+                i += 1  # Skip next quote
+            else:
+                # Toggle quote state
+                in_quotes = not in_quotes
+        elif char == ',' and not in_quotes:
+            # Field separator
+            fields.append(current_field)
+            current_field = ""
+        else:
+            current_field += char
+        
+        i += 1
+    
+    # Add the last field
+    fields.append(current_field)
+    return fields
 
 
 class StaffActivatedHandler(BaseHandler):
@@ -70,7 +116,7 @@ class StaffActivatedHandler(BaseHandler):
             email = staff.user.email
         
         # Create new row
-        new_row = [
+        new_row = format_csv_row([
             timestamp,
             staff.id,
             staff.first_name,
@@ -78,13 +124,11 @@ class StaffActivatedHandler(BaseHandler):
             email,
             new_status,
             previous_status
-        ]
+        ])
         
         # If no existing data, create header and add row
         if not existing_data:
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow([
+            header = format_csv_row([
                 "timestamp", 
                 "staff_id", 
                 "first_name", 
@@ -93,15 +137,10 @@ class StaffActivatedHandler(BaseHandler):
                 "status", 
                 "previous_status"
             ])
-            writer.writerow(new_row)
-            updated_csv = output.getvalue()
+            updated_csv = header + "\n" + new_row
         else:
             # Append to existing CSV
-            updated_csv = existing_data.rstrip() + "\n"
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(new_row)
-            updated_csv += output.getvalue().rstrip()
+            updated_csv = existing_data.rstrip() + "\n" + new_row
         
         # Store updated CSV (7 days = 604800 seconds)
         cache.set(cache_key, updated_csv, timeout_seconds=604800)
@@ -122,8 +161,7 @@ class StaffActivatedHandler(BaseHandler):
             
             # Look for the most recent entry for this staff member
             for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
-                reader = csv.reader([line])
-                row = next(reader)
+                row = parse_csv_row(line)
                 if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                     return row[5]  # status is in column 5
                     
@@ -189,7 +227,7 @@ class StaffDeactivatedHandler(BaseHandler):
             email = staff.user.email
         
         # Create new row
-        new_row = [
+        new_row = format_csv_row([
             timestamp,
             staff.id,
             staff.first_name,
@@ -197,13 +235,11 @@ class StaffDeactivatedHandler(BaseHandler):
             email,
             new_status,
             previous_status
-        ]
+        ])
         
         # If no existing data, create header and add row
         if not existing_data:
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow([
+            header = format_csv_row([
                 "timestamp", 
                 "staff_id", 
                 "first_name", 
@@ -212,15 +248,10 @@ class StaffDeactivatedHandler(BaseHandler):
                 "status", 
                 "previous_status"
             ])
-            writer.writerow(new_row)
-            updated_csv = output.getvalue()
+            updated_csv = header + "\n" + new_row
         else:
             # Append to existing CSV
-            updated_csv = existing_data.rstrip() + "\n"
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(new_row)
-            updated_csv += output.getvalue().rstrip()
+            updated_csv = existing_data.rstrip() + "\n" + new_row
         
         # Store updated CSV (7 days = 604800 seconds)
         cache.set(cache_key, updated_csv, timeout_seconds=604800)
@@ -241,8 +272,7 @@ class StaffDeactivatedHandler(BaseHandler):
             
             # Look for the most recent entry for this staff member
             for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
-                reader = csv.reader([line])
-                row = next(reader)
+                row = parse_csv_row(line)
                 if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                     return row[5]  # status is in column 5
                     

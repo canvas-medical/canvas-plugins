@@ -1,7 +1,6 @@
 """Staff Status Tracker Cron Task Handler."""
 
 import arrow
-import csv
 import io
 from typing import Any
 
@@ -10,6 +9,21 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.handlers.cron_task import CronTask
 from canvas_sdk.v1.data.staff import Staff
 from logger import log
+
+
+def escape_csv_field(field: str) -> str:
+    """Escape a field for CSV format."""
+    if not field:
+        return ""
+    # If field contains comma, quote, or newline, wrap in quotes and escape quotes
+    if "," in field or '"' in field or "\n" in field:
+        return '"' + field.replace('"', '""') + '"'
+    return field
+
+
+def format_csv_row(fields: list) -> str:
+    """Format a list of fields as a CSV row."""
+    return ",".join(escape_csv_field(str(field)) for field in fields)
 
 
 class StaffStatusCronTask(CronTask):
@@ -58,11 +72,10 @@ class StaffStatusCronTask(CronTask):
         """
         Generate CSV format data for staff members.
         """
-        output = io.StringIO()
-        writer = csv.writer(output)
+        lines = []
         
         # Write header
-        writer.writerow([
+        header = format_csv_row([
             "timestamp", 
             "staff_id", 
             "first_name", 
@@ -71,6 +84,7 @@ class StaffStatusCronTask(CronTask):
             "status", 
             "previous_status"
         ])
+        lines.append(header)
         
         # Write staff data
         for staff in staff_members:
@@ -81,7 +95,7 @@ class StaffStatusCronTask(CronTask):
             
             status = "active" if staff.active else "inactive"
             
-            writer.writerow([
+            row = format_csv_row([
                 timestamp,
                 staff.id,
                 staff.first_name,
@@ -90,5 +104,6 @@ class StaffStatusCronTask(CronTask):
                 status,
                 ""  # previous_status empty for initial collection
             ])
+            lines.append(row)
         
-        return output.getvalue()
+        return "\n".join(lines)

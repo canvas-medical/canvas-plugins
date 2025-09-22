@@ -1,11 +1,57 @@
 """Basic tests for Staff Status Tracker functionality."""
 
-import csv
 import io
 from unittest.mock import Mock, patch
 
 # Note: These imports would need to be adjusted based on the actual plugin loading mechanism
 # For demonstration purposes, we're showing the expected structure
+
+
+def escape_csv_field(field: str) -> str:
+    """Escape a field for CSV format."""
+    if not field:
+        return ""
+    # If field contains comma, quote, or newline, wrap in quotes and escape quotes
+    if "," in field or '"' in field or "\n" in field:
+        return '"' + field.replace('"', '""') + '"'
+    return field
+
+
+def format_csv_row(fields: list) -> str:
+    """Format a list of fields as a CSV row."""
+    return ",".join(escape_csv_field(str(field)) for field in fields)
+
+
+def parse_csv_row(row: str) -> list:
+    """Parse a CSV row into fields."""
+    fields = []
+    current_field = ""
+    in_quotes = False
+    i = 0
+    
+    while i < len(row):
+        char = row[i]
+        
+        if char == '"':
+            if in_quotes and i + 1 < len(row) and row[i + 1] == '"':
+                # Escaped quote
+                current_field += '"'
+                i += 1  # Skip next quote
+            else:
+                # Toggle quote state
+                in_quotes = not in_quotes
+        elif char == ',' and not in_quotes:
+            # Field separator
+            fields.append(current_field)
+            current_field = ""
+        else:
+            current_field += char
+        
+        i += 1
+    
+    # Add the last field
+    fields.append(current_field)
+    return fields
 
 
 class TestStaffStatusCronTask:
@@ -37,14 +83,10 @@ class TestStaffStatusCronTask:
         timestamp = "2025-03-06T01:20:32.446Z"
         
         # Mock the CSV generation logic
-        import io
-        import csv
-        
-        output = io.StringIO()
-        writer = csv.writer(output)
+        lines = []
         
         # Write header
-        writer.writerow([
+        header = format_csv_row([
             "timestamp", 
             "staff_id", 
             "first_name", 
@@ -53,13 +95,14 @@ class TestStaffStatusCronTask:
             "status", 
             "previous_status"
         ])
+        lines.append(header)
         
         # Write staff data
         for staff in staff_members:
             email = staff.user.email if staff.user else ""
             status = "active" if staff.active else "inactive"
             
-            writer.writerow([
+            row = format_csv_row([
                 timestamp,
                 staff.id,
                 staff.first_name,
@@ -68,8 +111,9 @@ class TestStaffStatusCronTask:
                 status,
                 ""  # previous_status empty for initial collection
             ])
+            lines.append(row)
         
-        csv_data = output.getvalue()
+        csv_data = "\n".join(lines)
         
         # Parse and verify CSV
         lines = csv_data.strip().split('\n')
@@ -81,8 +125,8 @@ class TestStaffStatusCronTask:
         assert expected_header == header
         
         # Check data rows
-        reader = csv.reader(io.StringIO(csv_data))
-        rows = list(reader)
+        lines = csv_data.strip().split('\n')
+        rows = [parse_csv_row(line) for line in lines]
         
         # First staff member (active)
         assert rows[1][0] == timestamp
@@ -125,8 +169,7 @@ class TestStaffEventHandlers:
                 
                 # Look for the most recent entry for this staff member
                 for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
-                    reader = csv.reader([line])
-                    row = next(reader)
+                    row = parse_csv_row(line)
                     if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                         return row[5]  # status is in column 5
                         
@@ -166,8 +209,7 @@ class TestStaffEventHandlers:
                 
                 # Look for the most recent entry for this staff member
                 for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
-                    reader = csv.reader([line])
-                    row = next(reader)
+                    row = parse_csv_row(line)
                     if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                         return row[5]  # status is in column 5
                         
