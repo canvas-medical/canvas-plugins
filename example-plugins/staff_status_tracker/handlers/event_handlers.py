@@ -1,7 +1,6 @@
 """Staff Status Change Event Handlers."""
 
 import arrow
-import io
 from typing import Any
 
 from canvas_sdk.caching.plugins import get_cache

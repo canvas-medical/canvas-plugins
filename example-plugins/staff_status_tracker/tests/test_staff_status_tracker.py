@@ -1,6 +1,5 @@
 """Basic tests for Staff Status Tracker functionality."""
 
-import io
 from unittest.mock import Mock, patch
 
 # Note: These imports would need to be adjusted based on the actual plugin loading mechanism
