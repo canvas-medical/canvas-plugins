@@ -25,6 +25,37 @@ This plugin monitors incoming lab reports and automatically creates task notific
 
 This plugin requires no additional configuration. It automatically monitors all lab reports and creates tasks as needed.
 
+## Technical Implementation
+
+The plugin uses the Canvas SDK's protocol system to:
+
+1. **Event Handling**: Registers for `LAB_REPORT_CREATED` events using the `RESPONDS_TO` mechanism
+2. **Data Access**: Queries lab reports and their associated lab values using Django ORM
+3. **Abnormal Detection**: Checks the `abnormal_flag` field of each lab value for non-empty values
+4. **Task Creation**: Uses the `AddTask` effect to create tasks in the Canvas system
+5. **Error Handling**: Includes proper exception handling and logging for debugging
+
+### Safety Features
+
+- Filters out test-only reports (`for_test_only=True`)
+- Filters out junked reports (`junked=True`)  
+- Handles missing or null abnormal flags gracefully
+- Includes comprehensive error logging
+- Validates patient association before creating tasks
+
+### Data Fields Used
+
+From `LabReport`:
+- `patient_id`: Links the task to the correct patient
+- `for_test_only`: Used to filter out test reports
+- `junked`: Used to filter out invalid reports
+
+From `LabValue`:
+- `abnormal_flag`: Primary field for detecting abnormal values
+- `value`: Lab result value for task details
+- `units`: Measurement units for task details  
+- `reference_range`: Normal ranges for task details
+
 ## Task Details
 
 Created tasks include:

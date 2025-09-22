@@ -45,10 +45,11 @@ class AbnormalLabProtocol(BaseProtocol):
             # Check all lab values for abnormal flags
             abnormal_values = []
             for lab_value in lab_report.values.all():
-                # Check if the lab value has an abnormal flag
-                if lab_value.abnormal_flag and lab_value.abnormal_flag.strip():
+                # Check if the lab value has an abnormal flag (handle None case)
+                abnormal_flag = getattr(lab_value, 'abnormal_flag', None) or ""
+                if abnormal_flag.strip():
                     abnormal_values.append(lab_value)
-                    log.info(f"Found abnormal lab value: {lab_value.id} with flag: {lab_value.abnormal_flag}")
+                    log.info(f"Found abnormal lab value: {lab_value.id} with flag: {abnormal_flag}")
             
             if not abnormal_values:
                 log.info(f"No abnormal values found in lab report {lab_report_id}")
@@ -61,23 +62,26 @@ class AbnormalLabProtocol(BaseProtocol):
             # Create the task description with details about abnormal values
             value_details = []
             for value in abnormal_values:
-                detail = f"- {value.abnormal_flag}"
-                if value.value:
+                abnormal_flag = getattr(value, 'abnormal_flag', None) or ""
+                detail = f"- {abnormal_flag}"
+                if hasattr(value, 'value') and value.value:
                     detail += f": {value.value}"
-                if value.units:
+                if hasattr(value, 'units') and value.units:
                     detail += f" {value.units}"
-                if value.reference_range:
+                if hasattr(value, 'reference_range') and value.reference_range:
                     detail += f" (ref: {value.reference_range})"
                 value_details.append(detail)
             
             # Create the task
+            # Note: linked_object_type is set to None because LAB_REPORT is not yet
+            # available in the LinkableObjectType enum. When it's added, this should be updated.
             task = AddTask(
                 patient_id=str(patient_id),
                 title=task_title,
                 status=TaskStatus.OPEN,
                 labels=["abnormal-lab", "urgent-review"],
                 linked_object_id=str(lab_report_id),
-                linked_object_type=None  # LAB_REPORT type is not in the enum yet
+                linked_object_type=None  # TODO: Set to LAB_REPORT when available
             )
             
             log.info(f"Created task for abnormal lab values in report {lab_report_id}")

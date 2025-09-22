@@ -51,6 +51,12 @@ def test_abnormal_lab_detection():
     # Test case 3: Whitespace only abnormal flag (should be treated as normal)
     whitespace_value = MockLabValue(abnormal_flag="   ")
     assert not whitespace_value.abnormal_flag.strip()
+    
+    # Test case 4: None abnormal flag (defensive programming)
+    none_value = MockLabValue(abnormal_flag=None)
+    # Simulate getattr with None fallback
+    flag = getattr(none_value, 'abnormal_flag', None) or ""
+    assert not flag.strip()
 
 
 def test_task_creation_logic():
