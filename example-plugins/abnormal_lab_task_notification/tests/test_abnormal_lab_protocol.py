@@ -78,6 +78,22 @@ def test_task_creation_logic():
     assert task.linked_object_id == "test-lab-report-id"
 
 
+def test_task_apply_method():
+    """Test that AddTask has apply() method (structure validation)."""
+    task = AddTask(
+        patient_id="test-patient-id",
+        title="Test Task",
+        status=TaskStatus.OPEN
+    )
+    
+    # Verify apply method exists
+    assert hasattr(task, 'apply')
+    assert callable(getattr(task, 'apply'))
+    
+    # Note: We can't actually call apply() without Django environment
+    # but we can verify the method exists for the protocol to use
+
+
 def test_filtered_reports():
     """Test that test-only and junked reports are filtered out."""
     # Test case 1: Test-only report should be filtered
@@ -115,6 +131,7 @@ if __name__ == "__main__":
     test_plugin_responds_to_correct_event()
     test_abnormal_lab_detection()
     test_task_creation_logic()
+    test_task_apply_method()
     test_filtered_reports()
     test_multiple_abnormal_values()
     print("All tests passed!")
