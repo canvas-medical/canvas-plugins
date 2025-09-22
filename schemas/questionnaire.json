@@ -92,7 +92,7 @@
                         }
                     }
                 },
-                    "required": ["code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
+                "required": ["code_system", "code", "content", "responses_code_system", "responses_type", "responses"]
             }
         }
     },
