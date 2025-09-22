@@ -1,12 +1,12 @@
 {
     "sdk_version": "0.1.4",
     "plugin_version": "0.1.0",
-    "name": "staff-status-tracker",
+    "name": "staff_status_tracker",
     "description": "A plugin to track staffing status changes for a clinic",
     "components": {
         "protocols": [
             {
-                "class": "staff-status-tracker.handlers.cron_task:StaffStatusCronTask",
+                "class": "staff_status_tracker.handlers.cron_task:StaffStatusCronTask",
                 "description": "Weekly cron job to collect all staff status data",
                 "data_access": {
                     "event": "CRON",
@@ -17,7 +17,7 @@
                 }
             },
             {
-                "class": "staff-status-tracker.handlers.event_handlers:StaffActivatedHandler",
+                "class": "staff_status_tracker.handlers.event_handlers:StaffActivatedHandler",
                 "description": "Handler for staff activation events",
                 "data_access": {
                     "event": "STAFF_ACTIVATED",
@@ -28,7 +28,7 @@
                 }
             },
             {
-                "class": "staff-status-tracker.handlers.event_handlers:StaffDeactivatedHandler",
+                "class": "staff_status_tracker.handlers.event_handlers:StaffDeactivatedHandler",
                 "description": "Handler for staff deactivation events",
                 "data_access": {
                     "event": "STAFF_DEACTIVATED",
@@ -39,7 +39,7 @@
                 }
             },
             {
-                "class": "staff-status-tracker.handlers.api:StaffStatusTriggerAPI",
+                "class": "staff_status_tracker.handlers.api:StaffStatusTriggerAPI",
                 "description": "API endpoint to manually trigger staff status collection for testing",
                 "data_access": {
                     "event": "SIMPLE_API_REQUEST",
