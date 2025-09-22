@@ -1,8 +1,7 @@
 """SimpleAPI endpoint to trigger staff status collection for testing."""
 
-from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse
-from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
+from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPIRoute
 from canvas_sdk.v1.data.staff import Staff
 from logger import log
 
@@ -10,7 +9,7 @@ from logger import log
 from staff_status_tracker.handlers import StaffStatusCronTask
 
 
-class StaffStatusTriggerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
+class StaffStatusTriggerAPI(APIKeyAuthMixin, SimpleAPIRoute):
     """API endpoint that triggers the weekly staff status collection job."""
 
     PATH = "/trigger-staff-status-collection"

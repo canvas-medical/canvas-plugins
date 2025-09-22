@@ -56,7 +56,7 @@
         "views": []
     },
     "tags": ["staff", "tracking", "cron"],
-    "secrets": ["my_api_key"],
+    "secrets": ["simpleapi-api-key"],
     "license": "NONE",
     "readme": "NONE"
 }
