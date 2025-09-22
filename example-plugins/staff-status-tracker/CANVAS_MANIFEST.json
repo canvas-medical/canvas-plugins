@@ -1,0 +1,52 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "staff-status-tracker",
+    "description": "A plugin to track staffing status changes for a clinic",
+    "components": {
+        "protocols": [],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": [],
+        "handlers": [
+            {
+                "class": "staff-status-tracker.handlers.cron_task:StaffStatusCronTask",
+                "description": "Weekly cron job to collect all staff status data",
+                "data_access": {
+                    "event": "CRON",
+                    "read": [
+                        "staff"
+                    ],
+                    "write": []
+                }
+            },
+            {
+                "class": "staff-status-tracker.handlers.event_handlers:StaffActivatedHandler",
+                "description": "Handler for staff activation events",
+                "data_access": {
+                    "event": "STAFF_ACTIVATED",
+                    "read": [
+                        "staff"
+                    ],
+                    "write": []
+                }
+            },
+            {
+                "class": "staff-status-tracker.handlers.event_handlers:StaffDeactivatedHandler",
+                "description": "Handler for staff deactivation events",
+                "data_access": {
+                    "event": "STAFF_DEACTIVATED",
+                    "read": [
+                        "staff"
+                    ],
+                    "write": []
+                }
+            }
+        ]
+    },
+    "tags": ["staff", "tracking", "cron"],
+    "secrets": [],
+    "license": "NONE",
+    "readme": "NONE"
+}
