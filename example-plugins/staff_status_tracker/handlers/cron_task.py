@@ -40,29 +40,29 @@ class StaffStatusCronTask(CronTask):
         try:
             # Get all staff members
             staff_members = Staff.objects.all()
-            
+
             # Generate timestamp
             timestamp = arrow.utcnow().isoformat()
-            
+
             # Generate CSV data
             csv_data = self._generate_csv_data(staff_members, timestamp)
-            
+
             # Get cache and store for 7 days (7 * 24 * 60 * 60 = 604800 seconds)
             cache = get_cache()
             cache_key = "staff-status"
-            
+
             # Check if previous cache exists and log it
             existing_data = cache.get(cache_key)
             if existing_data:
                 log.info(f"Previous staff status data found: {existing_data[:500]}...")
-            
+
             # Store new CSV data
             cache.set(cache_key, csv_data, timeout_seconds=604800)  # 7 days
-            
+
             log.info(f"Staff status data collected and cached: {csv_data[:500]}...")
-            
+
             return []
-            
+
         except Exception as e:
             log.error(f"Error in staff status cron task: {e}")
             return []
@@ -72,28 +72,28 @@ class StaffStatusCronTask(CronTask):
         Generate CSV format data for staff members.
         """
         lines = []
-        
+
         # Write header
         header = format_csv_row([
-            "timestamp", 
-            "staff_id", 
-            "first_name", 
-            "last_name", 
-            "email", 
-            "status", 
+            "timestamp",
+            "staff_id",
+            "first_name",
+            "last_name",
+            "email",
+            "status",
             "previous_status"
         ])
         lines.append(header)
-        
+
         # Write staff data
         for staff in staff_members:
             # Get email from user if available
             email = ""
             if staff.user and hasattr(staff.user, 'email'):
                 email = staff.user.email
-            
+
             status = "active" if staff.active else "inactive"
-            
+
             row = format_csv_row([
                 timestamp,
                 staff.id,
@@ -104,5 +104,6 @@ class StaffStatusCronTask(CronTask):
                 ""  # previous_status empty for initial collection
             ])
             lines.append(row)
-        
+
         return "\n".join(lines)
+
