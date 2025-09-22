@@ -1,7 +1,6 @@
 """Staff Status Change Event Handlers."""
 
 import arrow
-from typing import Any
 
 from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.effects import Effect
@@ -32,10 +31,10 @@ def parse_csv_row(row: str) -> list:
     current_field = ""
     in_quotes = False
     i = 0
-    
+
     while i < len(row):
         char = row[i]
-        
+
         if char == '"':
             if in_quotes and i + 1 < len(row) and row[i + 1] == '"':
                 # Escaped quote
@@ -50,9 +49,9 @@ def parse_csv_row(row: str) -> list:
             current_field = ""
         else:
             current_field += char
-        
+
         i += 1
-    
+
     # Add the last field
     fields.append(current_field)
     return fields
@@ -74,24 +73,24 @@ class StaffActivatedHandler(BaseHandler):
         try:
             staff_id = self.event.target.id
             log.info(f"Processing STAFF_ACTIVATED event for staff ID: {staff_id}")
-            
+
             # Get staff object
             staff = Staff.objects.get(id=staff_id)
-            
+
             # Update CSV with status change - determine previous status
             cache = get_cache()
             cache_key = "staff-status"
             existing_data = cache.get(cache_key, "")
-            
+
             previous_status = self._get_previous_status_from_csv(existing_data, staff_id)
             if not previous_status:
                 # New staff member
                 previous_status = "null"
-            
+
             self._update_csv_with_status_change(staff, "active", previous_status)
-            
+
             return []
-            
+
         except Exception as e:
             log.error(f"Error in StaffActivatedHandler: {e}")
             return []
@@ -102,18 +101,18 @@ class StaffActivatedHandler(BaseHandler):
         """
         cache = get_cache()
         cache_key = "staff-status"
-        
+
         # Get existing CSV data
         existing_data = cache.get(cache_key, "")
-        
+
         # Generate timestamp
         timestamp = arrow.utcnow().isoformat()
-        
+
         # Get email from user if available
         email = ""
         if staff.user and hasattr(staff.user, 'email'):
             email = staff.user.email
-        
+
         # Create new row
         new_row = format_csv_row([
             timestamp,
@@ -124,26 +123,28 @@ class StaffActivatedHandler(BaseHandler):
             new_status,
             previous_status
         ])
-        
+
+        log.info(f"New CSV row to add: {new_row}")
+
         # If no existing data, create header and add row
         if not existing_data:
             header = format_csv_row([
-                "timestamp", 
-                "staff_id", 
-                "first_name", 
-                "last_name", 
-                "email", 
-                "status", 
+                "timestamp",
+                "staff_id",
+                "first_name",
+                "last_name",
+                "email",
+                "status",
                 "previous_status"
             ])
             updated_csv = header + "\n" + new_row
         else:
             # Append to existing CSV
             updated_csv = existing_data.rstrip() + "\n" + new_row
-        
+
         # Store updated CSV (7 days = 604800 seconds)
         cache.set(cache_key, updated_csv, timeout_seconds=604800)
-        
+
         log.info(f"Updated staff status CSV with {new_status} for staff {staff.id}")
 
     def _get_previous_status_from_csv(self, csv_data: str, staff_id: str) -> str:
@@ -152,21 +153,21 @@ class StaffActivatedHandler(BaseHandler):
         """
         if not csv_data:
             return ""
-        
+
         try:
             lines = csv_data.strip().split('\n')
             if len(lines) <= 1:  # Only header or empty
                 return ""
-            
+
             # Look for the most recent entry for this staff member
             for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
                 row = parse_csv_row(line)
                 if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                     return row[5]  # status is in column 5
-                    
+
         except Exception as e:
             log.error(f"Error parsing CSV for previous status: {e}")
-        
+
         return ""
 
 
@@ -186,15 +187,15 @@ class StaffDeactivatedHandler(BaseHandler):
         try:
             staff_id = self.event.target.id
             log.info(f"Processing STAFF_DEACTIVATED event for staff ID: {staff_id}")
-            
+
             # Get staff object
             staff = Staff.objects.get(id=staff_id)
-            
+
             # Update CSV with status change
             self._update_csv_with_status_change(staff, "inactive", "active")
-            
+
             return []
-            
+
         except Exception as e:
             log.error(f"Error in StaffDeactivatedHandler: {e}")
             return []
@@ -205,10 +206,10 @@ class StaffDeactivatedHandler(BaseHandler):
         """
         cache = get_cache()
         cache_key = "staff-status"
-        
+
         # Get existing CSV data
         existing_data = cache.get(cache_key, "")
-        
+
         # Check if staff exists in previous data to determine previous status
         actual_previous_status = self._get_previous_status_from_csv(existing_data, staff.id)
         if actual_previous_status:
@@ -216,15 +217,15 @@ class StaffDeactivatedHandler(BaseHandler):
         elif not existing_data and new_status == "active":
             # New staff being activated for the first time
             previous_status = "null"
-        
+
         # Generate timestamp
         timestamp = arrow.utcnow().isoformat()
-        
+
         # Get email from user if available
         email = ""
         if staff.user and hasattr(staff.user, 'email'):
             email = staff.user.email
-        
+
         # Create new row
         new_row = format_csv_row([
             timestamp,
@@ -235,26 +236,28 @@ class StaffDeactivatedHandler(BaseHandler):
             new_status,
             previous_status
         ])
-        
+
+        log.info(f"New CSV row to add: {new_row}")
+
         # If no existing data, create header and add row
         if not existing_data:
             header = format_csv_row([
-                "timestamp", 
-                "staff_id", 
-                "first_name", 
-                "last_name", 
-                "email", 
-                "status", 
+                "timestamp",
+                "staff_id",
+                "first_name",
+                "last_name",
+                "email",
+                "status",
                 "previous_status"
             ])
             updated_csv = header + "\n" + new_row
         else:
             # Append to existing CSV
             updated_csv = existing_data.rstrip() + "\n" + new_row
-        
+
         # Store updated CSV (7 days = 604800 seconds)
         cache.set(cache_key, updated_csv, timeout_seconds=604800)
-        
+
         log.info(f"Updated staff status CSV with {new_status} for staff {staff.id}")
 
     def _get_previous_status_from_csv(self, csv_data: str, staff_id: str) -> str:
@@ -263,19 +266,19 @@ class StaffDeactivatedHandler(BaseHandler):
         """
         if not csv_data:
             return ""
-        
+
         try:
             lines = csv_data.strip().split('\n')
             if len(lines) <= 1:  # Only header or empty
                 return ""
-            
+
             # Look for the most recent entry for this staff member
             for line in reversed(lines[1:]):  # Skip header, go in reverse for most recent
                 row = parse_csv_row(line)
                 if len(row) >= 6 and row[1] == staff_id:  # staff_id is in column 1
                     return row[5]  # status is in column 5
-                    
+
         except Exception as e:
             log.error(f"Error parsing CSV for previous status: {e}")
-        
+
         return ""
