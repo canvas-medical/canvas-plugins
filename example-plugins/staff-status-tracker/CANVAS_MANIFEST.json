@@ -42,6 +42,17 @@
                     ],
                     "write": []
                 }
+            },
+            {
+                "class": "staff-status-tracker.handlers.api:StaffStatusTriggerAPI",
+                "description": "API endpoint to manually trigger staff status collection for testing",
+                "data_access": {
+                    "event": "SIMPLE_API_REQUEST",
+                    "read": [
+                        "staff"
+                    ],
+                    "write": []
+                }
             }
         ]
     },

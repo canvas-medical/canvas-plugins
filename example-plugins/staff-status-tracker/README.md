@@ -6,7 +6,8 @@ This plugin tracks staffing status changes for a clinic by implementing:
 
 1. **Weekly Cron Job**: Runs every Monday at midnight to collect all staff data and their active/inactive status
 2. **Event Handlers**: Listens for `STAFF_ACTIVATED` and `STAFF_DEACTIVATED` events to track real-time changes
-3. **CSV Data Format**: Generates data in CSV format with columns:
+3. **Manual Trigger API**: SimpleAPI endpoint for testing the cron job without waiting for Monday
+4. **CSV Data Format**: Generates data in CSV format with columns:
    - timestamp
    - staff_id
    - first_name
@@ -14,7 +15,7 @@ This plugin tracks staffing status changes for a clinic by implementing:
    - email
    - status
    - previous_status
-4. **Caching**: Stores CSV data in cache for 7 days
+5. **Caching**: Stores CSV data in cache for 7 days
 
 ## Usage
 
@@ -25,10 +26,27 @@ The plugin automatically:
 - Handles new staff members appropriately (null → active)
 - Logs all changes and cached data
 
+### Manual Testing
+
+For development and testing purposes, you can manually trigger the staff status collection:
+
+**GET** `/plugin-io/api/staff-status-tracker/trigger-staff-status-collection`
+
+This endpoint requires staff session authentication and will execute the same logic as the weekly cron job.
+
+Example response:
+```json
+{
+  "message": "Staff status collection triggered successfully",
+  "staff_count": 15,
+  "status": "completed"
+}
+```
+
 ## Data Access
 
 - **Read**: staff data
-- **Events**: CRON, STAFF_ACTIVATED, STAFF_DEACTIVATED
+- **Events**: CRON, STAFF_ACTIVATED, STAFF_DEACTIVATED, SIMPLE_API_REQUEST
 - **Cache**: Uses Canvas caching system with 7-day retention
 
 ## Example Output
