@@ -1,11 +1,12 @@
 from http import HTTPStatus
 
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.billing_line_item import AddBillingLineItem
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
+from canvas_sdk.v1.data.note import Note
+
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 
 class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
@@ -18,12 +19,9 @@ class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
         "cpt_code": "98006"
     }
     """
-
     @api.post("/<id>/billing_line_items/")
     def add_billing_line_item(self) -> list[Response | Effect]:
-        required_attributes = {
-            "cpt_code",
-        }
+        required_attributes = {"cpt_code",}
         request_body = self.request.json()
         missing_attributes = required_attributes - request_body.keys()
         if len(missing_attributes) > 0:
@@ -51,8 +49,5 @@ class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
 
         return [
             effect.apply(),
-            JSONResponse(
-                {"message": "Billing line item data accepted for creation"},
-                status_code=HTTPStatus.ACCEPTED,
-            ),
+            JSONResponse({"message": "Billing line item data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
         ]

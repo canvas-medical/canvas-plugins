@@ -1,5 +1,5 @@
-from http import HTTPStatus
 from uuid import UUID
+from http import HTTPStatus
 
 from canvas_sdk.effects.simple_api import JSONResponse
 from canvas_sdk.v1.data.note import Note
@@ -28,6 +28,6 @@ def get_note_from_path_params(path_params) -> Note | None:
 
     try:
         note = Note.objects.get(id=note_id)
-    except Note.DoesNotExist:
+    except (Note.DoesNotExist):
         return None
     return note

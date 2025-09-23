@@ -31,9 +31,7 @@ class PatientPortalHandler(BaseHandler):
     def header_widget(self) -> Effect:
         """Constructs the header widget for the patient portal."""
         # Get the patient needed fields to generate the preferred full name
-        patient = Patient.objects.only("first_name", "last_name", "suffix", "nickname").get(
-            id=self.target
-        )
+        patient = Patient.objects.only("first_name", "last_name", "suffix", "nickname").get(id=self.target)
 
         payload = {
             "preferred_full_name": patient.preferred_full_name,
@@ -67,14 +65,10 @@ class PatientPortalHandler(BaseHandler):
         for member in patient_care_team:
             # Aliasing the member's name components for clarity
             name = f"{member['staff__first_name']} {member['staff__last_name']}"
-            prefixed_name = f"{member['staff__prefix']} " if member["staff__prefix"] else name
-            professional_name = (
-                f"{prefixed_name}, {member['staff__suffix']}"
-                if member["staff__suffix"]
-                else prefixed_name
-            )
-            photo_url = member["staff__photos__url"]
-            role = member["role_display"]
+            prefixed_name = f"{member['staff__prefix']} " if member['staff__prefix'] else name
+            professional_name = f"{prefixed_name}, {member['staff__suffix']}" if member['staff__suffix'] else prefixed_name
+            photo_url = member['staff__photos__url']
+            role = member['role_display']
 
             care_team.append(
                 {
@@ -103,13 +97,10 @@ class PatientPortalHandler(BaseHandler):
     def footer_widget(self) -> Effect:
         """This method gets called when an event of the type RESPONDS_TO is fired."""
         return PortalWidget(
-            content=render_to_string(
-                "templates/footer_widget.html",
-                {
-                    "background_color": self.background_color,
-                    "emergency_contact": self.emergency_contact,
-                },
-            ),
+            content=render_to_string("templates/footer_widget.html", {
+                "background_color": self.background_color,
+                "emergency_contact": self.emergency_contact,
+            }),
             size=PortalWidget.Size.EXPANDED,
             priority=12,
         ).apply()

@@ -4,7 +4,7 @@ from typing import Any
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from canvas_sdk.v1.data import Appointment, CareTeamMembership
+from canvas_sdk.v1.data import CareTeamMembership, Appointment, Patient
 from canvas_sdk.v1.data.care_team import CareTeamMembershipStatus
 from logger import log
 
@@ -19,9 +19,7 @@ class Providers(BaseHandler):
     """
 
     # Name the event type you wish to run in response to
-    RESPONDS_TO = EventType.Name(
-        EventType.PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__POST_SEARCH
-    )
+    RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__POST_SEARCH)
 
     def compute(self) -> list[Effect]:
         """Filters providers based on patient's care team membership.
@@ -29,6 +27,7 @@ class Providers(BaseHandler):
         Returns:
             List[Effect]: A single effect containing the filtered provider list
         """
+
         # Extract providers from context
         context = self.event.context
         providers = context.get("providers", [])
@@ -53,7 +52,8 @@ class Providers(BaseHandler):
 
             # Filter providers
             filtered_providers = [
-                provider for provider in providers if provider.get("id") in care_team_provider_ids
+                provider for provider in providers
+                if provider.get("id") in care_team_provider_ids
             ]
 
             log.info(
@@ -79,8 +79,9 @@ class Providers(BaseHandler):
         """
         try:
             care_team_members = CareTeamMembership.objects.filter(
-                patient__id=patient_id, status=CareTeamMembershipStatus.ACTIVE
-            ).values_list("staff__id", flat=True)
+                patient__id=patient_id,
+                status=CareTeamMembershipStatus.ACTIVE
+            ).values_list('staff__id', flat=True)
 
             return set(care_team_members)
 
@@ -97,11 +98,15 @@ class Providers(BaseHandler):
         Returns:
             List containing a single effect with the provider data
         """
-        payload = {"providers": providers}
+        payload = {
+            "providers": providers
+        }
 
         effect_type = EffectType.PATIENT_PORTAL__APPOINTMENTS__FORM_PROVIDERS__POST_SEARCH_RESULTS
 
-        return [Effect(type=effect_type, payload=json.dumps(payload))]
+        return [Effect(
+            type=effect_type,
+            payload=json.dumps(payload))]
 
 
 class Locations(BaseHandler):
@@ -114,9 +119,7 @@ class Locations(BaseHandler):
     """
 
     # Name the event type you wish to run in response to
-    RESPONDS_TO = EventType.Name(
-        EventType.PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__POST_SEARCH
-    )
+    RESPONDS_TO = EventType.Name(EventType.PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__POST_SEARCH)
 
     def compute(self) -> list[Effect]:
         """Filters locations based on patient's appointment history.
@@ -124,6 +127,7 @@ class Locations(BaseHandler):
         Returns:
             List[Effect]: A single effect containing the filtered location list
         """
+
         # Extract locations from context
         context = self.event.context
         locations = context.get("locations", [])
@@ -148,7 +152,8 @@ class Locations(BaseHandler):
 
             # Filter locations
             filtered_locations = [
-                location for location in locations if location.get("id") in patient_location_ids
+                location for location in locations
+                if location.get("id") in patient_location_ids
             ]
 
             log.info(
@@ -178,7 +183,7 @@ class Locations(BaseHandler):
             location_ids = (
                 Appointment.objects.filter(patient__id=patient_id)
                 .exclude(location__isnull=True, location__active=False)
-                .values_list("location__id", flat=True)
+                .values_list('location__id', flat=True)
                 .distinct()
             )
 
@@ -197,8 +202,13 @@ class Locations(BaseHandler):
         Returns:
             List containing a single effect with the location data
         """
-        payload = {"locations": locations}
+        payload = {
+            "locations": locations
+        }
 
         effect_type = EffectType.PATIENT_PORTAL__APPOINTMENTS__FORM_LOCATIONS__POST_SEARCH_RESULTS
 
-        return [Effect(type=effect_type, payload=json.dumps(payload))]
+        return [Effect(
+            type=effect_type,
+            payload=json.dumps(payload)
+        )]

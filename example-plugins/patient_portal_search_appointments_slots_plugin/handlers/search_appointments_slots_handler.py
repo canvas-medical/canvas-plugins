@@ -27,7 +27,9 @@ class SearchAppointmentsSlotsHandler(BaseHandler):
             if any(slots for slots in dates.values())
         }
 
-        payload = {"slots_by_provider": filtered}
+        payload = {
+            "slots_by_provider": filtered
+        }
 
         return [
             self._respond_with(payload),
