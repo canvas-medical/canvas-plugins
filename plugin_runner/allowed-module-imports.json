@@ -574,6 +574,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Encounter",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -601,6 +602,7 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -647,6 +649,7 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -761,6 +764,11 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.encounter": [
+    "Encounter",
+    "EncounterMedium",
+    "EncounterState"
+  ],
   "canvas_sdk.v1.data.facility": [
     "Facility"
   ],
@@ -813,6 +821,9 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_statement": [
+    "MedicationStatement"
   ],
   "canvas_sdk.v1.data.message": [
     "Message",
@@ -918,6 +929,9 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole"
+  ],
+  "canvas_sdk.v1.data.stop_medication_event": [
+    "StopMedicationEvent"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
