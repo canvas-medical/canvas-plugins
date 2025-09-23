@@ -509,6 +509,7 @@
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
     "ExtendedDraft7Validator",
+    "QuestionnaireConfig",
     "from_yaml"
   ],
   "canvas_sdk.templates": [
