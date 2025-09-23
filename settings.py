@@ -77,10 +77,24 @@ else:
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
 
+# By default, allow a pool size that gives each worker 2 active connections
+# and allow overriding via environment variable if necessary
+PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
+    os.getenv(
+        "PLUGIN_RUNNER_DATABASE_POOL_MAX",
+        PLUGIN_RUNNER_MAX_WORKERS * 2,
+    )
+)
+
 if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
         "ENGINE": "django.db.backends.postgresql",
-        "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+        "OPTIONS": {
+            "pool": {
+                "min_size": 2,
+                "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
+            }
+        },
     }
 
     if CANVAS_SDK_DB_URL:
