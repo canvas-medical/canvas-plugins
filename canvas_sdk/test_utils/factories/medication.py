@@ -11,8 +11,6 @@ class MedicationFactory(factory.django.DjangoModelFactory):
 
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.patient.PatientFactory")
     deleted = False
-    entered_in_error = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
-    committer = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
     status = "active"
     start_date = factory.Faker("date_time_this_decade")
     end_date = factory.Faker("date_time_this_decade")

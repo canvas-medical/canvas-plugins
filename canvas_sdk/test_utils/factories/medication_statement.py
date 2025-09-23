@@ -12,8 +12,6 @@ class MedicationStatementFactory(factory.django.DjangoModelFactory):
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.patient.PatientFactory")
     note = factory.SubFactory("canvas_sdk.test_utils.factories.note.NoteFactory")
     medication = factory.SubFactory("canvas_sdk.test_utils.factories.medication.MedicationFactory")
-    entered_in_error = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
-    committer = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.user.CanvasUserFactory")
     start_date_original_input = factory.Faker("date_this_century")
     start_date = factory.Faker("date_this_century")

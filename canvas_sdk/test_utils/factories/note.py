@@ -16,8 +16,6 @@ class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):
     class Meta:
         model = NoteType
 
-    created = factory.Faker("date_time_between", start_date="-1y", end_date="-6m")
-    modified = factory.Faker("date_time_between", start_date="-5m", end_date="-4m")
     system = FuzzyChoice(["loinc", "internal"])
     version = factory.Faker("slug")
     code = factory.Faker("slug")
@@ -51,8 +49,6 @@ class NoteFactory(factory.django.DjangoModelFactory[Note]):
     class Meta:
         model = Note
 
-    created = factory.Faker("date_time_between", start_date="-4d", end_date="-3d")
-    modified = factory.Faker("date_time_between", start_date="-1d", end_date="0d")
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.patient.PatientFactory")
     # provider = factory.SubFactory(ProviderFactory) # doesn't exist yet
     note_type = FuzzyChoice(NoteTypes.choices, getter=lambda c: c[0])
