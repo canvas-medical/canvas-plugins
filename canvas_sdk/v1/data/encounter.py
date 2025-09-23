@@ -35,7 +35,7 @@ class Encounter(IdentifiableModel):
     modified = models.DateTimeField(auto_now=True)
     medium = models.CharField(choices=EncounterMedium.choices, max_length=20)
     state = models.CharField(max_length=3, choices=EncounterState.choices)
-    start_time = models.DateTimeField(default=timezone.now, null=True, db_index=True)
+    start_time = models.DateTimeField(default=timezone.now, null=True)
     end_time = models.DateTimeField(default=None, null=True)
 
 

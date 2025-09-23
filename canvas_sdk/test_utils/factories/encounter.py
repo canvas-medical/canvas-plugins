@@ -13,8 +13,6 @@ class EncounterFactory(factory.django.DjangoModelFactory[Encounter]):
         model = Encounter
 
     note = factory.SubFactory(NoteFactory)
-    created = factory.Faker("date_time_between", start_date="-2d", end_date="-1d")
-    modified = factory.Faker("date_time_between", start_date="-1d", end_date="0d")
     medium = FuzzyChoice(EncounterMedium.choices, getter=lambda c: c[0])
     state = FuzzyChoice(EncounterState.choices, getter=lambda c: c[0])
     start_time = factory.Faker("date_time_between", start_date="+3d", end_date="+4d")
