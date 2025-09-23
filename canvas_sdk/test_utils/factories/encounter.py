@@ -1,5 +1,5 @@
 import factory
-from factory.fuzzy import FuzzyChoice
+from django.utils import timezone
 
 from canvas_sdk.v1.data.encounter import Encounter, EncounterMedium, EncounterState
 
@@ -13,7 +13,6 @@ class EncounterFactory(factory.django.DjangoModelFactory[Encounter]):
         model = Encounter
 
     note = factory.SubFactory(NoteFactory)
-    medium = FuzzyChoice(EncounterMedium.choices, getter=lambda c: c[0])
-    state = FuzzyChoice(EncounterState.choices, getter=lambda c: c[0])
-    start_time = factory.Faker("date_time_between", start_date="+3d", end_date="+4d")
-    end_time = factory.Faker("date_time_between", start_date="+4d", end_date="+5d")
+    medium = EncounterMedium.OFFICE
+    state = EncounterState.STARTED
+    start_time = timezone.now()
