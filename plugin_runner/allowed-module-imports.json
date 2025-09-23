@@ -600,6 +600,7 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -646,6 +647,7 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -810,6 +812,9 @@
     "MedicationCoding",
     "Status"
   ],
+  "canvas_sdk.v1.data.medication_statement": [
+    "MedicationStatement"
+  ],
   "canvas_sdk.v1.data.message": [
     "Message",
     "MessageAttachment",
@@ -914,6 +919,9 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole"
+  ],
+  "canvas_sdk.v1.data.stop_medication_event": [
+    "StopMedicationEvent"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
