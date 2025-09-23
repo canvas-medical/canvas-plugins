@@ -290,10 +290,10 @@ class PatientMetadata(IdentifiableModel):
         db_table = "canvas_sdk_data_api_patientmetadata_001"
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True
+        "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
-    key = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
 
 
 class PatientFacilityAddress(PatientAddress):
