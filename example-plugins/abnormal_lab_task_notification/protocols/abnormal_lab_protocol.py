@@ -3,6 +3,7 @@ from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data.lab import LabReport
+from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
 
@@ -37,9 +38,18 @@ class AbnormalLabProtocol(BaseProtocol):
                 return []
             
             # Get patient ID
-            patient_id = lab_report.patient_id
-            if not patient_id:
+            patient_dbid = lab_report.patient_id
+            if not patient_dbid:
                 log.warning(f"Lab report {lab_report_id} has no associated patient")
+                return []
+            
+            # Convert patient dbid to Canvas patient ID
+            try:
+                patient = Patient.objects.get(dbid=patient_dbid)
+                patient_id = patient.id
+                log.info(f"Converted patient dbid {patient_dbid} to Canvas ID {patient_id}")
+            except Patient.DoesNotExist:
+                log.error(f"Patient with dbid {patient_dbid} not found")
                 return []
             
             # Check all lab values for abnormal flags
@@ -73,19 +83,9 @@ class AbnormalLabProtocol(BaseProtocol):
                 value_details.append(detail)
             
             # Create the task
-            # Note: linked_object_id/linked_object_type are not set because LAB_REPORT is not
-            # available in the LinkableObjectType enum (only REFERRAL and IMAGING are supported).
             log.info(f"Creating task with patient_id: {patient_id}, title: {task_title}")
-            
-            # Try creating task without patient_id first to see if that works
-            task_without_patient = AddTask(
-                title=f"{task_title} (Test without patient)",
-                status=TaskStatus.OPEN,
-                labels=["abnormal-lab", "urgent-review", "test-no-patient"]
-            )
-            
             task = AddTask(
-                patient_id=str(patient_id),
+                patient_id=patient_id,
                 title=task_title,
                 status=TaskStatus.OPEN,
                 labels=["abnormal-lab", "urgent-review"]
@@ -95,26 +95,8 @@ class AbnormalLabProtocol(BaseProtocol):
             try:
                 applied_task = task.apply()
                 log.info(f"Task applied successfully - Effect type: {applied_task.type}")
-                log.info(f"Task applied successfully - Effect payload length: {len(applied_task.payload) if applied_task.payload else 0}")
-                
-                # Log the actual payload to see what's being sent
-                import json
-                try:
-                    payload_dict = json.loads(applied_task.payload) if applied_task.payload else {}
-                    log.info(f"Task payload data: {payload_dict.get('data', {})}")
-                except Exception as payload_error:
-                    log.error(f"Could not parse payload: {payload_error}")
-                
-                # Try the task without patient_id as well
-                log.info("Also creating task without patient_id for comparison...")
-                try:
-                    applied_task_no_patient = task_without_patient.apply()
-                    log.info(f"Task without patient applied successfully - Effect type: {applied_task_no_patient.type}")
-                    return [applied_task, applied_task_no_patient]
-                except Exception as e2:
-                    log.error(f"Error applying task without patient: {str(e2)}")
-                    return [applied_task]
-                
+                log.info(f"Task Effect created for abnormal lab values in report {lab_report_id}")
+                return [applied_task]
             except Exception as e:
                 log.error(f"Error applying task: {str(e)}")
                 log.error(f"Error type: {type(e)}")
