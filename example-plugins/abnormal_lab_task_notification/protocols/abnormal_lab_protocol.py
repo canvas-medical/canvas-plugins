@@ -22,25 +22,8 @@ class AbnormalLabProtocol(BaseProtocol):
         This method gets called when a LAB_REPORT_CREATED event is fired.
         It checks for abnormal lab values and creates tasks for them.
         """
-        # Debug logging to understand the event structure
-        log.info(f"Event type: {self.event.type}")
-        log.info(f"Event name: {self.event.name}")
-        log.info(f"Event target id: {self.event.target.id}")
-        log.info(f"Event context: {self.event.context}")
-        
-        # Try to get the lab report ID from multiple sources
+        # Get the lab report ID from the event target
         lab_report_id = self.event.target.id
-        
-        # If target.id is None, check if it's in the context
-        if lab_report_id is None:
-            lab_report_id = self.event.context.get("lab_report", {}).get("id")
-            if lab_report_id is None:
-                lab_report_id = self.event.context.get("id")
-                if lab_report_id is None:
-                    # Check for other possible keys
-                    log.info(f"Available context keys: {list(self.event.context.keys())}")
-                    log.error("Could not find lab report ID in event target or context")
-                    return []
         
         log.info(f"Processing lab report {lab_report_id} for abnormal values")
         
@@ -92,6 +75,7 @@ class AbnormalLabProtocol(BaseProtocol):
             # Create the task
             # Note: linked_object_id/linked_object_type are not set because LAB_REPORT is not
             # available in the LinkableObjectType enum (only REFERRAL and IMAGING are supported).
+            log.info(f"Creating task with patient_id: {patient_id}, title: {task_title}")
             task = AddTask(
                 patient_id=str(patient_id),
                 title=task_title,
@@ -99,8 +83,15 @@ class AbnormalLabProtocol(BaseProtocol):
                 labels=["abnormal-lab", "urgent-review"]
             )
             
-            log.info(f"Created task for abnormal lab values in report {lab_report_id}")
-            return [task.apply()]
+            log.info(f"Task object created successfully: {task}")
+            try:
+                applied_task = task.apply()
+                log.info(f"Task applied successfully: {applied_task}")
+                log.info(f"Applied task type: {type(applied_task)}")
+                return [applied_task]
+            except Exception as e:
+                log.error(f"Error applying task: {str(e)}")
+                return []
             
         except LabReport.DoesNotExist:
             log.error(f"Lab report {lab_report_id} not found")
