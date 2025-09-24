@@ -22,8 +22,25 @@ class AbnormalLabProtocol(BaseProtocol):
         This method gets called when a LAB_REPORT_CREATED event is fired.
         It checks for abnormal lab values and creates tasks for them.
         """
-        # Get the lab report ID from the event target
-        lab_report_id = self.target.id
+        # Debug logging to understand the event structure
+        log.info(f"Event type: {self.event.type}")
+        log.info(f"Event name: {self.event.name}")
+        log.info(f"Event target id: {self.event.target.id}")
+        log.info(f"Event context: {self.event.context}")
+        
+        # Try to get the lab report ID from multiple sources
+        lab_report_id = self.event.target.id
+        
+        # If target.id is None, check if it's in the context
+        if lab_report_id is None:
+            lab_report_id = self.event.context.get("lab_report", {}).get("id")
+            if lab_report_id is None:
+                lab_report_id = self.event.context.get("id")
+                if lab_report_id is None:
+                    # Check for other possible keys
+                    log.info(f"Available context keys: {list(self.event.context.keys())}")
+                    log.error("Could not find lab report ID in event target or context")
+                    return []
         
         log.info(f"Processing lab report {lab_report_id} for abnormal values")
         
