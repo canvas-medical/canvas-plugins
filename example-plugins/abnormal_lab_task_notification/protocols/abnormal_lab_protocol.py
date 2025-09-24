@@ -25,22 +25,20 @@ class AbnormalLabProtocol(BaseProtocol):
         # Get the lab report ID from the event target
         lab_report_id = self.event.target.id
         
-        log.info(f"Processing lab report {lab_report_id} for abnormal values")
-        
         try:
             # Get the lab report instance
             lab_report = LabReport.objects.get(id=lab_report_id)
             
             # Check if the report is valid and not for test only
             if lab_report.for_test_only or lab_report.junked:
-                log.info(f"Skipping lab report {lab_report_id} - test only or junked")
                 return []
             
-            # Get patient ID
-            patient_id = lab_report.patient.id
-            if not patient_id:
+            # Get patient ID using the foreign key relationship
+            if not lab_report.patient:
                 log.warning(f"Lab report {lab_report_id} has no associated patient")
                 return []
+            
+            patient_id = lab_report.patient.id
             
             # Check all lab values for abnormal flags
             abnormal_values = []
@@ -49,31 +47,15 @@ class AbnormalLabProtocol(BaseProtocol):
                 abnormal_flag = getattr(lab_value, 'abnormal_flag', None) or ""
                 if abnormal_flag.strip():
                     abnormal_values.append(lab_value)
-                    log.info(f"Found abnormal lab value: {lab_value.id} with flag: {abnormal_flag}")
             
             if not abnormal_values:
-                log.info(f"No abnormal values found in lab report {lab_report_id}")
                 return []
             
             # Create a task for the abnormal lab values
             abnormal_count = len(abnormal_values)
             task_title = f"Review Abnormal Lab Values ({abnormal_count} abnormal)"
             
-            # Create the task description with details about abnormal values
-            value_details = []
-            for value in abnormal_values:
-                abnormal_flag = getattr(value, 'abnormal_flag', None) or ""
-                detail = f"- {abnormal_flag}"
-                if hasattr(value, 'value') and value.value:
-                    detail += f": {value.value}"
-                if hasattr(value, 'units') and value.units:
-                    detail += f" {value.units}"
-                if hasattr(value, 'reference_range') and value.reference_range:
-                    detail += f" (ref: {value.reference_range})"
-                value_details.append(detail)
-            
             # Create the task
-            log.info(f"Creating task with patient_id: {patient_id}, title: {task_title}")
             task = AddTask(
                 patient_id=patient_id,
                 title=task_title,
@@ -81,18 +63,9 @@ class AbnormalLabProtocol(BaseProtocol):
                 labels=["abnormal-lab", "urgent-review"]
             )
             
-            log.info(f"Task object created - patient_id: {task.patient_id}, title: {task.title}, status: {task.status.value}")
-            try:
-                applied_task = task.apply()
-                log.info(f"Task applied successfully - Effect type: {applied_task.type}")
-                log.info(f"Task Effect created for abnormal lab values in report {lab_report_id}")
-                return [applied_task]
-            except Exception as e:
-                log.error(f"Error applying task: {str(e)}")
-                log.error(f"Error type: {type(e)}")
-                import traceback
-                log.error(f"Traceback: {traceback.format_exc()}")
-                return []
+            applied_task = task.apply()
+            log.info(f"Created task for {abnormal_count} abnormal lab value(s) in report {lab_report_id}")
+            return [applied_task]
             
         except LabReport.DoesNotExist:
             log.error(f"Lab report {lab_report_id} not found")

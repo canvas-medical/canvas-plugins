@@ -1,74 +1,60 @@
 # Abnormal Lab Task Notification Plugin
 
-This plugin monitors incoming lab reports and automatically creates task notifications for any abnormal lab values, ensuring they are flagged for prompt clinical review.
+This Canvas EMR plugin automatically creates task notifications whenever lab results with abnormal values are received, ensuring critical lab findings are flagged for prompt clinical review.
 
-## Features
+## What This Plugin Does
 
-- Monitors `LAB_REPORT_CREATED` events
-- Checks lab values for abnormal flags
-- Creates tasks with appropriate priority for abnormal results
-- Includes details about the abnormal values in the task
-- Filters out test-only and junked lab reports
+When lab results come into Canvas EMR, this plugin:
 
-## How It Works
+1. **Monitors all incoming lab reports** - Automatically checks every new lab report
+2. **Identifies abnormal values** - Looks for lab values flagged as abnormal by the lab
+3. **Creates immediate notifications** - Generates tasks that appear in your Canvas task list
+4. **Prioritizes for review** - Labels tasks as "abnormal-lab" and "urgent-review" for easy filtering
 
-1. When a new lab report is created, the plugin is triggered
-2. The plugin examines all lab values in the report
-3. For any lab value with an `abnormal_flag`, it collects the details
-4. If abnormal values are found, a task is created with:
-   - Clear title indicating the number of abnormal values
-   - "abnormal-lab" and "urgent-review" labels for easy filtering
-   - Details about each abnormal value including reference ranges
+## Why Use This Plugin
 
-## Configuration
+- **Never miss critical results** - Ensures abnormal lab values don't get overlooked
+- **Saves time** - No manual checking required - the plugin does it automatically  
+- **Improves patient safety** - Faster response to abnormal results leads to better care
+- **Easy integration** - Works seamlessly with your existing Canvas workflow
 
-This plugin requires no additional configuration. It automatically monitors all lab reports and creates tasks as needed.
+## Example Scenario
 
-## Technical Implementation
+**Without this plugin:**
+- Lab results come in and sit in the lab section
+- Providers must manually review all lab reports
+- Abnormal values might be missed during busy periods
 
-The plugin uses the Canvas SDK's protocol system to:
-
-1. **Event Handling**: Registers for `LAB_REPORT_CREATED` events using the `RESPONDS_TO` mechanism
-2. **Data Access**: Queries lab reports and their associated lab values using Django ORM
-3. **Abnormal Detection**: Checks the `abnormal_flag` field of each lab value for non-empty values
-4. **Task Creation**: Uses the `AddTask` effect to create tasks in the Canvas system
-5. **Error Handling**: Includes proper exception handling and logging for debugging
-
-### Safety Features
-
-- Filters out test-only reports (`for_test_only=True`)
-- Filters out junked reports (`junked=True`)  
-- Handles missing or null abnormal flags gracefully
-- Includes comprehensive error logging
-- Validates patient association before creating tasks
-
-### Data Fields Used
-
-From `LabReport`:
-- `patient_id`: Links the task to the correct patient
-- `for_test_only`: Used to filter out test reports
-- `junked`: Used to filter out invalid reports
-
-From `LabValue`:
-- `abnormal_flag`: Primary field for detecting abnormal values
-- `value`: Lab result value for task details
-- `units`: Measurement units for task details  
-- `reference_range`: Normal ranges for task details
+**With this plugin:**
+- Lab results with abnormal values immediately generate tasks
+- Tasks appear in your task list with clear titles like "Review Abnormal Lab Values (3 abnormal)"
+- You can filter tasks by "abnormal-lab" label to see all abnormal results at once
 
 ## Task Details
 
-Created tasks include:
-- **Title**: "Review Abnormal Lab Values (N abnormal)" where N is the count
-- **Labels**: ["abnormal-lab", "urgent-review"]
-- **Status**: OPEN
-- **Patient**: Linked to the patient associated with the lab report
+When abnormal lab values are found, the plugin creates a task with:
 
-Note: Tasks are not directly linked to lab reports because the Canvas SDK currently only supports linking tasks to REFERRAL and IMAGING objects.
+- **Clear title** showing how many abnormal values were found
+- **Patient association** so the task appears in the correct patient's workflow
+- **Priority labels** ("abnormal-lab", "urgent-review") for easy filtering and sorting
+- **Open status** ensuring the task requires attention
 
-## Example
+## Setup
 
-When a lab report contains abnormal values like:
-- High glucose: 180 mg/dL (ref: 70-100)
-- Low hemoglobin: 9.2 g/dL (ref: 12-16)
+This plugin requires no configuration - it works automatically once installed. It will:
 
-The plugin creates a task titled "Review Abnormal Lab Values (2 abnormal)" with details about each abnormal finding.
+- Monitor all lab reports (except test reports and junked reports)
+- Create tasks only when abnormal values are present
+- Associate tasks with the correct patient automatically
+
+## Technical Details
+
+**Event Triggered By:** New lab reports entering the Canvas system  
+**Detection Method:** Checks the `abnormal_flag` field on lab values  
+**Task Creation:** Uses Canvas SDK's AddTask effect  
+**Labels Applied:** "abnormal-lab", "urgent-review"  
+
+The plugin is designed to be safe and efficient:
+- Filters out test-only and invalid lab reports
+- Handles missing data gracefully
+- Includes comprehensive error logging for troubleshooting
