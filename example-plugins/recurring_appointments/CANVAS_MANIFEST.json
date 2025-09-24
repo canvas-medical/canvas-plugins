@@ -1,17 +1,21 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
+    "plugin_version": "1.0.0",
     "name": "recurring_appointments",
-    "description": "Adds recurring appointment functionality with daily, weekly, and monthly recurrence options that automatically creates follow-up appointments",
+    "description": "Adds configurable recurring appointment functionality with customizable intervals, recurrence types (days/weeks/months), and flexible end conditions that automatically creates follow-up appointments",
     "components": {
         "protocols": [
             {
                 "class": "recurring_appointments.handlers.recurrence:AppointmentRecurrence",
-                "description": "Automatically creates recurring appointments based on recurrence metadata when an appointment is created"
+                "description": "Automatically creates recurring appointments based on configurable interval, recurrence type, and end condition metadata when an appointment is created"
             },
             {
                 "class": "recurring_appointments.handlers.form:AppointmentFormFields",
-                "description": "Adds a recurrence dropdown field to appointment forms with daily, weekly, and monthly options"
+                "description": "Adds three configurable form fields to appointment forms: interval selector (1-8), recurrence type dropdown (days/weeks/months), and end condition input"
+            },
+            {
+                "class": "recurring_appointments.cron.banner_alert:CheckPatientAppointmentRecurrence",
+                "description": "Daily cron job (3 AM) that monitors recurring appointment series and adds banner alerts to patient timelines when only 1 appointment remains in the series"
             }
         ],
         "commands": [],
