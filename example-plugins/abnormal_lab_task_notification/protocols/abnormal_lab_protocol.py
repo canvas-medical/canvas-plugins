@@ -3,7 +3,6 @@ from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data.lab import LabReport
-from canvas_sdk.v1.data.patient import Patient
 from logger import log
 
 
@@ -38,18 +37,9 @@ class AbnormalLabProtocol(BaseProtocol):
                 return []
             
             # Get patient ID
-            patient_dbid = lab_report.patient_id
-            if not patient_dbid:
+            patient_id = lab_report.patient.id
+            if not patient_id:
                 log.warning(f"Lab report {lab_report_id} has no associated patient")
-                return []
-            
-            # Convert patient dbid to Canvas patient ID
-            try:
-                patient = Patient.objects.get(dbid=patient_dbid)
-                patient_id = patient.id
-                log.info(f"Converted patient dbid {patient_dbid} to Canvas ID {patient_id}")
-            except Patient.DoesNotExist:
-                log.error(f"Patient with dbid {patient_dbid} not found")
                 return []
             
             # Check all lab values for abnormal flags
