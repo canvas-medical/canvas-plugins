@@ -73,15 +73,13 @@ class AbnormalLabProtocol(BaseProtocol):
                 value_details.append(detail)
             
             # Create the task
-            # Note: linked_object_type is set to None because LAB_REPORT is not yet
-            # available in the LinkableObjectType enum. When it's added, this should be updated.
+            # Note: linked_object_id/linked_object_type are not set because LAB_REPORT is not
+            # available in the LinkableObjectType enum (only REFERRAL and IMAGING are supported).
             task = AddTask(
                 patient_id=str(patient_id),
                 title=task_title,
                 status=TaskStatus.OPEN,
-                labels=["abnormal-lab", "urgent-review"],
-                linked_object_id=str(lab_report_id),
-                linked_object_type=None  # TODO: Set to LAB_REPORT when available
+                labels=["abnormal-lab", "urgent-review"]
             )
             
             log.info(f"Created task for abnormal lab values in report {lab_report_id}")

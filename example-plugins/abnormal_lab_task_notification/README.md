@@ -18,7 +18,6 @@ This plugin monitors incoming lab reports and automatically creates task notific
 4. If abnormal values are found, a task is created with:
    - Clear title indicating the number of abnormal values
    - "abnormal-lab" and "urgent-review" labels for easy filtering
-   - Link to the original lab report
    - Details about each abnormal value including reference ranges
 
 ## Configuration
@@ -63,7 +62,8 @@ Created tasks include:
 - **Labels**: ["abnormal-lab", "urgent-review"]
 - **Status**: OPEN
 - **Patient**: Linked to the patient associated with the lab report
-- **Linked Object**: References the original lab report
+
+Note: Tasks are not directly linked to lab reports because the Canvas SDK currently only supports linking tasks to REFERRAL and IMAGING objects.
 
 ## Example
 

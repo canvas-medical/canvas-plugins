@@ -66,8 +66,7 @@ def test_task_creation_logic():
         patient_id="test-patient-id",
         title="Review Abnormal Lab Values (2 abnormal)",
         status=TaskStatus.OPEN,
-        labels=["abnormal-lab", "urgent-review"],
-        linked_object_id="test-lab-report-id"
+        labels=["abnormal-lab", "urgent-review"]
     )
     
     assert task.patient_id == "test-patient-id"
@@ -75,7 +74,6 @@ def test_task_creation_logic():
     assert task.status == TaskStatus.OPEN
     assert "abnormal-lab" in task.labels
     assert "urgent-review" in task.labels
-    assert task.linked_object_id == "test-lab-report-id"
 
 
 def test_task_apply_method():
