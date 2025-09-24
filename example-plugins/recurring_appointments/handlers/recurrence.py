@@ -67,7 +67,6 @@ class AppointmentRecurrence(BaseHandler):
 
     def _calculate_recurrence_date(self, count: int) -> datetime.datetime:
         """Calculate the new date based on a recurrence type, count, and interval."""
-        log.info(f"############### Calculating recurrence date for appointment {self.appointment.id} and count {count}")
         start_time = self.appointment.start_time
         if self.recurrence_type == RecurrenceEnum.DAYS.value:
             return start_time + datetime.timedelta(days=count * self.recurrence_interval)
@@ -81,7 +80,6 @@ class AppointmentRecurrence(BaseHandler):
     def _create_child_appointment(self, count: int) -> Appointment:
         """Create a child appointment based on the appointment and recurrence type."""
         new_start_time = self._calculate_recurrence_date(count)
-        log.info(f"############### New start time: {new_start_time}")
 
         return Appointment(
             patient_id=self.event.context["patient"]["id"],
@@ -97,7 +95,6 @@ class AppointmentRecurrence(BaseHandler):
     def _create_child_event(self, count: int) -> ScheduleEvent:
         """Create a child schedule event based on the appointment and recurrence type."""
         new_start_time = self._calculate_recurrence_date(count)
-        log.info(f"############### New start time: {new_start_time}")
 
         return ScheduleEvent(
             patient_id=self.event.context.get("patient", {}).get("id"),
@@ -112,18 +109,12 @@ class AppointmentRecurrence(BaseHandler):
 
 
     def compute(self):
-        log.info(f"############### Creating recurring appointments for appointment {self.appointment.id}")
         if not self.recurrence_type or self.recurrence_type == RecurrenceEnum.NONE.value:
             return []
 
         # appointment or schedule event
         is_schedule_event = self.appointment.note_type.category == NoteTypeCategories.SCHEDULE_EVENT
-        log.info(f"############### is schedule event: {is_schedule_event}")
         effects = []
-
-        log.info(f"############### Recurrence type: {self.recurrence_type}")
-        log.info(f"############### Recurrence interval: {self.recurrence_interval}")
-        log.info(f"############### Recurrence ends after: {self.recurrence_stops_after}")
 
         # Create recurring appointments/events
         for count in range(1, self.recurrence_stops_after + 1):
