@@ -3,8 +3,8 @@ Test for the abnormal lab task notification plugin.
 
 These tests validate the plugin logic for creating tasks when abnormal lab values are detected.
 """
-import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
+
 from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.events import EventType
 
