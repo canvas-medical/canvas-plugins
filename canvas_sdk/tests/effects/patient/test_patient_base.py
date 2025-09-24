@@ -12,6 +12,7 @@ from canvas_sdk.effects.patient.base import (
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientMetadata,
 )
 from canvas_sdk.v1.data.common import (
     AddressType,
@@ -64,6 +65,12 @@ def patient_address() -> PatientAddress:
         state_code="NY",
         postal_code="10001",
     )
+
+
+@pytest.fixture
+def patient_metadata() -> PatientMetadata:
+    """Create a PatientMetadata for testing."""
+    return PatientMetadata(key="source", value="protocol")
 
 
 @pytest.fixture
@@ -137,6 +144,19 @@ def test_patient_external_identifier_to_dict() -> None:
     }
 
 
+def test_patient_values_includes_metadata_when_set(
+    mock_db_queries: dict[str, MagicMock],
+    valid_patient_data: dict[str, Any],
+    patient_metadata: PatientMetadata,
+) -> None:
+    """Test that values includes metadata when they are provided."""
+    patient = Patient(**valid_patient_data, metadata=[patient_metadata])
+    values = patient.values
+
+    assert "metadata" in values
+    assert values["metadata"] == [patient_metadata.to_dict()]
+
+
 def test_patient_values_includes_contact_points_when_set(
     mock_db_queries: dict[str, MagicMock],
     valid_patient_data: dict[str, Any],
@@ -175,6 +195,18 @@ def test_patient_values_excludes_collections_when_not_dirty(
     assert "contact_points" not in values
 
 
+def test_patient_values_excludes_metadata_when_not_dirty(
+    mock_db_queries: dict[str, MagicMock],
+    valid_patient_data: dict[str, Any],
+    patient_metadata: PatientMetadata,
+) -> None:
+    """Test that values excludes metadata that are not marked as dirty."""
+    patient = Patient(**valid_patient_data)
+    values = patient.values
+
+    assert "metadata" not in values
+
+
 def test_patient_values_handles_none_collections(
     mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
 ) -> None:
@@ -187,6 +219,7 @@ def test_patient_values_handles_none_collections(
     assert values.get("contact_points") is None
     assert values.get("addresses") is None
     assert values.get("external_identifiers") is None
+    assert values.get("metadata") is None
 
 
 def test_patient_create_validation_with_patient_id_error(
@@ -286,8 +319,9 @@ def test_patient_create_with_complex_data(
     mock_db_queries: dict[str, MagicMock],
     patient_address: PatientAddress,
     patient_contact_point: PatientContactPoint,
+    patient_metadata: PatientMetadata,
 ) -> None:
-    """Test creating patient with addresses and contact points."""
+    """Test creating patient with addresses and contact points and metadata."""
     external_identifier = PatientExternalIdentifier(system="MRN", value="12345")
 
     patient = Patient(
@@ -297,6 +331,7 @@ def test_patient_create_with_complex_data(
         contact_points=[patient_contact_point],
         external_identifiers=[external_identifier],
         previous_names=["Jane Johnson"],
+        metadata=[patient_metadata],
     )
 
     effect = patient.create()
@@ -307,6 +342,7 @@ def test_patient_create_with_complex_data(
     assert len(payload_data["data"]["addresses"]) == 1
     assert len(payload_data["data"]["contact_points"]) == 1
     assert len(payload_data["data"]["external_identifiers"]) == 1
+    assert len(payload_data["data"]["metadata"]) == 1
     assert payload_data["data"]["previous_names"] == ["Jane Johnson"]
 
 
