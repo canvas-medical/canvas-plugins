@@ -13,6 +13,7 @@ This plugin adds recurring appointment functionality to Canvas, allowing healthc
 - **Automatic Creation**: Automatically generates follow-up appointments when a recurring appointment is created
 - **Appointment & Schedule Event Support**: Works with both regular appointments and schedule events
 - **Parent-Child Relationship**: Maintains relationship between original appointment and recurring instances
+- **Smart Alerts**: Automatic banner alerts when recurring appointment series are nearing completion
 
 ## How It Works
 
@@ -25,11 +26,15 @@ This plugin adds recurring appointment functionality to Canvas, allowing healthc
    - Calculates future appointment dates based on the interval and type
    - Creates the specified number of child appointments or schedule events
    - Preserves all original appointment details (provider, location, duration, etc.)
+3. **Proactive Monitoring**: A daily cron job (running at 3 AM) monitors recurring appointment series and:
+   - Identifies patients with only 1 remaining appointment in their recurring series
+   - Automatically adds banner alert to patient timelines
 
 ## Technical Components
 
 - `AppointmentFormFields`: Handler that adds three configurable form fields (interval, recurrence type, and end condition) to appointment forms
 - `AppointmentRecurrence`: Handler that processes newly created appointments and generates recurring instances based on the configured recurrence pattern
+- `CheckPatientAppointmentRecurrence`: Cron task that runs daily at 3 AM to monitor recurring appointment series and add banner alert when only 1 appointment remains
 
 ## Recurrence Logic
 
