@@ -83,14 +83,17 @@ class AbnormalLabProtocol(BaseProtocol):
                 labels=["abnormal-lab", "urgent-review"]
             )
             
-            log.info(f"Task object created successfully: {task}")
+            log.info(f"Task object created - patient_id: {task.patient_id}, title: {task.title}, status: {task.status.value}")
             try:
                 applied_task = task.apply()
-                log.info(f"Task applied successfully: {applied_task}")
-                log.info(f"Applied task type: {type(applied_task)}")
+                log.info(f"Task applied successfully - Effect type: {applied_task.type}")
+                log.info(f"Task applied successfully - Effect payload length: {len(applied_task.payload) if applied_task.payload else 0}")
                 return [applied_task]
             except Exception as e:
                 log.error(f"Error applying task: {str(e)}")
+                log.error(f"Error type: {type(e)}")
+                import traceback
+                log.error(f"Traceback: {traceback.format_exc()}")
                 return []
             
         except LabReport.DoesNotExist:
