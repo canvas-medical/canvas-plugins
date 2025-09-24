@@ -76,6 +76,14 @@ class AbnormalLabProtocol(BaseProtocol):
             # Note: linked_object_id/linked_object_type are not set because LAB_REPORT is not
             # available in the LinkableObjectType enum (only REFERRAL and IMAGING are supported).
             log.info(f"Creating task with patient_id: {patient_id}, title: {task_title}")
+            
+            # Try creating task without patient_id first to see if that works
+            task_without_patient = AddTask(
+                title=f"{task_title} (Test without patient)",
+                status=TaskStatus.OPEN,
+                labels=["abnormal-lab", "urgent-review", "test-no-patient"]
+            )
+            
             task = AddTask(
                 patient_id=str(patient_id),
                 title=task_title,
@@ -88,7 +96,25 @@ class AbnormalLabProtocol(BaseProtocol):
                 applied_task = task.apply()
                 log.info(f"Task applied successfully - Effect type: {applied_task.type}")
                 log.info(f"Task applied successfully - Effect payload length: {len(applied_task.payload) if applied_task.payload else 0}")
-                return [applied_task]
+                
+                # Log the actual payload to see what's being sent
+                import json
+                try:
+                    payload_dict = json.loads(applied_task.payload) if applied_task.payload else {}
+                    log.info(f"Task payload data: {payload_dict.get('data', {})}")
+                except Exception as payload_error:
+                    log.error(f"Could not parse payload: {payload_error}")
+                
+                # Try the task without patient_id as well
+                log.info("Also creating task without patient_id for comparison...")
+                try:
+                    applied_task_no_patient = task_without_patient.apply()
+                    log.info(f"Task without patient applied successfully - Effect type: {applied_task_no_patient.type}")
+                    return [applied_task, applied_task_no_patient]
+                except Exception as e2:
+                    log.error(f"Error applying task without patient: {str(e2)}")
+                    return [applied_task]
+                
             except Exception as e:
                 log.error(f"Error applying task: {str(e)}")
                 log.error(f"Error type: {type(e)}")
