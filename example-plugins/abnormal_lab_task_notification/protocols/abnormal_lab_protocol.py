@@ -26,18 +26,17 @@ class AbnormalLabProtocol(BaseProtocol):
         lab_report_id = self.event.target.id
 
         try:
-            # Get the lab report instance
-            lab_report = LabReport.objects.get(id=lab_report_id)
-
-            # Check if the report is valid and not for test only
-            if lab_report.for_test_only or lab_report.junked:
+            # Get the lab report instance with filters applied
+            lab_report = LabReport.objects.filter(
+                id=lab_report_id,
+                for_test_only=False,
+                junked=False,
+                patient__isnull=False
+            ).first()
+            
+            if not lab_report:
                 return []
-
-            # Get patient ID using the foreign key relationship
-            if not lab_report.patient:
-                log.warning(f"Lab report {lab_report_id} has no associated patient")
-                return []
-
+            
             patient_id = lab_report.patient.id
 
             # Check all lab values for abnormal flags
