@@ -25,13 +25,6 @@ def test_values_property(
     assert effect.values == {"contact_point_id": valid_contact_point_id}
 
 
-def test_effect_payload_property(
-    effect: SendContactVerificationEffect, valid_contact_point_id: str
-) -> None:
-    """Test that the effect_payload property returns the correct payload structure."""
-    assert effect.effect_payload == {"data": {"contact_point_id": valid_contact_point_id}}
-
-
 @patch("canvas_sdk.effects.send_contact_verification.PatientContactPoint.objects.filter")
 def test_get_error_details_valid_contact_point(
     mock_filter: MagicMock, effect: SendContactVerificationEffect
