@@ -212,6 +212,7 @@ THIRD_PARTY_MODULES = {
         "When",
     },
     "django.db.models.functions": {
+        "Coalesce",
         "Trim",
     },
     "django.db.models.query": {
