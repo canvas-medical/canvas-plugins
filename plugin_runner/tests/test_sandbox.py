@@ -380,6 +380,19 @@ def test_allowed_import() -> None:
     assert scope["result"] == '{"key": "value"}', "JSON encoding should work with allowed imports."
 
 
+def test_trim_function_import() -> None:
+    """Test that Trim function from django.db.models.functions can be imported successfully."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models.functions import Trim
+            result = "Trim import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Trim import successful", "Trim import should work from django.db.models.functions."
+
+
 def test_typeguard_import_and_usage() -> None:
     """Test that TypeGuard can be imported and used in sandbox."""
     sandbox = _sandbox_from_code(
