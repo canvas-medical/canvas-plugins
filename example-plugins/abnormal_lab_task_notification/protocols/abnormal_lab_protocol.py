@@ -66,9 +66,6 @@ class AbnormalLabProtocol(BaseProtocol):
             log.info(f"Created task for {abnormal_count} abnormal lab value(s) in report {lab_report_id}")
             return [applied_task]
 
-        except LabReport.DoesNotExist:
-            log.error(f"Lab report {lab_report_id} not found")
-            return []
         except Exception as e:
             log.error(f"Error processing lab report {lab_report_id}: {str(e)}")
             return []
