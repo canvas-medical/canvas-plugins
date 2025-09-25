@@ -24,7 +24,7 @@ class MedicationHistoryMedication(IdentifiableModel):
         null=True,
     )
 
-    drug_description = models.TextField()
+    drug_description = models.TextField(blank=True, default="")
 
     strength_value = models.CharField(max_length=255, blank=True, default="")
     strength_form = models.CharField(max_length=255, blank=True, default="")
@@ -96,9 +96,9 @@ class MedicationHistoryMedicationCoding(Model):
     version = models.CharField(max_length=255)
     code = models.CharField(max_length=255)
     display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
+    user_selected = models.BooleanField(default=False)
     medication = models.ForeignKey(
-        MedicationHistoryMedication, on_delete=models.DO_NOTHING, related_name="codings", null=True
+        MedicationHistoryMedication, on_delete=models.CASCADE, related_name="codings"
     )
 
 
@@ -120,13 +120,12 @@ class MedicationHistoryResponse(IdentifiableModel):
 
     patient = models.ForeignKey(
         "v1.Patient",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="medication_history_responses",
-        null=True,
     )
     staff = models.ForeignKey(
         "v1.Staff",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="medication_history_responses",
         null=True,
     )
@@ -136,7 +135,7 @@ class MedicationHistoryResponse(IdentifiableModel):
 
     status = models.CharField(choices=MedicationHistoryResponseStatus.choices, max_length=20)
 
-    reason = models.TextField()
+    reason = models.TextField(blank=True, default="")
     reason_code = models.CharField(max_length=2, blank=True, default="")
 
     note = models.TextField(blank=True, default="")
