@@ -211,10 +211,6 @@ THIRD_PARTY_MODULES = {
         "Value",
         "When",
     },
-    "django.db.models.functions": {
-        "Coalesce",
-        "Trim",
-    },
     "django.db.models.query": {
         "QuerySet",
     },
