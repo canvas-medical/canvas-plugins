@@ -45,6 +45,12 @@ from .line_item_transaction import (
     NewLineItemPayment,
 )
 from .medication import Medication, MedicationCoding
+from .medication_history import (
+    MedicationHistoryMedication,
+    MedicationHistoryMedicationCoding,
+    MedicationHistoryResponse,
+    MedicationHistoryResponseStatus,
+)
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
@@ -164,6 +170,10 @@ __all__ = __exports__ = (
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponseStatus",
+    "MedicationHistoryResponse",
     "MedicationStatement",
     "Message",
     "MessageAttachment",
