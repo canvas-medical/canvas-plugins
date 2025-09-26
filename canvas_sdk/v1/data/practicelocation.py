@@ -1,7 +1,7 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, Model
-from canvas_sdk.v1.data.common import TaxIDType
+from canvas_sdk.v1.data.common import TaxIDType, AddressUse, AddressType, AddressState
 
 
 class PracticeLocationPOS(models.TextChoices):
@@ -99,8 +99,37 @@ class PracticeLocationSetting(Model):
         return self.name
 
 
+class PracticeLocationAddress(Model):
+    """PracticeLocationAddress."""
+    
+    class Meta:
+        db_table = "canvas_sdk_data_api_practicelocationaddress_001"
+    
+    practice_location = models.ForeignKey(
+        "v1.PracticeLocation", on_delete=models.DO_NOTHING, related_name="addresses", null=True
+    )
+    line1 = models.CharField(max_length=255, default="", blank=True)
+    line2 = models.CharField(max_length=255, default="", blank=True)
+    city = models.CharField(max_length=255)
+    district = models.CharField(max_length=255, blank=True, default="")
+    state_code = models.CharField(max_length=2)
+    postal_code = models.CharField(max_length=255)
+    use = models.CharField(choices=AddressUse.choices, max_length=10, default=AddressUse.WORK)
+    type = models.CharField(choices=AddressType.choices, max_length=10, default=AddressType.BOTH)
+    longitude = models.FloatField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    start = models.DateField(null=True, blank=True)
+    end = models.DateField(null=True, blank=True)
+    country = models.CharField(max_length=255)
+    state = models.CharField(choices=AddressState.choices, max_length=20, default=AddressState.ACTIVE)
+    
+    def __str__(self) -> str:
+        return f"Address for {self.practice_location}"
+
+
 __exports__ = (
     "PracticeLocationPOS",
-    "PracticeLocation",
+    "PracticeLocation", 
     "PracticeLocationSetting",
+    "PracticeLocationAddress",
 )
