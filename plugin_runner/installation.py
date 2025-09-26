@@ -170,7 +170,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
     except Exception as e:
-        log.error(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}: {e}')
+        log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
 
         sentry_sdk.capture_exception(e)
 
@@ -190,7 +190,7 @@ def extract_plugin(plugin_file_path: Path, plugin_installation_path: Path) -> No
                     archive = tarfile.TarFile.open(fileobj=file)
                     archive.extractall(plugin_installation_path, filter="data")
             except tarfile.ReadError as e:
-                log.error(f"Unreadable tar archive: '{plugin_file_path}'")
+                log.exception(f"Unreadable tar archive: '{plugin_file_path}'")
                 sentry_sdk.capture_exception(e)
 
                 raise InvalidPluginFormat from e
