@@ -6,7 +6,6 @@ class CompoundMedication(models.Model):
     """CompoundMedication."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_compoundmedication_001"
 
     class PotencyUnits(TextChoices):
