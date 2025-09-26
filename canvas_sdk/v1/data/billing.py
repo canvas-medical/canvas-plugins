@@ -2,7 +2,13 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, ValueSetTimeframeLookupQuerySet
+from canvas_sdk.v1.data.base import (
+    IdentifiableModel,
+    Model,
+    TimestampedModel,
+    ValueSetTimeframeLookupQuerySet,
+)
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.value_set.value_set import CodeConstants
 
 if TYPE_CHECKING:
@@ -29,17 +35,14 @@ class BillingLineItemStatus(models.TextChoices):
     REMOVED = "removed", "Removed"
 
 
-class BillingLineItem(IdentifiableModel):
+class BillingLineItem(TimestampedModel, IdentifiableModel):
     """BillingLineItem."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_billinglineitem_001"
 
-    # objects = BillingLineItemQuerySet.as_manager()
     objects = models.Manager().from_queryset(BillingLineItemQuerySet)()
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     note = models.ForeignKey(
         "v1.Note",
         on_delete=models.DO_NOTHING,
@@ -61,17 +64,12 @@ class BillingLineItem(IdentifiableModel):
     status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
 
 
-class BillingLineItemModifier(Model):
+class BillingLineItemModifier(Model, Coding):
     """BillingLineItemModifier."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_billinglineitemmodifier_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     line_item = models.ForeignKey(
         "v1.BillingLineItem",
         on_delete=models.DO_NOTHING,

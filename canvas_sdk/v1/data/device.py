@@ -1,16 +1,14 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class Device(IdentifiableModel):
+class Device(TimestampedModel, IdentifiableModel):
     """Device."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_device_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )

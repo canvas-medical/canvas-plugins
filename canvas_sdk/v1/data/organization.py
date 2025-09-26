@@ -1,17 +1,15 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 from canvas_sdk.v1.data.common import TaxIDType
 
 
-class Organization(Model):
+class Organization(TimestampedModel):
     """Organization."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_organization_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     full_name = models.CharField(max_length=255)
     short_name = models.CharField(max_length=255)
     subdomain = models.CharField(max_length=100)

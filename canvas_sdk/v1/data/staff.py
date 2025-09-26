@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -19,7 +19,7 @@ from canvas_sdk.v1.data.common import (
 from canvas_sdk.v1.data.utils import create_key
 
 
-class Staff(Model):
+class Staff(TimestampedModel):
     """Staff."""
 
     class Meta:
@@ -35,8 +35,6 @@ class Staff(Model):
         editable=False,
         default=create_key,
     )
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     prefix = models.CharField(max_length=100)
     suffix = models.CharField(max_length=100)
     first_name = models.CharField(max_length=255)
@@ -165,14 +163,12 @@ class StaffAddress(IdentifiableModel):
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="addresses")
 
 
-class StaffPhoto(Model):
+class StaffPhoto(TimestampedModel):
     """StaffPhoto."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_staffphoto_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="photos")
     url = models.CharField(
         default="https://d3hn0m4rbsz438.cloudfront.net/avatar1.png", max_length=512
