@@ -102,6 +102,18 @@ class PatientAddress:
         }
 
 
+@dataclass
+class PatientMetadata:
+    """A class representing a patient metadata."""
+
+    key: str
+    value: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the metadata to a dictionary."""
+        return {"key": self.key, "value": self.value}
+
+
 class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
@@ -127,6 +139,7 @@ class Patient(TrackableFieldsModel):
     external_identifiers: list[PatientExternalIdentifier] | None = None
     preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
     addresses: list[PatientAddress] | None = None
+    metadata: list[PatientMetadata] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -157,6 +170,11 @@ class Patient(TrackableFieldsModel):
                 [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
                 if self.preferred_pharmacies
                 else None
+            )
+
+        if self.is_dirty("metadata"):
+            values["metadata"] = (
+                [md.to_dict() for md in self.metadata] if self.metadata is not None else None
             )
 
         return values
@@ -271,5 +289,6 @@ __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy",
 )
