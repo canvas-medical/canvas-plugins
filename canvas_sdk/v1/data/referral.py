@@ -2,18 +2,16 @@ import json
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.task import Task
 
 
-class Referral(IdentifiableModel):
+class Referral(TimestampedModel, IdentifiableModel):
     """Referral."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referral_001"
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
@@ -66,14 +64,12 @@ class Referral(IdentifiableModel):
         return f"Referral {self.id}"
 
 
-class ReferralReport(IdentifiableModel):
+class ReferralReport(TimestampedModel, IdentifiableModel):
     """ReferralReport."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referralreport_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )

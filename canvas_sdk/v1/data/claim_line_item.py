@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 from canvas_sdk.v1.data.note import PracticeLocationPOS
 
 
@@ -106,7 +106,7 @@ class ClaimLineItemQuerySet(models.QuerySet):
         return self.exclude(proc_code=LineItemCodes.UNLINKED.value).apply_ordering()
 
 
-class ClaimLineItem(Model):
+class ClaimLineItem(TimestampedModel):
     """ClaimLineItem."""
 
     class Meta:
@@ -131,9 +131,6 @@ class ClaimLineItem(Model):
     units = models.IntegerField()
     epsdt = models.CharField(max_length=2)
     family_planning = models.CharField(choices=FamilyPlanningOptions.choices, max_length=1)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("ClaimLineItem", "ClaimLineItemStatus", "LineItemCodes", "FamilyPlanningOptions")

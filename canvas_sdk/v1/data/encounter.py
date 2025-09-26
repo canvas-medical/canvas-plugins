@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class EncounterMedium(models.TextChoices):
@@ -24,15 +24,13 @@ class EncounterState(models.TextChoices):
     CANCELLED = "CAN", "Cancelled"
 
 
-class Encounter(IdentifiableModel):
+class Encounter(TimestampedModel, IdentifiableModel):
     """Encounter."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_encounter_001"
 
     note = models.OneToOneField("v1.Note", on_delete=models.CASCADE, related_name="encounter")
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     medium = models.CharField(choices=EncounterMedium.choices, max_length=20)
     state = models.CharField(max_length=3, choices=EncounterState.choices)
     start_time = models.DateTimeField(default=timezone.now, null=True)

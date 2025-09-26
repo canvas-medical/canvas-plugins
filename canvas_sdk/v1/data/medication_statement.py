@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class MedicationStatement(IdentifiableModel):
+class MedicationStatement(TimestampedModel, IdentifiableModel):
     """MedicationStatement."""
 
     class Meta:
@@ -33,8 +33,6 @@ class MedicationStatement(IdentifiableModel):
         "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+", null=True
     )
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     start_date_original_input = models.CharField(max_length=255, default="")
     start_date = models.DateField(default=None, null=True)
     end_date_original_input = models.CharField(max_length=255, default="")

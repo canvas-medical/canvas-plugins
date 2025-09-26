@@ -54,6 +54,16 @@ class IdentifiableModel(Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
 
+class TimestampedModel(Model):
+    """A model that includes created and modified timestamps."""
+
+    class Meta:
+        abstract = True
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+
 class BaseModelManager(models.Manager):
     """A base manager for models."""
 

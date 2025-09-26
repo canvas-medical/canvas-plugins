@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class ClaimDiagnosisCode(IdentifiableModel):
+class ClaimDiagnosisCode(TimestampedModel, IdentifiableModel):
     """ClaimDiagnosisCode model for claim diagnosis codes."""
 
     class Meta:
@@ -14,9 +14,6 @@ class ClaimDiagnosisCode(IdentifiableModel):
     rank = models.IntegerField()
     code = models.CharField(max_length=20, blank=True)
     display = models.CharField(max_length=1000, blank=True)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("ClaimDiagnosisCode",)

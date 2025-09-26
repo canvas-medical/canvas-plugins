@@ -8,6 +8,7 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    TimestampedModel,
 )
 
 
@@ -35,7 +36,7 @@ class ProtocolOverrideQuerySet(BaseQuerySet, ForPatientQuerySetMixin, Committabl
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
 
 
-class ProtocolOverride(IdentifiableModel):
+class ProtocolOverride(TimestampedModel, IdentifiableModel):
     """ProtocolOverride."""
 
     class Meta:
@@ -43,8 +44,6 @@ class ProtocolOverride(IdentifiableModel):
 
     objects = cast(ProtocolOverrideQuerySet, ProtocolOverrideManager())
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"

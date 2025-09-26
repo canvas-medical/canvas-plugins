@@ -1,16 +1,15 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.coding import Coding
 
 
-class DetectedIssue(IdentifiableModel):
+class DetectedIssue(TimestampedModel, IdentifiableModel):
     """DetectedIssue."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_detectedissue_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     identified = models.DateTimeField()
     deleted = models.BooleanField()
     originator = models.ForeignKey(
@@ -34,17 +33,12 @@ class DetectedIssue(IdentifiableModel):
     detail = models.TextField()
 
 
-class DetectedIssueEvidence(IdentifiableModel):
+class DetectedIssueEvidence(IdentifiableModel, Coding):
     """DetectedIssueEvidence."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_detectedissueevidence_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     detected_issue = models.ForeignKey(
         DetectedIssue,
         on_delete=models.DO_NOTHING,
