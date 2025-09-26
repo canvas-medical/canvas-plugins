@@ -346,6 +346,9 @@
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
+  "canvas_sdk.effects.send_contact_verification": [
+    "SendContactVerificationEffect"
+  ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
   ],
