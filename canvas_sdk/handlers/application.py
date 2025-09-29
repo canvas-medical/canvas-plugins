@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from logger import log
 
 
 class Application(BaseHandler, ABC):
@@ -16,31 +15,24 @@ class Application(BaseHandler, ABC):
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
-        log.info(f"self.event.target.id: {self.event.target.id}")
-        log.info(f"self.identifier: {self.identifier}")
         if self.event.target.id != self.identifier:
             return []
-        log.info(f"Event type: {self.event.type}")
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
-                open_effect_or_effects = self.on_open()
-                log.info(f"type of effects!!!!!! {type(open_effect_or_effects)}")
-                if type(open_effect_or_effects) is list[Effect]:
-                    log.info("returning as is")
-                    return open_effect_or_effects
-                if type(open_effect_or_effects) is Effect:
-                    log.info("returning as list")
-                    return [open_effect_or_effects]
-                log.info("RETURNING NOTHING!!!!!")
+                open_effects = self.on_open()
+                if type(open_effects) is list and all(isinstance(e, Effect) for e in open_effects):
+                    return open_effects
+                if type(open_effects) is Effect:
+                    return [open_effects]
                 return []
             case EventType.APPLICATION__ON_CONTEXT_CHANGE:
-                context_effect_or_effects = self.on_context_change()
-                if context_effect_or_effects is None:
+                context_effects = self.on_context_change()
+                if context_effects is None:
                     return []
-                if type(context_effect_or_effects) is list[Effect]:
-                    return context_effect_or_effects
-                if type(context_effect_or_effects) is Effect:
-                    return [context_effect_or_effects]
+                if type(context_effects) is list:
+                    return context_effects
+                if type(context_effects) is Effect:
+                    return [context_effects]
                 return []
             case _:
                 return []
