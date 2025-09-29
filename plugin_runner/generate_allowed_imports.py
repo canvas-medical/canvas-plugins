@@ -60,7 +60,11 @@ def main() -> None:
     CANVAS_MODULES: dict[str, set[str]] = {}
 
     for module_name in CANVAS_SUBMODULE_NAMES:
-        module = importlib.import_module(module_name)
+        try:
+            module = importlib.import_module(module_name)
+        except Exception as e:
+            print(f"could not import {module_name}: {e}")
+            continue
 
         exports = getattr(module, "__exports__", None)
 
@@ -73,7 +77,8 @@ def main() -> None:
         CANVAS_MODULES[module_name].update(exports)
 
     # In use by a current plugin...
-    CANVAS_MODULES["canvas_sdk.commands"].add("*")
+    if "canvas_sdk.commands" in CANVAS_MODULES:
+        CANVAS_MODULES["canvas_sdk.commands"].add("*")
 
     def default(o: Any) -> Any:
         if isinstance(o, set):
