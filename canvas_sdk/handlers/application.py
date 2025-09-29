@@ -19,14 +19,14 @@ class Application(BaseHandler, ABC):
             return []
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
-                open_effect_or_effects: Effect | list[Effect] = self.on_open()
+                open_effect_or_effects = self.on_open()
                 if type(open_effect_or_effects) is list[Effect]:
                     return open_effect_or_effects
                 if type(open_effect_or_effects) is Effect:
                     return [open_effect_or_effects]
                 return []
             case EventType.APPLICATION__ON_CONTEXT_CHANGE:
-                context_effect_or_effects: Effect | list[Effect] | None = self.on_context_change()
+                context_effect_or_effects = self.on_context_change()
                 if context_effect_or_effects is None:
                     return []
                 if type(context_effect_or_effects) is list[Effect]:
