@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.65.0 (2025-09-25)
+
+### Chores
+
+- **docs**: Recurrence example plugin
+  ([#1057](https://github.com/canvas-medical/canvas-plugins/pull/1057),
+  [`0234ccb`](https://github.com/canvas-medical/canvas-plugins/commit/0234ccbf6cde1e09f91bcf818811f628190bc823))
+
+### Features
+
+- Add typing.TypeGuard to sandbox environment
+  ([#962](https://github.com/canvas-medical/canvas-plugins/pull/962),
+  [`96a11db`](https://github.com/canvas-medical/canvas-plugins/commit/96a11db330e11eee3edb9bd0f166697f2cfc75b9))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Questionnaire branching logic (PANDA-512)
+  ([#987](https://github.com/canvas-medical/canvas-plugins/pull/987),
+  [`471aec4`](https://github.com/canvas-medical/canvas-plugins/commit/471aec4e1eb6eebc4028dc2b47987a80194e84b8))
+
+Signed-off-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.64.0 (2025-09-23)
 
 ### Features
