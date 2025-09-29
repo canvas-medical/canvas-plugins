@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
+from logger import log
 
 
 class Application(BaseHandler, ABC):
@@ -15,8 +16,11 @@ class Application(BaseHandler, ABC):
 
     def compute(self) -> list[Effect]:
         """Handle the application events."""
+        log.info(f"self.event.target.id: {self.event.target.id}")
+        log.info(f"self.identifier: {self.identifier}")
         if self.event.target.id != self.identifier:
             return []
+        log.info(f"Event type: {self.event.type}")
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
                 open_effect_or_effects = self.on_open()
