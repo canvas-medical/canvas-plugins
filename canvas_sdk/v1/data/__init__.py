@@ -7,6 +7,7 @@ from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
 from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue, InstallmentPlan
+from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem
 from .command import Command
 from .compound_medication import CompoundMedication
@@ -15,6 +16,7 @@ from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -43,6 +45,7 @@ from .line_item_transaction import (
     NewLineItemPayment,
 )
 from .medication import Medication, MedicationCoding
+from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
 from .observation import (
@@ -93,6 +96,7 @@ from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
+from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .user import CanvasUser
@@ -117,6 +121,7 @@ __all__ = __exports__ = (
     "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
+    "ClaimDiagnosisCode",
     "ClaimLineItem",
     "ClaimPatient",
     "ClaimQueue",
@@ -131,6 +136,7 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Encounter",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -158,6 +164,7 @@ __all__ = __exports__ = (
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -204,6 +211,7 @@ __all__ = __exports__ = (
     "StaffPhoto",
     "StaffRole",
     "StaffContactPoint",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
