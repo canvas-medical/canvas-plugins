@@ -29,7 +29,9 @@ class Application(BaseHandler, ABC):
                 context_effects = self.on_context_change()
                 if context_effects is None:
                     return []
-                if type(context_effects) is list:
+                if type(context_effects) is list and all(
+                    isinstance(e, Effect) for e in context_effects
+                ):
                     return context_effects
                 if type(context_effects) is Effect:
                     return [context_effects]
