@@ -103,8 +103,8 @@ class PatientAddress:
 
 
 @dataclass
-class PatientMetadata:
-    """A class representing a patient metadata."""
+class Metadata:
+    """A class representing a metadata."""
 
     key: str
     value: str
@@ -139,7 +139,7 @@ class Patient(TrackableFieldsModel):
     external_identifiers: list[PatientExternalIdentifier] | None = None
     preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
     addresses: list[PatientAddress] | None = None
-    metadata: list[PatientMetadata] | None = None
+    metadata: list[Metadata] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -289,6 +289,6 @@ __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
-    "PatientMetadata",
+    "Metadata",
     "PatientPreferredPharmacy",
 )
