@@ -390,7 +390,9 @@ def test_trim_function_import() -> None:
     )
 
     scope = sandbox.execute()
-    assert scope["result"] == "Trim import successful", "Trim import should work from django.db.models.functions."
+    assert scope["result"] == "Trim import successful", (
+        "Trim import should work from django.db.models.functions."
+    )
 
 
 def test_coalesce_function_import() -> None:
@@ -403,7 +405,9 @@ def test_coalesce_function_import() -> None:
     )
 
     scope = sandbox.execute()
-    assert scope["result"] == "Coalesce import successful", "Coalesce import should work from django.db.models.functions."
+    assert scope["result"] == "Coalesce import successful", (
+        "Coalesce import should work from django.db.models.functions."
+    )
 
 
 def test_multiple_functions_import() -> None:
@@ -416,7 +420,9 @@ def test_multiple_functions_import() -> None:
     )
 
     scope = sandbox.execute()
-    assert scope["result"] == "Multiple functions import successful", "Multiple functions should be importable together."
+    assert scope["result"] == "Multiple functions import successful", (
+        "Multiple functions should be importable together."
+    )
 
 
 def test_typeguard_import_and_usage() -> None:
