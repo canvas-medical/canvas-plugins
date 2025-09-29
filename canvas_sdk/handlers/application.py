@@ -24,10 +24,14 @@ class Application(BaseHandler, ABC):
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
                 open_effect_or_effects = self.on_open()
+                log.info(f"type of effects!!!!!! {type(open_effect_or_effects)}")
                 if type(open_effect_or_effects) is list[Effect]:
+                    log.info("returning as is")
                     return open_effect_or_effects
                 if type(open_effect_or_effects) is Effect:
+                    log.info("returning as list")
                     return [open_effect_or_effects]
+                log.info("RETURNING NOTHING!!!!!")
                 return []
             case EventType.APPLICATION__ON_CONTEXT_CHANGE:
                 context_effect_or_effects = self.on_context_change()
