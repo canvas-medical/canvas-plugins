@@ -3,6 +3,7 @@ from typing import cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     BaseQuerySet,
     CommittableQuerySetMixin,
@@ -32,7 +33,7 @@ class TransmissionType(models.TextChoices):
     MANUAL = "M", "manual"
 
 
-class LabReport(TimestampedModel, IdentifiableModel):
+class LabReport(AuditedModel, IdentifiableModel):
     """A class representing a lab report."""
 
     class Meta:
@@ -58,16 +59,6 @@ class LabReport(TimestampedModel, IdentifiableModel):
     original_date = models.DateTimeField()
     date_performed = models.DateTimeField()
     custom_document_name = models.CharField(max_length=500)
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
 
 
 class LabReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
@@ -79,7 +70,7 @@ class LabReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQueryS
 LabReviewManager = BaseModelManager.from_queryset(LabReviewQuerySet)
 
 
-class LabReview(TimestampedModel, IdentifiableModel):
+class LabReview(AuditedModel, IdentifiableModel):
     """A class representing a lab review."""
 
     class Meta:
@@ -87,16 +78,6 @@ class LabReview(TimestampedModel, IdentifiableModel):
 
     objects = cast(LabReviewQuerySet, LabReviewManager())
 
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     internal_comment = models.TextField()
     message_to_patient = models.CharField(max_length=2048)
     status = models.CharField(max_length=50)
@@ -156,7 +137,7 @@ class LabValueCoding(TimestampedModel):
     system = models.CharField(max_length=128)
 
 
-class LabOrder(TimestampedModel, IdentifiableModel):
+class LabOrder(AuditedModel, IdentifiableModel):
     """A class representing a lab order."""
 
     class SpecimenCollectionType(models.TextChoices):
@@ -184,16 +165,6 @@ class LabOrder(TimestampedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborder_001"
 
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="lab_orders", null=True
     )
@@ -228,7 +199,7 @@ class LabOrder(TimestampedModel, IdentifiableModel):
     reports = models.ManyToManyField("v1.LabReport", through="v1.LabTest")
 
 
-class LabOrderReason(TimestampedModel):
+class LabOrderReason(AuditedModel):
     """A class representing a lab order reason."""
 
     class LabReasonMode(models.TextChoices):
@@ -242,16 +213,6 @@ class LabOrderReason(TimestampedModel):
     class Meta:
         db_table = "canvas_sdk_data_api_laborderreason_001"
 
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     order = models.ForeignKey(
         LabOrder, on_delete=models.DO_NOTHING, related_name="reasons", null=True
     )

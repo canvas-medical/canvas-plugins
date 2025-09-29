@@ -3,6 +3,7 @@ from typing import cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
@@ -25,7 +26,7 @@ class ObservationQuerySet(
 ObservationManager = BaseModelManager.from_queryset(ObservationQuerySet)
 
 
-class Observation(TimestampedModel, IdentifiableModel):
+class Observation(AuditedModel, IdentifiableModel):
     """Observation."""
 
     class Meta:
@@ -33,16 +34,6 @@ class Observation(TimestampedModel, IdentifiableModel):
 
     objects = cast(ObservationQuerySet, ObservationManager())
 
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="observations", null=True
     )

@@ -64,6 +64,24 @@ class TimestampedModel(Model):
     modified = models.DateTimeField(auto_now=True)
 
 
+class AuditedModel(TimestampedModel):
+    """A model that includes auditing fields."""
+
+    class Meta:
+        abstract = True
+
+    originator = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    committer = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    entered_in_error = models.ForeignKey(
+        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
+    )
+    deleted = models.BooleanField(default=False)
+
+
 class BaseModelManager(models.Manager):
     """A base manager for models."""
 

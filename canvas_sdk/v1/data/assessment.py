@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
 
 
 class AssessmentStatus(models.TextChoices):
@@ -11,20 +11,12 @@ class AssessmentStatus(models.TextChoices):
     STATUS_DETERIORATING = "deteriorated", "Deteriorated"
 
 
-class Assessment(TimestampedModel, IdentifiableModel):
+class Assessment(AuditedModel, IdentifiableModel):
     """Assessment."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_assessment_001"
 
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     patient = models.ForeignKey(
         "v1.Patient",
         on_delete=models.DO_NOTHING,
