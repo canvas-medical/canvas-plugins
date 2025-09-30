@@ -9,3 +9,6 @@ def normalize_effects(effects: Effect | list[Effect] | None) -> list[Effect]:
         return [effects]
     if isinstance(effects, list):
         return [e for e in effects if isinstance(e, Effect)]
+
+
+__exports__ = ("normalize_effects",)
