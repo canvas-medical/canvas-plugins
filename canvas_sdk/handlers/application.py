@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.handlers.utils import normalize_effects
 
 
 class Application(BaseHandler, ABC):
@@ -19,23 +20,9 @@ class Application(BaseHandler, ABC):
             return []
         match self.event.type:
             case EventType.APPLICATION__ON_OPEN:
-                open_effects = self.on_open()
-                if type(open_effects) is list and all(isinstance(e, Effect) for e in open_effects):
-                    return open_effects
-                if type(open_effects) is Effect:
-                    return [open_effects]
-                return []
+                return normalize_effects(self.on_open())
             case EventType.APPLICATION__ON_CONTEXT_CHANGE:
-                context_effects = self.on_context_change()
-                if context_effects is None:
-                    return []
-                if type(context_effects) is list and all(
-                    isinstance(e, Effect) for e in context_effects
-                ):
-                    return context_effects
-                if type(context_effects) is Effect:
-                    return [context_effects]
-                return []
+                return normalize_effects(self.on_context_change())
             case _:
                 return []
 
