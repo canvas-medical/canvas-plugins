@@ -92,3 +92,84 @@ def test_compute_context_change_event_targeted() -> None:
 
     assert len(result) == 1, "Expected a single effect if the event target is the app identifier"
     assert isinstance(result[0], Effect), "Effect should be an instance of Effect"
+
+
+class EffectsList(Application):
+    """A concrete implementation of the Application class for testing."""
+
+    def on_open(self) -> Effect | list[Effect]:
+        """Handle the application open event by returning a mock effect."""
+        return [LaunchModalEffect(url="https://example.com").apply()]
+
+    def on_context_change(self) -> Effect | list[Effect] | None:
+        """Handle the application context change event by returning a mock effect."""
+        return [LaunchModalEffect(url="https://example.com/context").apply()]
+
+
+class MultipleEffectsList(Application):
+    """A concrete implementation of the Application class for testing."""
+
+    def on_open(self) -> Effect | list[Effect]:
+        """Handle the application open event by returning a mock effect."""
+        return [
+            LaunchModalEffect(url="https://example.com").apply(),
+            LaunchModalEffect(url="https://canvasmedical.com").apply(),
+        ]
+
+    def on_context_change(self) -> Effect | list[Effect] | None:
+        """Handle the application context change event by returning a mock effect."""
+        return [
+            LaunchModalEffect(url="https://example.com/context").apply(),
+            LaunchModalEffect(url="https://canvasmedical.com").apply(),
+        ]
+
+
+class MultipleEffectsListWithInvalids(Application):
+    """A concrete implementation of the Application class for testing."""
+
+    def on_open(self) -> Effect | list[Effect]:
+        """Handle the application open event by returning a mock effect."""
+        return [
+            {"not": "an effect"},  # type: ignore
+            LaunchModalEffect(url="https://canvasmedical.com").apply(),
+        ]
+
+    def on_context_change(self) -> Effect | list[Effect] | None:
+        """Handle the application context change event by returning a mock effect."""
+        return [
+            {"not": "an effect"},  # type: ignore
+            {"also": "not an effect"},  # type: ignore
+        ]
+
+
+@pytest.mark.parametrize(
+    "event_type,App,exp_num_effects",
+    [
+        (EventType.APPLICATION__ON_OPEN, EffectsList, 1),
+        (EventType.APPLICATION__ON_CONTEXT_CHANGE, EffectsList, 1),
+        (EventType.APPLICATION__ON_OPEN, MultipleEffectsList, 2),
+        (EventType.APPLICATION__ON_CONTEXT_CHANGE, MultipleEffectsList, 2),
+        (EventType.APPLICATION__ON_OPEN, MultipleEffectsListWithInvalids, 1),
+        (EventType.APPLICATION__ON_CONTEXT_CHANGE, MultipleEffectsListWithInvalids, 0),
+    ],
+    ids=(
+        "on-open-single",
+        "on-context-change-single",
+        "on-open-multiple",
+        "on-context-change-multiple",
+        "on-open-multiple-with-invalids",
+        "on-context-change-multiple-with-invalids",
+    ),
+)
+def test_compute_with_list_effects(
+    event_type: EventType, App: type[Application], exp_num_effects: int
+) -> None:
+    """Ensure compute normalizes on_open return values to a list of Effects."""
+    request = EventRequest(
+        type=event_type,
+        target=f"{App.__module__}:{App.__qualname__}",
+    )
+    effects = App(Event(request)).compute()
+    assert len(effects) == exp_num_effects
+    for effect in effects:
+        assert isinstance(effect, Effect)
