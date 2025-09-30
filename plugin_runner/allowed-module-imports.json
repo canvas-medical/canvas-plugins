@@ -498,9 +498,6 @@
     "WebSocket",
     "WebSocketAPI"
   ],
-  "canvas_sdk.handlers.utils": [
-    "normalize_effects"
-  ],
   "canvas_sdk.protocols": [
     "BaseProtocol",
     "ClinicalQualityMeasure"
