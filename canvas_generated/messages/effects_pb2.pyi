@@ -232,10 +232,12 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
     UPDATE_APPOINTMENT: _ClassVar[EffectType]
+    RESCHEDULE_APPOINTMENT: _ClassVar[EffectType]
     CANCEL_APPOINTMENT: _ClassVar[EffectType]
     CREATE_SCHEDULE_EVENT: _ClassVar[EffectType]
     UPDATE_SCHEDULE_EVENT: _ClassVar[EffectType]
     DELETE_SCHEDULE_EVENT: _ClassVar[EffectType]
+    RESCHEDULE_SCHEDULE_EVENT: _ClassVar[EffectType]
     CREATE_PATIENT: _ClassVar[EffectType]
     UPDATE_PATIENT: _ClassVar[EffectType]
     CREATE_MESSAGE: _ClassVar[EffectType]
@@ -498,10 +500,12 @@ CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
 UPDATE_APPOINTMENT: EffectType
+RESCHEDULE_APPOINTMENT: EffectType
 CANCEL_APPOINTMENT: EffectType
 CREATE_SCHEDULE_EVENT: EffectType
 UPDATE_SCHEDULE_EVENT: EffectType
 DELETE_SCHEDULE_EVENT: EffectType
+RESCHEDULE_SCHEDULE_EVENT: EffectType
 CREATE_PATIENT: EffectType
 UPDATE_PATIENT: EffectType
 CREATE_MESSAGE: EffectType
