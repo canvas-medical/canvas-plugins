@@ -239,5 +239,22 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
 
         return values
 
+    def reschedule(self) -> Effect:
+        """Send a RESCHEDULE effect for the appointment."""
+        self._validate_before_effect("update")
+
+        # Check if any fields were actually modified
+        if self._dirty_keys == {"instance_id"}:
+            raise ValueError("No fields have been modified. Nothing to update.")
+
+        return Effect(
+            type=f"RESCHEDULE_{self.Meta.effect_type}",
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
 
 __exports__ = ("AppointmentIdentifier", "NoteOrAppointmentABC", "AppointmentABC")
