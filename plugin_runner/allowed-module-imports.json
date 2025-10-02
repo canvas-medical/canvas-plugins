@@ -603,6 +603,10 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus",
     "MedicationStatement",
     "Message",
     "MessageAttachment",
@@ -823,6 +827,12 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_history": [
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus"
   ],
   "canvas_sdk.v1.data.medication_statement": [
     "MedicationStatement"
