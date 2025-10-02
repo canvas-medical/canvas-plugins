@@ -348,6 +348,9 @@
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
+  "canvas_sdk.effects.send_contact_verification": [
+    "SendContactVerificationEffect"
+  ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
   ],
@@ -576,6 +579,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "EligibilitySummary",
     "Encounter",
     "Facility",
     "Goal",
@@ -604,6 +608,10 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus",
     "MedicationStatement",
     "Message",
     "MessageAttachment",
@@ -750,6 +758,7 @@
     "CoverageStack",
     "CoverageState",
     "CoverageType",
+    "EligibilitySummary",
     "Transactor",
     "TransactorAddress",
     "TransactorCoverageType",
@@ -823,6 +832,12 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_history": [
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus"
   ],
   "canvas_sdk.v1.data.medication_statement": [
     "MedicationStatement"

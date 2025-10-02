@@ -288,11 +288,27 @@ class TransactorPhone(IdentifiableModel):
         return f"id={self.id}"
 
 
+class EligibilitySummary(IdentifiableModel):
+    """EligibilitySummary."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_eligibilitysummary_001"
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    coverage = models.OneToOneField(
+        "v1.Coverage", on_delete=models.CASCADE, related_name="eligibility_summary"
+    )
+    copay_cents = models.IntegerField(null=True)
+    coinsurance = models.IntegerField(null=True)
+
+
 __exports__ = (
     "CoverageStack",
     "CoverageState",
     "CoverageType",
     "CoverageRelationshipCode",
+    "EligibilitySummary",
     "TransactorCoverageType",
     "TransactorType",
     "Coverage",

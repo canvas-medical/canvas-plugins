@@ -12,7 +12,7 @@ from .claim_line_item import ClaimLineItem
 from .command import Command
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
-from .coverage import Coverage, Transactor, TransactorAddress, TransactorPhone
+from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
@@ -45,6 +45,12 @@ from .line_item_transaction import (
     NewLineItemPayment,
 )
 from .medication import Medication, MedicationCoding
+from .medication_history import (
+    MedicationHistoryMedication,
+    MedicationHistoryMedicationCoding,
+    MedicationHistoryResponse,
+    MedicationHistoryResponseStatus,
+)
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
 from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
@@ -136,6 +142,7 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "EligibilitySummary",
     "Encounter",
     "Facility",
     "Goal",
@@ -164,6 +171,10 @@ __all__ = __exports__ = (
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponseStatus",
+    "MedicationHistoryResponse",
     "MedicationStatement",
     "Message",
     "MessageAttachment",
