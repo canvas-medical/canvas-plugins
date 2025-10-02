@@ -7,6 +7,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.metadata import Metadata
 from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import (
@@ -100,18 +101,6 @@ class PatientAddress:
             "longitude": self.longitude,
             "latitude": self.latitude,
         }
-
-
-@dataclass
-class Metadata:
-    """A class representing a metadata."""
-
-    key: str
-    value: str
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert the metadata to a dictionary."""
-        return {"key": self.key, "value": self.value}
 
 
 class Patient(TrackableFieldsModel):

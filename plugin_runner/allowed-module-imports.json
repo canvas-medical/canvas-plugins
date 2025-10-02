@@ -249,6 +249,9 @@
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
+  "canvas_sdk.effects.metadata": [
+    "Metadata"
+  ],
   "canvas_sdk.effects.note": [
     "Appointment",
     "AppointmentIdentifier",
