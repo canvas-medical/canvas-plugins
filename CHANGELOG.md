@@ -1,6 +1,118 @@
 # CHANGELOG
 
 
+## v0.66.0 (2025-10-01)
+
+### Bug Fixes
+
+- Prevent PrescribeCommand.edit() from incorrectly unsetting type_to_dispense
+  ([#1028](https://github.com/canvas-medical/canvas-plugins/pull/1028),
+  [`42294bd`](https://github.com/canvas-medical/canvas-plugins/commit/42294bded179719ff194656ba8683e0ead923b12))
+
+### Chores
+
+- **deps**: Bump the production-patches group with 2 updates
+  ([#1085](https://github.com/canvas-medical/canvas-plugins/pull/1085),
+  [`b8a1627`](https://github.com/canvas-medical/canvas-plugins/commit/b8a162760e78ff5248ca2eedea3993048f90fafe))
+
+- **deps**: Bump typer from 0.15.1 to 0.19.2
+  ([#1086](https://github.com/canvas-medical/canvas-plugins/pull/1086),
+  [`12912f5`](https://github.com/canvas-medical/canvas-plugins/commit/12912f5520e604b09763a1a9896f4d189f0004a3))
+
+### Features
+
+- Add abnormal lab task notification plugin
+  ([#1072](https://github.com/canvas-medical/canvas-plugins/pull/1072),
+  [`4062b9f`](https://github.com/canvas-medical/canvas-plugins/commit/4062b9f3348817d49c109f1653d0d061c7fe4eab))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+- Add medication history related models
+  ([#1094](https://github.com/canvas-medical/canvas-plugins/pull/1094),
+  [`f6330d4`](https://github.com/canvas-medical/canvas-plugins/commit/f6330d4a08d65b8b18c079ab3a938234a513665d))
+
+- Add Trim and Coalesce to allowed django.db.models.functions imports
+  ([#1097](https://github.com/canvas-medical/canvas-plugins/pull/1097),
+  [`aaa9dae`](https://github.com/canvas-medical/canvas-plugins/commit/aaa9dae1c91139d0611ebf013a4ec99df9c592a1))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
+## v0.65.0 (2025-09-25)
+
+### Chores
+
+- **docs**: Recurrence example plugin
+  ([#1057](https://github.com/canvas-medical/canvas-plugins/pull/1057),
+  [`0234ccb`](https://github.com/canvas-medical/canvas-plugins/commit/0234ccbf6cde1e09f91bcf818811f628190bc823))
+
+### Features
+
+- Add typing.TypeGuard to sandbox environment
+  ([#962](https://github.com/canvas-medical/canvas-plugins/pull/962),
+  [`96a11db`](https://github.com/canvas-medical/canvas-plugins/commit/96a11db330e11eee3edb9bd0f166697f2cfc75b9))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+- Questionnaire branching logic (PANDA-512)
+  ([#987](https://github.com/canvas-medical/canvas-plugins/pull/987),
+  [`471aec4`](https://github.com/canvas-medical/canvas-plugins/commit/471aec4e1eb6eebc4028dc2b47987a80194e84b8))
+
+Signed-off-by: Reba Magier <reba.magier@canvasmedical.com>
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
+## v0.64.0 (2025-09-23)
+
+### Features
+
+- Add bare bones copilot instructions
+  ([#1075](https://github.com/canvas-medical/canvas-plugins/pull/1075),
+  [`4b2c269`](https://github.com/canvas-medical/canvas-plugins/commit/4b2c2693a305960c4d664fee8ee11f7b5f113512))
+
+- Add claim diagnosis code model
+  ([#1041](https://github.com/canvas-medical/canvas-plugins/pull/1041),
+  [`77fa630`](https://github.com/canvas-medical/canvas-plugins/commit/77fa63072e9885e5e183e95d10c7a0a3eeeaea01))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Add encounter to data module ([#1024](https://github.com/canvas-medical/canvas-plugins/pull/1024),
+  [`19d6d99`](https://github.com/canvas-medical/canvas-plugins/commit/19d6d9935c8ae3a5fe52a56ede482997995863d5))
+
+- Add example plugin for a PUT Appointment updater endpoint
+  ([#985](https://github.com/canvas-medical/canvas-plugins/pull/985),
+  [`730dcb5`](https://github.com/canvas-medical/canvas-plugins/commit/730dcb584a8e97b6c7877c7f7e974875c46ddf89))
+
+Co-authored-by: Mary Dickson <marydickson@Marys-MacBook-Pro.local>
+
+- Create medication statement and stop medication event models
+  ([#988](https://github.com/canvas-medical/canvas-plugins/pull/988),
+  [`a9a2535`](https://github.com/canvas-medical/canvas-plugins/commit/a9a25353b712c93c4e34db5ff6f829baff55d25f))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Data - patient ethnicity (KOALA-3119)
+  ([#1018](https://github.com/canvas-medical/canvas-plugins/pull/1018),
+  [`7216242`](https://github.com/canvas-medical/canvas-plugins/commit/7216242ea15d4d7bce2905870c0c5dd41ee563c2))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Update pool size and add interstitial variable
+  ([#1062](https://github.com/canvas-medical/canvas-plugins/pull/1062),
+  [`0bc97da`](https://github.com/canvas-medical/canvas-plugins/commit/0bc97da96b845ed082d4173052a0940557cd610a))
+
+
 ## v0.63.0 (2025-09-15)
 
 ### Features

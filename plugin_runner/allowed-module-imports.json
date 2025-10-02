@@ -512,6 +512,7 @@
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
     "ExtendedDraft7Validator",
+    "QuestionnaireConfig",
     "from_yaml"
   ],
   "canvas_sdk.templates": [
@@ -561,6 +562,7 @@
     "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
+    "ClaimDiagnosisCode",
     "ClaimLineItem",
     "ClaimPatient",
     "ClaimQueue",
@@ -575,6 +577,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "Encounter",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -602,6 +605,11 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -648,6 +656,7 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -704,6 +713,9 @@
     "InstallmentPlan",
     "InstallmentPlanStatus"
   ],
+  "canvas_sdk.v1.data.claim_diagnosis_code": [
+    "ClaimDiagnosisCode"
+  ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
     "ClaimLineItemStatus",
@@ -759,6 +771,11 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.encounter": [
+    "Encounter",
+    "EncounterMedium",
+    "EncounterState"
+  ],
   "canvas_sdk.v1.data.facility": [
     "Facility"
   ],
@@ -811,6 +828,15 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_history": [
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus"
+  ],
+  "canvas_sdk.v1.data.medication_statement": [
+    "MedicationStatement"
   ],
   "canvas_sdk.v1.data.message": [
     "Message",
@@ -916,6 +942,9 @@
     "StaffLicense",
     "StaffPhoto",
     "StaffRole"
+  ],
+  "canvas_sdk.v1.data.stop_medication_event": [
+    "StopMedicationEvent"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",

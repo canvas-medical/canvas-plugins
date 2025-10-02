@@ -380,6 +380,70 @@ def test_allowed_import() -> None:
     assert scope["result"] == '{"key": "value"}', "JSON encoding should work with allowed imports."
 
 
+def test_trim_function_import() -> None:
+    """Test that Trim function from django.db.models.functions can be imported successfully."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models.functions import Trim
+            result = "Trim import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Trim import successful", (
+        "Trim import should work from django.db.models.functions."
+    )
+
+
+def test_coalesce_function_import() -> None:
+    """Test that Coalesce function from django.db.models.functions can be imported successfully."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models.functions import Coalesce
+            result = "Coalesce import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Coalesce import successful", (
+        "Coalesce import should work from django.db.models.functions."
+    )
+
+
+def test_multiple_functions_import() -> None:
+    """Test that multiple functions from django.db.models.functions can be imported together."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models.functions import Trim, Coalesce
+            result = "Multiple functions import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Multiple functions import successful", (
+        "Multiple functions should be importable together."
+    )
+
+
+def test_typeguard_import_and_usage() -> None:
+    """Test that TypeGuard can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from typing import TypeGuard
+
+            def is_string(val) -> TypeGuard[str]:
+                return isinstance(val, str)
+
+            # Test the TypeGuard function
+            test_value = "hello"
+            result = is_string(test_value)
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is True, "TypeGuard function should correctly identify string"
+
+
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
     sandbox = _sandbox_from_code("builtins = {}")

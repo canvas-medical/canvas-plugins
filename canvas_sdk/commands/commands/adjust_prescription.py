@@ -13,5 +13,9 @@ class AdjustPrescriptionCommand(RefillCommand):
         default=None, json_schema_extra={"commands_api_name": "change_medication_to"}
     )
 
+    def _has_fdb_code(self) -> bool:
+        """Check if new_fdb_code is provided and non-empty."""
+        return self.new_fdb_code is not None and self.new_fdb_code.strip() != ""
+
 
 __exports__ = ("AdjustPrescriptionCommand",)
