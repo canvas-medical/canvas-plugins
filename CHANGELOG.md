@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.67.0 (2025-10-02)
+
+### Features
+
+- Add patientmetada to patient create effect
+  ([#1083](https://github.com/canvas-medical/canvas-plugins/pull/1083),
+  [`bc69040`](https://github.com/canvas-medical/canvas-plugins/commit/bc690403878eb68f4018c2dfd33233f848b6f74c))
+
+- Create eligibilitysummary model
+  ([#1093](https://github.com/canvas-medical/canvas-plugins/pull/1093),
+  [`933a96e`](https://github.com/canvas-medical/canvas-plugins/commit/933a96ebd003f566e135e3cb678c9f8eab78d905))
+
+- Create send contact verification effect
+  ([#1034](https://github.com/canvas-medical/canvas-plugins/pull/1034),
+  [`819dcd7`](https://github.com/canvas-medical/canvas-plugins/commit/819dcd75f34129e641f73022a3decd2b728fc55f))
+
+
 ## v0.66.0 (2025-10-01)
 
 ### Bug Fixes
