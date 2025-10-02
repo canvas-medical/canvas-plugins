@@ -278,6 +278,6 @@ __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
-    "Metadata",
+    "PatientMetadata",
     "PatientPreferredPharmacy",
 )

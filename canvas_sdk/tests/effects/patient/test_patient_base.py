@@ -8,11 +8,11 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_sdk.effects.patient.base import (
-    Metadata,
     Patient,
     PatientAddress,
     PatientContactPoint,
     PatientExternalIdentifier,
+    PatientMetadata,
 )
 from canvas_sdk.v1.data.common import (
     AddressType,
@@ -68,9 +68,9 @@ def patient_address() -> PatientAddress:
 
 
 @pytest.fixture
-def patient_metadata() -> Metadata:
+def patient_metadata() -> PatientMetadata:
     """Create a Metadata for testing."""
-    return Metadata(key="source", value="protocol")
+    return PatientMetadata(key="source", value="protocol")
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def test_patient_external_identifier_to_dict() -> None:
 def test_patient_values_includes_metadata_when_set(
     mock_db_queries: dict[str, MagicMock],
     valid_patient_data: dict[str, Any],
-    patient_metadata: Metadata,
+    patient_metadata: PatientMetadata,
 ) -> None:
     """Test that values includes metadata when they are provided."""
     patient = Patient(**valid_patient_data, metadata=[patient_metadata])
@@ -198,7 +198,7 @@ def test_patient_values_excludes_collections_when_not_dirty(
 def test_patient_values_excludes_metadata_when_not_dirty(
     mock_db_queries: dict[str, MagicMock],
     valid_patient_data: dict[str, Any],
-    patient_metadata: Metadata,
+    patient_metadata: PatientMetadata,
 ) -> None:
     """Test that values excludes metadata that are not marked as dirty."""
     patient = Patient(**valid_patient_data)
@@ -319,7 +319,7 @@ def test_patient_create_with_complex_data(
     mock_db_queries: dict[str, MagicMock],
     patient_address: PatientAddress,
     patient_contact_point: PatientContactPoint,
-    patient_metadata: Metadata,
+    patient_metadata: PatientMetadata,
 ) -> None:
     """Test creating patient with addresses and contact points and metadata."""
     external_identifier = PatientExternalIdentifier(system="MRN", value="12345")
