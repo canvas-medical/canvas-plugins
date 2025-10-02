@@ -1,7 +1,21 @@
 import json
+from dataclasses import dataclass
+from typing import Any
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+
+
+@dataclass
+class Metadata:
+    """A class representing a metadata."""
+
+    key: str
+    value: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the metadata to a dictionary."""
+        return {"key": self.key, "value": self.value}
 
 
 class BaseMetadata(TrackableFieldsModel):
@@ -23,4 +37,4 @@ class BaseMetadata(TrackableFieldsModel):
         )
 
 
-__exports__ = ()
+__exports__ = ("Metadata",)

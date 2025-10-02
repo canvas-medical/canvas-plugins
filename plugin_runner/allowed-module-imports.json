@@ -249,6 +249,9 @@
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
+  "canvas_sdk.effects.metadata": [
+    "Metadata"
+  ],
   "canvas_sdk.effects.note": [
     "Appointment",
     "AppointmentIdentifier",
@@ -280,6 +283,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
@@ -287,6 +291,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [

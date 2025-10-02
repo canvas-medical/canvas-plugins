@@ -7,6 +7,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.metadata import Metadata as PatientMetadata
 from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
 from canvas_sdk.v1.data.common import (
@@ -127,6 +128,7 @@ class Patient(TrackableFieldsModel):
     external_identifiers: list[PatientExternalIdentifier] | None = None
     preferred_pharmacies: list[PatientPreferredPharmacy] | None = None
     addresses: list[PatientAddress] | None = None
+    metadata: list[PatientMetadata] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -157,6 +159,11 @@ class Patient(TrackableFieldsModel):
                 [pharmacy.to_dict() for pharmacy in self.preferred_pharmacies]
                 if self.preferred_pharmacies
                 else None
+            )
+
+        if self.is_dirty("metadata"):
+            values["metadata"] = (
+                [md.to_dict() for md in self.metadata] if self.metadata is not None else None
             )
 
         return values
@@ -271,5 +278,6 @@ __exports__ = (
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy",
 )
