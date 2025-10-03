@@ -28,7 +28,7 @@ class Message(TimestampedModel, IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="message", null=True
     )
-    read = models.BooleanField()
+    read = models.DateTimeField(null=True, blank=True)
 
 
 class MessageAttachment(IdentifiableModel):

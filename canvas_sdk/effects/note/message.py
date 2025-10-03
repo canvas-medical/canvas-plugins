@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -19,9 +20,10 @@ class Message(TrackableFieldsModel):
         effect_type = "MESSAGE"
 
     message_id: str | UUID | None = None
-    content: str
+    content: str | None
     sender_id: str | UUID
     recipient_id: str | UUID
+    read: datetime | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -47,6 +49,14 @@ class Message(TrackableFieldsModel):
                     "value",
                     f"Recipient with ID {self.recipient_id} does not exist.",
                     self.recipient_id,
+                )
+            )
+        if not self.content or self.content.strip() == "":
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Message content cannot be empty.",
+                    self.content,
                 )
             )
 
