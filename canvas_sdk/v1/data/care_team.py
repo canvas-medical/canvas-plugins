@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.coding import Coding
 
 
@@ -14,7 +14,7 @@ class CareTeamMembershipStatus(models.TextChoices):
     ENTERED_IN_ERROR = "entered-in-error", "Entered in Error"
 
 
-class CareTeamRole(Model, Coding):
+class CareTeamRole(Coding):
     """CareTeamRole."""
 
     class Meta:

@@ -7,7 +7,6 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -79,7 +78,7 @@ class Immunization(IdentifiableModel):
     deleted = models.BooleanField()
 
 
-class ImmunizationCoding(Model, Coding):
+class ImmunizationCoding(Coding):
     """ImmunizationCoding."""
 
     class Meta:
@@ -129,7 +128,7 @@ class ImmunizationStatement(IdentifiableModel):
     deleted = models.BooleanField()
 
 
-class ImmunizationStatementCoding(Model, Coding):
+class ImmunizationStatementCoding(Coding):
     """ImmunizationStatementCoding."""
 
     class Meta:

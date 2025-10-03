@@ -1,10 +1,10 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel
 from canvas_sdk.v1.data.coding import Coding
 
 
-class PatientConsentRejectionCoding(Model, Coding):
+class PatientConsentRejectionCoding(Coding):
     """Patient Consent Rejection Coding."""
 
     class Meta:
@@ -19,7 +19,7 @@ class PatientConsentExpirationRule(models.TextChoices):
     END_OF_YEAR = "end_of_year", "End of year"
 
 
-class PatientConsentCoding(Model, Coding):
+class PatientConsentCoding(Coding):
     """Patient Consent Coding."""
 
     class Meta:

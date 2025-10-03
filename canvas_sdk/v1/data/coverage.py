@@ -282,14 +282,12 @@ class TransactorPhone(TimestampedModel, IdentifiableModel):
         return f"id={self.id}"
 
 
-class EligibilitySummary(IdentifiableModel):
+class EligibilitySummary(TimestampedModel, IdentifiableModel):
     """EligibilitySummary."""
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_eligibilitysummary_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     coverage = models.OneToOneField(
         "v1.Coverage", on_delete=models.CASCADE, related_name="eligibility_summary"
     )

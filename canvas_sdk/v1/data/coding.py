@@ -1,7 +1,9 @@
 from django.db import models
 
+from canvas_sdk.v1.data.base import Model
 
-class Coding(models.Model):
+
+class Coding(Model):
     """A representation of a coding from a terminology system."""
 
     class Meta:
