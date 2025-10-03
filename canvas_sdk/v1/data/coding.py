@@ -14,3 +14,6 @@ class Coding(Model):
     system = models.CharField(max_length=255)
     version = models.CharField(max_length=255, blank=True, default="")
     user_selected = models.BooleanField(default=False)
+
+
+__exports__ = ()
