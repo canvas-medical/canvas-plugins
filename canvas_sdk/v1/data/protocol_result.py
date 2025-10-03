@@ -1,6 +1,8 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import Model
+
 
 class ProtocolResultStatus(models.TextChoices):
     """Constants for ProtocolResultStatus."""
@@ -12,7 +14,7 @@ class ProtocolResultStatus(models.TextChoices):
     STATUS_NOT_RELEVANT = "not_relevant"
 
 
-class ProtocolResult(models.Model):
+class ProtocolResult(Model):
     """ProtocolResult."""
 
     class Meta:
