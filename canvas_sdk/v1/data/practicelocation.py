@@ -67,7 +67,7 @@ class PracticeLocation(TimestampedModel, IdentifiableModel):
     short_name = models.CharField(max_length=255)
     background_image_url = models.CharField(max_length=255)
     background_gradient = models.CharField(max_length=255)
-    active = models.BooleanField()
+    active = models.BooleanField(default=True)
     npi_number = models.CharField(max_length=10)
     bill_through_organization = models.BooleanField()
     tax_id = models.CharField(max_length=25)
@@ -75,7 +75,7 @@ class PracticeLocation(TimestampedModel, IdentifiableModel):
     billing_location_name = models.CharField(max_length=255)
     group_npi_number = models.CharField(max_length=10)
     taxonomy_number = models.CharField(max_length=10)
-    include_zz_qualifier = models.BooleanField()
+    include_zz_qualifier = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return self.full_name
