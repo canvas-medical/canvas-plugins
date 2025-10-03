@@ -62,7 +62,6 @@ class Staff(Model):
         "v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True
     )
     npi_number = models.CharField(max_length=10)
-    nadean_number = models.CharField(max_length=20)
     group_npi_number = models.CharField(max_length=10)
     bill_through_organization = models.BooleanField()
     tax_id = models.CharField(max_length=25)
