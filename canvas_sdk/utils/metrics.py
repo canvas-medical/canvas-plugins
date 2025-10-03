@@ -1,4 +1,3 @@
-import os
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
@@ -140,7 +139,6 @@ def measure(
 
     tags = {
         "name": name,
-        "container_index": os.getenv("APTIBLE_PROCESS_INDEX", ""),
         **(extra_tags or {}),
     }
 
