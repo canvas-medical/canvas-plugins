@@ -6,16 +6,23 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic_core import ValidationError
 from typer.testing import CliRunner
 
 from canvas_sdk.commands import (
     AllergyCommand,
     AssessCommand,
     ChartSectionReviewCommand,
+    FamilyHistoryCommand,
     GoalCommand,
+    InstructCommand,
+    MedicationStatementCommand,
+    PastSurgicalHistoryCommand,
+    PerformCommand,
 )
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
+from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
     CommandCode,
@@ -266,3 +273,62 @@ def test_plugin_commits_command(
     assert command["state"] == "committed", (
         f"Expected command state to be 'committed', but got '{command['state']}'"
     )
+
+
+@pytest.mark.parametrize(
+    "command_cls,field_name,valid_systems,invalid_system",
+    [
+        (
+            MedicationStatementCommand,
+            "fdb_code",
+            [CodeSystems.FDB, CodeSystems.UNSTRUCTURED],
+            CodeSystems.RXNORM,
+        ),
+        (
+            PastSurgicalHistoryCommand,
+            "past_surgical_history",
+            [CodeSystems.SNOMED, CodeSystems.UNSTRUCTURED],
+            CodeSystems.ICD10,
+        ),
+        (
+            FamilyHistoryCommand,
+            "family_history",
+            [CodeSystems.SNOMED, CodeSystems.UNSTRUCTURED],
+            CodeSystems.ICD10,
+        ),
+        (
+            PerformCommand,
+            "cpt_code",
+            [CodeSystems.CPT, CodeSystems.UNSTRUCTURED],
+            CodeSystems.HCPCS,
+        ),
+        (
+            InstructCommand,
+            "coding",
+            [CodeSystems.SNOMED, CodeSystems.UNSTRUCTURED],
+            CodeSystems.ICD10,
+        ),
+    ],
+)
+def test_coding_system_validation_with_valid_systems(
+    command_cls: type[_BaseCommand],
+    field_name: str,
+    valid_systems: list[CodeSystems],
+    invalid_system: CodeSystems,
+) -> None:
+    """Test that commands accept valid coding systems and reject invalid ones."""
+    # Test valid systems
+    for valid_system in valid_systems:
+        coding = {"system": valid_system, "code": "test_code", "display": "Test Display"}
+        command_data = {field_name: coding}
+        command = command_cls(**command_data)
+        assert getattr(command, field_name) == coding
+
+    # Test invalid system
+    invalid_coding = {"system": invalid_system, "code": "test_code", "display": "Test Display"}
+    command_data_invalid = {field_name: invalid_coding}
+
+    with pytest.raises(ValidationError) as exc_info:
+        command_cls(**command_data_invalid).originate()
+
+    assert "coding.system" in str(exc_info.value).lower()
