@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from datetime import date
 from pathlib import Path
@@ -320,9 +321,10 @@ def test_coding_system_validation_with_valid_systems(
     # Test valid systems
     for valid_system in valid_systems:
         coding = {"system": valid_system, "code": "test_code", "display": "Test Display"}
-        command_data = {field_name: coding}
-        command = command_cls(**command_data)
-        assert getattr(command, field_name) == coding
+        command_data = {field_name: coding, "note_uuid": "test_uuid"}
+        command = command_cls(**command_data).originate()
+        parsed_coding = json.loads(command.payload)["data"][field_name]
+        assert parsed_coding["system"] == valid_system
 
     # Test invalid system
     invalid_coding = {"system": invalid_system, "code": "test_code", "display": "Test Display"}
@@ -332,3 +334,24 @@ def test_coding_system_validation_with_valid_systems(
         command_cls(**command_data_invalid).originate()
 
     assert "coding.system" in str(exc_info.value).lower()
+
+
+@pytest.mark.parametrize(
+    "command_cls,field_name,value",
+    [
+        (MedicationStatementCommand, "fdb_code", "123456"),
+        (PastSurgicalHistoryCommand, "past_surgical_history", "condition"),
+        (FamilyHistoryCommand, "family_history", "condition"),
+        (PerformCommand, "cpt_code", "789456"),
+    ],
+)
+def test_coding_system_validation_accepts_string_values(
+    command_cls: type[_BaseCommand],
+    field_name: str,
+    value: str,
+) -> None:
+    """Test that commands accept string values for coding systems without errors."""
+    command_data = {field_name: value, "note_uuid": "test_uuid"}
+    command = command_cls(**command_data).originate()
+    parsed_value = json.loads(command.payload)["data"][field_name]
+    assert parsed_value == value
