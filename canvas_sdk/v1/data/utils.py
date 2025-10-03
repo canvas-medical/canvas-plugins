@@ -29,4 +29,9 @@ def generate_mrn(length: int = 9, max_attempts: int = 100) -> str:
     raise RuntimeError(f"Unable to generate a unique MRN after {max_attempts} attempts")
 
 
+def empty_note_body() -> list[dict[str, str]]:
+    """Generates an empty note body with 15 empty text elements."""
+    return [{"type": "text", "value": ""}] * 15
+
+
 __exports__ = ()
