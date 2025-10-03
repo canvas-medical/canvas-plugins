@@ -1,3 +1,4 @@
+import os
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
@@ -137,7 +138,11 @@ def measure(
             extra_tags["plugin"] = caller.split(".")[0]
             extra_tags["handler"] = caller
 
-    tags = {"name": name, **(extra_tags or {})}
+    tags = {
+        "name": name,
+        "container_index": os.getenv("APTIBLE_PROCESS_INDEX", ""),
+        **(extra_tags or {}),
+    }
 
     pipeline = client.pipeline()
     timing_start = time.perf_counter_ns()
