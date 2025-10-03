@@ -8,6 +8,7 @@ from urllib import parse
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 from env_tools import env_to_bool
+from psycopg_pool import ConnectionPool
 
 load_dotenv()
 
@@ -93,6 +94,7 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
             "pool": {
                 "min_size": 2,
                 "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
+                'check': ConnectionPool.check_connection
             }
         },
     }
