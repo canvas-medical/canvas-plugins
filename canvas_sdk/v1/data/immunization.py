@@ -7,9 +7,9 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class ImmunizationStatus(models.TextChoices):
@@ -78,17 +78,12 @@ class Immunization(IdentifiableModel):
     deleted = models.BooleanField()
 
 
-class ImmunizationCoding(Model):
+class ImmunizationCoding(Coding):
     """ImmunizationCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_immunizationcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     immunization = models.ForeignKey(
         Immunization, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
@@ -133,17 +128,12 @@ class ImmunizationStatement(IdentifiableModel):
     deleted = models.BooleanField()
 
 
-class ImmunizationStatementCoding(Model):
+class ImmunizationStatementCoding(Coding):
     """ImmunizationStatementCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_immunizationstatementcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     immunization_statement = models.ForeignKey(
         ImmunizationStatement, on_delete=models.CASCADE, related_name="coding"
     )

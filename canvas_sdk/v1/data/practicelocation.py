@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import TaxIDType
 
 
@@ -53,14 +53,12 @@ class PracticeLocationPOS(models.TextChoices):
     OTHER = "99", "Other Place of Service"
 
 
-class PracticeLocation(IdentifiableModel):
+class PracticeLocation(TimestampedModel, IdentifiableModel):
     """PracticeLocation."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_practicelocation_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     organization = models.ForeignKey(
         "v1.Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
     )

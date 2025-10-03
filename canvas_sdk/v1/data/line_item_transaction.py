@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import QuerySet
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
 class AbstractLineItemQuerySet(models.QuerySet):
@@ -12,7 +12,7 @@ class AbstractLineItemQuerySet(models.QuerySet):
         return self.filter(entered_in_error__isnull=True)
 
 
-class AbstractLineItemTransaction(Model):
+class AbstractLineItemTransaction(TimestampedModel):
     """Abstract class with common properties for both payments and adjustments."""
 
     class Meta:
@@ -27,9 +27,6 @@ class AbstractLineItemTransaction(Model):
         "v1.BillingLineItem", related_name="%(class)ss", on_delete=models.PROTECT
     )
     amount = models.DecimalField(max_digits=8, decimal_places=2)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 class NewLineItemPayment(AbstractLineItemTransaction):

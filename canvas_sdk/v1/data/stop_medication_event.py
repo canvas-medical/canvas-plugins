@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
 
 
-class StopMedicationEvent(IdentifiableModel):
+class StopMedicationEvent(AuditedModel, IdentifiableModel):
     """StopMedicationEvent."""
 
     class Meta:
@@ -21,15 +21,6 @@ class StopMedicationEvent(IdentifiableModel):
         related_name="stopmedicationevent_set",
         null=True,
     )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+", null=True
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+", null=True
-    )
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     rationale = models.CharField(max_length=1024, default="")
 
 
