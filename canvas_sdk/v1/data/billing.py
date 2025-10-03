@@ -4,7 +4,6 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     IdentifiableModel,
-    Model,
     TimestampedModel,
     ValueSetTimeframeLookupQuerySet,
 )
@@ -64,7 +63,7 @@ class BillingLineItem(TimestampedModel, IdentifiableModel):
     status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
 
 
-class BillingLineItemModifier(Model, Coding):
+class BillingLineItemModifier(Coding):
     """BillingLineItemModifier."""
 
     class Meta:

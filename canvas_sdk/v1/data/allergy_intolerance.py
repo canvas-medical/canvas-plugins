@@ -7,7 +7,6 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
@@ -61,7 +60,7 @@ class AllergyIntolerance(TimestampedModel, IdentifiableModel):
     narrative = models.CharField(max_length=512)
 
 
-class AllergyIntoleranceCoding(Model, Coding):
+class AllergyIntoleranceCoding(Coding):
     """AllergyIntoleranceCoding."""
 
     class Meta:

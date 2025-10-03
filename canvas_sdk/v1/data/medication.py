@@ -8,7 +8,6 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -60,7 +59,7 @@ class Medication(IdentifiableModel):
     erx_quantity = models.FloatField()
 
 
-class MedicationCoding(Model, Coding):
+class MedicationCoding(Coding):
     """MedicationCoding."""
 
     class Meta:

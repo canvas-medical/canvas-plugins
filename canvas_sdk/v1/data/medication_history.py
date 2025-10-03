@@ -4,18 +4,16 @@ from django.db.models import TextChoices
 
 from canvas_sdk.v1.data.base import (
     IdentifiableModel,
-    Model,
+    TimestampedModel,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
-class MedicationHistoryMedication(IdentifiableModel):
+class MedicationHistoryMedication(TimestampedModel, IdentifiableModel):
     """MedicationHistoryMedication."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_medicationhistorymedication_001"
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
     patient = models.ForeignKey(
         "v1.Patient",
@@ -86,17 +84,12 @@ class MedicationHistoryMedication(IdentifiableModel):
     prescriber_dea_number = models.CharField(max_length=255, blank=True, default="")
 
 
-class MedicationHistoryMedicationCoding(Model):
+class MedicationHistoryMedicationCoding(Coding):
     """MedicationHistoryMedicationCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_medicationhistorymedicationcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField(default=False)
     medication = models.ForeignKey(
         MedicationHistoryMedication, on_delete=models.CASCADE, related_name="codings"
     )
@@ -109,14 +102,11 @@ class MedicationHistoryResponseStatus(TextChoices):
     STATUS_DENIED = "denied"
 
 
-class MedicationHistoryResponse(IdentifiableModel):
+class MedicationHistoryResponse(TimestampedModel, IdentifiableModel):
     """MedicationHistoryResponse."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_medicationhistoryresponse_001"
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
     patient = models.ForeignKey(
         "v1.Patient",

@@ -8,7 +8,6 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     TimestampedModel,
     ValueSetLookupQuerySet,
 )
@@ -48,7 +47,7 @@ class Observation(AuditedModel, IdentifiableModel):
     effective_datetime = models.DateTimeField()
 
 
-class ObservationCoding(Model, Coding):
+class ObservationCoding(Coding):
     """ObservationCoding."""
 
     class Meta:
@@ -73,7 +72,7 @@ class ObservationComponent(TimestampedModel):
     name = models.TextField()
 
 
-class ObservationComponentCoding(Model, Coding):
+class ObservationComponentCoding(Coding):
     """ObservationComponentCoding."""
 
     class Meta:
@@ -84,7 +83,7 @@ class ObservationComponentCoding(Model, Coding):
     )
 
 
-class ObservationValueCoding(Model, Coding):
+class ObservationValueCoding(Coding):
     """ObservationValueCoding."""
 
     class Meta:
