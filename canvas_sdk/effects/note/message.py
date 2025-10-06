@@ -51,14 +51,6 @@ class Message(TrackableFieldsModel):
                     self.recipient_id,
                 )
             )
-        if not self.content or self.content.strip() == "":
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Message content cannot be empty.",
-                    self.content,
-                )
-            )
 
         if method == "edit":
             if not self.message_id:
@@ -78,21 +70,27 @@ class Message(TrackableFieldsModel):
                             self.message_id,
                         )
                     )
-        elif (
-            method
-            in (
-                "create",
-                "create_and_send",
-            )
-            and self.message_id
+        elif method in (
+            "create",
+            "create_and_send",
         ):
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Can't set message ID when creating a message.",
-                    self.message_id,
+            if not self.content or self.content.strip() == "":
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Message content cannot be empty.",
+                        self.content,
+                    )
                 )
-            )
+
+            if self.message_id:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Can't set message ID when creating a message.",
+                        self.message_id,
+                    )
+                )
 
         return errors
 
