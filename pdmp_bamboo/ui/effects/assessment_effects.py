@@ -78,96 +78,66 @@ class AssessmentEffectsService:
         
         return True
 
+
     def _create_pdmp_assessment(self,
                                 patient_id: Optional[str],
                                 practitioner_id: Optional[str],
                                 note_id: str) -> List[Effect]:
-        """Create structured assessment to document PDMP check."""
-        log.info("AssessmentEffectsService: Creating structured assessment for PDMP check")
-
+        """Create structured assessment command for PDMP check."""
         try:
-            # Get the note
+            # Get the note and questionnaire
             note = Note.objects.get(dbid=note_id)
-            log.info(f"AssessmentEffectsService: Retrieved note UUID={note.id}")
-
-            # Get the questionnaire
             questionnaire = Questionnaire.objects.get(
                 name="PDMP Check",
                 can_originate_in_charting=True
             )
-            log.info(f"AssessmentEffectsService: Found questionnaire: ID={questionnaire.id}")
 
-            # Get practitioner info for "checked by" field
+            # Get practitioner info and current date
             reviewed_by = self._get_practitioner_name(practitioner_id)
-            current_date = datetime.now().strftime("%Y-%m-%d")
-
-            log.info(f"AssessmentEffectsService: Assessment data:")
-            log.info(f"  - Note UUID: {note.id}")
-            log.info(f"  - Questionnaire ID: {questionnaire.id}")
-            log.info(f"  - Practitioner: {reviewed_by}")
-            log.info(f"  - Date: {current_date}")
+            current_date_timezone = self._get_current_date_timezone()
 
             # Create structured assessment command
             assessment = StructuredAssessmentCommand(
                 note_uuid=str(note.id),
                 questionnaire_id=str(questionnaire.id),
                 command_uuid=str(uuid4()),
+                result=f"Reviewed by: {reviewed_by}\nDate: {current_date_timezone}",
             )
-            log.info(f"AssessmentEffectsService: Created StructuredAssessmentCommand UUID={assessment.command_uuid}")
 
-            # Populate responses
-            log.info(f"AssessmentEffectsService: Found {len(assessment.questions)} questions in assessment")
-            for i, question in enumerate(assessment.questions):
-                log.info(
-                    f"AssessmentEffectsService: Question {i + 1}: label='{question.label}', name='{question.name}'")
-                try:
-                    if "PDMP checked by" in question.label:
-                        question.add_response(text=reviewed_by)
-                        log.info(f"AssessmentEffectsService: Set 'PDMP checked by' = {reviewed_by}")
-                    elif "Date checked" in question.label:
-                        question.add_response(text=current_date)
-                        log.info(f"AssessmentEffectsService: Set 'Date checked' = {current_date}")
-                    else:
-                        log.warning(f"AssessmentEffectsService: No match for question label: '{question.label}'")
-                except Exception as e:
-                    log.error(f"AssessmentEffectsService: Error setting response for '{question.label}': {e}")
+            # Add responses to questions
+            for question in assessment.questions:
+                question_code = question.coding.get('code', '')
 
-            # Generate effects to finalize the assessment
-            log.info("AssessmentEffectsService: Generating assessment effects...")
-            originate_effect = assessment.originate()
-            log.info(f"AssessmentEffectsService: Originate effect: {originate_effect}")
-            edit_effect = assessment.edit()
-            log.info(f"AssessmentEffectsService: Edit effect: {edit_effect}")
-            commit_effect = assessment.commit()
-            log.info(f"AssessmentEffectsService: Commit effect: {commit_effect}")
+                if question_code == "STRUCTURED_ASSESSMENT_PDMP_001":  # "Reviewed by"
+                    question.add_response(text=reviewed_by)
+                elif question_code == "STRUCTURED_ASSESSMENT_PDMP_003":  # "Date"
+                    question.add_response(text=current_date_timezone)
 
-            effects = [originate_effect, edit_effect, commit_effect]
+            # Generate and return effects
+            return [assessment.originate(), assessment.commit()]
 
-            log.info("AssessmentEffectsService: Generated structured assessment effects")
-            # log.info(f"AssessmentEffectsService: Effect types: {[type(effect).__name__ for effect in effects]}")
-            log.info(f"AssessmentEffectsService: Effect details:")
-            for i, effect in enumerate(effects):
-                # log.info(f"  Effect {i + 1}: {type(effect).__name__}")
-                if hasattr(effect, 'command_uuid'):
-                    log.info(f"    Command UUID: {effect.command_uuid}")
-                if hasattr(effect, 'note_uuid'):
-                    log.info(f"    Note UUID: {effect.note_uuid}")
-                if hasattr(effect, 'questionnaire_id'):
-                    log.info(f"    Questionnaire ID: {effect.questionnaire_id}")
-
-            return effects
-
-        except Note.DoesNotExist:
-            log.error(f"AssessmentEffectsService: Note not found (dbid={note_id})")
-            return []
-        except Questionnaire.DoesNotExist:
-            log.error("AssessmentEffectsService: PDMP Check questionnaire not found")
-            return []
         except Exception as e:
             log.error(f"AssessmentEffectsService: Error creating structured assessment: {str(e)}")
-            import traceback
-            log.error(f"AssessmentEffectsService: Traceback: {traceback.format_exc()}")
             return []
+
+
+    def _get_current_date_timezone(self) -> str:
+        """Get current date and time with timezone (similar to {{CURRENT_DATE_TIMEZONE}})."""
+        from datetime import datetime
+        import pytz
+
+        # Get current time in UTC
+        now_utc = datetime.now(pytz.UTC)
+
+        # Convert to CDT (Central Daylight Time) - adjust as needed
+        cdt = pytz.timezone('America/Chicago')
+        now_cdt = now_utc.astimezone(cdt)
+
+        # Format like "4/22/19 12:30 PM CDT"
+        formatted_date = now_cdt.strftime("%-m/%-d/%y %-I:%M %p %Z")
+
+        log.info(f"AssessmentEffectsService: Generated timezone date: {formatted_date}")
+        return formatted_date
     
     def _get_practitioner_name(self, practitioner_id: Optional[str]) -> str:
         """Get practitioner name for assessment."""

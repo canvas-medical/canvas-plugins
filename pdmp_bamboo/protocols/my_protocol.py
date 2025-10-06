@@ -6,7 +6,7 @@ from typing import List, Any
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import Event
 from canvas_sdk.handlers.action_button import ActionButton
-from logger import log
+# from logger import log
 
 from pdmp_bamboo.services.pdmp_integration_service import PDMPIntegrationService
 
@@ -47,22 +47,22 @@ class PDMPRequestProtocol(ActionButton):
 
     def handle(self) -> List[Effect]:
         """Handle the PDMP request."""
-        log.info("PDMP-Protocol: Starting PDMP request")
-
-        # Log input parameters
-        log.info(f"PDMP-Protocol: self.target: {self.target}")
-        log.info(f"PDMP-Protocol: self.context: {self.context}")
-        log.info(f"PDMP-Protocol: self.secrets keys: {list(self.secrets.keys()) if self.secrets else 'None'}")
-        log.info(f"PDMP-Protocol: self.event: {self.event}")
+        # # log.info("PDMP-Protocol: Starting PDMP request")
+        # 
+        # # Log input parameters
+        # # log.info(f"PDMP-Protocol: self.target: {self.target}")
+        # # log.info(f"PDMP-Protocol: self.context: {self.context}")
+        # # log.info(f"PDMP-Protocol: self.secrets keys: {list(self.secrets.keys()) if self.secrets else 'None'}")
+        # # log.info(f"PDMP-Protocol: self.event: {self.event}")
 
         # Determine environment
         use_test_env = self.secrets.get("USE_TEST_ENV", "false").lower() == "true"
         use_test_env = True # TODO: HARDCODE FOR TESTING
-        log.info(f"PDMP-Protocol: Using test environment: {use_test_env}")
+        # # log.info(f"PDMP-Protocol: Using test environment: {use_test_env}")
 
         try:
             # Process the request
-            log.info("PDMP-Protocol: Calling PDMPIntegrationService.process_patient_pdmp_request")
+            # log.info("PDMP-Protocol: Calling PDMPIntegrationService.process_patient_pdmp_request")
             effects = self.pdmp_service.process_patient_pdmp_request(
                 target=self.target,
                 context=self.context,
@@ -71,31 +71,31 @@ class PDMPRequestProtocol(ActionButton):
                 use_test_env=use_test_env
             )
 
-            log.info(f"PDMP-Protocol: Received {len(effects) if isinstance(effects, list) else 1} effects from service")
+            # log.info(f"PDMP-Protocol: Received {len(effects) if isinstance(effects, list) else 1} effects from service")
 
             if isinstance(effects, list):
-                log.info(f"PDMP-Protocol: Received {len(effects)} effects from service")
+                # log.info(f"PDMP-Protocol: Received {len(effects)} effects from service")
 
-                for i, effect in enumerate(effects):
-                    if hasattr(effect, 'content'):
-                        log.info(f"    Content preview: {str(effect.content)[:100]}...")
-                    if hasattr(effect, 'target'):
-                        log.info(f"    Target: {effect.target}")
+                # for i, effect in enumerate(effects):
+                #     if hasattr(effect, 'content'):
+                        # log.info(f"    Content preview: {str(effect.content)[:100]}...")
+                    # if hasattr(effect, 'target'):
+                        # log.info(f"    Target: {effect.target}")
 
-                log.info("PDMP-Protocol: Returning list of effects to Canvas")
+                # log.info("PDMP-Protocol: Returning list of effects to Canvas")
                 return effects
             else:
                 # Convert single effect to list
-                log.info(f"PDMP-Protocol: Received single effect: {effects}")
-                if hasattr(effects, 'content'):
-                    log.info(f"    Content preview: {str(effects.content)[:100]}...")
-                if hasattr(effects, 'target'):
-                    log.info(f"    Target: {effects.target}")
+                # log.info(f"PDMP-Protocol: Received single effect: {effects}")
+                # if hasattr(effects, 'content'):
+                    # log.info(f"    Content preview: {str(effects.content)[:100]}...")
+                # if hasattr(effects, 'target'):
+                    # log.info(f"    Target: {effects.target}")
 
-                log.info("PDMP-Protocol: Converting single effect to list and returning to Canvas")
+                # log.info("PDMP-Protocol: Converting single effect to list and returning to Canvas")
                 return [effects]
 
         except Exception as e:
-            log.error(f"PDMP-Protocol: Error in handle: {str(e)}")
+            # log.error(f"PDMP-Protocol: Error in handle: {str(e)}")
             raise
 
