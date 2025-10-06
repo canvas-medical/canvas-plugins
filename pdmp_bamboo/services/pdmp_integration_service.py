@@ -21,7 +21,7 @@ class PDMPIntegrationService:
 
     def __init__(self):
         """Initialize the integration service with all required components."""
-        log.info("PDMPIntegrationService: Initializing integration service")
+        # log.info("PDMPIntegrationService: Initializing integration service")
 
         # Initialize all services
         self.data_extraction_service = DataExtractionService()
@@ -29,7 +29,7 @@ class PDMPIntegrationService:
         self.ui_service = UIService()
         self.pdmp_client = PDMPClient()
 
-        log.info("PDMPIntegrationService: Integration service initialized successfully")
+        # log.info("PDMPIntegrationService: Integration service initialized successfully")
 
     def process_patient_pdmp_request(self,
                                      target: str,
@@ -53,11 +53,11 @@ class PDMPIntegrationService:
             List of Effects (assessment effects + modal effects)
         """
         env_label = "test" if use_test_env else "production"
-        log.info(f"PDMPIntegrationService: Starting PDMP request for {env_label} environment")
+        # log.info(f"PDMPIntegrationService: Starting PDMP request for {env_label} environment")
 
         try:
             # Step 1: Extract data
-            log.info("PDMPIntegrationService: Step 1 - Extracting data")
+            # log.info("PDMPIntegrationService: Step 1 - Extracting data")
             patient_id = target
             practitioner_id = None
             if isinstance(context, dict) and context.get("user"):
@@ -71,14 +71,14 @@ class PDMPIntegrationService:
                 return self.ui_service.create_data_validation_ui(extraction_errors)
 
             # Step 2: Generate XML
-            log.info("PDMPIntegrationService: Step 2 - Generating XML")
+            # log.info("PDMPIntegrationService: Step 2 - Generating XML")
             try:
                 pdmp_xml = self.xml_generation_service.create_pdmp_xml(extracted_data)
             except ValueError as e:
                 return self.ui_service.create_data_validation_ui([str(e)])
 
             # Step 3: Validate API configuration
-            log.info("PDMPIntegrationService: Step 3 - Validating API configuration")
+            # log.info("PDMPIntegrationService: Step 3 - Validating API configuration")
             try:
                 url_key = "TEST_PDMP_API_URL" if use_test_env else "PDMP_API_URL"
                 base_url = get_secret_value(secrets, url_key)
@@ -88,7 +88,7 @@ class PDMPIntegrationService:
                 return self.ui_service.create_data_validation_ui([str(e)])
 
             # Step 4: Send API request using new PDMPClient
-            log.info("PDMPIntegrationService: Step 4 - Sending API request")
+            # log.info("PDMPIntegrationService: Step 4 - Sending API request")
 
             # Build API URL
             if base_url.endswith("/"):
@@ -96,7 +96,7 @@ class PDMPIntegrationService:
             else:
                 api_url = f"{base_url}/v5_1/patient"
 
-            log.info(f"PDMPIntegrationService: Built API URL: {api_url}")
+            # log.info(f"PDMPIntegrationService: Built API URL: {api_url}")
 
             # Use new PDMPClient
             api_result = self.pdmp_client.send_patient_request(
@@ -120,12 +120,12 @@ class PDMPIntegrationService:
             }
 
             # Step 6: Create UI
-            log.info("PDMPIntegrationService: Step 6 - Creating UI")
-            log.info(f"PDMPIntegrationService: Calling ui_service.create_response_ui with:")
-            log.info(f"  - result status: {result['status']}")
-            log.info(f"  - use_test_env: {use_test_env}")
-            log.info(f"  - patient_id: {patient_id}")
-            log.info(f"  - practitioner_id: {practitioner_id}")
+            # log.info("PDMPIntegrationService: Step 6 - Creating UI")
+            # log.info(f"PDMPIntegrationService: Calling ui_service.create_response_ui with:")
+            # log.info(f"  - result status: {result['status']}")
+            # log.info(f"  - use_test_env: {use_test_env}")
+            # log.info(f"  - patient_id: {patient_id}")
+            # log.info(f"  - practitioner_id: {practitioner_id}")
 
             # Extract organization_id from practitioner data if available
             organization_id = None
@@ -133,7 +133,7 @@ class PDMPIntegrationService:
                 practitioner_dto = extracted_data["practitioner"]
                 # Access the attribute directly on the DTO object
                 organization_id = getattr(practitioner_dto, 'organization_id', None)
-                log.info(f"PDMPIntegrationService: Extracted organization_id: {organization_id}")
+                # log.info(f"PDMPIntegrationService: Extracted organization_id: {organization_id}")
 
             ui_effects = self.ui_service.create_response_ui(
                 result, use_test_env, patient_id, practitioner_id, organization_id
@@ -141,5 +141,5 @@ class PDMPIntegrationService:
             return ui_effects
 
         except Exception as e:
-            log.error(f"PDMPIntegrationService: Unexpected error: {str(e)}")
+            # log.error(f"PDMPIntegrationService: Unexpected error: {str(e)}")
             return self.ui_service.create_data_validation_ui([str(e)])

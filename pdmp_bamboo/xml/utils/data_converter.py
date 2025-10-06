@@ -5,7 +5,7 @@ Converts DTOs to XML-friendly dictionary format.
 """
 
 from typing import Dict, Any, Optional
-from logger import log
+# from log.ger import log
 
 
 class DTOToXMLConverter:
@@ -13,7 +13,7 @@ class DTOToXMLConverter:
     
     def convert_to_xml_format(self, extracted_data: dict) -> dict:
         """Convert DTOs to dictionary format expected by XML builders."""
-        log.info("DTOToXMLConverter: Converting extracted data to XML format")
+        # log..info("DTOToXMLConverter: Converting extracted data to XML format")
         
         return {
             'patient': self._convert_patient_dto(extracted_data.get('patient')),
@@ -26,10 +26,10 @@ class DTOToXMLConverter:
     def _convert_patient_dto(self, patient_dto) -> Dict[str, Any]:
         """Convert PatientDTO to XML format."""
         if not patient_dto:
-            log.warning("DTOToXMLConverter: No patient DTO provided")
+            # log..warning("DTOToXMLConverter: No patient DTO provided")
             return {}
         
-        log.debug(f"DTOToXMLConverter: Converting patient DTO: {patient_dto.__dict__}")
+        # log..debug(f"DTOToXMLConverter: Converting patient DTO: {patient_dto.__dict__}")
         
         return {
             'first_name': patient_dto.first_name,
@@ -46,10 +46,10 @@ class DTOToXMLConverter:
     def _convert_practitioner_dto(self, practitioner_dto) -> Dict[str, Any]:
         """Convert PractitionerDTO to XML format."""
         if not practitioner_dto:
-            log.warning("DTOToXMLConverter: No practitioner DTO provided")
+            # log..warning("DTOToXMLConverter: No practitioner DTO provided")
             return {}
         
-        log.debug(f"DTOToXMLConverter: Converting practitioner DTO: {practitioner_dto.__dict__}")
+        # log..debug(f"DTOToXMLConverter: Converting practitioner DTO: {practitioner_dto.__dict__}")
         
         return {
             'first_name': practitioner_dto.first_name,
@@ -73,10 +73,10 @@ class DTOToXMLConverter:
     def _convert_organization_dto(self, organization_dto) -> Dict[str, Any]:
         """Convert OrganizationDTO to XML format."""
         if not organization_dto:
-            log.warning("DTOToXMLConverter: No organization DTO provided")
+            # log..warning("DTOToXMLConverter: No organization DTO provided")
             return {}
         
-        log.debug(f"DTOToXMLConverter: Converting organization DTO: {organization_dto.__dict__}")
+        # log..debug(f"DTOToXMLConverter: Converting organization DTO: {organization_dto.__dict__}")
         
         return {
             'id': organization_dto.id,
@@ -88,10 +88,10 @@ class DTOToXMLConverter:
     def _convert_practice_location_dto(self, practice_location_dto) -> Dict[str, Any]:
         """Convert PracticeLocationDTO to XML format."""
         if not practice_location_dto:
-            log.warning("DTOToXMLConverter: No practice location DTO provided")
+            # log..warning("DTOToXMLConverter: No practice location DTO provided")
             return {}
         
-        log.debug(f"DTOToXMLConverter: Converting practice location DTO: {practice_location_dto.__dict__}")
+        # log..debug(f"DTOToXMLConverter: Converting practice location DTO: {practice_location_dto.__dict__}")
         
         return {
             'id': practice_location_dto.id,
@@ -128,7 +128,7 @@ class DTOToXMLConverter:
             address = practice_location.address
             if address and address.state:
                 pmp_destination = address.state.upper()
-                log.info(f"DTOToXMLConverter: Using PMP destination from practice location: {pmp_destination}")
+                # log..info(f"DTOToXMLConverter: Using PMP destination from practice location: {pmp_destination}")
         
         return {
             'pmp_destination': pmp_destination,
