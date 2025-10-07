@@ -393,3 +393,75 @@ def test_update_schedule_event_appointment_equals_instance_id(
         "parent_appointment_id can only be set when creating an appointment." in str(e)
         for e in errors
     )
+
+
+def test_schedule_event_reschedule_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful schedule event reschedule."""
+    event = ScheduleEvent(instance_id=str(uuid4()))
+    event.start_time = datetime.datetime.now()
+    event.duration_minutes = 120
+
+    effect = event.reschedule()
+
+    assert effect.type == EffectType.RESCHEDULE_SCHEDULE_EVENT
+    payload = json.loads(effect.payload)
+    assert "start_time" in payload["data"]
+    assert payload["data"]["duration_minutes"] == 120
+
+
+def test_schedule_event_reschedule_no_changes_fails(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that reschedule with no changes raises error."""
+    event = ScheduleEvent(instance_id=str(uuid4()))
+
+    with pytest.raises(ValueError) as exc_info:
+        event.reschedule()
+
+    assert "No fields have been modified" in str(exc_info.value)
+
+
+def test_schedule_event_reschedule_missing_instance_id(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that reschedule without instance_id raises error."""
+    event = ScheduleEvent(practice_location_id=str(uuid4()), provider_id=str(uuid4()))
+    event.start_time = datetime.datetime.now()
+
+    with pytest.raises(ValidationError) as exc_info:
+        event.reschedule()
+
+    errors = exc_info.value.errors()
+    assert any("instance_id' is required" in str(e) for e in errors)
+
+
+def test_schedule_event_reschedule_nonexistent_schedule_event(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test rescheduling a schedule event that doesn't exist."""
+    mock_db_queries["appointment"].filter.return_value.exists.return_value = False
+
+    event = ScheduleEvent(instance_id=str(uuid4()))
+    event.start_time = datetime.datetime.now()
+
+    with pytest.raises(ValidationError) as exc_info:
+        event.reschedule()
+
+    errors = exc_info.value.errors()
+    assert any("Appointment with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def test_schedule_event_reschedule_with_multiple_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test rescheduling with multiple modified fields."""
+    event = ScheduleEvent(instance_id=str(uuid4()))
+    event.start_time = datetime.datetime.now()
+    event.duration_minutes = 90
+    event.description = "Rescheduled Meeting"
+
+    effect = event.reschedule()
+
+    assert effect.type == EffectType.RESCHEDULE_SCHEDULE_EVENT
+    payload = json.loads(effect.payload)
+    assert "start_time" in payload["data"]
+    assert payload["data"]["duration_minutes"] == 90
+    assert payload["data"]["description"] == "Rescheduled Meeting"
