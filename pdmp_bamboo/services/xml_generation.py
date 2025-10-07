@@ -22,7 +22,7 @@ class XMLGenerationService:
 
     def __init__(self):
         """Initialize the XML generation service with all required builders."""
-        # log.info("XMLGenerationService: Initializing XML generation service")
+        log.info("XMLGenerationService: Initializing XML generation service")
 
         # Initialize builders
         self.patient_builder = PatientXMLBuilder()
@@ -34,7 +34,7 @@ class XMLGenerationService:
         self.data_converter = DTOToXMLConverter()
         self.xml_utils = XMLUtils()
 
-        # log.info("XMLGenerationService: XML generation service initialized successfully")
+        log.info("XMLGenerationService: XML generation service initialized successfully")
 
     def create_pdmp_xml(self, extracted_data: Dict[str, Any]) -> str:
         """
@@ -49,11 +49,11 @@ class XMLGenerationService:
         Raises:
             ValueError: If data validation fails or required data is missing
         """
-        # log.info("XMLGenerationService: Starting PDMP XML generation")
+        log.info("XMLGenerationService: Starting PDMP XML generation")
 
         try:
             # Convert DTOs to XML-friendly format
-            # log.info("XMLGenerationService: Converting DTOs to XML format")
+            log.info("XMLGenerationService: Converting DTOs to XML format")
             xml_data = self.data_converter.convert_to_xml_format(extracted_data)
 
             # Log the converted data for debugging
@@ -67,11 +67,11 @@ class XMLGenerationService:
             validation_errors = self._validate_required_fields(xml_data)
             if validation_errors:
                 error_msg = f"XML validation failed: {', '.join(validation_errors)}"
-                # log.error(f"XMLGenerationService: {error_msg}")
+                log.error(f"XMLGenerationService: {error_msg}")
                 raise ValueError(error_msg)
 
             # Build XML sections
-            # log.info("XMLGenerationService: Building XML sections")
+            log.info("XMLGenerationService: Building XML sections")
 
             patient_xml = self.patient_builder.build(xml_data['patient'])
             practitioner_xml = self.practitioner_builder.build(xml_data['practitioner'])
@@ -83,7 +83,7 @@ class XMLGenerationService:
             location_xml = self.location_builder.build(location_data)
 
             # Build complete request
-            # log.info("XMLGenerationService: Building complete XML request")
+            log.info("XMLGenerationService: Building complete XML request")
             request_data = {
                 "patient_xml": patient_xml,
                 "practitioner_xml": practitioner_xml,
@@ -92,11 +92,11 @@ class XMLGenerationService:
             }
             complete_xml = self.request_builder.build(request_data)
 
-            # log.info(f"XMLGenerationService: XML generation completed successfully ({len(complete_xml)} characters)")
+            log.info(f"XMLGenerationService: XML generation completed successfully ({len(complete_xml)} characters)")
             return complete_xml
 
         except Exception as e:
-            # log.error(f"XMLGenerationService: Error during XML generation: {str(e)}")
+            log.error(f"XMLGenerationService: Error during XML generation: {str(e)}")
             raise
 
     def _validate_required_fields(self, xml_data: Dict[str, Any]) -> list:
