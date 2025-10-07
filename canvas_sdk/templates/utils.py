@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from django.template import Context, Template
+from django.template.engine import Engine
 
 from canvas_sdk.utils.plugins import plugin_context
 
@@ -36,7 +37,9 @@ def render_to_string(
     elif not template_path.exists():
         raise FileNotFoundError(f"Template {template_name} not found.")
 
-    template = Template(template_path.read_text())
+    engine = Engine.get_default()
+    engine.dirs = [plugin_dir]
+    template = Template(template_path.read_text(), engine=engine)
 
     return template.render(Context(context))
 
