@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.coverage import CoverageRelationshipCode, CoverageType
 from canvas_sdk.v1.data.fields import ChoiceArrayField
@@ -21,7 +21,7 @@ class InstallmentPlanStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
-class InstallmentPlan(Model):
+class InstallmentPlan(TimestampedModel):
     """InstallmentPlan."""
 
     class Meta:
@@ -34,9 +34,6 @@ class InstallmentPlan(Model):
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
     status = models.CharField(choices=InstallmentPlanStatus.choices, max_length=10)
     expected_payoff_date = models.DateField()
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimQueueColumns(models.TextChoices):
@@ -73,7 +70,7 @@ class ClaimQueues(models.IntegerChoices):
     TRASH = 10, "Trash"
 
 
-class ClaimQueue(Model):
+class ClaimQueue(TimestampedModel):
     """ClaimQueue."""
 
     class Meta:
@@ -87,9 +84,6 @@ class ClaimQueue(Model):
     visible_columns = ChoiceArrayField(
         models.CharField(choices=ClaimQueueColumns.choices, max_length=64)
     )
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 class ClaimPayerOrder(models.TextChoices):
@@ -124,7 +118,7 @@ class ClaimCoverageQuerySet(models.QuerySet):
         return self.filter(active=True)
 
 
-class ClaimCoverage(Model):
+class ClaimCoverage(TimestampedModel):
     """A model that represents the link between a claim and a specific insurance coverage."""
 
     class Meta:
@@ -180,11 +174,8 @@ class ClaimCoverage(Model):
     resubmission_code = models.CharField(max_length=1)
     payer_icn = models.CharField(max_length=250)
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
-
-class ClaimPatient(Model):
+class ClaimPatient(TimestampedModel):
     """ClaimPatient."""
 
     class Meta:
@@ -206,9 +197,6 @@ class ClaimPatient(Model):
     zip = models.CharField(max_length=255)
     country = models.CharField(max_length=50)
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-
 
 class ClaimQueryset(models.QuerySet):
     """ClaimQueryset."""
@@ -218,7 +206,7 @@ class ClaimQueryset(models.QuerySet):
         return self.exclude(current_queue__queue_sort_ordering=ClaimQueues.TRASH)
 
 
-class Claim(IdentifiableModel):
+class Claim(TimestampedModel, IdentifiableModel):
     """Claim."""
 
     class Meta:
@@ -253,8 +241,6 @@ class Claim(IdentifiableModel):
 
     patient_balance = models.DecimalField(max_digits=8, decimal_places=2)
     aggregate_coverage_balance = models.DecimalField(max_digits=8, decimal_places=2)
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
     @property
     def total_charges(self) -> Decimal:

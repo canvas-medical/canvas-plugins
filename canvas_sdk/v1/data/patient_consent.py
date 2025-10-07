@@ -1,19 +1,14 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.coding import Coding
 
 
-class PatientConsentRejectionCoding(Model):
+class PatientConsentRejectionCoding(Coding):
     """Patient Consent Rejection Coding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientconsentrejectioncoding_001"
-
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
 
 
 class PatientConsentExpirationRule(models.TextChoices):
@@ -24,17 +19,12 @@ class PatientConsentExpirationRule(models.TextChoices):
     END_OF_YEAR = "end_of_year", "End of year"
 
 
-class PatientConsentCoding(Model):
+class PatientConsentCoding(Coding):
     """Patient Consent Coding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientconsentcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     expiration_rule = models.CharField(choices=PatientConsentExpirationRule.choices, max_length=255)
     is_mandatory = models.BooleanField()
     is_proof_required = models.BooleanField()

@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel
 
 
 class GoalLifecycleStatus(models.TextChoices):
@@ -38,23 +38,11 @@ class GoalPriority(models.TextChoices):
     LOW = "low-priority", "Low Priority"
 
 
-class Goal(IdentifiableModel):
+class Goal(AuditedModel, IdentifiableModel):
     """Goal."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_goal_001"
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
 
     patient = models.ForeignKey("v1.Patient", on_delete=models.DO_NOTHING, related_name="goals")
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="goals")

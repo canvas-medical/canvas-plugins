@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -60,14 +60,12 @@ class Appointment(IdentifiableModel):
     description = models.TextField(null=True, blank=True)
 
 
-class AppointmentExternalIdentifier(IdentifiableModel):
+class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
     """AppointmentExternalIdentifier."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_appointmentexternalidentifier_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     use = models.CharField(max_length=255)
     identifier_type = models.CharField(max_length=255)
     system = models.CharField(max_length=255)

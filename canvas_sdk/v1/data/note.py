@@ -1,8 +1,9 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.claim import Claim
+from canvas_sdk.v1.data.coding import Coding
 
 
 class NoteTypeCategories(models.TextChoices):
@@ -114,7 +115,7 @@ class NoteStates(models.TextChoices):
     CONFIRM_IMPORT = "CNF", "Confirmed"
 
 
-class NoteType(IdentifiableModel):
+class NoteType(TimestampedModel, IdentifiableModel, Coding):
     """NoteType."""
 
     objects: models.Manager["NoteType"]
@@ -122,13 +123,6 @@ class NoteType(IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_notetype_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     name = models.CharField(max_length=250)
     icon = models.CharField(max_length=250)
     category = models.CharField(choices=NoteTypeCategories.choices, max_length=50)
@@ -153,14 +147,12 @@ class NoteType(IdentifiableModel):
     online_duration = models.IntegerField()
 
 
-class Note(IdentifiableModel):
+class Note(TimestampedModel, IdentifiableModel):
     """Note."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_note_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
@@ -192,14 +184,12 @@ class Note(IdentifiableModel):
         return self.claims.order_by("-created").first()
 
 
-class NoteStateChangeEvent(IdentifiableModel):
+class NoteStateChangeEvent(TimestampedModel, IdentifiableModel):
     """NoteStateChangeEvent."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_notestatechangeevent_001"
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     state = models.CharField(choices=NoteStates.choices, max_length=3)
