@@ -8,7 +8,6 @@ from urllib import parse
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 from env_tools import env_to_bool
-from psycopg_pool import ConnectionPool
 
 load_dotenv()
 
@@ -77,6 +76,7 @@ else:
     CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
 
 # By default, allow a pool size that gives each worker 2 active connections
 # and allow overriding via environment variable if necessary
@@ -90,11 +90,11 @@ PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
 if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
         "ENGINE": "django.db.backends.postgresql",
+        "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
         "OPTIONS": {
             "pool": {
                 "min_size": 2,
                 "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
-                "check": ConnectionPool.check_connection,
             }
         },
     }
