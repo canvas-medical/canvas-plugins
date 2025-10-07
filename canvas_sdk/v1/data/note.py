@@ -1,9 +1,11 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.utils import timezone
 
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.claim import Claim
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.utils import empty_note_body
 
 
 class NoteTypeCategories(models.TextChoices):
@@ -163,17 +165,17 @@ class Note(TimestampedModel, IdentifiableModel):
     note_type_version = models.ForeignKey(
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
-    title = models.TextField()
-    body = models.JSONField()
+    title = models.TextField(default="", blank=True)
+    body = models.JSONField(default=empty_note_body)
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField(max_length=32)
     billing_note = models.TextField()
     # TODO -implement InpatientStay model
     # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
-    related_data = models.JSONField()
+    related_data = models.JSONField(default=dict, blank=True)
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
-    datetime_of_service = models.DateTimeField()
+    datetime_of_service = models.DateTimeField(default=timezone.now)
     place_of_service = models.CharField(max_length=255)
 
     def get_claim(self) -> Claim | None:

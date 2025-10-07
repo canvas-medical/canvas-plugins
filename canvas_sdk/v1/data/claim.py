@@ -80,7 +80,7 @@ class ClaimQueue(TimestampedModel):
     name = models.CharField(max_length=100)
     display_name = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
-    show_in_revenue = models.BooleanField()
+    show_in_revenue = models.BooleanField(default=True)
     visible_columns = ChoiceArrayField(
         models.CharField(choices=ClaimQueueColumns.choices, max_length=64)
     )
@@ -224,23 +224,23 @@ class Claim(TimestampedModel, IdentifiableModel):
         ClaimCoverage, related_name="claims", on_delete=models.SET_NULL, null=True
     )
 
-    accept_assign = models.BooleanField()
-    auto_accident = models.BooleanField()
+    accept_assign = models.BooleanField(default=True)
+    auto_accident = models.BooleanField(default=False)
     auto_accident_state = models.CharField(max_length=2)
-    employment_related = models.BooleanField()
-    other_accident = models.BooleanField()
+    employment_related = models.BooleanField(default=False)
+    other_accident = models.BooleanField(default=False)
     accident_code = models.CharField(max_length=10)
-    illness_date = models.DateField()
+    illness_date = models.DateField(blank=True, null=True)
     remote_batch_id = models.CharField(max_length=100)
     remote_file_id = models.CharField(max_length=100)
     prior_auth = models.CharField(max_length=100)
 
     narrative = models.CharField(max_length=2500)
     account_number = models.CharField(max_length=255)
-    snoozed_until = models.DateField()
+    snoozed_until = models.DateField(null=True)
 
-    patient_balance = models.DecimalField(max_digits=8, decimal_places=2)
-    aggregate_coverage_balance = models.DecimalField(max_digits=8, decimal_places=2)
+    patient_balance = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    aggregate_coverage_balance = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
 
     @property
     def total_charges(self) -> Decimal:

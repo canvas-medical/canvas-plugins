@@ -16,14 +16,14 @@ class Organization(TimestampedModel):
     logo_url = models.CharField(max_length=255)
     background_image_url = models.CharField(max_length=255)
     background_gradient = models.CharField(max_length=255)
-    active = models.BooleanField()
+    active = models.BooleanField(default=True)
     tax_id = models.CharField(null=True, max_length=25)
     tax_id_type = models.CharField(choices=TaxIDType.choices, max_length=1)
     group_npi_number = models.CharField(max_length=10)
     group_taxonomy_number = models.CharField(max_length=10)
-    include_zz_qualifier = models.BooleanField()
+    include_zz_qualifier = models.BooleanField(default=False)
     main_location = models.OneToOneField(
-        "v1.PracticeLocation", on_delete=models.DO_NOTHING, related_name="+"
+        "PracticeLocation", related_name="+", null=True, on_delete=models.PROTECT
     )
 
 
