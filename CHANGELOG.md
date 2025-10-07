@@ -1,6 +1,36 @@
 # CHANGELOG
 
 
+## v0.68.0 (2025-10-07)
+
+### Bug Fixes
+
+- Fix data model factories ([#1134](https://github.com/canvas-medical/canvas-plugins/pull/1134),
+  [`26f3bb2`](https://github.com/canvas-medical/canvas-plugins/commit/26f3bb2a07f36e8819eb7d2cb4237c1f01a505c3))
+
+- **data**: Add TimestampedModel, Coding and AuditedModel
+  ([#1108](https://github.com/canvas-medical/canvas-plugins/pull/1108),
+  [`e68a8c1`](https://github.com/canvas-medical/canvas-plugins/commit/e68a8c1eafde404cd64938cc811640bca06a990f))
+
+### Chores
+
+- Rename class to Conditions ([#1142](https://github.com/canvas-medical/canvas-plugins/pull/1142),
+  [`156f3d8`](https://github.com/canvas-medical/canvas-plugins/commit/156f3d89c0db1fa44faf5e3b9a2771ddd78c2abc))
+
+### Features
+
+- Add a reschedule effect for appointments and reschedule events
+  ([#1126](https://github.com/canvas-medical/canvas-plugins/pull/1126),
+  [`57dc39f`](https://github.com/canvas-medical/canvas-plugins/commit/57dc39ff37321f8d0f2ab1cb69b58caf5ebc1013))
+
+- Allow an application handler to return one effect OR multiple effects
+  ([#1114](https://github.com/canvas-medical/canvas-plugins/pull/1114),
+  [`c983589`](https://github.com/canvas-medical/canvas-plugins/commit/c983589e5d6ee37c5a86d0316199e5a05fe20856))
+
+- Appointments slots search ([#1050](https://github.com/canvas-medical/canvas-plugins/pull/1050),
+  [`707a504`](https://github.com/canvas-medical/canvas-plugins/commit/707a50447d547e5e3ae0c53cd1f71618c6ae85db))
+
+
 ## v0.67.0 (2025-10-02)
 
 ### Features
