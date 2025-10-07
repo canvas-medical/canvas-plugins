@@ -94,7 +94,7 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
             "pool": {
                 "min_size": 2,
                 "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
-                'check': ConnectionPool.check_connection
+                "check": ConnectionPool.check_connection,
             }
         },
     }
