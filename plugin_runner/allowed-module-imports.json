@@ -396,6 +396,7 @@
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
+    "TaskMetadata",
     "TaskStatus",
     "UpdateTask"
   ],
