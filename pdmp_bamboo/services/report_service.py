@@ -71,8 +71,8 @@ class ReportService:
             api_result = self.pdmp_client.fetch_report(
                 report_id=report_id,
                 report_request_xml=report_request_xml,
-                secrets=secrets,
-                use_test_env=use_test_env
+                staff_id=practitioner_id,
+                secrets=secrets
             )
 
             # Step 5: Process result

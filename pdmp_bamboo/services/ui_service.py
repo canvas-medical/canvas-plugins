@@ -18,7 +18,6 @@ class UIService:
 
     def __init__(self):
         """Initialize the UI service with all required components."""
-        log.info("UIService: Initializing UI service")
 
         # Initialize modal components
         self.success_modal = SuccessModal()
@@ -35,7 +34,6 @@ class UIService:
 
     def create_response_ui(self,
                           result: Dict[str, Any],
-                          use_test_env: bool = False,
                           patient_id: Optional[str] = None,
                           practitioner_id: Optional[str] = None,
                           organization_id: Optional[str] = None) -> List[Effect]:
@@ -44,7 +42,6 @@ class UIService:
 
         Args:
             result: PDMP request result data
-            use_test_env: Whether this is a test environment request
             patient_id: Patient ID for context
             practitioner_id: Practitioner ID for context
             organization_id: Organization ID for context
@@ -52,14 +49,6 @@ class UIService:
         Returns:
             List of Effects for the response
         """
-        log.info("UIService: Creating response UI")
-        log.info(f"UIService: Input parameters:")
-        log.info(f"  - result status: {result.get('status', 'unknown')}")
-        log.info(f"  - use_test_env: {use_test_env}")
-        log.info(f"  - patient_id: {patient_id}")
-        log.info(f"  - practitioner_id: {practitioner_id}")
-        log.info(f"  - organization_id: {organization_id}")
-
         effects = []
 
         # Create assessment effects if request was successful
@@ -80,7 +69,7 @@ class UIService:
         log.info("UIService: Creating modal effect")
         try:
             modal_effect = self._create_enhanced_modal_effect(
-                result, use_test_env, patient_id, practitioner_id, organization_id
+                result, patient_id, practitioner_id, organization_id
             )
             log.info(f"UIService: Created modal effect: {type(modal_effect)}")
             effects.append(modal_effect)
@@ -99,7 +88,6 @@ class UIService:
 
     def _create_enhanced_modal_effect(self,
                                     result: Dict[str, Any],
-                                    use_test_env: bool,
                                     patient_id: Optional[str],
                                     practitioner_id: Optional[str],
                                     organization_id: Optional[str]) -> Effect:
@@ -107,14 +95,13 @@ class UIService:
 
         if result.get("status") == "success":
             return self._create_enhanced_success_modal(
-                result, use_test_env, patient_id, practitioner_id, organization_id
+                result, patient_id, practitioner_id, organization_id
             )
         else:
-            return self.error_modal.create_error_modal(result, use_test_env)
+            return self.error_modal.create_error_modal(result)
 
     def _create_enhanced_success_modal(self,
                                      result: Dict[str, Any],
-                                     use_test_env: bool,
                                      patient_id: Optional[str],
                                      practitioner_id: Optional[str],
                                      organization_id: Optional[str]) -> Effect:
@@ -123,11 +110,6 @@ class UIService:
         # Parse PDMP response for enhanced display
         raw_response = result.get("api_result", {}).get("raw_response", "")
         parsed_data = self.response_parser.parse_pdmp_response(raw_response)
-
-        log.info(f"UIService: Parsed data - Success: {parsed_data.get('parsed', False)}")
-        log.info(f"UIService: Report URL available: {bool(parsed_data.get('report_url'))}")
-        log.info(f"UIService: Scores available: {len(parsed_data.get('narx_scores', []))}")
-        log.info(f"UIService: Messages available: {len(parsed_data.get('narx_messages', []))}")
 
         # Assessment status HTML
         assessment_html = ""
@@ -171,11 +153,9 @@ class UIService:
         if parsed_data.get("parsed") and parsed_data.get("report_url"):
             report_url = parsed_data.get("report_url", "")
             expiration_date = parsed_data.get("report_expiration", "Unknown")
-            env = "test" if use_test_env else "prod"
             report_button_html = self.response_parser.generate_report_button_html(
                 report_url,
                 expiration_date,
-                env,
                 patient_id=patient_id,
                 practitioner_id=practitioner_id,
                 organization_id=organization_id
@@ -189,7 +169,6 @@ class UIService:
             <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0;">
                 <p><strong>Status Code:</strong> {result.get("api_result", {}).get("status_code", "N/A")}</p>
                 <p><strong>Patient ID:</strong> {result.get("patient_id", "N/A")}</p>
-                <p><strong>Environment:</strong> {"Test Environment" if use_test_env else "Production Environment"}</p>
                 {"<p><strong>Request ID:</strong> " + parsed_data.get("request_id", "N/A") + "</p>" if parsed_data.get("request_id") else ""}
             </div>
             
@@ -209,7 +188,7 @@ class UIService:
         """
 
         modal_title = (
-            "✅ PDMP Test Request Successful" if use_test_env else "✅ PDMP Request Successful"
+            "✅ PDMP Request Successful"
         )
 
         from canvas_sdk.effects.launch_modal import LaunchModalEffect
