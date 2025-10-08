@@ -37,8 +37,16 @@ def render_to_string(
     elif not template_path.exists():
         raise FileNotFoundError(f"Template {template_name} not found.")
 
-    engine = Engine.get_default()
-    engine.dirs = [plugin_dir]
+    engine = Engine(
+        dirs=[plugin_dir],
+        libraries={
+            "cache": "django.templatetags.cache",
+            "i18n": "django.templatetags.i18n",
+            "l10n": "django.templatetags.l10n",
+            "static": "django.templatetags.static",
+            "tz": "django.templatetags.tz",
+        },
+    )
     template = Template(template_path.read_text(), engine=engine)
 
     return template.render(Context(context))
