@@ -14,7 +14,6 @@ class ResponseParserService:
 
     def __init__(self):
         """Initialize the response parser service."""
-        log.info("ResponseParserService: Initializing response parser service")
 
     def parse_pdmp_response(self, xml_content: str) -> Dict[str, Any]:
         """
