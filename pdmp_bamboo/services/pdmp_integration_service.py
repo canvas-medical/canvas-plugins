@@ -1,19 +1,17 @@
 """
 PDMP Integration Service
 
-Main service that integrates all the refactored components into a single workflow.
-This replaces the old handle_pdmp_request function with clean, modular architecture.
+Main service that integrates all the components into a single workflow.
 """
 
 from canvas_sdk.effects import Effect
 from logger import log
 
-# Import our new services
 from pdmp_bamboo.services.data_extraction import DataExtractionService
 from pdmp_bamboo.services.xml_generation import XMLGenerationService
 from pdmp_bamboo.services.ui_service import UIService
 from pdmp_bamboo.api.client.pdmp_client import PDMPClient
-from pdmp_bamboo.utils.secrets_helper import get_secret_value
+from pdmp_bamboo.utils.secrets_helper import get_pdmp_api_url
 
 
 class PDMPIntegrationService:
@@ -21,7 +19,6 @@ class PDMPIntegrationService:
 
     def __init__(self):
         """Initialize the integration service with all required components."""
-        # # log.info("PDMPIntegrationService: Initializing integration service")
 
         # Initialize all services
         self.data_extraction_service = DataExtractionService()
@@ -29,35 +26,27 @@ class PDMPIntegrationService:
         self.ui_service = UIService()
         self.pdmp_client = PDMPClient()
 
-        # # log.info("PDMPIntegrationService: Integration service initialized successfully")
 
     def process_patient_pdmp_request(self,
                                      target: str,
                                      context: dict,
                                      secrets: dict,
-                                     event,
-                                     use_test_env: bool = False) -> Effect | list[Effect]:
+                                     event) -> Effect | list[Effect]:
         """
-        Process a complete PDMP request using the new modular architecture.
-
-        This is the main entry point that replaces the old handle_pdmp_request function.
+        Process a complete PDMP request.
 
         Args:
             target: Patient ID from button target
             context: Canvas context dict containing user info
             secrets: Plugin secrets dict
             event: Canvas event object
-            use_test_env: If True, uses test credentials and no certificates
 
         Returns:
             List of Effects (assessment effects + modal effects)
         """
-        env_label = "test" if use_test_env else "production"
-        # # log.info(f"PDMPIntegrationService: Starting PDMP request for {env_label} environment")
 
         try:
             # Step 1: Extract data
-            # # log.info("PDMPIntegrationService: Step 1 - Extracting data")
             patient_id = target
             practitioner_id = None
             if isinstance(context, dict) and context.get("user"):
@@ -71,24 +60,20 @@ class PDMPIntegrationService:
                 return self.ui_service.create_data_validation_ui(extraction_errors)
 
             # Step 2: Generate XML
-            # # log.info("PDMPIntegrationService: Step 2 - Generating XML")
             try:
                 pdmp_xml = self.xml_generation_service.create_pdmp_xml(extracted_data)
             except ValueError as e:
                 return self.ui_service.create_data_validation_ui([str(e)])
 
             # Step 3: Validate API configuration
-            # # log.info("PDMPIntegrationService: Step 3 - Validating API configuration")
             try:
-                url_key = "TEST_PDMP_API_URL" if use_test_env else "PDMP_API_URL"
-                base_url = get_secret_value(secrets, url_key)
+                base_url = get_pdmp_api_url(secrets)
                 if not base_url:
-                    return self.ui_service.create_data_validation_ui([f"Secret '{url_key}' is required"])
+                    return self.ui_service.create_data_validation_ui([f"Secret PDMP_API_URL is required"])
             except ValueError as e:
                 return self.ui_service.create_data_validation_ui([str(e)])
 
             # Step 4: Send API request using new PDMPClient
-            # # log.info("PDMPIntegrationService: Step 4 - Sending API request")
 
             # Build API URL
             if base_url.endswith("/"):
@@ -96,14 +81,11 @@ class PDMPIntegrationService:
             else:
                 api_url = f"{base_url}/v5_1/patient"
 
-            # # log.info(f"PDMPIntegrationService: Built API URL: {api_url}")
-
-            # Use new PDMPClient
             api_result = self.pdmp_client.send_patient_request(
                 api_url=api_url,
                 xml_content=pdmp_xml,
                 secrets=secrets,
-                use_test_env=use_test_env,
+                staff_id=practitioner_id,
                 timeout=60
             )
 
@@ -112,7 +94,6 @@ class PDMPIntegrationService:
                 "status": api_result.get("status", "error"),
                 "patient_id": patient_id,
                 "practitioner_id": practitioner_id,
-                "environment": env_label,
                 "extraction_errors": extraction_errors,
                 "api_result": api_result,
                 "request_xml": pdmp_xml,
@@ -120,12 +101,6 @@ class PDMPIntegrationService:
             }
 
             # Step 6: Create UI
-            log.info("PDMPIntegrationService: Step 6 - Creating UI")
-            log.info(f"PDMPIntegrationService: Calling ui_service.create_response_ui with:")
-            log.info(f"  - result status: {result['status']}")
-            log.info(f"  - use_test_env: {use_test_env}")
-            log.info(f"  - patient_id: {patient_id}")
-            log.info(f"  - practitioner_id: {practitioner_id}")
 
             # Extract organization_id from practitioner data if available
             organization_id = None
@@ -136,7 +111,7 @@ class PDMPIntegrationService:
                 log.info(f"PDMPIntegrationService: Extracted organization_id: {organization_id}")
 
             ui_effects = self.ui_service.create_response_ui(
-                result, use_test_env, patient_id, practitioner_id, organization_id
+                result, patient_id, practitioner_id, organization_id
             )
             return ui_effects
 

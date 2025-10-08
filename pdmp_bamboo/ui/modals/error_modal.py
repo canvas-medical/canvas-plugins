@@ -15,14 +15,12 @@ class ErrorModal(BaseModal):
     """Builds error modals for PDMP requests."""
     
     def create_error_modal(self,
-                          result: Dict[str, Any],
-                          use_test_env: bool = False) -> Effect:
+                          result: Dict[str, Any]) -> Effect:
         """
         Create an error modal for a failed PDMP request.
 
         Args:
             result: PDMP request result data
-            use_test_env: Whether this is a test environment request
 
         Returns:
             LaunchModalEffect for the error modal
@@ -35,18 +33,17 @@ class ErrorModal(BaseModal):
         api_result = result.get("api_result", {})
 
         # Build modal content
-        content = self._build_modal_content(error_type, errors, api_result, use_test_env)
+        content = self._build_modal_content(error_type, errors, api_result)
 
         # Create modal title
-        title = self._create_modal_title(use_test_env)
+        title = self._create_modal_title()
 
         return self.create_modal(title, content)
 
     def _build_modal_content(self,
                            error_type: str,
                            errors: List[str],
-                           api_result: Dict[str, Any],
-                           use_test_env: bool) -> str:
+                           api_result: Dict[str, Any]) -> str:
         """Build the complete modal content."""
 
         # Main title
@@ -108,9 +105,6 @@ class ErrorModal(BaseModal):
         }
         return error_titles.get(error_type, "Request Failed")
 
-    def _create_modal_title(self, use_test_env: bool) -> str:
-        """Create the modal title based on environment."""
-        if use_test_env:
-            return "❌ PDMP Test Request Failed"
-        else:
-            return "❌ PDMP Request Failed"
+    def _create_modal_title(self) -> str:
+        """Create the modal title."""
+        return "❌ PDMP Request Failed"

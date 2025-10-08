@@ -5,7 +5,6 @@ Handles creation of structured assessment effects for PDMP requests.
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime
 from uuid import uuid4
 from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data.note import Note
@@ -114,7 +113,7 @@ class AssessmentEffectsService:
                     question.add_response(text=current_date_timezone)
 
             # Generate and return effects
-            return [assessment.originate(), assessment.commit()]
+            return [assessment.originate(), assessment.edit(), assessment.commit()]
 
         except Exception as e:
             log.error(f"AssessmentEffectsService: Error creating structured assessment: {str(e)}")

@@ -39,9 +39,8 @@
         ]
     },
     "secrets": [
-        "TEST_PDMP_API_URL",
-        "TEST_PDMP_API_USERNAME",
-        "TEST_PDMP_API_PASSWORD"
+        "PDMP_API_URL",
+        "PDMP_STAFF_CREDENTIALS"
     ],
     "tags": {},
     "references": [],
