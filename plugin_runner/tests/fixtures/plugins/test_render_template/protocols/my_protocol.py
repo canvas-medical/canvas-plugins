@@ -5,7 +5,7 @@ from canvas_sdk.templates import render_to_string
 
 
 class ValidTemplate(BaseHandler):
-    """You should put a helpful description of this protocol's behavior here."""
+    """Handler used in unit tests."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
 
@@ -17,7 +17,7 @@ class ValidTemplate(BaseHandler):
 
 
 class TemplateInheritance(BaseHandler):
-    """You should put a helpful description of this protocol's behavior here."""
+    """Handler used in unit tests."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
 
@@ -31,7 +31,7 @@ class TemplateInheritance(BaseHandler):
 
 
 class InvalidTemplate(BaseHandler):
-    """You should put a helpful description of this protocol's behavior here."""
+    """Handler used in unit tests."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
 
@@ -43,7 +43,7 @@ class InvalidTemplate(BaseHandler):
 
 
 class ForbiddenTemplate(BaseHandler):
-    """You should put a helpful description of this protocol's behavior here."""
+    """Handler used in unit tests."""
 
     RESPONDS_TO = [EventType.Name(EventType.UNKNOWN)]
 
