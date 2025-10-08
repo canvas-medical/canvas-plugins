@@ -32,7 +32,7 @@ class DetectedIssue(AuditedModel, IdentifiableModel):
     )
     code = models.CharField(max_length=20)
     status = models.CharField(max_length=16, choices=Status.choices)
-    severity = models.CharField(max_length=10, choices=Severity.choices, blank=True)
+    severity = models.CharField(max_length=10, choices=Severity.choices, blank=True, default="")
     reference = models.CharField(max_length=200)
     issue_identifier = models.CharField(max_length=255)
     issue_identifier_system = models.CharField(max_length=255)
