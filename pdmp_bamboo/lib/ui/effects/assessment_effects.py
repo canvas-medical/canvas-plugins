@@ -4,7 +4,7 @@ Assessment Effects Service.
 Handles creation of structured assessment effects for PDMP requests.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
 from uuid import uuid4
 
 import arrow
@@ -112,7 +112,7 @@ class AssessmentEffectsService:
                     question.add_response(text=current_date_timezone)
 
             # Generate and return effects
-            return [assessment.originate(), assessment.edit(), assessment.commit()]
+            return [assessment.originate(), assessment.commit()]
 
         except Exception as e:
             log.error(f"AssessmentEffectsService: Error creating structured assessment: {str(e)}")

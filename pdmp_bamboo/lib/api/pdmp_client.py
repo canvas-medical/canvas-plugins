@@ -6,8 +6,10 @@ Handles HTTP requests to the PDMP API with proper error handling and response ma
 
 from typing import Any
 
-from pdmp_bamboo.api.client.auth_handler import AuthHandler
-from pdmp_bamboo.utils.secrets_helper import get_pdmp_api_url
+from canvas_sdk.utils import Http
+from logger import log
+from pdmp_bamboo.lib.api.auth_handler import AuthHandler
+from pdmp_bamboo.lib.utils.common import create_error_result
 
 
 class PDMPClient:
@@ -17,38 +19,36 @@ class PDMPClient:
         self.auth_handler = AuthHandler()
         self.default_timeout = 60
 
-    def send_patient_request(self,
-                            api_url: str,
-                            xml_content: str,
-                            staff_id: str,
-                            secrets: Dict[str, str],
-                            timeout: Optional[int] = None) -> Dict[str, Any]:
+    def send_patient_request(
+        self,
+        api_url: str,
+        xml_content: str,
+        secrets: dict[str, str],
+        use_test_env: bool = False,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """
         Send PDMP patient data request to the API.
 
         Args:
             api_url: The API endpoint URL
             xml_content: The XML content to send
-            staff_id: The staff member's ID for authentication
             secrets: Plugin secrets containing configuration
+            use_test_env: If True, uses test environment without certificates
             timeout: Request timeout in seconds (default: 60)
 
         Returns:
             Dict containing status, response data, and request details
         """
+        env_label = "Test Environment" if use_test_env else "Production Environment"
         timeout = timeout or self.default_timeout
-
-        log.info(f"PDMPClient: Sending PDMP patient request to {api_url}")
-        log.info(f"PDMPClient: Request timeout: {timeout} seconds")
-        log.info(f"PDMPClient: Using XML content ({len(xml_content)} characters)")
 
         try:
             # Create authentication headers
-            headers = self.auth_handler.create_auth_headers(secrets, staff_id)
+            headers = self.auth_handler.create_auth_headers(secrets, use_test_env)
 
             # Get certificate configuration
-            # cert_config = self._get_cert_config(use_test_env) # TODO: fix this
-            cert_config = None
+            cert_config = self._get_cert_config(use_test_env, secrets)
 
             # Make the request using Canvas SDK Http
             http = Http()
@@ -62,8 +62,9 @@ class PDMPClient:
                 headers=headers,
             )
 
-            log.info(f"PDMPClient: response: {response}")
-            return self._process_response(response, xml_content)
+            log.info(f"PDMPClient: Response status: {response.status_code}")
+            # Process response
+            return self._process_response(response, xml_content, env_label)
 
         except TimeoutError:
             log.error(f"PDMPClient: Request timed out after {timeout} seconds")
@@ -79,25 +80,28 @@ class PDMPClient:
             log.error(f"PDMPClient: Unexpected error during request: {e}")
             return create_error_result("unexpected_error", f"Unexpected error: {str(e)}")
 
-    def fetch_report(self,
-                     report_id: str,
-                     report_request_xml: str,
-                     staff_id: str,
-                     secrets: Dict[str, str],
-                     timeout: Optional[int] = None) -> Dict[str, Any]:
+    def fetch_report(
+        self,
+        report_id: str,
+        report_request_xml: str,
+        secrets: dict[str, str],
+        use_test_env: bool = False,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """
         Fetch a PDMP report using the report ID and ReportRequest XML.
 
         Args:
             report_id: The ID of the report to fetch
             report_request_xml: The ReportRequest XML content
-            staff_id: The staff member's ID for authentication
             secrets: Plugin secrets containing configuration
+            use_test_env: If True, uses test environment without certificates
             timeout: Request timeout in seconds (default: 60)
 
         Returns:
             Dict containing response data and status
         """
+        env_label = "Test Environment" if use_test_env else "Production Environment"
         timeout = timeout or self.default_timeout
 
         log.info(f"PDMPClient: Fetching report {report_id}")
@@ -108,11 +112,11 @@ class PDMPClient:
 
         try:
             # Build report URL
-            base_url = get_pdmp_api_url(secrets)
+            base_url = self._get_base_url(secrets, use_test_env)
             report_url = f"{base_url}/v5_1/report/{report_id}"
 
             # Create headers for report request
-            headers = self._create_report_headers(secrets, staff_id)
+            headers = self._create_report_headers(secrets, use_test_env)
 
             # Log headers (mask sensitive data)
             log.info("PDMPClient: Request headers:")
@@ -123,29 +127,24 @@ class PDMPClient:
                     log.info(f"  {key}: {value}")
 
             # Get certificate configuration
-            # cert_config = self._get_cert_config(use_test_env) TODO: fix this
-            # log.info(f"PDMPClient: Certificate config: {cert_config}")
+            cert_config = self._get_cert_config(use_test_env, secrets)
+            log.info(f"PDMPClient: Certificate config: {cert_config}")
 
             # Make the request using Canvas SDK Http
             log.info("PDMPClient: Making POST request to PMP Gateway for report")
             log.info(f"  - URL: {report_url}")
             log.info(f"  - Body length: {len(report_request_xml)} characters")
             log.info(f"  - Timeout: {timeout} seconds")
-            log.info(f"  - Verify SSL: True")
-            # log.info(f"  - Use certificates: {cert_config is not None}")
 
             http = Http()
             response = http.post(
                 report_url,
                 data=report_request_xml,
                 headers=headers,
-                # cert=cert_config if cert_config else None,
-                timeout=timeout,
-                verify=True
             )
 
             # Process response with detailed logging
-            return self._process_report_response(response, report_request_xml)
+            return self._process_report_response(response, report_request_xml, env_label)
 
         except TimeoutError:
             log.error(f"PDMPClient: Request timed out after {timeout} seconds")
@@ -161,7 +160,9 @@ class PDMPClient:
             log.error(f"PDMPClient: Unexpected error during request: {e}")
             return create_error_result("unexpected_error", f"Unexpected error: {str(e)}")
 
-    def _process_report_response(self, response: requests.Response, xml_content: str) -> Dict[str, Any]:
+    def _process_report_response(
+        self, response: Any, xml_content: str, env_label: str
+    ) -> dict[str, Any]:
         """Process the HTTP response from the PDMP API for report requests with detailed logging."""
         log.info(f"PDMPClient: Received response - Status: {response.status_code}")
         log.info(f"PDMPClient: Response URL: {response.url}")
@@ -184,6 +185,7 @@ class PDMPClient:
                 "request_xml": xml_content,
                 "response_headers": dict(response.headers),
                 "response_url": response.url,
+                "environment": env_label,
             }
         else:
             log.warning(f"PDMPClient: Report request failed with status {response.status_code}")
@@ -212,9 +214,12 @@ class PDMPClient:
                 "raw_response": response.text,
                 "response_url": response.url,
                 "response_reason": response.reason,
+                "environment": env_label,
             }
 
-    def _process_response(self, response: requests.Response, xml_content: str) -> Dict[str, Any]:
+    def _process_response(
+        self, response: Any, xml_content: str, env_label: str
+    ) -> dict[str, Any]:
         """Process the HTTP response from the PDMP API."""
         log.info(f"PDMPClient: Received response - Status: {response.status_code}")
         log.info(f"PDMPClient: Response URL: {response.url}")
@@ -232,7 +237,7 @@ class PDMPClient:
                 "request_xml": xml_content,
                 "response_headers": dict(response.headers),
                 "response_url": response.url,
-                # "environment": env_label,
+                "environment": env_label,
             }
         else:
             log.warning(f"PDMPClient: Request failed with status {response.status_code}")
@@ -258,7 +263,7 @@ class PDMPClient:
                 "raw_response": response.text,
                 "response_url": response.url,
                 "response_reason": response.reason,
-                # "environment": env_label,
+                "environment": env_label,
             }
 
     def _get_cert_config(self, use_test_env: bool, secrets: dict[str, str]) -> tuple[str, str] | None:
@@ -280,12 +285,9 @@ class PDMPClient:
         if not use_test_env:
             log.info("PDMPClient: Production environment - client certificates required")
 
-            # Build certificate paths relative to plugin root
-            import os
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            plugin_root = os.path.join(current_dir, "..", "..")
-            cert_file = os.path.join(plugin_root, "certs", "client.crt")
-            key_file = os.path.join(plugin_root, "certs", "client-no-password.key")
+            # Get certificate paths from secrets (not file system)
+            cert_file = secrets.get("PDMP_CLIENT_CERT_PATH")
+            key_file = secrets.get("PDMP_CLIENT_KEY_PATH")
 
             if not cert_file or not key_file:
                 log.warning("PDMPClient: Certificate paths not configured in secrets")
@@ -300,11 +302,17 @@ class PDMPClient:
             log.info("PDMPClient: Test environment - no client certificates required")
             return None
 
+    def _get_base_url(self, secrets: dict[str, str], use_test_env: bool) -> str:
+        """Get the base URL from secrets for the specified environment."""
+        from pdmp_bamboo.lib.utils.secrets_helper import get_secrets_for_environment
 
-    def _create_report_headers(self, secrets: Dict[str, str], staff_id: str) -> Dict[str, str]:
+        env_secrets = get_secrets_for_environment(secrets, use_test_env)
+        return env_secrets["url"]
+
+    def _create_report_headers(self, secrets: dict[str, str], use_test_env: bool) -> dict[str, str]:
         """Create request headers specifically for report requests."""
         # Use the same auth headers as regular requests
-        headers = self.auth_handler.create_auth_headers(secrets, staff_id)
+        headers = self.auth_handler.create_auth_headers(secrets, use_test_env)
 
         # Add report-specific headers
         headers["Content-Type"] = "application/xml"
