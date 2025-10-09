@@ -1,0 +1,35 @@
+<!-- PDMP Error Modal Start -->
+<div data-modal-content="pdmp-modal"
+     data-component="error-modal"
+     data-modal-type="error"
+     class="shell"
+     style="
+    margin: 0;
+    padding: 24px;
+    font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 400px;
+">
+    <main class="app"
+          data-component="modal-main-content"
+          style="
+        width: min(1100px,100%);
+        display: grid;
+        gap: 20px;
+        margin: 0 auto;
+    ">
+        {{ error_details|safe }}
+        
+        {% if api_details %}
+        {{ api_details|safe }}
+        {% endif %}
+        
+        {{ help_section|safe }}
+
+        <!-- Add bottom spacing to prevent Canvas Chat bot from covering content -->
+        <div style="height: 80px;"></div>
+    </main>
+</div>
+<!-- PDMP Error Modal End -->
+

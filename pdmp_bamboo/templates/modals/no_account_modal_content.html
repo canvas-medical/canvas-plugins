@@ -1,0 +1,197 @@
+<!-- PDMP No Account Modal Start -->
+<div data-modal-content="pdmp-no-account-modal"
+     data-component="no-account-modal"
+     data-modal-type="no-account"
+     class="shell"
+     style="
+    margin: 0;
+    padding: 24px;
+    font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 400px;
+">
+    <main class="app"
+          data-component="modal-main-content"
+          style="
+        width: min(1100px,100%);
+        display: grid;
+        gap: 20px;
+        margin: 0 auto;
+    ">
+        <h1 class="sr-only"
+            data-component="modal-title-hidden"
+            style="
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        ">Bamboo Health Account Required</h1>
+
+        <!-- Main Message Section -->
+        <section class="section alerts"
+                 data-component="main-message-section"
+                 style="
+            display: grid;
+            gap: 12px;
+            margin: 0 0 20px 0;
+        ">
+            <div class="alert-group"
+                 data-component="main-message-group"
+                 role="group"
+                 aria-label="Account information"
+                 style="display: grid; gap: 10px;">
+                <div class="alert"
+                     data-component="main-message-alert"
+                     data-variant="yellow"
+                     style="
+                    display: grid;
+                    grid-template-columns: 24px 1fr;
+                    gap: 12px;
+                    padding: 16px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                    background: color-mix(in oklab, var(--warn) 12%, white);
+                ">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 24px; height: 24px;">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>
+                        <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 12px 0; color: var(--text);">
+                            Please create an account with Bamboo Health to access PDMP
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instructions Section -->
+        <section class="section" style="
+            display: grid;
+            gap: 12px;
+            margin: 0 0 20px 0;
+        ">
+            <div class="card" style="
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                box-shadow: 0 1px 2px rgba(0,0,0,.06);
+                padding: 20px;
+            ">
+                <h3 style="
+                    color: var(--text);
+                    margin: 0 0 16px 0;
+                    font-size: 1.125rem;
+                    font-weight: 600;
+                    line-height: 1.5;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                ">
+                    <span style="font-size: 1.5rem;">📝</span> Account Setup Instructions
+                </h3>
+                <ol style="
+                    color: var(--text);
+                    margin: 0;
+                    padding-left: 24px;
+                    font-size: 1rem;
+                    line-height: 1.75;
+                ">
+                    <li style="margin-bottom: 12px;">
+                        Visit <a href="https://connect.bamboohealth.com/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style="color: var(--primary); text-decoration: underline; font-weight: 600;">
+                            https://connect.bamboohealth.com/
+                        </a> to create an account
+                    </li>
+                    <li style="margin-bottom: 12px;">
+                        Complete the registration process with your professional credentials
+                    </li>
+                    <li style="margin-bottom: 12px;">
+                        Once your account is activated, contact Canvas support to configure your access
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Tennessee Notice Section -->
+        <section class="section alerts" style="
+            display: grid;
+            gap: 12px;
+            margin: 0 0 20px 0;
+        ">
+            <div class="alert-group" role="group" aria-label="Tennessee notice" style="display: grid; gap: 10px;">
+                <div class="alert" data-variant="note" style="
+                    display: grid;
+                    grid-template-columns: 24px 1fr;
+                    gap: 12px;
+                    padding: 16px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                    background: var(--surface-sub);
+                ">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 16v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>
+                        <h4 style="color: var(--text); margin: 0 0 8px 0; font-size: 1rem; font-weight: 600; line-height: 1.5;">
+                            Tennessee State Notice
+                        </h4>
+                        <p style="margin: 0; color: var(--muted); font-size: 0.875rem; line-height: 1.5;">
+                            Due to state restrictions, Tennessee clients must use their state's own integration request forms.
+                            Please contact your state PDMP administrator for more information.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Support Section -->
+        <section class="section" style="
+            display: grid;
+            gap: 12px;
+            margin: 0 0 20px 0;
+        ">
+            <div class="card" style="
+                background: color-mix(in oklab, var(--primary) 8%, white);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 20px;
+            ">
+                <h3 style="
+                    color: var(--text);
+                    margin: 0 0 12px 0;
+                    font-size: 1.125rem;
+                    font-weight: 600;
+                    line-height: 1.5;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                ">
+                    <span style="font-size: 1.5rem;">💬</span> Need Help?
+                </h3>
+                <p style="margin: 0; color: var(--text); font-size: 1rem; line-height: 1.5;">
+                    If you have an account with Bamboo Health and think you have reached this screen in error,
+                    please email
+                    <a href="mailto:support@canvasmedical.com"
+                       style="color: var(--primary); text-decoration: underline; font-weight: 600;">
+                        support@canvasmedical.com
+                    </a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Add bottom spacing to prevent Canvas Chat bot from covering content -->
+        <div style="height: 80px;"></div>
+    </main>
+</div>
+<!-- PDMP No Account Modal End -->
+

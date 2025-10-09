@@ -1,0 +1,59 @@
+<!-- PDMP Narx Scores Component -->
+<section class="section"
+         data-component="narx-scores-component"
+         data-component-type="risk-scores"
+         aria-label="Narx scores"
+         style="display: grid; gap: 12px; margin: 0 0 20px 0;">
+    <div class="header"
+         data-component="scores-header"
+         style="display: flex; gap: 16px; align-items: center; justify-content: space-between;">
+        <h2 style="font-size: 20px; margin: 0;">Narx Scores</h2>
+    </div>
+
+    <div class="scores"
+         data-component="scores-grid"
+         style="display: grid; gap: 14px; grid-template-columns: repeat(auto-fit,minmax(170px,1fr));">
+        {% for score in scores %}
+        <article class="score"
+                 data-component="score-card"
+                 data-score-type="{{ score.type }}"
+                 role="group"
+                 aria-label="{{ score.display_name }} risk score"
+                 style="background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px;">
+            <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: .03em; margin: 0; color: #6b7280;">{{ score.display_name }}</h3>
+            <div class="value"
+                 data-component="score-value"
+                 aria-live="polite"
+                 style="font-size: 28px; font-weight: 700;">{{ score.value }}</div>
+            <div class="meter"
+                 data-component="score-meter"
+                 role="meter"
+                 aria-valuemin="0"
+                 aria-valuemax="999"
+                 aria-valuenow="{{ score.numeric_value }}"
+                 aria-label="{{ score.display_name }} score"
+                 style="height: 10px; border-radius: 999px; background: linear-gradient(in oklch 90deg, #10b981 0%, #f59e0b 30%, #ef4444 60%, #ef4444 100% ); position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+                <div class="pin"
+                     data-component="score-pin"
+                     style="position: absolute; top: -3px; width: 2px; height: 16px; background: #111827; left: {{ score.percentage }}%; transform: translateX(-1px);"></div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="legend"
+         data-component="scores-legend"
+         aria-hidden="true"
+         style="display: flex; gap: 10px; align-items: center; color: #6b7280; font-size: 12px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="dot" style="width: 10px; height: 10px; border-radius: 999px; display: inline-block; background: #10b981;"></span>0-199: Low exposure, low risk
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="dot" style="width: 10px; height: 10px; border-radius: 999px; display: inline-block; background: #f59e0b;"></span>200-499: Moderate complexity
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="dot" style="width: 10px; height: 10px; border-radius: 999px; display: inline-block; background: #ef4444;"></span>>500: Multiple prescribers, pharmacies, overlaps
+        </span>
+    </div>
+</section>
+

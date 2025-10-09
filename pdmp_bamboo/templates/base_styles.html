@@ -1,0 +1,257 @@
+<style>
+:root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-sub: #f7f8fa;
+    --text: #111827;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --danger: #dc2626;
+    --warn: #d97706;
+    --ok: #4b5563;
+    --border: #e5e7eb;
+    --radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: start center;
+    padding: 24px;
+}
+
+.app {
+    width: min(1100px, 100%);
+    display: grid;
+    gap: 20px;
+}
+
+.header {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card, .patient-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+
+.patient-card {
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.patient-card .name {
+    font-weight: 600;
+}
+
+.section {
+    display: grid;
+    gap: 12px;
+}
+
+.section h2 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.btn {
+    background: var(--primary);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.btn:hover {
+    filter: brightness(.92);
+}
+
+.btn[aria-busy="true"] {
+    position: relative;
+    pointer-events: none;
+    opacity: .9;
+}
+
+.scores {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.score {
+    background: var(--surface-sub);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+}
+
+.score h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin: 0;
+    color: var(--muted);
+}
+
+.score .value {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.meter {
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #10b981 0 25%, #f59e0b 25% 60%, #ef4444 60% 100%);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.meter .pin {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 16px;
+    background: var(--text);
+    left: 0;
+    transform: translateX(-1px);
+}
+
+.legend {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.alerts {
+    display: grid;
+    gap: 16px;
+}
+
+.alert-group {
+    display: grid;
+    gap: 10px;
+}
+
+.alert-title {
+    font-weight: 700;
+}
+
+.alert-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.alert {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-sub);
+}
+
+.alert svg {
+    width: 20px;
+    height: 20px;
+}
+
+.alert[data-variant="red"] {
+    background: color-mix(in oklab, var(--danger) 10%, white);
+}
+
+.alert[data-variant="yellow"] {
+    background: color-mix(in oklab, var(--warn) 12%, white);
+}
+
+.alert[data-variant="success"] {
+    background: color-mix(in oklab, #10b981 10%, white);
+}
+
+.alert[data-variant="note"] {
+    background: var(--surface-sub);
+}
+
+.alert [data-sev] {
+    font-weight: 700;
+}
+
+details summary {
+    cursor: pointer;
+    color: var(--primary);
+}
+
+pre.raw {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    overflow: auto;
+    max-height: 320px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+[data-modal-content] {
+    background: var(--surface);
+}
+</style>
+
