@@ -1,6 +1,6 @@
 import json
 
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from logger import log
