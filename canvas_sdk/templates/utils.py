@@ -2,7 +2,6 @@ from functools import cache, lru_cache
 from pathlib import Path
 from typing import Any
 
-from django.template import Context
 from django.template.backends.django import get_installed_libraries
 from django.template.engine import Engine
 
@@ -52,7 +51,7 @@ def render_to_string(
         raise FileNotFoundError(f"Template {template_name} not found.")
 
     engine = _engine_for_plugin(plugin_dir)
-    return engine.render_to_string(template_path, context=Context(context))
+    return engine.render_to_string(str(template_path), context=context)
 
 
 __exports__ = ("render_to_string",)
