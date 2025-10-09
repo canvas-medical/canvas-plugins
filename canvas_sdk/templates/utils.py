@@ -1,10 +1,24 @@
+from functools import cache, lru_cache
 from pathlib import Path
 from typing import Any
 
-from django.template import Context, Template
+from django.template import Context
+from django.template.backends.django import get_installed_libraries
 from django.template.engine import Engine
 
 from canvas_sdk.utils.plugins import plugin_context
+
+
+@cache
+def _installed_template_libraries() -> dict[str, str]:
+    """Cache Django's template tag libraries lookup."""
+    return get_installed_libraries()
+
+
+@lru_cache(maxsize=5)
+def _engine_for_plugin(plugin_dir: str) -> Engine:
+    """Create a Django template engine for the given plugin directory."""
+    return Engine(dirs=[plugin_dir], libraries=_installed_template_libraries())
 
 
 @plugin_context
@@ -37,19 +51,8 @@ def render_to_string(
     elif not template_path.exists():
         raise FileNotFoundError(f"Template {template_name} not found.")
 
-    engine = Engine(
-        dirs=[plugin_dir],
-        libraries={
-            "cache": "django.templatetags.cache",
-            "i18n": "django.templatetags.i18n",
-            "l10n": "django.templatetags.l10n",
-            "static": "django.templatetags.static",
-            "tz": "django.templatetags.tz",
-        },
-    )
-    template = Template(template_path.read_text(), engine=engine)
-
-    return template.render(Context(context))
+    engine = _engine_for_plugin(plugin_dir)
+    return engine.render_to_string(template_path, context=Context(context))
 
 
 __exports__ = ("render_to_string",)
