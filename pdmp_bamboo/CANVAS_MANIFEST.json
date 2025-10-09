@@ -1,13 +1,13 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.1",
+    "plugin_version": "1.0.0",
     "name": "pdmp_bamboo",
-    "description": "PDMP Bamboo Plugin - Streamlined integration for PDMP requests with BambooHealth PMP Gateway. Provides structured assessment commands and API endpoints for prescription drug monitoring program data retrieval.",
+    "description": "PDMP Bamboo Plugin - integration for PDMP requests with BambooHealth PMP Gateway. Provides secure certificate-based authentication, structured assessment commands, and comprehensive API endpoints for prescription drug monitoring program data retrieval with HIPAA compliance.",
     "components": {
         "protocols": [
             {
-                "class": "pdmp_bamboo.protocols.my_protocol:PDMPRequestProtocol",
-                "description": "PDMP Request Protocol - Extracts Canvas patient and provider data, generates structured assessment commands, and sends PDMP requests to BambooHealth test environment for prescription drug monitoring",
+                "class": "pdmp_bamboo.handlers.pdmp_button:PDMPRequestButton",
+                "description": "PDMP Request Action Button - Initiates PDMP requests from patient notes with BambooHealth PMP Gateway integration for prescription drug monitoring",
                 "data_access": {
                     "event": "SHOW_NOTE_HEADER_BUTTON",
                     "read": [
@@ -24,8 +24,12 @@
                 }
             },
             {
-                "class": "pdmp_bamboo.api.endpoint.report_endpoint:ReportEndpoint",
-                "description": "PDMP Report API Endpoint - RESTful endpoint for generating and retrieving PDMP reports with patient prescription history and provider information"
+                "class": "pdmp_bamboo.routes.report_api:ReportAPI",
+                "description": "PDMP Report API - RESTful endpoint for retrieving PDMP reports with patient prescription history and clinical data"
+            },
+            {
+                "class": "pdmp_bamboo.routes.report_iframe_api:ReportIframeAPI",
+                "description": "PDMP Report Iframe API - Serves complete PDMP reports as iframe-embeddable HTML pages"
             }
         ],
         "commands": [],
@@ -42,9 +46,12 @@
         "PDMP_API_URL",
         "PDMP_STAFF_CREDENTIALS"
     ],
-    "tags": {},
-    "references": [],
-    "license": "",
-    "diagram": false,
+    "tags": ["pdmp", "healthcare", "integration", "hipaa", "security"],
+    "references": [
+        "https://docs.bamboohealth.com/",
+        "https://www.hhs.gov/hipaa/index.html"
+    ],
+    "license": "Proprietary",
+    "diagram": true,
     "readme": "./README.md"
 }

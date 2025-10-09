@@ -1,0 +1,288 @@
+<!-- PDMP Report Button Component -->
+<section class="section"
+         data-component="report-button-component"
+         data-component-type="report-access"
+         style="display: grid;gap: 12px;margin: 0 0 20px 0;justify-content: space-between;">
+    <div class="header"
+         data-component="report-header"
+         style="display: flex; gap: 16px; align-items: center; justify-content: space-between;">
+        <h2 style="font-size: 20px; margin: 0;">PDMP Report</h2>
+    </div>
+    <button class="btn"
+        id="reportHeaderBtn"
+        data-component="report-button"
+        data-report-url="{{ report_url }}"
+        data-env="{{ env }}"
+        data-patient-id="{{ patient_id }}"
+        data-practitioner-id="{{ practitioner_id }}"
+        data-organization-id="{{ organization_id }}"
+        type="button"
+        style="background: rgb(37, 99, 235);color: rgb(255, 255, 255);border: 0px;border-radius: 10px;cursor: pointer;transition: 0.3s;filter: brightness(1);width: 80%;height: 30px;"
+        onmouseover="this.style.filter='brightness(.92)'"
+        onmouseout="this.style.filter='brightness(1)'">
+        View PDMP Report</button>
+
+    <div data-component="report-expiration" style="font-size: 0.75rem; opacity: 0.8; text-align: right;">
+        Expires: {{ expiration_date }}
+    </div>
+    
+    <div id="pdmp-skeleton-loader"
+         data-component="skeleton-loader"
+         style="display: none; margin-top: 16px; padding: 20px; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+            <div class="skeleton-spinner" style="width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #9ca3af; border-radius: 50%; animation: skeleton-spin 1s linear infinite;"></div>
+            <div style="flex: 1;">
+                <div style="font-size: 1rem; font-weight: 600; color: #6b7280; margin-bottom: 4px;">Loading PDMP Report...</div>
+                <div style="font-size: 0.875rem; color: #9ca3af;">Please wait while we fetch your prescription monitoring data</div>
+            </div>
+        </div>
+
+        <div style="display: grid; gap: 12px;">
+            <div class="skeleton-line" style="height: 20px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 4px; width: 85%;"></div>
+            <div class="skeleton-line" style="height: 16px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 4px; width: 70%;"></div>
+            <div class="skeleton-line" style="height: 16px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 4px; width: 60%;"></div>
+        </div>
+    </div>
+</section>
+
+<script>
+(function() {
+    var isLoading = false;
+    var iframeLoaded = false;
+
+    function openPDMPReport(reportUrl, env, patientId, practitionerId, organizationId) {
+        var btn = document.getElementById('reportHeaderBtn');
+        if (!btn) {
+            console.error('PDMP: Button not found');
+            return;
+        }
+
+        if (isLoading || iframeLoaded) {
+            return;
+        }
+
+        isLoading = true;
+
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        btn.style.background = '#f59e0b';
+        btn.style.opacity = '0.8';
+        btn.textContent = '🔄 Loading Report...';
+
+        if (!document.querySelector('#skeleton-keyframes')) {
+            var style = document.createElement('style');
+            style.id = 'skeleton-keyframes';
+            style.textContent = `
+                @keyframes skeleton-shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+                @keyframes skeleton-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        showSkeletonLoaderInModal();
+        loadReportIframeWithLoader(reportUrl, env, patientId, practitionerId, organizationId);
+    }
+
+    function showSkeletonLoaderInModal() {
+        var modalContainer = document.querySelector('[data-modal-content="pdmp-modal"]') ||
+                           document.querySelector('[data-modal-content]') ||
+                           document.querySelector('.modal-content');
+
+        if (!modalContainer) {
+            console.error('PDMP: Modal container not found');
+            return;
+        }
+
+        var patientHeader = modalContainer.querySelector('[data-component="patient-header-component"]');
+        var patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
+
+        var skeletonHTML = `
+            <style>
+                @keyframes pdmp-skeleton-shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+                @keyframes pdmp-skeleton-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+            <div id="pdmp-skeleton-container" style="padding: 20px; background-color: #f8f9fa; min-height: 400px; height: 100vh;">
+                <div style="margin-top: 16px; padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                        <div style="width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #2563eb; border-radius: 50%; animation: pdmp-skeleton-spin 1s linear infinite;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 1.25rem; font-weight: 600; color: #374151; margin-bottom: 4px;">Loading PDMP Report...</div>
+                            <div style="font-size: 0.875rem; color: #6b7280;">Please wait while we fetch your prescription monitoring data</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; gap: 12px; margin-top: 24px;">
+                        <div style="height: 24px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: pdmp-skeleton-shimmer 1.5s ease-in-out infinite; border-radius: 4px; width: 85%;"></div>
+                        <div style="height: 16px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: pdmp-skeleton-shimmer 1.5s ease-in-out infinite; border-radius: 4px; width: 70%;"></div>
+                        <div style="height: 16px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: pdmp-skeleton-shimmer 1.5s ease-in-out infinite; border-radius: 4px; width: 60%;"></div>
+                        <div style="height: 20px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: pdmp-skeleton-shimmer 1.5s ease-in-out infinite; border-radius: 4px; width: 75%;"></div>
+                        <div style="height: 16px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: pdmp-skeleton-shimmer 1.5s ease-in-out infinite; border-radius: 4px; width: 50%;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modalContainer.innerHTML = patientHeaderHTML + skeletonHTML;
+    }
+
+    function loadReportIframeWithLoader(reportUrl, env, patientId, practitionerId, organizationId) {
+        var reportId = reportUrl.split('/').pop();
+        var iframeUrl = '/plugin-io/api/pdmp_bamboo/report-iframe?report_id=' + reportId +
+                       '&env=' + env +
+                       '&patient_id=' + patientId +
+                       '&practitioner_id=' + practitionerId +
+                       '&organization_id=' + organizationId;
+
+        var modalContainer = document.querySelector('[data-modal-content="pdmp-modal"]') ||
+                           document.querySelector('[data-modal-content]') ||
+                           document.querySelector('.modal-content');
+
+        if (!modalContainer) {
+            console.error('PDMP: Modal container not found');
+            isLoading = false;
+            return;
+        }
+
+        var patientHeader = modalContainer.querySelector('[data-component="patient-header-component"]');
+        var patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
+
+        var iframeContainer = document.createElement('div');
+        iframeContainer.id = 'pdmp-iframe-container';
+        iframeContainer.style.cssText = 'padding: 0; background-color: #ffffff; min-height: 600px; display: none;';
+
+        var iframeElement = document.createElement('iframe');
+        iframeElement.id = 'pdmp-report-iframe';
+        iframeElement.src = iframeUrl;
+        iframeElement.style.cssText = 'width: 100%; height: calc(100vh - 150px); min-height: 600px; border: none; background-color: white;';
+        iframeElement.frameBorder = '0';
+        iframeElement.allowFullscreen = true;
+        iframeElement.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+
+        iframeContainer.appendChild(iframeElement);
+
+        iframeElement.onload = function() {
+            if (iframeLoaded) {
+                return;
+            }
+
+            iframeLoaded = true;
+
+            var skeletonContainer = document.getElementById('pdmp-skeleton-container');
+            if (skeletonContainer) {
+                skeletonContainer.style.display = 'none';
+            }
+
+            iframeContainer.style.display = 'block';
+
+            var btn = document.getElementById('reportHeaderBtn');
+            if (btn) {
+                btn.textContent = '✅ Report Loaded';
+                btn.style.background = '#10b981';
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+                btn.style.opacity = '0.8';
+            }
+
+            isLoading = false;
+        };
+
+        iframeElement.onerror = function() {
+            console.error('PDMP: Iframe failed to load');
+            isLoading = false;
+            iframeLoaded = false;
+            showErrorInModal('Failed to load the PDMP report iframe');
+
+            var btn = document.getElementById('reportHeaderBtn');
+            if (btn) {
+                btn.textContent = '❌ Error - Retry';
+                btn.style.background = '#dc2626';
+                btn.disabled = false;
+                btn.style.cursor = 'pointer';
+                btn.style.opacity = '1';
+            }
+        };
+
+        modalContainer.appendChild(iframeContainer);
+    }
+
+    function showErrorInModal(errorMessage) {
+        isLoading = false;
+        iframeLoaded = false;
+
+        var modalContainer = document.querySelector('[data-modal-content="pdmp-modal"]') ||
+                           document.querySelector('[data-modal-content]') ||
+                           document.querySelector('.modal-content');
+
+        if (!modalContainer) {
+            console.error('PDMP: Modal container not found');
+            return;
+        }
+
+        var patientHeader = modalContainer.querySelector('[data-component="patient-header-component"]');
+        var patientHeaderHTML = patientHeader ? patientHeader.outerHTML : '';
+
+        var errorHTML = `
+            <div style="padding: 20px; background-color: #f8f9fa; min-height: 400px;">
+                <div style="background-color: #ffebee; padding: 20px; border-radius: 8px; border: 1px solid #ffcdd2; margin-top: 20px;">
+                    <h3 style="color: #d32f2f; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.5rem;">❌</span>
+                        Report Loading Error
+                    </h3>
+                    <p style="margin: 15px 0; color: #d32f2f; font-size: 1rem;">Failed to load the full PDMP report:</p>
+                    <div style="margin: 15px 0; color: #666; font-family: 'Courier New', monospace; background-color: #f5f5f5; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem; overflow-wrap: break-word;">
+                        ` + errorMessage + `
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404; font-size: 0.9rem; text-align: center;">
+                            <strong>💡 What to do next:</strong><br>
+                            Please try clicking the "View PDMP Report" button again, or contact support if the problem persists.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modalContainer.innerHTML = patientHeaderHTML + errorHTML;
+    }
+
+    function initButton() {
+        var btn = document.getElementById('reportHeaderBtn');
+        if (!btn) {
+            setTimeout(initButton, 100);
+            return;
+        }
+
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var reportUrl = btn.getAttribute('data-report-url');
+            var env = btn.getAttribute('data-env');
+            var patientId = btn.getAttribute('data-patient-id');
+            var practitionerId = btn.getAttribute('data-practitioner-id');
+            var organizationId = btn.getAttribute('data-organization-id');
+
+            openPDMPReport(reportUrl, env, patientId, practitionerId, organizationId);
+        };
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initButton);
+    } else {
+        setTimeout(initButton, 50);
+    }
+})();
+</script>
+

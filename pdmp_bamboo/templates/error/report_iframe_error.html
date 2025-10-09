@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDMP Report Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .error-container {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 4px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .error-title {
+            color: #d32f2f;
+            margin-top: 0;
+            font-size: 24px;
+        }
+        .error-message {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .error-type {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 15px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1 class="error-title">❌ PDMP Report Error</h1>
+        <p class="error-message">Failed to load the PDMP report:</p>
+        <p class="error-message">{{ error_message }}</p>
+        <div class="error-type">Error Type: {{ error_type }}</div>
+    </div>
+</body>
+</html>
+

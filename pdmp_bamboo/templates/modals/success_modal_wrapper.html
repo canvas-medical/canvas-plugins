@@ -1,0 +1,22 @@
+<!-- PDMP Success Modal Wrapper -->
+<div data-modal-content="pdmp-modal" style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: white;">
+    {{ patient_header_html|safe }}
+
+    <div style="padding: 20px; background-color: #f8f9fa; min-height: 400px; margin-bottom: 10px;">
+        {{ report_button_html|safe }}
+        {{ scores_html|safe }}
+        {{ messages_html|safe }}
+
+        <!-- Raw response content (collapsible) injected by RawResponseComponent if present -->
+        {{ raw_response_html|safe }}
+
+        <div id="pdmp-report-iframe-container"
+             data-component="report-iframe-container"
+             style="display: none; margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: white;">
+            <!-- Iframe will be dynamically inserted here by JavaScript when button is clicked -->
+        </div>
+    </div>
+
+    {{ assessment_html|safe }}
+</div>
+
