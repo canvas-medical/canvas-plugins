@@ -18,4 +18,6 @@ def test_factory() -> None:
 def test_model() -> None:
     """Test that a Discount instance can be created."""
     Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)
-    assert Discount.objects.first().pk is not None
+    discount = Discount.objects.first()
+    assert discount is not None
+    assert discount.pk is not None
