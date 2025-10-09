@@ -172,15 +172,6 @@ SECRETS_FILE_NAME = "SECRETS.json"
 
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": False,
-        "OPTIONS": {},
-    },
-]
-
 
 if IS_SCRIPT:
     CACHES = {
