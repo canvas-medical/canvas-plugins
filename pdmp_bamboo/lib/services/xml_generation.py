@@ -1,20 +1,20 @@
 """
 XML Generation Service.
 
-Main service for generating PDMP XML requests.
+Main service for generating PDMP XML requests using the new modular architecture.
 """
 
 from typing import Any
 
 from logger import log
 
-from pdmp_bamboo.xml.builders import (
-    PatientRequestXMLBuilder,
-    PatientXMLBuilder,
-    PractitionerXMLBuilder,
-    LocationXMLBuilder
-)
-from pdmp_bamboo.xml.utils import DTOToXMLConverter, XMLUtils
+# Import our new XML components
+from pdmp_bamboo.lib.xml.builders.location_builder import LocationXMLBuilder
+from pdmp_bamboo.lib.xml.builders.patient_builder import PatientXMLBuilder
+from pdmp_bamboo.lib.xml.builders.patient_request_builder import PatientRequestXMLBuilder
+from pdmp_bamboo.lib.xml.builders.practitioner_builder import PractitionerXMLBuilder
+from pdmp_bamboo.lib.xml.utils.data_converter import DTOToXMLConverter
+from pdmp_bamboo.lib.xml.utils.xml_utils import XMLUtils
 
 
 class XMLGenerationService:
@@ -22,6 +22,7 @@ class XMLGenerationService:
 
     def __init__(self):
         """Initialize the XML generation service with all required builders."""
+        log.info("XMLGenerationService: Initializing XML generation service")
 
         # Initialize builders
         self.patient_builder = PatientXMLBuilder()
@@ -33,6 +34,7 @@ class XMLGenerationService:
         self.data_converter = DTOToXMLConverter()
         self.xml_utils = XMLUtils()
 
+        log.info("XMLGenerationService: XML generation service initialized successfully")
 
     def create_pdmp_xml(self, extracted_data: dict[str, Any]) -> str:
         """
