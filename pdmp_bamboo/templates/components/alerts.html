@@ -1,0 +1,83 @@
+<!-- PDMP Alerts Component -->
+<section class="section alerts"
+         data-component="alerts-component"
+         data-component-type="clinical-alerts"
+         aria-label="Safety flags and notes"
+         style="display: grid; gap: 12px; margin: 0 0 20px 0;">
+    <div class="alerts" style="display: grid; gap: 16px;">
+        {% if red_flags %}
+        <div class="alert-group"
+             data-component="red-flags-section"
+             role="group"
+             aria-label="Red flags"
+             style="display: grid; gap: 10px;">
+            <div class="alert-title" style="font-weight: 700;">Red Flag</div>
+            <ul class="alert-list" style="display: grid; gap: 10px; list-style: none; margin: 0; padding: 0;">
+                {% for flag in red_flags %}
+                <li class="alert"
+                    data-component="red-flag-item"
+                    data-variant="red"
+                    style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: color-mix(in oklab, var(--danger) 10%, white);">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>
+                        <span data-sev style="font-weight: 700;">{{ flag.severity }}:</span> {{ flag.message }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if alerts %}
+        <div class="alert-group"
+             data-component="alerts-section"
+             role="group"
+             aria-label="Alerts"
+             style="display: grid; gap: 10px;">
+            <div class="alert-title" style="font-weight: 700;">Alert</div>
+            <ul class="alert-list" style="display: grid; gap: 10px; list-style: none; margin: 0; padding: 0;">
+                {% for alert in alerts %}
+                <li class="alert"
+                    data-component="alert-item"
+                    data-variant="yellow"
+                    style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: color-mix(in oklab, var(--warn) 12%, white);">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>{{ alert.message }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if care_notes %}
+        <div class="alert-group"
+             data-component="care-notes-section"
+             role="group"
+             aria-label="Care notes"
+             style="display: grid; gap: 10px;">
+            <div class="alert-title" style="font-weight: 700;">Care Note</div>
+            <ul class="alert-list" style="display: grid; gap: 10px; list-style: none; margin: 0; padding: 0;">
+                {% for note in care_notes %}
+                <li class="alert"
+                    data-component="care-note-item"
+                    data-variant="note"
+                    style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-sub);">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>{{ note.message }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</section>
+

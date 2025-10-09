@@ -1,0 +1,33 @@
+<!-- PDMP Assessment Status Component -->
+{% if assessment_created %}
+<div class="alert"
+     data-component="assessment-status-component"
+     data-component-type="success-status"
+     data-variant="success"
+     style="background: color-mix(in oklab, #10b981 10%, white); border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin: 16px 0; font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display: grid; grid-template-columns: 24px 1fr; gap: 12px;">
+    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+        <h4 style="color: #10b981; margin: 0 0 4px 0; font-size: 1rem; font-weight: 600; line-height: 1.5;">Documentation Created</h4>
+        <p style="margin: 0; color: #10b981; font-size: 0.875rem; line-height: 1.25;">Structured assessment added to note documenting PDMP check was performed</p>
+    </div>
+</div>
+{% elif assessment_error %}
+<div class="alert"
+     data-component="assessment-status-component"
+     data-component-type="error-status"
+     data-variant="yellow"
+     style="background: color-mix(in oklab, #d97706 12%, white); border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin: 16px 0; font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display: grid; grid-template-columns: 24px 1fr; gap: 12px;">
+    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+        <h4 style="color: #d97706; margin: 0 0 4px 0; font-size: 1rem; font-weight: 600; line-height: 1.5;">Documentation Warning</h4>
+        <p style="margin: 0; color: #d97706; font-size: 0.875rem; line-height: 1.25;">Could not create structured assessment: {{ assessment_error }}</p>
+    </div>
+</div>
+{% endif %}
+
