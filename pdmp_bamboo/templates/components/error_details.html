@@ -1,35 +1,31 @@
 <!-- Error Details Section -->
-<section class="section alerts"
-         data-component="error-details-section"
-         style="display: grid; gap: 12px; margin: 0 0 20px 0;">
-    <div class="alert-group"
+<section class="section alerts pdmp-section"
+         data-component="error-details-section">
+    <div class="alert-group pdmp-alert-group"
          data-component="error-details-group"
          role="group"
-         aria-label="Error details"
-         style="display: grid; gap: 10px;">
-        <div class="alert-title"
-             data-component="error-details-title"
-             style="font-weight: 700; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.25rem;">❌</span> {{ error_title }}
+         aria-label="Error details">
+        <div class="alert-title pdmp-title pdmp-title-flex"
+             data-component="error-details-title">
+            <span class="pdmp-icon-sm">X</span> {{ error_title }}
         </div>
-        <div class="alert"
+        <div class="alert pdmp-alert pdmp-alert-red"
              data-component="error-details-alert"
-             data-variant="red"
-             style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: color-mix(in oklab, var(--danger) 10%, white);">
-            <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+             data-variant="red">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
                 <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
                 <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             <div>
-                <ul data-component="error-details-list" style="margin: 0; padding: 0; list-style: none; font-size: 0.875rem; line-height: 1.25;">
+                <ul data-component="error-details-list" class="pdmp-list-reset pdmp-text-small">
                     {% for error in errors %}
                         {% if 'Gateway' in error or 'PMP' in error or 'PDMP' in error %}
-                        <li style='margin-bottom: 12px; padding: 8px; background: rgba(255, 255, 255, 0.5); border-radius: 6px;'>
-                            <strong style='color: var(--danger);'>PDMP Gateway Message:</strong><br>
-                            <span style='color: var(--text);'>{{ error }}</span>
+                        <li class="pdmp-list-spaced-lg" style='padding: 8px; background: rgba(255, 255, 255, 0.5); border-radius: 6px;'>
+                            <strong class="pdmp-color-danger">PDMP Gateway Message:</strong><br>
+                            <span class="pdmp-color-text">{{ error }}</span>
                         </li>
                         {% else %}
-                        <li style='margin-bottom: 8px;'>{{ error }}</li>
+                        <li class="pdmp-list-spaced">{{ error }}</li>
                         {% endif %}
                     {% endfor %}
                 </ul>

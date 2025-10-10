@@ -16,8 +16,7 @@ class OrganizationMapper:
             id=str(organization.dbid),
             name=organization.full_name or organization.short_name or "",
             active=getattr(organization, "active", True),
-            errors=[],
         )
 
-        log.info(f"OrganizationMapper: Organization DTO created: {organization_dto.__dict__}")
+        log.info(f"OrganizationMapper: Organization DTO created")
         return organization_dto

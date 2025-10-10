@@ -6,11 +6,11 @@ Displays the status of structured assessment creation.
 
 from typing import Any
 
-from canvas_sdk.templates import render_to_string
 from logger import log
+from pdmp_bamboo.lib.ui.components.base_component import BaseComponent
 
 
-class AssessmentStatusComponent:
+class AssessmentStatusComponent(BaseComponent):
     """Component for displaying assessment status."""
 
     def create_component(self, result: dict[str, Any]) -> str | None:
@@ -30,11 +30,10 @@ class AssessmentStatusComponent:
 
         log.info("AssessmentStatusComponent: Creating assessment status component")
 
-        try:
-            return render_to_string("templates/components/assessment_status.html", {
+        return self._render_template(
+            "templates/components/assessment_status.html",
+            {
                 "assessment_created": result.get("assessment_created"),
-                "assessment_error": result.get("assessment_error")
-            })
-        except Exception as e:
-            log.error(f"AssessmentStatusComponent: Error rendering template: {e}")
-            return None
+                "assessment_error": result.get("assessment_error"),
+            },
+        )

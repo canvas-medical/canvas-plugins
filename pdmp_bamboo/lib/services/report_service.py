@@ -13,6 +13,7 @@ from logger import log
 from pdmp_bamboo.lib.api.pdmp_client import PDMPClient
 from pdmp_bamboo.lib.services.data_extraction import DataExtractionService
 from pdmp_bamboo.lib.utils.common import create_error_result
+from pdmp_bamboo.lib.utils.secrets_manager import SecretsManager
 from pdmp_bamboo.lib.xml.builders.report_request_builder import ReportRequestXMLBuilder
 
 
@@ -30,7 +31,6 @@ class ReportService:
         patient_id: str,
         practitioner_id: str,
         secrets: dict[str, Any],
-        use_test_env: bool = False,
     ) -> dict[str, Any]:
         """
         Fetch a PDMP report using the complete workflow.
@@ -72,11 +72,17 @@ class ReportService:
 
             # Step 4: Make API request
             log.info("ReportService: Step 4 - Making PDMP API request")
+            # Resolve API base URL and staff credentials
+            sm = SecretsManager(secrets)
+            api_base_url = sm.get_api_base_url()
+            username, password = sm.get_staff_credentials(str(practitioner_id))
+
             api_result = self.pdmp_client.fetch_report(
                 report_id=report_id,
                 report_request_xml=report_request_xml,
-                secrets=secrets,
-                use_test_env=use_test_env,
+                api_base_url=api_base_url,
+                username=username,
+                password=password,
             )
 
             # Step 5: Process result

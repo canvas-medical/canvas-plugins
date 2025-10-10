@@ -26,102 +26,51 @@ class DTOToXMLConverter:
             "metadata": self._build_request_metadata(extracted_data),
         }
 
-    def _convert_patient_dto(self, patient_dto) -> dict[str, Any]:
-        """Convert PatientDTO to XML format."""
-        if not patient_dto:
-            log.warning("DTOToXMLConverter: No patient DTO provided")
+    def _convert_dto(self, dto, dto_name: str) -> dict[str, Any]:
+        """
+        Generic DTO conversion with consistent logging.
+        
+        Now that DTOs are dataclasses, conversion is simple via to_dict().
+        
+        Args:
+            dto: DTO instance to convert
+            dto_name: Name of DTO for logging
+            
+        Returns:
+            Dictionary representation of DTO
+        """
+        if not dto:
+            log.warning(f"DTOToXMLConverter: No {dto_name} DTO provided")
             return {}
 
-        log.debug(f"DTOToXMLConverter: Converting patient DTO: {patient_dto.__dict__}")
+        log.debug(f"DTOToXMLConverter: Converting {dto_name} DTO")
 
-        return {
-            "first_name": patient_dto.first_name,
-            "last_name": patient_dto.last_name,
-            "middle_name": patient_dto.middle_name,
-            "birth_date": patient_dto.birth_date,
-            "sex": patient_dto.sex,
-            "mrn": patient_dto.mrn,
-            "ssn": patient_dto.ssn,
-            "phone": patient_dto.phone,
-            "address": self._convert_address_dto(patient_dto.address),
-        }
+        # DTOs now have to_dict() via dataclass asdict()
+        return dto.to_dict() if hasattr(dto, "to_dict") else {}
+
+    def _convert_patient_dto(self, patient_dto) -> dict[str, Any]:
+        """Convert PatientDTO to XML format."""
+        return self._convert_dto(patient_dto, "patient")
 
     def _convert_practitioner_dto(self, practitioner_dto) -> dict[str, Any]:
         """Convert PractitionerDTO to XML format."""
-        if not practitioner_dto:
-            log.warning("DTOToXMLConverter: No practitioner DTO provided")
-            return {}
-
-        log.debug(f"DTOToXMLConverter: Converting practitioner DTO: {practitioner_dto.__dict__}")
-
-        return {
-            "first_name": practitioner_dto.first_name,
-            "last_name": practitioner_dto.last_name,
-            "middle_name": practitioner_dto.middle_name,
-            "npi_number": practitioner_dto.npi_number,
-            "dea_number": practitioner_dto.dea_number,
-            "role": practitioner_dto.role,
-            "phone": practitioner_dto.phone,
-            "email": practitioner_dto.email,
-            "active": practitioner_dto.active,
-            "license_number": practitioner_dto.license_number,
-            "license_type": practitioner_dto.license_type,
-            "license_state": practitioner_dto.license_state,
-            "organization_id": practitioner_dto.organization_id,
-            "organization_name": practitioner_dto.organization_name,
-            "practice_location_id": practitioner_dto.practice_location_id,
-            "practice_location_name": practitioner_dto.practice_location_name,
-        }
+        result = self._convert_dto(practitioner_dto, "practitioner")
+        # Add group_npi if not present (for backward compatibility)
+        if result and "group_npi" not in result:
+            result["group_npi"] = ""
+        return result
 
     def _convert_organization_dto(self, organization_dto) -> dict[str, Any]:
         """Convert OrganizationDTO to XML format."""
-        if not organization_dto:
-            log.warning("DTOToXMLConverter: No organization DTO provided")
-            return {}
-
-        log.debug(f"DTOToXMLConverter: Converting organization DTO: {organization_dto.__dict__}")
-
-        return {
-            "id": organization_dto.id,
-            "name": organization_dto.name,
-            "active": organization_dto.active,
-            "group_npi": getattr(organization_dto, "group_npi", ""),
-        }
+        result = self._convert_dto(organization_dto, "organization")
+        # Add group_npi if not present (for backward compatibility)
+        if result and "group_npi" not in result:
+            result["group_npi"] = ""
+        return result
 
     def _convert_practice_location_dto(self, practice_location_dto) -> dict[str, Any]:
         """Convert PracticeLocationDTO to XML format."""
-        if not practice_location_dto:
-            log.warning("DTOToXMLConverter: No practice location DTO provided")
-            return {}
-
-        log.debug(
-            f"DTOToXMLConverter: Converting practice location DTO: {practice_location_dto.__dict__}"
-        )
-
-        return {
-            "id": practice_location_dto.id,
-            "name": practice_location_dto.name,
-            "npi": practice_location_dto.npi,
-            "dea": practice_location_dto.dea,
-            "ncpdp": practice_location_dto.ncpdp,
-            "phone": practice_location_dto.phone,
-            "active": practice_location_dto.active,
-            "address": self._convert_address_dto(practice_location_dto.address),
-        }
-
-    def _convert_address_dto(self, address_dto) -> dict[str, Any]:
-        """Convert AddressDTO to XML format."""
-        if not address_dto:
-            return {}
-
-        return {
-            "street": address_dto.street,
-            "street2": address_dto.street2,
-            "city": address_dto.city,
-            "state": address_dto.state,
-            "zip_code": address_dto.zip_code,
-            "zip_plus_four": address_dto.zip_plus_four,
-        }
+        return self._convert_dto(practice_location_dto, "practice_location")
 
     def _build_request_metadata(self, extracted_data: dict) -> dict[str, Any]:
         """Build request metadata for XML generation."""

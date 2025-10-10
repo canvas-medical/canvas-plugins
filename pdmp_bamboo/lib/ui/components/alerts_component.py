@@ -6,11 +6,11 @@ Displays clinical alerts, red flags, and care notes from PDMP responses.
 
 from typing import Any
 
-from canvas_sdk.templates import render_to_string
 from logger import log
+from pdmp_bamboo.lib.ui.components.base_component import BaseComponent
 
 
-class AlertsComponent:
+class AlertsComponent(BaseComponent):
     """Component for displaying clinical alerts and flags."""
 
     def create_component(self, parsed_data: dict[str, Any]) -> str | None:
@@ -39,12 +39,7 @@ class AlertsComponent:
             f"AlertsComponent: Creating alerts component with {len(red_flags)} red flags, {len(alerts)} alerts, {len(care_notes)} care notes"
         )
 
-        try:
-            return render_to_string("templates/components/alerts.html", {
-                "red_flags": red_flags,
-                "alerts": alerts,
-                "care_notes": care_notes
-            })
-        except Exception as e:
-            log.error(f"AlertsComponent: Error rendering template: {e}")
-            return None
+        return self._render_template(
+            "templates/components/alerts.html",
+            {"red_flags": red_flags, "alerts": alerts, "care_notes": care_notes},
+        )

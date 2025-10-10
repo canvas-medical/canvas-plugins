@@ -146,6 +146,10 @@ body {
     transform: translateX(-1px);
 }
 
+.meter .pin[data-percentage] {
+    left: calc(var(--percentage) * 1%);
+}
+
 .legend {
     display: flex;
     gap: 10px;

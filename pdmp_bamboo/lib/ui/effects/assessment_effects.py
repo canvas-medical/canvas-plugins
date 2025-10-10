@@ -112,7 +112,7 @@ class AssessmentEffectsService:
                     question.add_response(text=current_date_timezone)
 
             # Generate and return effects
-            return [assessment.originate(), assessment.commit()]
+            return [assessment.originate(), assessment.edit(), assessment.commit()]
 
         except Exception as e:
             log.error(f"AssessmentEffectsService: Error creating structured assessment: {str(e)}")

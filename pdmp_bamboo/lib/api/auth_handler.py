@@ -1,7 +1,7 @@
 """
 PDMP Authentication Handler.
 
-Handles authentication for PDMP API requests including header generation and credential management.
+Builds BambooHealth PMP Gateway WSSE-style authentication headers from username/password.
 """
 
 import hashlib
@@ -9,7 +9,7 @@ import time
 import uuid
 
 from logger import log
-from pdmp_bamboo.lib.utils.secrets_helper import get_secrets_for_environment
+ 
 
 
 class AuthHandler:
@@ -19,14 +19,14 @@ class AuthHandler:
         self.user_agent = "Canvas-PDMP-Plugin/1.0"
 
     def create_auth_headers(
-        self, secrets: dict[str, str], use_test_env: bool = False
+        self, username: str, password: str
     ) -> dict[str, str]:
         """
         Create BambooHealth PMP Gateway authentication headers.
 
         Args:
-            secrets: Plugin secrets containing authentication info
-            use_test_env: If True, uses test environment credentials
+            username: PDMP gateway username for the current staff
+            password: PDMP gateway password for the current staff
 
         Returns:
             Dictionary of headers for the request
@@ -34,18 +34,7 @@ class AuthHandler:
         Raises:
             ValueError: If required authentication credentials are missing
         """
-        env_label = "test" if use_test_env else "production"
-        log.info(
-            f"AuthHandler: Creating PMP Gateway authentication headers for {env_label} environment"
-        )
-
-        # Get environment-specific secrets
-        try:
-            env_secrets = get_secrets_for_environment(secrets, use_test_env)
-            username = env_secrets["username"]
-            password = env_secrets["password"]
-        except ValueError as e:
-            raise ValueError(f"Authentication credentials not found: {e}") from e
+        log.info("AuthHandler: Creating PMP Gateway authentication headers")
 
         log.info(f"AuthHandler: Username present: {'Yes' if username else 'No'}")
         log.info(f"AuthHandler: Password present: {'Yes' if password else 'No'}")
@@ -77,21 +66,6 @@ class AuthHandler:
         log.info("AuthHandler: Authentication headers created successfully")
         return headers
 
-    def validate_credentials(self, secrets: dict[str, str], use_test_env: bool = False) -> bool:
-        """
-        Validate that required credentials are present.
-
-        Args:
-            secrets: Plugin secrets containing authentication info
-            use_test_env: If True, uses test environment credentials
-
-        Returns:
-            True if credentials are valid, False otherwise
-        """
-        try:
-            env_secrets = get_secrets_for_environment(secrets, use_test_env)
-            username = env_secrets.get("username")
-            password = env_secrets.get("password")
-            return bool(username and password)
-        except ValueError:
-            return False
+    def validate_credentials(self, username: str | None, password: str | None) -> bool:
+        """Simple validation helper for presence of credentials."""
+        return bool(username and password)

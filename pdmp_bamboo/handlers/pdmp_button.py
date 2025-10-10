@@ -88,10 +88,6 @@ class PDMPRequestButton(ActionButton):
             log.warning("PDMP-Protocol: User does not have Bamboo Health account configured")
             return [self.pdmp_service.ui_service.create_no_account_ui()]
 
-        # Determine environment
-        use_test_env = self.secrets.get("USE_TEST_ENV", "false").lower() == "true"
-        log.info(f"PDMP-Protocol: Using test environment: {use_test_env}")
-
         try:
             # Process the request
             log.info("PDMP-Protocol: Calling PDMPIntegrationService.process_patient_pdmp_request")
@@ -100,7 +96,6 @@ class PDMPRequestButton(ActionButton):
                 context=self.context,
                 secrets=self.secrets,
                 event=self.event,
-                use_test_env=use_test_env,
             )
 
             log.info(

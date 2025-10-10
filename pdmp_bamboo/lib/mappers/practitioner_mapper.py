@@ -3,6 +3,7 @@ from canvas_sdk.v1.data.staff import StaffLicense
 from logger import log
 from pdmp_bamboo.lib.models.dtos import PractitionerDTO
 from pdmp_bamboo.lib.utils.common import safe_get_attr
+from pdmp_bamboo.lib.utils.priority_selector import PrioritySelector
 
 
 class PractitionerMapper:
@@ -86,46 +87,27 @@ class PractitionerMapper:
             if not hasattr(staff, "licenses"):
                 return ""
 
-            dea_licenses = list(
-                staff.licenses.filter(license_type=StaffLicense.LicenseType.DEA)
-            )
+            dea_licenses = list(staff.licenses.filter(license_type=StaffLicense.LicenseType.DEA))
             if not dea_licenses:
                 return ""
 
-            # Priority 1: State match + Primary
-            if patient_state:
-                for license in dea_licenses:
-                    license_state = getattr(license, "state", None)
-                    is_primary = getattr(license, "is_primary", False)
-                    if license_state and license_state.upper() == patient_state.upper() and is_primary:
-                        dea_number = getattr(license, "license_or_certification_identifier", "")
-                        log.info(f"✓ DEA Priority 1 (state+primary): {dea_number} ({license_state})")
-                        return dea_number
+            # Use PrioritySelector for priority-based selection
+            selected_license = PrioritySelector.select_by_priority(
+                items=dea_licenses,
+                state_match=lambda lic: (
+                    getattr(lic, "state", "").upper() == patient_state.upper()
+                    if patient_state
+                    else False
+                ),
+                is_primary=lambda lic: getattr(lic, "is_primary", False),
+                patient_state=patient_state,
+                item_description="DEA license",
+            )
 
-            # Priority 2: State match only
-            if patient_state:
-                for license in dea_licenses:
-                    license_state = getattr(license, "state", None)
-                    if license_state and license_state.upper() == patient_state.upper():
-                        dea_number = getattr(license, "license_or_certification_identifier", "")
-                        log.info(f"✓ DEA Priority 2 (state match): {dea_number} ({license_state})")
-                        return dea_number
-
-            # Priority 3: Primary DEA (any state)
-            for license in dea_licenses:
-                is_primary = getattr(license, "is_primary", False)
-                if is_primary:
-                    dea_number = getattr(license, "license_or_certification_identifier", "")
-                    license_state = getattr(license, "state", None)
-                    log.info(f"✓ DEA Priority 3 (primary): {dea_number} ({license_state})")
-                    return dea_number
-
-            # Priority 4: Any DEA
-            if dea_licenses:
-                first_license = dea_licenses[0]
-                dea_number = getattr(first_license, "license_or_certification_identifier", "")
-                license_state = getattr(first_license, "state", None)
-                log.info(f"✓ DEA Priority 4 (first available): {dea_number} ({license_state})")
+            if selected_license:
+                dea_number = getattr(selected_license, "license_or_certification_identifier", "")
+                license_state = getattr(selected_license, "state", None)
+                log.info(f"Selected DEA: {dea_number} ({license_state})")
                 return dea_number
 
             return ""
@@ -164,48 +146,26 @@ class PractitionerMapper:
             if not professional_licenses:
                 return "", "", ""
 
-            # Priority 1: State match + Primary
-            if patient_state:
-                for license in professional_licenses:
-                    license_state = getattr(license, "state", None)
-                    is_primary = getattr(license, "is_primary", False)
-                    if license_state and license_state.upper() == patient_state.upper() and is_primary:
-                        license_number = getattr(license, "license_or_certification_identifier", "")
-                        license_type_value = getattr(license, "license_type", "Medical")
-                        log.info(f"✓ License Priority 1: {license_number} ({license_type_value}, {license_state})")
-                        return license_number, str(license_type_value), license_state.upper()
+            # Use PrioritySelector for priority-based selection
+            selected_license = PrioritySelector.select_by_priority(
+                items=professional_licenses,
+                state_match=lambda lic: (
+                    getattr(lic, "state", "").upper() == patient_state.upper()
+                    if patient_state
+                    else False
+                ),
+                is_primary=lambda lic: getattr(lic, "is_primary", False),
+                patient_state=patient_state,
+                item_description="professional license",
+            )
 
-            # Priority 2: State match only
-            if patient_state:
-                for license in professional_licenses:
-                    license_state = getattr(license, "state", None)
-                    if license_state and license_state.upper() == patient_state.upper():
-                        license_number = getattr(license, "license_or_certification_identifier", "")
-                        license_type_value = getattr(license, "license_type", "Medical")
-                        log.info(f"✓ License Priority 2: {license_number} ({license_type_value}, {license_state})")
-                        return license_number, str(license_type_value), license_state.upper()
-
-            # Priority 3: Primary license (any state)
-            for license in professional_licenses:
-                is_primary = getattr(license, "is_primary", False)
-                if is_primary:
-                    license_number = getattr(license, "license_or_certification_identifier", "")
-                    license_state = getattr(license, "state", "")
-                    license_type_value = getattr(license, "license_type", "Medical")
-                    log.info(f"✓ License Priority 3: {license_number} ({license_type_value}, {license_state})")
-                    return (
-                        license_number,
-                        str(license_type_value),
-                        license_state.upper() if license_state else "",
-                    )
-
-            # Priority 4: Any license
-            if professional_licenses:
-                license = professional_licenses[0]
-                license_number = getattr(license, "license_or_certification_identifier", "")
-                license_type_value = getattr(license, "license_type", "Medical")
-                license_state = getattr(license, "state", "")
-                log.info(f"✓ License Priority 4: {license_number} ({license_type_value}, {license_state})")
+            if selected_license:
+                license_number = getattr(selected_license, "license_or_certification_identifier", "")
+                license_type_value = getattr(selected_license, "license_type", "Medical")
+                license_state = getattr(selected_license, "state", "")
+                log.info(
+                    f"Selected license: {license_number} ({license_type_value}, {license_state})"
+                )
                 return (
                     license_number,
                     str(license_type_value),
@@ -272,7 +232,7 @@ class PractitionerMapper:
         canvas_role_code = safe_get_attr(staff, "role", "")
         bamboo_role = cls.map_canvas_role_to_bamboo(canvas_role_code)
 
-        # Create DTO
+        # Create DTO with dataclass initialization
         dto = PractitionerDTO(
             id=staff_id,
             first_name=first_name,
@@ -291,7 +251,6 @@ class PractitionerMapper:
             organization_name=organization_name,
             practice_location_id=practice_location_id,
             practice_location_name=practice_location_name,
-            errors=[],
         )
 
         log.info(f"Mapped practitioner: NPI={dto.npi_number}, DEA={dto.dea_number}, License={dto.license_state}")
