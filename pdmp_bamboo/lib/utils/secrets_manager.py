@@ -1,5 +1,5 @@
 """
-SecretsManager
+SecretsManager.
 
 Centralized helper to read and validate PDMP plugin secrets using the new model:
 - PDMP_API_URL: base HTTPS URL (e.g., https://secure.prep.pmpgateway.net)
@@ -12,7 +12,7 @@ Notes:
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Tuple
+# Note: Using built-in types instead of typing imports for Canvas plugin compatibility
 
 from logger import log
 
@@ -22,12 +22,12 @@ class SecretsManager:
     Resolve PDMP secrets and per-staff credentials.
     """
 
-    def __init__(self, secrets: Dict[str, Any] | str | None):
+    def __init__(self, secrets: dict | str | None):
         self._raw = secrets or {}
-        self._parsed: Dict[str, Any] = self._ensure_dict(self._raw)
-        self._staff_creds_cache: List[Dict[str, str]] | None = None
+        self._parsed: dict = self._ensure_dict(self._raw)
+        self._staff_creds_cache: list | None = None
 
-    def _ensure_dict(self, value: Dict[str, Any] | str) -> Dict[str, Any]:
+    def _ensure_dict(self, value: dict | str) -> dict:
         if isinstance(value, dict):
             return value
         try:
@@ -40,13 +40,13 @@ class SecretsManager:
             log.error(f"SecretsManager: Failed to parse secrets JSON: {e}")
             return {}
 
-    def _load_staff_credentials(self) -> List[Dict[str, str]]:
+    def _load_staff_credentials(self) -> list:
         if self._staff_creds_cache is not None:
             return self._staff_creds_cache
 
         raw = self._parsed.get("PDMP_STAFF_CREDENTIALS")
         # Accept either a list already, or a JSON string containing a list
-        records: List[Dict[str, str]] = []
+        records: list = []
         if isinstance(raw, list):
             records = raw  # assume list of dicts
         elif isinstance(raw, str):
@@ -64,7 +64,7 @@ class SecretsManager:
             log.error(f"SecretsManager: Unsupported PDMP_STAFF_CREDENTIALS type: {type(raw)}")
 
         # Normalize record keys to strings and validate shape
-        normalized: List[Dict[str, str]] = []
+        normalized: list = []
         for idx, rec in enumerate(records):
             if not isinstance(rec, dict):
                 log.error(f"SecretsManager: credential at index {idx} is not an object")
@@ -100,7 +100,7 @@ class SecretsManager:
         # Normalize: no trailing slash
         return base_url[:-1] if base_url.endswith("/") else base_url
 
-    def get_staff_credentials(self, staff_id: str) -> Tuple[str, str]:
+    def get_staff_credentials(self, staff_id: str) -> tuple:
         """
         Resolve (username, password) for a given staff_id.
         Raises ValueError if not found.

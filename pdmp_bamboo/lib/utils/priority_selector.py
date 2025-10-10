@@ -4,11 +4,7 @@ Priority Selector Utility.
 Provides priority-based selection logic for extracting credentials and licenses.
 """
 
-from typing import Callable, TypeVar
-
 from logger import log
-
-T = TypeVar("T")
 
 
 class PrioritySelector:
@@ -16,14 +12,14 @@ class PrioritySelector:
 
     @staticmethod
     def select_by_priority(
-        items: list[T],
-        state_match: Callable[[T], bool],
-        is_primary: Callable[[T], bool],
+        items: list,
+        state_match,
+        is_primary,
         patient_state: str | None = None,
         item_description: str = "item",
-    ) -> T | None:
+    ):
         """
-        Select item using priority logic:
+        Select item using priority logic.
         1. State match + Primary
         2. State match only
         3. Primary (any state)
