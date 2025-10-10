@@ -9,39 +9,28 @@ from http import HTTPStatus
 from typing import Any
 
 from canvas_sdk.effects.simple_api import HTMLResponse
-from canvas_sdk.handlers.simple_api import SimpleAPIRoute
-from canvas_sdk.handlers.simple_api.security import Credentials
 from logger import log
 from pdmp_bamboo.lib.services.report_service import ReportService
+from pdmp_bamboo.routes.base_report_api import BaseReportAPI
 
 
-class ReportAPI(SimpleAPIRoute):
+class ReportAPI(BaseReportAPI):
     """Clean API endpoint for PDMP report requests."""
 
     PATH = "/report"
 
-    def authenticate(self, credentials: Credentials) -> bool:
-        """
-        Authenticate the request.
-
-        Args:
-            credentials: Request credentials
-
-        Returns:
-            True to allow all authenticated requests
-        """
-        return True
-
     def get(self) -> list:
         """Handle report requests with clean separation of concerns."""
+        request_id = self._generate_request_id()
+
         # Extract and validate parameters
         params = self._extract_parameters()
         validation_error = self._validate_parameters(params)
         if validation_error:
             return [validation_error]
 
-        # Log request details
-        self._log_request_details(params)
+        # Log request details with tracking ID
+        self._log_request_details(params, request_id)
 
         try:
             report_service = ReportService()
@@ -52,47 +41,21 @@ class ReportAPI(SimpleAPIRoute):
                 patient_id=params["patient_id"],
                 practitioner_id=params["practitioner_id"],
                 secrets=self.secrets,
-                use_test_env=params["use_test_env"],
             )
 
-            return self._create_response(result, params)
+            response = self._create_response(result, params)
+
+            # Log response details
+            if response and len(response) > 0:
+                status_code = getattr(response[0], "status_code", 200)
+                content = getattr(response[0], "content", "")
+                self._log_response_details(request_id, status_code, len(content) if content else 0)
+
+            return response
 
         except Exception as e:
-            log.error(f"ReportEndpoint: Unexpected error: {str(e)}")
+            log.error(f"[{request_id}] ReportEndpoint: Unexpected error: {str(e)}", exc_info=True)
             return [self._create_error_response("Unexpected Error", f"Unexpected error: {str(e)}")]
-
-    def _extract_parameters(self) -> dict[str, Any]:
-        """Extract and normalize request parameters."""
-        return {
-            "report_id": self.request.query_params.get("report_id"),
-            "env": self.request.query_params.get("env", "test"),
-            "patient_id": self.request.query_params.get("patient_id"),
-            "practitioner_id": self.request.query_params.get("practitioner_id"),
-            "organization_id": self.request.query_params.get("organization_id"),
-            "use_test_env": self.request.query_params.get("env", "test") == "test",
-        }
-
-    def _validate_parameters(self, params: dict[str, Any]) -> HTMLResponse | None:
-        """Validate required parameters."""
-        if not params["report_id"]:
-            return self._create_error_response(
-                "Missing Report ID",
-                "Report ID is required to fetch the PDMP report.",
-                HTTPStatus.BAD_REQUEST,
-            )
-
-        if not params["patient_id"] or not params["practitioner_id"]:
-            return self._create_error_response(
-                "Missing Context",
-                "Patient ID and Practitioner ID are required.",
-                HTTPStatus.BAD_REQUEST,
-            )
-
-        return None
-
-    def _log_request_details(self, params: dict[str, Any]) -> None:
-        """Log request details for debugging."""
-        log.info(f"Report request: report_id={params['report_id']}, env={params['env']}, patient={params['patient_id']}")
 
     def _create_response(self, result: dict[str, Any], params: dict[str, Any]) -> list:
         """Create appropriate HTTP response based on service result."""
@@ -106,13 +69,3 @@ class ReportAPI(SimpleAPIRoute):
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                 )
             ]
-
-    def _create_error_response(
-        self, title: str, message: str, status_code: HTTPStatus = HTTPStatus.INTERNAL_SERVER_ERROR
-    ) -> HTMLResponse:
-        """Create standardized error response using template."""
-        from canvas_sdk.templates import render_to_string
-        html = render_to_string("templates/error/handler_error.html", {
-            "error_message": f"{title} - {message}"
-        })
-        return HTMLResponse(html, status_code=status_code)

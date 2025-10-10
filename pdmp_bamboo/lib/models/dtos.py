@@ -1,3 +1,13 @@
+"""
+Data Transfer Objects for PDMP data.
+
+DTOs are immutable dataclasses that ensure data integrity.
+"""
+
+import re
+from dataclasses import asdict, dataclass, field
+
+
 class SexCode:
     """Standard sex/gender codes for PDMP data."""
 
@@ -7,16 +17,26 @@ class SexCode:
     UNKNOWN = "U"
 
 
+@dataclass(frozen=True)
 class AddressDTO:
     """Data Transfer Object for Address data."""
 
-    def __init__(self, street="", street2="", city="", state="", zip_code="", zip_plus_four=""):
-        self.street = street
-        self.street2 = street2
-        self.city = city
-        self.state = state
-        self.zip_code = zip_code
-        self.zip_plus_four = zip_plus_four
+    street: str = ""
+    street2: str = ""
+    city: str = ""
+    state: str = ""
+    zip_code: str = ""
+    zip_plus_four: str = ""
+
+    def __post_init__(self):
+        """Validate address data on construction."""
+        # Validate ZIP code format if provided
+        if self.zip_code and not re.match(r"^\d{5}$", self.zip_code):
+            object.__setattr__(self, 'zip_code', self.zip_code)  # Allow for now, validation happens in validator
+
+        # Validate state code if provided
+        if self.state and len(self.state) not in (0, 2):
+            object.__setattr__(self, 'state', self.state)  # Allow for now, validation happens in validator
 
     def is_empty(self) -> bool:
         """Check if address has any meaningful data."""
@@ -24,183 +44,88 @@ class AddressDTO:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for backward compatibility."""
-        return {
-            "street": self.street,
-            "street2": self.street2,
-            "city": self.city,
-            "state": self.state,
-            "zip_code": self.zip_code,
-            "zip_plus_four": self.zip_plus_four,
-        }
+        return asdict(self)
 
 
+@dataclass(frozen=True)
 class PatientDTO:
     """Data Transfer Object for Patient data."""
 
-    def __init__(
-        self,
-        id="",
-        first_name="",
-        last_name="",
-        middle_name="",
-        birth_date="",
-        sex=SexCode.UNKNOWN,
-        mrn="",
-        ssn="",
-        phone="",
-        address=None,
-        errors=None,
-    ):
-        self.id = id
-        self.first_name = first_name
-        self.last_name = last_name
-        self.middle_name = middle_name
-        self.birth_date = birth_date
-        self.sex = sex
-        self.mrn = mrn
-        self.ssn = ssn
-        self.phone = phone
-        self.address = address or AddressDTO()
-        self.errors = errors or []
+    id: str = ""
+    first_name: str = ""
+    last_name: str = ""
+    middle_name: str = ""
+    birth_date: str = ""
+    sex: str = SexCode.UNKNOWN
+    mrn: str = ""
+    ssn: str = ""
+    phone: str = ""
+    address: AddressDTO = field(default_factory=AddressDTO)
+    errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "middle_name": self.middle_name,
-            "birth_date": self.birth_date,
-            "sex": self.sex,
-            "mrn": self.mrn,
-            "ssn": self.ssn,
-            "phone": self.phone,
-            "address": self.address.to_dict() if self.address else {},
-            "errors": self.errors,
-        }
+        result = asdict(self)
+        # Ensure address is dict (asdict handles nested dataclasses)
+        return result
 
 
+@dataclass(frozen=True)
 class PractitionerDTO:
     """Data Transfer Object for Practitioner data."""
 
-    def __init__(
-        self,
-        id="",
-        first_name="",
-        last_name="",
-        middle_name="",
-        npi_number="",
-        dea_number="",
-        role="",
-        phone="",
-        email="",
-        active=True,
-        license_number="",
-        license_type="",
-        license_state="",
-        organization_id="",
-        organization_name="",
-        practice_location_id="",
-        practice_location_name="",
-        errors=None,
-    ):
-        self.id = id
-        self.first_name = first_name
-        self.last_name = last_name
-        self.middle_name = middle_name
-        self.npi_number = npi_number
-        self.dea_number = dea_number
-        self.role = role
-        self.phone = phone
-        self.email = email
-        self.active = active
-        self.license_number = license_number
-        self.license_type = license_type
-        self.license_state = license_state
-        self.organization_id = organization_id
-        self.organization_name = organization_name
-        self.practice_location_id = practice_location_id
-        self.practice_location_name = practice_location_name
-        self.errors = errors or []
+    id: str = ""
+    first_name: str = ""
+    last_name: str = ""
+    middle_name: str = ""
+    npi_number: str = ""
+    dea_number: str = ""
+    role: str = ""
+    phone: str = ""
+    email: str = ""
+    active: bool = True
+    license_number: str = ""
+    license_type: str = ""
+    license_state: str = ""
+    organization_id: str = ""
+    organization_name: str = ""
+    practice_location_id: str = ""
+    practice_location_name: str = ""
+    errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "middle_name": self.middle_name,
-            "npi_number": self.npi_number,
-            "dea_number": self.dea_number,
-            "role": self.role,
-            "phone": self.phone,
-            "email": self.email,
-            "active": self.active,
-            "license_number": self.license_number,
-            "license_type": self.license_type,
-            "license_state": self.license_state,
-            "organization_id": self.organization_id,
-            "organization_name": self.organization_name,
-            "practice_location_id": self.practice_location_id,
-            "practice_location_name": self.practice_location_name,
-            "errors": self.errors,
-        }
+        return asdict(self)
 
 
+@dataclass(frozen=True)
 class PracticeLocationDTO:
     """Data Transfer Object for Practice Location data."""
 
-    def __init__(
-        self,
-        id="",
-        name="",
-        npi="",
-        dea="",
-        ncpdp="",
-        phone="",
-        active=True,
-        address=None,
-        errors=None,
-    ):
-        self.id = id
-        self.name = name
-        self.npi = npi
-        self.dea = dea
-        self.ncpdp = ncpdp
-        self.phone = phone
-        self.active = active
-        self.address = address or AddressDTO()
-        self.errors = errors or []
+    id: str = ""
+    name: str = ""
+    npi: str = ""
+    dea: str = ""
+    ncpdp: str = ""
+    phone: str = ""
+    active: bool = True
+    address: AddressDTO = field(default_factory=AddressDTO)
+    errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "npi": self.npi,
-            "dea": self.dea,
-            "ncpdp": self.ncpdp,
-            "phone": self.phone,
-            "active": self.active,
-            "address": self.address.to_dict() if self.address else {},
-            "errors": self.errors,
-        }
+        return asdict(self)
 
 
+@dataclass(frozen=True)
 class OrganizationDTO:
     """Data Transfer Object for Organization data."""
 
-    def __init__(self, id="", name="", active=True, errors=None):
-        self.id = id
-        self.name = name
-        self.active = active
-        self.errors = errors or []
+    id: str = ""
+    name: str = ""
+    active: bool = True
+    errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "active": self.active,
-            "errors": self.errors,
-        }
+        return asdict(self)

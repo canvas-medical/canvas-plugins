@@ -21,37 +21,32 @@ class PDMPClient:
 
     def send_patient_request(
         self,
-        api_url: str,
+        api_base_url: str,
         xml_content: str,
-        secrets: dict[str, str],
-        use_test_env: bool = False,
-        timeout: int | None = None,
+        username: str,
+        password: str,
     ) -> dict[str, Any]:
         """
         Send PDMP patient data request to the API.
 
         Args:
-            api_url: The API endpoint URL
+            api_base_url: Base PDMP API URL (https)
             xml_content: The XML content to send
-            secrets: Plugin secrets containing configuration
-            use_test_env: If True, uses test environment without certificates
-            timeout: Request timeout in seconds (default: 60)
+            username: PDMP username for staff
+            password: PDMP password for staff
 
         Returns:
             Dict containing status, response data, and request details
         """
-        env_label = "Test Environment" if use_test_env else "Production Environment"
-        timeout = timeout or self.default_timeout
+        env_label = "Production Environment"
 
         try:
             # Create authentication headers
-            headers = self.auth_handler.create_auth_headers(secrets, use_test_env)
-
-            # Get certificate configuration
-            cert_config = self._get_cert_config(use_test_env, secrets)
+            headers = self.auth_handler.create_auth_headers(username, password)
 
             # Make the request using Canvas SDK Http
             http = Http()
+            api_url = f"{api_base_url}/v5_1/patient"
             log.info(f"PDMPClient: Sending request to {api_url}")
             
             # Canvas SDK Http.post expects data as string, headers dict
@@ -67,10 +62,8 @@ class PDMPClient:
             return self._process_response(response, xml_content, env_label)
 
         except TimeoutError:
-            log.error(f"PDMPClient: Request timed out after {timeout} seconds")
-            return create_error_result(
-                "timeout", f"Request timed out after {timeout} seconds"
-            )
+            log.error("PDMPClient: Request timed out")
+            return create_error_result("timeout", "Request timed out")
 
         except ConnectionError as e:
             log.error(f"PDMPClient: Connection error: {e}")
@@ -84,9 +77,9 @@ class PDMPClient:
         self,
         report_id: str,
         report_request_xml: str,
-        secrets: dict[str, str],
-        use_test_env: bool = False,
-        timeout: int | None = None,
+        api_base_url: str,
+        username: str,
+        password: str,
     ) -> dict[str, Any]:
         """
         Fetch a PDMP report using the report ID and ReportRequest XML.
@@ -94,15 +87,14 @@ class PDMPClient:
         Args:
             report_id: The ID of the report to fetch
             report_request_xml: The ReportRequest XML content
-            secrets: Plugin secrets containing configuration
-            use_test_env: If True, uses test environment without certificates
-            timeout: Request timeout in seconds (default: 60)
+            api_base_url: Base PDMP API URL (https)
+            username: PDMP username for staff
+            password: PDMP password for staff
 
         Returns:
             Dict containing response data and status
         """
-        env_label = "Test Environment" if use_test_env else "Production Environment"
-        timeout = timeout or self.default_timeout
+        env_label = "Production Environment"
 
         log.info(f"PDMPClient: Fetching report {report_id}")
         log.info(f"PDMPClient: Using XML content ({len(report_request_xml)} characters)")
@@ -112,11 +104,10 @@ class PDMPClient:
 
         try:
             # Build report URL
-            base_url = self._get_base_url(secrets, use_test_env)
-            report_url = f"{base_url}/v5_1/report/{report_id}"
+            report_url = f"{api_base_url}/v5_1/report/{report_id}"
 
             # Create headers for report request
-            headers = self._create_report_headers(secrets, use_test_env)
+            headers = self._create_report_headers(username, password)
 
             # Log headers (mask sensitive data)
             log.info("PDMPClient: Request headers:")
@@ -126,15 +117,13 @@ class PDMPClient:
                 else:
                     log.info(f"  {key}: {value}")
 
-            # Get certificate configuration
-            cert_config = self._get_cert_config(use_test_env, secrets)
-            log.info(f"PDMPClient: Certificate config: {cert_config}")
+            # mTLS is handled externally (platform/proxy)
 
             # Make the request using Canvas SDK Http
             log.info("PDMPClient: Making POST request to PMP Gateway for report")
             log.info(f"  - URL: {report_url}")
             log.info(f"  - Body length: {len(report_request_xml)} characters")
-            log.info(f"  - Timeout: {timeout} seconds")
+            
 
             http = Http()
             response = http.post(
@@ -147,10 +136,8 @@ class PDMPClient:
             return self._process_report_response(response, report_request_xml, env_label)
 
         except TimeoutError:
-            log.error(f"PDMPClient: Request timed out after {timeout} seconds")
-            return create_error_result(
-                "timeout", f"Request timed out after {timeout} seconds"
-            )
+            log.error("PDMPClient: Request timed out")
+            return create_error_result("timeout", "Request timed out")
 
         except ConnectionError as e:
             log.error(f"PDMPClient: Connection error: {e}")
@@ -266,53 +253,14 @@ class PDMPClient:
                 "environment": env_label,
             }
 
-    def _get_cert_config(self, use_test_env: bool, secrets: dict[str, str]) -> tuple[str, str] | None:
-        """
-        Get certificate configuration for PMP Gateway requests based on environment.
-        
-        Certificates are read from plugin secrets instead of file system.
-        
-        Args:
-            use_test_env: Whether using test environment
-            secrets: Plugin secrets containing cert paths or content
-            
-        Returns:
-            Tuple of (cert_path, key_path) or None for test environment
-        """
-        environment = "test" if use_test_env else "production"
-        log.info(f"PDMPClient: Environment configuration: {environment}")
+    # Removed certificate handling; handled by platform/proxy layer
 
-        if not use_test_env:
-            log.info("PDMPClient: Production environment - client certificates required")
+    # Base URL is provided by SecretsManager; no env branching here
 
-            # Get certificate paths from secrets (not file system)
-            cert_file = secrets.get("PDMP_CLIENT_CERT_PATH")
-            key_file = secrets.get("PDMP_CLIENT_KEY_PATH")
-
-            if not cert_file or not key_file:
-                log.warning("PDMPClient: Certificate paths not configured in secrets")
-                log.warning("PDMPClient: Production requests may fail without certificates")
-                return None
-
-            log.info(f"PDMPClient: Certificate configured: {bool(cert_file)}")
-            log.info(f"PDMPClient: Key configured: {bool(key_file)}")
-
-            return (cert_file, key_file)
-        else:
-            log.info("PDMPClient: Test environment - no client certificates required")
-            return None
-
-    def _get_base_url(self, secrets: dict[str, str], use_test_env: bool) -> str:
-        """Get the base URL from secrets for the specified environment."""
-        from pdmp_bamboo.lib.utils.secrets_helper import get_secrets_for_environment
-
-        env_secrets = get_secrets_for_environment(secrets, use_test_env)
-        return env_secrets["url"]
-
-    def _create_report_headers(self, secrets: dict[str, str], use_test_env: bool) -> dict[str, str]:
+    def _create_report_headers(self, username: str, password: str) -> dict[str, str]:
         """Create request headers specifically for report requests."""
         # Use the same auth headers as regular requests
-        headers = self.auth_handler.create_auth_headers(secrets, use_test_env)
+        headers = self.auth_handler.create_auth_headers(username, password)
 
         # Add report-specific headers
         headers["Content-Type"] = "application/xml"

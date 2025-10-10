@@ -15,7 +15,7 @@ from pdmp_bamboo.lib.models.request_context import RequestContext
 from pdmp_bamboo.lib.services.data_extraction import DataExtractionService
 from pdmp_bamboo.lib.services.ui_service import UIService
 from pdmp_bamboo.lib.services.xml_generation import XMLGenerationService
-from pdmp_bamboo.lib.utils.secrets_helper import get_secret_value
+from pdmp_bamboo.lib.utils.secrets_manager import SecretsManager
 
 
 class PDMPIntegrationService:
@@ -52,7 +52,7 @@ class PDMPIntegrationService:
         log.info("PDMPIntegrationService: Initialized")
 
     def process_patient_pdmp_request(
-        self, target: str, context: dict, secrets: dict, event, use_test_env: bool = False
+        self, target: str, context: dict, secrets: dict, event
     ) -> Effect | list[Effect]:
         """
         Process a complete PDMP request using the new modular architecture.
@@ -81,7 +81,7 @@ class PDMPIntegrationService:
         request_context = RequestContext(
             patient_id=patient_id,
             practitioner_id=practitioner_id,
-            use_test_env=use_test_env,
+            staff_id=str(practitioner_id) if practitioner_id else None,
             note_id=note_id,
         )
 
@@ -132,18 +132,19 @@ class PDMPIntegrationService:
 
                 return self.ui_service.create_data_validation_ui([str(e)], available_data)
 
-            # Step 3: Get API configuration (inline config logic)
+            # Step 3: Get API configuration and staff credentials
             log.info("PDMPIntegrationService: Step 3 - Getting API configuration")
             try:
-                # Get API URL from secrets
-                url_key = "TEST_PDMP_API_URL" if request_context.use_test_env else "PDMP_API_URL"
-                base_url = get_secret_value(secrets, url_key)
-                if not base_url:
-                    raise ValueError(f"Secret '{url_key}' is required for PDMP API access")
-                
-                # Build patient endpoint URL
-                api_url = f"{base_url.rstrip('/')}/v5_1/patient"
-                log.info(f"PDMPIntegrationService: API URL: {api_url}")
+                sm = SecretsManager(secrets)
+                api_base_url = sm.get_api_base_url()
+
+                # Resolve staff credentials
+                current_staff_id = request_context.staff_id
+                if not current_staff_id:
+                    raise ValueError("Missing current staff user id in context")
+
+                username, password = sm.get_staff_credentials(str(current_staff_id))
+                log.info("PDMPIntegrationService: Resolved staff credentials for current user")
             except ValueError as e:
                 log.error(f"PDMPIntegrationService: API configuration failed: {str(e)}")
 
@@ -157,11 +158,10 @@ class PDMPIntegrationService:
             # Step 4: Send API request
             log.info("PDMPIntegrationService: Step 4 - Sending API request")
             api_result = self.pdmp_client.send_patient_request(
-                api_url=api_url,
+                api_base_url=api_base_url,
                 xml_content=pdmp_xml,
-                secrets=secrets,
-                use_test_env=request_context.use_test_env,
-                timeout=60,
+                username=username,
+                password=password,
             )
 
             # Step 5: Create result object with initial patient data

@@ -97,7 +97,6 @@ class UIService:
         """
         return self.create_response_ui(
             result=result,
-            use_test_env=context.use_test_env,
             patient_id=context.patient_id,
             practitioner_id=context.practitioner_id,
             organization_id=context.organization_id,
@@ -106,7 +105,6 @@ class UIService:
     def create_response_ui(
         self,
         result: dict[str, Any],
-        use_test_env: bool = False,
         patient_id: str | None = None,
         practitioner_id: str | None = None,
         organization_id: str | None = None,
@@ -143,7 +141,7 @@ class UIService:
         # Create modal effect with enhanced content
         try:
             modal_effect = self._create_enhanced_modal_effect(
-                result, use_test_env, patient_id, practitioner_id, organization_id
+                result, False, patient_id, practitioner_id, organization_id
             )
             effects.append(modal_effect)
         except Exception as e:
@@ -244,9 +242,7 @@ class UIService:
             "assessment_html": assessment_html
         })
 
-        modal_title = (
-            "✅ PDMP Test Request Successful" if use_test_env else "✅ PDMP Request Successful"
-        )
+        modal_title = "✅ PDMP Request Successful"
 
         return LaunchModalEffect(
             content=html_content,

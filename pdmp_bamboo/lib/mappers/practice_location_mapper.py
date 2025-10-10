@@ -39,9 +39,6 @@ class PracticeLocationMapper:
             name=practice_location.full_name or "",
             npi=practice_location.npi_number or "",
             dea="",  # DEA numbers belong to practitioners, not practice locations
-            # ncpdp=practice_location.ncpdp or "", not available
-            # phone=practice_location.phone or "", not available
             active=practice_location.active,
             address=address,
-            errors=[],
         )

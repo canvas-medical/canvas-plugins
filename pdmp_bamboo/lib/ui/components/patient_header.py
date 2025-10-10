@@ -7,11 +7,12 @@ Displays patient demographic information in a persistent header.
 from datetime import datetime
 from typing import Any
 
-from canvas_sdk.templates import render_to_string
 from logger import log
+from pdmp_bamboo.lib.ui.components.base_component import BaseComponent
+from pdmp_bamboo.lib.utils.text_utils import format_full_name
 
 
-class PatientHeaderComponent:
+class PatientHeaderComponent(BaseComponent):
     """Component for displaying patient demographic header."""
 
     def create_component(self, patient_data: dict[str, Any]) -> str | None:
@@ -33,8 +34,8 @@ class PatientHeaderComponent:
         date_of_birth = patient_data.get("birth_date", "")
         sex = patient_data.get("sex", "")
 
-        # Build full name
-        full_name = f"{first_name} {last_name}".strip()
+        # Build full name using utility function
+        full_name = format_full_name(first_name, last_name)
         if not full_name:
             return None
 
@@ -46,16 +47,15 @@ class PatientHeaderComponent:
         # Format sex
         formatted_sex = sex.title() if sex else "—"
 
-        # Render using template
-        try:
-            return render_to_string("templates/components/patient_header.html", {
+        # Render using safe template rendering from base class
+        return self._render_template(
+            "templates/components/patient_header.html",
+            {
                 "full_name": full_name,
                 "formatted_dob": formatted_dob if formatted_dob else "—",
                 "formatted_sex": formatted_sex,
-            })
-        except Exception as e:
-            log.error(f"PatientHeaderComponent: Error rendering template: {e}")
-            return None
+            },
+        )
 
     def _format_date(self, date_of_birth: str) -> str:
         """Format date of birth to readable format."""

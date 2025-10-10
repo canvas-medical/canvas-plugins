@@ -1,27 +1,24 @@
 <!-- PDMP Narx Messages Component -->
-<section class="section alerts"
+<section class="section alerts pdmp-section"
          data-component="narx-messages-component"
          data-component-type="clinical-messages"
-         aria-label="Clinical alerts"
-         style="display: grid; gap: 12px; margin: 0 0 20px 0;">
-    <div class="alert-group"
+         aria-label="Clinical alerts">
+    <div class="alert-group pdmp-alert-group"
          data-component="clinical-alerts-group"
          role="group"
-         aria-label="Clinical alerts"
-         style="display: grid; gap: 10px;">
-        <div class="alert-title" style="font-weight: 700;">Clinical Alerts</div>
-        <div class="alert-list" style="display: grid; gap: 10px;">
+         aria-label="Clinical alerts">
+        <div class="alert-title pdmp-title">Clinical Alerts</div>
+        <div class="alert-list pdmp-alert-list">
             {% for message in messages %}
-            <div class="alert"
+            <div class="alert pdmp-alert pdmp-alert-yellow"
                  data-component="clinical-message-item"
-                 data-variant="yellow"
-                 style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: color-mix(in oklab, #d97706 12%, white);">
-                <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                 data-variant="yellow">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
                     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
                     <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
                 <div>
-                    <span data-sev style="font-weight: 700;">{{ message.severity }} Alert:</span> {{ message.text }}
+                    <span data-sev class="pdmp-title">{{ message.severity }} Alert:</span> {{ message.text }}
                 </div>
             </div>
             {% endfor %}

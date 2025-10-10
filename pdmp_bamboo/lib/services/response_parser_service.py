@@ -10,6 +10,31 @@ from typing import Any
 from logger import log
 
 
+class RiskThresholds:
+    """
+    PDMP risk score thresholds for NarxCare risk assessment.
+    
+    These thresholds define risk levels based on NarxCare score values.
+    Scores range from 0-999+, with higher scores indicating higher risk.
+    """
+
+    # NarxCare score thresholds
+    NARX_LOW = 0
+    NARX_MODERATE = 200
+    NARX_HIGH = 500
+    NARX_CRITICAL = 700
+
+    # Risk level names
+    RISK_LOW = "Low Risk"
+    RISK_MEDIUM = "Medium Risk"
+    RISK_HIGH = "High Risk"
+
+    # Risk colors for UI display
+    COLOR_LOW = "#2e7d32"  # Green
+    COLOR_MEDIUM = "#f57c00"  # Orange
+    COLOR_HIGH = "#d32f2f"  # Red
+
+
 class ResponseParserService:
     """Service for parsing PDMP API responses."""
 
@@ -150,28 +175,56 @@ class ResponseParserService:
         return match.group(1).strip() if match else None
 
     def _get_risk_level(self, score_value: int) -> str:
-        """Determine risk level based on NarxCare score value."""
-        if score_value >= 700:
-            return "High Risk"
-        elif score_value >= 400:
-            return "Medium Risk"
+        """
+        Determine risk level based on NarxCare score value.
+        
+        Uses RiskThresholds constants for consistent threshold values.
+        
+        Args:
+            score_value: NarxCare score value (0-999+)
+            
+        Returns:
+            Risk level description string
+        """
+        if score_value >= RiskThresholds.NARX_CRITICAL:
+            return RiskThresholds.RISK_HIGH
+        elif score_value >= RiskThresholds.NARX_HIGH:
+            return RiskThresholds.RISK_MEDIUM
         else:
-            return "Low Risk"
+            return RiskThresholds.RISK_LOW
 
     def _get_risk_color(self, score_value: int) -> str:
-        """Get color code for risk level visualization."""
-        if score_value >= 700:
-            return "#d32f2f"  # Red for high risk
-        elif score_value >= 400:
-            return "#f57c00"  # Orange for medium risk
+        """
+        Get color code for risk level visualization.
+        
+        Uses RiskThresholds constants for consistent colors.
+        
+        Args:
+            score_value: NarxCare score value (0-999+)
+            
+        Returns:
+            Hex color code for UI display
+        """
+        if score_value >= RiskThresholds.NARX_CRITICAL:
+            return RiskThresholds.COLOR_HIGH
+        elif score_value >= RiskThresholds.NARX_HIGH:
+            return RiskThresholds.COLOR_MEDIUM
         else:
-            return "#2e7d32"  # Green for low risk
+            return RiskThresholds.COLOR_LOW
 
     def _get_severity_color(self, severity: str) -> str:
-        """Get color code for message severity."""
+        """
+        Get color code for message severity.
+        
+        Args:
+            severity: Severity level string (High, Medium, Low)
+            
+        Returns:
+            Hex color code for UI display
+        """
         severity_colors = {
-            "High": "#d32f2f",  # Red
-            "Medium": "#f57c00",  # Orange
-            "Low": "#2e7d32",  # Green
+            "High": RiskThresholds.COLOR_HIGH,
+            "Medium": RiskThresholds.COLOR_MEDIUM,
+            "Low": RiskThresholds.COLOR_LOW,
         }
         return severity_colors.get(severity, "#666666")  # Default gray

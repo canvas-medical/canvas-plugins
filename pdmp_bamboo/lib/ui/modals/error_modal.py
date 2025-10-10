@@ -36,7 +36,7 @@ class ErrorModal(BaseModal):
         content = self._build_modal_content(error_type, errors, api_result, use_test_env)
 
         # Create modal title
-        title = self._create_modal_title(use_test_env)
+        title = self._create_modal_title(False)
 
         return self.create_modal(title, content)
 
@@ -100,7 +100,4 @@ class ErrorModal(BaseModal):
 
     def _create_modal_title(self, use_test_env: bool) -> str:
         """Create the modal title based on environment."""
-        if use_test_env:
-            return "❌ PDMP Test Request Failed"
-        else:
-            return "❌ PDMP Request Failed"
+        return "❌ PDMP Request Failed"
