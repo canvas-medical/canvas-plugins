@@ -668,6 +668,7 @@
     "PaymentCollection",
     "PayorSpecificCharge",
     "PracticeLocation",
+    "PracticeLocationAddress",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -935,7 +936,8 @@
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
     "PracticeLocationPOS",
-    "PracticeLocationSetting"
+    "PracticeLocationSetting",
+    "PracticeLocationAddress"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",
