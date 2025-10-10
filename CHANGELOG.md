@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.69.0 (2025-10-10)
+
+### Bug Fixes
+
+- Configure the pool to check connections before handing them out
+  ([#1135](https://github.com/canvas-medical/canvas-plugins/pull/1135),
+  [`ca23e98`](https://github.com/canvas-medical/canvas-plugins/commit/ca23e9851a038d2340d3eef36c981881fee6a3b0))
+
+### Chores
+
+- Auto-update pre-commit hooks ([#979](https://github.com/canvas-medical/canvas-plugins/pull/979),
+  [`e834cea`](https://github.com/canvas-medical/canvas-plugins/commit/e834cea58cc6a4fed992b2d9f60bd2df62cf5afe))
+
+- Fix mypy pre-commit hook ([#1157](https://github.com/canvas-medical/canvas-plugins/pull/1157),
+  [`17114e2`](https://github.com/canvas-medical/canvas-plugins/commit/17114e275fbd1dba3c9064b56efb4472a41fef5d))
+
+- **deps**: Bump ruff from 0.12.10 to 0.14.0
+  ([#1155](https://github.com/canvas-medical/canvas-plugins/pull/1155),
+  [`a28fdb4`](https://github.com/canvas-medical/canvas-plugins/commit/a28fdb49a7947efa924b1bd8aec14a9dc5b96da5))
+
+### Features
+
+- Log aptible process id and send it to influx
+  ([#1136](https://github.com/canvas-medical/canvas-plugins/pull/1136),
+  [`fb8855f`](https://github.com/canvas-medical/canvas-plugins/commit/fb8855f6454b0c8c0a6a294059a3a3d22c8d2dd0))
+
+Signed-off-by: David Jantzen <mr.djantzen@gmail.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.68.0 (2025-10-07)
 
 ### Bug Fixes
