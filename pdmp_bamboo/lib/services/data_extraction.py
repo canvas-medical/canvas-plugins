@@ -38,7 +38,7 @@ class DataExtractionService:
             patient = Patient.objects.prefetch_related("addresses").get(id=patient_id)
             patient_dto = self.patient_mapper.map_to_dto(patient)
             validation_errors = self.patient_validator.validate(patient_dto)
-            patient_dto.errors = validation_errors
+            # Note: DTOs are now immutable, errors returned separately
             if validation_errors:
                 log.error(f"PDMP-DataExtractor: Patient validation errors: {validation_errors}")
             return patient_dto, validation_errors
@@ -75,7 +75,7 @@ class DataExtractionService:
             )
             practitioner_dto = self.practitioner_mapper.map_to_dto(staff, patient_state)
             validation_errors = self.practitioner_validator.validate(practitioner_dto)
-            practitioner_dto.errors = validation_errors
+            # Note: DTOs are now immutable, errors returned separately
             if validation_errors:
                 log.error(
                     f"PDMP-DataExtractor: Practitioner validation errors: {validation_errors}"
@@ -101,12 +101,11 @@ class DataExtractionService:
                 id=str(organization.dbid),
                 name=organization.full_name or organization.short_name or "",
                 active=getattr(organization, "active", True),
-                errors=[],
             )
 
             log.info("DataExtractionService: Starting organization validation")
             validation_errors = self.organization_validator.validate(organization_dto)
-            organization_dto.errors = validation_errors
+            # Note: DTOs are now immutable, errors returned separately
 
             log.info(
                 f"DataExtractionService: Organization data extraction completed. Success: {bool(organization_dto)}, Errors: {len(validation_errors)}"
@@ -147,7 +146,7 @@ class DataExtractionService:
 
             log.info("DataExtractionService: Starting practice location validation")
             validation_errors = self.practice_location_validator.validate(practice_location_dto)
-            practice_location_dto.errors = validation_errors
+            # Note: DTOs are now immutable, errors returned separately
 
             log.info(
                 f"DataExtractionService: Practice location data extraction completed. Success: {bool(practice_location_dto)}, Errors: {len(validation_errors)}"

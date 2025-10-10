@@ -43,17 +43,8 @@
         ]
     },
     "secrets": [
-        "TEST_PDMP_API_URL",
-        "TEST_PDMP_API_USERNAME",
-        "TEST_PDMP_API_PASSWORD",
         "PDMP_API_URL",
-        "PDMP_API_USERNAME",
-        "PDMP_API_PASSWORD",
-        "PDMP_CLIENT_CERT",
-        "PDMP_CLIENT_KEY",
-        "PDMP_CLIENT_CERT_PATH",
-        "PDMP_CLIENT_KEY_PATH",
-        "USE_TEST_ENV"
+        "PDMP_STAFF_CREDENTIALS"
     ],
     "tags": ["pdmp", "healthcare", "integration", "hipaa", "security"],
     "references": [

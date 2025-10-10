@@ -57,6 +57,7 @@ class PatientMapper:
         address = cls.extract_address(patient)
         sex = cls.normalize_sex_code(patient.sex_at_birth)
 
+        # Dataclass initialization with keyword arguments
         return PatientDTO(
             id=patient.id,
             first_name=patient.first_name or "",
@@ -68,7 +69,6 @@ class PatientMapper:
             ssn=patient.social_security_number or "",
             phone=phone,
             address=address,
-            errors=[],
         )
 
     @staticmethod

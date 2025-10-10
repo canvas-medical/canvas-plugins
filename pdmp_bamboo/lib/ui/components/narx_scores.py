@@ -1,10 +1,9 @@
 from typing import Any
 
-from canvas_sdk.templates import render_to_string
-from logger import log
+from pdmp_bamboo.lib.ui.components.base_component import BaseComponent
 
 
-class NarxScoresComponent:
+class NarxScoresComponent(BaseComponent):
     """Component for displaying NarxCare risk scores."""
 
     def create_component(self, parsed_data: dict[str, Any]) -> str | None:
@@ -23,7 +22,7 @@ class NarxScoresComponent:
         scores = parsed_data["narx_scores"]
         return self._build_scores_html(scores)
 
-    def _build_scores_html(self, scores: list[dict[str, Any]]) -> str:
+    def _build_scores_html(self, scores: list[dict[str, Any]]) -> str | None:
         """Build scores HTML using template."""
         valid_scores = [
             score
@@ -57,18 +56,14 @@ class NarxScoresComponent:
             clamped_value = max(0, min(999, numeric_value))
             percentage = (clamped_value / 999) * 100
 
-            template_scores.append({
-                "type": score_type.lower(),
-                "value": score_value,
-                "display_name": display_name,
-                "numeric_value": numeric_value,
-                "percentage": percentage,
-            })
+            template_scores.append(
+                {
+                    "type": score_type.lower(),
+                    "value": score_value,
+                    "display_name": display_name,
+                    "numeric_value": numeric_value,
+                    "percentage": percentage,
+                }
+            )
 
-        try:
-            return render_to_string("templates/components/narx_scores.html", {
-                "scores": template_scores
-            })
-        except Exception as e:
-            log.error(f"NarxScoresComponent: Error rendering template: {e}")
-            return None
+        return self._render_template("templates/components/narx_scores.html", {"scores": template_scores})

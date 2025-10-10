@@ -2,83 +2,36 @@
 <div data-modal-content="pdmp-modal"
      data-component="data-validation-modal"
      data-modal-type="validation"
-     class="shell"
-     style="
-    margin: 0;
-    padding: 24px;
-    font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 400px;
-">
-    <main class="app"
-          data-component="modal-main-content"
-          style="
-        width: min(1100px,100%);
-        display: grid;
-        gap: 20px;
-        margin: 0 auto;
-    ">
-        <h1 class="sr-only"
-            data-component="modal-title-hidden"
-            style="
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0,0,0,0);
-            white-space: nowrap;
-            border: 0;
-        ">PDMP Data Validation</h1>
+     class="shell pdmp-modal-shell">
+    <main class="app pdmp-modal-app"
+          data-component="modal-main-content">
+        <h1 class="sr-only pdmp-sr-only"
+            data-component="modal-title-hidden">PDMP Data Validation</h1>
 
-        <p style="color: var(--muted); margin-bottom: 20px; font-size: 1rem; line-height: 1.5;">The following data is missing or incomplete for the PDMP request:</p>
+        <p class="pdmp-text-muted pdmp-margin-bottom">The following data is missing or incomplete for the PDMP request:</p>
 
         <!-- Missing Data Section -->
-        <section class="section alerts"
-                 data-component="missing-data-section"
-                 style="
-            display: grid;
-            gap: 12px;
-            margin: 0 0 20px 0;
-        ">
-            <div class="alert-group"
+        <section class="section alerts pdmp-section"
+                 data-component="missing-data-section">
+            <div class="alert-group pdmp-alert-group"
                  data-component="missing-data-group"
                  role="group"
-                 aria-label="Missing data"
-                 style="display: grid; gap: 10px;">
-                <div class="alert-title"
-                     data-component="missing-data-title"
-                     style="font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.25rem;">⚠️</span> Missing Required Data
+                 aria-label="Missing data">
+                <div class="alert-title pdmp-title pdmp-title-flex"
+                     data-component="missing-data-title">
+                    <span class="pdmp-icon-sm">!</span> Missing Required Data
                 </div>
-                <div class="alert"
+                <div class="alert pdmp-alert pdmp-alert-red"
                      data-component="missing-data-alert"
-                     data-variant="red"
-                     style="
-                    display: grid;
-                    grid-template-columns: 24px 1fr;
-                    gap: 12px;
-                    padding: 12px;
-                    border-radius: 10px;
-                    border: 1px solid var(--border);
-                    background: color-mix(in oklab, var(--danger) 10%, white);
-                ">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+                     data-variant="red">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
                         <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                     <div>
-                        <ul data-component="missing-data-list" style="
-                            margin: 0;
-                            padding: 0;
-                            list-style: none;
-                            font-size: 0.875rem;
-                            line-height: 1.25;
-                        ">
+                        <ul data-component="missing-data-list" class="pdmp-list-reset pdmp-text-small">
                             {% for item in missing_data %}
-                            <li style='margin-bottom: 8px;'>{{ item }}</li>
+                            <li class="pdmp-list-spaced">{{ item }}</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -93,7 +46,7 @@
         {{ next_steps_section|safe }}
 
         <!-- Add bottom spacing to prevent Canvas Chat bot from covering content -->
-        <div style="height: 80px;"></div>
+        <div class="pdmp-spacer-bottom"></div>
     </main>
 </div>
 <!-- PDMP Data Validation Modal End -->

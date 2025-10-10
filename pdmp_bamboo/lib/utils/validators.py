@@ -1,14 +1,18 @@
+import re
+
 from logger import log
 from pdmp_bamboo.lib.models.dtos import (
+    AddressDTO,
     OrganizationDTO,
     PatientDTO,
     PracticeLocationDTO,
     PractitionerDTO,
     SexCode,
 )
+from pdmp_bamboo.lib.utils.base_validator import BaseValidator
 
 
-class PatientValidator:
+class PatientValidator(BaseValidator):
     """Validates PatientDTO data."""
 
     def validate(self, patient: PatientDTO) -> list[str]:
@@ -16,27 +20,24 @@ class PatientValidator:
         errors = []
 
         # Required fields
-        if not patient.first_name:
-            errors.append("❌ Patient first name is REQUIRED")
-        if not patient.last_name:
-            errors.append("❌ Patient last name is REQUIRED")
-        if not patient.birth_date:
-            errors.append("❌ Patient birth date is REQUIRED")
+        self._validate_required(patient.first_name, "Patient first name", errors)
+        self._validate_required(patient.last_name, "Patient last name", errors)
+        self._validate_required(patient.birth_date, "Patient birth date", errors)
+        
         if patient.sex == SexCode.UNKNOWN:
-            errors.append("❌ Patient sex/gender is REQUIRED")
+            self._add_error(errors, "Patient sex/gender is REQUIRED", "ERROR")
 
         # Optional but recommended fields
         if patient.address.is_empty():
-            errors.append("⚠️ WARNING: Patient address is missing")
-        if not patient.phone:
-            errors.append("⚠️ WARNING: Patient phone number is missing")
-        if not patient.ssn:
-            errors.append("⚠️ WARNING: Patient SSN is missing")
+            self._add_error(errors, "Patient address is missing", "WARNING")
+        
+        self._validate_optional(patient.phone, "Patient phone number", errors)
+        self._validate_optional(patient.ssn, "Patient SSN", errors)
 
         return errors
 
 
-class PractitionerValidator:
+class PractitionerValidator(BaseValidator):
     """Validates PractitionerDTO data."""
 
     def validate(self, practitioner: PractitionerDTO) -> list[str]:
@@ -47,32 +48,41 @@ class PractitionerValidator:
         has_identifier = bool(practitioner.npi_number or practitioner.dea_number)
 
         if not has_identifier:
-            errors.append(
-                "❌ CRITICAL: Practitioner must have either NPI number OR DEA number for PDMP request - Please update practitioner profile in Canvas"
+            self._add_error(
+                errors,
+                "CRITICAL: Practitioner must have either NPI number OR DEA number for PDMP request - Please update practitioner profile in Canvas",
+                "ERROR",
             )
-        if not practitioner.first_name:
-            errors.append(
-                "❌ Practitioner first name is REQUIRED - Please update practitioner profile in Canvas"
-            )
-        if not practitioner.last_name:
-            errors.append(
-                "❌ Practitioner last name is REQUIRED - Please update practitioner profile in Canvas"
-            )
+
+        self._validate_required(
+            practitioner.first_name,
+            "Practitioner first name - Please update practitioner profile in Canvas",
+            errors,
+        )
+        self._validate_required(
+            practitioner.last_name,
+            "Practitioner last name - Please update practitioner profile in Canvas",
+            errors,
+        )
 
         # Provide guidance on preferred identifiers
         if practitioner.npi_number and not practitioner.dea_number:
-            errors.append(
-                "ℹ️ INFO: NPI found but no DEA number - PDMP requests work best with both identifiers"
+            self._add_error(
+                errors,
+                "NPI found but no DEA number - PDMP requests work best with both identifiers",
+                "INFO",
             )
         elif practitioner.dea_number and not practitioner.npi_number:
-            errors.append(
-                "ℹ️ INFO: DEA found but no NPI number - Consider adding NPI to practitioner profile"
+            self._add_error(
+                errors,
+                "DEA found but no NPI number - Consider adding NPI to practitioner profile",
+                "INFO",
             )
 
         return errors
 
 
-class OrganizationValidator:
+class OrganizationValidator(BaseValidator):
     """Validates OrganizationDTO data."""
 
     def validate(self, organization: OrganizationDTO) -> list[str]:
@@ -83,11 +93,9 @@ class OrganizationValidator:
 
         errors = []
 
-        if not organization.name:
-            error_msg = "❌ Organization name is REQUIRED"
-            log.error(f"OrganizationValidator: {error_msg}")
-            errors.append(error_msg)
-        else:
+        self._validate_required(organization.name, "Organization name", errors)
+
+        if not errors:
             log.info(
                 f"OrganizationValidator: Organization name validation passed: '{organization.name}'"
             )
@@ -99,7 +107,7 @@ class OrganizationValidator:
         return errors
 
 
-class PracticeLocationValidator:
+class PracticeLocationValidator(BaseValidator):
     """Validates PracticeLocationDTO data."""
 
     def validate(self, practice_location: PracticeLocationDTO) -> list[str]:
@@ -112,29 +120,17 @@ class PracticeLocationValidator:
         errors = []
 
         # Required fields for PDMP
-        if not practice_location.name:
-            error_msg = "❌ Practice location name is REQUIRED"
-            log.error(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
-        else:
-            log.info(
-                f"PracticeLocationValidator: Practice location name validation passed: '{practice_location.name}'"
-            )
+        self._validate_required(practice_location.name, "Practice location name", errors)
+        self._validate_required(practice_location.npi, "Practice location NPI for PDMP requests", errors)
 
-        if not practice_location.npi:
-            error_msg = "❌ Practice location NPI is REQUIRED for PDMP requests"
-            log.error(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
-        else:
+        if not errors:
             log.info(
-                f"PracticeLocationValidator: Practice location NPI validation passed: '{practice_location.npi}'"
+                f"PracticeLocationValidator: Practice location validation passed: '{practice_location.name}'"
             )
 
         # Check if practice location is active
         if not practice_location.active:
-            error_msg = "⚠️ WARNING: Practice location is not active"
-            log.warning(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
+            self._add_error(errors, "Practice location is not active", "WARNING")
 
         # Validate address if present
         if practice_location.address and not practice_location.address.is_empty():
@@ -142,44 +138,89 @@ class PracticeLocationValidator:
             address = practice_location.address
 
             # Check for required address fields
-            if not address.street:
-                error_msg = "⚠️ WARNING: Practice location street address is missing"
-                log.warning(f"PracticeLocationValidator: {error_msg}")
-                errors.append(error_msg)
-
-            if not address.city:
-                error_msg = "⚠️ WARNING: Practice location city is missing"
-                log.warning(f"PracticeLocationValidator: {error_msg}")
-                errors.append(error_msg)
-
-            if not address.state:
-                error_msg = "⚠️ WARNING: Practice location state is missing"
-                log.warning(f"PracticeLocationValidator: {error_msg}")
-                errors.append(error_msg)
-
-            if not address.zip_code:
-                error_msg = "⚠️ WARNING: Practice location ZIP code is missing"
-                log.warning(f"PracticeLocationValidator: {error_msg}")
-                errors.append(error_msg)
+            self._validate_optional(address.street, "Practice location street address", errors)
+            self._validate_optional(address.city, "Practice location city", errors)
+            self._validate_optional(address.state, "Practice location state", errors)
+            self._validate_optional(address.zip_code, "Practice location ZIP code", errors)
         else:
-            error_msg = "⚠️ WARNING: Practice location address is missing"
-            log.warning(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
+            self._add_error(errors, "Practice location address is missing", "WARNING")
 
         # Optional but recommended fields
-        if not practice_location.phone:
-            error_msg = "ℹ️ INFO: Practice location phone number is missing"
-            log.info(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
+        self._validate_info(
+            not practice_location.phone,
+            "Practice location phone number is missing",
+            errors
+        )
 
         # Check for DEA number (optional but useful for PDMP)
-        if not practice_location.dea:
-            error_msg = "ℹ️ INFO: Practice location DEA number is missing - may be required for some PDMP requests"
-            log.info(f"PracticeLocationValidator: {error_msg}")
-            errors.append(error_msg)
+        self._validate_info(
+            not practice_location.dea,
+            "Practice location DEA number is missing - may be required for some PDMP requests",
+            errors
+        )
 
         log.info(f"PracticeLocationValidator: Validation completed with {len(errors)} errors")
         if errors:
             log.error(f"PracticeLocationValidator: Validation errors: {errors}")
+
+        return errors
+
+
+class AddressValidator(BaseValidator):
+    """Validates AddressDTO data."""
+
+    # Valid US state codes
+    VALID_STATES = [
+        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+        "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+        "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+        "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+        "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+        "DC"  # District of Columbia
+    ]
+
+    def validate(self, address: AddressDTO) -> list[str]:
+        """
+        Validate address data and return list of errors.
+
+        Args:
+            address: AddressDTO to validate
+
+        Returns:
+            List of validation errors/warnings
+        """
+        errors = []
+
+        # Skip validation if address is empty (empty addresses are allowed)
+        if address.is_empty():
+            return errors
+
+        log.info("AddressValidator: Validating address data")
+
+        # Validate ZIP code format (5 digits)
+        if address.zip_code and not re.match(r"^\d{5}$", address.zip_code):
+            self._add_error(
+                errors,
+                f"Invalid ZIP code format: '{address.zip_code}' (must be 5 digits)",
+                "ERROR",
+            )
+
+        # Validate ZIP+4 format (4 digits)
+        if address.zip_plus_four and not re.match(r"^\d{4}$", address.zip_plus_four):
+            self._add_error(
+                errors,
+                f"Invalid ZIP+4 format: '{address.zip_plus_four}' (must be 4 digits)",
+                "ERROR",
+            )
+
+        # Validate state code
+        if address.state and address.state.upper() not in self.VALID_STATES:
+            self._add_error(
+                errors,
+                f"Invalid state code: '{address.state}' (must be 2-letter US state code)",
+                "ERROR",
+            )
+
+        log.info(f"AddressValidator: Validation completed with {len(errors)} errors")
 
         return errors

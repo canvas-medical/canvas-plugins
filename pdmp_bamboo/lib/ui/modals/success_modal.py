@@ -106,7 +106,6 @@ class SuccessModal(BaseModal):
             "patient_header_html": patient_header_html or "",
             "report_button_html": self.report_component.create_component(
                 parsed_data,
-                use_test_env=use_test_env,
                 patient_id=patient_id,
                 practitioner_id=practitioner_id,
                 organization_id=organization_id,

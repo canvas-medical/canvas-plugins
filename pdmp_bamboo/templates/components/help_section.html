@@ -1,18 +1,18 @@
 <!-- Help / Next Steps Section -->
-<section class="section alerts" style="display: grid; gap: 12px; margin: 0 0 20px 0;">
-    <div class="alert-group" role="group" aria-label="Next steps" style="display: grid; gap: 10px;">
-        <div class="alert-title" style="font-weight: 700; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.25rem;">💡</span> What to do next
+<section class="section alerts pdmp-section">
+    <div class="alert-group pdmp-alert-group" role="group" aria-label="Next steps">
+        <div class="alert-title pdmp-title pdmp-title-flex">
+            <span class="pdmp-icon-sm">!</span> What to do next
         </div>
-        <div class="alert" data-variant="note" style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-sub);">
-            <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;">
+        <div class="alert pdmp-alert pdmp-alert-note" data-variant="note">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
                 <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
                 <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             <div>
-                <ul style="margin: 0; padding: 0; list-style: none; font-size: 0.875rem; line-height: 1.25;">
+                <ul class="pdmp-list-reset pdmp-text-small">
                     {% for item in items %}
-                    <li style='margin-bottom: 8px;'>{{ item }}</li>
+                    <li class="pdmp-list-spaced">{{ item }}</li>
                     {% endfor %}
                 </ul>
             </div>
