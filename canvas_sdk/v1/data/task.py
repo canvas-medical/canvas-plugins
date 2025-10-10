@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 
 
@@ -34,14 +34,12 @@ class TaskLabelModule(models.TextChoices):
     APPOINTMENTS = "appointments", "Appointments"
 
 
-class Task(IdentifiableModel):
+class Task(TimestampedModel, IdentifiableModel):
     """Task."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_task_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
     )
@@ -61,14 +59,12 @@ class Task(IdentifiableModel):
     status = models.CharField(choices=TaskStatus.choices, max_length=9)
 
 
-class TaskComment(IdentifiableModel):
+class TaskComment(TimestampedModel, IdentifiableModel):
     """TaskComment."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_taskcomment_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="comments", null=True
     )

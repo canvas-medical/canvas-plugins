@@ -67,6 +67,16 @@ class Note(NoteOrAppointmentABC):
                         None,
                     )
                 )
+
+            if self.instance_id and NoteModel.objects.filter(id=self.instance_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Note with ID {self.instance_id} already exists.",
+                        self.instance_id,
+                    )
+                )
+
         elif method == "update":
             if self.note_type_id:
                 errors.append(
@@ -85,14 +95,14 @@ class Note(NoteOrAppointmentABC):
                     )
                 )
 
-        if self.instance_id and not NoteModel.objects.filter(id=self.instance_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Note with ID {self.instance_id} does not exist.",
-                    self.instance_id,
+            if self.instance_id and not NoteModel.objects.filter(id=self.instance_id).exists():
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Note with ID {self.instance_id} does not exist.",
+                        self.instance_id,
+                    )
                 )
-            )
 
         if self.note_type_id:
             note_type_category = (

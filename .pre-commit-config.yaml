@@ -93,7 +93,7 @@ repos:
 
         entry: |
           bash -c "
-            python -m pip install --upgrade pip setuptools wheel uv \
+            python -m pip install --upgrade pip setuptools wheel \
             && uv sync \
             && exec uv run mypy --show-traceback $@
           "

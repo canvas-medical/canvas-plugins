@@ -7,9 +7,10 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
+    TimestampedModel,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class AllergyIntoleranceQuerySet(
@@ -25,7 +26,7 @@ class AllergyIntoleranceQuerySet(
 AllergyIntoleranceManager = BaseModelManager.from_queryset(AllergyIntoleranceQuerySet)
 
 
-class AllergyIntolerance(IdentifiableModel):
+class AllergyIntolerance(TimestampedModel, IdentifiableModel):
     """AllergyIntolerance."""
 
     class Meta:
@@ -33,8 +34,6 @@ class AllergyIntolerance(IdentifiableModel):
 
     objects = cast(AllergyIntoleranceQuerySet, AllergyIntoleranceManager())
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField()
     committer = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -61,17 +60,12 @@ class AllergyIntolerance(IdentifiableModel):
     narrative = models.CharField(max_length=512)
 
 
-class AllergyIntoleranceCoding(Model):
+class AllergyIntoleranceCoding(Coding):
     """AllergyIntoleranceCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_allergyintolerancecoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     allergy_intolerance = models.ForeignKey(
         AllergyIntolerance,
         on_delete=models.DO_NOTHING,

@@ -3,7 +3,7 @@ from typing import Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.utils import quantize
 
 
@@ -15,7 +15,7 @@ class PostingQuerySet(models.QuerySet):
         return self.filter(entered_in_error__isnull=True)
 
 
-class BasePosting(Model):
+class BasePosting(TimestampedModel):
     """
     Base model to aggregate multiple line item transactions on a claim.
     """
@@ -39,9 +39,6 @@ class BasePosting(Model):
     entered_in_error = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.PROTECT, null=True, blank=True
     )
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
     @property
     def paid_amount(self) -> Decimal:
@@ -149,7 +146,7 @@ class PatientPosting(BasePosting):
         return self.discounted_amount + self.paid_amount
 
 
-class AbstractBulkPosting(IdentifiableModel):
+class AbstractBulkPosting(TimestampedModel, IdentifiableModel):
     """Patient and Insurance bulk posting shared columns."""
 
     class Meta:
@@ -160,9 +157,6 @@ class AbstractBulkPosting(IdentifiableModel):
     )
 
     total_paid = models.DecimalField(max_digits=8, decimal_places=2)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 class BulkPatientPosting(AbstractBulkPosting):

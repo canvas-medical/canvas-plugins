@@ -1,17 +1,15 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
-class BannerAlert(Model):
+class BannerAlert(TimestampedModel):
     """BannerAlert."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_banneralert_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient",
         on_delete=models.DO_NOTHING,

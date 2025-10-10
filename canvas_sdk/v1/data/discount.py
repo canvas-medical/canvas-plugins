@@ -1,9 +1,9 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import TimestampedModel
 
 
-class Discount(Model):
+class Discount(TimestampedModel):
     """Model to represent a discount applied to a claim or patient posting."""
 
     class Meta:
@@ -13,9 +13,6 @@ class Discount(Model):
     adjustment_group = models.CharField(max_length=3)
     adjustment_code = models.CharField(max_length=3)
     discount = models.DecimalField(max_digits=8, decimal_places=2)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("Discount",)

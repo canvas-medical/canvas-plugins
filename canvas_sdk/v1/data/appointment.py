@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -29,6 +29,11 @@ class Appointment(IdentifiableModel):
         related_name="appointments",
         null=True,
     )
+
+    parent_appointment = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
+    )
+
     appointment_rescheduled_from = models.ForeignKey(
         "self",
         on_delete=models.DO_NOTHING,
@@ -55,14 +60,12 @@ class Appointment(IdentifiableModel):
     description = models.TextField(null=True, blank=True)
 
 
-class AppointmentExternalIdentifier(IdentifiableModel):
+class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
     """AppointmentExternalIdentifier."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_appointmentexternalidentifier_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     use = models.CharField(max_length=255)
     identifier_type = models.CharField(max_length=255)
     system = models.CharField(max_length=255)
@@ -103,9 +106,23 @@ class AppointmentLabel(models.Model):
     position = models.IntegerField()
 
 
+class AppointmentMetadata(IdentifiableModel):
+    """A class representing Appointment Metadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_appointmentmetadata_001"
+
+    appointment = models.ForeignKey(
+        "v1.Appointment", on_delete=models.CASCADE, related_name="metadata", null=True
+    )
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
+
+
 __exports__ = (
     "AppointmentProgressStatus",
     "Appointment",
+    "AppointmentMetadata",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
 )
