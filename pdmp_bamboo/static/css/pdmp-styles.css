@@ -614,3 +614,249 @@
     border: 0;
 }
 
+/* ========================================
+   MODERN ERROR PAGE STYLES
+   ======================================== */
+
+/* Hero Section */
+.pdmp-hero-section {
+    text-align: center;
+    padding: 40px 0 60px 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    margin-bottom: 32px;
+}
+
+.pdmp-hero-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.pdmp-hero-svg {
+    width: 64px;
+    height: 64px;
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+.pdmp-hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 16px 0;
+    letter-spacing: -0.025em;
+}
+
+.pdmp-hero-subtitle {
+    font-size: 1.25rem;
+    color: var(--muted);
+    margin: 0;
+    font-weight: 400;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Instructions Section */
+.pdmp-instructions-section {
+    margin-bottom: 32px;
+}
+
+.pdmp-instructions-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.pdmp-instructions-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 32px 0;
+    text-align: center;
+}
+
+.pdmp-steps {
+    display: grid;
+    gap: 24px;
+}
+
+.pdmp-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 24px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.pdmp-step:hover {
+    background: #f1f5f9;
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.pdmp-step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.pdmp-step-content {
+    flex: 1;
+}
+
+.pdmp-step-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px 0;
+}
+
+.pdmp-step-description {
+    font-size: 1rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.pdmp-step-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.pdmp-step-link:hover {
+    border-bottom-color: var(--primary);
+}
+
+/* Notice Section */
+.pdmp-notice-section {
+    margin-bottom: 32px;
+}
+
+.pdmp-notice-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 12px;
+}
+
+.pdmp-notice-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.pdmp-notice-svg {
+    width: 24px;
+    height: 24px;
+    color: #d97706;
+}
+
+.pdmp-notice-content {
+    flex: 1;
+}
+
+.pdmp-notice-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #92400e;
+    margin: 0 0 8px 0;
+}
+
+.pdmp-notice-text {
+    font-size: 0.95rem;
+    color: #92400e;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Support Section */
+.pdmp-support-section {
+    margin-bottom: 32px;
+}
+
+.pdmp-support-card {
+    text-align: center;
+    padding: 32px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 16px;
+}
+
+.pdmp-support-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 16px 0;
+}
+
+.pdmp-support-text {
+    font-size: 1rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.pdmp-support-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.pdmp-support-link:hover {
+    border-bottom-color: var(--primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .pdmp-hero-title {
+        font-size: 2rem;
+    }
+    
+    .pdmp-hero-subtitle {
+        font-size: 1.125rem;
+    }
+    
+    .pdmp-instructions-card {
+        padding: 24px;
+    }
+    
+    .pdmp-step {
+        padding: 20px;
+    }
+    
+    .pdmp-step-number {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    
+    .pdmp-support-card {
+        padding: 24px;
+    }
+}
+

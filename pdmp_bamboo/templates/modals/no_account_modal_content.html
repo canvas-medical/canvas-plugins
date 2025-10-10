@@ -8,88 +8,81 @@
         <h1 class="sr-only pdmp-sr-only"
             data-component="modal-title-hidden">Bamboo Health Account Required</h1>
 
-        <!-- Main Message Section -->
-        <section class="section alerts pdmp-section"
-                 data-component="main-message-section">
-            <div class="alert-group pdmp-alert-group"
-                 data-component="main-message-group"
-                 role="group"
-                 aria-label="Account information">
-                <div class="alert pdmp-alert pdmp-alert-yellow pdmp-alert-lg"
-                     data-component="main-message-alert"
-                     data-variant="yellow">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon-lg">
-                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <div>
-                        <h2 class="pdmp-title-lg pdmp-color-text pdmp-title-no-margin pdmp-title-bottom-margin">
-                            Please create an account with Bamboo Health to access PDMP
-                        </h2>
+        <!-- Hero Section -->
+        <section class="pdmp-hero-section">
+            <div class="pdmp-hero-icon">
+                <!-- <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-hero-svg">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg> -->
+                <!-- TODO: Add Bamboo Health logo -->
+            </div>
+            <h2 class="pdmp-hero-title">Account Setup Required</h2>
+            <p class="pdmp-hero-subtitle">Create your Bamboo Health account to access PDMP data</p>
+        </section>
+
+        <!-- Instructions Section -->
+        <section class="pdmp-instructions-section">
+            <div class="pdmp-instructions-card">
+                <h3 class="pdmp-instructions-title">Get Started</h3>
+                <div class="pdmp-steps">
+                    <div class="pdmp-step">
+                        <div class="pdmp-step-number">1</div>
+                        <div class="pdmp-step-content">
+                            <h4 class="pdmp-step-title">Visit Bamboo Health</h4>
+                            <p class="pdmp-step-description">
+                                Go to <a href="https://connect.bamboohealth.com/" target="_blank" rel="noopener noreferrer" class="pdmp-step-link">connect.bamboohealth.com</a> to create your account
+                            </p>
+                        </div>
+                    </div>
+                    <div class="pdmp-step">
+                        <div class="pdmp-step-number">2</div>
+                        <div class="pdmp-step-content">
+                            <h4 class="pdmp-step-title">Complete Registration</h4>
+                            <p class="pdmp-step-description">
+                                Use your professional credentials to complete the registration process
+                            </p>
+                        </div>
+                    </div>
+                    <div class="pdmp-step">
+                        <div class="pdmp-step-number">3</div>
+                        <div class="pdmp-step-content">
+                            <h4 class="pdmp-step-title">Contact Support</h4>
+                            <p class="pdmp-step-description">
+                                Once activated, contact Canvas support to configure your access
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Instructions Section -->
-        <section class="section pdmp-section">
-            <div class="card pdmp-card pdmp-card-padded-lg">
-                <h3 class="pdmp-color-text pdmp-title-no-margin pdmp-title-bottom-margin pdmp-title-flex pdmp-title-xl">
-                    <span class="pdmp-icon-md">*</span> Account Setup Instructions
-                </h3>
-                <ol class="pdmp-color-text pdmp-title-no-margin pdmp-list-spaced-lg" style="padding-left: 24px;">
-                    <li>
-                        Visit <a href="https://connect.bamboohealth.com/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="pdmp-link">
-                            https://connect.bamboohealth.com/
-                        </a> to create an account
-                    </li>
-                    <li>
-                        Complete the registration process with your professional credentials
-                    </li>
-                    <li>
-                        Once your account is activated, contact Canvas support to configure your access
-                    </li>
-                </ol>
-            </div>
-        </section>
-
-        <!-- Tennessee Notice Section -->
-        <section class="section alerts pdmp-section">
-            <div class="alert-group pdmp-alert-group" role="group" aria-label="Tennessee notice">
-                <div class="alert pdmp-alert pdmp-alert-note pdmp-alert-lg" data-variant="note">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-svg-icon">
+        <!-- Notice Section -->
+        <section class="pdmp-notice-section">
+            <div class="pdmp-notice-card">
+                <div class="pdmp-notice-icon">
+                    <!-- <svg viewBox="0 0 24 24" aria-hidden="true" class="pdmp-notice-svg">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
                         <path d="M12 16v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <div>
-                        <h4 class="pdmp-color-text pdmp-title-no-margin pdmp-title-bottom-margin pdmp-title-lg">
-                            Tennessee State Notice
-                        </h4>
-                        <p class="pdmp-title-no-margin pdmp-text-muted pdmp-text-small">
-                            Due to state restrictions, Tennessee clients must use their state's own integration request forms.
-                            Please contact your state PDMP administrator for more information.
-                        </p>
-                    </div>
+                    </svg> -->
+                    <!-- TODO: Add Bamboo Health logo -->
+                </div>
+                <div class="pdmp-notice-content">
+                    <h4 class="pdmp-notice-title">Tennessee State Notice</h4>
+                    <p class="pdmp-notice-text">
+                        Due to state restrictions, Tennessee clients must use their state's own integration request forms. 
+                        Please contact your state PDMP administrator for more information.
+                    </p>
                 </div>
             </div>
         </section>
 
         <!-- Support Section -->
-        <section class="section pdmp-section">
-            <div class="card pdmp-card pdmp-alert-primary pdmp-card-padded-lg">
-                <h3 class="pdmp-color-text pdmp-title-no-margin pdmp-title-bottom-margin pdmp-title-flex pdmp-title-xl">
-                    <span class="pdmp-icon-md">?</span> Need Help?
-                </h3>
-                <p class="pdmp-title-no-margin pdmp-color-text">
-                    If you have an account with Bamboo Health and think you have reached this screen in error,
-                    please email
-                    <a href="mailto:support@canvasmedical.com"
-                       class="pdmp-link">
-                        support@canvasmedical.com
-                    </a>
+        <section class="pdmp-support-section">
+            <div class="pdmp-support-card">
+                <h3 class="pdmp-support-title">Need Help?</h3>
+                <p class="pdmp-support-text">
+                    If you have an account with Bamboo Health and think you have reached this screen in error, 
+                    please email <a href="mailto:support@canvasmedical.com" class="pdmp-support-link">support@canvasmedical.com</a>
                 </p>
             </div>
         </section>
