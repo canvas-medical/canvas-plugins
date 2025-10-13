@@ -23,6 +23,7 @@ from canvas_sdk.commands import (
 )
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
+from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
 from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -355,3 +356,112 @@ def test_coding_system_validation_accepts_string_values(
     command = command_cls(**command_data).originate()
     parsed_value = json.loads(command.payload)["data"][field_name]
     assert parsed_value == value
+
+
+def test_immunization_statement_values_are_set_correctly() -> None:
+    """Test that ImmunizationStatementCommand sets values correctly."""
+    # Test with CPT and CVX codes
+    cpt_coding = {
+        "system": CodeSystems.CPT,
+        "code": "90471",
+        "display": "Immunization administration",
+    }
+    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
+    approximate_date_value = date(2024, 1, 15)
+    comments_value = "Patient tolerated well"
+
+    command = ImmunizationStatementCommand(
+        note_uuid="test_uuid",
+        cpt_code=cpt_coding,
+        cvx_code=cvx_coding,
+        approximate_date=approximate_date_value,
+        comments=comments_value,
+    ).originate()
+
+    payload = json.loads(command.payload)
+    data = payload["data"]
+
+    assert data["cpt_code"]["system"] == CodeSystems.CPT
+    assert data["cpt_code"]["code"] == "90471"
+    assert data["cpt_code"]["display"] == "Immunization administration"
+
+    assert data["cvx_code"]["system"] == CodeSystems.CVX
+    assert data["cvx_code"]["code"] == "207"
+    assert data["cvx_code"]["display"] == "COVID-19 vaccine"
+
+    assert data["approximate_date"] == "2024-01-15"
+    assert data["comments"] == comments_value
+
+    # Test with unstructured code
+    unstructured_coding = {
+        "system": CodeSystems.UNSTRUCTURED,
+        "code": "flu shot",
+        "display": "Flu shot",
+    }
+
+    command = ImmunizationStatementCommand(
+        note_uuid="test_uuid",
+        unstructured=unstructured_coding,
+        approximate_date=approximate_date_value,
+        comments=comments_value,
+    ).originate()
+
+    payload = json.loads(command.payload)
+    data = payload["data"]
+
+    assert data["unstructured"]["system"] == CodeSystems.UNSTRUCTURED
+    assert data["unstructured"]["code"] == "flu shot"
+    assert data["unstructured"]["display"] == "Flu shot"
+    assert data["approximate_date"] == "2024-01-15"
+    assert data["comments"] == comments_value
+
+
+def test_immunization_statement_cpt_and_cvx_required_together() -> None:
+    """Test that CPT and CVX codes must be provided together."""
+    cpt_coding = {
+        "system": CodeSystems.CPT,
+        "code": "90471",
+        "display": "Immunization administration",
+    }
+    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
+
+    # Test CPT without CVX raises error
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cpt_code=cpt_coding,
+        )
+    assert "'cvx_code' must be set with 'cpt_code'" in str(exc_info.value)
+
+    # Test CVX without CPT raises error
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cvx_code=cvx_coding,
+        )
+    assert "'cpt_code' must be set with 'cvx_code'" in str(exc_info.value)
+
+
+def test_immunization_statement_unstructured_cannot_be_used_with_cpt_or_cvx() -> None:
+    """Test that unstructured codes cannot be used together with CPT or CVX codes."""
+    cpt_coding = {
+        "system": CodeSystems.CPT,
+        "code": "90471",
+        "display": "Immunization administration",
+    }
+    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
+    unstructured_coding = {
+        "system": CodeSystems.UNSTRUCTURED,
+        "code": "flu shot",
+        "display": "Flu shot",
+    }
+
+    # Test unstructured with CPT and CVX raises error
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cpt_code=cpt_coding,
+            cvx_code=cvx_coding,
+            unstructured=unstructured_coding,
+        ).originate()
+    assert "Unstructured codes cannot be used with CPT or CVX codes" in str(exc_info.value)
