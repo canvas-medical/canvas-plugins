@@ -57,10 +57,3 @@ class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
             elif isinstance(item, dict):
                 # create a Task from provided kwargs
                 self.tasks.add(TaskFactory_t(**item))
-            else:
-                # assume it's already an object that can be added (e.g. a PK or factory instance)
-                try:
-                    self.tasks.add(item)
-                except Exception:
-                    # fallback: create a new Task
-                    self.tasks.add(TaskFactory_t())
