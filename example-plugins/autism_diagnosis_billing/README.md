@@ -15,7 +15,7 @@ This plugin monitors `DIAGNOSE_COMMAND__POST_COMMIT` events and automatically cr
 - **Flexible Code Format**: Handles ICD-10 codes with or without dots (Z13.41 or Z1341)
 - **Assessment Linking**: Automatically links billing line items to the latest assessment
 - **Error Handling**: Robust error handling with comprehensive logging
-- **Comprehensive Testing**: Full test suite with 95%+ code coverage
+
 
 ## Structure
 
@@ -24,9 +24,6 @@ autism_diagnosis_billing/
 ├── handlers/
 │   ├── __init__.py
 │   └── add_billing_line_item_handler.py
-├── tests/
-│   ├── __init__.py
-│   └── test_add_billing_line_item_handler.py
 ├── CANVAS_MANIFEST.json
 └── README.md
 ```
@@ -79,27 +76,7 @@ The plugin requires no additional configuration or secrets. It uses the followin
 
 2. The plugin will automatically start monitoring diagnosis events
 
-## Testing
 
-The plugin includes comprehensive tests covering:
-
-- ✅ Correct event type handling
-- ✅ Autism diagnosis detection (Z13.41)  
-- ✅ ICD-10 code normalization (dots removal)
-- ✅ Non-autism diagnosis filtering
-- ✅ Missing data handling (no codings, assessments, etc.)
-- ✅ Error scenarios (command not found, etc.)
-- ✅ Billing line item parameter validation
-
-Run tests:
-```bash
-python -m pytest autism_diagnosis_billing/tests/ -v
-```
-
-Or run the standalone test validation:
-```bash
-python autism_diagnosis_billing/tests/test_add_billing_line_item_handler.py
-```
 
 ## Example Usage
 
@@ -123,7 +100,7 @@ The plugin follows Canvas SDK best practices:
 - **Error Handling**: Comprehensive exception handling
 - **Logging**: Detailed logging for debugging and monitoring
 - **Documentation**: Extensive docstrings and comments
-- **Testing**: High test coverage with edge cases
+
 
 ## Data Access
 
