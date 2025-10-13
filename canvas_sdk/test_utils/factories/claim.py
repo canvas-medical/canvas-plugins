@@ -31,4 +31,4 @@ class ClaimLabelFactory(factory.django.DjangoModelFactory[ClaimLabel]):
         model = ClaimLabel
 
     claim = factory.SubFactory(ClaimFactory)
-    label = factory.SubFactory("canvas_sdk.test_utils.factories.TaskLabel")
+    label = factory.SubFactory("canvas_sdk.test_utils.factories.TaskLabelFactory")
