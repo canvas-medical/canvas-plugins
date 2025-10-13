@@ -152,7 +152,8 @@ norecursedirs = [
   "custom-plugins",
   "node_modules",
   "static",
-  "static-files"
+  "static-files",
+  "example-plugins"
 ]
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
