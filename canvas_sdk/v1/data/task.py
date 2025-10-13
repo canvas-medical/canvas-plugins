@@ -79,11 +79,17 @@ class TaskLabel(IdentifiableModel):
 
     tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
     position = models.IntegerField()
-    color = models.CharField(choices=ColorEnum.choices, max_length=50)
-    task_association = ArrayField(models.CharField(choices=Origin.choices, max_length=32))
+    color = models.CharField(choices=ColorEnum.choices, max_length=50, blank=True, default="")
+    task_association = ArrayField(
+        models.CharField(choices=Origin.choices, max_length=32), blank=True, default=list
+    )
     name = models.CharField(max_length=255)
-    active = models.BooleanField()
-    modules = ArrayField(models.CharField(choices=TaskLabelModule.choices, max_length=32))
+    active = models.BooleanField(default=True)
+    modules = ArrayField(
+        models.CharField(choices=TaskLabelModule.choices, max_length=32),
+        blank=True,
+        default=list,
+    )
 
 
 class TaskTaskLabel(Model):
