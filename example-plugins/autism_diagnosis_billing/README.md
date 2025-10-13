@@ -74,7 +74,7 @@ The plugin requires no additional configuration or secrets. It uses the followin
 
 1. Install the plugin using Canvas CLI:
    ```bash
-   canvas plugin install autism_diagnosis_billing/
+   canvas install autism_diagnosis_billing/
    ```
 
 2. The plugin will automatically start monitoring diagnosis events
