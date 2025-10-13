@@ -42,10 +42,6 @@ class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
         Example:
             TaskLabelFactory(tasks=[TaskFactory(), {'title': 't2'}])
         """
-        # If the object wasn't actually created in the DB, skip M2M handling.
-        if not create:
-            return
-
         if not extracted:
             return
 
