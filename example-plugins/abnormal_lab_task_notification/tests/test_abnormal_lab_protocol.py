@@ -43,15 +43,15 @@ def test_abnormal_lab_detection():
     # Test case 1: Normal values (no abnormal flag)
     normal_value = MockLabValue(abnormal_flag="")
     assert not normal_value.abnormal_flag.strip()
-    
+
     # Test case 2: Abnormal values (has abnormal flag)
     abnormal_value = MockLabValue(abnormal_flag="HIGH")
     assert abnormal_value.abnormal_flag.strip()
-    
+
     # Test case 3: Whitespace only abnormal flag (should be treated as normal)
     whitespace_value = MockLabValue(abnormal_flag="   ")
     assert not whitespace_value.abnormal_flag.strip()
-    
+
     # Test case 4: None abnormal flag (defensive programming)
     none_value = MockLabValue(abnormal_flag=None)
     # Simulate getattr with None fallback
@@ -68,7 +68,7 @@ def test_task_creation_logic():
         status=TaskStatus.OPEN,
         labels=["abnormal-lab", "urgent-review"]
     )
-    
+
     assert task.patient_id == "test-patient-id"
     assert task.title == "Review Abnormal Lab Values (2 abnormal)"
     assert task.status == TaskStatus.OPEN
@@ -83,11 +83,11 @@ def test_task_apply_method():
         title="Test Task",
         status=TaskStatus.OPEN
     )
-    
+
     # Verify apply method exists
     assert hasattr(task, 'apply')
     assert callable(getattr(task, 'apply'))
-    
+
     # Note: We can't actually call apply() without Django environment
     # but we can verify the method exists for the protocol to use
 
@@ -97,11 +97,11 @@ def test_filtered_reports():
     # Test case 1: Test-only report should be filtered
     test_report = MockLabReport(for_test_only=True)
     assert test_report.for_test_only
-    
+
     # Test case 2: Junked report should be filtered
     junked_report = MockLabReport(junked=True)
     assert junked_report.junked
-    
+
     # Test case 3: Normal report should not be filtered
     normal_report = MockLabReport(for_test_only=False, junked=False)
     assert not normal_report.for_test_only and not normal_report.junked
@@ -114,11 +114,11 @@ def test_multiple_abnormal_values():
         MockLabValue(abnormal_flag="LOW", value="9.2", units="g/dL", reference_range="12-16"),
         MockLabValue(abnormal_flag="CRITICAL", value="2.1", units="mmol/L", reference_range="3.5-5.0")
     ]
-    
+
     # Count abnormal values
     abnormal_count = len([v for v in abnormal_values if v.abnormal_flag.strip()])
     assert abnormal_count == 3
-    
+
     # Test title generation
     expected_title = f"Review Abnormal Lab Values ({abnormal_count} abnormal)"
     assert expected_title == "Review Abnormal Lab Values (3 abnormal)"
