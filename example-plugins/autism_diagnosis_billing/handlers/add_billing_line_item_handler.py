@@ -10,11 +10,11 @@ from logger import log
 class AddBillingLineItemToAutismDiagnoses(BaseHandler):
     """
     Handler that automatically creates billing line items for newly committed autism diagnosis conditions.
-    
+
     This handler responds to DIAGNOSE_COMMAND__POST_COMMIT events and checks if the diagnosis
-    has an ICD-10 coding for autism screening (Z13.41). When detected, it creates a billing 
+    has an ICD-10 coding for autism screening (Z13.41). When detected, it creates a billing
     line item with CPT code "AUTISM_DX" linked to the latest assessment for the diagnosis.
-    
+
     Triggers on: DIAGNOSE_COMMAND__POST_COMMIT events
     Effects: Creates AddBillingLineItem for autism screening diagnoses
     """
@@ -24,7 +24,7 @@ class AddBillingLineItemToAutismDiagnoses(BaseHandler):
     def compute(self) -> list[Effect]:
         """
         Process the DIAGNOSE_COMMAND__POST_COMMIT event and create billing line item if appropriate.
-        
+
         Returns:
             list[Effect]: List containing AddBillingLineItem effect if autism diagnosis detected,
                          empty list otherwise.
@@ -32,7 +32,7 @@ class AddBillingLineItemToAutismDiagnoses(BaseHandler):
         try:
             # Get the command that was committed
             command = Command.objects.get(id=self.event.target.id)
-            
+
             # Get the diagnosis (condition) that was created/updated by this command
             diagnosis = command.anchor_object
             if not diagnosis:
@@ -73,12 +73,12 @@ class AddBillingLineItemToAutismDiagnoses(BaseHandler):
             )
 
             applied_effect = billing_line_item.apply()
-            
+
             log.info(
                 f"Created billing line item for autism diagnosis (ICD-10: {icd_10_coding.code}) "
                 f"in note {note.id} with CPT code AUTISM_DX"
             )
-            
+
             return [applied_effect]
 
         except Command.DoesNotExist:
