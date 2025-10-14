@@ -79,6 +79,7 @@ class TaskLabel(IdentifiableModel):
         db_table = "canvas_sdk_data_api_tasklabel_001"
 
     tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
+    appointments = models.ManyToManyField("v1.Appointment", related_name="appointment_labels", through="v1.AppointmentLabel")
     position = models.IntegerField()
     color = models.CharField(choices=ColorEnum.choices, max_length=50)
     task_association = ArrayField(models.CharField(choices=Origin.choices, max_length=32))

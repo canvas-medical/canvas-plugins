@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -58,6 +58,11 @@ class Appointment(IdentifiableModel):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
+    labels = models.ManyToManyField(
+        "v1.TaskLabel", 
+        related_name="appointment_labels", 
+        through="v1.AppointmentLabel"
+    )
 
 
 class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
@@ -77,33 +82,19 @@ class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
     )
 
 
-class AppointmentLabel(models.Model):
-    """
-    A denormalized "through" model representing the connection between an Appointment
-    and a TaskLabel, including the label's details.
-    """
+class AppointmentLabel(Model):
+    """M2M for Appointment -> TaskLabels."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_appointment_labels_001"
 
-    dbid = models.BigIntegerField(primary_key=True)
-    appointment = models.ForeignKey(
-        Appointment, related_name="appointment_labels", on_delete=models.CASCADE
-    )
-    # This field represents the ID of the TaskLabel.
-    userselectedtasklabel = models.ForeignKey(
+    appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, null=True)
+    task_label = models.ForeignKey(
         "v1.TaskLabel",
-        related_name="appointment_links",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING,
+        null=True,
         db_column="userselectedtasklabel_id",
     )
-
-    # Denormalized fields from the TaskLabel model.
-    name = models.CharField(max_length=255)
-    color = models.CharField(max_length=50)
-    active = models.BooleanField()
-    position = models.IntegerField()
 
 
 class AppointmentMetadata(IdentifiableModel):

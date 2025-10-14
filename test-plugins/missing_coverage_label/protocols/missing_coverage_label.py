@@ -60,7 +60,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             try:
                 remove_label_effect = RemoveAppointmentLabel(
                     appointment_id=str(appt.id),
-                    labels=["MISSING_COVERAGE"],
+                    labels={"MISSING_COVERAGE"},
                 ).apply()
                 effects.append(remove_label_effect)
             except Exception as e:
@@ -115,7 +115,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             try:
                 add_label_effect = AddAppointmentLabel(
                     appointment_id=str(appt.id),
-                    labels=["MISSING_COVERAGE"],
+                    labels={"MISSING_COVERAGE"},
                 ).apply()
                 effects.append(add_label_effect)
             except Exception as e:
