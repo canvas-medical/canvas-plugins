@@ -132,7 +132,7 @@ class Appointment(AppointmentABC):
         appointment_note_type_id (UUID | str | None): The ID of the appointment note type.
         meeting_link (str | None): The meeting link for the appointment, if any.
         patient_id (str | None): The ID of the patient.
-        labels (list[str] | None): A list of label names to apply to the appointment.
+        labels (conset[str] | None): A set of label names to apply to the appointment.
     """
 
     class Meta:
