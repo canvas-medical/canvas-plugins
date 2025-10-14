@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.70.0 (2025-10-14)
+
+### Features
+
+- [panda-607]: Modified sig field max_length for MedicationStatement
+  ([#1147](https://github.com/canvas-medical/canvas-plugins/pull/1147),
+  [`cd636db`](https://github.com/canvas-medical/canvas-plugins/commit/cd636db0aec054e1280f0aa2817bea9f8444e531))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.69.0 (2025-10-10)
 
 ### Bug Fixes
