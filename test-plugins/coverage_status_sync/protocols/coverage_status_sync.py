@@ -28,9 +28,7 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         patient_id = self.context["patient"]["id"]
         label_in_event = self.context["label"]
 
-        # Check if this is the specific label we want to react to.
         if label_in_event != MONITORED_LABEL:
-            # This is a normal, expected case. The log clarifies we are intentionally skipping.
             log.info(
                 f"Ignoring event for label '{label_in_event}' because it is not the monitored label ('{MONITORED_LABEL}')."
             )
