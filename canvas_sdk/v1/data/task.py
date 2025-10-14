@@ -116,4 +116,5 @@ __exports__ = (
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "TaskMetadata",
 )
