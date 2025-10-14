@@ -182,9 +182,8 @@ STANDARD_LIBRARY_MODULES = {
         "uuid4",
         "UUID",
     },
-    "xml.etree": {
-        "ElementTree",
-        "ElementTree.fromstring"
+    "xml.etree.ElementTree": {
+        "fromstring"
     },
     "zoneinfo": {
         "ZoneInfo",
