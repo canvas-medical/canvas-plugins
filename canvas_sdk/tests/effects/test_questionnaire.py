@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.questionnaire import CreateQuestionnaire
@@ -67,9 +66,7 @@ def test_values_property(
     create_questionnaire_effect: CreateQuestionnaire, valid_questionnaire_yaml: str
 ) -> None:
     """Test that the values property returns the correct questionnaire_yaml mapping."""
-    assert create_questionnaire_effect.values == {
-        "questionnaire_yaml": valid_questionnaire_yaml
-    }
+    assert create_questionnaire_effect.values == {"questionnaire_yaml": valid_questionnaire_yaml}
 
 
 def test_effect_type_is_correct() -> None:
