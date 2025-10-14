@@ -1,14 +1,19 @@
+from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.group import Group
 from canvas_sdk.effects.patient_chart_group import PatientChartGroup
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from canvas_sdk.commands.constants import CodeSystems
 
-class Protocol(BaseHandler):
+
+class Conditions(BaseHandler):
+    """Groups psychiatric conditions together in the patient summary chart."""
     RESPONDS_TO = EventType.Name(EventType.PATIENT_CHART__CONDITIONS)
 
     def compute(self) -> list[Effect]:
+        """
+        Groups psychiatric conditions together in the patient summary chart. Returns an effect to apply the grouping.
+        """
         groups: dict[str, Group] = {}
         groups.setdefault("Psychiatry", Group(priority=100, items=[], name="Psychiatry"))
 
@@ -22,6 +27,7 @@ class Protocol(BaseHandler):
 
 
 class Medications(BaseHandler):
+    """Groups psychiatric medications together in the patient summary chart."""
     RESPONDS_TO = EventType.Name(EventType.PATIENT_CHART__MEDICATIONS)
 
     medication_codes = [
@@ -48,6 +54,9 @@ class Medications(BaseHandler):
     ]
 
     def compute(self) -> list[Effect]:
+        """
+        Groups psychiatric medications together in the patient summary chart. Returns an effect to apply the grouping.
+        """
         groups: dict[str, Group] = {}
         groups.setdefault("Psychiatry", Group(priority=100, items=[], name="Psychiatry"))
 

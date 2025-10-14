@@ -1,6 +1,129 @@
 # CHANGELOG
 
 
+## v0.69.0 (2025-10-10)
+
+### Bug Fixes
+
+- Configure the pool to check connections before handing them out
+  ([#1135](https://github.com/canvas-medical/canvas-plugins/pull/1135),
+  [`ca23e98`](https://github.com/canvas-medical/canvas-plugins/commit/ca23e9851a038d2340d3eef36c981881fee6a3b0))
+
+### Chores
+
+- Auto-update pre-commit hooks ([#979](https://github.com/canvas-medical/canvas-plugins/pull/979),
+  [`e834cea`](https://github.com/canvas-medical/canvas-plugins/commit/e834cea58cc6a4fed992b2d9f60bd2df62cf5afe))
+
+- Fix mypy pre-commit hook ([#1157](https://github.com/canvas-medical/canvas-plugins/pull/1157),
+  [`17114e2`](https://github.com/canvas-medical/canvas-plugins/commit/17114e275fbd1dba3c9064b56efb4472a41fef5d))
+
+- **deps**: Bump ruff from 0.12.10 to 0.14.0
+  ([#1155](https://github.com/canvas-medical/canvas-plugins/pull/1155),
+  [`a28fdb4`](https://github.com/canvas-medical/canvas-plugins/commit/a28fdb49a7947efa924b1bd8aec14a9dc5b96da5))
+
+### Features
+
+- Log aptible process id and send it to influx
+  ([#1136](https://github.com/canvas-medical/canvas-plugins/pull/1136),
+  [`fb8855f`](https://github.com/canvas-medical/canvas-plugins/commit/fb8855f6454b0c8c0a6a294059a3a3d22c8d2dd0))
+
+Signed-off-by: David Jantzen <mr.djantzen@gmail.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
+## v0.68.0 (2025-10-07)
+
+### Bug Fixes
+
+- Fix data model factories ([#1134](https://github.com/canvas-medical/canvas-plugins/pull/1134),
+  [`26f3bb2`](https://github.com/canvas-medical/canvas-plugins/commit/26f3bb2a07f36e8819eb7d2cb4237c1f01a505c3))
+
+- **data**: Add TimestampedModel, Coding and AuditedModel
+  ([#1108](https://github.com/canvas-medical/canvas-plugins/pull/1108),
+  [`e68a8c1`](https://github.com/canvas-medical/canvas-plugins/commit/e68a8c1eafde404cd64938cc811640bca06a990f))
+
+### Chores
+
+- Rename class to Conditions ([#1142](https://github.com/canvas-medical/canvas-plugins/pull/1142),
+  [`156f3d8`](https://github.com/canvas-medical/canvas-plugins/commit/156f3d89c0db1fa44faf5e3b9a2771ddd78c2abc))
+
+### Features
+
+- Add a reschedule effect for appointments and reschedule events
+  ([#1126](https://github.com/canvas-medical/canvas-plugins/pull/1126),
+  [`57dc39f`](https://github.com/canvas-medical/canvas-plugins/commit/57dc39ff37321f8d0f2ab1cb69b58caf5ebc1013))
+
+- Allow an application handler to return one effect OR multiple effects
+  ([#1114](https://github.com/canvas-medical/canvas-plugins/pull/1114),
+  [`c983589`](https://github.com/canvas-medical/canvas-plugins/commit/c983589e5d6ee37c5a86d0316199e5a05fe20856))
+
+- Appointments slots search ([#1050](https://github.com/canvas-medical/canvas-plugins/pull/1050),
+  [`707a504`](https://github.com/canvas-medical/canvas-plugins/commit/707a50447d547e5e3ae0c53cd1f71618c6ae85db))
+
+
+## v0.67.0 (2025-10-02)
+
+### Features
+
+- Add patientmetada to patient create effect
+  ([#1083](https://github.com/canvas-medical/canvas-plugins/pull/1083),
+  [`bc69040`](https://github.com/canvas-medical/canvas-plugins/commit/bc690403878eb68f4018c2dfd33233f848b6f74c))
+
+- Create eligibilitysummary model
+  ([#1093](https://github.com/canvas-medical/canvas-plugins/pull/1093),
+  [`933a96e`](https://github.com/canvas-medical/canvas-plugins/commit/933a96ebd003f566e135e3cb678c9f8eab78d905))
+
+- Create send contact verification effect
+  ([#1034](https://github.com/canvas-medical/canvas-plugins/pull/1034),
+  [`819dcd7`](https://github.com/canvas-medical/canvas-plugins/commit/819dcd75f34129e641f73022a3decd2b728fc55f))
+
+
+## v0.66.0 (2025-10-01)
+
+### Bug Fixes
+
+- Prevent PrescribeCommand.edit() from incorrectly unsetting type_to_dispense
+  ([#1028](https://github.com/canvas-medical/canvas-plugins/pull/1028),
+  [`42294bd`](https://github.com/canvas-medical/canvas-plugins/commit/42294bded179719ff194656ba8683e0ead923b12))
+
+### Chores
+
+- **deps**: Bump the production-patches group with 2 updates
+  ([#1085](https://github.com/canvas-medical/canvas-plugins/pull/1085),
+  [`b8a1627`](https://github.com/canvas-medical/canvas-plugins/commit/b8a162760e78ff5248ca2eedea3993048f90fafe))
+
+- **deps**: Bump typer from 0.15.1 to 0.19.2
+  ([#1086](https://github.com/canvas-medical/canvas-plugins/pull/1086),
+  [`12912f5`](https://github.com/canvas-medical/canvas-plugins/commit/12912f5520e604b09763a1a9896f4d189f0004a3))
+
+### Features
+
+- Add abnormal lab task notification plugin
+  ([#1072](https://github.com/canvas-medical/canvas-plugins/pull/1072),
+  [`4062b9f`](https://github.com/canvas-medical/canvas-plugins/commit/4062b9f3348817d49c109f1653d0d061c7fe4eab))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+- Add medication history related models
+  ([#1094](https://github.com/canvas-medical/canvas-plugins/pull/1094),
+  [`f6330d4`](https://github.com/canvas-medical/canvas-plugins/commit/f6330d4a08d65b8b18c079ab3a938234a513665d))
+
+- Add Trim and Coalesce to allowed django.db.models.functions imports
+  ([#1097](https://github.com/canvas-medical/canvas-plugins/pull/1097),
+  [`aaa9dae`](https://github.com/canvas-medical/canvas-plugins/commit/aaa9dae1c91139d0611ebf013a4ec99df9c592a1))
+
+Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+
+Co-authored-by: marythought <10136229+marythought@users.noreply.github.com>
+
+Co-authored-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+
 ## v0.65.0 (2025-09-25)
 
 ### Chores

@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.enums import TextChoices
 from timezone_utils.fields import TimeZoneField
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -19,7 +19,7 @@ from canvas_sdk.v1.data.common import (
 from canvas_sdk.v1.data.utils import create_key
 
 
-class Staff(Model):
+class Staff(TimestampedModel):
     """Staff."""
 
     class Meta:
@@ -35,8 +35,6 @@ class Staff(Model):
         editable=False,
         default=create_key,
     )
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     prefix = models.CharField(max_length=100)
     suffix = models.CharField(max_length=100)
     first_name = models.CharField(max_length=255)
@@ -44,7 +42,7 @@ class Staff(Model):
     last_name = models.CharField(max_length=255)
     maiden_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=255)
-    previous_names = models.JSONField()
+    previous_names = models.JSONField(default=list)
     birth_date = models.DateField(null=True)
     sex_at_birth = models.CharField(choices=PersonSex.choices, max_length=3)
     sexual_orientation_term = models.CharField(max_length=255)
@@ -57,14 +55,14 @@ class Staff(Model):
     cultural_ethnicity_codes = ArrayField(models.CharField(max_length=100))
     cultural_ethnicity_terms = ArrayField(models.CharField(max_length=255))
     last_known_timezone = TimeZoneField(null=True)
-    active = models.BooleanField()
+    active = models.BooleanField(default=True)
     primary_practice_location = models.ForeignKey(
         "v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True
     )
     npi_number = models.CharField(max_length=10)
     nadean_number = models.CharField(max_length=20)
     group_npi_number = models.CharField(max_length=10)
-    bill_through_organization = models.BooleanField()
+    bill_through_organization = models.BooleanField(default=True)
     tax_id = models.CharField(max_length=25)
     tax_id_type = models.CharField(choices=TaxIDType.choices, max_length=1)
     spi_number = models.CharField(max_length=50)
@@ -72,9 +70,9 @@ class Staff(Model):
     # language = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
     # language_secondary = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
     personal_meeting_room_link = models.URLField(null=True)
-    state = models.JSONField()
+    state = models.JSONField(default=dict, blank=True)
     user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-    schedule_column_ordering = models.IntegerField()
+    schedule_column_ordering = models.IntegerField(default=999)
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True
     )
@@ -135,10 +133,14 @@ class StaffContactPoint(IdentifiableModel):
 
     system = models.CharField(choices=ContactPointSystem.choices, max_length=20)
     value = models.CharField(max_length=100)
-    use = models.CharField(choices=ContactPointUse.choices, max_length=20)
+    use = models.CharField(
+        choices=ContactPointUse.choices, max_length=20, default=ContactPointUse.HOME
+    )
     use_notes = models.CharField(max_length=255)
-    rank = models.IntegerField()
-    state = models.CharField(choices=ContactPointState.choices, max_length=20)
+    rank = models.IntegerField(default=1)
+    state = models.CharField(
+        choices=ContactPointState.choices, max_length=20, default=ContactPointState.ACTIVE
+    )
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="telecom")
 
 
@@ -148,31 +150,31 @@ class StaffAddress(IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_staffaddress_001"
 
-    line1 = models.CharField(max_length=255)
-    line2 = models.CharField(max_length=255)
+    line1 = models.CharField(max_length=255, default="", blank=True)
+    line2 = models.CharField(max_length=255, default="", blank=True)
     city = models.CharField(max_length=255)
-    district = models.CharField(max_length=255)
+    district = models.CharField(max_length=255, blank=True, default="")
     state_code = models.CharField(max_length=2)
     postal_code = models.CharField(max_length=255)
-    use = models.CharField(choices=AddressUse.choices, max_length=10)
-    type = models.CharField(choices=AddressType.choices, max_length=10)
-    longitude = models.FloatField()
-    latitude = models.FloatField()
-    start = models.DateField()
-    end = models.DateField()
+    use = models.CharField(choices=AddressUse.choices, max_length=10, default=AddressUse.HOME)
+    type = models.CharField(choices=AddressType.choices, max_length=10, default=AddressType.BOTH)
+    longitude = models.FloatField(null=True, default=None, blank=True)
+    latitude = models.FloatField(null=True, default=None, blank=True)
+    start = models.DateField(null=True, blank=True)
+    end = models.DateField(null=True, blank=True)
     country = models.CharField(max_length=255)
-    state = models.CharField(choices=AddressState.choices, max_length=20)
+    state = models.CharField(
+        choices=AddressState.choices, max_length=20, default=AddressState.ACTIVE
+    )
     staff = models.ForeignKey(Staff, on_delete=models.DO_NOTHING, related_name="addresses")
 
 
-class StaffPhoto(Model):
+class StaffPhoto(TimestampedModel):
     """StaffPhoto."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_staffphoto_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="photos")
     url = models.CharField(
         default="https://d3hn0m4rbsz438.cloudfront.net/avatar1.png", max_length=512
@@ -185,6 +187,12 @@ class StaffRole(Model):
 
     class Meta:
         db_table = "canvas_sdk_data_api_staffrole_001"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["staff", "internal_code"],
+                name="staff_internal_code_unique",
+            )
+        ]
 
     class RoleDomain(TextChoices):
         CLINICAL = "CLI", "Clinical"

@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import ContactPointState, ContactPointSystem, ContactPointUse
 
 
@@ -39,14 +39,12 @@ class TeamResponsibility(models.TextChoices):
     REVIEW_COVERAGES = "REVIEW_COVERAGES", "Review incomplete patient coverages"
 
 
-class Team(IdentifiableModel):
+class Team(TimestampedModel, IdentifiableModel):
     """Team."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_team_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     name = models.CharField(max_length=200)
     responsibilities = ArrayField(
         models.CharField(choices=TeamResponsibility.choices, max_length=64)

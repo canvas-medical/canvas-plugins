@@ -1,6 +1,8 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from canvas_sdk.v1.data.base import TimestampedModel
+
 
 class ProtocolResultStatus(models.TextChoices):
     """Constants for ProtocolResultStatus."""
@@ -12,7 +14,7 @@ class ProtocolResultStatus(models.TextChoices):
     STATUS_NOT_RELEVANT = "not_relevant"
 
 
-class ProtocolResult(models.Model):
+class ProtocolResult(TimestampedModel):
     """ProtocolResult."""
 
     class Meta:
@@ -36,8 +38,6 @@ class ProtocolResult(models.Model):
     next_review = models.DateTimeField(null=True)
     feedback_enabled = models.BooleanField(default=False)
     plugin_can_be_snoozed = models.BooleanField(default=False)
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = (

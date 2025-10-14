@@ -249,6 +249,9 @@
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
+  "canvas_sdk.effects.metadata": [
+    "Metadata"
+  ],
   "canvas_sdk.effects.note": [
     "Appointment",
     "AppointmentIdentifier",
@@ -280,6 +283,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
@@ -287,6 +291,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientMetadata",
     "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
@@ -348,6 +353,9 @@
   ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
+  ],
+  "canvas_sdk.effects.send_contact_verification": [
+    "SendContactVerificationEffect"
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
@@ -577,6 +585,7 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "EligibilitySummary",
     "Encounter",
     "Facility",
     "Goal",
@@ -605,6 +614,10 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus",
     "MedicationStatement",
     "Message",
     "MessageAttachment",
@@ -751,6 +764,7 @@
     "CoverageStack",
     "CoverageState",
     "CoverageType",
+    "EligibilitySummary",
     "Transactor",
     "TransactorAddress",
     "TransactorCoverageType",
@@ -824,6 +838,12 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_history": [
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus"
   ],
   "canvas_sdk.v1.data.medication_statement": [
     "MedicationStatement"

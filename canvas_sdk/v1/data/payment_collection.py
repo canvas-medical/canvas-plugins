@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class PostingMethods(models.TextChoices):
@@ -12,7 +12,7 @@ class PostingMethods(models.TextChoices):
     OTHER = "other", "Other"
 
 
-class PaymentCollection(IdentifiableModel):
+class PaymentCollection(TimestampedModel, IdentifiableModel):
     """Stores the total collected amount and the payment method."""
 
     class Meta:
@@ -26,9 +26,6 @@ class PaymentCollection(IdentifiableModel):
     deposit_date = models.DateField()
 
     description = models.TextField()
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
 __exports__ = ("PaymentCollection", "PostingMethods")

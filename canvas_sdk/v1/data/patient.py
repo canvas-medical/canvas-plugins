@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -39,7 +39,7 @@ class PatientSettingConstants:
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
 
-class Patient(Model):
+class Patient(TimestampedModel):
     """A class representing a patient."""
 
     class Meta:
@@ -107,9 +107,6 @@ class Patient(Model):
         related_name="default_patients",
     )
     user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
     @classmethod
     def find(cls, id: str) -> Patient:
@@ -243,14 +240,12 @@ class PatientAddress(IdentifiableModel):
         return f"id={self.id}"
 
 
-class PatientExternalIdentifier(IdentifiableModel):
+class PatientExternalIdentifier(TimestampedModel, IdentifiableModel):
     """A class representing a patient external identifier."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientexternalidentifier_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient",
         related_name="external_identifiers",
@@ -268,14 +263,12 @@ class PatientExternalIdentifier(IdentifiableModel):
         return f"id={self.id}"
 
 
-class PatientSetting(Model):
+class PatientSetting(TimestampedModel):
     """PatientSetting."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientsetting_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
