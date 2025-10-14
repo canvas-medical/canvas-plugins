@@ -465,3 +465,19 @@ def test_immunization_statement_unstructured_cannot_be_used_with_cpt_or_cvx() ->
             unstructured=unstructured_coding,
         ).originate()
     assert "Unstructured codes cannot be used with CPT or CVX codes" in str(exc_info.value)
+
+
+def test_immunization_statement_can_be_originated_without_values() -> None:
+    """Test that ImmunizationStatementCommand can be originated without any values."""
+    command = ImmunizationStatementCommand(note_uuid="test_uuid").originate()
+
+    payload = json.loads(command.payload)
+    data = payload["data"]
+
+    # Verify that the command can be created and originated
+    assert payload["note"] == "test_uuid"
+    assert data.get("cpt_code") is None
+    assert data.get("cvx_code") is None
+    assert data.get("unstructured") is None
+    assert data.get("approximate_date") is None
+    assert data.get("comments") is None

@@ -20,13 +20,25 @@ class ImmunizationStatementCommand(BaseCommand):
     approximate_date: date | None = None
     comments: str | None = None
 
+    def _has_value(self, value: str | Coding | None) -> bool:
+        """Check if a value is set."""
+        if value is None:
+            return False
+        if isinstance(value, str):
+            return value != ""
+        # For Coding objects (dicts), check if it exists
+        return True
+
     @model_validator(mode="after")
     def check_needed_together_fields(self) -> Self:
         """Check that both 'cpt_code' and 'cvx_code' are set if one is provided."""
-        if self.cpt_code is not None and self.cvx_code is None:
-            raise ValueError("'cvx_code' must be set with 'cpt_code' if it is provided")
-        if self.cpt_code is None and self.cvx_code is not None:
-            raise ValueError("'cpt_code' must be set with 'cvx_code' if it is provided")
+        has_cpt_code = self._has_value(self.cpt_code)
+        has_cvx_code = self._has_value(self.cvx_code)
+
+        if has_cpt_code ^ has_cvx_code:
+            raise ValueError(
+                "Both cpt_code and cvx_code must be provided if one is specified and cannot be empty."
+            )
 
         return self
 
