@@ -25,7 +25,7 @@ class ImmunizationStatementCommand(BaseCommand):
         if value is None:
             return False
         if isinstance(value, str):
-            return value != ""
+            return value.strip() != ""
         # For Coding objects (dicts), check if it exists
         return True
 

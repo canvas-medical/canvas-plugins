@@ -24,7 +24,7 @@ from canvas_sdk.commands import (
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
-from canvas_sdk.commands.constants import CodeSystems
+from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
     CommandCode,
@@ -361,12 +361,12 @@ def test_coding_system_validation_accepts_string_values(
 def test_immunization_statement_values_are_set_correctly() -> None:
     """Test that ImmunizationStatementCommand sets values correctly."""
     # Test with CPT and CVX codes
-    cpt_coding = {
-        "system": CodeSystems.CPT,
-        "code": "90471",
-        "display": "Immunization administration",
-    }
-    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
+    cpt_coding = Coding(
+        system=CodeSystems.CPT,
+        code="90471",
+        display="Immunization administration",
+    )
+    cvx_coding = Coding(system=CodeSystems.CVX, code="207", display="COVID-19 vaccine")
     approximate_date_value = date(2024, 1, 15)
     comments_value = "Patient tolerated well"
 
@@ -393,11 +393,11 @@ def test_immunization_statement_values_are_set_correctly() -> None:
     assert data["comments"] == comments_value
 
     # Test with unstructured code
-    unstructured_coding = {
-        "system": CodeSystems.UNSTRUCTURED,
-        "code": "flu shot",
-        "display": "Flu shot",
-    }
+    unstructured_coding = Coding(
+        system=CodeSystems.UNSTRUCTURED,
+        code="flu shot",
+        display="Flu shot",
+    )
 
     command = ImmunizationStatementCommand(
         note_uuid="test_uuid",
@@ -418,12 +418,12 @@ def test_immunization_statement_values_are_set_correctly() -> None:
 
 def test_immunization_statement_cpt_and_cvx_required_together() -> None:
     """Test that CPT and CVX codes must be provided together."""
-    cpt_coding = {
-        "system": CodeSystems.CPT,
-        "code": "90471",
-        "display": "Immunization administration",
-    }
-    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
+    cpt_coding = Coding(
+        system=CodeSystems.CPT,
+        code="90471",
+        display="Immunization administration",
+    )
+    cvx_coding = Coding(system=CodeSystems.CVX, code="207", display="COVID-19 vaccine")
 
     # Test CPT without CVX raises error
     with pytest.raises(ValidationError) as exc_info:
@@ -431,7 +431,10 @@ def test_immunization_statement_cpt_and_cvx_required_together() -> None:
             note_uuid="test_uuid",
             cpt_code=cpt_coding,
         )
-    assert "'cvx_code' must be set with 'cpt_code'" in str(exc_info.value)
+    assert (
+        "Value error, Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
+        in str(exc_info.value)
+    )
 
     # Test CVX without CPT raises error
     with pytest.raises(ValidationError) as exc_info:
@@ -439,22 +442,25 @@ def test_immunization_statement_cpt_and_cvx_required_together() -> None:
             note_uuid="test_uuid",
             cvx_code=cvx_coding,
         )
-    assert "'cpt_code' must be set with 'cvx_code'" in str(exc_info.value)
+    assert (
+        "Value error, Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
+        in str(exc_info.value)
+    )
 
 
 def test_immunization_statement_unstructured_cannot_be_used_with_cpt_or_cvx() -> None:
     """Test that unstructured codes cannot be used together with CPT or CVX codes."""
-    cpt_coding = {
-        "system": CodeSystems.CPT,
-        "code": "90471",
-        "display": "Immunization administration",
-    }
-    cvx_coding = {"system": CodeSystems.CVX, "code": "207", "display": "COVID-19 vaccine"}
-    unstructured_coding = {
-        "system": CodeSystems.UNSTRUCTURED,
-        "code": "flu shot",
-        "display": "Flu shot",
-    }
+    cpt_coding = Coding(
+        system=CodeSystems.CPT,
+        code="90471",
+        display="Immunization administration",
+    )
+    cvx_coding = Coding(system=CodeSystems.CVX, code="207", display="COVID-19 vaccine")
+    unstructured_coding = Coding(
+        system=CodeSystems.UNSTRUCTURED,
+        code="flu shot",
+        display="Flu shot",
+    )
 
     # Test unstructured with CPT and CVX raises error
     with pytest.raises(ValidationError) as exc_info:
@@ -481,3 +487,49 @@ def test_immunization_statement_can_be_originated_without_values() -> None:
     assert data.get("unstructured") is None
     assert data.get("approximate_date") is None
     assert data.get("comments") is None
+
+
+def test_immunization_statement_empty_coding_raises_error() -> None:
+    """Test that an empty Coding object raises a validation error due to missing required fields."""
+    # Test empty dict for cpt_code
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cpt_code={},  # type:ignore [arg-type]
+            cvx_code=Coding(system=CodeSystems.CVX, code="207"),
+        )
+    assert "cpt_code" in str(exc_info.value).lower()
+
+    # Test empty dict for cvx_code
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cpt_code=Coding(system=CodeSystems.CPT, code="90471"),
+            cvx_code={},  # type:ignore [arg-type]
+        )
+    assert "cvx_code" in str(exc_info.value).lower()
+
+    # Test empty dict for unstructured
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            unstructured={},  # type:ignore [arg-type]
+        )
+    assert "unstructured" in str(exc_info.value).lower()
+
+    # Test Coding with missing 'code' field
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            cpt_code={"system": CodeSystems.CPT},  # type:ignore [arg-type]
+            cvx_code=Coding(system=CodeSystems.CVX, code="207"),
+        )
+    assert "code" in str(exc_info.value).lower()
+
+    # Test Coding with missing 'system' field
+    with pytest.raises(ValidationError) as exc_info:
+        ImmunizationStatementCommand(
+            note_uuid="test_uuid",
+            unstructured={"code": "some immunization"},  # type:ignore [arg-type]
+        )
+    assert "system" in str(exc_info.value).lower()
