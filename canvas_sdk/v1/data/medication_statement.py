@@ -35,7 +35,7 @@ class MedicationStatement(AuditedModel, IdentifiableModel):
     dose_route = models.CharField(max_length=255, default="")
     dose_frequency = models.FloatField(null=True)
     dose_frequency_interval = models.CharField(max_length=255, default="")
-    sig_original_input = models.CharField(max_length=255, default="")
+    sig_original_input = models.CharField(max_length=1000, default="")
 
 
 __exports__ = ("MedicationStatement",)
