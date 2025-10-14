@@ -969,6 +969,7 @@
     "TaskComment",
     "TaskLabel",
     "TaskLabelModule",
+    "TaskMetadata",
     "TaskStatus",
     "TaskTaskLabel",
     "TaskType"
