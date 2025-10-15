@@ -90,7 +90,7 @@ class RemoveClaimLabel(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a claim label."""
-        return {"claim_id": self.claim_id, "label_id": self.label_id}
+        return {"claim_id": str(self.claim_id), "label_id": str(self.label_id)}
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
