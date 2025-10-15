@@ -40,8 +40,8 @@ class AddClaimLabel(_BaseEffect):
     def values(self) -> dict[str, Any]:
         """The values for adding a claim label."""
         return {
-            "claim_id": self.claim_id,
-            "label_id": self.label_id,
+            "claim_id": str(self.claim_id),
+            "label_id": str(self.label_id),
             "label_values": self.label_values.to_dict() if self.label_values else None,
         }
 
