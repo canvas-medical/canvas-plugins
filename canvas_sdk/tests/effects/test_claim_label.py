@@ -89,7 +89,7 @@ def test_add_claim_label_with_label_values(mock_db_queries: dict[str, MagicMock]
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "label_id": null, "label_values": {"color": "pink", "name": "test", "position": 100}}}'
+        == '{"data": {"claim_id": "claim-id", "label_id": "None", "label_values": {"color": "pink", "name": "test", "position": 100}}}'
     )
 
 
