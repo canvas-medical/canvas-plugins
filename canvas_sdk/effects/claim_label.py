@@ -114,3 +114,10 @@ class RemoveClaimLabel(_BaseEffect):
             )
 
         return errors
+
+
+__exports__ = (
+    "Label",
+    "AddClaimLabel",
+    "RemoveClaimLabel",
+)
