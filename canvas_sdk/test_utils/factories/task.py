@@ -1,7 +1,6 @@
 import factory
 
-from canvas_sdk.effects.task.task import TaskMetadata
-from canvas_sdk.v1.data import Task, TaskComment, TaskLabel, TaskTaskLabel
+from canvas_sdk.v1.data import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 from canvas_sdk.v1.data.task import TaskLabelModule
 
