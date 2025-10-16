@@ -12,6 +12,7 @@ class Facility(IdentifiableModel):
     name = models.CharField(max_length=255)
     npi_number = models.CharField(verbose_name="NPI number", max_length=10, blank=True)
     phone_number = models.CharField(max_length=10, blank=True, default="")
+    fax_number = models.CharField(max_length=10, blank=True, default="")
     active = models.BooleanField(default=True)
     line1 = models.CharField(max_length=255, default="", blank=True)
     line2 = models.CharField(max_length=255, default="", blank=True)
