@@ -221,6 +221,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ADD_BILLING_LINE_ITEM: _ClassVar[EffectType]
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
+    ADD_CLAIM_LABEL: _ClassVar[EffectType]
+    REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
@@ -490,6 +492,8 @@ PATIENT_PORTAL__APPLICATION_CONFIGURATION: EffectType
 ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
+ADD_CLAIM_LABEL: EffectType
+REMOVE_CLAIM_LABEL: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
