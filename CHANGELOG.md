@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.72.0 (2025-10-16)
+
+### Features
+
+- Add cpt to questionnaire schema
+  ([#1178](https://github.com/canvas-medical/canvas-plugins/pull/1178),
+  [`7684604`](https://github.com/canvas-medical/canvas-plugins/commit/768460478d82101d47793be991b8f3f91960ed0d))
+
+
 ## v0.71.1 (2025-10-16)
 
 ### Bug Fixes
