@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.71.1 (2025-10-16)
+
+### Bug Fixes
+
+- Revert "chore: update Python matrix (#1160)"
+  ([#1184](https://github.com/canvas-medical/canvas-plugins/pull/1184),
+  [`0e2a326`](https://github.com/canvas-medical/canvas-plugins/commit/0e2a3269f498b3395c0aff54b31d6eae94f3b108))
+
+
 ## v0.71.0 (2025-10-16)
 
 ### Bug Fixes
