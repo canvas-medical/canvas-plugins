@@ -96,6 +96,17 @@ class TaskTaskLabel(Model):
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
 
+class TaskMetadata(IdentifiableModel):
+    """TaskMetadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_taskmetadata_001"
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="metadata")
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=255)
+
+
 __exports__ = (
     "TaskType",
     "EventType",
@@ -105,4 +116,5 @@ __exports__ = (
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "TaskMetadata",
 )
