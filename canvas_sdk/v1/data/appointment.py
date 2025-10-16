@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -58,6 +58,11 @@ class Appointment(IdentifiableModel):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
+    labels = models.ManyToManyField(
+        "v1.TaskLabel", 
+        related_name="appointment_labels", 
+        through="v1.AppointmentLabel"
+    )
 
 
 class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
@@ -74,6 +79,21 @@ class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
     expiration_date = models.DateField()
     appointment = models.ForeignKey(
         Appointment, on_delete=models.DO_NOTHING, related_name="external_identifiers"
+    )
+
+
+class AppointmentLabel(Model):
+    """M2M for Appointment -> TaskLabels."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_appointment_labels_001"
+
+    appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, null=True)
+    task_label = models.ForeignKey(
+        "v1.TaskLabel",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        db_column="userselectedtasklabel_id",
     )
 
 
@@ -95,4 +115,5 @@ __exports__ = (
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
 )

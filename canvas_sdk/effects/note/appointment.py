@@ -2,10 +2,15 @@ import json
 from typing import Any
 from uuid import UUID
 
+from django.db.models import Count
+from pydantic import conset
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects import Effect
+from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
+from canvas_sdk.v1.data import Appointment as AppointmentModel
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
@@ -127,6 +132,7 @@ class Appointment(AppointmentABC):
         appointment_note_type_id (UUID | str | None): The ID of the appointment note type.
         meeting_link (str | None): The meeting link for the appointment, if any.
         patient_id (str | None): The ID of the patient.
+        labels (conset[str] | None): A set of label names to apply to the appointment.
     """
 
     class Meta:
@@ -135,6 +141,7 @@ class Appointment(AppointmentABC):
     appointment_note_type_id: UUID | str | None = None
     meeting_link: str | None = None
     patient_id: str | None = None
+    labels: conset(str, min_length=1, max_length=3) | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -230,4 +237,101 @@ class Appointment(AppointmentABC):
         )
 
 
-__exports__ = ("ScheduleEvent", "Appointment")
+class _AppointmentLabelBase(_BaseEffect):
+    """
+    Base class for appointment label effects.
+    
+    Attributes:
+        appointment_id (UUID | str): The ID of the appointment.
+        labels (conset[str]): A set of label names (1-3 labels allowed).
+    """
+
+    appointment_id: str
+    labels: conset(str, min_length=1, max_length=3)
+
+
+    def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
+        """Override to handle set serialization in error details."""
+        if isinstance(value, set):
+            value = list(value)
+        return super()._create_error_detail(type, message, value)
+
+
+    @property
+    def values(self) -> dict:
+        """The effect's values."""
+        result = {
+            "appointment_id": self.appointment_id,
+            "labels": list(self.labels),  # Convert set to list for JSON serialization
+        }
+        return result
+
+
+
+class AddAppointmentLabel(_AppointmentLabelBase):
+    """
+    Effect to add one or more labels to an appointment.
+
+    Attributes:
+        appointment_id (UUID | str): The ID of the appointment to add labels to.
+        labels (list[str]): A list of label names to add.
+    """
+
+    class Meta:
+        effect_type = EffectType.ADD_APPOINTMENT_LABEL
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Validate that the appointment does not exceed the 3-label limit."""
+        errors = super()._get_error_details(method)
+        if not self.appointment_id or not self.labels:
+            return errors
+
+        result = (
+            AppointmentModel.objects
+            .filter(id=self.appointment_id)
+            .annotate(label_count=Count("appointment_labels"))
+            .values_list("label_count", flat=True)
+            .first()
+        )
+
+        if result is None:
+            # appointment doesn't exist
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Appointment {self.appointment_id} does not exist",
+                    self.appointment_id,
+                )
+            )
+        elif result + len(self.labels) > 3:
+            # appointment exists but label limit exceeded
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "Limit reached: Only 3 appointment labels allowed.",
+                    None,
+                )
+            )
+        return errors
+
+
+class RemoveAppointmentLabel(_AppointmentLabelBase, TrackableFieldsModel):
+    """
+    Effect to remove one or more labels from an appointment.
+
+    Attributes:
+        appointment_id (UUID | str): The ID of the appointment to remove labels from.
+        labels (list[str]): A list of label names to remove.
+    """
+
+    class Meta:
+        effect_type = EffectType.REMOVE_APPOINTMENT_LABEL
+
+
+
+__exports__ = (
+    "ScheduleEvent",
+    "Appointment",
+    "AddAppointmentLabel",
+    "RemoveAppointmentLabel",
+)
