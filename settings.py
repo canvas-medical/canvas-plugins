@@ -196,6 +196,10 @@ else:
         }
     }
 
-LOGSTASH_HOST = os.getenv("LOGSTASH_URL")
-LOGSTASH_PORT = int(cast(str, os.getenv("LOGSTASH_PORT"))) if os.getenv("LOGSTASH_PORT") else None
-LOGSTASH_PROTOCOL = os.getenv("LOGSTASH_PROTOCOL", "logger.logstash.HttpTransport")
+LOGSTASH_HOST = os.getenv("PLUGINS_LOGSTASH_URL")
+LOGSTASH_PORT = (
+    int(cast(str, os.getenv("PLUGINS_LOGSTASH_PORT")))
+    if os.getenv("PLUGINS_LOGSTASH_PORT")
+    else None
+)
+LOGSTASH_PROTOCOL = os.getenv("PLUGINS_LOGSTASH_PROTOCOL", "logger.logstash.HttpTransport")
