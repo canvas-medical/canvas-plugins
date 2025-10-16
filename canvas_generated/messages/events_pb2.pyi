@@ -3,7 +3,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -49,6 +50,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MEDICATION_LIST_ITEM_CREATED: _ClassVar[EventType]
     MEDICATION_LIST_ITEM_UPDATED: _ClassVar[EventType]
     MESSAGE_CREATED: _ClassVar[EventType]
+    MESSAGE_TRANSMISSION_CREATED: _ClassVar[EventType]
+    MESSAGE_TRANSMISSION_UPDATED: _ClassVar[EventType]
     PATIENT_CREATED: _ClassVar[EventType]
     PATIENT_UPDATED: _ClassVar[EventType]
     PRESCRIPTION_CREATED: _ClassVar[EventType]
@@ -857,6 +860,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SHOW_NOTE_FOOTER_BUTTON: _ClassVar[EventType]
     ACTION_BUTTON_CLICKED: _ClassVar[EventType]
     PATIENT_CHART__CONDITIONS: _ClassVar[EventType]
+    PATIENT_CHART__DETECTED_ISSUES: _ClassVar[EventType]
     PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION: _ClassVar[EventType]
     PATIENT_PROFILE__SECTION_CONFIGURATION: _ClassVar[EventType]
     PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH: _ClassVar[EventType]
@@ -966,6 +970,8 @@ LAB_REPORT_UPDATED: EventType
 MEDICATION_LIST_ITEM_CREATED: EventType
 MEDICATION_LIST_ITEM_UPDATED: EventType
 MESSAGE_CREATED: EventType
+MESSAGE_TRANSMISSION_CREATED: EventType
+MESSAGE_TRANSMISSION_UPDATED: EventType
 PATIENT_CREATED: EventType
 PATIENT_UPDATED: EventType
 PRESCRIPTION_CREATED: EventType
@@ -1774,6 +1780,7 @@ SHOW_NOTE_HEADER_BUTTON: EventType
 SHOW_NOTE_FOOTER_BUTTON: EventType
 ACTION_BUTTON_CLICKED: EventType
 PATIENT_CHART__CONDITIONS: EventType
+PATIENT_CHART__DETECTED_ISSUES: EventType
 PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION: EventType
 PATIENT_PROFILE__SECTION_CONFIGURATION: EventType
 PATIENT_PROFILE__ADD_PHARMACY__POST_SEARCH: EventType

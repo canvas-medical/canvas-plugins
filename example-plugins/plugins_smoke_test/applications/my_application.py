@@ -25,7 +25,7 @@ class MyGlobalApplication(Application):
 
 class SmokeTestApi(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/global")
-    def ical_links(self) -> list[Response | Effect]:
+    def smoke_test_ui(self) -> list[Response | Effect]:
         logged_in_staff = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
 
         context = {
