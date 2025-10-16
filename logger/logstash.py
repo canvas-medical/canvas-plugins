@@ -2,7 +2,6 @@ import contextlib
 import datetime
 import json
 import logging
-import os
 import re
 import sys
 import traceback
@@ -109,7 +108,7 @@ class LogstashFormatterV1(logging.Formatter):
             "plugin_context": True,
         }
 
-        self.source_host = os.getenv("HOSTNAME", "")
+        self.source_host = settings.HOSTNAME
 
     @staticmethod
     def get_location(fields: dict) -> str:
@@ -200,6 +199,82 @@ class LogstashFormatterV1(logging.Formatter):
 
         log_record = self.defaults.copy()
         log_record.update(base_log)
+
+        return json.dumps(log_record, default=_json_default)
+
+
+class LogstashFormatterECS(logging.Formatter):
+    """
+    A custom formatter to prepare logs to be shipped out to logstash ECS format.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.defaults = {
+            "service": {"name": "plugin-runner"},
+            "labels": {"customer": settings.CUSTOMER_IDENTIFIER},
+            "host": {"name": settings.HOSTNAME},
+        }
+
+    def format(self, record: LogRecord) -> str:
+        """
+        Format a log record to JSON, if the message is a dict assume an empty
+        message and use the dict as additional fields.
+        """
+        fields = record.__dict__.copy()
+
+        if "msg" in fields and isinstance(fields["msg"], dict):
+            msg = fields.pop("msg")
+
+            # if the dict has an "event" key, use that as the message
+            # to avoid conflicts with other message types that use event as an object.
+            if "event" in msg:
+                fields["message"] = msg.pop("event")
+
+            fields.update(msg)
+        elif "msg" in fields and "message" not in fields:
+            msg = record.getMessage()
+
+            del fields["msg"]
+
+            with contextlib.suppress(KeyError, IndexError, ValueError):
+                msg = msg.format(**fields)
+
+            fields["message"] = msg
+
+        if "exc_info" in fields:
+            if fields["exc_info"]:
+                exc_info = _figure_out_exc_info(fields["exc_info"])
+                fields["exception_message"] = str(exc_info[1])
+                fields["exception_type"] = f"{exc_info[0].__module__}.{exc_info[0].__qualname__}"
+                fields["stack_trace"] = traceback.format_exception(*exc_info)
+            del fields["exc_info"]
+
+        if "exc_text" in fields and not fields["exc_text"]:
+            del fields["exc_text"]
+
+        now = datetime.datetime.now(datetime.UTC)
+
+        log_record = {
+            **self.defaults,
+            "@timestamp": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            "message": fields.get("message", ""),
+            "log": {
+                "level": fields.get("levelname", ""),
+            },
+            **(
+                {
+                    "error": {
+                        "message": fields["exception_message"],
+                        "type": fields["exception_type"],
+                        "stack_trace": fields["stack_trace"],
+                    }
+                }
+                if "exception_message" in fields
+                else {}
+            ),
+        }
 
         return json.dumps(log_record, default=_json_default)
 
