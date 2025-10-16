@@ -1,10 +1,11 @@
 import logging
+import os
 from typing import Any
 
 from django.conf import settings
 from logstash_async.handler import AsynchronousLogstashHandler
 
-from logger.logstash import LogstashFormatterV1
+from logger.logstash import LogstashFormatterECS
 from logger.pubsub import PubSubLogHandler
 
 
@@ -42,7 +43,7 @@ class PluginLogger:
                 database_path=None,
                 transport=settings.LOGSTASH_PROTOCOL,
             )
-            logstash_handler.setFormatter(LogstashFormatterV1())
+            logstash_handler.setFormatter(LogstashFormatterECS())
             self.logger.addHandler(logstash_handler)
 
     def debug(self, message: Any, *args: Any, **kwargs: Any) -> None:
