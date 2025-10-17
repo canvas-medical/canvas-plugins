@@ -4,6 +4,7 @@ from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
 from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.common.enums import TaskPriority
 
 
 class ImagingOrderCommand(BaseCommand):
@@ -12,15 +13,11 @@ class ImagingOrderCommand(BaseCommand):
     class Meta:
         key = "imagingOrder"
 
-    class Priority(Enum):
-        ROUTINE = "Routine"
-        URGENT = "Urgent"
-
     image_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "image"})
     diagnosis_codes: list[str] | None = Field(
         default=None, json_schema_extra={"commands_api_name": "indications"}
     )
-    priority: Priority | None = None
+    priority: TaskPriority | None = None
     additional_details: str | None = None
     service_provider: ServiceProvider | None = Field(
         default=None, json_schema_extra={"commands_api_name": "ordering_provider"}
@@ -40,4 +37,4 @@ class ImagingOrderCommand(BaseCommand):
         return values
 
 
-__exports__ = ("ImagingOrderCommand",)
+__exports__ = ("ImagingOrderCommand", "TaskPriority")
