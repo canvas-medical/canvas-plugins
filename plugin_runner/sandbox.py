@@ -126,6 +126,7 @@ STANDARD_LIBRARY_MODULES = {
     "json": {
         "dumps",
         "loads",
+        "JSONDecodeError"
     },
     "operator": {
         "and_",
