@@ -3,7 +3,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -99,6 +100,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     STAFF_DEACTIVATED: _ClassVar[EventType]
     COMPOUND_MEDICATION_CREATED: _ClassVar[EventType]
     COMPOUND_MEDICATION_UPDATED: _ClassVar[EventType]
+    TASK_PRIORITY_UPDATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -1017,6 +1019,7 @@ STAFF_ACTIVATED: EventType
 STAFF_DEACTIVATED: EventType
 COMPOUND_MEDICATION_CREATED: EventType
 COMPOUND_MEDICATION_UPDATED: EventType
+TASK_PRIORITY_UPDATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
