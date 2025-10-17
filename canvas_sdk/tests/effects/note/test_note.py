@@ -345,3 +345,73 @@ def test_note_multiple_validation_errors(
     assert "Field 'patient_id' is required to create a note." in error_messages
     assert any("Practice location with ID" in msg for msg in error_messages)
     assert any("Provider with ID" in msg for msg in error_messages)
+
+
+def test_push_charges_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """push_charges should require an instance_id before attempting to push."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.push_charges()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required to push charges from a note to a claim." in msgs
+
+
+def test_push_charges_note_does_not_exist(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """If the note instance_id does not match a persisted Note, raise a ValidationError."""
+    instance_id = str(uuid4())
+    # Ensure the DB returns no note for this id
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.push_charges()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_push_charges_note_not_billable(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """If the note exists but its note_type_version is not billable, raise a ValidationError."""
+    instance_id = str(uuid4())
+
+    # create a fake persisted note with a non-billable note_type_version
+    fake_note = MagicMock()
+    fake_note.note_type_version = MagicMock(is_billable=False)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.push_charges()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    # message includes that the note type is not billable
+    assert any("is not billable and has no associated claim" in m for m in msgs)
+
+
+def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """When the note exists and is billable, push_charges returns a PUSH_NOTE_CHARGES effect."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.note_type_version = MagicMock(is_billable=True)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.push_charges()
+
+    from canvas_generated.messages.effects_pb2 import EffectType as _EffectType
+
+    assert effect.type == _EffectType.PUSH_NOTE_CHARGES
+    payload = json.loads(effect.payload)
+    assert payload["note"] == instance_id
