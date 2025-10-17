@@ -1,8 +1,11 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.utils import timezone
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.claim import Claim
+from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.utils import empty_note_body
 
 
 class NoteTypeCategories(models.TextChoices):
@@ -114,7 +117,7 @@ class NoteStates(models.TextChoices):
     CONFIRM_IMPORT = "CNF", "Confirmed"
 
 
-class NoteType(IdentifiableModel):
+class NoteType(TimestampedModel, IdentifiableModel, Coding):
     """NoteType."""
 
     objects: models.Manager["NoteType"]
@@ -122,13 +125,6 @@ class NoteType(IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_notetype_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     name = models.CharField(max_length=250)
     icon = models.CharField(max_length=250)
     category = models.CharField(choices=NoteTypeCategories.choices, max_length=50)
@@ -153,14 +149,12 @@ class NoteType(IdentifiableModel):
     online_duration = models.IntegerField()
 
 
-class Note(IdentifiableModel):
+class Note(TimestampedModel, IdentifiableModel):
     """Note."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_note_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
@@ -171,17 +165,17 @@ class Note(IdentifiableModel):
     note_type_version = models.ForeignKey(
         "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
     )
-    title = models.TextField()
-    body = models.JSONField()
+    title = models.TextField(default="", blank=True)
+    body = models.JSONField(default=empty_note_body)
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     last_modified_by_staff = models.ForeignKey("v1.Staff", on_delete=models.DO_NOTHING, null=True)
     checksum = models.CharField(max_length=32)
     billing_note = models.TextField()
     # TODO -implement InpatientStay model
     # inpatient_stay = models.ForeignKey("v1.InpatientStay", on_delete=models.DO_NOTHING, null=True)
-    related_data = models.JSONField()
+    related_data = models.JSONField(default=dict, blank=True)
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
-    datetime_of_service = models.DateTimeField()
+    datetime_of_service = models.DateTimeField(default=timezone.now)
     place_of_service = models.CharField(max_length=255)
 
     def get_claim(self) -> Claim | None:
@@ -192,14 +186,12 @@ class Note(IdentifiableModel):
         return self.claims.order_by("-created").first()
 
 
-class NoteStateChangeEvent(IdentifiableModel):
+class NoteStateChangeEvent(TimestampedModel, IdentifiableModel):
     """NoteStateChangeEvent."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_notestatechangeevent_001"
 
-    created = models.DateTimeField()
-    modified = models.DateTimeField()
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
     originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     state = models.CharField(choices=NoteStates.choices, max_length=3)
@@ -223,6 +215,7 @@ class CurrentNoteStateEvent(IdentifiableModel):
         """Returns a boolean to indicate if the related note can be edited."""
         return self.state in [
             NoteStates.NEW,
+            NoteStates.CONVERTED,
             NoteStates.PUSHED,
             NoteStates.UNLOCKED,
             NoteStates.RESTORED,

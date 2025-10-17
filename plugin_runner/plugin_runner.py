@@ -429,6 +429,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
                         log.info(
                             f'synchronize_plugins: installing/reloading plugin "{plugin_name}" for action=reload'
                         )
+                        unload_plugin(plugin_name)
                         install_plugin(plugin_name, attributes=plugin)
                         plugin_dir = pathlib.Path(PLUGIN_DIRECTORY) / plugin_name
                         load_plugin(plugin_dir.resolve())

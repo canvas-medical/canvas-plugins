@@ -14,7 +14,16 @@
                     "write": []
                 }
             },
-             {
+            {
+                "class": "test_render_template.protocols.my_protocol:TemplateInheritance",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
                 "class": "test_render_template.protocols.my_protocol:InvalidTemplate",
                 "description": "A protocol that does xyz...",
                 "data_access": {
@@ -23,7 +32,7 @@
                     "write": []
                 }
             },
-             {
+            {
                 "class": "test_render_template.protocols.my_protocol:ForbiddenTemplate",
                 "description": "A protocol that does xyz...",
                 "data_access": {

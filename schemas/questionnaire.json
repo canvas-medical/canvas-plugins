@@ -11,7 +11,7 @@
         },
         "code_system": {
             "type": "string",
-            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
             "description": "The coding system used for the questionnaire."
         },
         "code": { "type": "string",
@@ -41,7 +41,7 @@
                     "content": { "type": "string", "description": "The text displayed when the command is printed." },
                     "responses_code_system": {
                         "type": "string",
-                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
                         "description": "The coding system for responses."
                     },
                     "responses_type": {
@@ -52,6 +52,29 @@
                     "display_result_in_social_history_section": { "type": "boolean",
                         "description": "Determines if the response should be shown in the Social History (SHX) section.",
                         "default": false
+                    },
+                    "enabled_behavior": {
+                        "type": "string",
+                        "enum": ["all", "any"],
+                        "description": "Specifies if all or any of the conditions must be met to enable this question."
+                    },
+                    "enabled_conditions": {
+                        "type": "array",
+                        "description": "List of conditions that enable this question.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question_code": { "type": "string", "description": "Code of the question to check." },
+                                "operator": {
+                                    "type": "string",
+                                    "enum": ["=", "!=", "exists", "not_exists"],
+                                    "description": "Operator for condition."
+                                },
+                                "value_code": { "type": ["string", "null"], "description": "Response option code to match, if applicable." },
+                                "value_string": { "type": ["string", "null"], "description": "Free text value to match, if applicable." }
+                            },
+                            "required": ["question_code", "operator"]
+                        }
                     },
                     "responses": {
                         "type": "array",

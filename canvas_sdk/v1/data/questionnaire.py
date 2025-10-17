@@ -10,19 +10,17 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
+    TimestampedModel,
     ValueSetLookupByNameQuerySet,
 )
 
 
-class ResponseOptionSet(Model):
+class ResponseOptionSet(TimestampedModel):
     """ResponseOptionSet."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_responseoptionset_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
     code_system = models.CharField(max_length=255)
@@ -31,14 +29,12 @@ class ResponseOptionSet(Model):
     use_in_shx = models.BooleanField()
 
 
-class ResponseOption(Model):
+class ResponseOption(TimestampedModel):
     """ResponseOption."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_responseoption_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=100)
@@ -50,14 +46,12 @@ class ResponseOption(Model):
     ordering = models.IntegerField()
 
 
-class Question(IdentifiableModel):
+class Question(TimestampedModel, IdentifiableModel):
     """Question."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_question_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
     response_option_set = models.ForeignKey(
@@ -78,7 +72,7 @@ class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
         return Q(code_system=system, code__in=codes)
 
 
-class Questionnaire(IdentifiableModel):
+class Questionnaire(TimestampedModel, IdentifiableModel):
     """Questionnaire."""
 
     class Meta:
@@ -86,8 +80,6 @@ class Questionnaire(IdentifiableModel):
 
     objects = models.Manager.from_queryset(QuestionnaireValueSetLookupQuerySet)()
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
     expected_completion_time = models.FloatField()
@@ -104,14 +96,12 @@ class Questionnaire(IdentifiableModel):
     carry_forward = models.TextField()
 
 
-class QuestionnaireQuestionMap(Model):
+class QuestionnaireQuestionMap(TimestampedModel):
     """QuestionnaireQuestionMap."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_questionnairequestionmap_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, null=True)
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, null=True)
@@ -126,7 +116,7 @@ class InterviewQuerySet(BaseQuerySet, ForPatientQuerySetMixin, CommittableQueryS
 InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
 
 
-class Interview(IdentifiableModel):
+class Interview(TimestampedModel, IdentifiableModel):
     """Interview."""
 
     class Meta:
@@ -155,31 +145,25 @@ class Interview(IdentifiableModel):
         through="v1.InterviewQuestionnaireMap",
     )
     progress_status = models.CharField(max_length=3)
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
 
 
-class InterviewQuestionnaireMap(Model):
+class InterviewQuestionnaireMap(TimestampedModel):
     """InterviewQuestionnaireMap."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_interviewquestionnairemap_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     interview = models.ForeignKey(Interview, on_delete=models.DO_NOTHING, null=True)
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.DO_NOTHING, null=True)
 
 
-class InterviewQuestionResponse(Model):
+class InterviewQuestionResponse(TimestampedModel):
     """InterviewQuestionResponse."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_interviewquestionresponse_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=2)
     interview = models.ForeignKey(
         Interview, on_delete=models.DO_NOTHING, related_name="interview_responses", null=True

@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import TaxIDType
 
 
@@ -53,14 +53,12 @@ class PracticeLocationPOS(models.TextChoices):
     OTHER = "99", "Other Place of Service"
 
 
-class PracticeLocation(IdentifiableModel):
+class PracticeLocation(TimestampedModel, IdentifiableModel):
     """PracticeLocation."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_practicelocation_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     organization = models.ForeignKey(
         "v1.Organization", on_delete=models.DO_NOTHING, related_name="practice_locations", null=True
     )
@@ -69,7 +67,7 @@ class PracticeLocation(IdentifiableModel):
     short_name = models.CharField(max_length=255)
     background_image_url = models.CharField(max_length=255)
     background_gradient = models.CharField(max_length=255)
-    active = models.BooleanField()
+    active = models.BooleanField(default=True)
     npi_number = models.CharField(max_length=10)
     bill_through_organization = models.BooleanField()
     tax_id = models.CharField(max_length=25)
@@ -77,7 +75,7 @@ class PracticeLocation(IdentifiableModel):
     billing_location_name = models.CharField(max_length=255)
     group_npi_number = models.CharField(max_length=10)
     taxonomy_number = models.CharField(max_length=10)
-    include_zz_qualifier = models.BooleanField()
+    include_zz_qualifier = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return self.full_name

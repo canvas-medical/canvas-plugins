@@ -9,9 +9,9 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     ValueSetLookupQuerySetMixin,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class ClinicalStatus(TextChoices):
@@ -64,17 +64,12 @@ class Condition(IdentifiableModel):
     surgical = models.BooleanField()
 
 
-class ConditionCoding(Model):
+class ConditionCoding(Coding):
     """ConditionCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_conditioncoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     condition = models.ForeignKey(
         Condition, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )

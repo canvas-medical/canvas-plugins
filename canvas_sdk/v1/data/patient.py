@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -39,7 +39,7 @@ class PatientSettingConstants:
     PREFERRED_SCHEDULING_TIMEZONE = "preferredSchedulingTimezone"
 
 
-class Patient(Model):
+class Patient(TimestampedModel):
     """A class representing a patient."""
 
     class Meta:
@@ -70,6 +70,9 @@ class Patient(Model):
     gender_identity_code = models.CharField(max_length=255, default="", blank=True)
     preferred_pronouns = models.CharField(max_length=255, default="", blank=True)
     biological_race_codes = ArrayField(
+        models.CharField(max_length=100, default="", blank=True), default=list, blank=True
+    )
+    cultural_ethnicity_codes = ArrayField(
         models.CharField(max_length=100, default="", blank=True), default=list, blank=True
     )
     last_known_timezone = models.CharField(max_length=32, null=True, blank=True)
@@ -105,9 +108,6 @@ class Patient(Model):
     )
     user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-
     @classmethod
     def find(cls, id: str) -> Patient:
         """Find a patient by id."""
@@ -115,13 +115,6 @@ class Patient(Model):
 
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
-
-    @property
-    def full_name(self) -> str:
-        """Returns the patient's full name."""
-        return " ".join(
-            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
-        )
 
     def age_at(self, time: arrow.Arrow) -> float:
         """Given a datetime, returns what the patient's age would be at that datetime."""
@@ -148,6 +141,13 @@ class Patient(Model):
             return None
 
     @property
+    def full_name(self) -> str:
+        """Returns the patient's full name."""
+        return " ".join(
+            n for n in (self.first_name, self.middle_name, self.last_name, self.suffix) if n
+        )
+
+    @property
     def preferred_pharmacy(self) -> dict[str, str] | None:
         """Returns the patient's preferred pharmacy."""
         pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or {}
@@ -159,6 +159,20 @@ class Patient(Model):
         return pharmacy_setting
 
     @property
+    def preferred_pharmacies(self) -> list[dict[str, Any]] | None:
+        """
+        Returns the pharmacy patient setting, a list of dicts of the patient's preferred pharmacies.
+        If the pharmacy setting is currently a dict, make it the default and a list.
+        """
+        pharmacy_setting = self.get_setting(PatientSettingConstants.PHARMACY) or []
+        if isinstance(pharmacy_setting, dict):
+            return [{**pharmacy_setting, "default": True}]
+        elif isinstance(pharmacy_setting, list):
+            return pharmacy_setting
+
+        return None
+
+    @property
     def preferred_full_name(self) -> str:
         """Returns the patient's preferred full name, taking nickname into consideration."""
         return " ".join(n for n in (self.preferred_first_name, self.last_name, self.suffix) if n)
@@ -167,6 +181,11 @@ class Patient(Model):
     def preferred_first_name(self) -> str:
         """Returns the patient's preferred first name, taking nickname into consideration."""
         return self.nickname or self.first_name
+
+    @property
+    def primary_phone_number(self) -> PatientContactPoint | None:
+        """Returns the patient's primary phone number, if available."""
+        return (self.telecom.filter(system=ContactPointSystem.PHONE).order_by("rank")).first()
 
 
 class PatientContactPoint(IdentifiableModel):
@@ -221,14 +240,12 @@ class PatientAddress(IdentifiableModel):
         return f"id={self.id}"
 
 
-class PatientExternalIdentifier(IdentifiableModel):
+class PatientExternalIdentifier(TimestampedModel, IdentifiableModel):
     """A class representing a patient external identifier."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientexternalidentifier_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient",
         related_name="external_identifiers",
@@ -246,14 +263,12 @@ class PatientExternalIdentifier(IdentifiableModel):
         return f"id={self.id}"
 
 
-class PatientSetting(Model):
+class PatientSetting(TimestampedModel):
     """PatientSetting."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_patientsetting_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="settings", null=True
     )
@@ -268,10 +283,22 @@ class PatientMetadata(IdentifiableModel):
         db_table = "canvas_sdk_data_api_patientmetadata_001"
 
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="metadata", null=True
+        "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
-    key = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
+
+
+class PatientFacilityAddress(PatientAddress):
+    """PatientFacilityAddress."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientfacilityaddress_001"
+
+    room_number = models.CharField(max_length=100, null=True)
+    facility = models.ForeignKey(
+        "v1.Facility", on_delete=models.DO_NOTHING, related_name="patient_facilities", null=True
+    )
 
 
 __exports__ = (
@@ -280,6 +307,7 @@ __exports__ = (
     "Patient",
     "PatientContactPoint",
     "PatientAddress",
+    "PatientFacilityAddress",
     "PatientExternalIdentifier",
     "PatientSetting",
     "PatientMetadata",

@@ -8,6 +8,7 @@ import pytest
 from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
+from canvas_sdk.commands import AdjustPrescriptionCommand
 from canvas_sdk.commands.commands.prescribe import CompoundMedicationData, PrescribeCommand
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
@@ -102,6 +103,12 @@ def test_prescribe_regular_medication_success(
     assert payload["data"]["fdb_code"] == "123456"
     assert payload["data"]["sig"] == "Take one tablet by mouth daily"
     assert "compound_medication_formulation" not in payload["data"]
+
+
+@pytest.fixture
+def prescription(request: Any) -> Any:
+    """Fixture to parametrize between regular and compound medication prescriptions."""
+    return request.getfixturevalue(request.param)
 
 
 def test_prescribe_compound_medication_success(
@@ -577,6 +584,61 @@ def test_prescribe_compound_medication_id_and_formulation_conflict(
 
     with pytest.raises(ValidationError) as exc_info:
         prescribe_cmd.originate()
+
+    errors = exc_info.value.errors()
+    error_messages = [e["msg"] for e in errors]
+    assert any("Cannot specify multiple medication types" in msg for msg in error_messages)
+
+
+@pytest.mark.parametrize(
+    "prescription",
+    ("valid_regular_prescription_data", "valid_compound_medication_prescription_data"),
+    indirect=True,
+    ids=["regular_medication", "compound_medication"],
+)
+def test_originate_prescribe_output_mutually_exclusive_fields(
+    mock_db_queries: dict[str, MagicMock], prescription: dict[str, Any]
+) -> None:
+    """Test that originate output does not include mutually exclusive fields."""
+    prescribe_cmd = PrescribeCommand(**prescription)
+    effect = prescribe_cmd.originate()
+
+    assert effect.type == EffectType.ORIGINATE_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+
+    assert not ("fdb_code" in payload["data"] and "compound_medication_values" in payload["data"])
+
+
+@pytest.mark.parametrize(
+    "prescription",
+    ("valid_regular_prescription_data", "valid_compound_medication_prescription_data"),
+    indirect=True,
+    ids=["regular_medication", "compound_medication"],
+)
+def test_edit_prescribe_output_mutually_exclusive_fields(
+    mock_db_queries: dict[str, MagicMock], prescription: dict[str, Any]
+) -> None:
+    """Test that edit output does not include mutually exclusive fields."""
+    prescribe_cmd = PrescribeCommand(**{"command_uuid": str(uuid4()), **prescription})
+    effect = prescribe_cmd.edit()
+
+    assert effect.type == EffectType.EDIT_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+
+    assert not ("fdb_code" in payload["data"] and "compound_medication_values" in payload["data"])
+
+
+def test_adjust_prescription_medication_conflict(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that adjust_prescription fails when both fdb_code and compound_medication_id are provided."""
+    adjust_prescription_cmd = AdjustPrescriptionCommand(
+        note_uuid=str(uuid4()),
+        new_fdb_code="123456",
+        compound_medication_id=str(uuid4()),
+        sig="Take one tablet by mouth daily",
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        adjust_prescription_cmd.originate()
 
     errors = exc_info.value.errors()
     error_messages = [e["msg"] for e in errors]

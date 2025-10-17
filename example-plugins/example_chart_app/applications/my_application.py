@@ -26,7 +26,7 @@ class MyChartApplication(Application):
 
 class MyApi(StaffSessionAuthMixin, SimpleAPI):
     @api.get("/custom-ui")
-    def ical_links(self) -> list[Response | Effect]:
+    def custom_ui(self) -> list[Response | Effect]:
         logged_in_staff = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
 
         context = {

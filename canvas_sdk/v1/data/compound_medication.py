@@ -1,12 +1,13 @@
 from django.db import models
 from django.db.models import TextChoices
 
+from canvas_sdk.v1.data.base import IdentifiableModel
 
-class CompoundMedication(models.Model):
+
+class CompoundMedication(IdentifiableModel):
     """CompoundMedication."""
 
     class Meta:
-        managed = False
         db_table = "canvas_sdk_data_api_compoundmedication_001"
 
     class PotencyUnits(TextChoices):
@@ -50,8 +51,6 @@ class CompoundMedication(models.Model):
         SCHEDULE_IV = "IV", "Schedule IV"
         SCHEDULE_V = "V", "Schedule V"
 
-    id = models.UUIDField()
-    dbid = models.BigIntegerField(primary_key=True)
     active = models.BooleanField(default=True)
     formulation = models.CharField(max_length=105)
     potency_unit_code = models.CharField(max_length=20, choices=PotencyUnits.choices)

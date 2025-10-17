@@ -3,13 +3,15 @@ from typing import cast
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
+    TimestampedModel,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class ObservationQuerySet(
@@ -23,7 +25,7 @@ class ObservationQuerySet(
 ObservationManager = BaseModelManager.from_queryset(ObservationQuerySet)
 
 
-class Observation(IdentifiableModel):
+class Observation(AuditedModel, IdentifiableModel):
     """Observation."""
 
     class Meta:
@@ -31,18 +33,6 @@ class Observation(IdentifiableModel):
 
     objects = cast(ObservationQuerySet, ObservationManager())
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="observations", null=True
     )
@@ -57,30 +47,23 @@ class Observation(IdentifiableModel):
     effective_datetime = models.DateTimeField()
 
 
-class ObservationCoding(Model):
+class ObservationCoding(Coding):
     """ObservationCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_observationcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     observation = models.ForeignKey(
         Observation, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
 
 
-class ObservationComponent(Model):
+class ObservationComponent(TimestampedModel):
     """ObservationComponent."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_observationcomponent_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     observation = models.ForeignKey(
         Observation, on_delete=models.DO_NOTHING, related_name="components", null=True
     )
@@ -89,33 +72,23 @@ class ObservationComponent(Model):
     name = models.TextField()
 
 
-class ObservationComponentCoding(Model):
+class ObservationComponentCoding(Coding):
     """ObservationComponentCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_observationcomponentcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     observation_component = models.ForeignKey(
         ObservationComponent, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )
 
 
-class ObservationValueCoding(Model):
+class ObservationValueCoding(Coding):
     """ObservationValueCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_observationvaluecoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     observation = models.ForeignKey(
         Observation, on_delete=models.DO_NOTHING, related_name="value_codings", null=True
     )

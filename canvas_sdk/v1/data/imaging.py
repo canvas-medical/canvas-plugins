@@ -2,7 +2,7 @@ import json
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
@@ -12,24 +12,12 @@ from canvas_sdk.v1.data.common import (
 from canvas_sdk.v1.data.task import Task
 
 
-class ImagingOrder(IdentifiableModel):
+class ImagingOrder(AuditedModel, IdentifiableModel):
     """Model to read ImagingOrder data."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingorder_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+"
-    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="imaging_orders", null=True
     )
@@ -67,24 +55,12 @@ class ImagingOrder(IdentifiableModel):
         return list(self.get_task_objects())
 
 
-class ImagingReview(IdentifiableModel):
+class ImagingReview(AuditedModel, IdentifiableModel):
     """Model to read ImagingReview data."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreview_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    originator = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30
     )
@@ -99,7 +75,7 @@ class ImagingReview(IdentifiableModel):
     )
 
 
-class ImagingReport(IdentifiableModel):
+class ImagingReport(TimestampedModel, IdentifiableModel):
     """Model to read ImagingReport data."""
 
     class ImagingReportSource(models.TextChoices):
@@ -110,8 +86,6 @@ class ImagingReport(IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreport_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     review_mode = models.CharField(choices=DocumentReviewMode.choices, max_length=2)
     junked = models.BooleanField()
     requires_signature = models.BooleanField()

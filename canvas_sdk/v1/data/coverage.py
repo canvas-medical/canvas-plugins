@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -145,14 +145,12 @@ class TransactorType(models.TextChoices):
     BCBS = "bcbs", "Blue Cross Blue Shield"
 
 
-class Coverage(IdentifiableModel):
+class Coverage(TimestampedModel, IdentifiableModel):
     """Coverage."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_coverage_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
@@ -236,14 +234,12 @@ class Transactor(Model):
     )
 
 
-class TransactorAddress(IdentifiableModel):
+class TransactorAddress(TimestampedModel, IdentifiableModel):
     """TransactorAddress."""
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_transactoraddress_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     line1 = models.CharField(max_length=255)
     line2 = models.CharField(max_length=255)
     city = models.CharField(max_length=255)
@@ -266,14 +262,12 @@ class TransactorAddress(IdentifiableModel):
         return f"id={self.id}"
 
 
-class TransactorPhone(IdentifiableModel):
+class TransactorPhone(TimestampedModel, IdentifiableModel):
     """TransactorPhone."""
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_transactorphone_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     system = models.CharField(choices=ContactPointSystem.choices, max_length=20)
     value = models.CharField(max_length=100)
     use = models.CharField(choices=ContactPointUse.choices, max_length=20)
@@ -288,11 +282,25 @@ class TransactorPhone(IdentifiableModel):
         return f"id={self.id}"
 
 
+class EligibilitySummary(TimestampedModel, IdentifiableModel):
+    """EligibilitySummary."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_eligibilitysummary_001"
+
+    coverage = models.OneToOneField(
+        "v1.Coverage", on_delete=models.CASCADE, related_name="eligibility_summary"
+    )
+    copay_cents = models.IntegerField(null=True)
+    coinsurance = models.IntegerField(null=True)
+
+
 __exports__ = (
     "CoverageStack",
     "CoverageState",
     "CoverageType",
     "CoverageRelationshipCode",
+    "EligibilitySummary",
     "TransactorCoverageType",
     "TransactorType",
     "Coverage",

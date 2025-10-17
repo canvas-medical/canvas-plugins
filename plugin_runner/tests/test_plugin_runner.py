@@ -372,6 +372,7 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
         patch("plugin_runner.plugin_runner.enabled_plugins") as mock_enabled_plugins,
         patch("plugin_runner.plugin_runner.install_plugin") as mock_install_plugin,
         patch("plugin_runner.plugin_runner.load_or_reload_plugin") as mock_load_or_reload_plugin,
+        patch("plugin_runner.plugin_runner.unload_plugin") as mock_unload_plugin,
         patch("plugin_runner.plugin_runner.install_plugins") as mock_install_plugins,
         patch("plugin_runner.plugin_runner.load_plugins") as mock_load_plugins,
     ):
@@ -391,6 +392,7 @@ def test_synchronize_plugins_installs_and_loads_enabled_plugin() -> None:
 
         expected_path = (Path(PLUGIN_DIRECTORY) / plugin_name).resolve()
         mock_load_or_reload_plugin.assert_called_once_with(expected_path)
+        mock_unload_plugin.assert_called_once_with(plugin_name)
 
         mock_install_plugins.assert_not_called()
         mock_load_plugins.assert_not_called()

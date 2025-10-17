@@ -76,11 +76,27 @@ else:
     CANVAS_SDK_DB_BACKEND = "sqlite3" if IS_SCRIPT else "postgres"
 
 PLUGIN_RUNNER_MAX_WORKERS = int(os.getenv("PLUGIN_RUNNER_MAX_WORKERS", 5))
+CONN_HEALTH_CHECKS_ENABLED = env_to_bool("CONN_HEALTH_CHECKS_ENABLED", True)
+
+# By default, allow a pool size that gives each worker 2 active connections
+# and allow overriding via environment variable if necessary
+PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
+    os.getenv(
+        "PLUGIN_RUNNER_DATABASE_POOL_MAX",
+        PLUGIN_RUNNER_MAX_WORKERS * 2,
+    )
+)
 
 if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
         "ENGINE": "django.db.backends.postgresql",
-        "OPTIONS": {"pool": {"min_size": 2, "max_size": PLUGIN_RUNNER_MAX_WORKERS}},
+        "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
+        "OPTIONS": {
+            "pool": {
+                "min_size": 2,
+                "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
+            }
+        },
     }
 
     if CANVAS_SDK_DB_URL:
@@ -155,15 +171,6 @@ MANIFEST_FILE_NAME = "CANVAS_MANIFEST.json"
 SECRETS_FILE_NAME = "SECRETS.json"
 
 SENTRY_DSN = os.getenv("SENTRY_DSN")
-
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": False,
-        "OPTIONS": {},
-    },
-]
 
 
 if IS_SCRIPT:

@@ -31,7 +31,7 @@ class PluginLogger:
         self.logger = logging.getLogger("plugin_runner_logger")
         self.logger.setLevel(logging.INFO)
 
-        log_prefix = os.getenv("HOSTNAME", "")
+        log_prefix = f"{os.getenv('HOSTNAME', '?')}: {os.getenv('APTIBLE_PROCESS_INDEX', '?')}"
 
         if log_prefix != "":
             log_prefix = f"[{log_prefix}] "

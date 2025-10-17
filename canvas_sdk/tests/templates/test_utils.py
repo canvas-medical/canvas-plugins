@@ -16,7 +16,22 @@ def test_render_to_string_valid_template(
         "test_render_template:test_render_template.protocols.my_protocol:ValidTemplate"
     ]
     result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
-    assert "html" in result[0].payload
+    assert "This is always here" in result[0].payload
+    assert "This is here by default" in result[0].payload
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_render_template"], indirect=True)
+def test_render_to_string_valid_child_template(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that the render_to_string function allows template inheritance."""
+    plugin = LOADED_PLUGINS[
+        "test_render_template:test_render_template.protocols.my_protocol:TemplateInheritance"
+    ]
+    result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
+    assert "This is always here" in result[0].payload
+    assert "This is here when extended" in result[0].payload
+    assert "This is here by default" not in result[0].payload
 
 
 @pytest.mark.parametrize("install_test_plugin", ["test_render_template"], indirect=True)

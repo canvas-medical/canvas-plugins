@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class TransmissionChannel(models.TextChoices):
@@ -12,14 +12,12 @@ class TransmissionChannel(models.TextChoices):
     NOOP = "noop", "No-op"
 
 
-class Message(IdentifiableModel):
+class Message(TimestampedModel, IdentifiableModel):
     """Message."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_message_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     content = models.TextField()
     sender = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="sent_messages", null=True
@@ -30,7 +28,7 @@ class Message(IdentifiableModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.DO_NOTHING, related_name="message", null=True
     )
-    read = models.BooleanField()
+    read = models.DateTimeField(null=True, blank=True)
 
 
 class MessageAttachment(IdentifiableModel):
@@ -46,14 +44,12 @@ class MessageAttachment(IdentifiableModel):
     )
 
 
-class MessageTransmission(IdentifiableModel):
+class MessageTransmission(TimestampedModel, IdentifiableModel):
     """Message Transmission."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_messagetransmission_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     message = models.ForeignKey(
         "v1.Message", on_delete=models.DO_NOTHING, related_name="transmissions", null=True
     )

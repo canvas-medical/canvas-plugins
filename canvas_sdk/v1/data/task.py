@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 
 
@@ -41,14 +41,12 @@ class TaskPriority(models.TextChoices):
     ROUTINE = "routine", "Routine"
 
 
-class Task(IdentifiableModel):
+class Task(TimestampedModel, IdentifiableModel, models.TextChoices):
     """Task."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_task_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="creator_tasks", null=True
     )
@@ -70,14 +68,12 @@ class Task(IdentifiableModel):
     priority = models.CharField(choices=TaskPriority.choices, max_length=7, null=True, blank=True)
 
 
-class TaskComment(IdentifiableModel):
+class TaskComment(TimestampedModel, IdentifiableModel):
     """TaskComment."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_taskcomment_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="comments", null=True
     )
