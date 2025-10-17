@@ -127,22 +127,28 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
             for i in range(0, len(time_logs) - 1, 2):
                 start = time_logs[i]['timestamp']
                 end = time_logs[i + 1]['timestamp']
-                session_logs.append(f"{start} - {end}")
+                start_formatted = arrow.get(start).format("YYYY-MM-DD HH:mm:ss")
+                end_formatted = arrow.get(end).format("YYYY-MM-DD HH:mm:ss")
+                session_logs.append(f"{start_formatted} - {end_formatted}")
                 time_spent += (arrow.get(end) - arrow.get(start)).seconds
 
-            total_time_minutes = time_spent // 60
-            if total_time_minutes == 0 and time_spent > 0:
-                total_time_minutes = 1  # Round up to 1 minute if less than a minute but more than 0 seconds
-
-            total_time = f"{str(total_time_minutes)} minute{'' if total_time_minutes == 1 else 's'}"
-            if total_time_minutes > time_spent % 60:
-                total_time += f" and {str(time_spent % 60)} seconds"
+            # Format current session time as hh:mm:ss
+            hours = time_spent // 3600
+            minutes = (time_spent % 3600) // 60
+            seconds = time_spent % 60
+            session_duration_formatted = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
             notes = str(json_data["notes"]).strip()
 
-            total_month_minutes = self._get_previous_month_minutes(patient) + total_time_minutes
+            # Calculate cumulative month time in seconds
+            previous_month_seconds = self._get_this_month_seconds(patient)
+            total_month_seconds = previous_month_seconds + time_spent
 
-            # Convert totalTime from seconds to minutes (rounded to nearest integer)
+            # Format cumulative month time as hh:mm:ss
+            month_hours = total_month_seconds // 3600
+            month_minutes = (total_month_seconds % 3600) // 60
+            month_seconds = total_month_seconds % 60
+            total_month_time_formatted = f"{month_hours:02d}:{month_minutes:02d}:{month_seconds:02d}"
 
             for question in questionnaire_command.questions:
                 if question.coding.get("code") == "ccm_session_pt_name_question":
@@ -158,9 +164,9 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
                 elif question.coding.get("code") == "ccm_session_time_log_question":
                     question.add_response(text=", ".join(session_logs))
                 elif question.coding.get("code") == "ccm_session_duration_question":
-                    question.add_response(text=total_time)
+                    question.add_response(text=session_duration_formatted)
                 elif question.coding.get("code") == "ccm_month_minutes_question":
-                    question.add_response(text=f"{total_month_minutes} minute{'' if total_month_minutes == 1 else 's'}")
+                    question.add_response(text=total_month_time_formatted)
 
             return [
                 JSONResponse(
@@ -242,24 +248,38 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
     def _get_questionnaire(self) -> Questionnaire:
         return Questionnaire.objects.get(code=self.QUESTIONNAIRE_CODE)
 
-    def _get_previous_month_minutes(self, patient: Patient) -> int:
+    def _get_this_month_seconds(self, patient: Patient) -> int:
+        """Get the cumulative time in seconds from previous month's sessions."""
         questionnaire = self._get_questionnaire()
-        last_month = arrow.utcnow().shift(months=-1).month
-        last_month_responses = (
+        this_month = arrow.utcnow().month
+        this_month_responses = (
             patient.interviews.filter(questionnaires=questionnaire)
-            .filter(created__month=last_month)
+            .filter(created__month=this_month)
             .order_by("-created")
         )
 
-        if not last_month_responses.exists():
+        if not this_month_responses.exists():
             return 0
 
-        total_minutes = 0
-        for interview in last_month_responses:
+        total_seconds = 0
+        for interview in this_month_responses:
             for response in interview.interview_responses.filter(
                 question__code="ccm_month_minutes_question"
             ):
-                if response.response_option_value.isdigit():
-                    total_minutes += int(response.response_option_value)
+                time_str = response.response_option_value.strip()
+                # Try to parse hh:mm:ss format
+                if ":" in time_str:
+                    parts = time_str.split(":")
+                    if len(parts) == 3:
+                        try:
+                            hours = int(parts[0])
+                            minutes = int(parts[1])
+                            seconds = int(parts[2])
+                            total_seconds += hours * 3600 + minutes * 60 + seconds
+                        except ValueError:
+                            pass  # Skip invalid format
+                # Fallback: if it's just digits, assume it's minutes (backward compatibility)
+                elif time_str.isdigit():
+                    total_seconds += int(time_str) * 60
 
-        return total_minutes
+        return total_seconds
