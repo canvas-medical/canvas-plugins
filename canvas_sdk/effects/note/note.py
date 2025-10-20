@@ -1,11 +1,9 @@
 import datetime
-import json
 from typing import Any
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.v1.data import Note as NoteModel
 from canvas_sdk.v1.data import NoteType, Patient
@@ -106,16 +104,6 @@ class Note(NoteOrAppointmentABC):
                     )
                 )
 
-        elif method == "fax":
-            if not self.instance_id:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'instance_id' is required to fax a note.",
-                        None,
-                    )
-                )
-
         if self.note_type_id:
             note_type_category = (
                 NoteType.objects.values_list("category", flat=True)
@@ -155,28 +143,6 @@ class Note(NoteOrAppointmentABC):
             )
 
         return errors
-
-    def fax(
-        self, recipient_name: str, recipient_fax_number: str, include_coversheet: bool = False
-    ) -> Effect:
-        """Send an FAX effect for the note."""
-        self._validate_before_effect("fax")
-
-        values = {
-            **self.values,
-            "recipient_name": recipient_name,
-            "recipient_fax_number": recipient_fax_number,
-            "include_coversheet": include_coversheet,
-        }
-
-        return Effect(
-            type=f"FAX_{self.Meta.effect_type}",
-            payload=json.dumps(
-                {
-                    "data": values,
-                }
-            ),
-        )
 
 
 __exports__ = ("Note",)
