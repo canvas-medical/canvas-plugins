@@ -6,9 +6,6 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
-  "canvas_sdk.common.enums": [
-    "TaskPriority"
-  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -158,9 +155,9 @@
   ],
   "canvas_sdk.commands.commands.task": [
     "AssigneeType",
-    "TaskPriority",
     "TaskAssigner",
-    "TaskCommand"
+    "TaskCommand",
+    "TaskPriority"
   ],
   "canvas_sdk.commands.commands.update_diagnosis": [
     "UpdateDiagnosisCommand"
