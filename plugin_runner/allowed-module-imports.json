@@ -384,14 +384,12 @@
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
-    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
-    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
