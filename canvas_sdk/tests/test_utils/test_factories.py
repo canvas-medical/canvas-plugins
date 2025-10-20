@@ -1,7 +1,6 @@
 import importlib
 import inspect
 import pkgutil
-from typing import Any
 
 import pytest
 
@@ -62,13 +61,10 @@ def test_task_label_factory_tasks() -> None:
     """Ensure TaskLabelFactory can have tasks added."""
     from canvas_sdk.test_utils.factories import TaskFactory, TaskLabelFactory
 
-    TaskFactory_t: Any = TaskFactory
-    TaskLabelFactory_t: Any = TaskLabelFactory
-
     # Create a label with one newly-created Task (via dict) and one Task instance
-    task_instance = TaskFactory_t()
+    task_instance = TaskFactory.create()
 
-    label = TaskLabelFactory_t(tasks=[{"title": "from-dict"}, task_instance])
+    label = TaskLabelFactory.create(tasks=[{"title": "from-dict"}, task_instance])
 
     # Reload from DB to ensure relation is persisted
     label.refresh_from_db()
