@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.coverage import CoverageRelationshipCode, CoverageType
 from canvas_sdk.v1.data.fields import ChoiceArrayField
@@ -110,7 +110,7 @@ class ClaimTypeCode(models.TextChoices):
     UNNECESSARY = "", "No Typecode necessary"
 
 
-class ClaimComment(IdentifiableModel):
+class ClaimComment(IdentifiableModel, AuditedModel):
     """ClaimComment."""
 
     class Meta:
