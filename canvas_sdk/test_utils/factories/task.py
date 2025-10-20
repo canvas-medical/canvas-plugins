@@ -3,6 +3,7 @@ from typing import Any
 import factory
 
 from canvas_sdk.v1.data import Task, TaskLabel
+from canvas_sdk.v1.data.task import TaskStatus, TaskType
 
 
 class TaskFactory(factory.django.DjangoModelFactory[Task]):
@@ -12,14 +13,11 @@ class TaskFactory(factory.django.DjangoModelFactory[Task]):
         model = Task
 
     creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
-    assignee = None
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
-    task_type = "R"
+    task_type = TaskType.REMINDER
     tag = "Unit Test"
     title = "Unit Test"
-    due = None
-    due_event = ""
-    status = "OPEN"
+    status = TaskStatus.OPEN
 
 
 class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
