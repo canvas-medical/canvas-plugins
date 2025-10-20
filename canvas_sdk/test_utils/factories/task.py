@@ -2,7 +2,7 @@ import factory
 
 from canvas_sdk.v1.data import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
-from canvas_sdk.v1.data.task import TaskLabelModule
+from canvas_sdk.v1.data.task import TaskLabelModule, TaskStatus, TaskType
 
 
 class TaskFactory(factory.django.DjangoModelFactory[Task]):
@@ -14,6 +14,10 @@ class TaskFactory(factory.django.DjangoModelFactory[Task]):
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
     creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     assignee = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    task_type = TaskType.TASK
+    tag = factory.Faker("word")
+    title = factory.Faker("sentence", nb_words=4)
+    status = TaskStatus.OPEN
 
 
 class TaskMetadataFactory(factory.django.DjangoModelFactory[TaskMetadata]):
@@ -23,6 +27,8 @@ class TaskMetadataFactory(factory.django.DjangoModelFactory[TaskMetadata]):
         model = TaskMetadata
 
     task = factory.SubFactory(TaskFactory)
+    key = factory.Faker("word")
+    value = factory.Faker("word")
 
 
 class TaskCommentFactory(factory.django.DjangoModelFactory[TaskComment]):
@@ -33,6 +39,7 @@ class TaskCommentFactory(factory.django.DjangoModelFactory[TaskComment]):
 
     creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     task = factory.SubFactory(TaskFactory)
+    body = factory.Faker("sentence", nb_words=10)
 
 
 class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
