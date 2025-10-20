@@ -110,6 +110,16 @@ class ClaimTypeCode(models.TextChoices):
     UNNECESSARY = "", "No Typecode necessary"
 
 
+class ClaimComment(IdentifiableModel):
+    """ClaimComment."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimcomment_001"
+
+    claim = models.ForeignKey("Claim", on_delete=models.CASCADE, related_name="comments")
+    comment = models.TextField()
+
+
 class ClaimCoverageQuerySet(models.QuerySet):
     """ClaimCoverageQuerySet."""
 
@@ -291,6 +301,7 @@ class Claim(TimestampedModel, IdentifiableModel):
 __exports__ = (
     "Claim",
     "ClaimQueue",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimPatient",
     "ClaimPayerOrder",
