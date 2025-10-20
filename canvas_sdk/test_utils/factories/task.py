@@ -43,11 +43,9 @@ class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
         if not extracted:
             return
 
-        TaskFactory_t: Any = TaskFactory
-
         for item in extracted:
             if isinstance(item, Task):
                 self.tasks.add(item)
             elif isinstance(item, dict):
                 # create a Task from provided kwargs
-                self.tasks.add(TaskFactory_t(**item))
+                self.tasks.add(TaskFactory.create(**item))
