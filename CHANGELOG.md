@@ -1,6 +1,69 @@
 # CHANGELOG
 
 
+## v0.72.1 (2025-10-21)
+
+### Bug Fixes
+
+- Clear template loader cache on plugin updates
+  ([#1189](https://github.com/canvas-medical/canvas-plugins/pull/1189),
+  [`98e19ff`](https://github.com/canvas-medical/canvas-plugins/commit/98e19ff8ccea2769c280d55c7074af0124fa22f8))
+
+
+## v0.72.0 (2025-10-16)
+
+### Features
+
+- Add cpt to questionnaire schema
+  ([#1178](https://github.com/canvas-medical/canvas-plugins/pull/1178),
+  [`7684604`](https://github.com/canvas-medical/canvas-plugins/commit/768460478d82101d47793be991b8f3f91960ed0d))
+
+
+## v0.71.1 (2025-10-16)
+
+### Bug Fixes
+
+- Revert "chore: update Python matrix (#1160)"
+  ([#1184](https://github.com/canvas-medical/canvas-plugins/pull/1184),
+  [`0e2a326`](https://github.com/canvas-medical/canvas-plugins/commit/0e2a3269f498b3395c0aff54b31d6eae94f3b108))
+
+
+## v0.71.0 (2025-10-16)
+
+### Bug Fixes
+
+- Rename example plugin methods
+  ([#1181](https://github.com/canvas-medical/canvas-plugins/pull/1181),
+  [`6487996`](https://github.com/canvas-medical/canvas-plugins/commit/6487996ca25560d4bd04f002eff12e00af6458db))
+
+- Unload plugin handlers before reloading a specific plugin
+  ([#1165](https://github.com/canvas-medical/canvas-plugins/pull/1165),
+  [`d389a16`](https://github.com/canvas-medical/canvas-plugins/commit/d389a1686bd8f4d4fb07c762774b229ac9c5c3da))
+
+### Chores
+
+- Update Python matrix ([#1160](https://github.com/canvas-medical/canvas-plugins/pull/1160),
+  [`1d98693`](https://github.com/canvas-medical/canvas-plugins/commit/1d98693d36de849dd5dd802358b70698932b0273))
+
+### Features
+
+- Add events/effects for detected issue annotation and grouping on chart
+  ([#1140](https://github.com/canvas-medical/canvas-plugins/pull/1140),
+  [`61a3e9d`](https://github.com/canvas-medical/canvas-plugins/commit/61a3e9d6623cbeff9ea72dd2a3da41916c50bf52))
+
+- Add free text option support for medication statement, perform, family, past surgical history and
+  immunization statement ([#1131](https://github.com/canvas-medical/canvas-plugins/pull/1131),
+  [`93455df`](https://github.com/canvas-medical/canvas-plugins/commit/93455dfa4723831d71ba4d630adfea47a3759965))
+
+- Add message transmission events and allow message read to be set
+  ([#1133](https://github.com/canvas-medical/canvas-plugins/pull/1133),
+  [`e91becd`](https://github.com/canvas-medical/canvas-plugins/commit/e91becd6741f3a9ea1f48ed41e71ff88f9c25499))
+
+- Allow template inheritance in plugins
+  ([#1152](https://github.com/canvas-medical/canvas-plugins/pull/1152),
+  [`1764238`](https://github.com/canvas-medical/canvas-plugins/commit/17642381b2f23cad582516a4a3ba7f5bd6eb6739))
+
+
 ## v0.70.0 (2025-10-14)
 
 ### Features

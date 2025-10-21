@@ -11,7 +11,7 @@
         },
         "code_system": {
             "type": "string",
-            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+            "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
             "description": "The coding system used for the questionnaire."
         },
         "code": { "type": "string",
@@ -41,7 +41,7 @@
                     "content": { "type": "string", "description": "The text displayed when the command is printed." },
                     "responses_code_system": {
                         "type": "string",
-                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL"],
+                        "enum": ["SNOMED", "LOINC", "ICD-10", "INTERNAL", "CPT"],
                         "description": "The coding system for responses."
                     },
                     "responses_type": {

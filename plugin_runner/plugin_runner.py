@@ -42,6 +42,7 @@ from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.events import Event, EventRequest, EventResponse, EventType
 from canvas_sdk.handlers.simple_api.websocket import DenyConnection
 from canvas_sdk.protocols import ClinicalQualityMeasure
+from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
 from logger import log
@@ -419,6 +420,9 @@ def synchronize_plugins(run_once: bool = False) -> None:
         if "action" not in data:
             continue
 
+        # clear the template engine cache so that any template changes
+        # from plugins are picked up
+        _engine_for_plugin.cache_clear()
         plugin_name = data.get("plugin", None)
         try:
             if data["action"] == "reload":
