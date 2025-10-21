@@ -1871,16 +1871,18 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD: EventType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE: EventType
 
 class Event(_message.Message):
-    __slots__ = ("type", "target", "context", "target_type")
+    __slots__ = ("type", "target", "context", "target_type", "actor")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TARGET_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TARGET_TYPE_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_FIELD_NUMBER: _ClassVar[int]
     type: EventType
     target: str
     context: str
     target_type: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ...) -> None: ...
+    actor: str
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ..., actor: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")
