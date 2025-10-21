@@ -237,10 +237,10 @@ class Appointment(AppointmentABC):
         )
 
 
-class _AppointmentLabelBase(_BaseEffect):
+class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
     """
     Base class for appointment label effects.
-    
+
     Attributes:
         appointment_id (UUID | str): The ID of the appointment.
         labels (conset[str]): A set of label names (1-3 labels allowed).
@@ -248,14 +248,6 @@ class _AppointmentLabelBase(_BaseEffect):
 
     appointment_id: str
     labels: conset(str, min_length=1, max_length=3)
-
-
-    def _create_error_detail(self, type: str, message: str, value: Any) -> InitErrorDetails:
-        """Override to handle set serialization in error details."""
-        if isinstance(value, set):
-            value = list(value)
-        return super()._create_error_detail(type, message, value)
-
 
     @property
     def values(self) -> dict:
@@ -308,14 +300,14 @@ class AddAppointmentLabel(_AppointmentLabelBase):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Limit reached: Only 3 appointment labels allowed.",
-                    None,
+                    f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {result} existing label(s).",
+                    list(self.labels),
                 )
             )
         return errors
 
 
-class RemoveAppointmentLabel(_AppointmentLabelBase, TrackableFieldsModel):
+class RemoveAppointmentLabel(_AppointmentLabelBase):
     """
     Effect to remove one or more labels from an appointment.
 
