@@ -439,3 +439,142 @@ def test_appointment_reschedule_with_multiple_fields(
     assert "start_time" in payload["data"]
     assert payload["data"]["duration_minutes"] == 60
     assert payload["data"]["meeting_link"] == "https://new-reschedule-link.com"
+
+
+# Tests for AddAppointmentLabel and RemoveAppointmentLabel effects
+@pytest.fixture
+def mock_appointment_label_queries() -> Generator[dict[str, MagicMock]]:
+    """Mock database queries for appointment label effects."""
+    with (
+        patch("canvas_sdk.v1.data.Appointment.objects") as mock_appointment,
+    ):
+        # Setup default behaviors
+        mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 0  # No existing labels
+
+        yield {
+            "appointment": mock_appointment,
+        }
+
+
+@pytest.fixture
+def valid_appointment_label_data() -> dict[str, Any]:
+    """Valid data for creating appointment label effects."""
+    return {
+        "appointment_id": str(uuid4()),
+        "labels": {"MISSING_COVERAGE", "URGENT"},
+    }
+
+
+def test_add_appointment_label_values_property(
+    valid_appointment_label_data: dict[str, Any],
+) -> None:
+    """Test that the values property returns the correct appointment_id and labels mapping."""
+    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
+
+    effect = AddAppointmentLabel(**valid_appointment_label_data)
+    expected_values = {
+        "appointment_id": valid_appointment_label_data["appointment_id"],
+        "labels": list(valid_appointment_label_data["labels"]),
+    }
+    assert effect.values == expected_values
+
+
+def test_remove_appointment_label_values_property(
+    valid_appointment_label_data: dict[str, Any],
+) -> None:
+    """Test that the values property returns the correct appointment_id and labels mapping."""
+    from canvas_sdk.effects.note.appointment import RemoveAppointmentLabel
+
+    effect = RemoveAppointmentLabel(**valid_appointment_label_data)
+    expected_values = {
+        "appointment_id": valid_appointment_label_data["appointment_id"],
+        "labels": list(valid_appointment_label_data["labels"]),
+    }
+    assert effect.values == expected_values
+
+
+@patch("canvas_sdk.v1.data.Appointment.objects")
+def test_add_appointment_label_valid_appointment(
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+) -> None:
+    """Test that no errors are returned if the appointment exists and label limit is not exceeded."""
+    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
+
+    # Mock appointment exists with 1 existing label
+    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 1
+
+    effect = AddAppointmentLabel(**valid_appointment_label_data)
+    errors = effect._get_error_details(method=None)
+    assert errors == []
+
+
+@patch("canvas_sdk.v1.data.Appointment.objects")
+def test_add_appointment_label_nonexistent_appointment(
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+) -> None:
+    """Test that an error is returned if the appointment does not exist."""
+    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
+
+    # Mock appointment doesn't exist
+    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = None
+
+    effect = AddAppointmentLabel(**valid_appointment_label_data)
+    with patch.object(
+        effect, "_create_error_detail", return_value="error_detail"
+    ) as mock_create_error:
+        errors = effect._get_error_details(method=None)
+        mock_create_error.assert_called_once_with(
+            "value",
+            f"Appointment {valid_appointment_label_data['appointment_id']} does not exist",
+            valid_appointment_label_data["appointment_id"],
+        )
+        assert errors == [mock_create_error.return_value]
+
+
+@patch("canvas_sdk.v1.data.Appointment.objects")
+def test_add_appointment_label_limit_exceeded(
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+) -> None:
+    """Test that an error is returned if adding labels would exceed the 3-label limit."""
+    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
+
+    # Mock appointment exists with 2 existing labels, trying to add 2 more (would exceed limit)
+    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 2
+
+    effect = AddAppointmentLabel(**valid_appointment_label_data)
+    with patch.object(
+        effect, "_create_error_detail", return_value="error_detail"
+    ) as mock_create_error:
+        errors = effect._get_error_details(method=None)
+        mock_create_error.assert_called_once_with(
+            "value",
+            "Limit reached: Only 3 appointment labels allowed. Attempted to add 2 label(s) to appointment with 2 existing label(s).",
+            list(valid_appointment_label_data["labels"]),
+        )
+        assert errors == [mock_create_error.return_value]
+
+
+@patch("canvas_sdk.v1.data.Appointment.objects")
+def test_add_appointment_label_valid_with_existing_labels(
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+) -> None:
+    """Test that no errors are returned when adding labels within the limit."""
+    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
+
+    # Mock appointment exists with 1 existing label, trying to add 2 more (total 3, within limit)
+    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 1
+
+    effect = AddAppointmentLabel(**valid_appointment_label_data)
+    errors = effect._get_error_details(method=None)
+    assert errors == []
+
+
+def test_remove_appointment_label_valid_appointment(
+    valid_appointment_label_data: dict[str, Any],
+) -> None:
+    """Test that no errors are returned for remove operation (no validation needed)."""
+    from canvas_sdk.effects.note.appointment import RemoveAppointmentLabel
+
+    effect = RemoveAppointmentLabel(**valid_appointment_label_data)
+    errors = effect._get_error_details(method=None)
+    assert errors == []
