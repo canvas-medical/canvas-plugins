@@ -160,6 +160,13 @@ uv run canvas run-plugin example-plugins/api_samples \
 ```
 This uses the local development version which has the latest factories.
 
+You can also verify that the custom `AppointmentFactory` is working by running the tests:
+```bash
+cd example-plugins
+uv run pytest tests/test_factory_examples.py::TestCustomFactories::test_appointment_factory -v
+```
+This will test the custom factory and show you that it's creating appointments correctly.
+
 ### Problem: Seed file fails
 **Solution:** Make sure you're in the `canvas-plugins` directory and the path is correct:
 ```bash

@@ -41,7 +41,7 @@ class AppointmentFactory(factory.django.DjangoModelFactory):
         )
     """
 
-    class Meta:
+    class Meta:  # type: ignore[misc]
         model = AppointmentData
 
     # Required relationships

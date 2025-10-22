@@ -57,8 +57,8 @@ def test_appointment_api_put():
 
     # Create API instance
     dummy_context = {"method": "PUT", "path": f"/appointments/{note.dbid}"}
-    api = AppointmentAPI(event=DummyEvent(context=dummy_context))
-    api.request = request
+    api = AppointmentAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+    api.request = request  # type: ignore[attr-defined]
 
     # Execute the API call
     result = api.put()
@@ -85,13 +85,14 @@ def test_appointment_api_put_not_found():
 
     # Create API instance with proper context
     dummy_context = {"method": "PUT", "path": "/appointments/99999"}
-    api = AppointmentAPI(event=DummyEvent(context=dummy_context))
-    api.request = request
+    api = AppointmentAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+    api.request = request  # type: ignore[attr-defined]
 
     # Execute the API call
     result = api.put()
 
     # Verify 404 response
     assert len(result) == 1
-    assert result[0].status_code == HTTPStatus.NOT_FOUND
-
+    response = result[0]
+    assert hasattr(response, "status_code"), "Expected a Response object"
+    assert response.status_code == HTTPStatus.NOT_FOUND  # type: ignore[attr-defined]
