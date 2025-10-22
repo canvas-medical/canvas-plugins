@@ -143,6 +143,23 @@ canvas config set api_samples my-api-key=test-secret-123
 ### Problem: "Appointment not found"
 **Solution:** Double-check you're using the Note DBID (from seed output), not the appointment ID.
 
+### Problem: "ImportError: cannot import name 'NoteFactory'"
+**Solution:** Your canvas installation may be outdated. Update it with:
+```bash
+uv tool install canvas --force
+```
+Then verify the version:
+```bash
+canvas --version  # Should be 0.72.0 or higher
+```
+
+If you're working in the canvas-plugins repository for development, you can also use:
+```bash
+uv run canvas run-plugin example-plugins/api_samples \
+  --db-seed-file ./example-plugins/tests/api_samples/seed_appointment_updater.py
+```
+This uses the local development version which has the latest factories.
+
 ### Problem: Seed file fails
 **Solution:** Make sure you're in the `canvas-plugins` directory and the path is correct:
 ```bash
