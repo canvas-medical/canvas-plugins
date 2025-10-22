@@ -20,7 +20,7 @@ from canvas_sdk.test_utils.factories import (
     PracticeLocationFactory,
     StaffFactory,
 )
-from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
+from canvas_sdk.v1.data.appointment import Appointment
 
 
 class AppointmentFactory(factory.django.DjangoModelFactory):
