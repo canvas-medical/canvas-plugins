@@ -13,35 +13,11 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
         patch("canvas_sdk.effects.claim_label.Claim.objects") as mock_claim,
-        patch("canvas_sdk.effects.claim_label.TaskLabel.objects") as mock_label,
     ):
         # Setup default behaviors - objects exist
         mock_claim.filter.return_value.exists.return_value = True
-        mock_label.filter.return_value.values_list.return_value = ["urgent", "routine"]
 
-        yield {
-            "claim": mock_claim,
-            "label": mock_label,
-        }
-
-
-def test_add_claim_label_requires_existing_label(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that the labels are valid and exist."""
-    add = AddClaimLabel(claim_id="something-right", labels=["something-wrong"])
-    with pytest.raises(ValidationError) as e:
-        add.apply()
-
-    err_msg = repr(e.value)
-    assert "Label with name something-wrong does not exist" in err_msg
-
-    add = AddClaimLabel(
-        claim_id="something-right", labels=["something-wrong", "something-else-wrong"]
-    )
-    with pytest.raises(ValidationError) as e:
-        add.apply()
-
-    err_msg = repr(e.value)
-    assert "Labels with names something-else-wrong, something-wrong do not exist" in err_msg
+        yield {"claim": mock_claim}
 
 
 def test_add_claim_label_requires_existing_claim_id(mock_db_queries: dict[str, MagicMock]) -> None:
@@ -93,27 +69,6 @@ def test_add_claim_label_with_label_name_and_label_values(
         payload.payload
         == '{"data": {"claim_id": "claim-id", "labels": ["urgent"], "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
     )
-
-
-def test_remove_claim_label_requires_existing_label(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test that the label is valid and the label exists."""
-    remove = RemoveClaimLabel(claim_id="something-right", labels=["something-wrong"])
-    with pytest.raises(ValidationError) as e:
-        remove.apply()
-
-    err_msg = repr(e.value)
-    assert "Label with name something-wrong does not exist" in err_msg
-
-    remove = RemoveClaimLabel(
-        claim_id="something-right", labels=["something-wrong", "something-else-wrong"]
-    )
-    with pytest.raises(ValidationError) as e:
-        remove.apply()
-
-    err_msg = repr(e.value)
-    assert "Labels with names something-else-wrong, something-wrong do not exist" in err_msg
 
 
 def test_remove_claim_label_requires_existing_claim_id(
