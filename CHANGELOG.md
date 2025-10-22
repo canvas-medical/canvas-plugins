@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.72.1 (2025-10-21)
+
+### Bug Fixes
+
+- Clear template loader cache on plugin updates
+  ([#1189](https://github.com/canvas-medical/canvas-plugins/pull/1189),
+  [`98e19ff`](https://github.com/canvas-medical/canvas-plugins/commit/98e19ff8ccea2769c280d55c7074af0124fa22f8))
+
+
 ## v0.72.0 (2025-10-16)
 
 ### Features
