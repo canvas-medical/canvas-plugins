@@ -136,6 +136,9 @@ warn_unused_ignores = true
 init_forbid_extra = true
 init_typed = true
 
+[tool.pyright]
+exclude = ["canvas_generated", "canvas_cli/templates"]
+
 [tool.pytest.ini_options]
 addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
 filterwarnings = [
@@ -158,7 +161,7 @@ norecursedirs = [
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
 [tool.ruff]
-exclude = ["canvas_generated/"]
+exclude = ["canvas_generated/", "canvas_cli/templates/"]
 line-length = 100
 target-version = "py311"
 
