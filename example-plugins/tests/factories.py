@@ -23,7 +23,7 @@ from canvas_sdk.test_utils.factories import (
 from canvas_sdk.v1.data.appointment import Appointment
 
 
-class AppointmentFactory(factory.django.DjangoModelFactory):
+class AppointmentFactory(factory.django.DjangoModelFactory[Appointment]):
     """Factory for creating test Appointments.
 
     Example:
