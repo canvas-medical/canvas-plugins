@@ -1,8 +1,10 @@
 from http import HTTPStatus
-from unittest.mock import MagicMock
 
 import pytest
 from api_samples.routes.appointment_updater import AppointmentAPI
+
+from canvas_sdk.test_utils.factories import NoteFactory
+from tests.factories import AppointmentFactory
 
 
 class DummyRequest:
@@ -17,48 +19,79 @@ class DummyRequest:
         return self._json_body
 
 
-@pytest.mark.skip(reason="Temporarily disabled due to pydantic validation errors")
-@pytest.mark.django_db
-def test_appointment_api_put(monkeypatch):
-    """Test the put method of AppointmentAPI for updating an appointment."""
-    dummy_appointment = MagicMock()
-    dummy_appointment.id = 42
-    # Simulate AppointmentData.objects.filter().last()
-    class DummyQueryset:
-        def last(self):
-            return dummy_appointment
+class DummyEvent:
+    """A dummy event object for testing API handlers."""
 
-    monkeypatch.setattr(
-    "example-plugins.api_samples.routes.appointment_updater.AppointmentData.objects.filter",
-        lambda **kwargs: DummyQueryset(),
+    def __init__(self, context=None):
+        self.context = context or {}
+
+
+@pytest.mark.django_db
+def test_appointment_api_put():
+    """Test the put method of AppointmentAPI for updating an appointment.
+
+    This test uses real database objects via factories to test the API in a more
+    realistic scenario compared to using mocks.
+    """
+    # Create a real note (which creates patient, provider, location automatically)
+    note = NoteFactory.create()
+
+    # Create a real appointment associated with the note
+    appointment = AppointmentFactory.create(
+        note=note,
+        patient=note.patient,
+        provider=note.provider,
+        location=note.location,
+        status="confirmed",
     )
-    # Patch Appointment to return a dummy object with required fields for Pydantic validation
-    class DummyAppointment:
-        def __init__(self, instance_id):
-            self.instance_id = instance_id
-            self.id = 42
-            self.meetingLink = "https://meet.example.com/abc"
-            # Add any other required fields here as needed
-        def update(self):
-            return "effect-updated"
-    monkeypatch.setattr(
-        "example-plugins.api_samples.routes.appointment_updater.Appointment",
-        DummyAppointment,
-    )
+
+    # Verify appointment was created
+    assert appointment.id is not None
+    assert appointment.note == note
+
+    # Create the API request
     request = DummyRequest(
-        path_params={"id": "testid"},
-        json_body={"meetingLink": "https://meet.example.com/abc"},
+        path_params={"id": str(note.dbid)},  # Use note's dbid for lookup
+        json_body={"meetingLink": "https://meet.example.com/test-meeting"},
     )
-    class DummyEvent:
-        def __init__(self, context=None):
-            self.context = context or {}
-    # Provide minimal context expected by AppointmentAPI
-    dummy_context = {"method": "PUT", "path": "/appointments/testid"}
+
+    # Create API instance
+    dummy_context = {"method": "PUT", "path": f"/appointments/{note.dbid}"}
     api = AppointmentAPI(event=DummyEvent(context=dummy_context))
     api.request = request
+
+    # Execute the API call
     result = api.put()
-    assert any(
-        r == "effect-updated" or getattr(r, "status_code", None) == HTTPStatus.ACCEPTED
-        for r in result
+
+    # Verify results - API returns an effect and a response
+    assert len(result) == 2
+    assert any(getattr(r, "status_code", None) == HTTPStatus.ACCEPTED for r in result)
+
+    # Verify the effect was created correctly
+    # Note: Effects need to be applied separately to actually update the database
+    # This test verifies the API correctly creates the effect
+    effect = [r for r in result if hasattr(r, "apply")][0]
+    assert effect is not None
+
+
+@pytest.mark.django_db
+def test_appointment_api_put_not_found():
+    """Test the put method returns 404 when appointment doesn't exist."""
+    # Create API request for non-existent appointment
+    request = DummyRequest(
+        path_params={"id": "99999"},  # Non-existent note ID
+        json_body={"meetingLink": "https://meet.example.com/test"},
     )
+
+    # Create API instance with proper context
+    dummy_context = {"method": "PUT", "path": "/appointments/99999"}
+    api = AppointmentAPI(event=DummyEvent(context=dummy_context))
+    api.request = request
+
+    # Execute the API call
+    result = api.put()
+
+    # Verify 404 response
+    assert len(result) == 1
+    assert result[0].status_code == HTTPStatus.NOT_FOUND
 
