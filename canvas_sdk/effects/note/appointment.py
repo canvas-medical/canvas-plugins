@@ -222,6 +222,35 @@ class Appointment(AppointmentABC):
                     )
                 )
 
+        if self.labels and method in ["create", "update"]:
+            # For updates, check existing labels
+            if method == "update" and self.id:
+                existing_count = (
+                    AppointmentModel.objects
+                    .filter(id=self.id)
+                    .annotate(label_count=Count("appointment_labels"))
+                    .values_list("label_count", flat=True)
+                    .first() or 0
+                )
+                
+                if existing_count + len(self.labels) > 3:
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {existing_count} existing label(s).",
+                            list(self.labels),
+                        )
+                    )
+            # For creates, just check the new labels don't exceed 3
+            elif method == "create" and len(self.labels) > 3:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Limit reached: Only 3 appointment labels allowed. Attempted to create appointment with {len(self.labels)} label(s).",
+                        list(self.labels),
+                    )
+                )
+
         return errors
 
     def cancel(self) -> Effect:
@@ -281,7 +310,7 @@ class AddAppointmentLabel(_AppointmentLabelBase):
         result = (
             AppointmentModel.objects
             .filter(id=self.appointment_id)
-            .annotate(label_count=Count("appointment_labels"))
+            .annotate(label_count=Count("labels"))
             .values_list("label_count", flat=True)
             .first()
         )

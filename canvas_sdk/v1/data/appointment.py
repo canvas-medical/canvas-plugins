@@ -58,11 +58,6 @@ class Appointment(IdentifiableModel):
     telehealth_instructions_sent = models.BooleanField()
     location = models.ForeignKey("v1.PracticeLocation", on_delete=models.DO_NOTHING, null=True)
     description = models.TextField(null=True, blank=True)
-    labels = models.ManyToManyField(
-        "v1.TaskLabel", 
-        related_name="appointment_labels", 
-        through="v1.AppointmentLabel"
-    )
 
 
 class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
