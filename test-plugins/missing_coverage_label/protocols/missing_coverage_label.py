@@ -41,8 +41,8 @@ class AppointmentLabelsProtocol(BaseProtocol):
             return []
 
         appointments_to_update = Appointment.objects.filter(
-            patient=patient, appointment_labels__name="MISSING_COVERAGE"
-        ).prefetch_related("appointment_labels")
+            patient=patient, labels__name="MISSING_COVERAGE"
+        ).prefetch_related("labels")
 
         if not appointments_to_update.exists():
             log.info(
@@ -97,8 +97,8 @@ class AppointmentLabelsProtocol(BaseProtocol):
         # created one.
         appointments_to_label = (
             Appointment.objects.filter(patient=patient)
-            .exclude(appointment_labels__name="MISSING_COVERAGE")
-            .prefetch_related("appointment_labels")
+            .exclude(labels__name="MISSING_COVERAGE")
+            .prefetch_related("labels")
         )
 
         if not appointments_to_label.exists():
