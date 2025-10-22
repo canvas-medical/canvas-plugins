@@ -8,6 +8,10 @@
             {
                 "class": "refill_priority_setter_plugin.protocols.priority_setter:RefillTaskPriorityProtocol",
                 "description": "Sets task priority to URGENT when assigned to teams with refill processing responsibilities."
+            },
+            {
+                "class": "refill_priority_setter_plugin.protocols.create_refill_task:CreateRefillTaskProtocol",
+                "description": "Creates a refill task when a refill command is committed."
             }
         ],
         "commands": [],

@@ -1,6 +1,6 @@
 from canvas_sdk.effects import Effect
 from canvas_sdk.v1.data.task import TaskPriority
-from canvas_sdk.effects.task import UpdateTask
+from canvas_sdk.effects.task import UpdateTask, AddTask, TaskStatus
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Task, Team
@@ -57,6 +57,9 @@ class RefillTaskPriorityProtocol(BaseProtocol):
         Updates the task priority based on the task.
         """
         task = Task.objects.get(id=self.target)
+
+        if task.status != TaskStatus.OPEN.value:
+            return []
         
         return self._update_priority_if_needed(
             current_priority=task.priority,
@@ -104,7 +107,7 @@ class RefillTaskPriorityProtocol(BaseProtocol):
         if use_command:
             return [TaskCommand(command_uuid=self.target, priority=desired_priority).edit()]
         else:
-            return [UpdateTask(id=self.target, priority=desired_priority).apply()]
+            return [UpdateTask(id=self.target, priority=desired_priority).apply(), AddTask(title=f"New-{self.target}", priority=desired_priority).apply()]
 
 
     def _get_desired_priority(self, team: Team | None) -> TaskPriority | None:
