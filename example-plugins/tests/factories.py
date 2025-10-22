@@ -42,7 +42,7 @@ class AppointmentFactory(factory.django.DjangoModelFactory):
     """
 
     class Meta:  # type: ignore[misc]
-        model = AppointmentData
+        model = Appointment
 
     # Required relationships
     patient = factory.SubFactory(PatientFactory)
