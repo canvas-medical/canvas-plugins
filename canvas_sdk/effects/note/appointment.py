@@ -3,7 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from django.db.models import Count
-from pydantic import conset
+from pydantic import conset, constr
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
@@ -141,7 +141,7 @@ class Appointment(AppointmentABC):
     appointment_note_type_id: UUID | str | None = None
     meeting_link: str | None = None
     patient_id: str | None = None
-    labels: conset(str, min_length=1, max_length=3) | None = None
+    labels: conset(constr(min_length=1, max_length=50, strip_whitespace=True), min_length=1, max_length=3) | None = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
