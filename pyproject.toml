@@ -136,9 +136,6 @@ warn_unused_ignores = true
 init_forbid_extra = true
 init_typed = true
 
-[tool.pyright]
-exclude = ["canvas_cli/templates", "canvas_generated"]
-
 [tool.pytest.ini_options]
 addopts = "--durations=5 --durations-min=0.25 --pdbcls=IPython.terminal.debugger:TerminalPdb"
 filterwarnings = [
