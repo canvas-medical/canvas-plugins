@@ -17,7 +17,7 @@ from canvas_sdk.v1.data.staff import Staff
 
 class MyChartApplication(Application):
     def on_open(self) -> Effect:
-        patient_id = self.context['patient']['id']
+        patient_id = self.context["patient"]["id"]
         return LaunchModalEffect(
             url=f"/plugin-io/api/example_chart_app/custom-ui?patient={patient_id}",
             target=LaunchModalEffect.TargetType.RIGHT_CHART_PANE,
@@ -50,8 +50,5 @@ class MyApi(StaffSessionAuthMixin, SimpleAPI):
         )
         return [
             add_task.apply(),
-            JSONResponse(
-                {"message": "Task will be created"},
-                status_code=HTTPStatus.ACCEPTED
-            )
+            JSONResponse({"message": "Task will be created"}, status_code=HTTPStatus.ACCEPTED),
         ]

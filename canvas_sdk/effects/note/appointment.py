@@ -232,7 +232,7 @@ class Appointment(AppointmentABC):
                     .values_list("label_count", flat=True)
                     .first() or 0
                 )
-                
+
                 if existing_count + len(self.labels) > 3:
                     errors.append(
                         self._create_error_detail(
@@ -286,7 +286,6 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
             "labels": list(self.labels),  # Convert set to list for JSON serialization
         }
         return result
-
 
 
 class AddAppointmentLabel(_AppointmentLabelBase):
@@ -347,7 +346,6 @@ class RemoveAppointmentLabel(_AppointmentLabelBase):
 
     class Meta:
         effect_type = EffectType.REMOVE_APPOINTMENT_LABEL
-
 
 
 __exports__ = (
