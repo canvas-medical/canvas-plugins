@@ -259,7 +259,6 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
         return result
 
 
-
 class AddAppointmentLabel(_AppointmentLabelBase):
     """
     Effect to add one or more labels to an appointment.
@@ -279,8 +278,7 @@ class AddAppointmentLabel(_AppointmentLabelBase):
             return errors
 
         result = (
-            AppointmentModel.objects
-            .filter(id=self.appointment_id)
+            AppointmentModel.objects.filter(id=self.appointment_id)
             .annotate(label_count=Count("appointment_labels"))
             .values_list("label_count", flat=True)
             .first()
@@ -318,7 +316,6 @@ class RemoveAppointmentLabel(_AppointmentLabelBase):
 
     class Meta:
         effect_type = EffectType.REMOVE_APPOINTMENT_LABEL
-
 
 
 __exports__ = (
