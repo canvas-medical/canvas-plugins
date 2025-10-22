@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -30,23 +31,31 @@ class _ClaimLabelBase(_BaseEffect):
     """Base class for managing ClaimLabels."""
 
     claim_id: UUID | str
-    labels: list[str] | None = None
+    labels: Sequence[str | Label]
 
-    def _check_if_all_labels_exist(self) -> list[InitErrorDetails]:
-        if self.labels is not None:
-            existing_labels = TaskLabel.objects.filter(name__in=self.labels).values_list(
-                "name", flat=True
-            )
-            missing_labels = set(self.labels) - set(existing_labels)
-            if len(missing_labels) > 0:
-                missing_labels_list = sorted(missing_labels)
-                missing_labels_text = ", ".join(missing_labels_list)
-                has_multiple = len(missing_labels_list) > 1
-                plural = "s" if has_multiple else ""
-                do = "do" if has_multiple else "does"
-                message = f"Label{plural} with name{plural} {missing_labels_text} {do} not exist."
-                return [self._create_error_detail("value", message, missing_labels_text)]
-        return []
+    @property
+    def _existing_label_names(self) -> list[str]:
+        return [label for label in self.labels if type(label) is str]
+
+    @property
+    def _new_label_values(self) -> list[Label]:
+        return [label for label in self.labels if type(label) is Label]
+
+    def _check_if_named_labels_exist(self) -> list[InitErrorDetails]:
+        requested_label_names = self._existing_label_names
+        existing_labels = TaskLabel.objects.filter(name__in=requested_label_names).values_list(
+            "name", flat=True
+        )
+        missing_labels = set(requested_label_names) - set(existing_labels)
+        if len(missing_labels) == 0:
+            return []
+        missing_labels_list = sorted(missing_labels)
+        missing_labels_text = ", ".join(missing_labels_list)
+        has_multiple = len(missing_labels_list) > 1
+        plural = "s" if has_multiple else ""
+        do = "do" if has_multiple else "does"
+        message = f"Label{plural} with name{plural} {missing_labels_text} {do} not exist."
+        return [self._create_error_detail("value", message, missing_labels_text)]
 
     def _check_if_claim_exists(self) -> list[InitErrorDetails]:
         if Claim.objects.filter(id=self.claim_id).exists():
@@ -61,6 +70,12 @@ class _ClaimLabelBase(_BaseEffect):
             )
         ]
 
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+        errors.extend(self._check_if_claim_exists())
+        errors.extend(self._check_if_named_labels_exist())
+        return errors
+
 
 class AddClaimLabel(_ClaimLabelBase):
     """Effect to add a label to a Claim."""
@@ -68,34 +83,14 @@ class AddClaimLabel(_ClaimLabelBase):
     class Meta:
         effect_type = EffectType.ADD_CLAIM_LABEL
 
-    label_values: list[Label] | None = None
-
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a claim label."""
         return {
             "claim_id": str(self.claim_id),
-            "labels": self.labels,
-            "label_values": [label_value.to_dict() for label_value in self.label_values]
-            if self.label_values
-            else None,
+            "labels": self._existing_label_names,
+            "label_values": [label_value.to_dict() for label_value in self._new_label_values],
         }
-
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)
-
-        if self.label_values is None and self.labels is None:
-            errors.append(
-                self._create_error_detail(
-                    "missing",
-                    "One of the fields 'labels' or 'label_values' are required in order to add a claim label.",
-                    self.labels,
-                )
-            )
-        errors.extend(self._check_if_claim_exists())
-        errors.extend(self._check_if_all_labels_exist())
-
-        return errors
 
 
 class RemoveClaimLabel(_ClaimLabelBase):
@@ -110,12 +105,6 @@ class RemoveClaimLabel(_ClaimLabelBase):
     def values(self) -> dict[str, Any]:
         """The values for adding a claim label."""
         return {"claim_id": str(self.claim_id), "labels": self.labels}
-
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)
-        errors.extend(self._check_if_claim_exists())
-        errors.extend(self._check_if_all_labels_exist())
-        return errors
 
 
 __exports__ = (

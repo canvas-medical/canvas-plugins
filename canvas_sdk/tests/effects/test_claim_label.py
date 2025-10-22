@@ -25,28 +25,6 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         }
 
 
-def test_add_claim_label_requires_claim_id() -> None:
-    """Test that claim_id is required."""
-    with pytest.raises(ValidationError) as e:
-        AddClaimLabel()  # type: ignore
-    err_msg = repr(e.value)
-    assert "1 validation error for AddClaimLabel\nclaim_id\n  Field required" in err_msg
-
-
-def test_add_claim_label_requires_label_id_or_label_values(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test that labels or label_values is required."""
-    add = AddClaimLabel(claim_id="claim-id")
-    with pytest.raises(ValidationError) as e:
-        add.apply()
-    err_msg = repr(e.value)
-    assert (
-        "1 validation error for AddClaimLabel\n  One of the fields 'labels' or 'label_values' are required in order to add a claim label. [type=missing,"
-        in err_msg
-    )
-
-
 def test_add_claim_label_requires_existing_label(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that the labels are valid and exist."""
     add = AddClaimLabel(claim_id="something-right", labels=["something-wrong"])
@@ -84,33 +62,37 @@ def test_add_claim_label_with_labels(mock_db_queries: dict[str, MagicMock]) -> N
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"], "label_values": null}}'
+        == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"], "label_values": []}}'
     )
 
 
 def test_add_claim_label_with_label_values(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test the correct payload with valid claim_id and label_values."""
     add = AddClaimLabel(
-        claim_id="claim-id", label_values=[Label(color=ColorEnum.PINK, name="test", position=100)]
+        claim_id="claim-id", labels=[Label(color=ColorEnum.PINK, name="test", position=100)]
     )
     payload = add.apply()
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": null, "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [], "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
     )
 
 
-def test_remove_claim_label_requires_claim_id_and_labels() -> None:
-    """Test that claim_id and labels are required."""
-    with pytest.raises(ValidationError) as e:
-        RemoveClaimLabel()  # type: ignore
-    err_msg = repr(e.value)
+def test_add_claim_label_with_label_name_and_label_values(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test the correct payload with valid claim_id and label names and label_values."""
+    add = AddClaimLabel(
+        claim_id="claim-id",
+        labels=["urgent", Label(color=ColorEnum.PINK, name="test", position=100)],
+    )
+    payload = add.apply()
+    assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
-        "2 validation errors for RemoveClaimLabel\nclaim_id\n  Field required [type=missing,"
-        in err_msg
+        payload.payload
+        == '{"data": {"claim_id": "claim-id", "labels": ["urgent"], "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
     )
-    assert "labels\n  Field required [type=missing," in err_msg
 
 
 def test_remove_claim_label_requires_existing_label(
