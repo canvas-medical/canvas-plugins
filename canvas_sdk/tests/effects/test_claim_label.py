@@ -67,7 +67,7 @@ def test_add_claim_label_with_label_name_and_label_values(
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": [{"color": "pink", "name": "test", "position": 100}, {"name": "urgent"}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"name": "urgent"}, {"color": "pink", "name": "test", "position": 100}]}}'
     )
 
 

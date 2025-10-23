@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import conset
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -32,7 +32,7 @@ class _ClaimLabelBase(_BaseEffect):
     """Base class for managing ClaimLabels."""
 
     claim_id: UUID | str
-    labels: Sequence[str | Label]
+    labels: Annotated[Sequence[str | Label], Field(min_length=1)]
 
     def _check_if_claim_exists(self) -> list[InitErrorDetails]:
         if Claim.objects.filter(id=self.claim_id).exists():
@@ -84,7 +84,7 @@ class RemoveClaimLabel(_ClaimLabelBase):
     class Meta:
         effect_type = EffectType.REMOVE_CLAIM_LABEL
 
-    labels: conset(str, min_length=1)  # type: ignore
+    labels: Annotated[Sequence[str], Field(min_length=1)]
 
     @property
     def values(self) -> dict[str, Any]:
