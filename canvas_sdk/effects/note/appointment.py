@@ -2,7 +2,6 @@ import json
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Count
 from pydantic import conset, constr
 from pydantic_core import InitErrorDetails
 
@@ -222,19 +221,17 @@ class Appointment(AppointmentABC):
                     )
                 )
 
-        if self.labels and method == "update":
-            # For updates, check existing labels
-            if method == "update" and self.instance_id:
-                existing_count = AppointmentLabel.objects.filter(appointment_id=self.instance_id).count()
+        if method == "update" and self.labels and self.instance_id:
 
-                if existing_count + len(self.labels) > 3:
-                    errors.append(
-                        self._create_error_detail(
-                            "value",
-                            f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {existing_count} existing label(s).",
-                            list(self.labels),
-                        )
+            existing_count = AppointmentLabel.objects.filter(appointment__id=self.instance_id).count()
+            if existing_count + len(self.labels) > 3:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {existing_count} existing label(s).",
+                        list(self.labels),
                     )
+                )
 
         return errors
 
@@ -244,7 +241,6 @@ class Appointment(AppointmentABC):
         Returns a dictionary of modified attributes with type-specific transformations.
         """
         values = super().values
-
         # Convert labels set to list for JSON serialization
         # This is necessary because:
         # 1. The labels field is defined as a conset (constrained set) for validation
@@ -255,7 +251,6 @@ class Appointment(AppointmentABC):
         # 5. Sort the labels to ensure consistent ordering for tests and API responses
         if self.labels is not None:
             values["labels"] = sorted(list(self.labels))
-
         return values
 
     def cancel(self) -> Effect:
@@ -305,7 +300,7 @@ class AddAppointmentLabel(_AppointmentLabelBase):
         """Validate that the appointment does not exceed the 3-label limit."""
         errors = super()._get_error_details(method)
 
-        result = AppointmentLabel.objects.filter(appointment_id=self.appointment_id).count()
+        result = AppointmentLabel.objects.filter(appointment__id=self.appointment_id).count()
 
         if result is None:
             # appointment doesn't exist
