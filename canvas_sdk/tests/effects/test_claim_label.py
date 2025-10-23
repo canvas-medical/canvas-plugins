@@ -38,7 +38,7 @@ def test_add_claim_label_with_labels(mock_db_queries: dict[str, MagicMock]) -> N
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"], "label_values": []}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"name": "urgent"}, {"name": "routine"}]}}'
     )
 
 
@@ -51,7 +51,7 @@ def test_add_claim_label_with_label_values(mock_db_queries: dict[str, MagicMock]
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": [], "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"color": "pink", "name": "test", "position": 100}]}}'
     )
 
 
@@ -67,7 +67,7 @@ def test_add_claim_label_with_label_name_and_label_values(
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": ["urgent"], "label_values": [{"color": "pink", "name": "test", "position": 100}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"color": "pink", "name": "test", "position": 100}, {"name": "urgent"}]}}'
     )
 
 
@@ -89,4 +89,7 @@ def test_remove_claim_label(mock_db_queries: dict[str, MagicMock]) -> None:
     remove = RemoveClaimLabel(claim_id="claim-id", labels=["urgent", "routine"])
     payload = remove.apply()
     assert payload.type == EffectType.REMOVE_CLAIM_LABEL
-    assert payload.payload == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"]}}'
+    assert (
+        payload.payload
+        == '{"data": {"claim_id": "claim-id", "label_names": ["urgent", "routine"]}}'
+    )
