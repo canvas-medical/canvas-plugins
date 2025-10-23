@@ -168,6 +168,7 @@ STANDARD_LIBRARY_MODULES = {
         "Tuple",
         "Type",
         "TypedDict",
+        "TypeGuard",
         "Union",
     },
     "urllib": {
@@ -209,6 +210,10 @@ THIRD_PARTY_MODULES = {
         "Case",
         "Value",
         "When",
+    },
+    "django.db.models.functions": {
+        "Coalesce",
+        "Trim",
     },
     "django.db.models.query": {
         "QuerySet",

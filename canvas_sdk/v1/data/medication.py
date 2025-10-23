@@ -8,9 +8,9 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    Model,
     ValueSetLookupQuerySet,
 )
+from canvas_sdk.v1.data.coding import Coding
 
 
 class Status(TextChoices):
@@ -59,17 +59,12 @@ class Medication(IdentifiableModel):
     erx_quantity = models.FloatField()
 
 
-class MedicationCoding(Model):
+class MedicationCoding(Coding):
     """MedicationCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_medicationcoding_001"
 
-    system = models.CharField(max_length=255)
-    version = models.CharField(max_length=255)
-    code = models.CharField(max_length=255)
-    display = models.CharField(max_length=1000)
-    user_selected = models.BooleanField()
     medication = models.ForeignKey(
         Medication, on_delete=models.DO_NOTHING, related_name="codings", null=True
     )

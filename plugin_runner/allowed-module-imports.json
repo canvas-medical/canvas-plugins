@@ -180,6 +180,20 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.appointments_metadata": [
+    "AppointmentsMetadata",
+    "AppointmentsMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.appointments_metadata.appointments_metadata_create_form": [
+    "AppointmentsMetadataCreateFormEffect",
+    "FormField",
+    "InputType"
+  ],
+  "canvas_sdk.effects.appointments_metadata.base": [
+    "AppointmentsMetadata"
+  ],
   "canvas_sdk.effects.banner_alert": [
     "AddBannerAlert",
     "RemoveBannerAlert"
@@ -208,17 +222,37 @@
   "canvas_sdk.effects.billing_line_item.update_billing_line_item": [
     "UpdateBillingLineItem"
   ],
+  "canvas_sdk.effects.calendar": [
+    "CalendarType",
+    "CreateCalendar",
+    "CreateEvent",
+    "EventRecurrence"
+  ],
+  "canvas_sdk.effects.calendar.create_calendar": [
+    "CalendarType",
+    "CreateCalendar"
+  ],
+  "canvas_sdk.effects.calendar.create_event": [
+    "CreateEvent",
+    "EventRecurrence"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.generate_full_chart_pdf": [
+    "GenerateFullChartPDFEffect"
+  ],
   "canvas_sdk.effects.group": [
     "Group"
   ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
+  ],
+  "canvas_sdk.effects.metadata": [
+    "Metadata"
   ],
   "canvas_sdk.effects.note": [
     "Appointment",
@@ -246,17 +280,27 @@
   ],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
+    "CreatePatientPreferredPharmacies",
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientMetadata",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.base": [
     "Patient",
+    "PatientAddress",
     "PatientContactPoint",
-    "PatientExternalIdentifier"
+    "PatientExternalIdentifier",
+    "PatientMetadata",
+    "PatientPreferredPharmacy"
   ],
   "canvas_sdk.effects.patient.create_patient_external_identifier": [
     "CreatePatientExternalIdentifier"
+  ],
+  "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
+    "CreatePatientPreferredPharmacies"
   ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
@@ -308,6 +352,9 @@
   ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
+  ],
+  "canvas_sdk.effects.send_contact_verification": [
+    "SendContactVerificationEffect"
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
@@ -472,6 +519,7 @@
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
     "ExtendedDraft7Validator",
+    "QuestionnaireConfig",
     "from_yaml"
   ],
   "canvas_sdk.templates": [
@@ -506,6 +554,7 @@
     "AllergyIntoleranceCoding",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "Assessment",
     "BannerAlert",
     "BasePosting",
@@ -520,6 +569,7 @@
     "ChargeDescriptionMaster",
     "Claim",
     "ClaimCoverage",
+    "ClaimDiagnosisCode",
     "ClaimLineItem",
     "ClaimPatient",
     "ClaimQueue",
@@ -534,10 +584,17 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "EligibilitySummary",
+    "Encounter",
+    "Facility",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview",
+    "Immunization",
+    "ImmunizationCoding",
+    "ImmunizationStatement",
+    "ImmunizationStatementCoding",
     "InstallmentPlan",
     "Interview",
     "InterviewQuestionResponse",
@@ -556,6 +613,11 @@
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus",
+    "MedicationStatement",
     "Message",
     "MessageAttachment",
     "MessageTransmission",
@@ -577,6 +639,7 @@
     "PatientConsentRejectionCoding",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientPosting",
     "PatientSetting",
@@ -584,6 +647,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationSetting",
+    "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
     "Questionnaire",
@@ -597,8 +661,10 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole",
+    "StopMedicationEvent",
     "Task",
     "TaskComment",
     "TaskLabel",
@@ -616,6 +682,7 @@
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentMetadata",
     "AppointmentProgressStatus"
   ],
   "canvas_sdk.v1.data.assessment": [
@@ -653,6 +720,9 @@
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"
+  ],
+  "canvas_sdk.v1.data.claim_diagnosis_code": [
+    "ClaimDiagnosisCode"
   ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
@@ -693,6 +763,7 @@
     "CoverageStack",
     "CoverageState",
     "CoverageType",
+    "EligibilitySummary",
     "Transactor",
     "TransactorAddress",
     "TransactorCoverageType",
@@ -709,6 +780,14 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.encounter": [
+    "Encounter",
+    "EncounterMedium",
+    "EncounterState"
+  ],
+  "canvas_sdk.v1.data.facility": [
+    "Facility"
+  ],
   "canvas_sdk.v1.data.goal": [
     "Goal",
     "GoalAchievementStatus",
@@ -719,6 +798,14 @@
     "ImagingOrder",
     "ImagingReport",
     "ImagingReview"
+  ],
+  "canvas_sdk.v1.data.immunization": [
+    "Immunization",
+    "ImmunizationCoding",
+    "ImmunizationReasonsNotGiven",
+    "ImmunizationStatement",
+    "ImmunizationStatementCoding",
+    "ImmunizationStatus"
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
@@ -750,6 +837,15 @@
     "Medication",
     "MedicationCoding",
     "Status"
+  ],
+  "canvas_sdk.v1.data.medication_history": [
+    "MedicationHistoryMedication",
+    "MedicationHistoryMedicationCoding",
+    "MedicationHistoryResponse",
+    "MedicationHistoryResponseStatus"
+  ],
+  "canvas_sdk.v1.data.medication_statement": [
+    "MedicationStatement"
   ],
   "canvas_sdk.v1.data.message": [
     "Message",
@@ -784,6 +880,7 @@
     "PatientAddress",
     "PatientContactPoint",
     "PatientExternalIdentifier",
+    "PatientFacilityAddress",
     "PatientMetadata",
     "PatientSetting",
     "PatientSettingConstants",
@@ -813,10 +910,18 @@
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
+  "canvas_sdk.v1.data.protocol_current": [
+    "ProtocolCurrent",
+    "ProtocolCurrentStatus"
+  ],
   "canvas_sdk.v1.data.protocol_override": [
     "IntervalUnit",
     "ProtocolOverride",
     "Status"
+  ],
+  "canvas_sdk.v1.data.protocol_result": [
+    "ProtocolResult",
+    "ProtocolResultStatus"
   ],
   "canvas_sdk.v1.data.questionnaire": [
     "Interview",
@@ -843,8 +948,12 @@
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
+    "StaffLicense",
     "StaffPhoto",
     "StaffRole"
+  ],
+  "canvas_sdk.v1.data.stop_medication_event": [
+    "StopMedicationEvent"
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",

@@ -57,6 +57,7 @@ def valid_appointment_data() -> dict[str, Any]:
         "start_time": datetime.datetime.now(),
         "duration_minutes": 30,
         "meeting_link": "https://example.com/meeting",
+        "parent_appointment_id": str(uuid4()),
     }
 
 
@@ -327,3 +328,114 @@ def test_appointment_update_nonexistent_appointment(mock_db_queries: dict[str, M
 
     errors = exc_info.value.errors()
     assert any("Appointment with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def test_create_appointment_parent_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on creation."""
+    same_id = str(uuid4())
+    appointment_data = {
+        **valid_appointment_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    appointment = Appointment(**appointment_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.create()
+
+    errors = exc_info.value.errors()
+    assert any("parent_appointment_id cannot be the same as instance_id" in str(e) for e in errors)
+
+
+def test_update_appointment_parent_appointment_equals_instance_id(
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test that parent appointment cannot be the same as instance_id on update."""
+    same_id = str(uuid4())
+    appointment_data = {
+        **valid_appointment_data,
+        "instance_id": same_id,
+        "parent_appointment_id": same_id,
+    }
+    appointment = Appointment(**appointment_data)
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.update()
+
+    errors = exc_info.value.errors()
+    assert any(
+        "parent_appointment_id can only be set when creating an appointment." in str(e)
+        for e in errors
+    )
+
+
+def test_appointment_reschedule_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful appointment reschedule."""
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.start_time = datetime.datetime.now()
+    appointment.duration_minutes = 45
+
+    effect = appointment.reschedule()
+
+    assert effect.type == EffectType.RESCHEDULE_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert "start_time" in payload["data"]
+    assert payload["data"]["duration_minutes"] == 45
+
+
+def test_appointment_reschedule_no_changes_fails(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that reschedule with no changes raises error."""
+    appointment = Appointment(instance_id=str(uuid4()))
+
+    with pytest.raises(ValueError) as exc_info:
+        appointment.reschedule()
+
+    assert "No fields have been modified" in str(exc_info.value)
+
+
+def test_appointment_reschedule_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that reschedule without instance_id raises error."""
+    appointment = Appointment(practice_location_id=str(uuid4()), provider_id=str(uuid4()))
+    appointment.start_time = datetime.datetime.now()
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.reschedule()
+
+    errors = exc_info.value.errors()
+    assert any("instance_id' is required" in str(e) for e in errors)
+
+
+def test_appointment_reschedule_nonexistent_appointment(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test rescheduling an appointment that doesn't exist."""
+    mock_db_queries["appointment"].filter.return_value.exists.return_value = False
+
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.start_time = datetime.datetime.now()
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.reschedule()
+
+    errors = exc_info.value.errors()
+    assert any("Appointment with ID" in str(e) and "does not exist" in str(e) for e in errors)
+
+
+def test_appointment_reschedule_with_multiple_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test rescheduling with multiple modified fields."""
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.start_time = datetime.datetime.now()
+    appointment.duration_minutes = 60
+    appointment.meeting_link = "https://new-reschedule-link.com"
+
+    effect = appointment.reschedule()
+
+    assert effect.type == EffectType.RESCHEDULE_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert "start_time" in payload["data"]
+    assert payload["data"]["duration_minutes"] == 60
+    assert payload["data"]["meeting_link"] == "https://new-reschedule-link.com"
