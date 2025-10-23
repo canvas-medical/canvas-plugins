@@ -21,7 +21,7 @@ class MoveClaimToQueue(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The claim_id and queue_id."""
-        return {"claim_id": self.claim_id, "queue": self.queue}
+        return {"claim_id": str(self.claim_id), "queue": self.queue}
 
     @property
     def effect_payload(self) -> dict[str, Any]:
