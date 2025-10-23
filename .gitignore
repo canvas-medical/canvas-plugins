@@ -18,6 +18,3 @@ dist/
 *.sqlite3
 
 profile-imports-*.txt
-
-.vscode/
-pyrightconfig.json
