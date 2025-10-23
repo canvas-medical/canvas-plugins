@@ -441,18 +441,17 @@ def test_appointment_reschedule_with_multiple_fields(
     assert payload["data"]["meeting_link"] == "https://new-reschedule-link.com"
 
 
-# Tests for AddAppointmentLabel and RemoveAppointmentLabel effects
 @pytest.fixture
 def mock_appointment_label_queries() -> Generator[dict[str, MagicMock]]:
     """Mock database queries for appointment label effects."""
     with (
-        patch("canvas_sdk.v1.data.Appointment.objects") as mock_appointment,
+        patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects") as mock_appointment_label,
     ):
-        # Setup default behaviors
-        mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 0  # No existing labels
+        # Setup default behaviors - using simplified query approach
+        mock_appointment_label.filter.return_value.count.return_value = 0  # No existing labels
 
         yield {
-            "appointment": mock_appointment,
+            "appointment_label": mock_appointment_label,
         }
 
 
@@ -493,30 +492,30 @@ def test_remove_appointment_label_values_property(
     assert effect.values == expected_values
 
 
-@patch("canvas_sdk.v1.data.Appointment.objects")
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 def test_add_appointment_label_valid_appointment(
-    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned if the appointment exists and label limit is not exceeded."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     # Mock appointment exists with 1 existing label
-    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 1
+    mock_appointment_label.filter.return_value.count.return_value = 1
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
     assert errors == []
 
 
-@patch("canvas_sdk.v1.data.Appointment.objects")
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 def test_add_appointment_label_nonexistent_appointment(
-    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that an error is returned if the appointment does not exist."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     # Mock appointment doesn't exist
-    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = None
+    mock_appointment_label.filter.return_value.count.return_value = None
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     with patch.object(
@@ -531,15 +530,15 @@ def test_add_appointment_label_nonexistent_appointment(
         assert errors == [mock_create_error.return_value]
 
 
-@patch("canvas_sdk.v1.data.Appointment.objects")
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 def test_add_appointment_label_limit_exceeded(
-    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that an error is returned if adding labels would exceed the 3-label limit."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     # Mock appointment exists with 2 existing labels, trying to add 2 more (would exceed limit)
-    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 2
+    mock_appointment_label.filter.return_value.count.return_value = 2
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     with patch.object(
@@ -554,15 +553,15 @@ def test_add_appointment_label_limit_exceeded(
         assert errors == [mock_create_error.return_value]
 
 
-@patch("canvas_sdk.v1.data.Appointment.objects")
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 def test_add_appointment_label_valid_with_existing_labels(
-    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned when adding labels within the limit."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     # Mock appointment exists with 1 existing label, trying to add 2 more (total 3, within limit)
-    mock_appointment.filter.return_value.annotate.return_value.values_list.return_value.first.return_value = 1
+    mock_appointment_label.filter.return_value.count.return_value = 1
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
@@ -578,3 +577,80 @@ def test_remove_appointment_label_valid_appointment(
     effect = RemoveAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
     assert errors == []
+
+
+def test_create_appointment_with_labels(
+        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test creating an appointment with labels."""
+    valid_appointment_data["labels"] = {"MISSING_COVERAGE", "URGENT"}
+
+    appointment = Appointment(**valid_appointment_data)
+    effect = appointment.create()
+
+    assert effect.type == EffectType.CREATE_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert payload["data"]["labels"] == ["MISSING_COVERAGE", "URGENT"]
+
+
+def test_create_appointment_with_too_many_labels(
+        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test creating an appointment with more than 3 labels fails."""
+    valid_appointment_data["labels"] = {"LABEL1", "LABEL2", "LABEL3", "LABEL4"}
+
+    with pytest.raises(ValidationError) as exc_info:
+        Appointment(**valid_appointment_data)
+
+    errors = exc_info.value.errors()
+    assert any("at most 3 items" in str(e) for e in errors)
+
+
+def test_create_appointment_with_invalid_label_length(
+        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+) -> None:
+    """Test creating an appointment with labels that are too long."""
+    valid_appointment_data["labels"] = {"A" * 51}  # 51 characters, exceeds max_length=50
+
+    with pytest.raises(ValidationError) as exc_info:
+        Appointment(**valid_appointment_data)
+
+    errors = exc_info.value.errors()
+    assert any("at most 50 characters" in str(e) for e in errors)
+
+
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+def test_update_appointment_with_labels(
+        mock_appointment_label: MagicMock, mock_db_queries: dict[str, MagicMock]
+) -> None:
+    """Test updating an appointment with labels."""
+    # Mock existing labels count
+    mock_appointment_label.filter.return_value.count.return_value = 0
+    
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.labels = {"UPDATED_LABEL"}
+    appointment.start_time = datetime.datetime.now()  # Need at least one dirty field
+
+    effect = appointment.update()
+
+    assert effect.type == EffectType.UPDATE_APPOINTMENT
+    payload = json.loads(effect.payload)
+    assert payload["data"]["labels"] == ["UPDATED_LABEL"]
+
+
+@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+def test_appointment_label_validation_exceeds_limit(
+        mock_appointment_label: MagicMock, mock_db_queries: dict[str, MagicMock]
+) -> None:
+    """Test that updating an appointment with labels that would exceed the 3-label limit fails."""
+    # Mock existing labels count
+    mock_appointment_label.filter.return_value.count.return_value = 2
+
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.labels = {"LABEL1", "LABEL2"}  # Would make total 4 labels
+
+    with pytest.raises(ValidationError) as exc_info:
+        appointment.update()
+
+    errors = exc_info.value.errors()
+    assert any("Limit reached: Only 3 appointment labels allowed" in str(e) for e in errors)
