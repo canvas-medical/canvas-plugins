@@ -38,8 +38,8 @@ class _ClaimLabelBase(_BaseEffect):
         return [label for label in self.labels if type(label) is str]
 
     @property
-    def _label_values(self) -> list[Label]:
-        return [label for label in self.labels if type(label) is Label]
+    def _label_values(self) -> list[dict]:
+        return [label.to_dict() for label in self.labels if type(label) is Label]
 
     def _check_if_claim_exists(self) -> list[InitErrorDetails]:
         if Claim.objects.filter(id=self.claim_id).exists():
@@ -78,8 +78,7 @@ class AddClaimLabel(_ClaimLabelBase):
         """The values for adding a claim label."""
         return {
             "claim_id": str(self.claim_id),
-            "labels": self._label_names,
-            "label_values": [label_value.to_dict() for label_value in self._label_values],
+            "labels": self._label_values + [{"name": name} for name in self._label_names],
         }
 
 
@@ -94,7 +93,7 @@ class RemoveClaimLabel(_ClaimLabelBase):
     @property
     def values(self) -> dict[str, Any]:
         """The values for adding a claim label."""
-        return {"claim_id": str(self.claim_id), "labels": self.labels}
+        return {"claim_id": str(self.claim_id), "label_names": self._label_names}
 
 
 __exports__ = (
