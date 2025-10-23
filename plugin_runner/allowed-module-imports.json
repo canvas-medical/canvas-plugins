@@ -206,6 +206,9 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.batch_originate": [
+    "BatchOriginateCommandEffect"
+  ],
   "canvas_sdk.effects.billing_line_item": [
     "AddBillingLineItem",
     "RemoveBillingLineItem",
