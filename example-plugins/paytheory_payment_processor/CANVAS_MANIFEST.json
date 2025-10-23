@@ -1,0 +1,43 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "paytheory_payment_processor",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "url_permissions": [
+        {
+            "url": "https://start.sdk.paytheory.com/index.js",
+            "permissions": ["SCRIPTS"]
+        },
+        {
+            "url": "https://start.tags.static.paytheory.com",
+            "permissions": []
+        },
+        {
+            "url": "https://start.paytheory.com/pt-token-service/",
+            "permissions": []
+        }
+    ],
+    "components": {
+        "protocols": [
+            {
+                "class": "paytheory_payment_processor.handlers.paytheory_payment_processor:PayTheoryPaymentProcessor",
+                "description": "A protocol that does xyz...",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["paytheory_merchant_id", "paytheory_public_key", "paytheory_secret_key", "paytheory_default_payor_id"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
