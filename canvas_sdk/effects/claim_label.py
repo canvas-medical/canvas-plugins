@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from pydantic import conset
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -32,14 +33,6 @@ class _ClaimLabelBase(_BaseEffect):
 
     claim_id: UUID | str
     labels: Sequence[str | Label]
-
-    @property
-    def _label_names(self) -> list[str]:
-        return [label for label in self.labels if type(label) is str]
-
-    @property
-    def _label_values(self) -> list[dict]:
-        return [label.to_dict() for label in self.labels if type(label) is Label]
 
     def _check_if_claim_exists(self) -> list[InitErrorDetails]:
         if Claim.objects.filter(id=self.claim_id).exists():
@@ -78,7 +71,10 @@ class AddClaimLabel(_ClaimLabelBase):
         """The values for adding a claim label."""
         return {
             "claim_id": str(self.claim_id),
-            "labels": self._label_values + [{"name": name} for name in self._label_names],
+            "labels": [
+                label.to_dict() if isinstance(label, Label) else {"name": label}
+                for label in self.labels
+            ],
         }
 
 
@@ -88,12 +84,12 @@ class RemoveClaimLabel(_ClaimLabelBase):
     class Meta:
         effect_type = EffectType.REMOVE_CLAIM_LABEL
 
-    labels: list[str]
+    labels: conset(str, min_length=1)  # type: ignore
 
     @property
     def values(self) -> dict[str, Any]:
-        """The values for adding a claim label."""
-        return {"claim_id": str(self.claim_id), "label_names": self._label_names}
+        """The values for removing a claim label."""
+        return {"claim_id": str(self.claim_id), "label_names": list(self.labels)}
 
 
 __exports__ = (
