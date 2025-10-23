@@ -10,7 +10,7 @@ from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
-from canvas_sdk.v1.data import Appointment as AppointmentModel
+from canvas_sdk.v1.data import AppointmentLabel
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
@@ -222,16 +222,10 @@ class Appointment(AppointmentABC):
                     )
                 )
 
-        if self.labels and method in ["create", "update"]:
+        if self.labels and method == "update":
             # For updates, check existing labels
-            if method == "update" and self.id:
-                existing_count = (
-                    AppointmentModel.objects
-                    .filter(id=self.id)
-                    .annotate(label_count=Count("appointment_labels"))
-                    .values_list("label_count", flat=True)
-                    .first() or 0
-                )
+            if method == "update" and self.instance_id:
+                existing_count = AppointmentLabel.objects.filter(appointment_id=self.instance_id).count()
 
                 if existing_count + len(self.labels) > 3:
                     errors.append(
@@ -241,17 +235,28 @@ class Appointment(AppointmentABC):
                             list(self.labels),
                         )
                     )
-            # For creates, just check the new labels don't exceed 3
-            elif method == "create" and len(self.labels) > 3:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Limit reached: Only 3 appointment labels allowed. Attempted to create appointment with {len(self.labels)} label(s).",
-                        list(self.labels),
-                    )
-                )
 
         return errors
+
+    @property
+    def values(self) -> dict:
+        """
+        Returns a dictionary of modified attributes with type-specific transformations.
+        """
+        values = super().values
+
+        # Convert labels set to list for JSON serialization
+        # This is necessary because:
+        # 1. The labels field is defined as a conset (constrained set) for validation
+        # 2. JSON cannot serialize Python sets directly - it only supports lists, dicts, strings, numbers, booleans, and None
+        # 3. When the effect payload is serialized to JSON in the base Effect class, it would fail with:
+        #    "TypeError: Object of type set is not JSON serializable"
+        # 4. Converting to list maintains the same data while making it JSON-compatible
+        # 5. Sort the labels to ensure consistent ordering for tests and API responses
+        if self.labels is not None:
+            values["labels"] = sorted(list(self.labels))
+
+        return values
 
     def cancel(self) -> Effect:
         """Send a CANCEL effect for the appointment."""
@@ -282,8 +287,8 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
     def values(self) -> dict:
         """The effect's values."""
         result = {
-            "appointment_id": self.appointment_id,
-            "labels": list(self.labels),  # Convert set to list for JSON serialization
+            "appointment_id": str(self.appointment_id),
+            "labels": list(self.labels),
         }
         return result
 
@@ -291,10 +296,6 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
 class AddAppointmentLabel(_AppointmentLabelBase):
     """
     Effect to add one or more labels to an appointment.
-
-    Attributes:
-        appointment_id (UUID | str): The ID of the appointment to add labels to.
-        labels (list[str]): A list of label names to add.
     """
 
     class Meta:
@@ -303,16 +304,8 @@ class AddAppointmentLabel(_AppointmentLabelBase):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate that the appointment does not exceed the 3-label limit."""
         errors = super()._get_error_details(method)
-        if not self.appointment_id or not self.labels:
-            return errors
 
-        result = (
-            AppointmentModel.objects
-            .filter(id=self.appointment_id)
-            .annotate(label_count=Count("labels"))
-            .values_list("label_count", flat=True)
-            .first()
-        )
+        result = AppointmentLabel.objects.filter(appointment_id=self.appointment_id).count()
 
         if result is None:
             # appointment doesn't exist
