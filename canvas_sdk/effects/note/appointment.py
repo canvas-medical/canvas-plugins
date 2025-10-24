@@ -1,14 +1,16 @@
 import json
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import conset, constr
+from django.db.models import Count
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
+from canvas_sdk.v1.data import Appointment as AppointmentDataModel
 from canvas_sdk.v1.data import AppointmentLabel, NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
@@ -140,9 +142,10 @@ class Appointment(AppointmentABC):
     meeting_link: str | None = None
     patient_id: str | None = None
     labels: (
-        conset(
-            constr(min_length=1, max_length=50, strip_whitespace=True), min_length=1, max_length=3
-        )
+        Annotated[
+            set[Annotated[str, Field(min_length=1, max_length=50)]],
+            Field(min_length=1, max_length=3),
+        ]
         | None
     ) = None
 
@@ -281,7 +284,7 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
     """
 
     appointment_id: str
-    labels: conset(str, min_length=1, max_length=3)
+    labels: Annotated[set[str], Field(min_length=1, max_length=3)]
 
     @property
     def values(self) -> dict:
@@ -305,10 +308,19 @@ class AddAppointmentLabel(_AppointmentLabelBase):
         """Validate that the appointment does not exceed the 3-label limit."""
         errors = super()._get_error_details(method)
 
-        result = AppointmentLabel.objects.filter(appointment__id=self.appointment_id).count()
+        if not self.appointment_id or not self.labels:
+            return errors
 
-        if result == 0:
-            # appointment doesn't exist
+        appointment_label_count = (
+            AppointmentDataModel.objects.filter(id=self.appointment_id)
+            .annotate(label_count=Count("labels"))
+            .values_list("label_count", flat=True)
+            .first()
+        )
+
+        # note that appointment_label_count will be None if the appointment doesn't exist
+        # and appointment_label_count will be 0 if the appointment exists but has no labels
+        if appointment_label_count is None:
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -316,12 +328,13 @@ class AddAppointmentLabel(_AppointmentLabelBase):
                     self.appointment_id,
                 )
             )
-        elif result + len(self.labels) > 3:
-            # appointment exists but label limit exceeded
+        elif appointment_label_count + len(self.labels) > 3:
             errors.append(
                 self._create_error_detail(
                     "value",
-                    f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {result} existing label(s).",
+                    f"Limit reached: Only 3 appointment labels allowed. "
+                    f"Attempted to add {len(self.labels)} label(s) to appointment with "
+                    f"{appointment_label_count} existing label(s).",
                     list(self.labels),
                 )
             )

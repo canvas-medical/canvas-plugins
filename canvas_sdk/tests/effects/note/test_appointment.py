@@ -492,29 +492,44 @@ def test_remove_appointment_label_values_property(
     assert effect.values == expected_values
 
 
-@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+@patch("canvas_sdk.v1.data.Appointment.objects")
 def test_add_appointment_label_valid_appointment(
-    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned if the appointment exists and label limit is not exceeded."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     # Mock appointment exists with 1 existing label
-    mock_appointment_label.filter.return_value.count.return_value = 1
+    mock_filter = MagicMock()
+    mock_annotate = MagicMock()
+    mock_values_list = MagicMock()
+    
+    mock_appointment.filter.return_value = mock_filter
+    mock_filter.annotate.return_value = mock_annotate
+    mock_annotate.values_list.return_value = mock_values_list
+    mock_values_list.first.return_value = 1
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
     assert errors == []
 
 
-@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+@patch("canvas_sdk.v1.data.Appointment.objects")
 def test_add_appointment_label_nonexistent_appointment(
-    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
-    """Test that an error is returned if the appointment doesn't exist (count returns 0)."""
+    """Test that an error is returned if the appointment doesn't exist (annotate returns None)."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
-    mock_appointment_label.filter.return_value.count.return_value = 0
+    # Mock appointment doesn't exist - first() returns None
+    mock_filter = MagicMock()
+    mock_annotate = MagicMock()
+    mock_values_list = MagicMock()
+    
+    mock_appointment.filter.return_value = mock_filter
+    mock_filter.annotate.return_value = mock_annotate
+    mock_annotate.values_list.return_value = mock_values_list
+    mock_values_list.first.return_value = None
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     with patch.object(
@@ -529,14 +544,22 @@ def test_add_appointment_label_nonexistent_appointment(
         assert errors == [mock_create_error.return_value]
 
 
-@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+@patch("canvas_sdk.v1.data.Appointment.objects")
 def test_add_appointment_label_limit_exceeded(
-    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that an error is returned if adding labels would exceed the 3-label limit."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
-    mock_appointment_label.filter.return_value.count.return_value = 2
+    # Mock appointment exists with 2 existing labels
+    mock_filter = MagicMock()
+    mock_annotate = MagicMock()
+    mock_values_list = MagicMock()
+    
+    mock_appointment.filter.return_value = mock_filter
+    mock_filter.annotate.return_value = mock_annotate
+    mock_annotate.values_list.return_value = mock_values_list
+    mock_values_list.first.return_value = 2
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     with patch.object(
@@ -551,14 +574,22 @@ def test_add_appointment_label_limit_exceeded(
         assert errors == [mock_create_error.return_value]
 
 
-@patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
+@patch("canvas_sdk.v1.data.Appointment.objects")
 def test_add_appointment_label_valid_with_existing_labels(
-    mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
+    mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned when adding labels within the limit."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
-    mock_appointment_label.filter.return_value.count.return_value = 1
+    # Mock appointment exists with 1 existing label
+    mock_filter = MagicMock()
+    mock_annotate = MagicMock()
+    mock_values_list = MagicMock()
+    
+    mock_appointment.filter.return_value = mock_filter
+    mock_filter.annotate.return_value = mock_annotate
+    mock_annotate.values_list.return_value = mock_values_list
+    mock_values_list.first.return_value = 1
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
