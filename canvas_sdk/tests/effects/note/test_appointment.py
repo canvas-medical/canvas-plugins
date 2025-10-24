@@ -503,7 +503,7 @@ def test_add_appointment_label_valid_appointment(
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
     mock_values_list = MagicMock()
-    
+
     mock_appointment.filter.return_value = mock_filter
     mock_filter.annotate.return_value = mock_annotate
     mock_annotate.values_list.return_value = mock_values_list
@@ -525,7 +525,7 @@ def test_add_appointment_label_nonexistent_appointment(
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
     mock_values_list = MagicMock()
-    
+
     mock_appointment.filter.return_value = mock_filter
     mock_filter.annotate.return_value = mock_annotate
     mock_annotate.values_list.return_value = mock_values_list
@@ -555,7 +555,7 @@ def test_add_appointment_label_limit_exceeded(
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
     mock_values_list = MagicMock()
-    
+
     mock_appointment.filter.return_value = mock_filter
     mock_filter.annotate.return_value = mock_annotate
     mock_annotate.values_list.return_value = mock_values_list
@@ -585,7 +585,7 @@ def test_add_appointment_label_valid_with_existing_labels(
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
     mock_values_list = MagicMock()
-    
+
     mock_appointment.filter.return_value = mock_filter
     mock_filter.annotate.return_value = mock_annotate
     mock_annotate.values_list.return_value = mock_values_list
