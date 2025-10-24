@@ -302,7 +302,7 @@ class AddAppointmentLabel(_AppointmentLabelBase):
 
         result = AppointmentLabel.objects.filter(appointment__id=self.appointment_id).count()
 
-        if result is None:
+        if result == 0:
             # appointment doesn't exist
             errors.append(
                 self._create_error_detail(

@@ -511,14 +511,22 @@ def test_add_appointment_label_valid_appointment(
 def test_add_appointment_label_nonexistent_appointment(
     mock_appointment_label: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
-    """Test that no error is returned if the appointment doesn't exist (count returns 0)."""
+    """Test that an error is returned if the appointment doesn't exist (count returns 0)."""
     from canvas_sdk.effects.note.appointment import AddAppointmentLabel
 
     mock_appointment_label.filter.return_value.count.return_value = 0
 
     effect = AddAppointmentLabel(**valid_appointment_label_data)
-    errors = effect._get_error_details(method=None)
-    assert errors == []
+    with patch.object(
+        effect, "_create_error_detail", return_value="error_detail"
+    ) as mock_create_error:
+        errors = effect._get_error_details(method=None)
+        mock_create_error.assert_called_once_with(
+            "value",
+            f"Appointment {valid_appointment_label_data['appointment_id']} does not exist",
+            valid_appointment_label_data["appointment_id"],
+        )
+        assert errors == [mock_create_error.return_value]
 
 
 @patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
@@ -614,7 +622,7 @@ def test_update_appointment_with_labels(mock_appointment: MagicMock, mock_appoin
     """Test updating an appointment with labels."""
     mock_appointment.filter.return_value.exists.return_value = True
     mock_appointment_label.filter.return_value.count.return_value = 0
-    
+
     appointment = Appointment(instance_id=str(uuid4()))
     appointment.labels = {"UPDATED_LABEL"}
 
