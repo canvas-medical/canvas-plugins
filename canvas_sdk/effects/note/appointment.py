@@ -308,9 +308,6 @@ class AddAppointmentLabel(_AppointmentLabelBase):
         """Validate that the appointment does not exceed the 3-label limit."""
         errors = super()._get_error_details(method)
 
-        if not self.appointment_id or not self.labels:
-            return errors
-
         appointment_label_count = (
             AppointmentDataModel.objects.filter(id=self.appointment_id)
             .annotate(label_count=Count("labels"))
