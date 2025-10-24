@@ -1,13 +1,13 @@
 {
   "sdk_version":"0.1.4",
-  "plugin_version":"0.0.2",
-  "name":"missing_coverage_label",
-  "description": "Adds a 'Missing Coverage' label to appointments for patients without coverage, and removes the label when coverage is added.",
+  "plugin_version":"1.0.0",
+  "name":"appointment_coverage_label",
+  "description": "Automatically manages appointment labels based on patient insurance coverage status. Adds a 'MISSING_COVERAGE' label to appointments for patients without coverage, and removes the label when coverage is subsequently added.",
   "components":{
     "protocols":[
       {
-        "class":"missing_coverage_label.protocols.missing_coverage_label:AppointmentLabelsProtocol",
-        "description": "Adds a 'Missing Coverage' label to new appointments for patients without coverage and removes the label from all of a patient's appointments when coverage is subsequently added.",
+        "class":"appointment_coverage_label.protocols.appointment_labels:AppointmentLabelsProtocol",
+        "description": "Monitors appointment and coverage events to automatically add or remove the 'MISSING_COVERAGE' label based on patient insurance coverage status.",
         "data_access":{
           "event":"read",
           "read":[
@@ -42,3 +42,4 @@
   "diagram":false,
   "readme":"./README.md"
 }
+
