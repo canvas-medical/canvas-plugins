@@ -473,7 +473,7 @@ def test_add_appointment_label_values_property(
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     expected_values = {
         "appointment_id": valid_appointment_label_data["appointment_id"],
-        "labels": list(valid_appointment_label_data["labels"]),
+        "labels": sorted(valid_appointment_label_data["labels"]),
     }
     assert effect.values == expected_values
 
@@ -487,7 +487,7 @@ def test_remove_appointment_label_values_property(
     effect = RemoveAppointmentLabel(**valid_appointment_label_data)
     expected_values = {
         "appointment_id": valid_appointment_label_data["appointment_id"],
-        "labels": list(valid_appointment_label_data["labels"]),
+        "labels": sorted(valid_appointment_label_data["labels"]),
     }
     assert effect.values == expected_values
 
@@ -569,7 +569,7 @@ def test_add_appointment_label_limit_exceeded(
         mock_create_error.assert_called_once_with(
             "value",
             "Limit reached: Only 3 appointment labels allowed. Attempted to add 2 label(s) to appointment with 2 existing label(s).",
-            list(valid_appointment_label_data["labels"]),
+            sorted(valid_appointment_label_data["labels"]),
         )
         assert errors == [mock_create_error.return_value]
 
@@ -618,7 +618,7 @@ def test_create_appointment_with_labels(
 
     assert effect.type == EffectType.CREATE_APPOINTMENT
     payload = json.loads(effect.payload)
-    assert payload["data"]["labels"] == ["MISSING_COVERAGE", "URGENT"]
+    assert payload["data"]["labels"] == sorted(["MISSING_COVERAGE", "URGENT"])
 
 
 def test_create_appointment_with_too_many_labels(
@@ -663,7 +663,7 @@ def test_update_appointment_with_labels(
 
     assert effect.type == EffectType.UPDATE_APPOINTMENT
     payload = json.loads(effect.payload)
-    assert payload["data"]["labels"] == ["UPDATED_LABEL"]
+    assert payload["data"]["labels"] == sorted(["UPDATED_LABEL"])
 
 
 @patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")

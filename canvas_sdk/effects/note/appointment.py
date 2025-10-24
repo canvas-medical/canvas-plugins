@@ -237,7 +237,7 @@ class Appointment(AppointmentABC):
                     self._create_error_detail(
                         "value",
                         f"Limit reached: Only 3 appointment labels allowed. Attempted to add {len(self.labels)} label(s) to appointment with {existing_count} existing label(s).",
-                        list(self.labels),
+                        sorted(self.labels),
                     )
                 )
 
@@ -291,7 +291,7 @@ class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):
         """The effect's values."""
         result = {
             "appointment_id": str(self.appointment_id),
-            "labels": list(self.labels),
+            "labels": sorted(self.labels),
         }
         return result
 
@@ -332,7 +332,7 @@ class AddAppointmentLabel(_AppointmentLabelBase):
                     f"Limit reached: Only 3 appointment labels allowed. "
                     f"Attempted to add {len(self.labels)} label(s) to appointment with "
                     f"{appointment_label_count} existing label(s).",
-                    list(self.labels),
+                    sorted(self.labels),
                 )
             )
         return errors
