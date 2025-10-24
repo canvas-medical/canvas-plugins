@@ -89,7 +89,4 @@ def test_remove_claim_label(mock_db_queries: dict[str, MagicMock]) -> None:
     remove = RemoveClaimLabel(claim_id="claim-id", labels=["urgent", "routine"])
     payload = remove.apply()
     assert payload.type == EffectType.REMOVE_CLAIM_LABEL
-    assert (
-        payload.payload
-        == '{"data": {"claim_id": "claim-id", "label_names": ["urgent", "routine"]}}'
-    )
+    assert payload.payload == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"]}}'
