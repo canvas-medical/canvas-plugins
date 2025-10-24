@@ -57,8 +57,5 @@ class CoverageStatusSyncProtocol(BaseProtocol):
             update_effect = metadata_effect_instance.upsert(value=new_status)
             return [update_effect]
         except Exception as e:
-            log.error(
-                f"Failed to create PatientMetadata effect for patient {patient_id}: {e}",
-                exc_info=True,
-            )
+            log.error(f"Failed to create PatientMetadata effect for patient {patient_id}: {e}")
             return []
