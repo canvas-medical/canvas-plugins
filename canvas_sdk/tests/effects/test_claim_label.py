@@ -44,14 +44,12 @@ def test_add_claim_label_with_labels(mock_db_queries: dict[str, MagicMock]) -> N
 
 def test_add_claim_label_with_label_values(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test the correct payload with valid claim_id and label_values."""
-    add = AddClaimLabel(
-        claim_id="claim-id", labels=[Label(color=ColorEnum.PINK, name="test", position=100)]
-    )
+    add = AddClaimLabel(claim_id="claim-id", labels=[Label(color=ColorEnum.PINK, name="test")])
     payload = add.apply()
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": [{"color": "pink", "name": "test", "position": 100}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"color": "pink", "name": "test"}]}}'
     )
 
 
@@ -61,13 +59,13 @@ def test_add_claim_label_with_label_name_and_label_values(
     """Test the correct payload with valid claim_id and label names and label_values."""
     add = AddClaimLabel(
         claim_id="claim-id",
-        labels=["urgent", Label(color=ColorEnum.PINK, name="test", position=100)],
+        labels=["urgent", Label(color=ColorEnum.PINK, name="test")],
     )
     payload = add.apply()
     assert payload.type == EffectType.ADD_CLAIM_LABEL
     assert (
         payload.payload
-        == '{"data": {"claim_id": "claim-id", "labels": [{"name": "urgent"}, {"color": "pink", "name": "test", "position": 100}]}}'
+        == '{"data": {"claim_id": "claim-id", "labels": [{"name": "urgent"}, {"color": "pink", "name": "test"}]}}'
     )
 
 

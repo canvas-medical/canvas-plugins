@@ -16,15 +16,10 @@ class Label:
 
     color: ColorEnum
     name: str
-    position: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the label to a dictionary."""
-        return {
-            "color": self.color.value,
-            "name": self.name,
-            "position": self.position,
-        }
+        return {"color": self.color.value, "name": self.name}
 
 
 class _ClaimLabelBase(_BaseEffect):
