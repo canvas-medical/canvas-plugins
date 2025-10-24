@@ -577,7 +577,7 @@ def test_remove_appointment_label_valid_appointment(
 
 
 def test_create_appointment_with_labels(
-        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
 ) -> None:
     """Test creating an appointment with labels."""
     valid_appointment_data["labels"] = {"MISSING_COVERAGE", "URGENT"}
@@ -591,7 +591,7 @@ def test_create_appointment_with_labels(
 
 
 def test_create_appointment_with_too_many_labels(
-        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
 ) -> None:
     """Test creating an appointment with more than 3 labels fails."""
     valid_appointment_data["labels"] = {"LABEL1", "LABEL2", "LABEL3", "LABEL4"}
@@ -604,7 +604,7 @@ def test_create_appointment_with_too_many_labels(
 
 
 def test_create_appointment_with_invalid_label_length(
-        mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
+    mock_db_queries: dict[str, MagicMock], valid_appointment_data: dict[str, Any]
 ) -> None:
     """Test creating an appointment with labels that are too long."""
     valid_appointment_data["labels"] = {"A" * 51}  # 51 characters, exceeds max_length=50
@@ -618,7 +618,9 @@ def test_create_appointment_with_invalid_label_length(
 
 @patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 @patch("canvas_sdk.v1.data.appointment.Appointment.objects")
-def test_update_appointment_with_labels(mock_appointment: MagicMock, mock_appointment_label: MagicMock) -> None:
+def test_update_appointment_with_labels(
+    mock_appointment: MagicMock, mock_appointment_label: MagicMock
+) -> None:
     """Test updating an appointment with labels."""
     mock_appointment.filter.return_value.exists.return_value = True
     mock_appointment_label.filter.return_value.count.return_value = 0
@@ -635,7 +637,9 @@ def test_update_appointment_with_labels(mock_appointment: MagicMock, mock_appoin
 
 @patch("canvas_sdk.v1.data.appointment.AppointmentLabel.objects")
 @patch("canvas_sdk.v1.data.appointment.Appointment.objects")
-def test_appointment_label_validation_exceeds_limit(mock_appointment: MagicMock, mock_appointment_label: MagicMock) -> None:
+def test_appointment_label_validation_exceeds_limit(
+    mock_appointment: MagicMock, mock_appointment_label: MagicMock
+) -> None:
     """Test that updating an appointment with labels that would exceed the 3-label limit fails."""
     mock_appointment.filter.return_value.exists.return_value = True
     mock_appointment_label.filter.return_value.count.return_value = 2

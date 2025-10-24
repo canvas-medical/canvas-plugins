@@ -9,8 +9,7 @@ from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.note.base import AppointmentABC
-from canvas_sdk.v1.data import AppointmentLabel
-from canvas_sdk.v1.data import NoteType, Patient
+from canvas_sdk.v1.data import AppointmentLabel, NoteType, Patient
 from canvas_sdk.v1.data.note import NoteTypeCategories
 
 
@@ -140,7 +139,12 @@ class Appointment(AppointmentABC):
     appointment_note_type_id: UUID | str | None = None
     meeting_link: str | None = None
     patient_id: str | None = None
-    labels: conset(constr(min_length=1, max_length=50, strip_whitespace=True), min_length=1, max_length=3) | None = None
+    labels: (
+        conset(
+            constr(min_length=1, max_length=50, strip_whitespace=True), min_length=1, max_length=3
+        )
+        | None
+    ) = None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
@@ -222,8 +226,9 @@ class Appointment(AppointmentABC):
                 )
 
         if method == "update" and self.labels and self.instance_id:
-
-            existing_count = AppointmentLabel.objects.filter(appointment__id=self.instance_id).count()
+            existing_count = AppointmentLabel.objects.filter(
+                appointment__id=self.instance_id
+            ).count()
             if existing_count + len(self.labels) > 3:
                 errors.append(
                     self._create_error_detail(
@@ -250,7 +255,7 @@ class Appointment(AppointmentABC):
         # 4. Converting to list maintains the same data while making it JSON-compatible
         # 5. Sort the labels to ensure consistent ordering for tests and API responses
         if self.labels is not None:
-            values["labels"] = sorted(list(self.labels))
+            values["labels"] = sorted(self.labels)
         return values
 
     def cancel(self) -> Effect:

@@ -5,7 +5,6 @@ from .appointment import (
     AppointmentLabel,
     AppointmentMetadata,
 )
-from .appointment import Appointment, AppointmentExternalIdentifier, AppointmentMetadata
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
