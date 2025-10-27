@@ -938,7 +938,6 @@
     "PracticeLocationAddress",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
-
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",
