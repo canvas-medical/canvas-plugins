@@ -340,6 +340,9 @@
     "PaymentProcessorMetadata",
     "RemovePaymentMethodResponse"
   ],
+  "canvas_sdk.effects.post_claim_payment": [
+    "PostClaimPayment"
+  ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
     "Recommendation"
