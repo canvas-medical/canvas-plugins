@@ -616,6 +616,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -761,6 +762,9 @@
   "canvas_sdk.v1.data.business_line": [
     "BusinessLine",
     "BusinessLineState"
+  ],
+  "canvas_sdk.v1.data.calendar": [
+    "Calendar"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
