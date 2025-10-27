@@ -123,11 +123,7 @@ STANDARD_LIBRARY_MODULES = {
     "http": {
         "HTTPStatus",
     },
-    "json": {
-        "dumps",
-        "loads",
-        "JSONDecodeError"
-    },
+    "json": {"dumps", "loads", "JSONDecodeError"},
     "operator": {
         "and_",
     },
@@ -183,12 +179,10 @@ STANDARD_LIBRARY_MODULES = {
         "uuid4",
         "UUID",
     },
-    "xml.etree.ElementTree": {
-        "fromstring"
-    },
+    "xml.etree.ElementTree": {"fromstring"},
     "zoneinfo": {
         "ZoneInfo",
-    }
+    },
 }
 
 
