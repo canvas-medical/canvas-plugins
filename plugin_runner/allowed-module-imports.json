@@ -355,6 +355,9 @@
     "ProtocolCard",
     "Recommendation"
   ],
+  "canvas_sdk.effects.questionnaire": [
+    "CreateQuestionnaire"
+  ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
