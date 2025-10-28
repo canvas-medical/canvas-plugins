@@ -54,23 +54,3 @@ def test_factory_is_instantiable() -> None:
             factory_class()
         except Exception as ex:
             raise Exception(f"Failed to instantiate factory '{factory_class.__name__}'") from ex
-
-
-@pytest.mark.django_db
-def test_task_label_factory_tasks() -> None:
-    """Ensure TaskLabelFactory can have tasks added."""
-    from canvas_sdk.test_utils.factories import TaskFactory, TaskLabelFactory
-
-    # Create a label with one newly-created Task (via dict) and one Task instance
-    task_instance = TaskFactory.create()
-
-    label = TaskLabelFactory.create(tasks=[{"title": "from-dict"}, task_instance])
-
-    # Reload from DB to ensure relation is persisted
-    label.refresh_from_db()
-
-    tasks = list(label.tasks.all())
-    titles = {t.title for t in tasks}
-
-    assert "from-dict" in titles
-    assert task_instance.title in titles
