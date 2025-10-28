@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -77,6 +77,21 @@ class AppointmentExternalIdentifier(TimestampedModel, IdentifiableModel):
     )
 
 
+class AppointmentLabel(Model):
+    """M2M for Appointment -> TaskLabels."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_appointment_labels_001"
+
+    appointment = models.ForeignKey(Appointment, on_delete=models.DO_NOTHING, null=True)
+    task_label = models.ForeignKey(
+        "v1.TaskLabel",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        db_column="userselectedtasklabel_id",
+    )
+
+
 class AppointmentMetadata(IdentifiableModel):
     """A class representing Appointment Metadata."""
 
@@ -95,4 +110,5 @@ __exports__ = (
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
 )

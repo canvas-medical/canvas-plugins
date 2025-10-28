@@ -1,9 +1,8 @@
-from typing import Any
-
 import factory
 
-from canvas_sdk.v1.data import Task, TaskLabel
-from canvas_sdk.v1.data.task import TaskStatus, TaskType
+from canvas_sdk.v1.data import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from canvas_sdk.v1.data.common import ColorEnum, Origin
+from canvas_sdk.v1.data.task import TaskLabelModule, TaskStatus, TaskType
 
 
 class TaskFactory(factory.django.DjangoModelFactory[Task]):
@@ -12,12 +11,35 @@ class TaskFactory(factory.django.DjangoModelFactory[Task]):
     class Meta:
         model = Task
 
-    creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
-    task_type = TaskType.REMINDER
-    tag = "Unit Test"
-    title = "Unit Test"
+    creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    assignee = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    task_type = TaskType.TASK
+    tag = factory.Faker("word")
+    title = factory.Faker("sentence", nb_words=4)
     status = TaskStatus.OPEN
+
+
+class TaskMetadataFactory(factory.django.DjangoModelFactory[TaskMetadata]):
+    """Factory for creating TaskMetadata."""
+
+    class Meta:
+        model = TaskMetadata
+
+    task = factory.SubFactory(TaskFactory)
+    key = factory.Faker("word")
+    value = factory.Faker("word")
+
+
+class TaskCommentFactory(factory.django.DjangoModelFactory[TaskComment]):
+    """Factory for creating TaskComment."""
+
+    class Meta:
+        model = TaskComment
+
+    creator = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    task = factory.SubFactory(TaskFactory)
+    body = factory.Faker("sentence", nb_words=10)
 
 
 class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
@@ -26,26 +48,19 @@ class TaskLabelFactory(factory.django.DjangoModelFactory[TaskLabel]):
     class Meta:
         model = TaskLabel
 
-    position = 1
-    color = "red"
-    task_association = ["FLG_PST_REV"]
-    name = "needs review"
+    position = factory.Sequence(lambda n: n)
+    color = ColorEnum.BLUE
+    task_association = [Origin.REFERAL]
+    name = factory.Faker("word")
+    active = True
+    modules = [TaskLabelModule.TASKS]
 
-    @factory.post_generation
-    def tasks(self, create: bool, extracted: list | None, **kwargs: Any) -> None:
-        """Attach tasks to the TaskLabel via the M2M relationship.
 
-        Pass a list of Task instances or dicts to create tasks via TaskFactory.
+class TaskTaskLabelFactory(factory.django.DjangoModelFactory[TaskTaskLabel]):
+    """Factory for creating TaskTaskLabel."""
 
-        Example:
-            TaskLabelFactory(tasks=[TaskFactory(), {'title': 't2'}])
-        """
-        if not extracted:
-            return
+    class Meta:
+        model = TaskTaskLabel
 
-        for item in extracted:
-            if isinstance(item, Task):
-                self.tasks.add(item)
-            elif isinstance(item, dict):
-                # create a Task from provided kwargs
-                self.tasks.add(TaskFactory.create(**item))
+    task = factory.SubFactory(TaskFactory)
+    task_label = factory.SubFactory(TaskLabelFactory)

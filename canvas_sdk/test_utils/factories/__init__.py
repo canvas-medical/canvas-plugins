@@ -19,7 +19,13 @@ from .staff import (
     StaffPhotoFactory,
     StaffRoleFactory,
 )
-from .task import TaskFactory, TaskLabelFactory
+from .task import (
+    TaskCommentFactory,
+    TaskFactory,
+    TaskLabelFactory,
+    TaskMetadataFactory,
+    TaskTaskLabelFactory,
+)
 from .user import CanvasUserFactory
 
 __all__ = (
@@ -47,6 +53,9 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffContactPointFactory",
     "StaffAddressFactory",
+    "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
+    "TaskMetadataFactory",
+    "TaskTaskLabelFactory",
 )
