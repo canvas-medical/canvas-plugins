@@ -4,9 +4,12 @@ from typing import Any, Self, cast
 from uuid import UUID
 
 from pydantic import model_validator
+from pydantic_core import InitErrorDetails
 
 from canvas_sdk.commands.constants import TaskPriority
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.metadata import BaseMetadata
+from canvas_sdk.v1.data import Task
 
 
 class TaskStatus(Enum):
@@ -146,10 +149,37 @@ class UpdateTask(_BaseEffect):
         return value_dict
 
 
+class TaskMetadata(BaseMetadata):
+    """Task Metadata."""
+
+    class Meta:
+        effect_type = "TASK_METADATA"
+
+    task_id: str
+
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        """Get the error details for the effect.
+        If task_id is not found, return an error detail.
+        """
+        errors = super()._get_error_details(method)
+
+        if not Task.objects.filter(id=self.task_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "task_id",
+                    f"Task with id: {self.task_id} does not exist.",
+                    self.task_id,
+                )
+            )
+
+        return errors
+
+
 __exports__ = (
     "AddTask",
     "AddTaskComment",
     "TaskPriority",
     "TaskStatus",
+    "TaskMetadata",
     "UpdateTask",
 )
