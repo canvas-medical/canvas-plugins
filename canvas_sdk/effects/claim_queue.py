@@ -17,7 +17,7 @@ class MoveClaimToQueue(_BaseEffect):
         effect_type = EffectType.MOVE_CLAIM_TO_QUEUE
 
     claim_id: UUID | str
-    queue: constr(min_length=1)  # type: ignore[valid-type]
+    queue: constr(min_length=1, strip_whitespace=True)  # type: ignore[valid-type]
 
     @property
     def values(self) -> dict[str, Any]:
