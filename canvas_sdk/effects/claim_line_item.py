@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
@@ -14,7 +15,7 @@ class UpdateClaimLineItem(_BaseEffect):
     class Meta:
         effect_type = EffectType.UPDATE_CLAIM_LINE_ITEM
 
-    claim_line_item_id: int
+    claim_line_item_id: str | UUID
     charge: float | None = None
 
     @property
@@ -32,7 +33,7 @@ class UpdateClaimLineItem(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if not ClaimLineItem.objects.filter(dbid=self.claim_line_item_id).exists():
+        if not ClaimLineItem.objects.filter(id=self.claim_line_item_id).exists():
             errors.append(
                 self._create_error_detail(
                     "value",

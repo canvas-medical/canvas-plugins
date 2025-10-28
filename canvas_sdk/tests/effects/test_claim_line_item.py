@@ -23,7 +23,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
 def test_requires_existing_claim_line_item_id(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that the claim_line_item_id is valid and the claim exists."""
     mock_db_queries["claim_line_item"].filter.return_value.exists.return_value = False
-    update = UpdateClaimLineItem(claim_line_item_id=123)
+    update = UpdateClaimLineItem(claim_line_item_id="something-wrong")
     with pytest.raises(ValidationError) as e:
         update.apply()
 
@@ -33,23 +33,25 @@ def test_requires_existing_claim_line_item_id(mock_db_queries: dict[str, MagicMo
 
 def test_payload_with_charge(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that the charge is included in the data payload."""
-    update = UpdateClaimLineItem(claim_line_item_id=123, charge=150.75)
+    update = UpdateClaimLineItem(claim_line_item_id="something-right", charge=150.75)
     payload = update.apply()
     assert payload.type == EffectType.UPDATE_CLAIM_LINE_ITEM
-    assert payload.payload == '{"data": {"charge": "150.75"}, "claim_line_item_id": 123}'
+    assert (
+        payload.payload == '{"data": {"charge": "150.75"}, "claim_line_item_id": "something-right"}'
+    )
 
 
 def test_payload_with_no_charge(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that the charge is not included in the data payload."""
-    update = UpdateClaimLineItem(claim_line_item_id=123)
+    update = UpdateClaimLineItem(claim_line_item_id="something-right")
     payload = update.apply()
     assert payload.type == EffectType.UPDATE_CLAIM_LINE_ITEM
-    assert payload.payload == '{"data": {}, "claim_line_item_id": 123}'
+    assert payload.payload == '{"data": {}, "claim_line_item_id": "something-right"}'
 
 
 def test_payload_with_zero_charge(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that a charge of 0 is included in the data payload."""
-    update = UpdateClaimLineItem(claim_line_item_id=123, charge=0)
+    update = UpdateClaimLineItem(claim_line_item_id="something-right", charge=0)
     payload = update.apply()
     assert payload.type == EffectType.UPDATE_CLAIM_LINE_ITEM
-    assert payload.payload == '{"data": {"charge": "0.0"}, "claim_line_item_id": 123}'
+    assert payload.payload == '{"data": {"charge": "0.0"}, "claim_line_item_id": "something-right"}'
