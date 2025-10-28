@@ -103,9 +103,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             log.error(f"Error collecting vitals data: {str(e)}")
             return {"weight": [], "body_temperature": [], "oxygen_saturation": []}
 
-    def _generate_visualization_html(
-        self, vitals_data: Dict[str, List[Dict[str, Any]]]
-    ) -> str:
+    def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]]) -> str:
         """Generate the HTML for the vitals visualization using template."""
         context = {"vitals_data": json.dumps(vitals_data)}
         return render_to_string("templates/vitals_visualization.html", context)

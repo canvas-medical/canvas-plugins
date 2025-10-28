@@ -28,22 +28,19 @@ class AbnormalLabProtocol(BaseProtocol):
         try:
             # Get the lab report instance with filters applied
             lab_report = LabReport.objects.filter(
-                id=lab_report_id,
-                for_test_only=False,
-                junked=False,
-                patient__isnull=False
+                id=lab_report_id, for_test_only=False, junked=False, patient__isnull=False
             ).first()
-            
+
             if not lab_report:
                 return []
-            
+
             patient_id = lab_report.patient.id
 
             # Check all lab values for abnormal flags
             abnormal_values = []
             for lab_value in lab_report.values.all():
                 # Check if the lab value has an abnormal flag (handle None case)
-                abnormal_flag = getattr(lab_value, 'abnormal_flag', None) or ""
+                abnormal_flag = getattr(lab_value, "abnormal_flag", None) or ""
                 if abnormal_flag.strip():
                     abnormal_values.append(lab_value)
 
@@ -59,11 +56,13 @@ class AbnormalLabProtocol(BaseProtocol):
                 patient_id=patient_id,
                 title=task_title,
                 status=TaskStatus.OPEN,
-                labels=["abnormal-lab", "urgent-review"]
+                labels=["abnormal-lab", "urgent-review"],
             )
 
             applied_task = task.apply()
-            log.info(f"Created task for {abnormal_count} abnormal lab value(s) in report {lab_report_id}")
+            log.info(
+                f"Created task for {abnormal_count} abnormal lab value(s) in report {lab_report_id}"
+            )
             return [applied_task]
 
         except Exception as e:

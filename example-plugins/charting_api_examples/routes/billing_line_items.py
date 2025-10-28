@@ -19,9 +19,12 @@ class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
         "cpt_code": "98006"
     }
     """
+
     @api.post("/<id>/billing_line_items/")
     def add_billing_line_item(self) -> list[Response | Effect]:
-        required_attributes = {"cpt_code",}
+        required_attributes = {
+            "cpt_code",
+        }
         request_body = self.request.json()
         missing_attributes = required_attributes - request_body.keys()
         if len(missing_attributes) > 0:
@@ -49,5 +52,8 @@ class BillingLineItemAPI(APIKeyAuthMixin, SimpleAPI):
 
         return [
             effect.apply(),
-            JSONResponse({"message": "Billing line item data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Billing line item data accepted for creation"},
+                status_code=HTTPStatus.ACCEPTED,
+            ),
         ]
