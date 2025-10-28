@@ -1,5 +1,10 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment, AppointmentExternalIdentifier, AppointmentMetadata
+from .appointment import (
+    Appointment,
+    AppointmentExternalIdentifier,
+    AppointmentLabel,
+    AppointmentMetadata,
+)
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
@@ -111,6 +116,7 @@ __all__ = __exports__ = (
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
