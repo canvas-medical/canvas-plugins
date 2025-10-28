@@ -1,6 +1,7 @@
 from typing import Any
 from uuid import UUID
 
+from pydantic import constr
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -16,17 +17,12 @@ class MoveClaimToQueue(_BaseEffect):
         effect_type = EffectType.MOVE_CLAIM_TO_QUEUE
 
     claim_id: UUID | str
-    queue: str
+    queue: constr(max_length=1)  # type: ignore[valid-type]
 
     @property
     def values(self) -> dict[str, Any]:
         """The claim_id and queue_id."""
         return {"claim_id": str(self.claim_id), "queue": self.queue}
-
-    @property
-    def effect_payload(self) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": self.values}
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
