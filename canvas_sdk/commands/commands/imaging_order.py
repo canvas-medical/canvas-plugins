@@ -3,8 +3,7 @@ from enum import Enum
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.commands.constants import ServiceProvider
-from canvas_sdk.common.enums import TaskPriority
+from canvas_sdk.commands.constants import ServiceProvider, TaskPriority
 
 
 class ImagingOrderCommand(BaseCommand):

@@ -1,4 +1,4 @@
-from canvas_sdk.common.enums import TaskPriority
+from canvas_sdk.commands.constants import TaskPriority
 
 from .task import AddTask, AddTaskComment, TaskStatus, UpdateTask
 

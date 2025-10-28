@@ -173,7 +173,8 @@
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
-    "ServiceProvider"
+    "ServiceProvider",
+    "TaskPriority"
   ],
   "canvas_sdk.effects": [
     "Effect",

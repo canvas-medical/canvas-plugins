@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import model_validator
 
-from canvas_sdk.common.enums import TaskPriority
+from canvas_sdk.commands.constants import TaskPriority
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 

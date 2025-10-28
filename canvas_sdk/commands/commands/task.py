@@ -5,7 +5,7 @@ from typing import NotRequired
 from typing_extensions import TypedDict
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.common.enums import TaskPriority
+from canvas_sdk.commands.constants import TaskPriority
 
 
 class AssigneeType(StrEnum):
