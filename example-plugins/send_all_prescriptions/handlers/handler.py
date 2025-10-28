@@ -9,13 +9,14 @@ class SendPrescriptionButtonHandler(ActionButton):
     BUTTON_KEY = "SEND_ALL_PRESCRIPTIONS"
     BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_FOOTER
 
-
     def handle(self) -> list[Effect]:
         note_id = self.context.get("note_id")
 
         effects = []
         # get all committed prescribe commands
-        prescribe_commands = Command.objects.filter(note_id=note_id, schema_key="prescribe", committer__isnull=False)
+        prescribe_commands = Command.objects.filter(
+            note_id=note_id, schema_key="prescribe", committer__isnull=False
+        )
 
         for command in prescribe_commands:
             prescribe = PrescribeCommand()
