@@ -47,8 +47,5 @@ class SmokeTestApi(StaffSessionAuthMixin, SimpleAPI):
         )
         return [
             add_task.apply(),
-            JSONResponse(
-                {"message": "Task will be created"},
-                status_code=HTTPStatus.ACCEPTED
-            )
+            JSONResponse({"message": "Task will be created"}, status_code=HTTPStatus.ACCEPTED),
         ]
