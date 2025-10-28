@@ -28,7 +28,7 @@ class UpdateClaimLineItem(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
-        return {"data": self.values, "claim_line_item_id": self.claim_line_item_id}
+        return {"data": self.values, "claim_line_item_id": str(self.claim_line_item_id)}
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
