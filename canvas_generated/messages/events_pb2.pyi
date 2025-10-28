@@ -93,6 +93,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DETECTED_ISSUE_UPDATED: _ClassVar[EventType]
     TASK_CLOSED: _ClassVar[EventType]
     TASK_COMPLETED: _ClassVar[EventType]
+    TASK_METADATA_CREATED: _ClassVar[EventType]
+    TASK_METADATA_UPDATED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_CREATED: _ClassVar[EventType]
     DETECTED_ISSUE_EVIDENCE_UPDATED: _ClassVar[EventType]
     STAFF_ACTIVATED: _ClassVar[EventType]
@@ -1013,6 +1015,8 @@ DETECTED_ISSUE_CREATED: EventType
 DETECTED_ISSUE_UPDATED: EventType
 TASK_CLOSED: EventType
 TASK_COMPLETED: EventType
+TASK_METADATA_CREATED: EventType
+TASK_METADATA_UPDATED: EventType
 DETECTED_ISSUE_EVIDENCE_CREATED: EventType
 DETECTED_ISSUE_EVIDENCE_UPDATED: EventType
 STAFF_ACTIVATED: EventType

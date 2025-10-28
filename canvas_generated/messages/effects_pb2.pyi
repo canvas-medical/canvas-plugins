@@ -108,6 +108,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_TASK: _ClassVar[EffectType]
     UPDATE_TASK: _ClassVar[EffectType]
     CREATE_TASK_COMMENT: _ClassVar[EffectType]
+    UPSERT_TASK_METADATA: _ClassVar[EffectType]
     ORIGINATE_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
     EDIT_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
     DELETE_MEDICAL_HISTORY_COMMAND: _ClassVar[EffectType]
@@ -380,6 +381,7 @@ ENTER_IN_ERROR_SURGICAL_HISTORY_COMMAND: EffectType
 CREATE_TASK: EffectType
 UPDATE_TASK: EffectType
 CREATE_TASK_COMMENT: EffectType
+UPSERT_TASK_METADATA: EffectType
 ORIGINATE_MEDICAL_HISTORY_COMMAND: EffectType
 EDIT_MEDICAL_HISTORY_COMMAND: EffectType
 DELETE_MEDICAL_HISTORY_COMMAND: EffectType
