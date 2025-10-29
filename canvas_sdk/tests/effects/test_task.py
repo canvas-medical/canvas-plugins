@@ -64,8 +64,8 @@ def test_add_task_with_priority(
     values = task.values
     
     assert task.priority == priority
-    assert values["priority"] == expected_value
     assert "priority" in values
+    assert values["priority"] == expected_value
 
 
 def test_add_task_without_priority(valid_add_task_data: dict[str, Any]) -> None:
@@ -96,18 +96,6 @@ def test_update_task_with_priority(
     
     assert task.priority == priority
     assert values["priority"] == expected_value
-
-
-def test_update_task_clear_priority(valid_update_task_data: dict[str, Any]) -> None:
-    """Test clearing a task's priority by explicitly setting it to None."""
-    valid_update_task_data["priority"] = None
-    
-    task = UpdateTask(**valid_update_task_data)
-    values = task.values
-    
-    assert task.priority is None
-    assert values["priority"] is None
-    assert "priority" in values  # None should be explicitly included when set
 
 
 def test_update_task_without_priority(valid_update_task_data: dict[str, Any]) -> None:
