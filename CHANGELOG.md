@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.74.0 (2025-10-30)
+
+### Features
+
+- Add UpdateClaimLineItem effect
+  ([#1213](https://github.com/canvas-medical/canvas-plugins/pull/1213),
+  [`8840d98`](https://github.com/canvas-medical/canvas-plugins/commit/8840d986529052ae3fdf5ebfb75d7cd59d39b47d))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Claim label effects ([#1179](https://github.com/canvas-medical/canvas-plugins/pull/1179),
+  [`cc6e4da`](https://github.com/canvas-medical/canvas-plugins/commit/cc6e4da1a4241852a3d4f1636f7e223c07c0ee37))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Create push charges effect on note
+  ([#1163](https://github.com/canvas-medical/canvas-plugins/pull/1163),
+  [`53e76b4`](https://github.com/canvas-medical/canvas-plugins/commit/53e76b49ed0795ebb70db7160ef870656f8e4569))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.73.0 (2025-10-28)
 
 ### Bug Fixes
