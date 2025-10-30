@@ -10,9 +10,9 @@ from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel
 class CalendarQuerySet(BaseQuerySet):
     """A queryset for calendars."""
 
-    def for_calendar_name(self, provider_name: str, calendar_type: str) -> Self:
+    def for_calendar_name(self, provider_name: str, calendar_type: str, location: str) -> Self:
         """Return a queryset that filters objects for a specific calendar name."""
-        calendar_name = f"{provider_name}: {calendar_type}"
+        calendar_name = f"{provider_name}: {calendar_type}{f': {location}' if location else ''}"
 
         return self.filter(title=calendar_name)
 
