@@ -234,6 +234,11 @@
     "CreateEvent",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim_label": [
+    "AddClaimLabel",
+    "Label",
+    "RemoveClaimLabel"
+  ],
   "canvas_sdk.effects.claim_line_item": [
     "UpdateClaimLineItem"
   ],
