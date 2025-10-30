@@ -392,6 +392,31 @@ def test_immunization_statement_values_are_set_correctly() -> None:
     assert data["approximate_date"] == "2024-01-15"
     assert data["comments"] == comments_value
 
+    # Test with values after instantiation
+    immunization_statement_command = ImmunizationStatementCommand(
+        note_uuid="test_uuid",
+        approximate_date=approximate_date_value,
+        comments=comments_value,
+    )
+    immunization_statement_command.cpt_code = cpt_coding
+    immunization_statement_command.cvx_code = cvx_coding
+
+    command = immunization_statement_command.originate()
+
+    payload = json.loads(command.payload)
+    data = payload["data"]
+
+    assert data["cpt_code"]["system"] == CodeSystems.CPT
+    assert data["cpt_code"]["code"] == "90471"
+    assert data["cpt_code"]["display"] == "Immunization administration"
+
+    assert data["cvx_code"]["system"] == CodeSystems.CVX
+    assert data["cvx_code"]["code"] == "207"
+    assert data["cvx_code"]["display"] == "COVID-19 vaccine"
+
+    assert data["approximate_date"] == "2024-01-15"
+    assert data["comments"] == comments_value
+
     # Test with unstructured code
     unstructured_coding = Coding(
         system=CodeSystems.UNSTRUCTURED,
@@ -405,6 +430,24 @@ def test_immunization_statement_values_are_set_correctly() -> None:
         approximate_date=approximate_date_value,
         comments=comments_value,
     ).originate()
+
+    payload = json.loads(command.payload)
+    data = payload["data"]
+
+    assert data["unstructured"]["system"] == CodeSystems.UNSTRUCTURED
+    assert data["unstructured"]["code"] == "flu shot"
+    assert data["unstructured"]["display"] == "Flu shot"
+    assert data["approximate_date"] == "2024-01-15"
+    assert data["comments"] == comments_value
+
+    # Test with value set after instantiation
+    immunization_statement_command = ImmunizationStatementCommand(
+        note_uuid="test_uuid",
+        approximate_date=approximate_date_value,
+        comments=comments_value,
+    )
+    immunization_statement_command.unstructured = unstructured_coding
+    command = immunization_statement_command.originate()
 
     payload = json.loads(command.payload)
     data = payload["data"]
@@ -430,9 +473,9 @@ def test_immunization_statement_cpt_and_cvx_required_together() -> None:
         ImmunizationStatementCommand(
             note_uuid="test_uuid",
             cpt_code=cpt_coding,
-        )
+        ).originate()
     assert (
-        "Value error, Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
+        "Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
         in str(exc_info.value)
     )
 
@@ -441,9 +484,9 @@ def test_immunization_statement_cpt_and_cvx_required_together() -> None:
         ImmunizationStatementCommand(
             note_uuid="test_uuid",
             cvx_code=cvx_coding,
-        )
+        ).originate()
     assert (
-        "Value error, Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
+        "Both cpt_code and cvx_code must be provided if one is specified and cannot be empty"
         in str(exc_info.value)
     )
 
