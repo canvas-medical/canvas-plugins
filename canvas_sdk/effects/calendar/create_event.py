@@ -23,7 +23,7 @@ class CreateEvent(_BaseEffect):
     title: str
     starts_at: datetime
     ends_at: datetime
-    recurrence: EventRecurrence
+    recurrence: EventRecurrence | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -47,7 +47,7 @@ class UpdateEvent(_BaseEffect):
     title: str
     starts_at: datetime
     ends_at: datetime
-    recurrence: EventRecurrence
+    recurrence: EventRecurrence | None = None
 
     @property
     def values(self) -> dict[str, Any]:
