@@ -3,6 +3,7 @@ Test for the abnormal lab task notification plugin.
 
 These tests validate the plugin logic for creating tasks when abnormal lab values are detected.
 """
+
 from unittest.mock import Mock
 
 from canvas_sdk.effects.task import AddTask, TaskStatus
@@ -11,6 +12,7 @@ from canvas_sdk.events import EventType
 
 class MockLabValue:
     """Mock lab value for testing."""
+
     def __init__(self, abnormal_flag="", value="", units="", reference_range=""):
         self.id = "test-value-id"
         self.abnormal_flag = abnormal_flag
@@ -21,6 +23,7 @@ class MockLabValue:
 
 class MockLabReport:
     """Mock lab report for testing."""
+
     def __init__(self, patient_id="test-patient", for_test_only=False, junked=False, values=None):
         self.id = "test-lab-report-id"
         self.patient_id = patient_id
@@ -55,7 +58,7 @@ def test_abnormal_lab_detection():
     # Test case 4: None abnormal flag (defensive programming)
     none_value = MockLabValue(abnormal_flag=None)
     # Simulate getattr with None fallback
-    flag = getattr(none_value, 'abnormal_flag', None) or ""
+    flag = getattr(none_value, "abnormal_flag", None) or ""
     assert not flag.strip()
 
 
@@ -66,7 +69,7 @@ def test_task_creation_logic():
         patient_id="test-patient-id",
         title="Review Abnormal Lab Values (2 abnormal)",
         status=TaskStatus.OPEN,
-        labels=["abnormal-lab", "urgent-review"]
+        labels=["abnormal-lab", "urgent-review"],
     )
 
     assert task.patient_id == "test-patient-id"
@@ -112,7 +115,9 @@ def test_multiple_abnormal_values():
     abnormal_values = [
         MockLabValue(abnormal_flag="HIGH", value="180", units="mg/dL", reference_range="70-100"),
         MockLabValue(abnormal_flag="LOW", value="9.2", units="g/dL", reference_range="12-16"),
-        MockLabValue(abnormal_flag="CRITICAL", value="2.1", units="mmol/L", reference_range="3.5-5.0")
+        MockLabValue(
+            abnormal_flag="CRITICAL", value="2.1", units="mmol/L", reference_range="3.5-5.0"
+        ),
     ]
 
     # Count abnormal values

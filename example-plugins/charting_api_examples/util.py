@@ -28,6 +28,6 @@ def get_note_from_path_params(path_params) -> Note | None:
 
     try:
         note = Note.objects.get(id=note_id)
-    except (Note.DoesNotExist):
+    except Note.DoesNotExist:
         return None
     return note

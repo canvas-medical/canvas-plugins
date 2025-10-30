@@ -30,9 +30,12 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
         "committed": false
     }
     """
+
     @api.post("/<id>/diagnose/")
     def add_diagnose_command(self) -> list[Response | Effect]:
-        required_attributes = {"icd10_code",}
+        required_attributes = {
+            "icd10_code",
+        }
         request_body = self.request.json()
         missing_attributes = required_attributes - request_body.keys()
         if len(missing_attributes) > 0:
@@ -67,7 +70,9 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
 
         return [
             *command_effects,
-            JSONResponse({"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED
+            ),
         ]
 
     """
@@ -78,6 +83,7 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
     Body: {
     }
     """
+
     @api.post("/<id>/prechart/")
     def add_precharting_commands(self) -> list[Response | Effect]:
         request_body = self.request.json()
@@ -95,5 +101,7 @@ class CommandAPI(APIKeyAuthMixin, SimpleAPI):
             exam.originate(),
             diagnose.originate(),
             plan.originate(),
-            JSONResponse({"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED)
+            JSONResponse(
+                {"message": "Command data accepted for creation"}, status_code=HTTPStatus.ACCEPTED
+            ),
         ]

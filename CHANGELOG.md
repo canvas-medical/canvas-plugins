@@ -1,6 +1,51 @@
 # CHANGELOG
 
 
+## v0.74.0 (2025-10-30)
+
+### Features
+
+- Add UpdateClaimLineItem effect
+  ([#1213](https://github.com/canvas-medical/canvas-plugins/pull/1213),
+  [`8840d98`](https://github.com/canvas-medical/canvas-plugins/commit/8840d986529052ae3fdf5ebfb75d7cd59d39b47d))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Claim label effects ([#1179](https://github.com/canvas-medical/canvas-plugins/pull/1179),
+  [`cc6e4da`](https://github.com/canvas-medical/canvas-plugins/commit/cc6e4da1a4241852a3d4f1636f7e223c07c0ee37))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Create push charges effect on note
+  ([#1163](https://github.com/canvas-medical/canvas-plugins/pull/1163),
+  [`53e76b4`](https://github.com/canvas-medical/canvas-plugins/commit/53e76b49ed0795ebb70db7160ef870656f8e4569))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.73.0 (2025-10-28)
+
+### Bug Fixes
+
+- Add missing prescriber field command events
+  ([#1199](https://github.com/canvas-medical/canvas-plugins/pull/1199),
+  [`663ef4b`](https://github.com/canvas-medical/canvas-plugins/commit/663ef4b98b0ce61adfc729dc86ff8be7e6e17f2c))
+
+### Features
+
+- Add fax note effect ([#1146](https://github.com/canvas-medical/canvas-plugins/pull/1146),
+  [`29f300a`](https://github.com/canvas-medical/canvas-plugins/commit/29f300a0c7bdd4ae2df205542ed1ba0c76255045))
+
+- Panda-387 Implement appointment label management
+  ([#840](https://github.com/canvas-medical/canvas-plugins/pull/840),
+  [`65e1791`](https://github.com/canvas-medical/canvas-plugins/commit/65e1791bcc2190ce6c6a36c438036d80592e0123))
+
+Co-authored-by: nikola-milev-vicert <nikola.milev@vicert.com>
+
+- Task metadata ([#1174](https://github.com/canvas-medical/canvas-plugins/pull/1174),
+  [`d5a28f5`](https://github.com/canvas-medical/canvas-plugins/commit/d5a28f57bca8a3d9e9c88b1909faf84c50d96814))
+
+
 ## v0.72.1 (2025-10-21)
 
 ### Bug Fixes
