@@ -228,7 +228,9 @@
     "CalendarType",
     "CreateCalendar",
     "CreateEvent",
-    "EventRecurrence"
+    "DeleteEvent",
+    "EventRecurrence",
+    "UpdateEvent"
   ],
   "canvas_sdk.effects.calendar.create_calendar": [
     "CalendarType",
@@ -236,7 +238,9 @@
   ],
   "canvas_sdk.effects.calendar.create_event": [
     "CreateEvent",
-    "EventRecurrence"
+    "DeleteEvent",
+    "EventRecurrence",
+    "UpdateEvent"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
@@ -613,6 +617,7 @@
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -819,6 +824,9 @@
     "Encounter",
     "EncounterMedium",
     "EncounterState"
+  ],
+  "canvas_sdk.v1.data.event": [
+    "Event"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"

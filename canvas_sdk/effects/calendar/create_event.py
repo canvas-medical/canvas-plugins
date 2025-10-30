@@ -37,7 +37,47 @@ class CreateEvent(_BaseEffect):
         }
 
 
+class UpdateEvent(_BaseEffect):
+    """Effect to update a Calendar event."""
+
+    class Meta:
+        effect_type = EffectType.CALENDAR__EVENT__UPDATE
+
+    event_id: str | UUID
+    title: str
+    starts_at: datetime
+    ends_at: datetime
+    recurrence: EventRecurrence
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The event's values."""
+        return {
+            "event_id": self.event_id,
+            "title": self.title,
+            "starts_at": self.starts_at.isoformat(),
+            "ends_at": self.ends_at.isoformat(),
+            "recurrence": self.recurrence,
+        }
+
+
+class DeleteEvent(_BaseEffect):
+    """Effect to delete a Calendar event."""
+
+    class Meta:
+        effect_type = EffectType.CALENDAR__EVENT__DELETE
+
+    event_id: str | UUID
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """The event's values."""
+        return {"event_id": self.event_id}
+
+
 __exports__ = (
     "CreateEvent",
+    "UpdateEvent",
+    "DeleteEvent",
     "EventRecurrence",
 )
