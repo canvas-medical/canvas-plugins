@@ -24,6 +24,14 @@ class CodeSystems(StrEnum):
     UNSTRUCTURED = "UNSTRUCTURED"
 
 
+class TaskPriority(StrEnum):
+    """Task priority values used across the SDK. Matches canvas-core values."""
+
+    STAT = "stat"
+    URGENT = "urgent"
+    ROUTINE = "routine"
+
+
 class Coding(TypedDict):
     """Coding object in Canvas."""
 
@@ -57,4 +65,5 @@ __exports__ = (
     "Coding",
     "ClinicalQuantity",
     "ServiceProvider",
+    "TaskPriority",
 )

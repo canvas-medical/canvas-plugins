@@ -3,7 +3,7 @@ from enum import Enum
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.commands.constants import ServiceProvider, TaskPriority
 
 
 class ReferCommand(BaseCommand):
@@ -20,12 +20,6 @@ class ReferCommand(BaseCommand):
         SPECIALIZED_INTERVENTION = "Specialized intervention"
         DIAGNOSTIC_UNCERTAINTY = "Diagnostic Uncertainty"
 
-    class Priority(Enum):
-        """Priority choices."""
-
-        ROUTINE = "Routine"
-        URGENT = "Urgent"
-
     service_provider: ServiceProvider | None = Field(
         default=None, json_schema_extra={"commands_api_name": "refer_to"}
     )
@@ -33,7 +27,7 @@ class ReferCommand(BaseCommand):
         default=[], json_schema_extra={"commands_api_name": "indications"}
     )
     clinical_question: ClinicalQuestion | None = None
-    priority: Priority | None = None
+    priority: TaskPriority | None = None
     notes_to_specialist: str | None = None
     include_visit_note: bool = False
     comment: str | None = None
@@ -50,4 +44,4 @@ class ReferCommand(BaseCommand):
         return values
 
 
-__exports__ = ("ReferCommand",)
+__exports__ = ("ReferCommand", "TaskPriority")
