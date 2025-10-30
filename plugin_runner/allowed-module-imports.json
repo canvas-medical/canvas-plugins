@@ -238,6 +238,8 @@
     "AddClaimLabel",
     "Label",
     "RemoveClaimLabel"
+  "canvas_sdk.effects.claim_line_item": [
+    "UpdateClaimLineItem"
   ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
