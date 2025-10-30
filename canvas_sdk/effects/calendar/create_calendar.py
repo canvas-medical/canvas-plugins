@@ -21,6 +21,7 @@ class CreateCalendar(_BaseEffect):
     id: str | UUID | None = None
     provider: str | UUID
     type: CalendarType
+    location: str | None = None
     description: str | None = None
 
     @property
@@ -30,6 +31,7 @@ class CreateCalendar(_BaseEffect):
             "id": self.id,
             "provider": self.provider,
             "type": self.type,
+            "location": self.location,
             "description": self.description,
         }
 
