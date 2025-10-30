@@ -586,6 +586,7 @@
     "Claim",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
+    "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
     "ClaimQueue",
@@ -730,6 +731,7 @@
   "canvas_sdk.v1.data.claim": [
     "Claim",
     "ClaimCoverage",
+    "ClaimLabel",
     "ClaimPatient",
     "ClaimPayerOrder",
     "ClaimQueue",
