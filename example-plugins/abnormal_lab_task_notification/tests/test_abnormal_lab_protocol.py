@@ -81,11 +81,15 @@ def test_task_creation_logic():
 
 def test_task_apply_method():
     """Test that AddTask has apply() method (structure validation)."""
-    task = AddTask(patient_id="test-patient-id", title="Test Task", status=TaskStatus.OPEN)
+    task = AddTask(
+        patient_id="test-patient-id",
+        title="Test Task",
+        status=TaskStatus.OPEN
+    )
 
     # Verify apply method exists
-    assert hasattr(task, "apply")
-    assert callable(getattr(task, "apply"))
+    assert hasattr(task, 'apply')
+    assert callable(getattr(task, 'apply'))
 
     # Note: We can't actually call apply() without Django environment
     # but we can verify the method exists for the protocol to use

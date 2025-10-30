@@ -3,7 +3,7 @@ from http import HTTPStatus
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.appointment import Appointment
 from canvas_sdk.effects.note.base import AppointmentIdentifier
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPIRoute
 from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
 
@@ -33,11 +33,7 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
         appointment = appointments.last()
 
         if not appointment:
-            return [
-                Response(
-                    status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"}
-                )
-            ]
+            return [JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"})]
 
         # set up the meeting effect to update the appointment
         appointment_effect = Appointment(instance_id=appointment.id)
