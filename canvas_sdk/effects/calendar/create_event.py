@@ -16,6 +16,8 @@ class CreateEvent(_BaseEffect):
     starts_at: datetime
     ends_at: datetime
     recurrence: str
+    recurrence_ends_at: datetime | None = None
+    allowed_note_types: list[str] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -26,6 +28,10 @@ class CreateEvent(_BaseEffect):
             "starts_at": self.starts_at.isoformat(),
             "ends_at": self.ends_at.isoformat(),
             "recurrence": self.recurrence,
+            "recurrence_ends_at": self.recurrence_ends_at.isoformat()
+            if self.recurrence_ends_at
+            else None,
+            "allowed_note_types": self.allowed_note_types,
         }
 
 
@@ -40,6 +46,8 @@ class UpdateEvent(_BaseEffect):
     starts_at: datetime
     ends_at: datetime
     recurrence: str
+    recurrence_ends_at: datetime | None = None
+    allowed_note_types: list[str] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -50,6 +58,10 @@ class UpdateEvent(_BaseEffect):
             "starts_at": self.starts_at.isoformat(),
             "ends_at": self.ends_at.isoformat(),
             "recurrence": self.recurrence,
+            "recurrence_ends_at": self.recurrence_ends_at.isoformat()
+            if self.recurrence_ends_at
+            else None,
+            "allowed_note_types": self.allowed_note_types,
         }
 
 
