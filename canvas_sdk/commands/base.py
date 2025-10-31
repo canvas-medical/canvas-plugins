@@ -118,7 +118,7 @@ class _BaseCommand(TrackableFieldsModel):
             ),
         )
 
-    def _originate_for_batch(self, line_number: int = -1) -> dict:
+    def _origination_payload_for_batch(self, line_number: int = -1) -> dict:
         """Originate a new command in the note body for batch processing."""
         self._validate_before_effect("originate")
         return {

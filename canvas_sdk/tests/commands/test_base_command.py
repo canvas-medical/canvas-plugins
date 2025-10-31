@@ -110,10 +110,10 @@ def test_originate_raises_error_when_required_fields_not_set() -> None:
 def test_batch_originate_successfully_returns_dict(
     dummy_command_instance: DummyCommand,
 ) -> None:
-    """Test that _originate_for_batch() successfully returns the correct dict."""
-    dict = dummy_command_instance._originate_for_batch()
+    """Test that _origination_payload_for_batch() successfully returns the correct dict."""
+    batch_payload = dummy_command_instance._origination_payload_for_batch()
 
-    assert dict == {
+    assert batch_payload == {
         "type": "ORIGINATE_PLAN_COMMAND",
         "command": dummy_command_instance.command_uuid,
         "note": dummy_command_instance.note_uuid,
@@ -123,11 +123,11 @@ def test_batch_originate_successfully_returns_dict(
 
 
 def test_batch_originate_raises_error_when_required_fields_not_set() -> None:
-    """Test that _originate_for_batch() raises an error when a required field is not set."""
+    """Test that _origination_payload_for_batch() raises an error when a required field is not set."""
     cmd = DummyCommand()
 
     with pytest.raises(ValueError, match="note_uuid"):
-        cmd._originate_for_batch()
+        cmd._origination_payload_for_batch()
 
 
 def test_commit_successfully_returns_commit_effect(
