@@ -28,6 +28,9 @@ class Event(IdentifiableModel):
     original_starts_at = models.DateTimeField(blank=True, null=True)
     is_all_day = models.BooleanField(default=False)
     is_cancelled = models.BooleanField(default=False)
+    allowed_note_types = models.ManyToManyField(
+        "v1.NoteType", blank=True, db_table="canvas_sdk_data_calendars_event_allowed_note_types_001"
+    )
 
 
 __exports__ = ("Event",)
