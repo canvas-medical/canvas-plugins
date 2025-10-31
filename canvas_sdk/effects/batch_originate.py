@@ -2,8 +2,7 @@ from typing import Any
 
 from pydantic import Field
 
-from canvas_generated.messages.effects_pb2 import EffectType
-from canvas_sdk.effects import _BaseEffect
+from canvas_sdk.effects import EffectType, _BaseEffect
 
 
 class BatchOriginateCommandEffect(_BaseEffect):
@@ -17,7 +16,7 @@ class BatchOriginateCommandEffect(_BaseEffect):
     @property
     def values(self) -> dict[str, Any]:
         """The BatchOriginateCommandEffect's values."""
-        return {"commands": [command._originate_for_batch() for command in self.commands]}
+        return {"commands": [command._origination_payload_for_batch() for command in self.commands]}
 
 
 __exports__ = ("BatchOriginateCommandEffect",)
