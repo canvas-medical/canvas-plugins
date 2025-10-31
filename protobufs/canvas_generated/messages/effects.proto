@@ -355,6 +355,8 @@ enum EffectType {
 
   CALENDAR__CREATE = 8001;
   CALENDAR__EVENT__CREATE = 8002;
+  CALENDAR__EVENT__UPDATE = 8003;
+  CALENDAR__EVENT__DELETE = 8004;
 }
 
 message Effect {

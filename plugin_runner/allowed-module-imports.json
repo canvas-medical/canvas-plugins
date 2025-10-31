@@ -224,7 +224,8 @@
     "CalendarType",
     "CreateCalendar",
     "CreateEvent",
-    "EventRecurrence"
+    "DeleteEvent",
+    "UpdateEvent"
   ],
   "canvas_sdk.effects.calendar.create_calendar": [
     "CalendarType",
@@ -232,7 +233,8 @@
   ],
   "canvas_sdk.effects.calendar.create_event": [
     "CreateEvent",
-    "EventRecurrence"
+    "DeleteEvent",
+    "UpdateEvent"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
@@ -579,6 +581,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -602,6 +605,7 @@
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -719,6 +723,9 @@
     "BusinessLine",
     "BusinessLineState"
   ],
+  "canvas_sdk.v1.data.calendar": [
+    "Calendar"
+  ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
     "CareTeamMembershipStatus",
@@ -802,6 +809,9 @@
     "Encounter",
     "EncounterMedium",
     "EncounterState"
+  ],
+  "canvas_sdk.v1.data.event": [
+    "Event"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"

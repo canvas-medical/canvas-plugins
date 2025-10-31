@@ -9,6 +9,7 @@ from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
+from .calendar import Calendar
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
 from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimQueue, InstallmentPlan
@@ -22,6 +23,7 @@ from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
 from .encounter import Encounter
+from .event import Event
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -127,6 +129,7 @@ __all__ = __exports__ = (
     "BillingLineItemModifier",
     "BusinessLine",
     "BulkPatientPosting",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -150,6 +153,7 @@ __all__ = __exports__ = (
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
