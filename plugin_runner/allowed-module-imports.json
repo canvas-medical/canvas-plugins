@@ -225,7 +225,6 @@
     "CreateCalendar",
     "CreateEvent",
     "DeleteEvent",
-    "EventRecurrence",
     "UpdateEvent"
   ],
   "canvas_sdk.effects.calendar.create_calendar": [
@@ -235,7 +234,6 @@
   "canvas_sdk.effects.calendar.create_event": [
     "CreateEvent",
     "DeleteEvent",
-    "EventRecurrence",
     "UpdateEvent"
   ],
   "canvas_sdk.effects.claim_label": [

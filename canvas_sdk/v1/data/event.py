@@ -14,7 +14,9 @@ class Event(IdentifiableModel):
     calendar = models.ForeignKey("v1.Calendar", on_delete=models.CASCADE, related_name="events")
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
-    recurrence = models.CharField(blank=True, null=True) # TODO: Change to proper recurrence field/type
+    recurrence = models.CharField(
+        blank=True, null=True
+    )  # TODO: Change to proper recurrence field/type?
     recurrence_ends_at = models.DateTimeField()
     recurring_parent_event = models.ForeignKey(
         "self",
