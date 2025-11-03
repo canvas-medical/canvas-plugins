@@ -244,6 +244,7 @@
     "CalendarType",
     "CreateCalendar",
     "CreateEvent",
+    "DaysOfWeek",
     "DeleteEvent",
     "EventRecurrence",
     "UpdateEvent"
@@ -254,6 +255,7 @@
   ],
   "canvas_sdk.effects.calendar.create_event": [
     "CreateEvent",
+    "DaysOfWeek",
     "DeleteEvent",
     "EventRecurrence",
     "UpdateEvent"
@@ -769,7 +771,8 @@
     "BusinessLineState"
   ],
   "canvas_sdk.v1.data.calendar": [
-    "Calendar"
+    "Calendar",
+    "Event"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
@@ -858,9 +861,6 @@
     "Encounter",
     "EncounterMedium",
     "EncounterState"
-  ],
-  "canvas_sdk.v1.data.event": [
-    "Event"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"

@@ -7,6 +7,7 @@ from .claim import (
     ClaimQueueFactory,
     ClaimSubmissionFactory,
 )
+from .calendar import CalendarFactory, EventFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .coverage import CoverageFactory
 from .facility import FacilityFactory
@@ -56,6 +57,7 @@ from .task import (
 from .user import CanvasUserFactory
 
 __all__ = (
+    "CalendarFactory",
     "CanvasUserFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
@@ -66,6 +68,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
+    "EventFactory",
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
