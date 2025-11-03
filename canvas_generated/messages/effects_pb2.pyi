@@ -225,6 +225,9 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     MOVE_CLAIM_TO_QUEUE: _ClassVar[EffectType]
+    ADD_CLAIM_LABEL: _ClassVar[EffectType]
+    REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
+    UPDATE_CLAIM_LINE_ITEM: _ClassVar[EffectType]
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
     LAUNCH_MODAL: _ClassVar[EffectType]
@@ -235,6 +238,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
+    PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
     UPDATE_APPOINTMENT: _ClassVar[EffectType]
@@ -499,6 +503,9 @@ ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
 MOVE_CLAIM_TO_QUEUE: EffectType
+ADD_CLAIM_LABEL: EffectType
+REMOVE_CLAIM_LABEL: EffectType
+UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType
 LAUNCH_MODAL: EffectType
@@ -509,6 +516,7 @@ SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
+PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
 UPDATE_APPOINTMENT: EffectType
