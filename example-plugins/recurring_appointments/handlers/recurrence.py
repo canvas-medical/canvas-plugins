@@ -7,7 +7,12 @@ from canvas_sdk.effects.note.appointment import Appointment
 from canvas_sdk.v1.data import Appointment as AppointmentModel, AppointmentMetadata
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data.note import NoteTypeCategories
-from recurring_appointments.utils.constants import RecurrenceEnum, FIELD_RECURRENCE_TYPE_KEY, FIELD_RECURRENCE_INTERVAL_KEY, FIELD_RECURRENCE_STOP_AFTER_KEY
+from recurring_appointments.utils.constants import (
+    RecurrenceEnum,
+    FIELD_RECURRENCE_TYPE_KEY,
+    FIELD_RECURRENCE_INTERVAL_KEY,
+    FIELD_RECURRENCE_STOP_AFTER_KEY,
+)
 
 from logger import log
 
@@ -33,9 +38,14 @@ class AppointmentRecurrence(BaseHandler):
     def recurrence_type(self) -> RecurrenceEnum:
         """Determine the recurrence type from the appointment metadata."""
         if self._recurrence_type is None:
-            self._recurrence_type = AppointmentMetadata.objects.filter(
+            self._recurrence_type = (
+                AppointmentMetadata.objects.filter(
                     appointment=self.appointment, key=FIELD_RECURRENCE_TYPE_KEY
-            ).values_list("value", flat=True).first() or RecurrenceEnum.NONE.value
+                )
+                .values_list("value", flat=True)
+                .first()
+                or RecurrenceEnum.NONE.value
+            )
 
         return self._recurrence_type
 
@@ -44,9 +54,13 @@ class AppointmentRecurrence(BaseHandler):
         """Determine the recurrence interval from the appointment metadata."""
         if self._recurrence_interval is None:
             try:
-                self._recurrence_interval = int(AppointmentMetadata.objects.filter(
-                    appointment=self.appointment, key=FIELD_RECURRENCE_INTERVAL_KEY
-                ).values_list("value", flat=True).first())
+                self._recurrence_interval = int(
+                    AppointmentMetadata.objects.filter(
+                        appointment=self.appointment, key=FIELD_RECURRENCE_INTERVAL_KEY
+                    )
+                    .values_list("value", flat=True)
+                    .first()
+                )
             except:
                 self._recurrence_interval = 1
 
@@ -57,9 +71,13 @@ class AppointmentRecurrence(BaseHandler):
         """Determine when recurrence should stop from the appointment metadata."""
         if self._recurrence_stops_after is None:
             try:
-                self._recurrence_stops_after = int(AppointmentMetadata.objects.filter(
-                    appointment=self.appointment, key=FIELD_RECURRENCE_STOP_AFTER_KEY
-                ).values_list("value", flat=True).first())
+                self._recurrence_stops_after = int(
+                    AppointmentMetadata.objects.filter(
+                        appointment=self.appointment, key=FIELD_RECURRENCE_STOP_AFTER_KEY
+                    )
+                    .values_list("value", flat=True)
+                    .first()
+                )
             except:
                 self._recurrence_stops_after = 30
 
@@ -89,7 +107,7 @@ class AppointmentRecurrence(BaseHandler):
             provider_id=self.appointment.provider.id,
             practice_location_id=self.appointment.location.id,
             meeting_link=self.appointment.meeting_link,
-            appointment_note_type_id=self.appointment.note_type.id
+            appointment_note_type_id=self.appointment.note_type.id,
         )
 
     def _create_child_event(self, count: int) -> ScheduleEvent:
@@ -106,7 +124,6 @@ class AppointmentRecurrence(BaseHandler):
             provider_id=self.appointment.provider.id,
             note_type_id=self.appointment.note_type.id,
         )
-
 
     def compute(self):
         if not self.recurrence_type or self.recurrence_type == RecurrenceEnum.NONE.value:
