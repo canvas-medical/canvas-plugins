@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.74.1 (2025-11-03)
+
+### Bug Fixes
+
+- Change how we validate cpt_code and cvx_code in immunization statement command
+  ([#1226](https://github.com/canvas-medical/canvas-plugins/pull/1226),
+  [`fedc545`](https://github.com/canvas-medical/canvas-plugins/commit/fedc54580998b5faba9001e85e35f2bb082e20fe))
+
+
 ## v0.74.0 (2025-10-30)
 
 ### Features
