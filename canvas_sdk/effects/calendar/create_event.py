@@ -13,6 +13,31 @@ class EventRecurrence(StrEnum):
     Weekly = "WEEKLY"
 
 
+class DaysOfWeek(StrEnum):
+    """Days of the week."""
+
+    Monday = "MO"
+    Tuesday = "TU"
+    Wednesday = "WE"
+    Thursday = "TH"
+    Friday = "FR"
+    Saturday = "SA"
+    Sunday = "SU"
+
+
+def get_recurrence_string(
+    frequency: EventRecurrence | None, interval: int | None, days_of_week: list[DaysOfWeek] | None
+) -> str:
+    """Generate the recurrence string for an event."""
+    parts = [
+        f"FREQ={frequency}" if frequency else "",
+        f"INTERVAL={interval}" if interval else "",
+        f"BYDAY={','.join(list(map(str, days_of_week)))}" if days_of_week else "",
+    ]
+
+    return ";".join(filter(bool, parts))
+
+
 class CreateEvent(_BaseEffect):
     """Effect to create a Calendar event."""
 
@@ -23,7 +48,9 @@ class CreateEvent(_BaseEffect):
     title: str
     starts_at: datetime
     ends_at: datetime
-    recurrence: str
+    recurrence_frequency: EventRecurrence | None = None
+    recurrence_interval: int | None = None
+    recurrence_days: list[DaysOfWeek] | None = None
     recurrence_ends_at: datetime | None = None
     allowed_note_types: list[str] | None = None
 
@@ -35,7 +62,9 @@ class CreateEvent(_BaseEffect):
             "title": self.title,
             "starts_at": self.starts_at.isoformat(),
             "ends_at": self.ends_at.isoformat(),
-            "recurrence": self.recurrence,
+            "recurrence": get_recurrence_string(
+                self.recurrence_frequency, self.recurrence_interval, self.recurrence_days
+            ),
             "recurrence_ends_at": self.recurrence_ends_at.isoformat()
             if self.recurrence_ends_at
             else None,
@@ -53,7 +82,9 @@ class UpdateEvent(_BaseEffect):
     title: str
     starts_at: datetime
     ends_at: datetime
-    recurrence: str
+    recurrence_frequency: EventRecurrence | None = None
+    recurrence_interval: int | None = None
+    recurrence_days: list[DaysOfWeek] | None = None
     recurrence_ends_at: datetime | None = None
     allowed_note_types: list[str] | None = None
 
@@ -65,7 +96,9 @@ class UpdateEvent(_BaseEffect):
             "title": self.title,
             "starts_at": self.starts_at.isoformat(),
             "ends_at": self.ends_at.isoformat(),
-            "recurrence": self.recurrence,
+            "recurrence": get_recurrence_string(
+                self.recurrence_frequency, self.recurrence_interval, self.recurrence_days
+            ),
             "recurrence_ends_at": self.recurrence_ends_at.isoformat()
             if self.recurrence_ends_at
             else None,
@@ -87,4 +120,4 @@ class DeleteEvent(_BaseEffect):
         return {"event_id": self.event_id}
 
 
-__exports__ = ("CreateEvent", "UpdateEvent", "DeleteEvent", "EventRecurrence")
+__exports__ = ("CreateEvent", "UpdateEvent", "DeleteEvent", "EventRecurrence", "DaysOfWeek")
