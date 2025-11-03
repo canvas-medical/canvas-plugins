@@ -2,6 +2,7 @@ from canvas_sdk.effects.calendar.create_calendar import CalendarType, CreateCale
 from canvas_sdk.effects.calendar.create_event import (
     CreateEvent,
     DeleteEvent,
+    EventRecurrence,
     UpdateEvent,
 )
 
@@ -11,4 +12,5 @@ __all__ = __exports__ = (
     "CreateEvent",
     "UpdateEvent",
     "DeleteEvent",
+    "EventRecurrence",
 )
