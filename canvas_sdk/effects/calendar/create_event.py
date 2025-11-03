@@ -1,8 +1,16 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from canvas_sdk.effects import EffectType, _BaseEffect
+
+
+class EventRecurrence(StrEnum):
+    """Calendar event recurrence."""
+
+    Daily = "DAILY"
+    Weekly = "WEEKLY"
 
 
 class CreateEvent(_BaseEffect):
@@ -79,4 +87,4 @@ class DeleteEvent(_BaseEffect):
         return {"event_id": self.event_id}
 
 
-__exports__ = ("CreateEvent", "UpdateEvent", "DeleteEvent")
+__exports__ = ("CreateEvent", "UpdateEvent", "DeleteEvent", "EventRecurrence")
