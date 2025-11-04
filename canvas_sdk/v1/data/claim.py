@@ -344,8 +344,19 @@ class Claim(TimestampedModel, IdentifiableModel):
         return self.line_items.active().exclude_copay_and_unlinked()
 
 
+class ClaimLabel(IdentifiableModel):
+    """ClaimLabel."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimlabel_001"
+
+    claim = models.ForeignKey("v1.Claim", on_delete=models.PROTECT, related_name="claim_labels")
+    label = models.ForeignKey("v1.TaskLabel", on_delete=models.PROTECT, related_name="claim_labels")
+
+
 __exports__ = (
     "Claim",
+    "ClaimLabel",
     "ClaimQueue",
     "ClaimCoverage",
     "ClaimPatient",

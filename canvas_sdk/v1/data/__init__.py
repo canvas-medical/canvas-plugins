@@ -1,12 +1,25 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
-from .appointment import Appointment, AppointmentExternalIdentifier, AppointmentMetadata
+from .appointment import (
+    Appointment,
+    AppointmentExternalIdentifier,
+    AppointmentLabel,
+    AppointmentMetadata,
+)
 from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
-from .claim import Claim, ClaimCoverage, ClaimPatient, ClaimProvider, ClaimQueue, InstallmentPlan
+from .claim import (
+    Claim,
+    ClaimCoverage,
+    ClaimLabel,
+    ClaimPatient,
+    ClaimProvider,
+    ClaimQueue,
+    InstallmentPlan,
+)
 from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem
 from .command import Command
@@ -103,7 +116,7 @@ from .referral import Referral, ReferralReport
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
-from .task import Task, TaskComment, TaskLabel, TaskTaskLabel
+from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .user import CanvasUser
 
@@ -111,6 +124,7 @@ __all__ = __exports__ = (
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
@@ -128,6 +142,7 @@ __all__ = __exports__ = (
     "Claim",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
+    "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
     "ClaimProvider",
@@ -228,6 +243,7 @@ __all__ = __exports__ = (
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "TaskMetadata",
     "Team",
     "TeamContactPoint",
     "Transactor",
