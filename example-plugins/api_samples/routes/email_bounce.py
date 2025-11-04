@@ -9,8 +9,10 @@ from canvas_sdk.v1.data import Patient
 # Body: { "mrn": "valid patient MRN" }
 # Headers: "Authorization <your value for 'my-api-key'>"
 
+
 class EmailBounceAPI(SimpleAPIRoute):
     """API endpoint to handle email bounce webhooks from a CRM system."""
+
     PATH = "/crm-webhooks/email-bounce"
 
     def authenticate(self, credentials: APIKeyCredentials) -> bool:

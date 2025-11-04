@@ -1,9 +1,11 @@
 import datetime
+import json
 from typing import Any
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
 
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.v1.data import Note as NoteModel
 from canvas_sdk.v1.data import NoteType, Patient
@@ -28,6 +30,14 @@ class Note(NoteOrAppointmentABC):
     patient_id: str | None = None
     title: str | None = None
 
+    def push_charges(self) -> Effect:
+        """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
+        self._validate_before_effect("push_charges")
+        return Effect(
+            type="PUSH_NOTE_CHARGES",
+            payload=json.dumps({"note": self.instance_id}),
+        )
+
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """
         Validates the note type category and returns a list of error details if validation fails.
@@ -39,6 +49,34 @@ class Note(NoteOrAppointmentABC):
             list[InitErrorDetails]: A list of error details for invalid note type categories.
         """
         errors = super()._get_error_details(method)
+
+        if method == "push_charges":
+            if not self.instance_id:
+                errors.append(
+                    self._create_error_detail(
+                        "missing",
+                        "Field 'instance_id' is required to push charges from a note to a claim.",
+                        None,
+                    )
+                )
+            elif not (note := NoteModel.objects.filter(id=self.instance_id).first()):
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Note with ID {self.instance_id} does not exist.",
+                        self.instance_id,
+                    )
+                )
+            elif not note.note_type_version or not note.note_type_version.is_billable:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        f"Note with note type {note.note_type_version} is not billable and has no associated claim.",
+                        note.note_type_version,
+                    )
+                )
+
+            return errors
 
         if method == "create":
             if not self.note_type_id:

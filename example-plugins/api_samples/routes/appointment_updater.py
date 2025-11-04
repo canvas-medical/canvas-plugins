@@ -13,8 +13,10 @@ from canvas_sdk.v1.data.appointment import Appointment as AppointmentData
 # Authentication is handled by the APIKeyAuthMixin, which checks the API key in the request headers
 # https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#api-key-1
 
+
 class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
     """API for managing appointment updates."""
+
     PATH = "/appointments/<id>"
 
     def put(self) -> list[Response | Effect]:
@@ -31,7 +33,11 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
         appointment = appointments.last()
 
         if not appointment:
-            return [Response(status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"})]
+            return [
+                Response(
+                    status_code=HTTPStatus.NOT_FOUND, content={"error": "Appointment not found"}
+                )
+            ]
 
         # set up the meeting effect to update the appointment
         appointment_effect = Appointment(instance_id=appointment.id)
@@ -41,7 +47,7 @@ class AppointmentAPI(APIKeyAuthMixin, SimpleAPIRoute):
 
         # let's also add some external identifiers for fun
         # for example, this could be an ID from an external scheduling system
-        external_identifiers=[
+        external_identifiers = [
             AppointmentIdentifier(system="https://www.example.com", value="123TEST")
         ]
 
