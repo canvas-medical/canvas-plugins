@@ -238,6 +238,17 @@
     "CreateEvent",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim_label": [
+    "AddClaimLabel",
+    "Label",
+    "RemoveClaimLabel"
+  ],
+  "canvas_sdk.effects.claim_line_item": [
+    "UpdateClaimLineItem"
+  ],
+  "canvas_sdk.effects.claim_queue": [
+    "MoveClaimToQueue"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
@@ -580,10 +591,13 @@
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
+    "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
+    "ClaimProvider",
     "ClaimQueue",
     "Command",
     "CompoundMedication",
@@ -725,9 +739,12 @@
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
+    "ClaimLabel",
     "ClaimPatient",
     "ClaimPayerOrder",
+    "ClaimProvider",
     "ClaimQueue",
     "ClaimQueueColumns",
     "ClaimQueues",

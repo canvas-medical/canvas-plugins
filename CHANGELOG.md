@@ -1,6 +1,69 @@
 # CHANGELOG
 
 
+## v0.75.0 (2025-11-04)
+
+### Features
+
+- Add claim events (koala-3187)
+  ([#1143](https://github.com/canvas-medical/canvas-plugins/pull/1143),
+  [`d805e3c`](https://github.com/canvas-medical/canvas-plugins/commit/d805e3c47500228f51dc7396654f92b8103119c4))
+
+Co-authored-by: Michela Iannaccone <michela.iannaccone@canvasmedical.com>
+
+- Add ClaimLabel to data module
+  ([#1166](https://github.com/canvas-medical/canvas-plugins/pull/1166),
+  [`c64e6ee`](https://github.com/canvas-medical/canvas-plugins/commit/c64e6ee61ec441275e562d0669b1e4b089aee2d2))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Claimcomment model and factory
+  ([#1192](https://github.com/canvas-medical/canvas-plugins/pull/1192),
+  [`cb20770`](https://github.com/canvas-medical/canvas-plugins/commit/cb20770eb88baa6cd823e913c6bc153b66af9e26))
+
+- Create claimprovider model and factory
+  ([#1195](https://github.com/canvas-medical/canvas-plugins/pull/1195),
+  [`0bc4bcf`](https://github.com/canvas-medical/canvas-plugins/commit/0bc4bcf18449a9c5126d62b300b3948f9dec6403))
+
+- Move claim to queue effect ([#1202](https://github.com/canvas-medical/canvas-plugins/pull/1202),
+  [`659298b`](https://github.com/canvas-medical/canvas-plugins/commit/659298ba4794698960777c19e3579cc3e8d04b3a))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.74.1 (2025-11-03)
+
+### Bug Fixes
+
+- Change how we validate cpt_code and cvx_code in immunization statement command
+  ([#1226](https://github.com/canvas-medical/canvas-plugins/pull/1226),
+  [`fedc545`](https://github.com/canvas-medical/canvas-plugins/commit/fedc54580998b5faba9001e85e35f2bb082e20fe))
+
+
+## v0.74.0 (2025-10-30)
+
+### Features
+
+- Add UpdateClaimLineItem effect
+  ([#1213](https://github.com/canvas-medical/canvas-plugins/pull/1213),
+  [`8840d98`](https://github.com/canvas-medical/canvas-plugins/commit/8840d986529052ae3fdf5ebfb75d7cd59d39b47d))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Claim label effects ([#1179](https://github.com/canvas-medical/canvas-plugins/pull/1179),
+  [`cc6e4da`](https://github.com/canvas-medical/canvas-plugins/commit/cc6e4da1a4241852a3d4f1636f7e223c07c0ee37))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+- Create push charges effect on note
+  ([#1163](https://github.com/canvas-medical/canvas-plugins/pull/1163),
+  [`53e76b4`](https://github.com/canvas-medical/canvas-plugins/commit/53e76b49ed0795ebb70db7160ef870656f8e4569))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.73.0 (2025-10-28)
 
 ### Bug Fixes
