@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.coverage import CoverageRelationshipCode, CoverageType
 from canvas_sdk.v1.data.fields import ChoiceArrayField
@@ -108,6 +108,16 @@ class ClaimTypeCode(models.TextChoices):
     DISABLED = "43", "Disabled (Under Age 65)"
     OTHER_LIABILITY = "47", "Other Liability Insurance is primary"
     UNNECESSARY = "", "No Typecode necessary"
+
+
+class ClaimComment(IdentifiableModel, AuditedModel):
+    """ClaimComment."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimcomment_001"
+
+    claim = models.ForeignKey("Claim", on_delete=models.CASCADE, related_name="comments")
+    comment = models.TextField()
 
 
 class ClaimCoverageQuerySet(models.QuerySet):
@@ -358,6 +368,7 @@ __exports__ = (
     "Claim",
     "ClaimLabel",
     "ClaimQueue",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimPatient",
     "ClaimPayerOrder",

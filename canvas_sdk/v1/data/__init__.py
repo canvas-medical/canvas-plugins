@@ -13,6 +13,7 @@ from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
 from .claim import (
     Claim,
+    ClaimComment,
     ClaimCoverage,
     ClaimLabel,
     ClaimPatient,
@@ -140,6 +141,7 @@ __all__ = __exports__ = (
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
     "ClaimLabel",

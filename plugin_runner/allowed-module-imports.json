@@ -587,6 +587,7 @@
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
     "ClaimLabel",
@@ -734,6 +735,7 @@
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimLabel",
     "ClaimPatient",
