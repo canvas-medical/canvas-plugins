@@ -60,7 +60,10 @@ def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plu
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
 def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_package(
-    install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
     assert (
@@ -284,7 +287,10 @@ def test_unload_plugin_should_refresh_event_handler_map(
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_handle_plugin_event_returns_expected_result(
-    install_test_plugin: Path, plugin_runner: PluginRunner, load_test_plugins: None
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
 ) -> None:
     """Test that HandleEvent successfully calls the relevant plugins and returns the expected result."""
     event = EventRequest(type=EventType.UNKNOWN)
@@ -432,7 +438,10 @@ def test_synchronize_plugins_uninstalls_and_unloads_disabled_plugin() -> None:
 
 @pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
 def test_changes_to_plugin_modules_should_be_reflected_after_reload(
-    install_test_plugin: Path, load_test_plugins: None, plugin_runner: PluginRunner
+    install_test_plugin: Path,
+    load_test_plugins: None,
+    plugin_runner: PluginRunner,
+    db: None,
 ) -> None:
     """Test that changes to plugin modules are reflected after reloading the plugin."""
     event = EventRequest(type=EventType.UNKNOWN)
@@ -514,6 +523,7 @@ def test_simple_api(
     plugin_runner: PluginRunner,
     context: dict[str, Any],
     status_code: HTTPStatus,
+    db: None,
 ) -> None:
     """Test that the PluginRunner returns responses to SimpleAPI request events."""
     event = EventRequest(
@@ -559,6 +569,7 @@ def test_simple_api_websocket(
     load_test_plugins: None,
     plugin_runner: PluginRunner,
     context: dict[str, Any],
+    db: None,
 ) -> None:
     """Test that the PluginRunner returns responses to  SimpleAPI Websocket events."""
     event = EventRequest(
@@ -741,6 +752,7 @@ def test_payment_processor(
     event_type: EventType,
     context: dict[str, Any],
     expected_responses: list[Any],
+    db: None,
 ) -> None:
     """Test that the PluginRunner returns responses to Payment Processor events."""
     event = EventRequest(
