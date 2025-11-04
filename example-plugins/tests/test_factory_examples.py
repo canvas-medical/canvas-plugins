@@ -113,6 +113,7 @@ class TestBuiltInFactories:
 class TestFactoriesWithMocks:
     """Examples of combining factories with mocks for protocol testing."""
 
+    @pytest.mark.django_db
     def test_protocol_with_factory_data(self):
         """Test a protocol handler using factory data."""
         # Create test data using factories (in-memory only for speed)
@@ -193,9 +194,7 @@ class TestFactoryScenarios:
         patient = PatientFactory.create(first_name="Emma")
         provider = StaffFactory.create()
 
-        notes = [
-            NoteFactory.create(patient=patient, provider=provider) for _ in range(3)
-        ]
+        notes = [NoteFactory.create(patient=patient, provider=provider) for _ in range(3)]
 
         # Test: Verify patient has notes
         assert len(notes) == 3
@@ -208,10 +207,7 @@ class TestFactoryScenarios:
         provider = StaffFactory.create()
         patients = PatientFactory.create_batch(5)
 
-        notes = [
-            NoteFactory.create(patient=patient, provider=provider)
-            for patient in patients
-        ]
+        notes = [NoteFactory.create(patient=patient, provider=provider) for patient in patients]
 
         # Test: Verify all notes have same provider
         assert len(notes) == 5
