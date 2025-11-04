@@ -34,7 +34,24 @@ jobs:
               --verbosity 2 \
               --cov \
               --cov-branch \
-              --cov-report=xml
+              --cov-report=xml \
+              canvas_sdk \
+              canvas_cli \
+              plugin_runner
+
+      - name: Run Pytest unit tests for the example plugins
+        env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
+        run: |
+          uv run \
+            pytest \
+              --ff \
+              --verbosity 2 \
+              --cov \
+              --cov-branch \
+              --cov-report=xml \
+              --cov-append \
+              example-plugins
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
