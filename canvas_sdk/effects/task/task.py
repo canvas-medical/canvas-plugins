@@ -10,6 +10,7 @@ from canvas_sdk.commands.constants import TaskPriority
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.effects.metadata import BaseMetadata
 from canvas_sdk.v1.data import Task
+from canvas_sdk.v1.data.task import TaskPriority
 
 
 class TaskStatus(Enum):
@@ -143,7 +144,7 @@ class UpdateTask(_BaseEffect):
             elif field == "status":
                 value_dict[field] = cast(TaskStatus, val).value
             elif field == "priority":
-                value_dict[field] = cast(TaskPriority, val).value if val is not None else None
+                value_dict[field] = val.value if val else None
             else:
                 value_dict[field] = getattr(self, field)
         return value_dict
