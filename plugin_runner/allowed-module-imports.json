@@ -242,6 +242,9 @@
   "canvas_sdk.effects.claim_line_item": [
     "UpdateClaimLineItem"
   ],
+  "canvas_sdk.effects.claim_queue": [
+    "MoveClaimToQueue"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
@@ -590,6 +593,7 @@
     "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
+    "ClaimProvider",
     "ClaimQueue",
     "Command",
     "CompoundMedication",
@@ -736,6 +740,7 @@
     "ClaimLabel",
     "ClaimPatient",
     "ClaimPayerOrder",
+    "ClaimProvider",
     "ClaimQueue",
     "ClaimQueueColumns",
     "ClaimQueues",

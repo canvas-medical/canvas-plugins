@@ -17,6 +17,7 @@ from .claim import (
     ClaimCoverage,
     ClaimLabel,
     ClaimPatient,
+    ClaimProvider,
     ClaimQueue,
     InstallmentPlan,
 )
@@ -146,6 +147,7 @@ __all__ = __exports__ = (
     "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
+    "ClaimProvider",
     "ClaimQueue",
     "Command",
     "CompoundMedication",

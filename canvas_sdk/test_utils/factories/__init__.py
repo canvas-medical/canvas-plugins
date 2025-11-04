@@ -1,4 +1,10 @@
-from .claim import ClaimCommentFactory, ClaimFactory, ClaimLabelFactory, ClaimQueueFactory
+from .claim import (
+    ClaimCommentFactory,
+    ClaimFactory,
+    ClaimLabelFactory,
+    ClaimProviderFactory,
+    ClaimQueueFactory,
+)
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
 from .medication_history import (
@@ -34,6 +40,7 @@ __all__ = (
     "ClaimCommentFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
+    "ClaimProviderFactory",
     "ClaimQueueFactory",
     "FacilityFactory",
     "MedicationHistoryMedicationFactory",
