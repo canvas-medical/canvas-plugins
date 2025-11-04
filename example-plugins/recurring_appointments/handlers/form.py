@@ -6,7 +6,12 @@ from canvas_sdk.effects.appointments_metadata import (
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.effects import Effect
-from recurring_appointments.utils.constants import RecurrenceEnum, FIELD_RECURRENCE_TYPE_KEY, FIELD_RECURRENCE_INTERVAL_KEY, FIELD_RECURRENCE_STOP_AFTER_KEY
+from recurring_appointments.utils.constants import (
+    RecurrenceEnum,
+    FIELD_RECURRENCE_TYPE_KEY,
+    FIELD_RECURRENCE_INTERVAL_KEY,
+    FIELD_RECURRENCE_STOP_AFTER_KEY,
+)
 
 
 class AppointmentFormFields(BaseHandler):
@@ -39,10 +44,6 @@ class AppointmentFormFields(BaseHandler):
 
         return [
             AppointmentsMetadataCreateFormEffect(
-                form_fields=[
-                  interval_form_field,
-                  recurrence_form_field,
-                  stop_after_form_field
-                ]
+                form_fields=[interval_form_field, recurrence_form_field, stop_after_form_field]
             ).apply()
         ]
