@@ -9,7 +9,7 @@ class EventFactory(factory.django.DjangoModelFactory[Event]):
     class Meta:
         model = Event
 
-    name = "Calendar Event"
+    title = "Calendar Event"
     calendar = factory.SubFactory("canvas_sdk.test_utils.factories.CalendarFactory")
     starts_at = factory.Faker("date_time")
     ends_at = factory.Faker("date_time")
