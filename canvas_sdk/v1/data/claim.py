@@ -175,6 +175,62 @@ class ClaimCoverage(TimestampedModel):
     payer_icn = models.CharField(max_length=250)
 
 
+class ClaimProvider(TimestampedModel, IdentifiableModel):
+    """ClaimProvider."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimprovider_001"
+
+    claim = models.OneToOneField("v1.Claim", on_delete=models.CASCADE, related_name="provider")
+    clia_number = models.CharField(max_length=100, default="", blank=True)
+
+    billing_provider_name = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_phone = models.CharField(max_length=15, default="", blank=True)
+    billing_provider_addr1 = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_addr2 = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_city = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_state = models.CharField(max_length=2, default="", blank=True)
+    billing_provider_zip = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_id = models.CharField(max_length=255, default="", blank=True)
+    billing_provider_npi = models.CharField(max_length=10, default="0")
+    billing_provider_tax_id = models.CharField(max_length=100, default="", blank=True)
+    billing_provider_tax_id_type = models.CharField(max_length=1, default="E")
+    billing_provider_taxonomy = models.CharField(max_length=100, default="", blank=True)
+
+    provider_id = models.CharField(max_length=255, default="", blank=True)
+    provider_first_name = models.CharField(max_length=255, default="", blank=True)
+    provider_last_name = models.CharField(max_length=255, default="", blank=True)
+    provider_middle_name = models.CharField(max_length=255, default="", blank=True)
+    provider_npi = models.CharField(max_length=10, default="0")
+    provider_tax_id = models.CharField(max_length=100, default="", blank=True)
+    provider_tax_id_type = models.CharField(max_length=1, default="E")
+    provider_taxonomy = models.CharField(max_length=100, default="", blank=True)
+    provider_ptan_identifier = models.CharField(max_length=50, default="", blank=True)
+
+    referring_provider_id = models.CharField(max_length=255, default="", blank=True)
+    referring_provider_first_name = models.CharField(max_length=255, default="", blank=True)
+    referring_provider_last_name = models.CharField(max_length=255, default="", blank=True)
+    referring_provider_middle_name = models.CharField(max_length=255, default="", blank=True)
+    referring_provider_npi = models.CharField(max_length=10, default="0")
+    referring_provider_ptan_identifier = models.CharField(max_length=50, default="", blank=True)
+
+    ordering_provider_first_name = models.CharField(max_length=255, default="", blank=True)
+    ordering_provider_last_name = models.CharField(max_length=255, default="", blank=True)
+    ordering_provider_middle_name = models.CharField(max_length=255, default="", blank=True)
+    ordering_provider_npi = models.CharField(max_length=10, default="0")
+
+    facility_id = models.CharField(max_length=255, default="", blank=True)
+    facility_name = models.CharField(max_length=255, default="", blank=True)
+    facility_npi = models.CharField(max_length=10, default="0")
+    facility_addr1 = models.CharField(max_length=255, default="", blank=True)
+    facility_addr2 = models.CharField(max_length=255, default="", blank=True)
+    facility_city = models.CharField(max_length=255, default="", blank=True)
+    facility_state = models.CharField(max_length=2, default="", blank=True)
+    facility_zip = models.CharField(max_length=255, default="", blank=True)
+    hosp_from_date = models.CharField(max_length=10, default="0000-00-00")
+    hosp_to_date = models.CharField(max_length=10, default="0000-00-00")
+
+
 class ClaimPatient(TimestampedModel):
     """ClaimPatient."""
 
@@ -305,6 +361,7 @@ __exports__ = (
     "ClaimCoverage",
     "ClaimPatient",
     "ClaimPayerOrder",
+    "ClaimProvider",
     "ClaimQueues",
     "ClaimQueueColumns",
     "ClaimTypeCode",

@@ -1,4 +1,4 @@
-from .claim import ClaimFactory, ClaimLabelFactory, ClaimQueueFactory
+from .claim import ClaimFactory, ClaimLabelFactory, ClaimProviderFactory, ClaimQueueFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
 from .medication_history import (
@@ -33,6 +33,7 @@ __all__ = (
     "ClaimFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
+    "ClaimProviderFactory",
     "ClaimQueueFactory",
     "FacilityFactory",
     "MedicationHistoryMedicationFactory",

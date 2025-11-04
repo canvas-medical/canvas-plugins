@@ -1,6 +1,6 @@
 import factory
 
-from canvas_sdk.v1.data import Claim, ClaimLabel, ClaimQueue
+from canvas_sdk.v1.data import Claim, ClaimLabel, ClaimProvider, ClaimQueue
 
 
 class ClaimQueueFactory(factory.django.DjangoModelFactory[ClaimQueue]):
@@ -22,6 +22,15 @@ class ClaimFactory(factory.django.DjangoModelFactory[Claim]):
 
     note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     current_queue = factory.SubFactory(ClaimQueueFactory)
+
+
+class ClaimProviderFactory(factory.django.DjangoModelFactory[ClaimProvider]):
+    """Factory for creating ClaimProvider."""
+
+    class Meta:
+        model = ClaimProvider
+
+    claim = factory.SubFactory(ClaimFactory)
 
 
 class ClaimLabelFactory(factory.django.DjangoModelFactory[ClaimLabel]):
