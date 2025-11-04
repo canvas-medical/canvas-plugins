@@ -11,7 +11,7 @@
                 "name": "Chronic Care Management",
                 "description": "An Application that does xyz...",
                 "scope": "patient_specific",
-                "icon": "assets/python-logo.png"
+                "icon": "assets/CCM.png"
             }
         ],
         "protocols": [

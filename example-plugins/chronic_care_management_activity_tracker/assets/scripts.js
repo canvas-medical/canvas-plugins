@@ -147,20 +147,15 @@ function renderLog() {
     });
 }
 
-// Clear the session
-function clearSession() {
-    if (sessionLog.length === 0 && elapsedSeconds === 0) {
-        return;
-    }
-
-    const confirmed = confirm('Are you sure you want to clear the current session? This will reset the timer and clear all data.');
-    if (!confirmed) {
-        return;
-    }
-
+// Reset the form and timer state
+function resetForm() {
     // Stop timer if running
     if (isRunning) {
-        stopTimer();
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        isRunning = false;
     }
 
     // Reset everything
@@ -180,6 +175,21 @@ function clearSession() {
     renderLog();
     timerBtn.textContent = 'Start';
     timerBtn.classList.remove('stop', 'resume');
+    saveBtn.disabled = true;
+}
+
+// Clear the session (with confirmation)
+function clearSession() {
+    if (sessionLog.length === 0 && elapsedSeconds === 0) {
+        return;
+    }
+
+    const confirmed = confirm('Are you sure you want to clear the current session? This will reset the timer and clear all data.');
+    if (!confirmed) {
+        return;
+    }
+
+    resetForm();
 }
 
 // Save the session
@@ -220,7 +230,7 @@ function saveSession() {
         // return createQuestionnaire(activities);
     }).then(() => {
         alert('Session saved successfully!');
-        // clearSession();
+        resetForm();  // Clear form without confirmation after successful save
     }).catch(error => {
         console.error('Error saving session:', error);
         alert('There was an error saving the session. Please try again.');
