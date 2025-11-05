@@ -1,4 +1,10 @@
-from .claim import ClaimFactory, ClaimQueueFactory
+from .claim import (
+    ClaimCommentFactory,
+    ClaimFactory,
+    ClaimLabelFactory,
+    ClaimProviderFactory,
+    ClaimQueueFactory,
+)
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
 from .medication_history import (
@@ -19,12 +25,22 @@ from .staff import (
     StaffPhotoFactory,
     StaffRoleFactory,
 )
+from .task import (
+    TaskCommentFactory,
+    TaskFactory,
+    TaskLabelFactory,
+    TaskMetadataFactory,
+    TaskTaskLabelFactory,
+)
 from .user import CanvasUserFactory
 
 __all__ = (
     "CanvasUserFactory",
     "ClaimFactory",
+    "ClaimCommentFactory",
     "ClaimDiagnosisCodeFactory",
+    "ClaimLabelFactory",
+    "ClaimProviderFactory",
     "ClaimQueueFactory",
     "FacilityFactory",
     "MedicationHistoryMedicationFactory",
@@ -45,4 +61,9 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffContactPointFactory",
     "StaffAddressFactory",
+    "TaskCommentFactory",
+    "TaskFactory",
+    "TaskLabelFactory",
+    "TaskMetadataFactory",
+    "TaskTaskLabelFactory",
 )

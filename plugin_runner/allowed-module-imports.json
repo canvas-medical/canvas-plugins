@@ -234,11 +234,25 @@
     "CreateEvent",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim_label": [
+    "AddClaimLabel",
+    "Label",
+    "RemoveClaimLabel"
+  ],
+  "canvas_sdk.effects.claim_line_item": [
+    "UpdateClaimLineItem"
+  ],
+  "canvas_sdk.effects.claim_queue": [
+    "MoveClaimToQueue"
+  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
+  ],
+  "canvas_sdk.effects.fax": [
+    "FaxNoteEffect"
   ],
   "canvas_sdk.effects.generate_full_chart_pdf": [
     "GenerateFullChartPDFEffect"
@@ -253,13 +267,17 @@
     "Metadata"
   ],
   "canvas_sdk.effects.note": [
+    "AddAppointmentLabel",
     "Appointment",
     "AppointmentIdentifier",
     "Note",
+    "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
   "canvas_sdk.effects.note.appointment": [
+    "AddAppointmentLabel",
     "Appointment",
+    "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
   "canvas_sdk.effects.note.base": [
@@ -386,12 +404,14 @@
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
+    "TaskMetadata",
     "TaskStatus",
     "UpdateTask"
   ],
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
+    "TaskMetadata",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -555,6 +575,7 @@
     "AllergyIntoleranceCoding",
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AppointmentMetadata",
     "Assessment",
     "BannerAlert",
@@ -569,10 +590,13 @@
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
+    "ClaimLabel",
     "ClaimLineItem",
     "ClaimPatient",
+    "ClaimProvider",
     "ClaimQueue",
     "Command",
     "CompoundMedication",
@@ -669,6 +693,7 @@
     "Task",
     "TaskComment",
     "TaskLabel",
+    "TaskMetadata",
     "TaskTaskLabel",
     "Team",
     "TeamContactPoint",
@@ -683,6 +708,7 @@
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
+    "AppointmentLabel",
     "AppointmentMetadata",
     "AppointmentProgressStatus"
   ],
@@ -712,9 +738,12 @@
   ],
   "canvas_sdk.v1.data.claim": [
     "Claim",
+    "ClaimComment",
     "ClaimCoverage",
+    "ClaimLabel",
     "ClaimPatient",
     "ClaimPayerOrder",
+    "ClaimProvider",
     "ClaimQueue",
     "ClaimQueueColumns",
     "ClaimQueues",
@@ -962,6 +991,7 @@
     "TaskComment",
     "TaskLabel",
     "TaskLabelModule",
+    "TaskMetadata",
     "TaskStatus",
     "TaskTaskLabel",
     "TaskType"

@@ -31,6 +31,7 @@ class TaskLabelModule(models.TextChoices):
 
     CLAIMS = "claims", "Claims"
     TASKS = "tasks", "Tasks"
+    APPOINTMENTS = "appointments", "Appointments"
 
 
 class Task(TimestampedModel, IdentifiableModel):
@@ -78,12 +79,22 @@ class TaskLabel(IdentifiableModel):
         db_table = "canvas_sdk_data_api_tasklabel_001"
 
     tasks = models.ManyToManyField(Task, related_name="labels", through="TaskTaskLabel")  # type: ignore[var-annotated]
+    claims = models.ManyToManyField("v1.Claim", related_name="labels", through="v1.ClaimLabel")
+    appointments = models.ManyToManyField(
+        "v1.Appointment", related_name="labels", through="v1.AppointmentLabel"
+    )
     position = models.IntegerField()
-    color = models.CharField(choices=ColorEnum.choices, max_length=50)
-    task_association = ArrayField(models.CharField(choices=Origin.choices, max_length=32))
+    color = models.CharField(choices=ColorEnum.choices, max_length=50, blank=True, default="")
+    task_association = ArrayField(
+        models.CharField(choices=Origin.choices, max_length=32), blank=True, default=list
+    )
     name = models.CharField(max_length=255)
-    active = models.BooleanField()
-    modules = ArrayField(models.CharField(choices=TaskLabelModule.choices, max_length=32))
+    active = models.BooleanField(default=True)
+    modules = ArrayField(
+        models.CharField(choices=TaskLabelModule.choices, max_length=32),
+        blank=True,
+        default=list,
+    )
 
 
 class TaskTaskLabel(Model):
@@ -96,6 +107,17 @@ class TaskTaskLabel(Model):
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
 
+class TaskMetadata(IdentifiableModel):
+    """TaskMetadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_taskmetadata_001"
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="metadata")
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=255)
+
+
 __exports__ = (
     "TaskType",
     "EventType",
@@ -105,4 +127,5 @@ __exports__ = (
     "TaskComment",
     "TaskLabel",
     "TaskTaskLabel",
+    "TaskMetadata",
 )
