@@ -50,7 +50,6 @@ def test_protocol_event_configuration() -> None:
 
 
 # Example: You can use a factory to create a patient instance for testing purposes.
-@pytest.mark.django_db
 def test_factory_example() -> None:
     """Test that a patient can be created using the PatientFactory."""
     patient = PatientFactory.create()
@@ -58,7 +57,6 @@ def test_factory_example() -> None:
 
 
 # Example: If a factory is not available, you can create an instance manually with the data model directly.
-@pytest.mark.django_db
 def test_model_example() -> None:
     """Test that a Discount instance can be created."""
     Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)

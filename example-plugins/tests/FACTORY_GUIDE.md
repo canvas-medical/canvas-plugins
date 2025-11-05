@@ -335,7 +335,6 @@ def test_my_protocol():
 ```python
 from canvas_sdk.test_utils.factories import PatientFactory, StaffFactory
 
-@pytest.mark.django_db
 def test_appointment_api():
     # Create test data
     patient = PatientFactory.create()

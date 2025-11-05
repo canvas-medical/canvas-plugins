@@ -8,8 +8,6 @@ and custom factories in your tests.
 import datetime
 from unittest.mock import Mock
 
-import pytest
-
 from canvas_sdk.test_utils.factories import (
     NoteFactory,
     PatientFactory,
@@ -23,7 +21,6 @@ from canvas_sdk.test_utils.factories import (
 class TestBuiltInFactories:
     """Examples of using built-in Canvas SDK factories."""
 
-    @pytest.mark.django_db
     def test_create_patient_with_defaults(self):
         """Test creating a patient with all default values."""
         patient = PatientFactory.create()
@@ -39,7 +36,6 @@ class TestBuiltInFactories:
         # Verify relationships
         assert patient.user is not None
 
-    @pytest.mark.django_db
     def test_create_patient_with_custom_values(self):
         """Test creating a patient with custom values."""
         patient = PatientFactory.create(
@@ -50,7 +46,6 @@ class TestBuiltInFactories:
         assert patient.last_name == "Smith"
         assert patient.birth_date == datetime.date(1990, 5, 15)
 
-    @pytest.mark.django_db
     def test_create_multiple_patients(self):
         """Test creating multiple patients at once."""
         patients = PatientFactory.create_batch(5)
@@ -62,7 +57,6 @@ class TestBuiltInFactories:
         first_names = [p.first_name for p in patients]
         assert len(set(first_names)) > 1  # At least some different names
 
-    @pytest.mark.django_db
     def test_create_staff_member(self):
         """Test creating a staff member."""
         staff = StaffFactory.create()
@@ -72,7 +66,6 @@ class TestBuiltInFactories:
         assert staff.last_name is not None
         assert staff.user is not None
 
-    @pytest.mark.django_db
     def test_create_note_with_relationships(self):
         """Test creating a note (which auto-creates related objects)."""
         note = NoteFactory.create()
@@ -83,7 +76,6 @@ class TestBuiltInFactories:
         assert note.provider is not None
         assert note.location is not None
 
-    @pytest.mark.django_db
     def test_create_note_for_specific_patient(self):
         """Test creating a note for a specific patient."""
         # Create patient first
@@ -95,7 +87,6 @@ class TestBuiltInFactories:
         assert note.patient.id == patient.id
         assert note.patient.first_name == "Bob"
 
-    @pytest.mark.django_db
     def test_reuse_objects_across_tests(self):
         """Test creating multiple notes for the same patient."""
         patient = PatientFactory.create()
@@ -113,7 +104,6 @@ class TestBuiltInFactories:
 class TestFactoriesWithMocks:
     """Examples of combining factories with mocks for protocol testing."""
 
-    @pytest.mark.django_db
     def test_protocol_with_factory_data(self):
         """Test a protocol handler using factory data."""
         # Create test data using factories (in-memory only for speed)
@@ -141,7 +131,6 @@ class TestFactoriesWithMocks:
 class TestFactoryBestPractices:
     """Best practices and patterns for using factories."""
 
-    @pytest.mark.django_db
     def test_minimal_overrides(self):
         """Only override fields that matter for the test."""
         # Good: Only override what's relevant
@@ -152,7 +141,6 @@ class TestFactoryBestPractices:
         assert patient.first_name == "TestUser"
         assert patient.id is not None
 
-    @pytest.mark.django_db
     def test_build_vs_create(self):
         """Use build() when database persistence isn't needed."""
         # build() creates in-memory object (faster)
@@ -168,7 +156,6 @@ class TestFactoryBestPractices:
         assert patient_db.id is not None
         assert patient_db.first_name == "Database"
 
-    @pytest.mark.django_db
     def test_related_objects_pattern(self):
         """Pattern for creating objects with relationships."""
         # Create shared objects
@@ -187,7 +174,6 @@ class TestFactoryBestPractices:
 class TestFactoryScenarios:
     """Real-world testing scenarios using factories."""
 
-    @pytest.mark.django_db
     def test_patient_with_multiple_notes(self):
         """Test scenario with patient who has multiple notes."""
         # Setup: Create a patient with multiple notes
@@ -200,7 +186,6 @@ class TestFactoryScenarios:
         assert len(notes) == 3
         assert all(note.patient.id == patient.id for note in notes)
 
-    @pytest.mark.django_db
     def test_provider_with_multiple_patients(self):
         """Test scenario with provider who has multiple patients."""
         # Setup: Create a provider with multiple patients
@@ -213,7 +198,6 @@ class TestFactoryScenarios:
         assert len(notes) == 5
         assert all(note.provider.id == provider.id for note in notes)
 
-    @pytest.mark.django_db
     def test_age_based_logic(self):
         """Test logic that depends on patient age."""
         # Create pediatric patient (8 years old)
@@ -236,7 +220,6 @@ class TestFactoryScenarios:
 class TestCustomFactories:
     """Examples using custom factories."""
 
-    @pytest.mark.django_db
     def test_appointment_factory(self):
         """Test using custom AppointmentFactory."""
         from tests.factories import AppointmentFactory
@@ -249,7 +232,6 @@ class TestCustomFactories:
         assert appointment.duration_minutes in [15, 30, 45, 60]
         assert appointment.status in ["unconfirmed", "confirmed", "arrived", "roomed"]
 
-    @pytest.mark.django_db
     def test_appointment_with_custom_values(self):
         """Test appointment with custom duration and status."""
         from tests.factories import AppointmentFactory
@@ -263,7 +245,6 @@ class TestCustomFactories:
         assert appointment.duration_minutes == 60
         assert appointment.status == "confirmed"
 
-    @pytest.mark.django_db
     def test_complete_scenario(self):
         """Test using the helper function for complete scenarios."""
         from tests.factories import create_test_appointment_scenario

@@ -26,7 +26,6 @@ class DummyEvent:
         self.context = context or {}
 
 
-@pytest.mark.django_db
 def test_appointment_api_put():
     """Test the put method of AppointmentAPI for updating an appointment.
 
@@ -74,7 +73,6 @@ def test_appointment_api_put():
     assert effect is not None
 
 
-@pytest.mark.django_db
 def test_appointment_api_put_not_found():
     """Test the put method returns 404 when appointment doesn't exist."""
     # Create API request for non-existent appointment
