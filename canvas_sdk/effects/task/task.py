@@ -6,7 +6,6 @@ from uuid import UUID
 from pydantic import model_validator
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.constants import TaskPriority
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.effects.metadata import BaseMetadata
 from canvas_sdk.v1.data import Task

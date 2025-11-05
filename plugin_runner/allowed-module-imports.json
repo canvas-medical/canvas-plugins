@@ -85,8 +85,7 @@
     "HistoryOfPresentIllnessCommand"
   ],
   "canvas_sdk.commands.commands.imaging_order": [
-    "ImagingOrderCommand",
-    "TaskPriority"
+    "ImagingOrderCommand"
   ],
   "canvas_sdk.commands.commands.immunization_statement": [
     "ImmunizationStatementCommand"
@@ -134,8 +133,7 @@
     "ReasonForVisitCommand"
   ],
   "canvas_sdk.commands.commands.refer": [
-    "ReferCommand",
-    "TaskPriority"
+    "ReferCommand"
   ],
   "canvas_sdk.commands.commands.refill": [
     "RefillCommand"
@@ -174,8 +172,7 @@
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
-    "ServiceProvider",
-    "TaskPriority"
+    "ServiceProvider"
   ],
   "canvas_sdk.effects": [
     "Effect",
@@ -406,6 +403,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -413,6 +411,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],

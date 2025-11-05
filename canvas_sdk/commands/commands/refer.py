@@ -3,7 +3,8 @@ from enum import Enum
 from pydantic import Field
 
 from canvas_sdk.commands.base import _BaseCommand as BaseCommand
-from canvas_sdk.commands.constants import ServiceProvider, TaskPriority
+from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.v1.data.task import TaskPriority
 
 
 class ReferCommand(BaseCommand):
@@ -44,4 +45,4 @@ class ReferCommand(BaseCommand):
         return values
 
 
-__exports__ = ("ReferCommand", "TaskPriority")
+__exports__ = ("ReferCommand",)
