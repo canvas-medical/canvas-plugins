@@ -1,0 +1,52 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "availability_manager",
+    "description": "A plugin to manage availability calendars",
+    "url_permissions": [
+        {
+            "url": "https://www.canvasmedical.com/extensions",
+            "permissions": []
+        }
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "availability_manager.applications.my_application:MyApplication",
+                "name": "Availability Manager",
+                "description": "An application to manage availability calendars",
+                "scope": "global",
+                "icon": "assets/calendar.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "availability_manager.handlers.my_web_app:MyWebApp",
+                "description": "Serves the application",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "availability_manager.api.calendar:CalendarAPI",
+                "description": "endpoint to create calendars"
+            },
+            {
+                "class": "availability_manager.api.events:CalendarEventsAPI",
+                "description": "endpoint to create calendar events"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
