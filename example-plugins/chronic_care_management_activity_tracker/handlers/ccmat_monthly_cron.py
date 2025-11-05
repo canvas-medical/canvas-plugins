@@ -117,6 +117,10 @@ class CcmatMonthlyCron(CronTask):
 
             log.info(f"Patient {patient.id} logged {response_text} last month")
 
+            total_minutes = self._parse_time_to_minutes(response_text)
+
+            log.info(f"Patient {patient.id} total minutes: {total_minutes}")
+
             # Check if >= 20 minutes
             if total_minutes < self.MINUTES_THRESHOLD:
                 log.info(f"Patient {patient.id} did not meet {self.MINUTES_THRESHOLD} minute threshold")

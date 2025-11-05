@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from canvas_sdk.commands.commands.questionnaire import QuestionnaireCommand
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.effects.note import Note as NoteEffect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.handlers.simple_api import api
@@ -31,6 +32,8 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
     NOTE_TYPE_CODE = "chronic_care_management_note"
 
     QUESTIONNAIRE_CODE = "ccm_session_questionnaire"
+
+    BANNER_TEMPLATE_KEY = "ccm_monthly_banner"
 
     ACTIVITIES = (
         ("Medication review", "medication_review"),
@@ -95,14 +98,15 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
             staff = self._get_staff()
             patient = self._get_patient()
             note_id = str(uuid4())
-            now = datetime.datetime.now()
+
+            now = datetime.datetime.utcnow()
 
             note = NoteEffect(
                 instance_id=note_id,
                 note_type_id=self._get_chronic_note_type_id(),
-                datetime_of_service=now,
                 patient_id=patient.id,
                 provider_id=staff.id,
+                datetime_of_service=now,
                 practice_location_id=self._get_practice_location_id(patient, staff).id,
                 title="Chronic Care Management Note",
             )
@@ -127,8 +131,8 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
             for i in range(0, len(time_logs) - 1, 2):
                 start = time_logs[i]['timestamp']
                 end = time_logs[i + 1]['timestamp']
-                start_formatted = arrow.get(start).format("YYYY-MM-DD HH:mm:ss")
-                end_formatted = arrow.get(end).format("YYYY-MM-DD HH:mm:ss")
+                start_formatted = arrow.get(start).format("YYYY-MM-DD HH:mm:ss ZZZ")
+                end_formatted = arrow.get(end).format("YYYY-MM-DD HH:mm:ss ZZZ")
                 session_logs.append(f"{start_formatted} - {end_formatted}")
                 time_spent += (arrow.get(end) - arrow.get(start)).seconds
 
@@ -168,6 +172,15 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
                 elif question.coding.get("code") == "ccm_month_minutes_question":
                     question.add_response(text=total_month_time_formatted)
 
+            # Create banner alert with updated cumulative time
+            banner = AddBannerAlert(
+                key=self.BANNER_TEMPLATE_KEY,
+                narrative=f"Chronic Care Management Recorded This Month: {total_month_time_formatted}",
+                placement=[AddBannerAlert.Placement.CHART, AddBannerAlert.Placement.PROFILE],
+                intent=AddBannerAlert.Intent.INFO,
+                patient_id=patient.id,
+            )
+
             return [
                 JSONResponse(
                     {
@@ -180,6 +193,7 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
                 questionnaire_command.originate(),
                 questionnaire_command.edit(),
                 questionnaire_command.commit(),
+                banner.apply(),
             ]
         except Patient.DoesNotExist:
             log.error("Patient does not exist.")
@@ -249,37 +263,46 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
         return Questionnaire.objects.get(code=self.QUESTIONNAIRE_CODE)
 
     def _get_this_month_seconds(self, patient: Patient) -> int:
-        """Get the cumulative time in seconds from previous month's sessions."""
+        """Get the cumulative time in seconds from this month's sessions.
+
+        Returns the most recent cumulative total, since each session already stores
+        the running total for the month (not just that session's time).
+        """
         questionnaire = self._get_questionnaire()
         this_month = arrow.utcnow().month
-        this_month_responses = (
+        this_year = arrow.utcnow().year
+
+        # Get the most recent interview from this month
+        most_recent_interview = (
             patient.interviews.filter(questionnaires=questionnaire)
-            .filter(created__month=this_month)
+            .filter(created__month=this_month, created__year=this_year)
             .order_by("-created")
+            .first()
         )
 
-        if not this_month_responses.exists():
+        if not most_recent_interview:
             return 0
 
-        total_seconds = 0
-        for interview in this_month_responses:
-            for response in interview.interview_responses.filter(
-                question__code="ccm_month_minutes_question"
-            ):
-                time_str = response.response_option_value.strip()
-                # Try to parse hh:mm:ss format
-                if ":" in time_str:
-                    parts = time_str.split(":")
-                    if len(parts) == 3:
-                        try:
-                            hours = int(parts[0])
-                            minutes = int(parts[1])
-                            seconds = int(parts[2])
-                            total_seconds += hours * 3600 + minutes * 60 + seconds
-                        except ValueError:
-                            pass  # Skip invalid format
-                # Fallback: if it's just digits, assume it's minutes (backward compatibility)
-                elif time_str.isdigit():
-                    total_seconds += int(time_str) * 60
+        # Get the cumulative month time from the most recent interview
+        response = most_recent_interview.interview_responses.filter(
+            question__code="ccm_month_minutes_question"
+        ).first()
 
-        return total_seconds
+        if not response:
+            return 0
+
+        time_str = response.response_option_value.strip()
+
+        # Try to parse hh:mm:ss format
+        if ":" in time_str:
+            parts = time_str.split(":")
+            if len(parts) == 3:
+                try:
+                    hours = int(parts[0])
+                    minutes = int(parts[1])
+                    seconds = int(parts[2])
+                    return hours * 3600 + minutes * 60 + seconds
+                except ValueError:
+                    return 0
+
+        return 0

@@ -8,7 +8,7 @@
         "applications": [
             {
                 "class": "chronic_care_management_activity_tracker.applications.ccmat_app:CcmatApp",
-                "name": "Chronic Care Management",
+                "name": "CCM",
                 "description": "An Application that does xyz...",
                 "scope": "patient_specific",
                 "icon": "assets/CCM.png"

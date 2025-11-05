@@ -38,10 +38,10 @@ class CcmatMonthlyBannerProtocol(BaseProtocol):
             for patient in active_patients:
                 interviews = patient.interviews.filter(questionnaires=questionnaire)
 
-                if not interviews.exists():
-                    continue
+                time_spent = "00:00:00"
+                if interviews.exists():
+                    time_spent = self._calculate_time_spent(interviews)
 
-                time_spent = self._calculate_time_spent(interviews)
                 log.info(f"Total time spent for patient {patient.id} is {time_spent}")
 
                 banner = AddBannerAlert(
@@ -59,11 +59,10 @@ class CcmatMonthlyBannerProtocol(BaseProtocol):
             patient = Patient.objects.get(id=self.target)
             interviews = patient.interviews.filter(questionnaires=questionnaire)
 
-            if not interviews.exists():
-                log.info(f"No interviews found for questionnaire {self.QUESTIONNAIRE_CODE} and patient {patient.id}")
-                return []
+            time_spent = "00:00:00"
+            if interviews.exists():
+                time_spent = self._calculate_time_spent(interviews)
 
-            time_spent = self._calculate_time_spent(interviews)
             log.info(f"Total time spent for patient {self.target} is {time_spent}")
 
             banner = AddBannerAlert(
