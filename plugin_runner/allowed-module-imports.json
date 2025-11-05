@@ -403,6 +403,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],
@@ -410,6 +411,7 @@
     "AddTask",
     "AddTaskComment",
     "TaskMetadata",
+    "TaskPriority",
     "TaskStatus",
     "UpdateTask"
   ],

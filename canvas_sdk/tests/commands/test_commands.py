@@ -23,7 +23,10 @@ from canvas_sdk.commands import (
 )
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
+from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
+from canvas_sdk.commands.commands.refer import ReferCommand
+from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -44,6 +47,7 @@ from canvas_sdk.tests.shared import (
     install_plugin,
 )
 from canvas_sdk.v1.data import Condition
+from canvas_sdk.v1.data.task import TaskPriority
 
 # some commands can't be originated without any content
 EMPTY_COMMAND_NOT_ALLOWED = ["chartSectionReview"]
@@ -576,3 +580,40 @@ def test_immunization_statement_empty_coding_raises_error() -> None:
             unstructured={"code": "some immunization"},  # type:ignore [arg-type]
         )
     assert "system" in str(exc_info.value).lower()
+
+
+@pytest.mark.parametrize(
+    "command_cls,priority",
+    [
+        (TaskCommand, TaskPriority.ROUTINE),
+        (TaskCommand, TaskPriority.STAT),
+        (TaskCommand, TaskPriority.URGENT),
+        (TaskCommand, None),
+        (ReferCommand, ReferCommand.Priority.URGENT),
+        (ReferCommand, ReferCommand.Priority.STAT),
+        (ReferCommand, ReferCommand.Priority.ROUTINE),
+        (ReferCommand, None),
+        (ImagingOrderCommand, ImagingOrderCommand.Priority.ROUTINE),
+        (ImagingOrderCommand, ImagingOrderCommand.Priority.STAT),
+        (ImagingOrderCommand, ImagingOrderCommand.Priority.URGENT),
+        (ImagingOrderCommand, None),
+    ],
+)
+def test_commands_with_priority(command_cls: type, priority: TaskPriority | None) -> None:
+    """Test that command classes accept all valid priority values."""
+    command = command_cls(priority=priority)
+    assert command.priority == priority
+
+
+@pytest.mark.parametrize(
+    "command_class,kwargs",
+    [
+        (TaskCommand, {"title": "Test", "priority": "invalid"}),
+        (ReferCommand, {"priority": "invalid"}),
+        (ImagingOrderCommand, {"priority": "invalid"}),
+    ],
+)
+def test_commands_reject_invalid_priority(command_class: type, kwargs: dict) -> None:
+    """Test that all command classes reject invalid priority values."""
+    with pytest.raises(ValidationError):
+        command_class(**kwargs)

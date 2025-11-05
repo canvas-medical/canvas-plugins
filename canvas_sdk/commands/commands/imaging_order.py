@@ -15,6 +15,7 @@ class ImagingOrderCommand(BaseCommand):
     class Priority(Enum):
         ROUTINE = "Routine"
         URGENT = "Urgent"
+        STAT = "STAT"
 
     image_code: str | None = Field(default=None, json_schema_extra={"commands_api_name": "image"})
     diagnosis_codes: list[str] | None = Field(

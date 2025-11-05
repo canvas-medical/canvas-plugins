@@ -178,6 +178,7 @@ class TaskMetadata(BaseMetadata):
 __exports__ = (
     "AddTask",
     "AddTaskComment",
+    "TaskPriority",
     "TaskStatus",
     "TaskMetadata",
     "UpdateTask",
