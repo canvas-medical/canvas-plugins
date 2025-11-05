@@ -25,6 +25,7 @@ runs:
 
     - name: Delete .python-version
       run: rm .python-version
+      shell: sh
 
     - name: Set Python version in the environment
       run: |
