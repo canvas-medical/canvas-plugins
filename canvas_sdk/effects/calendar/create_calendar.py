@@ -21,7 +21,7 @@ class CreateCalendar(_BaseEffect):
     id: str | UUID | None = None
     provider: str | UUID
     type: CalendarType
-    location: str | None = None
+    location: str | UUID | None = None
     description: str | None = None
 
     @property
