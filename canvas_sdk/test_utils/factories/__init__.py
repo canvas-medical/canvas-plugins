@@ -1,3 +1,4 @@
+from .calendar import CalendarFactory, EventFactory
 from .claim import (
     ClaimCommentFactory,
     ClaimFactory,
@@ -5,7 +6,6 @@ from .claim import (
     ClaimProviderFactory,
     ClaimQueueFactory,
 )
-from .calendar import CalendarFactory, EventFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
 from .medication_history import (
