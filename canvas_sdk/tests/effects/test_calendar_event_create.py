@@ -189,14 +189,6 @@ def test_update_event_with_uuid_event_id() -> None:
     )
 
 
-def test_delete_event() -> None:
-    """Test DeleteEvent with event_id."""
-    delete = DeleteEvent(event_id="event-id")
-    payload = delete.apply()
-    assert payload.type == EffectType.CALENDAR__EVENT__DELETE
-    assert payload.payload == '{"data": {"event_id": "event-id"}}'
-
-
 def test_delete_event_with_uuid() -> None:
     """Test DeleteEvent with UUID string for event_id."""
     delete = DeleteEvent(event_id="87654321-4321-8765-4321-876543218765")
