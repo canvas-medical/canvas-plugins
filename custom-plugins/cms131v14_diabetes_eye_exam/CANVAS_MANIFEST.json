@@ -26,7 +26,14 @@
     "content": [],
     "effects": [],
     "views": [],
-    "questionnaires": []
+    "questionnaires": [
+      {
+        "template": "questionnaires/hospice_and_frailty.yml"
+      },
+      {
+        "template": "questionnaires/hospice_and_palliative.yml"
+      }
+    ]
   },
   "secrets": [],
   "tags": {
