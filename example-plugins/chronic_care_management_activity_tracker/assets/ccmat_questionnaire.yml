@@ -28,18 +28,6 @@ questions:
         code: ccm_session_staff_name_response
         code_description: ''
         value: ''
-  - content: Date
-    code_system: INTERNAL
-    code: ccm_session_date_question
-    code_description: ''
-    responses_code_system: INTERNAL
-    responses_type: TXT
-    display_result_in_social_history_section: false
-    responses:
-      - name: TXT
-        code: ccm_session_date_response
-        code_description: ''
-        value: ''
   - content: Activities Performed
     code_system: INTERNAL
     code: ccm_session_activities_question
