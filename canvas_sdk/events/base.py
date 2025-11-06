@@ -60,6 +60,7 @@ class Event:
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
         self.actor = Actor(id=event_request.actor)
+        self.source = event_request.source
 
 
 __exports__ = ("TargetType", "Event")

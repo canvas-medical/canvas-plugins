@@ -283,6 +283,7 @@ class PluginRunner(PluginRunnerServicer):
                                 classname=classname,
                                 handler_name=handler_name,
                                 actor=event.actor.id,
+                                source=event.source,
                             )
                             for effect in _effects
                         ]
