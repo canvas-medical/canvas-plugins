@@ -159,8 +159,6 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
                     question.add_response(text=patient.preferred_full_name)
                 elif question.coding.get("code") == "ccm_session_staff_name_question":
                     question.add_response(text=staff.full_name)
-                elif question.coding.get("code") == "ccm_session_date_question":
-                    question.add_response(text=now.strftime("%Y-%m-%d"))
                 elif question.coding.get("code") == "ccm_session_activities_question":
                     question.add_response(text=", ".join(activities))
                 elif question.coding.get("code") == "ccm_session_notes_question":
