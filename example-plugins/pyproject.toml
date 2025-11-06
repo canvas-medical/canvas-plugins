@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "canvas[test-utils]",
+    "pytest-cov",
 ]
 
 [tool.pytest.ini_options]
