@@ -87,7 +87,10 @@ The automated billing follows CMS guidelines for Chronic Care Management (CCM) s
 - 63 minutes → 99490 × 1, 99439 × 2
 - 45 minutes → 99490 × 1, 99439 × 1
 
-### Important Note!
+### Important Notes!
+
+
+Keep in mind that the CCM calculations will only take into account the latest version of the questionnaire, and changing the yaml file with the questionnaire structure and installing the plugin will cause a new questionnaire version to be installed.
 
 The CANVAS_MANIFEST.json is used when installing your plugin. Please ensure it
 gets updated if you add, remove, or rename protocols.
