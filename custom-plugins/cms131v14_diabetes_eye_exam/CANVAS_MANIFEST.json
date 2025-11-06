@@ -1,0 +1,44 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "1.0.0",
+  "name": "cms131v14_diabetes_eye_exam",
+  "description": "CMS131v14 - Diabetes: Eye Exam. Percentage of patients 18-75 years of age with diabetes who had a retinal or dilated eye exam by an eye care professional during the measurement period or a negative retinal exam (no evidence of retinopathy) in the 12 months prior to the measurement period.",
+  "components": {
+    "protocols": [
+      {
+        "class": "cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol:CMS131v14DiabetesEyeExam",
+        "description": "Diabetes: Eye Exam - CMS131v14",
+        "meta": {
+          "title": "Diabetes: Eye Exam",
+          "description": "Patients 18-75 years of age with diabetes who have not had a retinal or dilated eye exam by an eye care professional.",
+          "version": "2025-05-08v14",
+          "information": "https://ecqi.healthit.gov/ecqm/ec/2026/cms0131v14",
+          "identifiers": ["CMS131v14"],
+          "types": ["CQM"],
+          "authors": ["National Committee for Quality Assurance"],
+          "references": [
+            "American Diabetes Association. Microvascular complications and foot care. Sec. 10. In Standards of Medical Care in Diabetes 2017. Diabetes Care 2017;40(Suppl. 1):S88-S98"
+          ]
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": [],
+    "questionnaires": []
+  },
+  "secrets": [],
+  "tags": {
+    "clinical_quality_measure": "CMS131v14",
+    "category": "diabetes",
+    "measure_type": "preventive_care"
+  },
+  "references": [
+    "https://ecqi.healthit.gov/ecqm/ec/2026/cms0131v14",
+    "American Diabetes Association. Microvascular complications and foot care. Sec. 10. In Standards of Medical Care in Diabetes 2017. Diabetes Care 2017;40(Suppl. 1):S88-S98"
+  ],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
