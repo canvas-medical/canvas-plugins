@@ -258,7 +258,7 @@ class CcmatApi(StaffSessionAuthMixin, SimpleAPI):
         return staff.primary_practice_location
 
     def _get_questionnaire(self) -> Questionnaire:
-        return Questionnaire.objects.get(code=self.QUESTIONNAIRE_CODE)
+        return Questionnaire.objects.get(code=self.QUESTIONNAIRE_CODE, status="AC")
 
     def _get_this_month_seconds(self, patient: Patient) -> int:
         """Get the cumulative time in seconds from this month's sessions.
