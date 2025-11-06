@@ -1,7 +1,7 @@
 """Basic smoke tests for abnormal_lab_task_notification plugin."""
 
 
-def test_import_abnormal_lab_protocol():
+def test_import_abnormal_lab_protocol() -> None:
     """Test that AbnormalLabProtocol can be imported without errors."""
     from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
         AbnormalLabProtocol,
@@ -13,7 +13,7 @@ def test_import_abnormal_lab_protocol():
     assert hasattr(AbnormalLabProtocol, "compute")
 
 
-def test_abnormal_lab_protocol_responds_to():
+def test_abnormal_lab_protocol_responds_to() -> None:
     """Test that AbnormalLabProtocol responds to LAB_REPORT_CREATED event."""
     from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
         AbnormalLabProtocol,
