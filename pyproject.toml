@@ -61,9 +61,7 @@ requires-python = ">=3.11,<3.13"
 version = "0.75.0"
 
 [project.optional-dependencies]
-test-utils = [
-  "pytest-canvas"
-]
+test-utils = ["pytest-canvas"]
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
@@ -195,7 +193,7 @@ version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
 
 [tool.uv]
-required-version = "~=0.8.0"
+required-version = ">=0.8.0"
 
 [[tool.uv.index]]
 default = true
