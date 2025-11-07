@@ -1,3 +1,5 @@
+import arrow
+
 from canvas_sdk.commands import PerformCommand, ReferCommand
 from canvas_sdk.commands.constants import CodeSystems, ServiceProvider
 from canvas_sdk.effects import Effect
@@ -7,8 +9,12 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
 from canvas_sdk.value_set.v2022.condition import Diabetes #TODO: Update to v2026 when value set is updated
+from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.value_set.v2022.intervention import (
+    HospiceCareAmbulatory,
+    PalliativeOrHospiceCare,
+)
 from logger import log
-import arrow
 
 
 class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
@@ -165,7 +171,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             log.info(f"CMS131v14: Patient {patient.id} not in initial population")
             return False
 
-        if self._has_hospice_care_in_period(patient):
+        if self._has_hospice_care_in_period(patient)
+            log.info(f"CMS131v14: Patient {patient.id} in hospice care")
             return False
 
         if self._is_age_66_plus_with_frailty(
@@ -260,7 +267,42 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         return True
 
     def _has_hospice_care_in_period(self, patient: Patient) -> bool:
-        return False
+        """
+        Check if patient is in hospice or palliative care during the measurement period.
+
+        Checks for:
+        - Referral reports to hospice/palliative care services
+        - Active condition codings against hospice value sets
+        """
+        try:
+            # Check for hospice/palliative care referral reports
+            hospice_reports = ReferralReport.objects.filter(
+                patient=patient,
+                junked=False,
+                original_date__gte=self.timeframe.start.date(),
+                original_date__lte=self.timeframe.end.date(),
+            ).all()
+
+            # Check if any reports are for hospice specialties
+            hospice_specialties = {"Hospice", "Palliative Care", "Palliative Medicine"}
+            for report in hospice_reports:
+                if report.specialty and any(
+                    hospice_specialty.lower() in report.specialty.lower()
+                    for hospice_specialty in hospice_specialties
+                ):
+                    log.info(
+                        f"CMS131v14: Found hospice referral report for patient {patient.id}"
+                    )
+                    return True
+
+            # Additionally check condition codings against hospice value sets
+            return self._patient_has_any_code_in_value_sets(
+                patient,
+                [PalliativeOrHospiceCare, HospiceCareAmbulatory],
+            )
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking hospice status: {str(e)}")
+            return False
 
     def _is_age_66_plus_with_frailty(self, patient: Patient) -> bool:
         return False
@@ -386,3 +428,70 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         )
 
         return card.apply()
+
+    def _patient_has_any_code_in_value_sets(
+        self, patient: Patient, value_set_classes: list
+    ) -> bool:
+        """
+        Helper to check if patient has any active condition coding present in given value sets.
+        
+        Args:
+            patient: The patient to check
+            value_set_classes: List of value set classes (e.g., [PalliativeOrHospiceCare, HospiceCareAmbulatory])
+        
+        Returns:
+            True if any active condition coding matches any of the value sets
+        """
+        try:
+            conditions = Condition.objects.for_patient(patient.id).active()
+
+            for condition in conditions:
+                for coding in condition.codings.all():
+                    for value_set_class in value_set_classes:
+                        if self._coding_in_value_set(coding, value_set_class):
+                            log.info(
+                                f"CMS131v14: Found matching code {coding.code} in value set for patient {patient.id}"
+                            )
+                            return True
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking codes in value sets: {str(e)}")
+            return False
+
+    def _coding_in_value_set(self, coding: ConditionCoding, value_set_class) -> bool:
+        """
+        Helper to check if a single coding belongs to a value set.
+        
+        Args:
+            coding: The ConditionCoding to check
+            value_set_class: Value set class to check against
+        
+        Returns:
+            True if the coding is found in the value set
+        """
+        try:
+            # Normalize the coding system for comparison
+            normalized_system = coding.system.replace("-", "").upper()
+
+            # Check common coding systems
+            if normalized_system in ["ICD10", "ICD10CM"]:
+                codes = getattr(value_set_class, "ICD10CM", set())
+                normalized_code = coding.code.replace(".", "")
+                codes_normalized = {code.replace(".", "") for code in codes}
+                return normalized_code in codes_normalized
+            elif normalized_system in ["SNOMEDCT", "SNOMED"]:
+                codes = getattr(value_set_class, "SNOMEDCT", set())
+                return coding.code in codes
+            elif normalized_system == "CPT":
+                codes = getattr(value_set_class, "CPT", set())
+                return coding.code in codes
+            elif normalized_system == "HCPCS":
+                codes = getattr(value_set_class, "HCPCS", set())
+                return coding.code in codes
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking coding in value set: {str(e)}")
+            return False
+            
