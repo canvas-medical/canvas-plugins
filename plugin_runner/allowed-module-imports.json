@@ -227,22 +227,18 @@
   "canvas_sdk.effects.calendar": [
     "CalendarType",
     "CreateCalendar",
-    "CreateEvent",
     "DaysOfWeek",
-    "DeleteEvent",
-    "EventRecurrence",
-    "UpdateEvent"
+    "Event",
+    "EventRecurrence"
   ],
-  "canvas_sdk.effects.calendar.create_calendar": [
+  "canvas_sdk.effects.calendar.calendar": [
     "CalendarType",
     "CreateCalendar"
   ],
-  "canvas_sdk.effects.calendar.create_event": [
-    "CreateEvent",
+  "canvas_sdk.effects.calendar.event": [
     "DaysOfWeek",
-    "DeleteEvent",
-    "EventRecurrence",
-    "UpdateEvent"
+    "Event",
+    "EventRecurrence"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",

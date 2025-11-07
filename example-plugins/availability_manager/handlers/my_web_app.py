@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.calendar import CalendarType
-from canvas_sdk.effects.calendar.create_event import EventRecurrence
+from canvas_sdk.effects.calendar.event import EventRecurrence
 from canvas_sdk.effects.simple_api import HTMLResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, api, StaffSessionAuthMixin
 from canvas_sdk.templates import render_to_string
