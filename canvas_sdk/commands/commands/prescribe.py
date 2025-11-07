@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import Field, conlist
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import _BaseCommand, _SendableCommandMixin
+from canvas_sdk.commands.base import _BaseCommand, _ReviewableCommandMixin, _SendableCommandMixin
 from canvas_sdk.commands.constants import ClinicalQuantity
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.compound_medications.compound_medication import (
@@ -37,7 +37,7 @@ class CompoundMedicationData:
         }
 
 
-class PrescribeCommand(_SendableCommandMixin, _BaseCommand):
+class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseCommand):
     """A class for managing a Prescribe command within a specific note."""
 
     class Meta:

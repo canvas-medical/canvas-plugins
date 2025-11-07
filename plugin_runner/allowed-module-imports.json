@@ -44,6 +44,7 @@
   ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
+    "_ReviewableCommandMixin",
     "_SendableCommandMixin"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
