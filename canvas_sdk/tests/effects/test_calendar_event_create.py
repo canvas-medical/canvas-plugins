@@ -2,23 +2,20 @@ from datetime import datetime
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.calendar import (
-    CreateEvent,
     DaysOfWeek,
-    DeleteEvent,
+    Event,
     EventRecurrence,
-    UpdateEvent,
 )
 
 
 def test_create_event_minimal_required_fields() -> None:
-    """Test CreateEvent with only required fields."""
-    create = CreateEvent(
+    """Test Event with only required fields."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Patient Appointment",
         starts_at=datetime(2025, 1, 15, 10, 0, 0),
         ends_at=datetime(2025, 1, 15, 11, 0, 0),
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -27,16 +24,15 @@ def test_create_event_minimal_required_fields() -> None:
 
 
 def test_create_event_with_daily_recurrence() -> None:
-    """Test CreateEvent with daily recurrence."""
-    create = CreateEvent(
+    """Test Event with daily recurrence."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Daily Standup",
         starts_at=datetime(2025, 1, 15, 9, 0, 0),
         ends_at=datetime(2025, 1, 15, 9, 30, 0),
         recurrence_frequency=EventRecurrence.Daily,
         recurrence_interval=1,
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -45,8 +41,8 @@ def test_create_event_with_daily_recurrence() -> None:
 
 
 def test_create_event_with_weekly_recurrence_and_days() -> None:
-    """Test CreateEvent with weekly recurrence on specific days."""
-    create = CreateEvent(
+    """Test Event with weekly recurrence on specific days."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Weekly Team Meeting",
         starts_at=datetime(2025, 1, 15, 14, 0, 0),
@@ -54,8 +50,7 @@ def test_create_event_with_weekly_recurrence_and_days() -> None:
         recurrence_frequency=EventRecurrence.Weekly,
         recurrence_interval=1,
         recurrence_days=[DaysOfWeek.Monday, DaysOfWeek.Wednesday, DaysOfWeek.Friday],
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -64,8 +59,8 @@ def test_create_event_with_weekly_recurrence_and_days() -> None:
 
 
 def test_create_event_with_recurrence_end_date() -> None:
-    """Test CreateEvent with recurrence that ends on a specific date."""
-    create = CreateEvent(
+    """Test Event with recurrence that ends on a specific date."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Temporary Clinic Hours",
         starts_at=datetime(2025, 1, 15, 8, 0, 0),
@@ -73,8 +68,7 @@ def test_create_event_with_recurrence_end_date() -> None:
         recurrence_frequency=EventRecurrence.Daily,
         recurrence_interval=1,
         recurrence_ends_at=datetime(2025, 3, 31, 23, 59, 59),
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -83,15 +77,14 @@ def test_create_event_with_recurrence_end_date() -> None:
 
 
 def test_create_event_with_allowed_note_types() -> None:
-    """Test CreateEvent with allowed note types."""
-    create = CreateEvent(
+    """Test Event with allowed note types."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Specialist Consultation",
         starts_at=datetime(2025, 1, 15, 10, 0, 0),
         ends_at=datetime(2025, 1, 15, 11, 0, 0),
         allowed_note_types=["Progress Note", "SOAP Note"],
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -100,8 +93,8 @@ def test_create_event_with_allowed_note_types() -> None:
 
 
 def test_create_event_with_all_fields() -> None:
-    """Test CreateEvent with all fields populated."""
-    create = CreateEvent(
+    """Test Event with all fields populated."""
+    payload = Event(
         calendar_id="calendar-id",
         title="Recurring Appointment",
         starts_at=datetime(2025, 1, 15, 13, 0, 0),
@@ -111,8 +104,7 @@ def test_create_event_with_all_fields() -> None:
         recurrence_days=[DaysOfWeek.Tuesday, DaysOfWeek.Thursday],
         recurrence_ends_at=datetime(2025, 12, 31, 23, 59, 59),
         allowed_note_types=["Follow-up Note"],
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -121,14 +113,13 @@ def test_create_event_with_all_fields() -> None:
 
 
 def test_create_event_with_uuid_calendar_id() -> None:
-    """Test CreateEvent with UUID string for calendar_id."""
-    create = CreateEvent(
+    """Test Event with UUID string for calendar_id."""
+    payload = Event(
         calendar_id="12345678-1234-5678-1234-567812345678",
         title="Appointment",
         starts_at=datetime(2025, 1, 15, 10, 0, 0),
         ends_at=datetime(2025, 1, 15, 11, 0, 0),
-    )
-    payload = create.apply()
+    ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
@@ -137,14 +128,13 @@ def test_create_event_with_uuid_calendar_id() -> None:
 
 
 def test_update_event_minimal_required_fields() -> None:
-    """Test UpdateEvent with only required fields."""
-    update = UpdateEvent(
+    """Test Event with only required fields."""
+    payload = Event(
         event_id="event-id",
         title="Updated Appointment",
         starts_at=datetime(2025, 1, 15, 11, 0, 0),
         ends_at=datetime(2025, 1, 15, 12, 0, 0),
-    )
-    payload = update.apply()
+    ).update()
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
@@ -153,8 +143,8 @@ def test_update_event_minimal_required_fields() -> None:
 
 
 def test_update_event_with_all_fields() -> None:
-    """Test UpdateEvent with all fields populated."""
-    update = UpdateEvent(
+    """Test Event with all fields populated."""
+    payload = Event(
         event_id="event-id",
         title="Updated Recurring Meeting",
         starts_at=datetime(2025, 1, 15, 15, 0, 0),
@@ -164,8 +154,7 @@ def test_update_event_with_all_fields() -> None:
         recurrence_days=[DaysOfWeek.Monday, DaysOfWeek.Friday],
         recurrence_ends_at=datetime(2025, 6, 30, 23, 59, 59),
         allowed_note_types=["Clinical Note", "Progress Note"],
-    )
-    payload = update.apply()
+    ).update()
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
@@ -174,14 +163,13 @@ def test_update_event_with_all_fields() -> None:
 
 
 def test_update_event_with_uuid_event_id() -> None:
-    """Test UpdateEvent with UUID string for event_id."""
-    update = UpdateEvent(
+    """Test Event with UUID string for event_id."""
+    payload = Event(
         event_id="87654321-4321-8765-4321-876543218765",
         title="Updated Event",
         starts_at=datetime(2025, 1, 15, 9, 0, 0),
         ends_at=datetime(2025, 1, 15, 10, 0, 0),
-    )
-    payload = update.apply()
+    ).update()
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
@@ -191,7 +179,6 @@ def test_update_event_with_uuid_event_id() -> None:
 
 def test_delete_event_with_uuid() -> None:
     """Test DeleteEvent with UUID string for event_id."""
-    delete = DeleteEvent(event_id="87654321-4321-8765-4321-876543218765")
-    payload = delete.apply()
+    payload = Event(event_id="87654321-4321-8765-4321-876543218765").delete()
     assert payload.type == EffectType.CALENDAR__EVENT__DELETE
     assert payload.payload == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765"}}'
