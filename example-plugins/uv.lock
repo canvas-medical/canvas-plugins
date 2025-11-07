@@ -75,7 +75,7 @@ wheels = [
 [[package]]
 name = "canvas"
 version = "0.75.0"
-source = { registry = "https://pypi.org/simple/" }
+source = { directory = "../" }
 dependencies = [
     { name = "cookiecutter" },
     { name = "cron-converter" },
@@ -106,14 +106,63 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/7a/79cbcc56f2094dc569c5f061b2b9a41b641b4f32c670d7875d52a71783f1/canvas-0.75.0.tar.gz", hash = "sha256:986117f7b4f838e88bceec73afb3334205614118b6afb6b44ace1ceb979d568f", size = 943196, upload-time = "2025-11-04T14:58:24.036Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/cf/4c984813f8731f550fbb6f470623707779733718ca9ffa658a650c058f3f/canvas-0.75.0-py3-none-any.whl", hash = "sha256:5aa0b4389f6c5e31b6f33804a42dc08bd1d193307bab42217b27ea10f2a79144", size = 1103176, upload-time = "2025-11-04T14:58:22.281Z" },
-]
 
 [package.optional-dependencies]
 test-utils = [
     { name = "pytest-canvas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cookiecutter" },
+    { name = "cron-converter", specifier = ">=1.2.1,<2" },
+    { name = "cryptography", specifier = ">=45.0.5" },
+    { name = "deprecation", specifier = ">=2.1.0,<3" },
+    { name = "django", specifier = ">=5.1.1,<6" },
+    { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.1.1,<6" },
+    { name = "django-timezone-utils", specifier = ">=0.15.0,<0.16" },
+    { name = "env-tools", specifier = ">=2.4.0,<3" },
+    { name = "factory-boy", specifier = ">=3.3.3" },
+    { name = "frozendict", specifier = ">=2.4.6" },
+    { name = "grpcio", specifier = ">=1.60.1,<2" },
+    { name = "ipython", specifier = ">=8.21.0,<9" },
+    { name = "jsonschema", specifier = ">=4.21.1,<5" },
+    { name = "pathspec", specifier = ">=0.12.1" },
+    { name = "protobuf", specifier = ">=4.25.3,<5" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.2,<4" },
+    { name = "pydantic", specifier = ">=2.6.1,<3" },
+    { name = "pyjwt", specifier = "==2.10.1" },
+    { name = "pytest-canvas", marker = "extra == 'test-utils'" },
+    { name = "python-dotenv", specifier = ">=1.0.1,<2" },
+    { name = "rapidfuzz", specifier = ">=3.10.1,<4" },
+    { name = "redis", specifier = ">=5.0.4,<6" },
+    { name = "requests" },
+    { name = "restrictedpython", specifier = ">=8.0" },
+    { name = "sentry-sdk", specifier = ">=2.33.2" },
+    { name = "statsd", specifier = ">=4.0.1,<5" },
+    { name = "typer" },
+    { name = "typing-extensions", specifier = ">=4.8,<4.13" },
+    { name = "websocket-client", specifier = ">=1.7.0,<2" },
+]
+provides-extras = ["test-utils"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "grpcio-tools", specifier = ">=1.60.1,<2" },
+    { name = "httpretty", git = "https://github.com/carlsmedstad/HTTPretty.git?rev=8e96b1e312d473429fbd08bc867376e9932ad42a" },
+    { name = "mypy", specifier = ">=1.17.0,<2" },
+    { name = "pre-commit", specifier = ">=4.3.0,<5" },
+    { name = "psutil", specifier = ">=7.0.0" },
+    { name = "pytest", specifier = ">=8.4,<9" },
+    { name = "pytest-cov" },
+    { name = "pytest-django", specifier = ">=4.11,<5" },
+    { name = "pytest-freezegun", specifier = ">=0.4.2" },
+    { name = "pytest-mock" },
+    { name = "python-semantic-release" },
+    { name = "requests-mock" },
+    { name = "ruff" },
+    { name = "types-protobuf" },
+    { name = "types-requests" },
 ]
 
 [[package]]
@@ -597,7 +646,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "canvas", extras = ["test-utils"] },
+    { name = "canvas", extras = ["test-utils"], directory = "../" },
     { name = "pytest-cov" },
 ]
 
