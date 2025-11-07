@@ -8,6 +8,7 @@ from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
 from canvas_sdk.value_set.v2022.condition import Diabetes
 from logger import log
+import arrow
 
 
 class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
@@ -148,6 +149,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _in_initial_population(self, patient: Patient) -> bool:
         if not self._check_age_18_to_75(patient):
+            log.info(f"CMS131v14: Patient {patient.id} not in age 18-75 range")
             return False
 
         if not self._has_diabetes_diagnosis_overlapping_period(patient):
@@ -160,6 +162,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _in_denominator(self, patient: Patient) -> bool:
         if not self._in_initial_population(patient):
+            log.info(f"CMS131v14: Patient {patient.id} not in initial population")
             return False
 
         if self._has_hospice_care_in_period(patient):
@@ -221,7 +224,22 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _check_age_18_to_75(self, patient: Patient) -> bool:
-        return True
+        try:
+            if not getattr(patient, "birth_date", None):
+                log.info("CMS131v14: Missing birth_date; patient fails age check")
+                return False
+
+            birth_date = arrow.get(patient.birth_date)
+            age_years = (self.now - birth_date).days // 365
+
+            in_range = 18 <= age_years <= 75
+            log.info(
+                f"CMS131v14: Patient {patient.id} age {age_years} in 18-75 range={in_range}"
+            )
+            return in_range
+        except Exception as e:
+            log.error(f"CMS131v14: Error computing age: {str(e)}")
+            return False
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
         try:
