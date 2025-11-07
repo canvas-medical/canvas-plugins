@@ -7,6 +7,9 @@ dependencies = [
     "pytest-cov",
 ]
 
+[tool.setuptools]
+packages = []  # This is a test-only project, no packages to build
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py", "*_tests.py"]
