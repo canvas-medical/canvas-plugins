@@ -41,7 +41,6 @@ jobs:
           CUSTOMER_IDENTIFIER: "ci-unit-tests"
         run: |
           cd example-plugins
-          uv add "canvas[test-utils]"
           uv run \
             pytest \
               --ff \
