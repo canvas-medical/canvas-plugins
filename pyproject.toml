@@ -148,6 +148,7 @@ norecursedirs = [
   "__pycache__",
   "canvas_cli/templates",
   "custom-plugins",
+  "example-plugins",
   "node_modules",
   "static",
   "static-files"
@@ -155,7 +156,7 @@ norecursedirs = [
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
 [tool.ruff]
-exclude = ["canvas_generated/"]
+exclude = ["canvas_cli/templates/", "canvas_generated/"]
 line-length = 100
 target-version = "py311"
 

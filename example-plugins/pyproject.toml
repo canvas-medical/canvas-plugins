@@ -1,0 +1,20 @@
+[project]
+name = "example-plugins"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "canvas[test-utils]",
+    "pytest-cov",
+]
+
+[tool.setuptools]
+packages = []  # This is a test-only project, no packages to build
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "*_tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.uv.sources]
+canvas = { path = "../" }
