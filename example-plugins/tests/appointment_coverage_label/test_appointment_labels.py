@@ -6,6 +6,19 @@ import pytest
 
 from canvas_sdk.events import EventType
 
+# Check if the required effects are available in the SDK
+try:
+    from canvas_sdk.effects.note import AddAppointmentLabel, RemoveAppointmentLabel
+
+    APPOINTMENT_LABEL_EFFECTS_AVAILABLE = True
+except ImportError:
+    APPOINTMENT_LABEL_EFFECTS_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not APPOINTMENT_LABEL_EFFECTS_AVAILABLE,
+    reason="AddAppointmentLabel and RemoveAppointmentLabel not available in installed SDK version",
+)
+
 
 @pytest.mark.django_db
 class TestAppointmentLabelsProtocol:
