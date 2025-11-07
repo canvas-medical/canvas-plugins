@@ -2,12 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from canvas_sdk.events import EventType
 
 
-@pytest.mark.django_db
 class TestSupervisingProviderPrescribeProtocolCard:
     """Test suite for supervising_provider_prescribe_protocol Protocol."""
 
@@ -15,9 +12,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
         """Test that Protocol responds to NOTE_STATE_CHANGE_EVENT_CREATED event."""
         from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
 
-        assert (
-            EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED) == Protocol.RESPONDS_TO
-        )
+        assert EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED) == Protocol.RESPONDS_TO
 
     def test_compute_with_staff_available(self, monkeypatch):
         """Test that compute creates protocol card with prescribe recommendation when staff available."""
@@ -139,11 +134,14 @@ class TestSupervisingProviderPrescribeProtocolCard:
         ) as mock_staff_first:
             mock_staff_first.return_value = mock_staff
 
-            with patch(
-                "supervising_provider_prescribe_protocol.protocols.my_protocol.PrescribeCommand"
-            ), patch(
-                "supervising_provider_prescribe_protocol.protocols.my_protocol.ProtocolCard"
-            ) as mock_card_class:
+            with (
+                patch(
+                    "supervising_provider_prescribe_protocol.protocols.my_protocol.PrescribeCommand"
+                ),
+                patch(
+                    "supervising_provider_prescribe_protocol.protocols.my_protocol.ProtocolCard"
+                ) as mock_card_class,
+            ):
                 mock_card_instance = MagicMock()
                 mock_card_instance.recommendations = []
                 mock_card_class.return_value = mock_card_instance

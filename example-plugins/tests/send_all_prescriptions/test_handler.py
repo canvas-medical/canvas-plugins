@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from send_all_prescriptions.handlers.handler import SendPrescriptionButtonHandler
 
 
@@ -15,7 +13,6 @@ def test_send_prescription_button_configuration():
     )
 
 
-@pytest.mark.django_db
 def test_send_prescription_button_handle_no_prescriptions(monkeypatch):
     """Test that handle() returns empty list when there are no prescriptions."""
     # Create handler instance with mocked event
@@ -34,7 +31,6 @@ def test_send_prescription_button_handle_no_prescriptions(monkeypatch):
     assert effects == []
 
 
-@pytest.mark.django_db
 def test_send_prescription_button_handle_with_prescriptions(monkeypatch):
     """Test that handle() creates send effects for all committed prescriptions."""
     # Create handler instance with mocked event
@@ -77,7 +73,6 @@ def test_send_prescription_button_handle_with_prescriptions(monkeypatch):
     mock_prescribe_instance2.send.assert_called_once()
 
 
-@pytest.mark.django_db
 def test_send_prescription_button_handle_no_note_id(monkeypatch):
     """Test that handle() works when note_id is not in context."""
     # Create handler instance with mocked event

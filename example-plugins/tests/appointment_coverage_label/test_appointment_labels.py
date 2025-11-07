@@ -2,13 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from canvas_sdk.effects.note import AddAppointmentLabel, RemoveAppointmentLabel
 from canvas_sdk.events import EventType
 
 
-@pytest.mark.django_db
 class TestAppointmentLabelsProtocol:
     """Test suite for AppointmentLabelsProtocol."""
 
@@ -42,9 +38,7 @@ class TestAppointmentLabelsProtocol:
         monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
 
         # Mock the handler method
-        with patch.object(
-            protocol, "handle_coverage_created", return_value=[]
-        ) as mock_handler:
+        with patch.object(protocol, "handle_coverage_created", return_value=[]) as mock_handler:
             protocol.compute()
             mock_handler.assert_called_once()
 
@@ -66,9 +60,7 @@ class TestAppointmentLabelsProtocol:
         monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
 
         # Mock the handler method
-        with patch.object(
-            protocol, "handle_appointment_created", return_value=[]
-        ) as mock_handler:
+        with patch.object(protocol, "handle_appointment_created", return_value=[]) as mock_handler:
             protocol.compute()
             mock_handler.assert_called_once()
 
@@ -247,9 +239,7 @@ class TestAppointmentLabelsProtocol:
                 with patch(
                     "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
-                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = (
-                        mock_appt_queryset
-                    )
+                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     with patch(
                         "appointment_coverage_label.protocols.appointment_labels.AddAppointmentLabel"
@@ -335,9 +325,7 @@ class TestAppointmentLabelsProtocol:
                 with patch(
                     "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
-                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = (
-                        mock_appt_queryset
-                    )
+                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     result = protocol.handle_appointment_created()
                     assert result == []
@@ -456,9 +444,7 @@ class TestAppointmentLabelsProtocol:
                 with patch(
                     "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
-                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = (
-                        mock_appt_queryset
-                    )
+                    mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     # Mock log.error to prevent exc_info TypeError
                     with patch("appointment_coverage_label.protocols.appointment_labels.log"):

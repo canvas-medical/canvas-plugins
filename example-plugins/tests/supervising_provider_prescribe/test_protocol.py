@@ -2,12 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from canvas_sdk.events import EventType
 
 
-@pytest.mark.django_db
 class TestSupervisingProviderPrescribeProtocol:
     """Test suite for supervising_provider_prescribe Protocol."""
 
@@ -15,9 +12,7 @@ class TestSupervisingProviderPrescribeProtocol:
         """Test that Protocol responds to PRESCRIBE_COMMAND__POST_ORIGINATE event."""
         from supervising_provider_prescribe.protocols.my_protocol import Protocol
 
-        assert (
-            EventType.Name(EventType.PRESCRIBE_COMMAND__POST_ORIGINATE) == Protocol.RESPONDS_TO
-        )
+        assert EventType.Name(EventType.PRESCRIBE_COMMAND__POST_ORIGINATE) == Protocol.RESPONDS_TO
 
     def test_compute_with_staff_available(self, monkeypatch):
         """Test that compute creates edit effect when staff is available."""

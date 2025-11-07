@@ -4,8 +4,8 @@ from unittest.mock import Mock, patch
 
 import arrow
 import pytest
-
 from api_samples.routes.email_bounce import EmailBounceAPI
+
 from canvas_sdk.effects.simple_api import JSONResponse
 from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.handlers.simple_api import APIKeyCredentials
@@ -44,7 +44,6 @@ def test_email_bounce_api_configuration():
     assert EmailBounceAPI.PATH == "/crm-webhooks/email-bounce"
 
 
-@pytest.mark.django_db
 class TestEmailBounceAPI:
     """Test suite for EmailBounceAPI endpoint."""
 

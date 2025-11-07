@@ -1,9 +1,7 @@
 """Comprehensive tests for vitals_visualizer_plugin vitals_api."""
 
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from vitals_visualizer_plugin.handlers.vitals_api import VitalsVisualizerAPI
 
@@ -22,7 +20,6 @@ class DummyEvent:
         self.context = context or {}
 
 
-@pytest.mark.django_db
 class TestVitalsVisualizerAPI:
     """Test suite for VitalsVisualizerAPI endpoint."""
 
@@ -295,9 +292,7 @@ class TestVitalsVisualizerAPI:
         }
 
         # Mock render_to_string
-        with patch(
-            "vitals_visualizer_plugin.handlers.vitals_api.render_to_string"
-        ) as mock_render:
+        with patch("vitals_visualizer_plugin.handlers.vitals_api.render_to_string") as mock_render:
             mock_render.return_value = "<html>Rendered HTML</html>"
 
             result = api._generate_visualization_html(vitals_data)
