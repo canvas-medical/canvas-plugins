@@ -19,7 +19,7 @@ def test_create_event_minimal_required_fields() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Patient Appointment", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Patient Appointment", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -36,7 +36,7 @@ def test_create_event_with_daily_recurrence() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Daily Standup", "starts_at": "2025-01-15T09:00:00", "ends_at": "2025-01-15T09:30:00", "recurrence": "FREQ=DAILY;INTERVAL=1", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Daily Standup", "starts_at": "2025-01-15T09:00:00", "ends_at": "2025-01-15T09:30:00", "recurrence": "FREQ=DAILY;INTERVAL=1", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -54,7 +54,7 @@ def test_create_event_with_weekly_recurrence_and_days() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Weekly Team Meeting", "starts_at": "2025-01-15T14:00:00", "ends_at": "2025-01-15T15:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Weekly Team Meeting", "starts_at": "2025-01-15T14:00:00", "ends_at": "2025-01-15T15:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -72,7 +72,7 @@ def test_create_event_with_recurrence_end_date() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Temporary Clinic Hours", "starts_at": "2025-01-15T08:00:00", "ends_at": "2025-01-15T12:00:00", "recurrence": "FREQ=DAILY;INTERVAL=1", "recurrence_ends_at": "2025-03-31T23:59:59", "allowed_note_types": null}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Temporary Clinic Hours", "starts_at": "2025-01-15T08:00:00", "ends_at": "2025-01-15T12:00:00", "recurrence": "FREQ=DAILY;INTERVAL=1", "recurrence_ends_at": "2025-03-31T23:59:59", "allowed_note_types": null}}'
     )
 
 
@@ -88,7 +88,7 @@ def test_create_event_with_allowed_note_types() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Specialist Consultation", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": ["Progress Note", "SOAP Note"]}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Specialist Consultation", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": ["Progress Note", "SOAP Note"]}}'
     )
 
 
@@ -108,7 +108,7 @@ def test_create_event_with_all_fields() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "calendar-id", "title": "Recurring Appointment", "starts_at": "2025-01-15T13:00:00", "ends_at": "2025-01-15T14:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH", "recurrence_ends_at": "2025-12-31T23:59:59", "allowed_note_types": ["Follow-up Note"]}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Recurring Appointment", "starts_at": "2025-01-15T13:00:00", "ends_at": "2025-01-15T14:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH", "recurrence_ends_at": "2025-12-31T23:59:59", "allowed_note_types": ["Follow-up Note"]}}'
     )
 
 
@@ -123,7 +123,7 @@ def test_create_event_with_uuid_calendar_id() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"calendar_id": "12345678-1234-5678-1234-567812345678", "title": "Appointment", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": null, "calendar_id": "12345678-1234-5678-1234-567812345678", "title": "Appointment", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -138,7 +138,7 @@ def test_update_event_minimal_required_fields() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
-        == '{"data": {"event_id": "event-id", "title": "Updated Appointment", "starts_at": "2025-01-15T11:00:00", "ends_at": "2025-01-15T12:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": "event-id", "calendar_id": null, "title": "Updated Appointment", "starts_at": "2025-01-15T11:00:00", "ends_at": "2025-01-15T12:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -158,7 +158,7 @@ def test_update_event_with_all_fields() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
-        == '{"data": {"event_id": "event-id", "title": "Updated Recurring Meeting", "starts_at": "2025-01-15T15:00:00", "ends_at": "2025-01-15T16:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,FR", "recurrence_ends_at": "2025-06-30T23:59:59", "allowed_note_types": ["Clinical Note", "Progress Note"]}}'
+        == '{"data": {"event_id": "event-id", "calendar_id": null, "title": "Updated Recurring Meeting", "starts_at": "2025-01-15T15:00:00", "ends_at": "2025-01-15T16:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,FR", "recurrence_ends_at": "2025-06-30T23:59:59", "allowed_note_types": ["Clinical Note", "Progress Note"]}}'
     )
 
 
@@ -173,7 +173,7 @@ def test_update_event_with_uuid_event_id() -> None:
     assert payload.type == EffectType.CALENDAR__EVENT__UPDATE
     assert (
         payload.payload
-        == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765", "title": "Updated Event", "starts_at": "2025-01-15T09:00:00", "ends_at": "2025-01-15T10:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
+        == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765", "calendar_id": null, "title": "Updated Event", "starts_at": "2025-01-15T09:00:00", "ends_at": "2025-01-15T10:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
 
 
@@ -181,4 +181,7 @@ def test_delete_event_with_uuid() -> None:
     """Test DeleteEvent with UUID string for event_id."""
     payload = Event(event_id="87654321-4321-8765-4321-876543218765").delete()
     assert payload.type == EffectType.CALENDAR__EVENT__DELETE
-    assert payload.payload == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765"}}'
+    assert (
+        payload.payload
+        == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765", "calendar_id": null, "title": null, "starts_at": null, "ends_at": null, "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
+    )
