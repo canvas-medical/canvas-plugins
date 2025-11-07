@@ -165,3 +165,25 @@ class TestCoverageStatusSyncProtocol:
 
         # Should return empty list when exception occurs
         assert effects == []
+
+    def test_compute_with_unexpected_event_type(self, monkeypatch):
+        """Test that unexpected event types are handled gracefully."""
+        # Create protocol instance
+        protocol = CoverageStatusSyncProtocol(event=MagicMock())
+        # Use an event type that's not APPOINTMENT_LABEL_ADDED or APPOINTMENT_LABEL_REMOVED
+        # This simulates the else branch in the code (lines 92-97)
+        protocol.event.type = EventType.COVERAGE_CREATED  # Not a label event type
+
+        # Set up context with MISSING_COVERAGE label and valid patient
+        dummy_context = {
+            "patient": {"id": "patient-123"},
+            "label": "MISSING_COVERAGE",
+        }
+        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+
+        with patch("coverage_metadata_sync.protocols.metadata_sync.log"):
+            # Call compute
+            effects = protocol.compute()
+
+        # Should return empty list for unexpected event type
+        assert effects == []
