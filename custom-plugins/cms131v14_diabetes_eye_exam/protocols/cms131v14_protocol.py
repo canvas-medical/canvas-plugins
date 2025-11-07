@@ -38,6 +38,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         EventType.Name(EventType.CONDITION_UPDATED),
     ]
 
+    # Age range constants
+    AGE_RANGE_START = 18
+    AGE_RANGE_END = 75
+
     def _get_patient_id(self) -> str | None:
         try:
             target_id = self.event.target.id
@@ -239,7 +243,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             birth_date = arrow.get(patient.birth_date)
             age_years = (self.now - birth_date).days // 365
 
-            in_range = 18 <= age_years <= 75
+            in_range = self.AGE_RANGE_START <= age_years <= self.AGE_RANGE_END
             log.info(
                 f"CMS131v14: Patient {patient.id} age {age_years} in 18-75 range={in_range}"
             )
