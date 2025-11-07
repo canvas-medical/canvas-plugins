@@ -26,6 +26,7 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
+          UV_PYTHON: ${{ matrix.version }}
         run: |
           uv run \
             pytest \
