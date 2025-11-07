@@ -128,7 +128,7 @@ class ClaimCoverageQuerySet(models.QuerySet):
         return self.filter(active=True)
 
 
-class ClaimCoverage(TimestampedModel):
+class ClaimCoverage(TimestampedModel, IdentifiableModel):
     """A model that represents the link between a claim and a specific insurance coverage."""
 
     class Meta:
@@ -364,6 +364,20 @@ class ClaimLabel(IdentifiableModel):
     label = models.ForeignKey("v1.TaskLabel", on_delete=models.PROTECT, related_name="claim_labels")
 
 
+class ClaimSubmission(IdentifiableModel):
+    """ClaimSubmission."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimsubmission_001"
+
+    claim = models.ForeignKey("v1.Claim", on_delete=models.PROTECT, related_name="submissions")
+    coverage = models.ForeignKey(
+        "v1.ClaimCoverage", on_delete=models.PROTECT, related_name="submissions", null=True
+    )
+    clearinghouse_claim_id = models.CharField(max_length=255, default="", blank=True, null=True)
+    claim_index = models.PositiveIntegerField(default=0)
+
+
 __exports__ = (
     "Claim",
     "ClaimLabel",
@@ -375,6 +389,7 @@ __exports__ = (
     "ClaimProvider",
     "ClaimQueues",
     "ClaimQueueColumns",
+    "ClaimSubmission",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus",

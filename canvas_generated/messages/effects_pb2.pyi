@@ -225,6 +225,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     POST_CLAIM_PAYMENT: _ClassVar[EffectType]
+    POST_CLAIMS_REMIT: _ClassVar[EffectType]
     MOVE_CLAIM_TO_QUEUE: _ClassVar[EffectType]
     ADD_CLAIM_LABEL: _ClassVar[EffectType]
     REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
@@ -504,6 +505,7 @@ ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
 POST_CLAIM_PAYMENT: EffectType
+POST_CLAIMS_REMIT: EffectType
 MOVE_CLAIM_TO_QUEUE: EffectType
 ADD_CLAIM_LABEL: EffectType
 REMOVE_CLAIM_LABEL: EffectType

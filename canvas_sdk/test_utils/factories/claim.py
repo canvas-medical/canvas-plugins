@@ -1,6 +1,13 @@
 import factory
 
-from canvas_sdk.v1.data import Claim, ClaimComment, ClaimLabel, ClaimProvider, ClaimQueue
+from canvas_sdk.v1.data import (
+    Claim,
+    ClaimComment,
+    ClaimLabel,
+    ClaimProvider,
+    ClaimQueue,
+    ClaimSubmission,
+)
 
 
 class ClaimQueueFactory(factory.django.DjangoModelFactory[ClaimQueue]):
@@ -51,3 +58,13 @@ class ClaimLabelFactory(factory.django.DjangoModelFactory[ClaimLabel]):
 
     claim = factory.SubFactory(ClaimFactory)
     label = factory.SubFactory("canvas_sdk.test_utils.factories.TaskLabelFactory")
+
+
+class ClaimSubmissionFactory(factory.django.DjangoModelFactory[ClaimSubmission]):
+    """Factory for creating ClaimSubmission."""
+
+    class Meta:
+        model = ClaimSubmission
+
+    claim = factory.SubFactory(ClaimFactory)
+    clearinghouse_claim_id = "123456"
