@@ -195,3 +195,17 @@ def test_event_init_with_invalid_json_context(mock_get_model: Mock) -> None:
     event = Event(event_request)
 
     assert event.context == {}
+
+
+def test_event_init_source() -> None:
+    """Test Event initialization with valid source."""
+    event_request = EventRequest()
+    event_request.type = EventType.UNKNOWN
+    event_request.target_type = "SomeModel"
+    event_request.target = "target_123"
+    event_request.actor = "user_123"
+    event_request.source = "api"
+
+    event = Event(event_request)
+
+    assert event.source == "api"
