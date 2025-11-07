@@ -6,7 +6,7 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
-from canvas_sdk.value_set.v2022.condition import Diabetes
+from canvas_sdk.value_set.v2022.condition import Diabetes #TODO: Update to v2026 when value set is updated
 from logger import log
 import arrow
 
