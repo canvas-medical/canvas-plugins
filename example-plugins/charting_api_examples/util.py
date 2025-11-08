@@ -5,7 +5,7 @@ from canvas_sdk.effects.simple_api import JSONResponse
 from canvas_sdk.v1.data.note import Note
 
 
-def is_valid_uuid(possible_uuid):
+def is_valid_uuid(possible_uuid: str) -> bool:
     try:
         uuid_obj = UUID(possible_uuid, version=4)
     except ValueError:
@@ -13,14 +13,14 @@ def is_valid_uuid(possible_uuid):
     return str(uuid_obj) == possible_uuid
 
 
-def note_not_found_response():
+def note_not_found_response() -> JSONResponse:
     return JSONResponse(
         {"error": "Note not found."},
         status_code=HTTPStatus.NOT_FOUND,
     )
 
 
-def get_note_from_path_params(path_params) -> Note | None:
+def get_note_from_path_params(path_params: dict[str, str]) -> Note | None:
     note_id = path_params["id"]
     # Ensure the note id is a valid UUID
     if not is_valid_uuid(note_id):

@@ -47,7 +47,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 .order_by("effective_datetime")
             )
 
-            vitals_data = {
+            vitals_data: Dict[str, List[Dict[str, Any]]] = {
                 "weight": [],
                 "body_temperature": [],
                 "oxygen_saturation": [],
