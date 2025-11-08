@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "canvas[test-utils]",
     "pytest-cov",
+    "types-python-dateutil",
 ]
 
 [tool.setuptools]
@@ -15,6 +16,21 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py", "*_tests.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/*_test.py",
+    "*/*_tests.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
 
 [tool.uv.sources]
 canvas = { path = "../" }

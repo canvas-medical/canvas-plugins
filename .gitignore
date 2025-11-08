@@ -18,3 +18,5 @@ dist/
 *.sqlite3
 
 profile-imports-*.txt
+
+.coverage
