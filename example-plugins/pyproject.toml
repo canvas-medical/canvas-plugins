@@ -12,7 +12,7 @@ dependencies = [
 packages = []  # This is a test-only project, no packages to build
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["."]
 python_files = ["test_*.py", "*_test.py", "*_tests.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
