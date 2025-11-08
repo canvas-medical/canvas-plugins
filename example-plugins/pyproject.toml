@@ -18,11 +18,16 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
+source = ["."]
 omit = [
     "*/tests/*",
     "*/test_*.py",
     "*/*_test.py",
     "*/*_tests.py",
+    "*/canvas_generated/*",
+    "*/canvas_sdk/*",
+    "*/.venv/*",
+    "*/site-packages/*",
 ]
 
 [tool.coverage.report]
