@@ -26,6 +26,7 @@ omit = [
 ]
 
 [tool.coverage.report]
+skip_empty = true
 exclude_lines = [
     "pragma: no cover",
     "raise AssertionError",
