@@ -32,7 +32,7 @@ let state = {
     daysOfWeek: [],
     recurrence: {
       type: '',
-      interval: null,
+      interval: 0,
       endDate: ''
     }
   }
@@ -51,12 +51,10 @@ function getProviderById(id) {
 // State management
 function updateCurrentEvent(field, value) {
   state.currentEvent[field] = value;
-  render();
 }
 
 function toggleProvider(providerId) {
   state.currentEvent.provider = providerId;
-  render();
 }
 
 function toggleNoteType(noteTypeId) {
@@ -66,7 +64,6 @@ function toggleNoteType(noteTypeId) {
   } else {
     state.currentEvent.allowedNoteTypes.push(noteTypeId);
   }
-  render();
 }
 
 function toggleDay(dayId) {
@@ -76,12 +73,15 @@ function toggleDay(dayId) {
   } else {
     state.currentEvent.daysOfWeek.push(dayId);
   }
-  render();
+  // Update button active state
+  const button = document.getElementById(`day-button-${dayId}`);
+  if (button) {
+    button.classList.toggle('active');
+  }
 }
 
 function updateRecurrence(field, value) {
   state.currentEvent.recurrence[field] = value;
-  render();
 }
 
 function deleteEvent(eventId) {
@@ -108,7 +108,7 @@ function deleteEvent(eventId) {
 }
 
 function updateEvent() {
-    if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== null)) {
+    if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== 0)) {
       alert('Please select a recurrence frequency when days of the week are selected or an interval is set');
       return;
     }
@@ -158,74 +158,74 @@ function updateEvent() {
 }
 
 function saveEvent() {
-  if (state.currentEvent.provider === null || state.currentEvent.title === '') {
-    alert('Please fill in all required fields, select at least one provider');
-    return;
-  }
+    if (state.currentEvent.provider === null || state.currentEvent.title === '') {
+        alert('Please fill in all required fields, select at least one provider');
+        return;
+    }
 
-  if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== null)) {
-    alert('Please select a recurrence frequency when days of the week are selected or an interval is set');
-    return;
-  }
+    if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== 0)) {
+        alert('Please select a recurrence frequency when days of the week are selected or an interval is set');
+        return;
+    }
 
-  const event = state.currentEvent;
+    const event = state.currentEvent;
 
-  const calendarData = {
-      provider: state.currentEvent.provider,
-      providerName: getProviderById(state.currentEvent.provider).full_name,
-      location: state.currentEvent.location || '',
-      locationName: getLocationName(state.currentEvent.location),
-      type: state.currentEvent.calendarType
-  }
+    const calendarData = {
+        provider: state.currentEvent.provider,
+        providerName: getProviderById(state.currentEvent.provider).full_name,
+        location: state.currentEvent.location || '',
+        locationName: getLocationName(state.currentEvent.location),
+        type: state.currentEvent.calendarType
+    }
 
-  fetch('/plugin-io/api/availability_manager/calendar', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(calendarData)
+    fetch('/plugin-io/api/availability_manager/calendar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(calendarData)
     })
-    .then(response => {
-      if (!response.ok) throw new Error('Failed to create calendar');
-      return response.json();
-    })
-    .then(data => {
-        const { calendarId } = data;
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to create calendar');
+            return response.json();
+        })
+        .then(data => {
+            const {calendarId} = data;
 
-        if (calendarId) {
-            const eventData = {
-                calendar: calendarId,
-                title: event.title,
-                startTime: event.startTime,
-                endTime: event.endTime,
-                recurrenceFrequency: event.recurrence.type,
-                recurrenceInterval: event.recurrence.interval,
-                recurrenceDays: event.daysOfWeek,
-                recurrenceEndsAt: event.recurrence.endDate,
-                allowedNoteTypes: event.allowedNoteTypes
+            if (calendarId) {
+                const eventData = {
+                    calendar: calendarId,
+                    title: event.title,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    recurrenceFrequency: event.recurrence.type,
+                    recurrenceInterval: event.recurrence.interval,
+                    recurrenceDays: event.daysOfWeek,
+                    recurrenceEndsAt: event.recurrence.endDate,
+                    allowedNoteTypes: event.allowedNoteTypes
+                }
+
+                fetch('/plugin-io/api/availability_manager/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(eventData)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to create event');
+                    }).catch(error => {
+                    alert('Error saving event: ' + error.message);
+                });
+
+                resetForm();
             }
+        })
+        .catch(error => {
+            alert('Error saving event: ' + error.message);
+        });
 
-            fetch('/plugin-io/api/availability_manager/events', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(eventData)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to create event');
-            }).catch(error => {
-                alert('Error saving event: ' + error.message);
-            });
-
-            resetForm();
-        }
-    })
-    .catch(error => {
-      alert('Error saving event: ' + error.message);
-    });
-
-  resetForm();
+    resetForm();
 }
 
 function resetForm() {
@@ -241,7 +241,7 @@ function resetForm() {
     daysOfWeek: [],
     recurrence: {
       type: '',
-      interval: null,
+      interval: 0,
       endDate: ''
     }
   };
@@ -266,36 +266,6 @@ function showForm() {
 function render() {
   const app = document.getElementById('app');
 
-  // Preserve scroll position and focused element before re-rendering
-  // Check multiple possible scroll containers
-  let scrollTop = 0;
-  let scrollElement = null;
-
-  const modalOverlay = document.querySelector('.modal-overlay');
-  const modal = document.querySelector('.modal');
-  const modalContent = document.querySelector('.modal-content');
-  const modalBody = document.querySelector('.modal-body');
-
-  // Find which element is actually scrolling
-  if (modalOverlay && modalOverlay.scrollTop > 0) {
-    scrollTop = modalOverlay.scrollTop;
-    scrollElement = 'overlay';
-  } else if (modal && modal.scrollTop > 0) {
-    scrollTop = modal.scrollTop;
-    scrollElement = 'modal';
-  } else if (modalContent && modalContent.scrollTop > 0) {
-    scrollTop = modalContent.scrollTop;
-    scrollElement = 'content';
-  } else if (modalBody && modalBody.scrollTop > 0) {
-    scrollTop = modalBody.scrollTop;
-    scrollElement = 'body';
-  }
-
-  // Temporarily hide the modal to prevent scroll jump during re-render
-  if (state.showForm && scrollTop > 0 && modalOverlay) {
-    modalOverlay.style.visibility = 'hidden';
-  }
-
   app.innerHTML = `
     <div class="app-container">
       <div class="max-width-container">
@@ -305,33 +275,6 @@ function render() {
       </div>
     </div>
   `;
-
-  // Restore scroll position immediately after re-rendering
-  if (state.showForm && scrollTop > 0) {
-    // Restore scroll synchronously to prevent visual jump
-    let targetElement = null;
-    if (scrollElement === 'overlay') {
-      targetElement = document.querySelector('.modal-overlay');
-    } else if (scrollElement === 'modal') {
-      targetElement = document.querySelector('.modal');
-    } else if (scrollElement === 'content') {
-      targetElement = document.querySelector('.modal-content');
-    } else if (scrollElement === 'body') {
-      targetElement = document.querySelector('.modal-body');
-    }
-
-    if (targetElement) {
-      targetElement.scrollTop = scrollTop;
-      // Restore visibility after scroll is set
-      targetElement.style.visibility = 'visible';
-      const newOverlay = document.querySelector('.modal-overlay');
-      if (newOverlay) {
-        newOverlay.style.visibility = 'visible';
-      }
-    }
-  }
-
-  attachEventListeners();
 }
 
 function renderHeader() {
@@ -457,7 +400,7 @@ function renderNoteTypesSelect() {
   return `
     <div class="form-group">
       <label class="form-label">
-        Allowed Note Types (${state.currentEvent.allowedNoteTypes.length} selected)
+        Allowed Note Types
       </label>
       <div class="grid providers-container">
         ${state.noteTypes.map(noteType => `
@@ -774,10 +717,6 @@ function editEventHandler(id) {
 
 function deleteEventHandler(id) {
   deleteEvent(id);
-}
-
-function attachEventListeners() {
-  // Additional event listeners can be attached here if needed
 }
 
 // Initialize the app
