@@ -3,12 +3,6 @@
     "plugin_version": "0.0.1",
     "name": "availability_manager",
     "description": "A plugin to manage availability calendars",
-    "url_permissions": [
-        {
-            "url": "https://www.canvasmedical.com/extensions",
-            "permissions": []
-        }
-    ],
     "components": {
         "applications": [
             {
