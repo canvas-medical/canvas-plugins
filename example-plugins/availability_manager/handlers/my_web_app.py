@@ -76,7 +76,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
                         "interval": (
                             event.recurrence and "INTERVAL=" in event.recurrence
                             and dict(part.split("=", 1) for part in event.recurrence.removeprefix("RRULE:").split(";")).get("INTERVAL", "")
-                        ) or '',
+                        ) or 0,
                         "endDate": event.recurrence_ends_at.strftime("%Y-%m-%dT%H:%M") if event.recurrence_ends_at else '',
                     }
                 } for event in events
