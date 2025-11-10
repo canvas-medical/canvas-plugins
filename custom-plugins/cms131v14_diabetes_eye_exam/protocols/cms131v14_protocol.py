@@ -179,10 +179,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         return True
 
     def _in_denominator(self, patient: Patient) -> bool:
-        if not self._in_initial_population(patient):
-            log.info(f"CMS131v14: Patient {patient.id} not in initial population")
-            return False
-
         if self._has_hospice_care_in_period(patient):
             log.info(f"CMS131v14: Patient {patient.id} in hospice care")
             return False
