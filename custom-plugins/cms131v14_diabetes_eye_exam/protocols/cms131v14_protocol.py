@@ -9,12 +9,17 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
 from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.value_set.v2022.condition import (
     Diabetes,  #TODO: Update to v2026 when value set is updated
     DementiaAndMentalDegenerations,
     Cancer,
 )
-from canvas_sdk.value_set.v2022.encounter import FrailtyEncounter
+from canvas_sdk.value_set.v2022.encounter import (
+    FrailtyEncounter,
+    CareServicesInLongTermResidentialFacility,
+    NursingFacilityVisit,
+)
 from canvas_sdk.value_set.v2022.intervention import (
     HospiceCareAmbulatory,
     PalliativeOrHospiceCare,
@@ -176,6 +181,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         if not self._has_diabetes_diagnosis_overlapping_period(patient):
+            log.info(f"CMS131v14: Patient {patient.id} does not have diabetes diagnosis overlapping period")
             return False
 
         if not self._has_eligible_encounter_in_period(patient):
@@ -195,6 +201,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         if self._is_age_66_plus_in_nursing_home(patient):
+            log.info(f"CMS131v14: Patient {patient.id} is age 66+ in nursing home")
             return False
 
         if self._has_palliative_care_in_period(patient):
@@ -373,7 +380,43 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _is_age_66_plus_in_nursing_home(self, patient: Patient) -> bool:
-        return False
+        """
+        Check for long-term residential care or nursing facility codes.
+        Per CMS131v14: This exclusion only applies to patients age 66 and older.
+        
+        Checks for CPT codes in ClaimLineItem during the measurement period.
+        """
+        # Check age requirement
+        age = self._calculate_age(patient)
+        if age is None or age < 66:
+            return False
+
+        try:
+            # Get CPT codes from the value sets
+            nursing_facility_codes = NursingFacilityVisit.CPT
+            long_term_care_codes = CareServicesInLongTermResidentialFacility.CPT
+            all_codes = nursing_facility_codes | long_term_care_codes
+
+            # Check for claim line items with these CPT codes within the measurement period
+            claim_line_items = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=all_codes,
+            )
+
+            if claim_line_items.exists():
+                found_code = claim_line_items.first().proc_code
+                log.info(
+                    f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care claim (CPT: {found_code})"
+                )
+                return True
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking nursing home status: {str(e)}")
+            return False
 
     def _has_palliative_care_in_period(self, patient: Patient) -> bool:
         return False
