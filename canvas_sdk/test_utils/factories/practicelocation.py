@@ -43,7 +43,9 @@ class PracticeLocationAddressFactory(factory.django.DjangoModelFactory[PracticeL
     class Meta:
         model = PracticeLocationAddress
 
-    practice_location = factory.SubFactory(PracticeLocation)
+    practice_location = factory.SubFactory(
+        "canvas_sdk.test_utils.factories.PracticeLocationFactory"
+    )
     line1 = "1234 Golden Gate Ave."
     line2 = "Suite 456"
     city = "San Francisco"
