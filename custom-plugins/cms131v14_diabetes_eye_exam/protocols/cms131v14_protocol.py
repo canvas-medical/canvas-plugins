@@ -8,12 +8,20 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
-from canvas_sdk.value_set.v2022.condition import Diabetes #TODO: Update to v2026 when value set is updated
 from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.value_set.v2022.condition import (
+    Diabetes,  #TODO: Update to v2026 when value set is updated
+    DementiaAndMentalDegenerations,
+    Cancer,
+)
+from canvas_sdk.value_set.v2022.encounter import FrailtyEncounter
 from canvas_sdk.value_set.v2022.intervention import (
     HospiceCareAmbulatory,
     PalliativeOrHospiceCare,
 )
+from canvas_sdk.value_set.v2022.symptom import FrailtySymptom
+from canvas_sdk.value_set.v2022.device import FrailtyDevice
+from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
 
@@ -175,13 +183,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             log.info(f"CMS131v14: Patient {patient.id} not in initial population")
             return False
 
-        if self._has_hospice_care_in_period(patient)
+        if self._has_hospice_care_in_period(patient):
             log.info(f"CMS131v14: Patient {patient.id} in hospice care")
             return False
 
         if self._is_age_66_plus_with_frailty(
             patient
         ) and self._has_advanced_illness_or_dementia_meds(patient):
+            log.info(f"CMS131v14: Patient {patient.id} is age 66+ with frailty and advanced illness or dementia meds")
             return False
 
         if self._is_age_66_plus_in_nursing_home(patient):
@@ -309,10 +318,58 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _is_age_66_plus_with_frailty(self, patient: Patient) -> bool:
-        return False
+        """
+        Check if patient is age 66+ with frailty indicators.
+        Per CMS131v14: This exclusion only applies to patients age 66 and older.
+        """
+        # Check age requirement
+        age = self._calculate_age(patient)
+        if age is None or age < 66:
+            return False
+
+        try:
+            # Check for frailty indicators
+            has_frailty = self._patient_has_any_code_in_value_sets(
+                patient,
+                [FrailtySymptom, FrailtyDevice, FrailtyEncounter],
+            )
+
+            if has_frailty:
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty indicators")
+
+            return has_frailty
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty: {str(e)}")
+            return False
 
     def _has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
-        return False
+        """
+        Check if patient has advanced illness (dementia, cancer, chemotherapy) or HCPCS S0311.
+        """
+        try:
+            # Check for advanced illness conditions and medications
+            has_advanced_illness = self._patient_has_any_code_in_value_sets(
+                patient,
+                [DementiaAndMentalDegenerations, Cancer, ChemotherapyForAdvancedCancer],
+            )
+
+            if not has_advanced_illness:
+                conditions = Condition.objects.for_patient(patient.id).active()
+                for condition in conditions:
+                    for coding in condition.codings.all():
+                        if coding.system.replace("-", "").upper() == "HCPCS" and coding.code == "S0311":
+                            has_advanced_illness = True
+                            break
+                    if has_advanced_illness:
+                        break
+
+            if has_advanced_illness:
+                log.info(f"CMS131v14: Patient {patient.id} has advanced illness or dementia meds")
+
+            return has_advanced_illness
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking advanced illness: {str(e)}")
+            return False
 
     def _is_age_66_plus_in_nursing_home(self, patient: Patient) -> bool:
         return False
@@ -498,4 +555,19 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         except Exception as e:
             log.error(f"CMS131v14: Error checking coding in value set: {str(e)}")
             return False
-            
+
+    def _calculate_age(self, patient: Patient) -> int | None:
+        """
+        Calculate patient's current age in years.
+        
+        Returns:
+            Age in years or None if birth_date is not available
+        """
+        try:
+            if not patient.birth_date:
+                return None
+            birth_date = arrow.get(patient.birth_date)
+            return (self.now - birth_date).days // 365
+        except Exception as e:
+            log.error(f"CMS131v14: Error calculating age: {str(e)}")
+            return None
