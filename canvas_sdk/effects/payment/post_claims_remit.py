@@ -1,82 +1,18 @@
 import base64
 import mimetypes
-from dataclasses import dataclass
-from typing import Any, Literal
-from uuid import UUID
+from typing import Any
 
 from django.db.models import QuerySet
 from pydantic import FilePath
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.payment.base import LineItemTransaction, PaymentMethod, PostPaymentBase
-from canvas_sdk.v1.data import Claim, ClaimCoverage
-
-
-@dataclass
-class ClaimAllocation:
-    """Claim payment details for a claim within a remit."""
-
-    claim_id: str | UUID
-    line_item_transactions: list[LineItemTransaction]
-    subscriber_number: str | None = None
-    move_to_queue_name: str | None = None
-    description: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert dataclass to dictionary."""
-        return {
-            "claim_id": str(self.claim_id),
-            "subscriber_number": self.subscriber_number,
-            "line_item_transactions": [lit.to_dict() for lit in self.line_item_transactions],
-            "move_to_queue_name": self.move_to_queue_name,
-            "description": self.description,
-        }
-
-    def check_payer_id(
-        self, payer_id: str | UUID | Literal["patient"], claim_coverages: QuerySet[ClaimCoverage]
-    ) -> list[tuple[str, str, Any]]:
-        """Checks that the payer is either 'patient' or an active coverage for the claim."""
-        if payer_id == "patient":
-            return []
-        coverages = claim_coverages.filter(payer_id=payer_id)
-        if not coverages:
-            return [
-                (
-                    "value",
-                    f"No active coverage with payer_id {payer_id} for this claim",
-                    {"claim_id": self.claim_id},
-                )
-            ]
-        if coverages.count() > 1 and self.subscriber_number:
-            coverages = coverages.filter(subscriber_number=self.subscriber_number)
-            if not coverages.exists():
-                return [
-                    (
-                        "value",
-                        f"No active coverage with payer_id {payer_id} and subscriber_number {self.subscriber_number} for this claim",
-                        {"claim_id": self.claim_id},
-                    )
-                ]
-        return []
-
-    def validate(
-        self, payer_id: str | UUID | Literal["patient"], claim: Claim
-    ) -> list[tuple[str, str, str]]:
-        """Returns error details for a claim allocation."""
-        claim_line_items = claim.line_items.active()
-        claim_coverages = claim.coverages.active()
-
-        if errors := self.check_payer_id(payer_id, claim_coverages):
-            return errors
-
-        for index, line_item_transaction in enumerate(self.line_item_transactions):
-            if errors := line_item_transaction.validate(
-                self.line_item_transactions, index, claim_line_items, payer_id, claim_coverages
-            ):
-                return errors
-
-        return []
+from canvas_sdk.effects.payment.base import (
+    ClaimAllocation,
+    PaymentMethod,
+    PostPaymentBase,
+)
+from canvas_sdk.v1.data import Claim, Transactor
 
 
 class PostClaimsRemit(PostPaymentBase):
@@ -87,6 +23,7 @@ class PostClaimsRemit(PostPaymentBase):
     class Meta:
         effect_type = EffectType.POST_CLAIMS_REMIT
 
+    payer_id: str
     era_document: FilePath | None = None
     claims_allocation: list[ClaimAllocation]
 
@@ -109,7 +46,7 @@ class PostClaimsRemit(PostPaymentBase):
         """The values for the payload."""
         return {
             "posting": {
-                "payer_id": str(self.payer_id),
+                "payer_id": self.payer_id,
                 "era_file": self.era_file,
             },
             "payment_collection": self.payment_collection_values,
@@ -138,18 +75,29 @@ class PostClaimsRemit(PostPaymentBase):
             return []
         incorrect_claim_ids = set(claim_ids) - {str(e) for e in claims.values_list("id", flat=True)}
         return [
-            (
-                self._create_error_detail(
-                    "value",
-                    f"There are {len(incorrect_claim_ids)} claim_ids that do not correspond to an existing Claim",
-                    ", ".join(incorrect_claim_ids),
-                )
+            self._create_error_detail(
+                "value",
+                f"There are {len(incorrect_claim_ids)} claim_ids that do not correspond to an existing Claim",
+                ", ".join(incorrect_claim_ids),
             )
         ]
+
+    def validate_payer_id(self) -> list[InitErrorDetails]:
+        """Checks that the payer_is corresponds to an existing Transactor."""
+        if not Transactor.objects.filter(payer_id=self.payer_id):
+            return [
+                self._create_error_detail(
+                    "value",
+                    "The provided payer_id does not correspond to an existing Transactor",
+                    self.payer_id,
+                )
+            ]
+        return []
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
+        errors.extend(self.validate_payer_id())
         errors.extend(self.validate_payment_method())
         errors.extend(self.validate_payment_method_fields())
 
@@ -159,7 +107,7 @@ class PostClaimsRemit(PostPaymentBase):
 
         for claim_allocation in self.claims_allocation:
             claim = claims.get(id=claim_allocation.claim_id)
-            claim_errors = claim_allocation.validate(self.payer_id, claim)
+            claim_errors = claim_allocation.validate(claim, self.payer_id)
             errors.extend([self._create_error_detail(*e) for e in claim_errors])
 
         return errors
@@ -168,6 +116,5 @@ class PostClaimsRemit(PostPaymentBase):
 __exports__ = (
     "PostClaimsRemit",
     "ClaimAllocation",
-    "LineItemTransaction",
     "PaymentMethod",
 )

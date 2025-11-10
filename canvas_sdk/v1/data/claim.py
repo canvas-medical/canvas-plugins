@@ -353,6 +353,18 @@ class Claim(TimestampedModel, IdentifiableModel):
         """Return the active claim line items."""
         return self.line_items.active().exclude_copay_and_unlinked()
 
+    def get_coverage_by_payer_id(
+        self, payer_id: str, subscriber_number: str | None
+    ) -> ClaimCoverage | None:
+        """Finds the active coverage associated with a payer_id. Optionally checks if the subscriber_number matches,
+        which will choose the correct coverage in the case where a patient has two coverages with the same payer_id.
+        """
+        if not (coverages := self.coverages.active().filter(payer_id=payer_id)):
+            return None
+        if coverages.count() == 1 and not subscriber_number:
+            return coverages.first()
+        return coverages.filter(subscriber_number=subscriber_number).first() or coverages.first()
+
 
 class ClaimLabel(IdentifiableModel):
     """ClaimLabel."""

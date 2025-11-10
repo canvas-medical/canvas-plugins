@@ -10,7 +10,7 @@ from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import _BaseEffect
-from canvas_sdk.v1.data import ClaimCoverage, ClaimLineItem
+from canvas_sdk.v1.data import Claim, ClaimCoverage, ClaimLineItem, ClaimQueue
 
 
 class PaymentMethod(Enum):
@@ -27,7 +27,6 @@ class PostPaymentBase(_BaseEffect):
     An BaseEffect for posting payment(s) to claim(s).
     """
 
-    payer_id: str | UUID | Literal["patient"]
     posting_description: str | None = None
 
     check_date: date | None = None
@@ -206,24 +205,26 @@ class LineItemTransaction:
         return []
 
     def is_transfer_to_valid(
-        self, payer_id: str | UUID | Literal["patient"], claim_coverages: QuerySet[ClaimCoverage]
+        self,
+        claim_coverage_id: str | UUID | Literal["patient"],
+        claim_coverages: QuerySet[ClaimCoverage],
     ) -> list[tuple[str, str, Any]]:
         """Checks that transfers are not made to the same payer as the transaction payer and that the transfer_to field is a valid payer for the claim."""
         if not self.transfer_remaining_balance_to:
             return []
 
         if self.transfer_remaining_balance_to and str(self.transfer_remaining_balance_to) == str(
-            payer_id
+            claim_coverage_id
         ):
             return [self._format_error("Can't create transfers to same payer")]
 
         if (
             self.transfer_remaining_balance_to != "patient"
-            and not claim_coverages.filter(payer_id=self.transfer_remaining_balance_to).exists()
+            and not claim_coverages.filter(id=self.transfer_remaining_balance_to).exists()
         ):
             return [
                 self._format_error(
-                    "Balance can only be transferred to patient or an active coverage payer_id for the claim"
+                    "Balance can only be transferred to patient or an active coverage for the claim"
                 )
             ]
         return []
@@ -236,8 +237,8 @@ class LineItemTransaction:
         line_item_transactions: list["LineItemTransaction"],
         index: int,
         claim_line_items: QuerySet[ClaimLineItem],
-        payer_id: str | UUID | Literal["patient"],
-        claim_coverages: QuerySet[ClaimCoverage],
+        claim_coverage_id: str | UUID | Literal["patient"],
+        active_claim_coverages: QuerySet[ClaimCoverage],
     ) -> list[tuple[str, str, Any]]:
         """Returns error details for a line item transaction, using the context of other transactions for the claim."""
         if not (line_item := claim_line_items.filter(id=self.claim_line_item_id).first()):
@@ -247,7 +248,7 @@ class LineItemTransaction:
                 )
             ]
 
-        is_patient_pmt = payer_id == "patient"
+        is_patient_pmt = claim_coverage_id == "patient"
         if errors := self.is_allowed_valid(is_patient_pmt):
             return errors
 
@@ -270,7 +271,75 @@ class LineItemTransaction:
         if errors := self.is_payer_valid(is_self_copay_line_item, is_patient_pmt):
             return errors
 
-        if errors := self.is_transfer_to_valid(payer_id, claim_coverages):
+        if errors := self.is_transfer_to_valid(claim_coverage_id, active_claim_coverages):
             return errors
 
         return []
+
+
+@dataclass
+class ClaimAllocation:
+    """Claim payment details."""
+
+    claim_id: str | UUID
+    claim_coverage_id: str | UUID
+    line_item_transactions: list[LineItemTransaction]
+    move_to_queue_name: str | None = None
+    description: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert dataclass to dictionary."""
+        return {
+            "claim_id": str(self.claim_id),
+            "claim_coverage_id": self.claim_coverage_id,
+            "line_item_transactions": [lit.to_dict() for lit in self.line_item_transactions],
+            "move_to_queue_name": self.move_to_queue_name,
+            "description": self.description,
+        }
+
+    def validate_claim_coverage(
+        self, active_claim_coverages: QuerySet[ClaimCoverage], payer_id: str | None = None
+    ) -> str | None:
+        """Checks that coverage is active, and if from ClaimsRemit that payer_id provided matches the coverage payer_id."""
+        if not payer_id and self.claim_coverage_id == "patient":
+            return None
+        filters = {"id": self.claim_coverage_id} | ({} if not payer_id else {"payer_id": payer_id})
+        if active_claim_coverages.filter(**filters):
+            return None
+        payer_id_message = f" with payer_id {payer_id}" if payer_id else ""
+        return f"The provided claim_coverage_id does not correspond to an active coverage for the claim{payer_id_message}"
+
+    def validate_move_to_queue_name(self) -> list[tuple[str, str, Any]]:
+        """Checks that the queue to move to is a valid name."""
+        if (
+            not self.move_to_queue_name
+            or ClaimQueue.objects.filter(name=self.move_to_queue_name).exists()
+        ):
+            return []
+        return [
+            (
+                "value",
+                "The provided move_to_queue_name does not correspond to an existing ClaimQueue",
+                self.move_to_queue_name,
+            )
+        ]
+
+    def validate(self, claim: Claim, payer_id: str | None = None) -> list[tuple[str, str, Any]]:
+        """Returns error details for a claim allocation."""
+        active_claim_coverages = claim.coverages.active()
+        if coverage_error := self.validate_claim_coverage(active_claim_coverages, payer_id):
+            return [("value", coverage_error, {"claim_coverage_id": self.claim_coverage_id})]
+
+        errors = []
+        errors.extend(self.validate_move_to_queue_name())
+        for index, line_item_transaction in enumerate(self.line_item_transactions):
+            errors.extend(
+                line_item_transaction.validate(
+                    self.line_item_transactions,
+                    index,
+                    claim.line_items.active(),
+                    self.claim_coverage_id,
+                    active_claim_coverages,
+                )
+            )
+        return errors
