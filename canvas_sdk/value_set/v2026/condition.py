@@ -2853,4 +2853,681 @@ class Diabetes(ValueSet):
     }
 
 
-__exports__ = (AdvancedIllness, Diabetes,)
+class DiabeticRetinopathy(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  diabetic retinopathy.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent a diagnosis of diabetic retinopathy.
+
+    **Exclusion Criteria:** Excludes concepts that represent a diagnosis for 'unspecified eye.'
+
+    ** Used in:** CMS131v14
+    """
+    VALUE_SET_NAME = "Diabetic Retinopathy"
+    OID = "2.16.840.1.113883.3.526.3.327"
+    DEFINITION_VERSION = "20210218"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+
+    ICD10CM = {
+        "E08311",   # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy with macular edema
+        "E08319",   # Diabetes mellitus due to underlying condition with unspecified diabetic retinopathy without macular edema
+        "E083211",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E083212",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E083213",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E083291",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E083292",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E083293",  # Diabetes mellitus due to underlying condition with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E083311",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E083312",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E083313",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E083391",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E083392",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E083393",  # Diabetes mellitus due to underlying condition with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E083411",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E083412",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E083413",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E083491",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E083492",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E083493",  # Diabetes mellitus due to underlying condition with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E083511",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with macular edema, right eye
+        "E083512",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with macular edema, left eye
+        "E083513",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with macular edema, bilateral
+        "E083521",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E083522",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E083523",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E083531",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E083532",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E083533",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E083541",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E083542",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E083543",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E083551",  # Diabetes mellitus due to underlying condition with stable proliferative diabetic retinopathy, right eye
+        "E083552",  # Diabetes mellitus due to underlying condition with stable proliferative diabetic retinopathy, left eye
+        "E083553",  # Diabetes mellitus due to underlying condition with stable proliferative diabetic retinopathy, bilateral
+        "E083591",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, right eye
+        "E083592",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, left eye
+        "E083593",  # Diabetes mellitus due to underlying condition with proliferative diabetic retinopathy without macular edema, bilateral
+        "E09311",   # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E09319",   # Drug or chemical induced diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E093211",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E093212",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E093213",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E093291",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E093292",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E093293",  # Drug or chemical induced diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E093311",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E093312",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E093313",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E093391",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E093392",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E093393",  # Drug or chemical induced diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E093411",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E093412",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E093413",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E093491",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E093492",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E093493",  # Drug or chemical induced diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E093511",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
+        "E093512",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
+        "E093513",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
+        "E093521",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E093522",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E093523",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E093531",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E093532",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E093533",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E093541",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E093542",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E093543",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E093551",  # Drug or chemical induced diabetes mellitus with stable proliferative diabetic retinopathy, right eye
+        "E093552",  # Drug or chemical induced diabetes mellitus with stable proliferative diabetic retinopathy, left eye
+        "E093553",  # Drug or chemical induced diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
+        "E093591",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
+        "E093592",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
+        "E093593",  # Drug or chemical induced diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+        "E10311",   # Type 1 diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E10319",   # Type 1 diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E103211",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E103212",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E103213",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E103291",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E103292",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E103293",  # Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E103311",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E103312",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E103313",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E103391",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E103392",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E103393",  # Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E103411",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E103412",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E103413",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E103491",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E103492",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E103493",  # Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E103511",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
+        "E103512",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
+        "E103513",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
+        "E103521",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E103522",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E103523",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E103531",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E103532",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E103533",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E103541",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E103542",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E103543",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E103551",  # Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, right eye
+        "E103552",  # Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, left eye
+        "E103553",  # Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
+        "E103591",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
+        "E103592",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
+        "E103593",  # Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+        "E11311",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E11319",   # Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E113211",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E113212",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E113213",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E113291",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E113292",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E113293",  # Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E113311",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E113312",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E113313",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E113391",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E113392",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E113393",  # Type 2 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E113411",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E113412",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E113413",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E113491",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E113492",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E113493",  # Type 2 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E113511",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
+        "E113512",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
+        "E113513",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
+        "E113521",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E113522",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E113523",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E113531",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E113532",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E113533",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E113541",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E113542",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E113543",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E113551",  # Type 2 diabetes mellitus with stable proliferative diabetic retinopathy, right eye
+        "E113552",  # Type 2 diabetes mellitus with stable proliferative diabetic retinopathy, left eye
+        "E113553",  # Type 2 diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
+        "E113591",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
+        "E113592",  # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
+        "E113593",   # Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+        "E13311",    # Other specified diabetes mellitus with unspecified diabetic retinopathy with macular edema
+        "E13319",    # Other specified diabetes mellitus with unspecified diabetic retinopathy without macular edema
+        "E133211",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133212",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133213",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133291",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133292",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133293",   # Other specified diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133311",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133312",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133313",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133391",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133392",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133393",   # Other specified diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133411",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye
+        "E133412",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye
+        "E133413",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral
+        "E133491",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye
+        "E133492",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye
+        "E133493",   # Other specified diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral
+        "E133511",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye
+        "E133512",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye
+        "E133513",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral
+        "E133521",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye
+        "E133522",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye
+        "E133523",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral
+        "E133531",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye
+        "E133532",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye
+        "E133533",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral
+        "E133541",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye
+        "E133542",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye
+        "E133543",   # Other specified diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral
+        "E133551",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, right eye
+        "E133552",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, left eye
+        "E133553",   # Other specified diabetes mellitus with stable proliferative diabetic retinopathy, bilateral
+        "E133591",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye
+        "E133592",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye
+        "E133593",   # Other specified diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral
+    }
+
+    SNOMEDCT = {
+        "1306699009",  # Stable treated proliferative retinopathy due to diabetes mellitus (disorder)
+        "1306700005",  # Stable treated proliferative retinopathy of bilateral eyes due to diabetes mellitus (disorder)
+        "193349004",   # Preproliferative retinopathy due to diabetes mellitus (disorder)
+        "193350004",   # Advanced maculopathy due to diabetes mellitus (disorder)
+        "232020009",   # Disorder of macula due to diabetes mellitus (disorder)
+        "232021008",   # Proliferative retinopathy with optic disc neovascularization due to diabetes mellitus (disorder)
+        "232022001",   # Proliferative retinopathy with neovascularization elsewhere than the optic disc due to diabetes mellitus (disorder)
+        "232023006",   # Traction detachment of retina due to diabetes mellitus (disorder)
+        "25412000",    # Microaneurysm of retinal artery due to diabetes mellitus (disorder)
+        "311782002",   # Advanced retinal disease due to diabetes mellitus (disorder)
+        "312903003",   # Mild nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312904009",   # Moderate nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312905005",   # Severe nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "312906006",   # Non-high-risk proliferative retinopathy due to diabetes mellitus (disorder)
+        "312907002",   # High risk proliferative retinopathy due to diabetes mellitus (disorder)
+        "312908007",   # Quiescent proliferative retinopathy due to diabetes mellitus (disorder)
+        "312909004",   # Proliferative retinopathy with iris neovascularization due to diabetes mellitus (disorder)
+        "312912001",   # Macular edema due to diabetes mellitus (disorder)
+        "314010006",   # Diffuse exudative maculopathy due to diabetes mellitus (disorder)
+        "314011005",   # Focal exudative maculopathy due to diabetes mellitus (disorder)
+        "314014002",   # Ischemic maculopathy due to diabetes mellitus (disorder)
+        "314015001",   # Mixed maculopathy due to diabetes mellitus (disorder)
+        "390834004",   # Nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "399862001",   # High risk proliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399863006",   # Very severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399864000",   # Macular edema not clinically significant due to diabetes mellitus (disorder)
+        "399865004",   # Very severe proliferative retinopathy due to diabetes mellitus (disorder)
+        "399866003",   # Venous beading of retina due to diabetes mellitus (disorder)
+        "399868002",   # Intraretinal microvascular anomaly due to diabetes mellitus (disorder)
+        "399869005",   # High risk proliferative retinopathy not amenable to photocoagulation due to diabetes mellitus (disorder)
+        "399870006",   # Non-high-risk proliferative retinopathy with no macular edema due to diabetes mellitus (disorder)
+        "399871005",   # Visually threatening retinopathy due to diabetes mellitus (disorder)
+        "399872003",   # Severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "399873008",   # Severe nonproliferative retinopathy without macular edema due to diabetes mellitus (disorder)
+        "399874002",   # High risk proliferative retinopathy with clinically significant macula edema due to diabetes mellitus (disorder)
+        "399875001",   # Non-high-risk proliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "399876000",   # Very severe nonproliferative retinopathy due to diabetes mellitus (disorder)
+        "399877009",   # Very severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus (disorder)
+        "420486006",   # Exudative maculopathy due to type 1 diabetes mellitus (disorder)
+        "420789003",   # Retinopathy due to type 1 diabetes mellitus (disorder)
+        "421779007",   # Exudative maculopathy due to type 2 diabetes mellitus (disorder)
+        "422034002",   # Retinopathy due to type 2 diabetes mellitus (disorder)
+        "4855003",     # Retinopathy due to diabetes mellitus (disorder)
+        "59276001",    # Proliferative retinopathy due to diabetes mellitus (disorder)
+        "870420005",   # Severe nonproliferative retinopathy with venous beading of retina due to diabetes mellitus (disorder)
+    }
+
+
+class FrailtyDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of potential indicators of frailty.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent that a diagnosis of potential frailty when coupled with older age: dependence on durable medical equipment for long-term use, limitation of activities of daily living due to disability, need for assistance with care, pressure ulcers, and falls.
+
+    **Exclusion Criteria:** Exclude concepts that indicate potential frailty when associated with pregnancy, fetal, juvenile, childhood or neonatal conditions; codes that indicate temporary need of durable medical equipment; codes that indicate accidental falls caused by another person, being pushed/shoved/collided into, falls on ice due to ice skates, falls due to impact against a baby buggy/shopping cart/wheelbarrow.
+
+    ** Used in:** CMS131v14
+    """
+
+    VALUE_SET_NAME = "Frailty Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.113.12.1074"
+    DEFINITION_VERSION = "20190315"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    ICD10CM = {
+        "L89000",  # Pressure ulcer of unspecified elbow, unstageable
+        "L89001",  # Pressure ulcer of unspecified elbow, stage 1
+        "L89002",  # Pressure ulcer of unspecified elbow, stage 2
+        "L89003",  # Pressure ulcer of unspecified elbow, stage 3
+        "L89004",  # Pressure ulcer of unspecified elbow, stage 4
+        "L89006",  # Pressure-induced deep tissue damage of unspecified elbow
+        "L89009",  # Pressure ulcer of unspecified elbow, unspecified stage
+        "L89010",  # Pressure ulcer of right elbow, unstageable
+        "L89011",  # Pressure ulcer of right elbow, stage 1
+        "L89012",  # Pressure ulcer of right elbow, stage 2
+        "L89013",  # Pressure ulcer of right elbow, stage 3
+        "L89014",  # Pressure ulcer of right elbow, stage 4
+        "L89016",  # Pressure-induced deep tissue damage of right elbow
+        "L89019",  # Pressure ulcer of right elbow, unspecified stage
+        "L89020",  # Pressure ulcer of left elbow, unstageable
+        "L89021",  # Pressure ulcer of left elbow, stage 1
+        "L89022",  # Pressure ulcer of left elbow, stage 2
+        "L89023",  # Pressure ulcer of left elbow, stage 3
+        "L89024",  # Pressure ulcer of left elbow, stage 4
+        "L89026",  # Pressure-induced deep tissue damage of left elbow
+        "L89029",  # Pressure ulcer of left elbow, unspecified stage
+        "L89100",  # Pressure ulcer of unspecified part of back, unstageable
+        "L89101",  # Pressure ulcer of unspecified part of back, stage 1
+        "L89102",  # Pressure ulcer of unspecified part of back, stage 2
+        "L89103",  # Pressure ulcer of unspecified part of back, stage 3
+        "L89104",  # Pressure ulcer of unspecified part of back, stage 4
+        "L89106",  # Pressure-induced deep tissue damage of unspecified part of back
+        "L89109",  # Pressure ulcer of unspecified part of back, unspecified stage
+        "L89110",  # Pressure ulcer of right upper back, unstageable
+        "L89111",  # Pressure ulcer of right upper back, stage 1
+        "L89112",  # Pressure ulcer of right upper back, stage 2
+        "L89113",  # Pressure ulcer of right upper back, stage 3
+        "L89114",  # Pressure ulcer of right upper back, stage 4
+        "L89116",  # Pressure-induced deep tissue damage of right upper back
+        "L89119",  # Pressure ulcer of right upper back, unspecified stage
+        "L89120",  # Pressure ulcer of left upper back, unstageable
+        "L89121",  # Pressure ulcer of left upper back, stage 1
+        "L89122",  # Pressure ulcer of left upper back, stage 2
+        "L89123",  # Pressure ulcer of left upper back, stage 3
+        "L89124",  # Pressure ulcer of left upper back, stage 4
+        "L89126",  # Pressure-induced deep tissue damage of left upper back
+        "L89129",  # Pressure ulcer of left upper back, unspecified stage
+        "L89130",  # Pressure ulcer of right lower back, unstageable
+        "L89131",  # Pressure ulcer of right lower back, stage 1
+        "L89132",  # Pressure ulcer of right lower back, stage 2
+        "L89133",  # Pressure ulcer of right lower back, stage 3
+        "L89134",  # Pressure ulcer of right lower back, stage 4
+        "L89136",  # Pressure-induced deep tissue damage of right lower back
+        "L89139",  # Pressure ulcer of right lower back, unspecified stage
+        "L89140",  # Pressure ulcer of left lower back, unstageable
+        "L89141",  # Pressure ulcer of left lower back, stage 1
+        "L89142",  # Pressure ulcer of left lower back, stage 2
+        "L89143",  # Pressure ulcer of left lower back, stage 3
+        "L89144",  # Pressure ulcer of left lower back, stage 4
+        "L89146",  # Pressure-induced deep tissue damage of left lower back
+        "L89149",  # Pressure ulcer of left lower back, unspecified stage
+        "L89150",  # Pressure ulcer of sacral region, unstageable
+        "L89151",  # Pressure ulcer of sacral region, stage 1
+        "L89152",  # Pressure ulcer of sacral region, stage 2
+        "L89153",  # Pressure ulcer of sacral region, stage 3
+        "L89154",  # Pressure ulcer of sacral region, stage 4
+        "L89156",  # Pressure-induced deep tissue damage of sacral region
+        "L89159",  # Pressure ulcer of sacral region, unspecified stage
+        "L89200",  # Pressure ulcer of unspecified hip, unstageable
+        "L89201",  # Pressure ulcer of unspecified hip, stage 1
+        "L89202",  # Pressure ulcer of unspecified hip, stage 2
+        "L89203",  # Pressure ulcer of unspecified hip, stage 3
+        "L89204",  # Pressure ulcer of unspecified hip, stage 4
+        "L89206",  # Pressure-induced deep tissue damage of unspecified hip
+        "L89209",  # Pressure ulcer of unspecified hip, unspecified stage
+        "L89210",  # Pressure ulcer of right hip, unstageable
+        "L89211",  # Pressure ulcer of right hip, stage 1
+        "L89212",  # Pressure ulcer of right hip, stage 2
+        "L89213",  # Pressure ulcer of right hip, stage 3
+        "L89214",  # Pressure ulcer of right hip, stage 4
+        "L89216",  # Pressure-induced deep tissue damage of right hip
+        "L89219",  # Pressure ulcer of right hip, unspecified stage
+        "L89220",  # Pressure ulcer of left hip, unstageable
+        "L89221",  # Pressure ulcer of left hip, stage 1
+        "L89222",  # Pressure ulcer of left hip, stage 2
+        "L89223",  # Pressure ulcer of left hip, stage 3
+        "L89224",  # Pressure ulcer of left hip, stage 4
+        "L89226",  # Pressure-induced deep tissue damage of left hip
+        "L89229",  # Pressure ulcer of left hip, unspecified stage
+        "L89300",  # Pressure ulcer of unspecified buttock, unstageable
+        "L89301",  # Pressure ulcer of unspecified buttock, stage 1
+        "L89302",  # Pressure ulcer of unspecified buttock, stage 2
+        "L89303",  # Pressure ulcer of unspecified buttock, stage 3
+        "L89304",  # Pressure ulcer of unspecified buttock, stage 4
+        "L89306",  # Pressure-induced deep tissue damage of unspecified buttock
+        "L89309",  # Pressure ulcer of unspecified buttock, unspecified stage
+        "L89310",  # Pressure ulcer of right buttock, unstageable
+        "L89311",  # Pressure ulcer of right buttock, stage 1
+        "L89312",  # Pressure ulcer of right buttock, stage 2
+        "L89313",  # Pressure ulcer of right buttock, stage 3
+        "L89314",  # Pressure ulcer of right buttock, stage 4
+        "L89316",  # Pressure-induced deep tissue damage of right buttock
+        "L89319",  # Pressure ulcer of right buttock, unspecified stage
+        "L89320",  # Pressure ulcer of left buttock, unstageable
+        "L89321",  # Pressure ulcer of left buttock, stage 1
+        "L89322",  # Pressure ulcer of left buttock, stage 2
+        "L89323",  # Pressure ulcer of left buttock, stage 3
+        "L89324",  # Pressure ulcer of left buttock, stage 4
+        "L89326",  # Pressure-induced deep tissue damage of left buttock
+        "L89329",  # Pressure ulcer of left buttock, unspecified stage
+        "L8940",   # Pressure ulcer of contiguous site of back, buttock and hip, unspecified stage
+        "L8941",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 1
+        "L8942",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 2
+        "L8943",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 3
+        "L8944",   # Pressure ulcer of contiguous site of back, buttock and hip, stage 4
+        "L8945",   # Pressure ulcer of contiguous site of back, buttock and hip, unstageable
+        "L8946",   # Pressure-induced deep tissue damage of contiguous site of back, buttock and hip
+        "L89500",  # Pressure ulcer of unspecified ankle, unstageable
+        "L89501",  # Pressure ulcer of unspecified ankle, stage 1
+        "L89502",  # Pressure ulcer of unspecified ankle, stage 2
+        "L89503",  # Pressure ulcer of unspecified ankle, stage 3
+        "L89504",  # Pressure ulcer of unspecified ankle, stage 4
+        "L89506",  # Pressure-induced deep tissue damage of unspecified ankle
+        "L89509",  # Pressure ulcer of unspecified ankle, unspecified stage
+        "L89510",  # Pressure ulcer of right ankle, unstageable
+        "L89511",  # Pressure ulcer of right ankle, stage 1
+        "L89512",  # Pressure ulcer of right ankle, stage 2
+        "L89513",  # Pressure ulcer of right ankle, stage 3
+        "L89514",  # Pressure ulcer of right ankle, stage 4
+        "L89516",  # Pressure-induced deep tissue damage of right ankle
+        "L89519",  # Pressure ulcer of right ankle, unspecified stage
+        "L89520",  # Pressure ulcer of left ankle, unstageable
+        "L89521",  # Pressure ulcer of left ankle, stage 1
+        "L89522",  # Pressure ulcer of left ankle, stage 2
+        "L89523",  # Pressure ulcer of left ankle, stage 3
+        "L89524",  # Pressure ulcer of left ankle, stage 4
+        "L89526",  # Pressure-induced deep tissue damage of left ankle
+        "L89529",   # Pressure ulcer of left ankle, unspecified stage
+        "L89600",   # Pressure ulcer of unspecified heel, unstageable
+        "L89601",   # Pressure ulcer of unspecified heel, stage 1
+        "L89602",   # Pressure ulcer of unspecified heel, stage 2
+        "L89603",   # Pressure ulcer of unspecified heel, stage 3
+        "L89604",   # Pressure ulcer of unspecified heel, stage 4
+        "L89606",   # Pressure-induced deep tissue damage of unspecified heel
+        "L89609",   # Pressure ulcer of unspecified heel, unspecified stage
+        "L89610",   # Pressure ulcer of right heel, unstageable
+        "L89611",   # Pressure ulcer of right heel, stage 1
+        "L89612",   # Pressure ulcer of right heel, stage 2
+        "L89613",   # Pressure ulcer of right heel, stage 3
+        "L89614",   # Pressure ulcer of right heel, stage 4
+        "L89616",   # Pressure-induced deep tissue damage of right heel
+        "L89619",   # Pressure ulcer of right heel, unspecified stage
+        "L89620",   # Pressure ulcer of left heel, unstageable
+        "L89621",   # Pressure ulcer of left heel, stage 1
+        "L89622",   # Pressure ulcer of left heel, stage 2
+        "L89623",   # Pressure ulcer of left heel, stage 3
+        "L89624",   # Pressure ulcer of left heel, stage 4
+        "L89626",   # Pressure-induced deep tissue damage of left heel
+        "L89629",   # Pressure ulcer of left heel, unspecified stage
+        "L89810",   # Pressure ulcer of head, unstageable
+        "L89811",   # Pressure ulcer of head, stage 1
+        "L89812",   # Pressure ulcer of head, stage 2
+        "L89813",   # Pressure ulcer of head, stage 3
+        "L89814",   # Pressure ulcer of head, stage 4
+        "L89816",   # Pressure-induced deep tissue damage of head
+        "L89819",   # Pressure ulcer of head, unspecified stage
+        "L89890",   # Pressure ulcer of other site, unstageable
+        "L89891",   # Pressure ulcer of other site, stage 1
+        "L89892",   # Pressure ulcer of other site, stage 2
+        "L89893",   # Pressure ulcer of other site, stage 3
+        "L89894",   # Pressure ulcer of other site, stage 4
+        "L89896",   # Pressure-induced deep tissue damage of other site
+        "L89899",   # Pressure ulcer of other site, unspecified stage
+        "L8990",    # Pressure ulcer of unspecified site, unspecified stage
+        "L8991",    # Pressure ulcer of unspecified site, stage 1
+        "L8992",    # Pressure ulcer of unspecified site, stage 2
+        "L8993",    # Pressure ulcer of unspecified site, stage 3
+        "L8994",    # Pressure ulcer of unspecified site, stage 4
+        "L8995",    # Pressure ulcer of unspecified site, unstageable
+        "L8996",    # Pressure-induced deep tissue damage of unspecified site
+        "M6250",    # Muscle wasting and atrophy, not elsewhere classified, unspecified site
+        "M6281",    # Muscle weakness (generalized)
+        "M6284",    # Sarcopenia
+        "R296",     # Repeated falls
+        "W010XXA",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, initial encounter
+        "W010XXD",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, subsequent encounter
+        "W010XXS",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, sequela
+        "W0110XA",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, initial encounter
+        "W0110XD",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, subsequent encounter
+        "W0110XS",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, sequela
+        "W01110A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, initial encounter
+        "W01110D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, subsequent encounter
+        "W01110S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, sequela
+        "W01111A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, initial encounter
+        "W01111D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, subsequent encounter
+        "W01111S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, sequela
+        "W01118A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, initial encounter
+        "W01118D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, subsequent encounter
+        "W01118S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, sequela
+        "W01119A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, initial encounter
+        "W01119D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, subsequent encounter
+        "W01119S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, sequela
+        "W01190A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, initial encounter
+        "W01190D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, subsequent encounter
+        "W01190S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, sequela
+        "W01198A",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, initial encounter
+        "W01198D",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, subsequent encounter
+        "W01198S",   # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, sequela
+        "W06XXXA",   # Fall from bed, initial encounter
+        "W06XXXD",   # Fall from bed, subsequent encounter
+        "W06XXXS",   # Fall from bed, sequela
+        "W07XXXA",   # Fall from chair, initial encounter
+        "W07XXXD",   # Fall from chair, subsequent encounter
+        "W07XXXS",   # Fall from chair, sequela
+        "W08XXXA",   # Fall from other furniture, initial encounter
+        "W08XXXD",   # Fall from other furniture, subsequent encounter
+        "W08XXXS",   # Fall from other furniture, sequela
+        "W100XXA",   # Fall (on)(from) escalator, initial encounter
+        "W100XXD",   # Fall (on)(from) escalator, subsequent encounter
+        "W100XXS",   # Fall (on)(from) escalator, sequela
+        "W101XXA",   # Fall (on)(from) sidewalk curb, initial encounter
+        "W101XXD",   # Fall (on)(from) sidewalk curb, subsequent encounter
+        "W101XXS",   # Fall (on)(from) sidewalk curb, sequela
+        "W102XXA",   # Fall (on)(from) incline, initial encounter
+        "W102XXD",   # Fall (on)(from) incline, subsequent encounter
+        "W102XXS",   # Fall (on)(from) incline, sequela
+        "W108XXA",   # Fall (on) (from) other stairs and steps, initial encounter
+        "W108XXD",   # Fall (on) (from) other stairs and steps, subsequent encounter
+        "W108XXS",   # Fall (on) (from) other stairs and steps, sequela
+        "W109XXA",   # Fall (on) (from) unspecified stairs and steps, initial encounter
+        "W109XXD",   # Fall (on) (from) unspecified stairs and steps, subsequent encounter
+        "W109XXS",   # Fall (on) (from) unspecified stairs and steps, sequela
+        "W1800XA",   # Striking against unspecified object with subsequent fall, initial encounter
+        "W1800XD",   # Striking against unspecified object with subsequent fall, subsequent encounter
+        "W1800XS",   # Striking against unspecified object with subsequent fall, sequela
+        "W1802XA",   # Striking against glass with subsequent fall, initial encounter
+        "W1802XD",   # Striking against glass with subsequent fall, subsequent encounter
+        "W1802XS",   # Striking against glass with subsequent fall, sequela
+        "W1809XA",   # Striking against other object with subsequent fall, initial encounter
+        "W1809XD",   # Striking against other object with subsequent fall, subsequent encounter
+        "W1809XS",   # Striking against other object with subsequent fall, sequela
+        "W1811XA",   # Fall from or off toilet without subsequent striking against object, initial encounter
+        "W1811XD",   # Fall from or off toilet without subsequent striking against object, subsequent encounter
+        "W1811XS",   # Fall from or off toilet without subsequent striking against object, sequela
+        "W1812XA",   # Fall from or off toilet with subsequent striking against object, initial encounter
+        "W1812XD",   # Fall from or off toilet with subsequent striking against object, subsequent encounter
+        "W1812XS",   # Fall from or off toilet with subsequent striking against object, sequela
+        "W182XXA",   # Fall in (into) shower or empty bathtub, initial encounter
+        "W182XXD",   # Fall in (into) shower or empty bathtub, subsequent encounter
+        "W182XXS",   # Fall in (into) shower or empty bathtub, sequela
+        "W1830XA",   # Fall on same level, unspecified, initial encounter
+        "W1830XD",   # Fall on same level, unspecified, subsequent encounter
+        "W1830XS",   # Fall on same level, unspecified, sequela
+        "W1831XA",   # Fall on same level due to stepping on an object, initial encounter
+        "W1831XD",   # Fall on same level due to stepping on an object, subsequent encounter
+        "W1831XS",   # Fall on same level due to stepping on an object, sequela
+        "W1839XA",   # Other fall on same level, initial encounter
+        "W1839XD",   # Other fall on same level, subsequent encounter
+        "W1839XS",   # Other fall on same level, sequela
+        "W19XXXA",   # Unspecified fall, initial encounter
+        "W19XXXD",   # Unspecified fall, subsequent encounter
+        "W19XXXS",   # Unspecified fall, sequela
+        "Y92199",    # Unspecified place in other specified residential institution as the place of occurrence of the external cause
+        "Z593",      # Problems related to living in residential institution
+        "Z736",      # Limitation of activities due to disability
+        "Z7401",     # Bed confinement status
+        "Z7409",     # Other reduced mobility
+        "Z741",      # Need for assistance with personal care
+        "Z742",      # Need for assistance at home and no other household member able to render care
+        "Z743",      # Need for continuous supervision
+        "Z748",      # Other problems related to care provider dependency
+        "Z749",      # Problem related to care provider dependency, unspecified
+        "Z9181",     # History of falling
+        "Z9911",     # Dependence on respirator [ventilator] status
+        "Z993",      # Dependence on wheelchair
+        "Z9981",     # Dependence on supplemental oxygen
+        "Z9989",     # Dependence on other enabling machines and devices
+    }
+
+    SNOMEDCT = {
+        "10637031000119106",  # Pressure injury of buttock stage I (disorder)
+        "10637071000119109",  # Pressure injury of buttock stage II (disorder)
+        "10637111000119102",  # Pressure injury of buttock stage III (disorder)
+        "10637151000119101",  # Pressure injury of buttock stage IV (disorder)
+        "129588001",          # Adult failure to thrive syndrome (disorder)
+        "138371000119104",    # Paresis as late effect of poliomyelitis (disorder)
+        "17886000",           # Fall from wheelchair (event)
+        "20902002",           # Fall from bed (event)
+        "214436006",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting (event)
+        "214437002",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, driver injured (event)
+        "214438007",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, passenger injured (event)
+        "214439004",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, motor cyclist injured (event)
+        "214441003",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, occupant of tram injured (event)
+        "214442005",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, rider of animal or occupant of animal-drawn vehicle injured (event)
+        "214443000",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedal cyclist injured (event)
+        "214444006",          # Noncollision MVA involving fall down stairs of motor bus while boarding or alighting, pedestrian injured (event)
+        "217082002",          # Accidental fall (event)
+        "217083007",          # Fall on or from stairs or steps (event)
+        "217084001",          # Fall on or from escalator (event)
+        "217086004",          # Fall from escalator (event)
+        "217088003",          # Fall on or from stairs (event)
+        "217090002",          # Fall from stairs (event)
+        "217092005",          # Fall on or from steps (event)
+        "217093000",          # Fall on steps (event)
+        "217094006",          # Fall from steps (event)
+        "217142006",          # Fall from chair or bed (event)
+        "217154006",          # Fall on same level from slipping, tripping or stumbling (event)
+        "217155007",          # Fall on same level from slipping (event)
+        "217156008",          # Fall on same level from tripping (event)
+        "217157004",          # Fall on same level from stumbling (event)
+        "217158009",          # Fall on moving sidewalk (event)
+        "217173005",          # Fall from bump against object (event)
+        "225558004",          # Pressure injury of back (disorder)
+        "225562005",          # Pressure injury of sacral region of back (disorder)
+        "225563000",          # Pressure injury of buttock (disorder)
+        "242109009",          # Fall down stairs of motor bus while boarding or alighting (event)
+        "242389003",          # Fall due to wet surface (event)
+        "242390007",          # Fall due to polished surface (event)
+        "242391006",          # Fall due to discarded object (event)
+        "242392004",          # Fall in bath or shower (event)
+        "242395002",          # Fall due to trip on loose carpet (event)
+        "242396001",          # Fall due to uneven surface indoors (event)
+        "242413007",          # Fall from furniture (event)
+        "242414001",          # Fall from stool (event)
+        "242419006",          # Fall from toilet seat (event)
+        "269699007",          # Fall on same level from impact against object (event)
+        "274918000",          # Fall on same level due to nature of surface (event)
+        "33036003",           # Fall on same level (event)
+        "40104005",           # Fall in home (event)
+        "414190009",          # Fall on stairs (event)
+        "427849003",          # Fall on hard surface (event)
+        "428484005",          # Organic failure to thrive (disorder)
+        "429621003",          # Fall on concrete (event)
+        "44188002",           # Fall in shower (event)
+        "56307009",           # Fall from table (event)
+        "67223001",           # Fall on escalator (event)
+        "699214007",          # Pressure injury of hip (disorder)
+        "699216009",          # Pressure injury of coccygeal region of back (disorder)
+        "715504003",          # Spastic paraparesis co-occurrent with deafness (disorder)
+        "74541001",           # Fall from bench (event)
+        "763829004",          # Oculopharyngodistal myopathy (disorder)
+        "823018004",          # Muscle paresis due to and following neuromuscular blockade (disorder)
+        "83468000",           # Fall from chair (event)
+        "8960001000004106",   # Pressure injury of ischial tuberosity region of right buttock (disorder)
+        "90619006",           # Fall in bathtub (event)
+        "92341000119107",     # Weakness of extremities as sequela of stroke (disorder)
+    }
+
+
+class HospiceDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts that indicate a patient is receiving hospice care or services.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent hospice care or services.
+
+    **Exclusion Criteria:** No exclusions.
+
+    ** Used in:** CMS131v14
+    """
+
+    VALUE_SET_NAME = "Hospice Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.1003"
+    DEFINITION_VERSION = "20220818"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    SNOMEDCT = {
+        "170935008",  # Full care by hospice (finding)
+        "170936009",  # Shared care - hospice and general practitioner (finding)
+        "305911006",  # 305911006
+    }
+
+
+class PalliativeCareDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts that indicate a patient is receiving palliative care or services.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent hospice care or services.
+
+    **Exclusion Criteria:** No exclusions.
+
+    ** Used in:** CMS131v14
+    """
+
+    VALUE_SET_NAME = "Palliative Care Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.1167"
+    DEFINITION_VERSION = "20220820"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    ICD10CM = {
+        "Z515",  # Encounter for palliative care
+    }
+
+    SNOMEDCT = {
+        "305686008",  # Seen by palliative care physician (finding)
+        "305824005",  # Seen by palliative care medicine service (finding)
+        "441874000",  # Seen by palliative care service (finding)
+    }
+
+
+__exports__ = (AdvancedIllness, Diabetes, DiabeticRetinopathy, FrailtyDiagnosis, HospiceDiagnosis, PalliativeCareDiagnosis,)
