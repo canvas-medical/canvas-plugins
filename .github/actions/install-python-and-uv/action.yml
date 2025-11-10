@@ -21,8 +21,11 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{inputs.PYTHON_VERSION}}
-        python-version-file: ".python-version"
         check-latest: ${{inputs.CHECK_LATEST}}
+
+    - name: Delete .python-version
+      run: rm .python-version
+      shell: sh
 
     - name: Set Python version in the environment
       run: |

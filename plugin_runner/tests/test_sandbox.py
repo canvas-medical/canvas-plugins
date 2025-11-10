@@ -198,6 +198,29 @@ def test_support_type_annotations() -> None:
     sandbox.execute()
 
 
+def test_support_dataclasses() -> None:
+    """Test that dataclasses can be created."""
+    sandbox = _sandbox_from_code("""
+        from dataclasses import dataclass
+
+        @dataclass
+        class InventoryItem:
+            name: str
+            unit_price: float
+            quantity_on_hand: int = 0
+
+            def total_cost(self) -> float:
+                return self.unit_price * self.quantity_on_hand
+
+
+        item = InventoryItem(name='test', unit_price=0.5, quantity_on_hand=1)
+
+        assert item.total_cost() == 0.5
+    """)
+
+    sandbox.execute()
+
+
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
