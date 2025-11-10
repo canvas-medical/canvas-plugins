@@ -31,7 +31,7 @@ let state = {
     endTime: new Date().toISOString().slice(0, 16),
     daysOfWeek: [],
     recurrence: {
-      type: null,
+      type: '',
       interval: null,
       endDate: ''
     }
@@ -108,6 +108,11 @@ function deleteEvent(eventId) {
 }
 
 function updateEvent() {
+    if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== null)) {
+      alert('Please select a recurrence frequency when days of the week are selected or an interval is set');
+      return;
+    }
+
     const event = state.currentEvent;
 
     const eventData = {
@@ -155,6 +160,11 @@ function updateEvent() {
 function saveEvent() {
   if (state.currentEvent.provider === null || state.currentEvent.title === '') {
     alert('Please fill in all required fields, select at least one provider');
+    return;
+  }
+
+  if (state.currentEvent.recurrence.type === '' && (state.currentEvent.daysOfWeek.length > 0 || state.currentEvent.recurrence.interval !== null)) {
+    alert('Please select a recurrence frequency when days of the week are selected or an interval is set');
     return;
   }
 
@@ -230,7 +240,7 @@ function resetForm() {
     endTime: new Date().toISOString().slice(0, 16),
     daysOfWeek: [],
     recurrence: {
-      type: null,
+      type: '',
       interval: null,
       endDate: ''
     }
@@ -580,6 +590,9 @@ function renderRecurrencePattern() {
             onchange="updateRecurrenceTypeHandler(this.value)"
             class="form-select"
           >
+            <option value="" ${state.currentEvent.recurrence.type === null || state.currentEvent.recurrence.type === '' ? 'selected' : ''}>
+              Select Frequency
+            </option>
             ${state.recurrenceTypes.map(type => `
               <option value="${type.value}" ${state.currentEvent.recurrence.type === type.value ? 'selected' : ''}>
                 ${type.label}
