@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from enum import Enum
@@ -7,6 +6,7 @@ from uuid import UUID
 
 from django.db.models import QuerySet
 from pydantic import Field
+from pydantic.dataclasses import dataclass
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import _BaseEffect
