@@ -7,7 +7,7 @@
         "handlers": [
             {
                 "class": "{{ cookiecutter.__package_name }}.handlers.event_handlers:NewOfficeVisitNoteHandler",
-                "description": "A handler that listens for a note change event and originates a goal command."
+                "description": "A handler that listens for an event and sets an inspirational goal."
             }
         ],
         "commands": [],

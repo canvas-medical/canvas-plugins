@@ -82,23 +82,39 @@ def write_plugin(
     with chdir(integration_tests_plugins_dir):
         cli_runner.invoke(app, "init", input=plugin_name)
 
-    protocol_code = """
+    handler_code = """
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from logger import log
 
-class Protocol(BaseProtocol):
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-    NARRATIVE_STRING = "I was inserted from my plugin's protocol."
+class TestHandler(BaseHandler):
+    RESPONDS_TO = [EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)]
 
-    def compute(self):
-        log.info(self.NARRATIVE_STRING)
-        return []
+    def handle(self) -> None:
+        log.info("I was inserted from my plugin's handler.")
 """
     plugin_dir = integration_tests_plugins_dir / plugin_name
+    handlers_dir = plugin_dir / plugin_name / "handlers"
 
-    with open(plugin_dir / plugin_name / "protocols" / "my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    # Ensure the handlers directory exists (it should from the template)
+    handlers_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(handlers_dir / "test_handler.py", "w") as handler:
+        handler.write(handler_code)
+
+    # Update the CANVAS_MANIFEST.json to include the test handler
+    manifest_path = plugin_dir / plugin_name / "CANVAS_MANIFEST.json"
+    with open(manifest_path, "r+") as manifest_file:
+        manifest_json = json.load(manifest_file)
+        manifest_json["components"]["handlers"].append(
+            {
+                "class": f"{plugin_name}.handlers.test_handler:TestHandler",
+                "description": "A handler for testing",
+            }
+        )
+        manifest_file.seek(0)
+        json.dump(manifest_json, manifest_file, indent=4)
+        manifest_file.truncate()
 
     yield
 
