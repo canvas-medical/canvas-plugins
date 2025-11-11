@@ -23,5 +23,10 @@ class CreateQuestionnaire(_BaseEffect):
             "questionnaire_yaml": self.questionnaire_yaml,
         }
 
+    @property
+    def effect_payload(self) -> dict[str, Any]:
+        """Override to send payload without 'data' wrapper for Canvas compatibility."""
+        return self.values
+
 
 __exports__ = ("CreateQuestionnaire",)
