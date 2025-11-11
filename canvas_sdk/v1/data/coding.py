@@ -16,4 +16,4 @@ class Coding(Model):
     user_selected = models.BooleanField(default=False)
 
 
-__exports__ = ()
+__exports__ = ("Coding",)
