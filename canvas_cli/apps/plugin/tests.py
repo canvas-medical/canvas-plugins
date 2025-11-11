@@ -14,7 +14,16 @@ from typer.testing import CliRunner
 
 from canvas_cli.main import app
 
-from .plugin import _build_package, install, list_secrets, parse_secrets, update, validate_package
+from .plugin import (
+    _build_package,
+    _find_unreferenced_handlers,
+    install,
+    list_secrets,
+    parse_secrets,
+    update,
+    validate_manifest,
+    validate_package,
+)
 
 
 def test_validate_package_unexistant_path() -> None:
@@ -92,15 +101,15 @@ def test_canvas_init(cli_runner: CliRunner, init_plugin_name: str) -> None:
     assert readme.exists()
     assert readme.is_file()
 
-    # protocols dir exists
-    protocols = plugin / "protocols"
-    assert protocols.exists()
-    assert protocols.is_dir()
+    # handlers dir exists
+    handlers = plugin / "handlers"
+    assert handlers.exists()
+    assert handlers.is_dir()
 
-    # protocol file exists in protocols dir
-    protocol = plugin / "protocols" / "my_protocol.py"
-    assert protocol.exists()
-    assert protocol.is_file()
+    # handler file exists in handlers dir
+    handler = plugin / "handlers" / "event_handlers.py"
+    assert handler.exists()
+    assert handler.is_file()
 
 
 def test_build_package(init_plugin: Path) -> None:
@@ -113,7 +122,7 @@ def test_build_package(init_plugin: Path) -> None:
     # check that the package contains the plugin files
     with tarfile.open(package, "r:gz") as tar:
         assert "CANVAS_MANIFEST.json" in tar.getnames()
-        assert "protocols" in tar.getnames()
+        assert "handlers" in tar.getnames()
         assert "README.md" in tar.getnames()
 
 
@@ -121,15 +130,15 @@ def test_build_package(init_plugin: Path) -> None:
     "ignore_lines, expected_present, expected_ignored",
     [
         # 1. Empty ignore file
-        ([], ["CANVAS_MANIFEST.json", "protocols"], [".hidden-dir", ".hidden.file", "symlink"]),
+        ([], ["CANVAS_MANIFEST.json", "handlers"], [".hidden-dir", ".hidden.file", "symlink"]),
         # 2. Relative path
-        (["*.md"], ["CANVAS_MANIFEST.json", "protocols"], ["README.md"]),
+        (["*.md"], ["CANVAS_MANIFEST.json", "handlers"], ["README.md"]),
         # 3. Negated path
-        (["*.md", "!*.json"], ["CANVAS_MANIFEST.json", "protocols"], ["README.md"]),
+        (["*.md", "!*.json"], ["CANVAS_MANIFEST.json", "handlers"], ["README.md"]),
         # 4. Commented lines and mixed rules
         (
             ["*.md", "# this is a comment", "*.tmp"],
-            ["CANVAS_MANIFEST.json", "protocols"],
+            ["CANVAS_MANIFEST.json", "handlers"],
             ["README.md"],
         ),
     ],
@@ -501,3 +510,455 @@ def test_update_enable_disable_only(
     mock_print.assert_any_call(
         "Updating plugin test-plugin from https://example.canvasmedical.com with is_enabled=True"
     )
+
+
+# Tests for validate_manifest and _find_unreferenced_handlers
+
+
+@pytest.fixture
+def plugin_with_manifest(tmp_path: Path) -> Path:
+    """Create a temporary plugin directory with a valid manifest."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest = {
+        "sdk_version": "0.1.4",
+        "plugin_version": "0.0.1",
+        "name": "test_plugin",
+        "description": "Test plugin",
+        "components": {
+            "handlers": [
+                {
+                    "class": "test_plugin.handlers.my_handler:MyHandler",
+                    "description": "A test handler",
+                }
+            ],
+            "commands": [],
+            "content": [],
+            "effects": [],
+            "views": [],
+        },
+        "secrets": [],
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "./README.md",
+    }
+
+    manifest_file = plugin_dir / "CANVAS_MANIFEST.json"
+    manifest_file.write_text(__import__("json").dumps(manifest))
+
+    # Create handlers directory
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    return plugin_dir
+
+
+@pytest.fixture
+def plugin_with_unreferenced_handler(tmp_path: Path) -> Path:
+    """Create a plugin with an unreferenced handler."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest = {
+        "sdk_version": "0.1.4",
+        "plugin_version": "0.0.1",
+        "name": "test_plugin",
+        "description": "Test plugin",
+        "components": {
+            "handlers": [
+                {
+                    "class": "test_plugin.handlers.my_handler:MyHandler",
+                    "description": "A test handler",
+                }
+            ],
+            "commands": [],
+            "content": [],
+            "effects": [],
+            "views": [],
+        },
+        "secrets": [],
+        "tags": {},
+        "references": [],
+        "license": "",
+        "diagram": False,
+        "readme": "./README.md",
+    }
+
+    manifest_file = plugin_dir / "CANVAS_MANIFEST.json"
+    manifest_file.write_text(__import__("json").dumps(manifest))
+
+    # Create handlers directory with two handlers
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    # Referenced handler
+    my_handler = handlers_dir / "my_handler.py"
+    my_handler.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class MyHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    # Unreferenced handler
+    another_handler = handlers_dir / "another_handler.py"
+    another_handler.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class UnreferencedHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    return plugin_dir
+
+
+def test_validate_manifest_success(
+    plugin_with_manifest: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """Test that validate_manifest succeeds with a valid manifest."""
+    validate_manifest(plugin_with_manifest)
+
+    captured = capsys.readouterr()
+    assert f"Plugin {plugin_with_manifest} has a valid CANVAS_MANIFEST.json file" in captured.out
+
+
+def test_validate_manifest_non_existent_directory() -> None:
+    """Test that validate_manifest raises error for non-existent directory."""
+    with pytest.raises(typer.BadParameter, match="does not exist"):
+        validate_manifest(Path("/non/existent/path"))
+
+
+def test_validate_manifest_not_a_directory(tmp_path: Path) -> None:
+    """Test that validate_manifest raises error when path is not a directory."""
+    file_path = tmp_path / "not_a_dir.txt"
+    file_path.write_text("not a directory")
+
+    with pytest.raises(typer.BadParameter, match="is not a directory"):
+        validate_manifest(file_path)
+
+
+def test_validate_manifest_missing_manifest_file(tmp_path: Path) -> None:
+    """Test that validate_manifest raises error when CANVAS_MANIFEST.json is missing."""
+    plugin_dir = tmp_path / "plugin"
+    plugin_dir.mkdir()
+
+    with pytest.raises(typer.BadParameter, match="does not have a CANVAS_MANIFEST.json file"):
+        validate_manifest(plugin_dir)
+
+
+def test_validate_manifest_invalid_json(tmp_path: Path) -> None:
+    """Test that validate_manifest raises error for invalid JSON."""
+    plugin_dir = tmp_path / "plugin"
+    plugin_dir.mkdir()
+
+    manifest_file = plugin_dir / "CANVAS_MANIFEST.json"
+    manifest_file.write_text("{ invalid json }")
+
+    with pytest.raises(typer.Abort):
+        validate_manifest(plugin_dir)
+
+
+@patch("canvas_cli.apps.plugin.plugin._find_unreferenced_handlers")
+def test_validate_manifest_with_unreferenced_handlers(
+    mock_find_unreferenced: Mock, plugin_with_manifest: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """Test that validate_manifest warns about unreferenced handlers."""
+    mock_find_unreferenced.return_value = ["test_plugin.handlers.unreferenced:UnreferencedHandler"]
+
+    validate_manifest(plugin_with_manifest)
+
+    captured = capsys.readouterr()
+    assert "Warning: Found handler classes that are not referenced" in captured.out
+    assert "test_plugin.handlers.unreferenced:UnreferencedHandler" in captured.out
+
+
+def test_find_unreferenced_handlers_detects_unreferenced(
+    plugin_with_unreferenced_handler: Path,
+) -> None:
+    """Test that _find_unreferenced_handlers correctly detects unreferenced handlers."""
+    manifest = __import__("json").loads(
+        (plugin_with_unreferenced_handler / "CANVAS_MANIFEST.json").read_text()
+    )
+
+    unreferenced = _find_unreferenced_handlers(plugin_with_unreferenced_handler, manifest)
+
+    assert len(unreferenced) == 1
+    assert "test_plugin.handlers.another_handler:UnreferencedHandler" in unreferenced
+
+
+def test_find_unreferenced_handlers_all_referenced(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers returns empty when all handlers are referenced."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest = {
+        "components": {
+            "handlers": [
+                {
+                    "class": "test_plugin.handlers.my_handler:MyHandler",
+                    "description": "A test handler",
+                }
+            ]
+        }
+    }
+
+    # Create handler
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    my_handler = handlers_dir / "my_handler.py"
+    my_handler.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class MyHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert len(unreferenced) == 0
+
+
+def test_find_unreferenced_handlers_protocols_key_backwards_compatibility(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers works with 'protocols' key for backwards compatibility."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest = {
+        "components": {
+            "protocols": [
+                {
+                    "class": "test_plugin.protocols.my_protocol:MyProtocol",
+                    "description": "A test protocol",
+                }
+            ]
+        }
+    }
+
+    # Create protocol
+    protocols_dir = plugin_dir / "protocols"
+    protocols_dir.mkdir()
+    (protocols_dir / "__init__.py").touch()
+
+    my_protocol = protocols_dir / "my_protocol.py"
+    my_protocol.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class MyProtocol(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert len(unreferenced) == 0
+
+
+def test_find_unreferenced_handlers_skips_test_files(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers skips test files."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    # Create handlers directory with test file
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    # Test file should be skipped
+    test_file = handlers_dir / "test_handler.py"
+    test_file.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class TestHandler(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    # Tests directory should be skipped
+    tests_dir = plugin_dir / "tests"
+    tests_dir.mkdir()
+    test_in_tests = tests_dir / "my_test.py"
+    test_in_tests.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class HandlerInTestDir(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    # Should not detect handlers in test files or test directories
+    assert len(unreferenced) == 0
+
+
+def test_find_unreferenced_handlers_skips_imported_classes(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers skips imported classes."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    # Create handler that imports BaseHandler
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    my_handler = handlers_dir / "my_handler.py"
+    my_handler.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+# BaseHandler is imported, so should not be flagged as unreferenced
+""")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    # Should not detect BaseHandler as it's imported, not defined in the module
+    assert len(unreferenced) == 0
+
+
+def test_find_unreferenced_handlers_handles_import_errors(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers gracefully handles import errors."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    # Create handler with import error
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    bad_handler = handlers_dir / "bad_handler.py"
+    bad_handler.write_text("""
+from non_existent_module import Something
+
+class MyHandler:
+    pass
+""")
+
+    # Should not raise error, just skip the file
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    assert isinstance(unreferenced, list)
+
+
+def test_find_unreferenced_handlers_no_canvas_sdk(tmp_path: Path) -> None:
+    """Test that _find_unreferenced_handlers returns empty list when canvas_sdk cannot be imported."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest: dict[str, Any] = {"components": {"handlers": []}}
+
+    with patch("canvas_cli.apps.plugin.plugin.importlib.import_module") as mock_import:
+        mock_import.side_effect = ImportError("Cannot import canvas_sdk")
+
+        unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+        assert unreferenced == []
+
+
+def test_find_unreferenced_handlers_mixed_handlers_and_protocols(tmp_path: Path) -> None:
+    """Test detection when manifest has both 'handlers' and 'protocols' keys."""
+    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir.mkdir()
+
+    manifest = {
+        "components": {
+            "handlers": [
+                {
+                    "class": "test_plugin.handlers.handler1:Handler1",
+                    "description": "Handler 1",
+                }
+            ],
+            "protocols": [
+                {
+                    "class": "test_plugin.protocols.protocol1:Protocol1",
+                    "description": "Protocol 1",
+                }
+            ],
+        }
+    }
+
+    # Create handlers
+    handlers_dir = plugin_dir / "handlers"
+    handlers_dir.mkdir()
+    (handlers_dir / "__init__.py").touch()
+
+    handler1 = handlers_dir / "handler1.py"
+    handler1.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class Handler1(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    # Unreferenced handler
+    handler2 = handlers_dir / "handler2.py"
+    handler2.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class Handler2(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    # Create protocols
+    protocols_dir = plugin_dir / "protocols"
+    protocols_dir.mkdir()
+    (protocols_dir / "__init__.py").touch()
+
+    protocol1 = protocols_dir / "protocol1.py"
+    protocol1.write_text("""
+from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.effects import Effect
+
+class Protocol1(BaseHandler):
+    RESPONDS_TO = "test"
+
+    def compute(self) -> list[Effect]:
+        return []
+""")
+
+    unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
+
+    # Should only detect Handler2 as unreferenced
+    assert len(unreferenced) == 1
+    assert "test_plugin.handlers.handler2:Handler2" in unreferenced
