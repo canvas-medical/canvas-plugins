@@ -84,13 +84,13 @@ class LineItemTransaction:
     def to_dict(self) -> dict[str, Any]:
         """Convert dataclass to dictionary."""
         return {
-            "charged": str(self.charged),
-            "adjustment": str(self.adjustment),
+            "charged": str(self.charged) if self.charged is not None else None,
+            "adjustment": str(self.adjustment) if self.adjustment is not None else None,
             "adjustment_code": self.adjustment_code,
-            "allowed": str(self.allowed),
+            "allowed": str(self.allowed) if self.allowed is not None else None,
             "claim_line_item_id": str(self.claim_line_item_id),
             # must be valid claim_line_item_id
-            "payment": str(self.payment),
+            "payment": str(self.payment) if self.payment is not None else None,
             "transfer_to": str(self.transfer_remaining_balance_to),
             # can only be the patient or other active coverages on the claim
             "write_off": self.write_off,
