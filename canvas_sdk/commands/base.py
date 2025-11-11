@@ -118,6 +118,17 @@ class _BaseCommand(TrackableFieldsModel):
             ),
         )
 
+    def _origination_payload_for_batch(self, line_number: int = -1) -> dict:
+        """Originate a new command in the note body for batch processing."""
+        self._validate_before_effect("originate")
+        return {
+            "type": f"ORIGINATE_{self.constantized_key()}_COMMAND",
+            "command": self.command_uuid,
+            "note": self.note_uuid,
+            "data": self.values,
+            "line_number": line_number,
+        }
+
     def edit(self) -> Effect:
         """Edit the command."""
         self._validate_before_effect("edit")

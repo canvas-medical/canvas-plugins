@@ -356,6 +356,8 @@ enum EffectType {
 
   CALENDAR__CREATE = 8001;
   CALENDAR__EVENT__CREATE = 8002;
+
+  BATCH_ORIGINATE_COMMANDS = 6024;
 }
 
 message Effect {
