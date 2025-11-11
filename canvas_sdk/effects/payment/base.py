@@ -91,7 +91,9 @@ class LineItemTransaction:
             "claim_line_item_id": str(self.claim_line_item_id),
             # must be valid claim_line_item_id
             "payment": str(self.payment) if self.payment is not None else None,
-            "transfer_to": str(self.transfer_remaining_balance_to),
+            "transfer_to": str(self.transfer_remaining_balance_to)
+            if self.transfer_remaining_balance_to
+            else None,
             # can only be the patient or other active coverages on the claim
             "write_off": self.write_off,
         }
