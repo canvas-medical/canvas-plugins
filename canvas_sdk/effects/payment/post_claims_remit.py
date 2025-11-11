@@ -48,6 +48,7 @@ class PostClaimsRemit(PostPaymentBase):
             "posting": {
                 "payer_id": self.payer_id,
                 "era_file": self.era_file,
+                "description": self.posting_description,
             },
             "payment_collection": self.payment_collection_values,
             "claims_allocation": [c.to_dict() for c in self.claims_allocation],

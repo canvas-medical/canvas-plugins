@@ -21,14 +21,9 @@ class PostClaimPayment(PostPaymentBase):
     def values(self) -> dict[str, Any]:
         """The values for the payload."""
         return {
-            "posting": {
-                "claim_id": str(self.claim.claim_id),
-                "claim_coverage_id": str(self.claim.claim_coverage_id),
-                "description": self.posting_description,
-            },
+            "posting": {"description": self.posting_description},
             "payment_collection": self.payment_collection_values,
-            "line_item_transactions": [t.to_dict() for t in self.claim.line_item_transactions],
-            "move_to_queue_name": self.claim.move_to_queue_name,
+            "claims_allocation": [self.claim.to_dict()],
         }
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:

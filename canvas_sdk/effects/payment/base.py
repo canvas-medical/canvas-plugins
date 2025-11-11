@@ -88,10 +88,10 @@ class LineItemTransaction:
             "adjustment": str(self.adjustment),
             "adjustment_code": self.adjustment_code,
             "allowed": str(self.allowed),
-            "claim_line_item_id": self.claim_line_item_id,
+            "claim_line_item_id": str(self.claim_line_item_id),
             # must be valid claim_line_item_id
             "payment": str(self.payment),
-            "transfer_to": self.transfer_remaining_balance_to,
+            "transfer_to": str(self.transfer_remaining_balance_to),
             # can only be the patient or other active coverages on the claim
             "write_off": self.write_off,
         }
@@ -282,7 +282,7 @@ class ClaimAllocation:
     """Claim payment details."""
 
     claim_id: str | UUID
-    claim_coverage_id: str | UUID
+    claim_coverage_id: str | UUID | Literal["patient"]
     line_item_transactions: list[LineItemTransaction]
     move_to_queue_name: str | None = None
     description: str | None = None
@@ -291,7 +291,7 @@ class ClaimAllocation:
         """Convert dataclass to dictionary."""
         return {
             "claim_id": str(self.claim_id),
-            "claim_coverage_id": self.claim_coverage_id,
+            "claim_coverage_id": str(self.claim_coverage_id),
             "line_item_transactions": [lit.to_dict() for lit in self.line_item_transactions],
             "move_to_queue_name": self.move_to_queue_name,
             "description": self.description,
@@ -328,7 +328,7 @@ class ClaimAllocation:
         """Returns error details for a claim allocation."""
         active_claim_coverages = claim.coverages.active()
         if coverage_error := self.validate_claim_coverage(active_claim_coverages, payer_id):
-            return [("value", coverage_error, {"claim_coverage_id": self.claim_coverage_id})]
+            return [("value", coverage_error, {"claim_coverage_id": str(self.claim_coverage_id)})]
 
         errors = []
         errors.extend(self.validate_move_to_queue_name())

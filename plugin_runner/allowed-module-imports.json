@@ -352,6 +352,8 @@
   ],
   "canvas_sdk.effects.payment": [
     "ClaimAllocation",
+    "LineItemTransaction",
+    "PaymentMethod",
     "PostClaimPayment",
     "PostClaimsRemit"
   ],
