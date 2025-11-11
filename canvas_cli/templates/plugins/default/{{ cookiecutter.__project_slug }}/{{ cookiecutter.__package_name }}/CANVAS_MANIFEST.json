@@ -6,8 +6,8 @@
     "components": {
         "protocols": [
             {
-                "class": "{{ cookiecutter.__package_name }}.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz..."
+                "class": "{{ cookiecutter.__package_name }}.handlers.event_handlers:NewOfficeVisitNoteHandler",
+                "description": "A handler that does xyz..."
             }
         ],
         "commands": [],
