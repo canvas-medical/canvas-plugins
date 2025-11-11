@@ -44,6 +44,7 @@
   ],
   "canvas_sdk.commands.base": [
     "_BaseCommand",
+    "_ReviewableCommandMixin",
     "_SendableCommandMixin"
   ],
   "canvas_sdk.commands.commands.adjust_prescription": [
@@ -205,6 +206,9 @@
   "canvas_sdk.effects.base": [
     "EffectType",
     "_BaseEffect"
+  ],
+  "canvas_sdk.effects.batch_originate": [
+    "BatchOriginateCommandEffect"
   ],
   "canvas_sdk.effects.billing_line_item": [
     "AddBillingLineItem",

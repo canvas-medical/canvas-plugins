@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v0.76.0 (2025-11-11)
+
+### Chores
+
+- Fix python version when running pytests with uv
+  ([#1248](https://github.com/canvas-medical/canvas-plugins/pull/1248),
+  [`e10eb3f`](https://github.com/canvas-medical/canvas-plugins/commit/e10eb3f15243cca5f1000caf1009bf8711a058f0))
+
+### Features
+
+- Add dataclasses to allowed list
+  ([#1244](https://github.com/canvas-medical/canvas-plugins/pull/1244),
+  [`5fc7e98`](https://github.com/canvas-medical/canvas-plugins/commit/5fc7e983d9c80a8d6dcb85b5839bbecadc11115b))
+
+- Allow prescribe commands to be set in_review
+  ([#1246](https://github.com/canvas-medical/canvas-plugins/pull/1246),
+  [`4bf5af3`](https://github.com/canvas-medical/canvas-plugins/commit/4bf5af3e1510c5f46185d30090807ef14959aafc))
+
+- Batch originate command effect ([#834](https://github.com/canvas-medical/canvas-plugins/pull/834),
+  [`fff2c53`](https://github.com/canvas-medical/canvas-plugins/commit/fff2c53c35b41723afd7c3bdee9118dc67d8cf82))
+
+- Set up tests for example-plugins KOALA-3505
+  ([#1171](https://github.com/canvas-medical/canvas-plugins/pull/1171),
+  [`403890b`](https://github.com/canvas-medical/canvas-plugins/commit/403890b83d7646cf34d24ff9f7f7d867e56d92d3))
+
+Signed-off-by: Mary Dickson <mary.dickson@canvasmedical.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.75.0 (2025-11-04)
 
 ### Features
