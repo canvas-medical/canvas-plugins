@@ -599,6 +599,7 @@
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "Coding",
     "Command",
     "CompoundMedication",
     "Condition",
@@ -760,6 +761,9 @@
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
+  ],
+  "canvas_sdk.v1.data.coding": [
+    "Coding"
   ],
   "canvas_sdk.v1.data.command": [
     "Command"
