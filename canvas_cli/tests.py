@@ -161,22 +161,22 @@ def list_plugin_no_secrets(plugin_name: str) -> tuple[str, int, list[str], list[
 
 def reinstall_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
     """Make a change and reinstall the plugin."""
-    protocol_code = """
+    handler_code = """
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from logger import log
 
-class Protocol(BaseProtocol):
+class AssessHandler(BaseHandler):
     RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-    NARRATIVE_STRING = "EDITED PROTOCOL: I was inserted from my plugin's protocol."
+    NARRATIVE_STRING = "EDITED HANDLER: I was inserted from my plugin's handler."
 
     def compute(self):
         log.info(self.NARRATIVE_STRING)
         return []
 """
 
-    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    with open(f"./{plugin_name}/handlers/event_handlers.py", "w") as handler_file:
+        handler_file.write(handler_code)
 
     return (
         f"install {plugin_name}",
