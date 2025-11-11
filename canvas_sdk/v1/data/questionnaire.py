@@ -61,6 +61,8 @@ class Question(TimestampedModel, IdentifiableModel):
     show_prologue = models.BooleanField()
     code_system = models.CharField(max_length=255)
     code = models.CharField(max_length=100)
+    enabled_behavior = models.CharField(max_length=10, null=True, blank=True)
+    enabled_conditions = models.JSONField(null=True, blank=True)
 
 
 class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
