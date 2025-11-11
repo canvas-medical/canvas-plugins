@@ -18,6 +18,7 @@ class _BaseCommand(TrackableFieldsModel):
         originate_required_fields = ("note_uuid",)
         edit_required_fields = ("command_uuid",)
         send_required_fields = ("command_uuid",)
+        review_required_fields = ("command_uuid",)
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
@@ -189,4 +190,14 @@ class _SendableCommandMixin:
         )
 
 
-__exports__ = ("_BaseCommand", "_SendableCommandMixin")
+class _ReviewableCommandMixin:
+    def review(self) -> Effect:
+        """Fire the review effect the command."""
+        self._validate_before_effect("review")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"REVIEW_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+__exports__ = ("_BaseCommand", "_SendableCommandMixin", "_ReviewableCommandMixin")
