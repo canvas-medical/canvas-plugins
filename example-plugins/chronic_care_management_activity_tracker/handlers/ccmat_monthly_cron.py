@@ -9,7 +9,6 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.billing_line_item import AddBillingLineItem
 from canvas_sdk.effects.note import Note as NoteEffect
 from canvas_sdk.handlers.cron_task import CronTask
-from canvas_sdk.v1.data import PracticeLocation
 from canvas_sdk.v1.data.care_team import CareTeamMembership, CareTeamMembershipStatus
 from canvas_sdk.v1.data.note import Note, NoteStates, NoteType
 from canvas_sdk.v1.data.patient import Patient

@@ -2,14 +2,14 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "chronic_care_management_activity_tracker",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "The Chronic Care Management (CCM) Activity Tracker plugin automates tracking, documentation, and billing for chronic care management services. This plugin provides a comprehensive workflow for managing CCM activities including session tracking, patient banner alerts, and automated monthly billing.",
     "url_permissions": [],
     "components": {
         "applications": [
             {
                 "class": "chronic_care_management_activity_tracker.applications.ccmat_app:CcmatApp",
                 "name": "CCM",
-                "description": "An Application that does xyz...",
+                "description": "Chronic Care Management Activity Tracker Application",
                 "scope": "patient_specific",
                 "icon": "assets/CCM.png"
             }

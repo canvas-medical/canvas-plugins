@@ -5,7 +5,7 @@ from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data.patient import Patient
-from canvas_sdk.v1.data.questionnaire import Questionnaire, Interview
+from canvas_sdk.v1.data.questionnaire import Interview, Questionnaire
 from logger import log
 
 
