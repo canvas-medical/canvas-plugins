@@ -20,11 +20,11 @@ class DiabeticRetinopathySeverityLevel(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     LOINC = {
-        "LA186439",  # No apparent retinopathy
-        "LA186447",  # Mild non-proliferative retinopathy
-        "LA186454",  # Moderate non-proliferative retinopathy
-        "LA186462",  # Severe non-proliferative retinopathy
-        "LA186488",  # Proliferative retinopathy
+        "LA18643-9",  # No apparent retinopathy
+        "LA18644-7",  # Mild non-proliferative retinopathy
+        "LA18645-4",  # Moderate non-proliferative retinopathy
+        "LA18646-2",  # Severe non-proliferative retinopathy
+        "LA18648-8",  # Proliferative retinopathy
     }
 
 
@@ -47,8 +47,8 @@ class AutonomousEyeExamResultOrFinding(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     LOINC = {
-        "LA343980",  # ETDRS Level 20 or lower, without macular edema
-        "LA343998",  # ETDRS Level 35 or higher, with or without macular edema
+        "LA34398-0",  # ETDRS Level 20 or lower, without macular edema
+        "LA34399-8",  # ETDRS Level 35 or higher, with or without macular edema
     }
 
 
