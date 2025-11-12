@@ -90,8 +90,9 @@ from logger import log
 class TestHandler(BaseHandler):
     RESPONDS_TO = [EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)]
 
-    def handle(self) -> None:
+    def compute(self):
         log.info("I was inserted from my plugin's handler.")
+        return []
 """
     plugin_dir = integration_tests_plugins_dir / plugin_name
     handlers_dir = plugin_dir / plugin_name / "handlers"
@@ -167,7 +168,7 @@ from canvas_sdk.handlers import BaseHandler
 from logger import log
 
 class AssessHandler(BaseHandler):
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+    RESPONDS_TO = [EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)]
     NARRATIVE_STRING = "EDITED HANDLER: I was inserted from my plugin's handler."
 
     def compute(self):
@@ -177,6 +178,19 @@ class AssessHandler(BaseHandler):
 
     with open(f"./{plugin_name}/handlers/event_handlers.py", "w") as handler_file:
         handler_file.write(handler_code)
+
+    # Update the CANVAS_MANIFEST.json to point to the new handler
+    manifest_path = f"./{plugin_name}/CANVAS_MANIFEST.json"
+    with open(manifest_path, "r+") as manifest_file:
+        manifest_json = json.load(manifest_file)
+        # Update the first handler in the list to point to our new AssessHandler
+        manifest_json["components"]["handlers"][0] = {
+            "class": f"{plugin_name}.handlers.event_handlers:AssessHandler",
+            "description": "An edited handler for testing",
+        }
+        manifest_file.seek(0)
+        json.dump(manifest_json, manifest_file, indent=4)
+        manifest_file.truncate()
 
     return (
         f"install {plugin_name}",
