@@ -354,7 +354,7 @@ class Claim(TimestampedModel, IdentifiableModel):
         return self.line_items.active().exclude_copay_and_unlinked()
 
     def get_coverage_by_payer_id(
-        self, payer_id: str, subscriber_number: str | None
+        self, payer_id: str, subscriber_number: str | None = None
     ) -> ClaimCoverage | None:
         """Finds the active coverage associated with a payer_id. Optionally checks if the subscriber_number matches,
         which will choose the correct coverage in the case where a patient has two coverages with the same payer_id.
