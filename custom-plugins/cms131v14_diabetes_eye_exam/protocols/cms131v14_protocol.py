@@ -38,6 +38,7 @@ from canvas_sdk.value_set.v2022.encounter import (
     CareServicesInLongTermResidentialFacility,
     NursingFacilityVisit,
 )
+from canvas_sdk.value_set.v2022.intervention import PalliativeOrHospiceCare
 from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
@@ -217,9 +218,11 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         if self._has_palliative_care_in_period(patient):
+            log.info(f"CMS131v14: Patient {patient.id} has palliative care")
             return False
 
         if self._has_bilateral_absence_of_eyes(patient):
+            log.info(f"CMS131v14: Patient {patient.id} has bilateral eye absence")
             return False
 
         return True
@@ -472,7 +475,27 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_bilateral_absence_of_eyes(self, patient: Patient) -> bool:
-        return False
+        """Check for bilateral absence of eyes."""
+        try:
+            conditions = Condition.objects.for_patient(patient.id).active()
+            
+            for condition in conditions:
+                for coding in condition.codings.all():
+                    normalized_system = (coding.system or "").replace("-", "").upper()
+                    code = (coding.code or "")
+                    
+                    # SNOMED 15665641000119103 (Anophthalmos of bilateral eyes)
+                    if normalized_system in {"SNOMED", "SNOMEDCT"} and code == "15665641000119103":
+                        log.info(
+                            f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) for patient {patient.id}"
+                        )
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking bilateral eye absence: {str(e)}")
+            return False
 
     def _has_retinopathy_diagnosis_in_period(self, patient: Patient) -> bool:
         return False
