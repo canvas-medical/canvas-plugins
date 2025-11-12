@@ -10,22 +10,34 @@ from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
 from canvas_sdk.v1.data.referral import ReferralReport
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
+from canvas_sdk.value_set.v2026.condition import (
+    Diabetes,
+    DiabeticRetinopathy,
+    AdvancedIllness,
+    FrailtyDiagnosis,
+    HospiceDiagnosis,
+    PalliativeCareDiagnosis,
+)
+from canvas_sdk.value_set.v2026.encounter import (
+    FrailtyEncounter,
+    PalliativeCareEncounter,
+    HospiceEncounter,
+)
+from canvas_sdk.value_set.v2026.intervention import (
+    HospiceCareAmbulatory,
+    PalliativeCareIntervention,
+)
+from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
+from canvas_sdk.value_set.v2026.device import FrailtyDevice
+from canvas_sdk.value_set.v2026.medication import DementiaMedications
 from canvas_sdk.value_set.v2022.condition import (
-    Diabetes,  #TODO: Update to v2026 when value set is updated
     DementiaAndMentalDegenerations,
     Cancer,
 )
 from canvas_sdk.value_set.v2022.encounter import (
-    FrailtyEncounter,
     CareServicesInLongTermResidentialFacility,
     NursingFacilityVisit,
 )
-from canvas_sdk.value_set.v2022.intervention import (
-    HospiceCareAmbulatory,
-    PalliativeOrHospiceCare,
-)
-from canvas_sdk.value_set.v2022.symptom import FrailtySymptom
-from canvas_sdk.value_set.v2022.device import FrailtyDevice
 from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
@@ -419,7 +431,45 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_palliative_care_in_period(self, patient: Patient) -> bool:
-        return False
+        """
+        Check if the patient received palliative care during the measurement period."""
+        try:
+            # Check all palliative care value sets in conditions (one query)
+            if self._patient_has_any_code_in_value_sets(
+                patient,
+                [PalliativeCareDiagnosis, PalliativeCareEncounter, PalliativeCareIntervention]
+            ):
+                log.info(f"CMS131v14: Found palliative care in conditions for patient {patient.id}")
+                return True
+            
+            # Combine all palliative care codes for claim line item check 
+            palliative_codes = (
+                PalliativeCareEncounter.HCPCSLEVELII |
+                PalliativeCareEncounter.SNOMEDCT |
+                PalliativeCareIntervention.SNOMEDCT
+            )
+            
+            # Check claim line items once with all combined codes
+            if palliative_codes:
+                palliative_claims = ClaimLineItem.objects.filter(
+                    claim__note__patient=patient,
+                    status="active",
+                    from_date__gte=self.timeframe.start.date().isoformat(),
+                    from_date__lte=self.timeframe.end.date().isoformat(),
+                    proc_code__in=palliative_codes,
+                )
+                
+                if palliative_claims.exists():
+                    log.info(
+                        f"CMS131v14: Found palliative care claim (CPT: {palliative_claims.first().proc_code}) for patient {patient.id}"
+                    )
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking palliative care: {str(e)}")
+            return False
 
     def _has_bilateral_absence_of_eyes(self, patient: Patient) -> bool:
         return False
