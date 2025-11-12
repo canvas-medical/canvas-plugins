@@ -11,7 +11,7 @@ class DementiaMedications(ValueSet):
 
     **Exclusion Criteria:** Excludes concepts that represent non-prescribable or branded drugs and excludes concepts that represent components or ingredients.
 
-    ** Used in:** CMS131v14
+    ** Used in:** CMS130v14
     """
 
     VALUE_SET_NAME = "Dementia Medications"
@@ -26,7 +26,7 @@ class DementiaMedications(ValueSet):
         "1599805",  # 24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 14 MG Extended Release Oral Capsule
         "1805420",  # 24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 21 MG Extended Release Oral Capsule
         "1805425",  # 24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 7 MG Extended Release Oral Capsule
-        "1858970",  # {7 (24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 14 MG Extended Release Oral Capsule) / 7 (24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 21 MG Extended Release Oral Capsule) / 7 (24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 28 MG Extended Release Oral Capsule) / 7 (24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 7 MG Extended Release Oral Capsule)} Pack
+        "1858970",  # {7 (24 HR donepezil hydrochloride 10 MG / memantine hydrochloride 14 MG Extended Release Oral Cap...
         "310436",  # galantamine 4 MG Oral Tablet
         "310437",  # galantamine 8 MG Oral Tablet
         "312835",  # rivastigmine 3 MG Oral Capsule
@@ -42,12 +42,12 @@ class DementiaMedications(ValueSet):
         "860901",  # galantamine hydrobromide 4 MG/ML Oral Solution
         "996561",  # memantine hydrochloride 10 MG Oral Tablet
         "996571",  # memantine hydrochloride 5 MG Oral Tablet
-        "996572",  # {21 (memantine hydrochloride 10 MG Oral Tablet) / 28 (memantine hydrochloride 5 MG Oral Tablet)} Pack
+        "996572",  # {21 (memantine hydrochloride 10 MG Oral Tablet) / 28 (memantine hydrochloride 5 MG Oral Tablet) }...
         "996594",  # 24 HR memantine hydrochloride 14 MG Extended Release Oral Capsule
         "996603",  # 24 HR memantine hydrochloride 21 MG Extended Release Oral Capsule
         "996609",  # 24 HR memantine hydrochloride 28 MG Extended Release Oral Capsule
         "996615",  # 24 HR memantine hydrochloride 7 MG Extended Release Oral Capsule
-        "996624",  # {7 (24 HR memantine hydrochloride 14 MG Extended Release Oral Capsule) / 7 (24 HR memantine hydrochloride 21 MG Extended Release Oral Capsule) / 7 (24 HR memantine hydrochloride 28 MG Extended Release Oral Capsule) / 7 (24 HR memantine hydrochloride 7 MG Extended Release Oral Capsule)} Pack
+        "996624",  # {7 (24 HR memantine hydrochloride 14 MG Extended Release Oral Capsule) / 7 (24 HR memantine hydro...
         "996740",  # memantine hydrochloride 2 MG/ML Oral Solution
         "997220",  # donepezil hydrochloride 10 MG Disintegrating Oral Tablet
         "997223",  # donepezil hydrochloride 10 MG Oral Tablet
@@ -56,4 +56,6 @@ class DementiaMedications(ValueSet):
     }
 
 
-__exports__ = (DementiaMedications,)
+__exports__ = (
+    "DementiaMedications",
+)
