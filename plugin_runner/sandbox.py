@@ -130,9 +130,6 @@ STANDARD_LIBRARY_MODULES = {
     "operator": {
         "and_",
     },
-    "pathlib": {
-        "Path",
-    },
     "random": {
         "choices",
         "uniform",

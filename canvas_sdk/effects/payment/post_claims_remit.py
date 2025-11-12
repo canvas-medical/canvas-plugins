@@ -1,9 +1,6 @@
-import base64
-import mimetypes
 from typing import Any
 
 from django.db.models import QuerySet
-from pydantic import FilePath
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType
@@ -24,22 +21,22 @@ class PostClaimsRemit(PostPaymentBase):
         effect_type = EffectType.POST_CLAIMS_REMIT
 
     payer_id: str
-    era_document: FilePath | None = None
+    era_document: dict | None = None
     claims_allocation: list[ClaimAllocation]
 
-    @property
-    def era_file(self) -> dict[str, str] | None:
-        """The base64 encoded file contents."""
-        if not self.era_document:
-            return None
-        with open(self.era_document, "rb") as fh:
-            b64 = base64.b64encode(fh.read()).decode()
-        content_type = mimetypes.guess_type(str(self.era_document))[0] or "application/octet-stream"
-        return {
-            "filename": self.era_document.name,
-            "content_type": content_type,
-            "base64": b64,
-        }
+    # @property
+    # def era_file(self) -> dict[str, str] | None:
+    #     """The base64 encoded file contents."""
+    #     if not self.era_document:
+    #         return None
+    #     with open(self.era_document, "rb") as fh:
+    #         b64 = base64.b64encode(fh.read()).decode()
+    #     content_type = mimetypes.guess_type(str(self.era_document))[0] or "application/octet-stream"
+    #     return {
+    #         "filename": self.era_document.name,
+    #         "content_type": content_type,
+    #         "base64": b64,
+    #     }
 
     @property
     def values(self) -> dict[str, Any]:
@@ -47,7 +44,7 @@ class PostClaimsRemit(PostPaymentBase):
         return {
             "posting": {
                 "payer_id": self.payer_id,
-                "era_file": self.era_file,
+                "era_file": self.era_document,
                 "description": self.posting_description,
             },
             "payment_collection": self.payment_collection_values,
