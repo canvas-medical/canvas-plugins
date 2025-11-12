@@ -1,1 +1,63 @@
-{"sdk_version": "0.1.4", "plugin_version": "0.0.1", "name": "cms130v6_colorectal_cancer_screening", "description": "CMS130v6 - Colorectal Cancer Screening. Percentage of adults 50-75 years of age who had appropriate screening for colorectal cancer.", "components": {"protocols": [{"class": "cms130v6_colorectal_cancer_screening.protocols.my_protocol:CMS130v6ColorectalCancerScreening", "description": "Colorectal Cancer Screening - CMS130v6", "meta": {"title": "Colorectal Cancer Screening", "description": "Percentage of adults 50-75 years of age who had appropriate screening for colorectal cancer.", "version": "2027-01-01v6", "information": "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html", "identifiers": ["CMS130v6"], "types": ["CQM"], "authors": ["Centers for Medicare & Medicaid Services"], "references": ["https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html"]}}], "commands": [], "content": [], "effects": [], "views": []}, "secrets": [], "tags": {"clinical_quality_measure": "CMS130v6", "category": "preventive_care", "measure_type": "preventive_care", "age_group": "50-75", "screening_type": "colorectal_cancer"}, "references": ["https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html", "American Cancer Society. 2015. \"Cancer Prevention & Early Detection Facts & Figures 2015-2016.\" Atlanta: American Cancer Society.", "National Cancer Institute. 2015. \"SEER Stat Fact Sheets: Colon and Rectum Cancer.\" Bethesda, MD, http://seer.cancer.gov/statfacts/html/colorect.html", "U.S. Preventive Services Task Force (USPSTF). 2008. \"Screening for colorectal cancer: U.S. Preventive Services Task Force recommendation statement.\" Ann Intern Med 149(9):627-37."], "license": "", "diagram": false, "readme": "./README.md"}
+{
+   "sdk_version":"0.1.4",
+   "plugin_version":"0.0.1",
+   "name":"cms130v6_colorectal_cancer_screening",
+   "description":"CMS130v6 - Colorectal Cancer Screening. Percentage of adults 50-75 years of age who had appropriate screening for colorectal cancer.",
+   "components":{
+      "protocols":[
+         {
+            "class":"cms130v6_colorectal_cancer_screening.protocols.my_protocol:CMS130v6ColorectalCancerScreening",
+            "description":"Colorectal Cancer Screening - CMS130v6",
+            "meta":{
+               "title":"Colorectal Cancer Screening",
+               "description":"Percentage of adults 50-75 years of age who had appropriate screening for colorectal cancer.",
+               "version":"2027-01-01v6",
+               "information":"https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html",
+               "identifiers":[
+                  "CMS130v6"
+               ],
+               "types":[
+                  "CQM"
+               ],
+               "authors":[
+                  "Centers for Medicare & Medicaid Services"
+               ],
+               "references":[
+                  "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html"
+               ]
+            }
+         }
+      ],
+      "commands":[
+
+      ],
+      "content":[
+
+      ],
+      "effects":[
+
+      ],
+      "views":[
+
+      ]
+   },
+   "secrets":[
+
+   ],
+   "tags":{
+      "clinical_quality_measure":"CMS130v6",
+      "category":"preventive_care",
+      "measure_type":"preventive_care",
+      "age_group":"50-75",
+      "screening_type":"colorectal_cancer"
+   },
+   "references":[
+      "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html",
+      "American Cancer Society. 2015. \"Cancer Prevention & Early Detection Facts & Figures 2015-2016.\" Atlanta: American Cancer Society.",
+      "National Cancer Institute. 2015. \"SEER Stat Fact Sheets: Colon and Rectum Cancer.\" Bethesda, MD, http://seer.cancer.gov/statfacts/html/colorect.html",
+      "U.S. Preventive Services Task Force (USPSTF). 2008. \"Screening for colorectal cancer: U.S. Preventive Services Task Force recommendation statement.\" Ann Intern Med 149(9):627-37."
+   ],
+   "license":"",
+   "diagram":false,
+   "readme":"./README.md"
+}
