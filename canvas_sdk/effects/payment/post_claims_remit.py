@@ -21,22 +21,9 @@ class PostClaimsRemit(PostPaymentBase):
         effect_type = EffectType.POST_CLAIMS_REMIT
 
     payer_id: str
-    era_document: dict | None = None
+    # TBD: figure out how we are going to handle files sent to home-app
+    era_document: str | None = None
     claims_allocation: list[ClaimAllocation]
-
-    # @property
-    # def era_file(self) -> dict[str, str] | None:
-    #     """The base64 encoded file contents."""
-    #     if not self.era_document:
-    #         return None
-    #     with open(self.era_document, "rb") as fh:
-    #         b64 = base64.b64encode(fh.read()).decode()
-    #     content_type = mimetypes.guess_type(str(self.era_document))[0] or "application/octet-stream"
-    #     return {
-    #         "filename": self.era_document.name,
-    #         "content_type": content_type,
-    #         "base64": b64,
-    #     }
 
     @property
     def values(self) -> dict[str, Any]:
@@ -44,7 +31,7 @@ class PostClaimsRemit(PostPaymentBase):
         return {
             "posting": {
                 "payer_id": self.payer_id,
-                "era_file": self.era_document,
+                "era_document": self.era_document,
                 "description": self.posting_description,
             },
             "payment_collection": self.payment_collection_values,
@@ -104,15 +91,7 @@ class PostClaimsRemit(PostPaymentBase):
         errors.extend(self.validate_claim_ids(claim_ids, claims))
 
         for claim_allocation in self.claims_allocation:
-            claim = claims.get(id=claim_allocation.claim_id)
-            claim_errors = claim_allocation.validate(claim, self.payer_id)
+            claim_errors = claim_allocation.validate(self.payer_id)
             errors.extend([self._create_error_detail(*e) for e in claim_errors])
 
         return errors
-
-
-__exports__ = (
-    "PostClaimsRemit",
-    "ClaimAllocation",
-    "PaymentMethod",
-)

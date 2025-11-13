@@ -4,7 +4,6 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType
 from canvas_sdk.effects.payment.base import ClaimAllocation, PostPaymentBase
-from canvas_sdk.v1.data import Claim
 
 
 class PostClaimPayment(PostPaymentBase):
@@ -29,15 +28,7 @@ class PostClaimPayment(PostPaymentBase):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if not (claim := Claim.objects.get(id=self.claim.claim_id)):
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "The provided claim_id does not correspond with an existing Claim",
-                    self.claim.claim_id,
-                )
-            )
-        errors.extend([self._create_error_detail(*e) for e in self.claim.validate(claim)])
+        errors.extend([self._create_error_detail(*e) for e in self.claim.validate()])
         errors.extend(self.validate_payment_method_fields())
 
         return errors

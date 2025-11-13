@@ -53,19 +53,20 @@ class PostPaymentBase(_BaseEffect):
         """Checks that check_number and check_date are provided when method is 'check'."""
         if self.method != PaymentMethod.CHECK:
             return []
+        errors = []
         if not self.check_number:
-            return [
+            errors.append(
                 self._create_error_detail(
                     "value", "Check number is required for payment method CHECK", self.check_number
                 )
-            ]
+            )
         if not self.check_date:
-            return [
+            errors.append(
                 self._create_error_detail(
                     "value", "Check date is required for payment method CHECK", self.check_date
                 )
-            ]
-        return []
+            )
+        return errors
 
 
 @dataclass
@@ -324,8 +325,15 @@ class ClaimAllocation:
             )
         ]
 
-    def validate(self, claim: Claim, payer_id: str | None = None) -> list[tuple[str, str, Any]]:
+    def validate_claim_id(self) -> Claim | None:
+        """Checks that the claim exists."""
+        return Claim.objects.filter(id=self.claim_id).first()
+
+    def validate(self, payer_id: str | None = None) -> list[tuple[str, str, Any]]:
         """Returns error details for a claim allocation."""
+        if not (claim := self.validate_claim_id()):
+            claim_error = "The provided claim_id does not correspond with an existing Claim"
+            return [("value", claim_error, str(self.claim_id))]
         active_claim_coverages = claim.coverages.active()
         if coverage_error := self.validate_claim_coverage(active_claim_coverages, payer_id):
             return [("value", coverage_error, {"claim_coverage_id": str(self.claim_coverage_id)})]

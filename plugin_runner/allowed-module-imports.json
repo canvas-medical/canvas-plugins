@@ -354,18 +354,12 @@
     "ClaimAllocation",
     "LineItemTransaction",
     "PaymentMethod",
-    "PostClaimPayment",
-    "PostClaimsRemit"
+    "PostClaimPayment"
   ],
   "canvas_sdk.effects.payment.post_claim_payment": [
     "ClaimAllocation",
     "PaymentMethod",
     "PostClaimPayment"
-  ],
-  "canvas_sdk.effects.payment.post_claims_remit": [
-    "ClaimAllocation",
-    "PaymentMethod",
-    "PostClaimsRemit"
   ],
   "canvas_sdk.effects.payment_processor": [
     "AddPaymentMethodResponse",
