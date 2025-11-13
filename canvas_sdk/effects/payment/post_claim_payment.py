@@ -20,7 +20,6 @@ class PostClaimPayment(PostPaymentBase):
     def values(self) -> dict[str, Any]:
         """The values for the payload."""
         return {
-            "posting": {"description": self.posting_description},
             "payment_collection": self.payment_collection_values,
             "claims_allocation": [self.claim.to_dict()],
         }

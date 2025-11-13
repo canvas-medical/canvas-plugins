@@ -27,11 +27,8 @@ class PostPaymentBase(_BaseEffect):
     An BaseEffect for posting payment(s) to claim(s).
     """
 
-    posting_description: str | None = None
-
     check_date: date | None = None
     check_number: str | None = None
-    # ^ these two are required only if method == check
     deposit_date: date | None = None
     method: PaymentMethod
     payment_description: str | None = None

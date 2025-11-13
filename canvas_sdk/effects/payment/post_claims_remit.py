@@ -29,11 +29,7 @@ class PostClaimsRemit(PostPaymentBase):
     def values(self) -> dict[str, Any]:
         """The values for the payload."""
         return {
-            "posting": {
-                "payer_id": self.payer_id,
-                "era_document": self.era_document,
-                "description": self.posting_description,
-            },
+            "remit": {"payer_id": self.payer_id, "era_document": self.era_document},
             "payment_collection": self.payment_collection_values,
             "claims_allocation": [c.to_dict() for c in self.claims_allocation],
         }
