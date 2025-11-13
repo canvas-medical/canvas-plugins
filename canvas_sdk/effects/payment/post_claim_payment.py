@@ -34,8 +34,4 @@ class PostClaimPayment(PostPaymentBase):
         return errors
 
 
-__exports__ = (
-    "PaymentMethod",
-    "PostClaimPayment",
-    "ClaimAllocation",
-)
+__exports__ = ("PostClaimPayment",)

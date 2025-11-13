@@ -351,3 +351,10 @@ class ClaimAllocation:
                 )
             )
         return errors
+
+
+__exports__ = (
+    "PaymentMethod",
+    "LineItemTransaction",
+    "ClaimAllocation",
+)
