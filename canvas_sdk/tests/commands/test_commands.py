@@ -24,6 +24,7 @@ from canvas_sdk.commands import (
 from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from canvas_sdk.commands.commands.immunization_statement import ImmunizationStatementCommand
+from canvas_sdk.commands.commands.review.base import ReportReviewCommunicationMethod
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.tests.commands.utils import (
     COMMANDS,
@@ -89,6 +90,24 @@ def goal() -> dict[str, Any]:
 def chart_section_review() -> dict[str, Any]:
     """Chart Section Review Command for testing."""
     return {"section": ChartSectionReviewCommand.Sections.MEDICATIONS}
+
+
+def labReview() -> dict[str, Any]:
+    """Lab Review Command for testing."""
+    return {
+        "message_to_patient": "Lab results reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test lab review",
+    }
+
+
+def imagingReview() -> dict[str, Any]:
+    """Imaging Review Command for testing."""
+    return {
+        "message_to_patient": "Imaging results reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test imaging review",
+    }
 
 
 @pytest.fixture(scope="module", autouse=True)
