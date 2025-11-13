@@ -89,38 +89,21 @@ from canvas_sdk.handlers import BaseHandler
 from logger import log
 
 
-class TestHandler(BaseHandler):
-    \"\"\"Test handler for integration tests.\"\"\"
+class NewOfficeVisitNoteHandler(BaseHandler):
+    \"\"\"Handler for integration tests.\"\"\"
 
     RESPONDS_TO = EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED)
 
     def compute(self) -> list[Effect]:
         \"\"\"This method gets called when an event of the type RESPONDS_TO is fired.\"\"\"
-        log.info("[TestHandler] Note state change event received")
+        log.info("[NewOfficeVisitNoteHandler] Note state change event received")
         return []
 """
     plugin_dir = integration_tests_plugins_dir / plugin_name
     handlers_dir = plugin_dir / plugin_name / "handlers"
 
-    # Ensure the handlers directory exists (it should from the template)
-    handlers_dir.mkdir(parents=True, exist_ok=True)
-
-    with open(handlers_dir / "test_handler.py", "w") as handler:
+    with open(handlers_dir / "event_handlers.py", "w") as handler:
         handler.write(handler_code)
-
-    # Update the CANVAS_MANIFEST.json to include the test handler
-    manifest_path = plugin_dir / plugin_name / "CANVAS_MANIFEST.json"
-    with open(manifest_path, "r+") as manifest_file:
-        manifest_json = json.load(manifest_file)
-        manifest_json["components"]["handlers"].append(
-            {
-                "class": f"{plugin_name}.handlers.test_handler:TestHandler",
-                "description": "A handler for testing",
-            }
-        )
-        manifest_file.seek(0)
-        json.dump(manifest_json, manifest_file, indent=4)
-        manifest_file.truncate()
 
     yield
 
