@@ -95,3 +95,6 @@ class PostClaimsRemit(PostPaymentBase):
             errors.extend([self._create_error_detail(*e) for e in claim_errors])
 
         return errors
+
+
+__exports__ = ()
