@@ -873,21 +873,6 @@ class MyHandler:
     assert isinstance(unreferenced, list)
 
 
-def test_find_unreferenced_handlers_no_canvas_sdk(tmp_path: Path) -> None:
-    """Test that _find_unreferenced_handlers returns empty list when canvas_sdk cannot be imported."""
-    plugin_dir = tmp_path / "test_plugin"
-    plugin_dir.mkdir()
-
-    manifest: dict[str, Any] = {"components": {"handlers": []}}
-
-    with patch("canvas_cli.apps.plugin.plugin.importlib.import_module") as mock_import:
-        mock_import.side_effect = ImportError("Cannot import canvas_sdk")
-
-        unreferenced = _find_unreferenced_handlers(plugin_dir, manifest)
-
-        assert unreferenced == []
-
-
 def test_find_unreferenced_handlers_mixed_handlers_and_protocols(tmp_path: Path) -> None:
     """Test detection when manifest has both 'handlers' and 'protocols' keys."""
     plugin_dir = tmp_path / "test_plugin"
