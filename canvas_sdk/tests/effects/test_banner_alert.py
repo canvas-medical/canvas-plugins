@@ -1,4 +1,3 @@
-import json
 import shutil
 from collections.abc import Generator
 from contextlib import chdir
@@ -57,13 +56,19 @@ def write_and_install_handler_and_clean_up(
         cli_runner.invoke(app, "init", input=plugin_name)
 
     handler_code = f"""
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 
-class BannerAlertHandler(BaseHandler):
+
+class NewOfficeVisitNoteHandler(BaseHandler):
+    \"\"\"Handler that adds a banner alert for testing purposes.\"\"\"
+
     RESPONDS_TO = EventType.Name(EventType.ENCOUNTER_CREATED)
-    def compute(self):
+
+    def compute(self) -> list[Effect]:
+        \"\"\"This method gets called when an event of the type RESPONDS_TO is fired.\"\"\"
         return [
             AddBannerAlert(
                 patient_id="{first_patient_id}",
@@ -80,34 +85,6 @@ class BannerAlertHandler(BaseHandler):
 
     with open(plugin_dir / package_name / "handlers" / "event_handlers.py", "w") as handler_file:
         handler_file.write(handler_code)
-
-    # Update manifest to reference the correct handler
-    manifest = {
-        "sdk_version": "0.1.4",
-        "plugin_version": "0.0.1",
-        "name": package_name,
-        "description": "Test plugin for banner alert",
-        "components": {
-            "handlers": [
-                {
-                    "class": f"{package_name}.handlers.event_handlers:BannerAlertHandler",
-                    "description": "Handler that adds a banner alert on encounter created",
-                }
-            ],
-            "commands": [],
-            "content": [],
-            "effects": [],
-            "views": [],
-        },
-        "secrets": [],
-        "tags": {},
-        "references": [],
-        "license": "",
-        "diagram": False,
-        "readme": "./README.md",
-    }
-    with open(plugin_dir / package_name / "CANVAS_MANIFEST.json", "w") as manifest_file:
-        json.dump(manifest, manifest_file)
 
     with open(_build_package(plugin_dir / package_name), "rb") as package:
         # install the plugin
