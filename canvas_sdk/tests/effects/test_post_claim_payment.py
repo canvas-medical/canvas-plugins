@@ -16,7 +16,7 @@ from canvas_sdk.effects.payment.post_claim_payment import PostClaimPayment
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock common DB queries used by post_claim_payment._get_error_details."""
     with (
-        patch("canvas_sdk.effects.payment.post_claim_payment.Claim.objects") as mock_claim_q,
+        patch("canvas_sdk.effects.payment.base.Claim.objects") as mock_claim_q,
         patch("canvas_sdk.effects.payment.base.ClaimLineItem.objects") as mock_cli_q,
         patch("canvas_sdk.effects.payment.base.ClaimQueue.objects") as mock_queue,
     ):
@@ -66,9 +66,6 @@ def test_post_claim_payment_requires_existing_claim(mock_db_queries: dict[str, M
         claim_coverage_id="patient",
         line_item_transactions=[],
     )
-    # Prevent validate from attempting to access attributes on a missing Claim;
-    # we only want to assert that the missing-claim error is produced.
-    claim_alloc.validate = MagicMock(return_value=[])  # type: ignore
 
     post = PostClaimPayment(
         claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("0.00")
