@@ -125,31 +125,29 @@ class NoteTask(IdentifiableModel):
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
     )
     note = models.ForeignKey(
-        "v1.Note", on_delete=models.DO_NOTHING, related_name="note_tasks", null=True
+        "v1.Note", on_delete=models.CASCADE, related_name="note_tasks", null=True
     )
-    task = models.ForeignKey(
-        Task, on_delete=models.DO_NOTHING, related_name="note_tasks", null=True
-    )
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         null=True,
     )
     original_title = models.TextField(blank=True, default="")
     original_assignee = models.ForeignKey(
         "v1.Staff",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.SET_NULL,
         related_name="assignee_note_tasks",
         null=True,
     )
     original_team = models.ForeignKey(
         "v1.Team",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.SET_NULL,
         related_name="note_tasks",
         null=True,
     )
     original_role = models.ForeignKey(
-        "v1.CareTeamRole", related_name="+", on_delete=models.DO_NOTHING, null=True
+        "v1.CareTeamRole", related_name="+", on_delete=models.SET_NULL, null=True
     )
     original_due = models.DateTimeField(blank=True, null=True)
 
