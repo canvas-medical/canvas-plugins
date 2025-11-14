@@ -1,4 +1,5 @@
 import arrow
+from django.db.models import Q
 
 from canvas_sdk.commands import PerformCommand, ReferCommand
 from canvas_sdk.commands.constants import CodeSystems, ServiceProvider
@@ -65,6 +66,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     RESPONDS_TO = [
         EventType.Name(EventType.CONDITION_CREATED),
         EventType.Name(EventType.CONDITION_UPDATED),
+        EventType.Name(EventType.CONDITION_RESOLVED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
+        EventType.Name(EventType.INTERVIEW_CREATED),
+        EventType.Name(EventType.INTERVIEW_UPDATED),
+        EventType.Name(EventType.PATIENT_UPDATED),
+        EventType.Name(EventType.ENCOUNTER_CREATED),
+        EventType.Name(EventType.ENCOUNTER_UPDATED),
+        EventType.Name(EventType.CLAIM_CREATED),
+        EventType.Name(EventType.CLAIM_UPDATED)
     ]
 
     # Age range constants
@@ -143,11 +154,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             if self._should_remove_card(patient, condition):
                 return [self._create_not_applicable_card(patient)]
 
-            if not self._in_initial_population(patient):
+            # Calculate age
+            age = int(patient.age_at(self.timeframe.end))
+
+            if not self._in_initial_population(patient, age):
                 log.info(f"CMS131v14: Patient {patient.id} not in initial population")
                 return [self._create_not_applicable_card(patient)]
 
-            if not self._in_denominator(patient):
+            if not self._in_denominator(patient, age):
                 log.info(f"CMS131v14: Patient {patient.id} excluded from denominator")
                 return [self._create_not_applicable_card(patient)]
 
@@ -162,9 +176,9 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             log.error(f"Error in CMS131v14 protocol compute: {str(e)}")
             return []
 
-    def _in_initial_population(self, patient: Patient) -> bool:
-        if not self._check_age_18_to_75(patient):
-            log.info(f"CMS131v14: Patient {patient.id} not in age 18-75 range")
+    def _in_initial_population(self, patient: Patient, age: int) -> bool:
+        if not (self.AGE_RANGE_START <= age <= self.AGE_RANGE_END):
+            log.info(f"CMS131v14: Patient {patient.id} age {age} not in 18-75 range")
             return False
 
         if not self._has_diabetes_diagnosis_overlapping_period(patient):
@@ -176,18 +190,18 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
         return True
 
-    def _in_denominator(self, patient: Patient) -> bool:
+    def _in_denominator(self, patient: Patient, age: int) -> bool:
         if self._has_hospice_care_in_period(patient):
             log.info(f"CMS131v14: Patient {patient.id} in hospice care")
             return False
 
         if self._is_age_66_plus_with_frailty(
-            patient
+            patient, age
         ) and self._has_advanced_illness_or_dementia_meds(patient):
             log.info(f"CMS131v14: Patient {patient.id} is age 66+ with frailty and advanced illness or dementia meds")
             return False
 
-        if self._is_age_66_plus_in_nursing_home(patient):
+        if self._is_age_66_plus_in_nursing_home(patient, age):
             log.info(f"CMS131v14: Patient {patient.id} is age 66+ in nursing home")
             return False
 
@@ -234,24 +248,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis: {str(e)}")
-            return False
-
-    def _check_age_18_to_75(self, patient: Patient) -> bool:
-        try:
-            if not getattr(patient, "birth_date", None):
-                log.info("CMS131v14: Missing birth_date; patient fails age check")
-                return False
-
-            birth_date = arrow.get(patient.birth_date)
-            age_years = (self.now - birth_date).days // 365
-
-            in_range = self.AGE_RANGE_START <= age_years <= self.AGE_RANGE_END
-            log.info(
-                f"CMS131v14: Patient {patient.id} age {age_years} in 18-75 range={in_range}"
-            )
-            return in_range
-        except Exception as e:
-            log.error(f"CMS131v14: Error computing age: {str(e)}")
             return False
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
@@ -314,15 +310,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             log.error(f"CMS131v14: Error checking hospice status: {str(e)}")
             return False
 
-    def _is_age_66_plus_with_frailty(self, patient: Patient) -> bool:
+    def _is_age_66_plus_with_frailty(self, patient: Patient, age: int) -> bool:
         """
         Check if patient is age 66+ with frailty indicators.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
         Uses responses from the "Hospice & Frailty" questionnaire.
         """
         # Check age requirement
-        age = self._calculate_age(patient)
-        if age is None or age < 66:
+        if age < 66:
             return False
 
         try:
@@ -334,8 +329,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 created__gte=self.timeframe.start.datetime,
                 created__lte=self.timeframe.end.datetime,
             )
-
-            log.info(f"CMS131v14: Found {interviews.count()} interviews for patient {patient.id}")
 
             # Check if there are any interviews for the patient
             if not interviews.exists():
@@ -349,15 +342,12 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 status="AC",
             ).select_related('response_option')
 
-            log.info(f"CMS131v14: Found {interview_responses.count()} interview responses for patient {patient.id}")
             
             # Check for frailty-related response codes (from "R-021" question)
             frailty_response_codes = {"105501005"}  # Frailty Device
             
             # Check if any response has a frailty code
             for response in interview_responses:
-                log.info(f"CMS131v14: Response option: {response.response_option}")
-                log.info(f"CMS131v14: Response option code: {response.response_option.code}")
                 if response.response_option and response.response_option.code in frailty_response_codes:
                     log.info(
                         f"CMS131v14: Found frailty response (code: {response.response_option.code}) for patient {patient.id}"
@@ -383,43 +373,33 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             end_date = self.timeframe.end.datetime
             
             # Check for advanced illness conditions using separate targeted queries
-            # Conditions are checked as active, which means they overlap the measurement period
             has_advanced_illness = (
                 Condition.objects.for_patient(patient.id).active().find(DementiaAndMentalDegenerations).exists() or
                 Condition.objects.for_patient(patient.id).active().find(Cancer).exists() or
                 Condition.objects.for_patient(patient.id).active().find(ChemotherapyForAdvancedCancer).exists()
             )
 
-            log.info(f"CMS131v14: Found {has_advanced_illness} advanced illness conditions for patient {patient.id}")
-
             if has_advanced_illness:
                 log.info(f"CMS131v14: Patient {patient.id} has advanced illness")
                 return True
             
             # Check for dementia medications during measurement period or year prior
-            # First find all dementia medications for the patient
-            dementia_meds_queryset = (
+            has_dementia_meds = (
                 Medication.objects.for_patient(patient.id)
                 .active()
                 .find(DementiaMedications)
+                .filter(
+                    Q(
+                        start_date__lte=end_date,
+                        end_date__gte=start_date,
+                        end_date__isnull=False
+                    ) | Q(
+                        start_date__lte=end_date,
+                        end_date__isnull=True
+                    )
+                )
+                .exists()
             )
-            
-            log.info(f"CMS131v14: Found {dementia_meds_queryset.count()} total dementia medications for patient {patient.id}")
-            
-            # Then filter by date range
-            dementia_meds_in_period = dementia_meds_queryset.filter(
-                start_date__lte=end_date,
-                end_date__gte=start_date
-            )
-            
-            log.info(f"CMS131v14: Found {dementia_meds_in_period.count()} dementia medications in period for patient {patient.id}")
-            log.info(f"CMS131v14: Date range: {start_date} to {end_date}")
-            
-            # Debug: show medication dates
-            for med in dementia_meds_queryset[:5]:  # Limit to first 5 for debugging
-                log.info(f"CMS131v14: Medication {med.id} dates: {med.start_date} to {med.end_date}")
-            
-            has_dementia_meds = dementia_meds_in_period.exists()
             
             if has_dementia_meds:
                 log.info(f"CMS131v14: Patient {patient.id} has dementia medications")
@@ -430,7 +410,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             log.error(f"CMS131v14: Error checking advanced illness: {str(e)}")
             return False
 
-    def _is_age_66_plus_in_nursing_home(self, patient: Patient) -> bool:
+    def _is_age_66_plus_in_nursing_home(self, patient: Patient, age: int) -> bool:
         """
         Check for long-term residential care or nursing facility codes.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
@@ -438,8 +418,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         Checks for CPT codes in ClaimLineItem during the measurement period.
         """
         # Check age requirement
-        age = self._calculate_age(patient)
-        if age is None or age < 66:
+        if age < 66:
             return False
 
         try:
@@ -516,21 +495,22 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_bilateral_absence_of_eyes(self, patient: Patient) -> bool:
         """Check for bilateral absence of eyes."""
         try:
-            conditions = Condition.objects.for_patient(patient.id).active()
+            has_bilateral_absence = (
+                Condition.objects.for_patient(patient.id)
+                .active()
+                .filter(
+                    codings__code="15665641000119103",
+                    codings__system__in=["SNOMED", "SNOMEDCT"]
+                )
+                .exists()
+            ) 
             
-            for condition in conditions:
-                for coding in condition.codings.all():
-                    normalized_system = (coding.system or "").replace("-", "").upper()
-                    code = (coding.code or "")
-                    
-                    # SNOMED 15665641000119103 (Anophthalmos of bilateral eyes)
-                    if normalized_system in {"SNOMED", "SNOMEDCT"} and code == "15665641000119103":
-                        log.info(
-                            f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) for patient {patient.id}"
-                        )
-                        return True
+            if has_bilateral_absence:
+                log.info(
+                    f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) for patient {patient.id}"
+                )
             
-            return False
+            return has_bilateral_absence
             
         except Exception as e:
             log.error(f"CMS131v14: Error checking bilateral eye absence: {str(e)}")
@@ -643,19 +623,3 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         )
 
         return card.apply()
-
-    def _calculate_age(self, patient: Patient) -> int | None:
-        """
-        Calculate patient's current age in years.
-        
-        Returns:
-            Age in years or None if birth_date is not available
-        """
-        try:
-            if not patient.birth_date:
-                return None
-            birth_date = arrow.get(patient.birth_date)
-            return (self.now - birth_date).days // 365
-        except Exception as e:
-            log.error(f"CMS131v14: Error calculating age: {str(e)}")
-            return None
