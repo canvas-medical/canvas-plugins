@@ -363,7 +363,6 @@ def test_valid_post_claim_payment_patient_payload_is_correct(
     result = post.apply()
 
     assert json.loads(result.payload)["data"] == {
-        "posting": {"description": None},
         "payment_collection": {
             "check_date": None,
             "check_number": None,
@@ -446,7 +445,6 @@ def test_valid_post_claim_payment_coverage_payload_is_correct(
     result = post.apply()
 
     assert json.loads(result.payload)["data"] == {
-        "posting": {"description": None},
         "payment_collection": {
             "check_date": None,
             "check_number": None,
