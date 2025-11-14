@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "task_comment_logger",
+    "description": "Logs all comments associated with a task, including the internal comment from NoteTask and TaskComments",
+    "components": {
+        "handlers": [
+            {
+                "class": "task_comment_logger.handlers.task_comment_logger:TaskCommentLoggerHandler",
+                "description": "Handler that logs all task comments when task or comment events occur"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
