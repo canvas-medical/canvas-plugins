@@ -2,15 +2,15 @@ from ..value_set import ValueSet
 
 class AdvancedIllness(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  advanced illnesses..
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  advanced illnesses.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis.
 
-    **Inclusion Criteria:** Includes concepts that represent a diagnosis of advanced illness when combined with older age and indications of frailty. Codes cover a wide range of conditions: heart failure, end stage renal disease, liver disease, emphysema, dementia and neurodegenerative disorders, metastatic and sever cancers, respiratory failure, and pulmonary fibrosis..
+    **Inclusion Criteria:** Includes concepts that represent a diagnosis of advanced illness when combined with older age and indications of frailty. Codes cover a wide range of conditions: heart failure, end stage renal disease, liver disease, emphysema, dementia and neurodegenerative disorders, metastatic and sever cancers, respiratory failure, and pulmonary fibrosis.
 
-    **Exclusion Criteria:** Exclude concepts that indicate pregnancy, fetal, juvenile, childhood or neonatal conditions, concepts that indicate acute, temporary, or procedure-related conditions..
+    **Exclusion Criteria:** Exclude concepts that indicate pregnancy, fetal, juvenile, childhood or neonatal conditions, concepts that indicate acute, temporary, or procedure-related conditions.
 
-    ** Used in:** CMS131v14
+    ** Used in:** CMS130v14
     """
 
     VALUE_SET_NAME = "Advanced Illness"
@@ -19,280 +19,247 @@ class AdvancedIllness(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     ICD10CM = {
-        "A8100",  # Creutzfeldt-Jakob disease, unspecified
-        "A8101",  # Variant Creutzfeldt-Jakob disease
-        "A8109",  # Other Creutzfeldt-Jakob disease
-        "C250",  # Malignant neoplasm of head of pancreas
-        "C251",  # Malignant neoplasm of body of pancreas
-        "C252",  # Malignant neoplasm of tail of pancreas
-        "C253",  # Malignant neoplasm of pancreatic duct
-        "C254",  # Malignant neoplasm of endocrine pancreas
-        "C257",  # Malignant neoplasm of other parts of pancreas
-        "C258",  # Malignant neoplasm of overlapping sites of pancreas
-        "C259",  # Malignant neoplasm of pancreas, unspecified
-        "C710",  # Malignant neoplasm of cerebrum, except lobes and ventricles
-        "C711",  # Malignant neoplasm of frontal lobe
-        "C712",  # Malignant neoplasm of temporal lobe
-        "C713",  # Malignant neoplasm of parietal lobe
-        "C714",  # Malignant neoplasm of occipital lobe
-        "C715",  # Malignant neoplasm of cerebral ventricle
-        "C716",  # Malignant neoplasm of cerebellum
-        "C717",  # Malignant neoplasm of brain stem
-        "C718",  # Malignant neoplasm of overlapping sites of brain
-        "C719",  # Malignant neoplasm of brain, unspecified
-        "C770",  # Secondary and unspecified malignant neoplasm of lymph nodes of head, face and neck
-        "C771",  # Secondary and unspecified malignant neoplasm of intrathoracic lymph nodes
-        "C772",  # Secondary and unspecified malignant neoplasm of intra-abdominal lymph nodes
-        "C773",  # Secondary and unspecified malignant neoplasm of axilla and upper limb lymph nodes
-        "C774",  # Secondary and unspecified malignant neoplasm of inguinal and lower limb lymph nodes
-        "C775",  # Secondary and unspecified malignant neoplasm of intrapelvic lymph nodes
-        "C778",  # Secondary and unspecified malignant neoplasm of lymph nodes of multiple regions
-        "C779",  # Secondary and unspecified malignant neoplasm of lymph node, unspecified
-        "C7800",  # Secondary malignant neoplasm of unspecified lung
-        "C7801",  # Secondary malignant neoplasm of right lung
-        "C7802",  # Secondary malignant neoplasm of left lung
-        "C781",  # Secondary malignant neoplasm of mediastinum
-        "C782",  # Secondary malignant neoplasm of pleura
-        "C7830",  # Secondary malignant neoplasm of unspecified respiratory organ
-        "C7839",  # Secondary malignant neoplasm of other respiratory organs
-        "C784",  # Secondary malignant neoplasm of small intestine
-        "C785",  # Secondary malignant neoplasm of large intestine and rectum
-        "C786",  # Secondary malignant neoplasm of retroperitoneum and peritoneum
-        "C787",  # Secondary malignant neoplasm of liver and intrahepatic bile duct
-        "C7880",  # Secondary malignant neoplasm of unspecified digestive organ
-        "C7889",  # Secondary malignant neoplasm of other digestive organs
-        "C7900",  # Secondary malignant neoplasm of unspecified kidney and renal pelvis
-        "C7901",  # Secondary malignant neoplasm of right kidney and renal pelvis
-        "C7902",  # Secondary malignant neoplasm of left kidney and renal pelvis
-        "C7910",  # Secondary malignant neoplasm of unspecified urinary organs
-        "C7911",  # Secondary malignant neoplasm of bladder
-        "C7919",  # Secondary malignant neoplasm of other urinary organs
-        "C792",  # Secondary malignant neoplasm of skin
-        "C7931",  # Secondary malignant neoplasm of brain
-        "C7932",  # Secondary malignant neoplasm of cerebral meninges
-        "C7940",  # Secondary malignant neoplasm of unspecified part of nervous system
-        "C7949",  # Secondary malignant neoplasm of other parts of nervous system
-        "C7951",  # Secondary malignant neoplasm of bone
-        "C7952",  # Secondary malignant neoplasm of bone marrow
-        "C7960",  # Secondary malignant neoplasm of unspecified ovary
-        "C7961",  # Secondary malignant neoplasm of right ovary
-        "C7962",  # Secondary malignant neoplasm of left ovary
-        "C7963",  # Secondary malignant neoplasm of bilateral ovaries
-        "C7970",  # Secondary malignant neoplasm of unspecified adrenal gland
-        "C7971",  # Secondary malignant neoplasm of right adrenal gland
-        "C7972",  # Secondary malignant neoplasm of left adrenal gland
-        "C7981",  # Secondary malignant neoplasm of breast
-        "C7982",  # Secondary malignant neoplasm of genital organs
-        "C7989",  # Secondary malignant neoplasm of other specified sites
-        "C799",  # Secondary malignant neoplasm of unspecified site
-        "C9100",  # Acute lymphoblastic leukemia not having achieved remission
-        "C9102",  # Acute lymphoblastic leukemia, in relapse
-        "C9200",  # Acute myeloblastic leukemia, not having achieved remission
-        "C9202",  # Acute myeloblastic leukemia, in relapse
-        "C9300",  # Acute monoblastic/monocytic leukemia, not having achieved remission
-        "C9302",  # Acute monoblastic/monocytic leukemia, in relapse
-        "C9390",  # Monocytic leukemia, unspecified, not having achieved remission
-        "C9392",  # Monocytic leukemia, unspecified in relapse
-        "C93Z0",  # Other monocytic leukemia, not having achieved remission
-        "C93Z2",  # Other monocytic leukemia, in relapse
-        "C9430",  # Mast cell leukemia not having achieved remission
-        "C9432",  # Mast cell leukemia, in relapse
-        "F0150",  # Vascular dementia, unspecified severity, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F01511",  # Vascular dementia, unspecified severity, with agitation
-        "F01518",  # Vascular dementia, unspecified severity, with other behavioral disturbance
-        "F0152",  # Vascular dementia, unspecified severity, with psychotic disturbance
-        "F0153",  # Vascular dementia, unspecified severity, with mood disturbance
-        "F0154",  # Vascular dementia, unspecified severity, with anxiety
-        "F01A0",  # Vascular dementia, mild, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F01A11",  # Vascular dementia, mild, with agitation
-        "F01A18",  # Vascular dementia, mild, with other behavioral disturbance
-        "F01A2",  # Vascular dementia, mild, with psychotic disturbance
-        "F01A3",  # Vascular dementia, mild, with mood disturbance
-        "F01A4",  # Vascular dementia, mild, with anxiety
-        "F01B0",  # Vascular dementia, moderate, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F01B11",  # Vascular dementia, moderate, with agitation
-        "F01B18",  # Vascular dementia, moderate, with other behavioral disturbance
-        "F01B2",  # Vascular dementia, moderate, with psychotic disturbance
-        "F01B3",  # Vascular dementia, moderate, with mood disturbance
-        "F01B4",  # Vascular dementia, moderate, with anxiety
-        "F01C0",  # Vascular dementia, severe, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F01C11",  # Vascular dementia, severe, with agitation
-        "F01C18",  # Vascular dementia, severe, with other behavioral disturbance
-        "F01C2",  # Vascular dementia, severe, with psychotic disturbance
-        "F01C3",  # Vascular dementia, severe, with mood disturbance
-        "F01C4",  # Vascular dementia, severe, with anxiety
-        "F0280",  # Dementia in other diseases classified elsewhere, unspecified severity, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F02811",  # Dementia in other diseases classified elsewhere, unspecified severity, with agitation
-        "F02818",  # Dementia in other diseases classified elsewhere, unspecified severity, with other behavioral disturbance
-        "F0282",  # Dementia in other diseases classified elsewhere, unspecified severity, with psychotic disturbance
-        "F0283",  # Dementia in other diseases classified elsewhere, unspecified severity, with mood disturbance
-        "F0284",  # Dementia in other diseases classified elsewhere, unspecified severity, with anxiety
-        "F02A0",  # Dementia in other diseases classified elsewhere, mild, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F02A11",  # Dementia in other diseases classified elsewhere, mild, with agitation
-        "F02A18",  # Dementia in other diseases classified elsewhere, mild, with other behavioral disturbance
-        "F02A2",  # Dementia in other diseases classified elsewhere, mild, with psychotic disturbance
-        "F02A3",  # Dementia in other diseases classified elsewhere, mild, with mood disturbance
-        "F02A4",  # Dementia in other diseases classified elsewhere, mild, with anxiety
-        "F02B0",  # Dementia in other diseases classified elsewhere, moderate, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F02B11",  # Dementia in other diseases classified elsewhere, moderate, with agitation
-        "F02B18",  # Dementia in other diseases classified elsewhere, moderate, with other behavioral disturbance
-        "F02B2",  # Dementia in other diseases classified elsewhere, moderate, with psychotic disturbance
-        "F02B3",  # Dementia in other diseases classified elsewhere, moderate, with mood disturbance
-        "F02B4",  # Dementia in other diseases classified elsewhere, moderate, with anxiety
-        "F02C0",  # Dementia in other diseases classified elsewhere, severe, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F02C11",  # Dementia in other diseases classified elsewhere, severe, with agitation
-        "F02C18",  # Dementia in other diseases classified elsewhere, severe, with other behavioral disturbance
-        "F02C2",  # Dementia in other diseases classified elsewhere, severe, with psychotic disturbance
-        "F02C3",  # Dementia in other diseases classified elsewhere, severe, with mood disturbance
-        "F02C4",  # Dementia in other diseases classified elsewhere, severe, with anxiety
-        "F0390",  # Unspecified dementia, unspecified severity, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F03911",  # Unspecified dementia, unspecified severity, with agitation
-        "F03918",  # Unspecified dementia, unspecified severity, with other behavioral disturbance
-        "F0392",  # Unspecified dementia, unspecified severity, with psychotic disturbance
-        "F0393",  # Unspecified dementia, unspecified severity, with mood disturbance
-        "F0394",  # Unspecified dementia, unspecified severity, with anxiety
-        "F03A0",  # Unspecified dementia, mild, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F03A11",  # Unspecified dementia, mild, with agitation
-        "F03A18",  # Unspecified dementia, mild, with other behavioral disturbance
-        "F03A2",  # Unspecified dementia, mild, with psychotic disturbance
-        "F03A3",  # Unspecified dementia, mild, with mood disturbance
-        "F03A4",  # Unspecified dementia, mild, with anxiety
-        "F03B0",  # Unspecified dementia, moderate, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F03B11",  # Unspecified dementia, moderate, with agitation
-        "F03B18",  # Unspecified dementia, moderate, with other behavioral disturbance
-        "F03B2",  # Unspecified dementia, moderate, with psychotic disturbance
-        "F03B3",  # Unspecified dementia, moderate, with mood disturbance
-        "F03B4",  # Unspecified dementia, moderate, with anxiety
-        "F03C0",  # Unspecified dementia, severe, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety
-        "F03C11",  # Unspecified dementia, severe, with agitation
-        "F03C18",  # Unspecified dementia, severe, with other behavioral disturbance
-        "F03C2",  # Unspecified dementia, severe, with psychotic disturbance
-        "F03C3",  # Unspecified dementia, severe, with mood disturbance
-        "F03C4",  # Unspecified dementia, severe, with anxiety
+        "A81.00",  # Creutzfeldt-Jakob disease, unspecified
+        "A81.01",  # Variant Creutzfeldt-Jakob disease
+        "A81.09",  # Other Creutzfeldt-Jakob disease
+        "C25.0",  # Malignant neoplasm of head of pancreas
+        "C25.1",  # Malignant neoplasm of body of pancreas
+        "C25.2",  # Malignant neoplasm of tail of pancreas
+        "C25.3",  # Malignant neoplasm of pancreatic duct
+        "C25.4",  # Malignant neoplasm of endocrine pancreas
+        "C25.7",  # Malignant neoplasm of other parts of pancreas
+        "C25.8",  # Malignant neoplasm of overlapping sites of pancreas
+        "C25.9",  # Malignant neoplasm of pancreas, unspecified
+        "C71.0",  # Malignant neoplasm of cerebrum, except lobes and ventricles
+        "C71.1",  # Malignant neoplasm of frontal lobe
+        "C71.2",  # Malignant neoplasm of temporal lobe
+        "C71.3",  # Malignant neoplasm of parietal lobe
+        "C71.4",  # Malignant neoplasm of occipital lobe
+        "C71.5",  # Malignant neoplasm of cerebral ventricle
+        "C71.6",  # Malignant neoplasm of cerebellum
+        "C71.7",  # Malignant neoplasm of brain stem
+        "C71.8",  # Malignant neoplasm of overlapping sites of brain
+        "C71.9",  # Malignant neoplasm of brain, unspecified
+        "C77.0",  # Secondary and unspecified malignant neoplasm of lymph nodes of head, face and neck
+        "C77.1",  # Secondary and unspecified malignant neoplasm of intrathoracic lymph nodes
+        "C77.2",  # Secondary and unspecified malignant neoplasm of intra-abdominal lymph nodes
+        "C77.3",  # Secondary and unspecified malignant neoplasm of axilla and upper limb lymph nodes
+        "C77.4",  # Secondary and unspecified malignant neoplasm of inguinal and lower limb lymph nodes
+        "C77.5",  # Secondary and unspecified malignant neoplasm of intrapelvic lymph nodes
+        "C77.8",  # Secondary and unspecified malignant neoplasm of lymph nodes of multiple regions
+        "C77.9",  # Secondary and unspecified malignant neoplasm of lymph node, unspecified
+        "C78.00",  # Secondary malignant neoplasm of unspecified lung
+        "C78.01",  # Secondary malignant neoplasm of right lung
+        "C78.02",  # Secondary malignant neoplasm of left lung
+        "C78.1",  # Secondary malignant neoplasm of mediastinum
+        "C78.2",  # Secondary malignant neoplasm of pleura
+        "C78.30",  # Secondary malignant neoplasm of unspecified respiratory organ
+        "C78.39",  # Secondary malignant neoplasm of other respiratory organs
+        "C78.4",  # Secondary malignant neoplasm of small intestine
+        "C78.5",  # Secondary malignant neoplasm of large intestine and rectum
+        "C78.6",  # Secondary malignant neoplasm of retroperitoneum and peritoneum
+        "C78.7",  # Secondary malignant neoplasm of liver and intrahepatic bile duct
+        "C78.80",  # Secondary malignant neoplasm of unspecified digestive organ
+        "C78.89",  # Secondary malignant neoplasm of other digestive organs
+        "C79.00",  # Secondary malignant neoplasm of unspecified kidney and renal pelvis
+        "C79.01",  # Secondary malignant neoplasm of right kidney and renal pelvis
+        "C79.02",  # Secondary malignant neoplasm of left kidney and renal pelvis
+        "C79.10",  # Secondary malignant neoplasm of unspecified urinary organs
+        "C79.11",  # Secondary malignant neoplasm of bladder
+        "C79.19",  # Secondary malignant neoplasm of other urinary organs
+        "C79.2",  # Secondary malignant neoplasm of skin
+        "C79.31",  # Secondary malignant neoplasm of brain
+        "C79.32",  # Secondary malignant neoplasm of cerebral meninges
+        "C79.40",  # Secondary malignant neoplasm of unspecified part of nervous system
+        "C79.49",  # Secondary malignant neoplasm of other parts of nervous system
+        "C79.51",  # Secondary malignant neoplasm of bone
+        "C79.52",  # Secondary malignant neoplasm of bone marrow
+        "C79.60",  # Secondary malignant neoplasm of unspecified ovary
+        "C79.61",  # Secondary malignant neoplasm of right ovary
+        "C79.62",  # Secondary malignant neoplasm of left ovary
+        "C79.63",  # Secondary malignant neoplasm of bilateral ovaries
+        "C79.70",  # Secondary malignant neoplasm of unspecified adrenal gland
+        "C79.71",  # Secondary malignant neoplasm of right adrenal gland
+        "C79.72",  # Secondary malignant neoplasm of left adrenal gland
+        "C79.81",  # Secondary malignant neoplasm of breast
+        "C79.82",  # Secondary malignant neoplasm of genital organs
+        "C79.89",  # Secondary malignant neoplasm of other specified sites
+        "C79.9",  # Secondary malignant neoplasm of unspecified site
+        "C91.00",  # Acute lymphoblastic leukemia not having achieved remission
+        "C91.02",  # Acute lymphoblastic leukemia, in relapse
+        "C92.00",  # Acute myeloblastic leukemia, not having achieved remission
+        "C92.02",  # Acute myeloblastic leukemia, in relapse
+        "C93.00",  # Acute monoblastic/monocytic leukemia, not having achieved remission
+        "C93.02",  # Acute monoblastic/monocytic leukemia, in relapse
+        "C93.90",  # Monocytic leukemia, unspecified, not having achieved remission
+        "C93.92",  # Monocytic leukemia, unspecified in relapse
+        "C93.Z0",  # Other monocytic leukemia, not having achieved remission
+        "C93.Z2",  # Other monocytic leukemia, in relapse
+        "C94.30",  # Mast cell leukemia not having achieved remission
+        "C94.32",  # Mast cell leukemia, in relapse
+        "F01.50",  # Vascular dementia, unspecified severity, without behavioral disturbance, psychotic disturbance, m...
+        "F01.511",  # Vascular dementia, unspecified severity, with agitation
+        "F01.518",  # Vascular dementia, unspecified severity, with other behavioral disturbance
+        "F01.52",  # Vascular dementia, unspecified severity, with psychotic disturbance
+        "F01.53",  # Vascular dementia, unspecified severity, with mood disturbance
+        "F01.54",  # Vascular dementia, unspecified severity, with anxiety
+        "F01.A0",  # Vascular dementia, mild, without behavioral disturbance, psychotic disturbance, mood disturbance,...
+        "F01.A11",  # Vascular dementia, mild, with agitation
+        "F01.A18",  # Vascular dementia, mild, with other behavioral disturbance
+        "F01.A2",  # Vascular dementia, mild, with psychotic disturbance
+        "F01.A3",  # Vascular dementia, mild, with mood disturbance
+        "F01.A4",  # Vascular dementia, mild, with anxiety
+        "F01.B0",  # Vascular dementia, moderate, without behavioral disturbance, psychotic disturbance, mood disturba...
+        "F01.B11",  # Vascular dementia, moderate, with agitation
+        "F01.B18",  # Vascular dementia, moderate, with other behavioral disturbance
+        "F01.B2",  # Vascular dementia, moderate, with psychotic disturbance
+        "F01.B3",  # Vascular dementia, moderate, with mood disturbance
+        "F01.B4",  # Vascular dementia, moderate, with anxiety
+        "F01.C0",  # Vascular dementia, severe, without behavioral disturbance, psychotic disturbance, mood disturbanc...
+        "F01.C11",  # Vascular dementia, severe, with agitation
+        "F01.C18",  # Vascular dementia, severe, with other behavioral disturbance
+        "F01.C2",  # Vascular dementia, severe, with psychotic disturbance
+        "F01.C3",  # Vascular dementia, severe, with mood disturbance
+        "F01.C4",  # Vascular dementia, severe, with anxiety
+        "F02.80",  # Dementia in other diseases classified elsewhere, unspecified severity, without behavioral disturb...
+        "F02.811",  # Dementia in other diseases classified elsewhere, unspecified severity, with agitation
+        "F02.818",  # Dementia in other diseases classified elsewhere, unspecified severity, with other behavioral dist...
+        "F02.82",  # Dementia in other diseases classified elsewhere, unspecified severity, with psychotic disturbance
+        "F02.83",  # Dementia in other diseases classified elsewhere, unspecified severity, with mood disturbance
+        "F02.84",  # Dementia in other diseases classified elsewhere, unspecified severity, with anxiety
+        "F02.A0",  # Dementia in other diseases classified elsewhere, mild, without behavioral disturbance, psychotic ...
+        "F02.A11",  # Dementia in other diseases classified elsewhere, mild, with agitation
+        "F02.A18",  # Dementia in other diseases classified elsewhere, mild, with other behavioral disturbance
+        "F02.A2",  # Dementia in other diseases classified elsewhere, mild, with psychotic disturbance
+        "F02.A3",  # Dementia in other diseases classified elsewhere, mild, with mood disturbance
+        "F02.A4",  # Dementia in other diseases classified elsewhere, mild, with anxiety
+        "F02.B0",  # Dementia in other diseases classified elsewhere, moderate, without behavioral disturbance, psycho...
+        "F02.B11",  # Dementia in other diseases classified elsewhere, moderate, with agitation
+        "F02.B18",  # Dementia in other diseases classified elsewhere, moderate, with other behavioral disturbance
+        "F02.B2",  # Dementia in other diseases classified elsewhere, moderate, with psychotic disturbance
+        "F02.B3",  # Dementia in other diseases classified elsewhere, moderate, with mood disturbance
+        "F02.B4",  # Dementia in other diseases classified elsewhere, moderate, with anxiety
+        "F02.C0",  # Dementia in other diseases classified elsewhere, severe, without behavioral disturbance, psychoti...
+        "F02.C11",  # Dementia in other diseases classified elsewhere, severe, with agitation
+        "F02.C18",  # Dementia in other diseases classified elsewhere, severe, with other behavioral disturbance
+        "F02.C2",  # Dementia in other diseases classified elsewhere, severe, with psychotic disturbance
+        "F02.C3",  # Dementia in other diseases classified elsewhere, severe, with mood disturbance
+        "F02.C4",  # Dementia in other diseases classified elsewhere, severe, with anxiety
+        "F03.90",  # Unspecified dementia, unspecified severity, without behavioral disturbance, psychotic disturbance...
+        "F03.911",  # Unspecified dementia, unspecified severity, with agitation
+        "F03.918",  # Unspecified dementia, unspecified severity, with other behavioral disturbance
+        "F03.92",  # Unspecified dementia, unspecified severity, with psychotic disturbance
+        "F03.93",  # Unspecified dementia, unspecified severity, with mood disturbance
+        "F03.94",  # Unspecified dementia, unspecified severity, with anxiety
+        "F03.A0",  # Unspecified dementia, mild, without behavioral disturbance, psychotic disturbance, mood disturban...
+        "F03.A11",  # Unspecified dementia, mild, with agitation
+        "F03.A18",  # Unspecified dementia, mild, with other behavioral disturbance
+        "F03.A2",  # Unspecified dementia, mild, with psychotic disturbance
+        "F03.A3",  # Unspecified dementia, mild, with mood disturbance
+        "F03.A4",  # Unspecified dementia, mild, with anxiety
+        "F03.B0",  # Unspecified dementia, moderate, without behavioral disturbance, psychotic disturbance, mood distu...
+        "F03.B11",  # Unspecified dementia, moderate, with agitation
+        "F03.B18",  # Unspecified dementia, moderate, with other behavioral disturbance
+        "F03.B2",  # Unspecified dementia, moderate, with psychotic disturbance
+        "F03.B3",  # Unspecified dementia, moderate, with mood disturbance
+        "F03.B4",  # Unspecified dementia, moderate, with anxiety
+        "F03.C0",  # Unspecified dementia, severe, without behavioral disturbance, psychotic disturbance, mood disturb...
+        "F03.C11",  # Unspecified dementia, severe, with agitation
+        "F03.C18",  # Unspecified dementia, severe, with other behavioral disturbance
+        "F03.C2",  # Unspecified dementia, severe, with psychotic disturbance
+        "F03.C3",  # Unspecified dementia, severe, with mood disturbance
+        "F03.C4",  # Unspecified dementia, severe, with anxiety
         "F04",  # Amnestic disorder due to known physiological condition
-        "F1027",  # Alcohol dependence with alcohol-induced persisting dementia
-        "F1096",  # Alcohol use, unspecified with alcohol-induced persisting amnestic disorder
-        "F1097",  # Alcohol use, unspecified with alcohol-induced persisting dementia
-        "G10",  # Huntington's disease
-        "G1221",  # Amyotrophic lateral sclerosis
-        "G20A1",  # Parkinson's disease without dyskinesia, without mention of fluctuations
-        "G20A2",  # Parkinson's disease without dyskinesia, with fluctuations
-        "G20B1",  # Parkinson's disease with dyskinesia, without mention of fluctuations
-        "G20B2",  # Parkinson's disease with dyskinesia, with fluctuations
-        "G20C",  # Parkinsonism, unspecified
-        "G300",  # Alzheimer's disease with early onset
-        "G301",  # Alzheimer's disease with late onset
-        "G308",  # Other Alzheimer's disease
-        "G309",  # Alzheimer's disease, unspecified
-        "G3101",  # Pick's disease
-        "G3109",  # Other frontotemporal neurocognitive disorder
-        "G3183",  # Neurocognitive disorder with Lewy bodies
+        "F10.27",  # Alcohol dependence with alcohol-induced persisting dementia
+        "F10.96",  # Alcohol use, unspecified with alcohol-induced persisting amnestic disorder
+        "F10.97",  # Alcohol use, unspecified with alcohol-induced persisting dementia
+        "G10",  # Huntington\'s disease
+        "G12.21",  # Amyotrophic lateral sclerosis
+        "G20.A1",  # Parkinson\'s disease without dyskinesia, without mention of fluctuations
+        "G20.A2",  # Parkinson\'s disease without dyskinesia, with fluctuations
+        "G20.B1",  # Parkinson\'s disease with dyskinesia, without mention of fluctuations
+        "G20.B2",  # Parkinson\'s disease with dyskinesia, with fluctuations
+        "G20.C",  # Parkinsonism, unspecified
+        "G30.0",  # Alzheimer\'s disease with early onset
+        "G30.1",  # Alzheimer\'s disease with late onset
+        "G30.8",  # Other Alzheimer\'s disease
+        "G30.9",  # Alzheimer\'s disease, unspecified
+        "G31.01",  # Pick\'s disease
+        "G31.09",  # Other frontotemporal neurocognitive disorder
+        "G31.83",  # Neurocognitive disorder with Lewy bodies
         "G35",  # Multiple sclerosis
-        "I0981",  # Rheumatic heart failure
-        "I110",  # Hypertensive heart disease with heart failure
-        "I120",  # Hypertensive chronic kidney disease with stage 5 chronic kidney disease or end stage renal disease
-        "I130",  # Hypertensive heart and chronic kidney disease with heart failure and stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease
-        "I1311",  # Hypertensive heart and chronic kidney disease without heart failure, with stage 5 chronic kidney disease, or end stage renal disease
-        "I132",  # Hypertensive heart and chronic kidney disease with heart failure and with stage 5 chronic kidney disease, or end stage renal disease
-        "I501",  # Left ventricular failure, unspecified
-        "I5020",  # Unspecified systolic (congestive) heart failure
-        "I5021",  # Acute systolic (congestive) heart failure
-        "I5022",  # Chronic systolic (congestive) heart failure
-        "I5023",  # Acute on chronic systolic (congestive) heart failure
-        "I5030",  # Unspecified diastolic (congestive) heart failure
-        "I5031",  # Acute diastolic (congestive) heart failure
-        "I5032",  # Chronic diastolic (congestive) heart failure
-        "I5033",  # Acute on chronic diastolic (congestive) heart failure
-        "I5040",  # Unspecified combined systolic (congestive) and diastolic (congestive) heart failure
-        "I5041",  # Acute combined systolic (congestive) and diastolic (congestive) heart failure
-        "I5042",  # Chronic combined systolic (congestive) and diastolic (congestive) heart failure
-        "I5043",  # Acute on chronic combined systolic (congestive) and diastolic (congestive) heart failure
-        "I50810",  # Right heart failure, unspecified
-        "I50811",  # Acute right heart failure
-        "I50812",  # Chronic right heart failure
-        "I50813",  # Acute on chronic right heart failure
-        "I50814",  # Right heart failure due to left heart failure
-        "I5082",  # Biventricular heart failure
-        "I5083",  # High output heart failure
-        "I5084",  # End stage heart failure
-        "I5089",  # Other heart failure
-        "I509",  # Heart failure, unspecified
-        "J430",  # Unilateral pulmonary emphysema [MacLeod's syndrome]
-        "J431",  # Panlobular emphysema
-        "J432",  # Centrilobular emphysema
-        "J438",  # Other emphysema
-        "J439",  # Emphysema, unspecified
-        "J684",  # Chronic respiratory conditions due to chemicals, gases, fumes and vapors
-        "J8410",  # Pulmonary fibrosis, unspecified
-        "J84112",  # Idiopathic pulmonary fibrosis
-        "J84170",  # Interstitial lung disease with progressive fibrotic phenotype in diseases classified elsewhere
-        "J84178",  # Other interstitial pulmonary diseases with fibrosis in diseases classified elsewhere
-        "J9610",  # Chronic respiratory failure, unspecified whether with hypoxia or hypercapnia
-        "J9611",  # Chronic respiratory failure with hypoxia
-        "J9612",  # Chronic respiratory failure with hypercapnia
-        "J9620",  # Acute and chronic respiratory failure, unspecified whether with hypoxia or hypercapnia
-        "J9621",  # Acute and chronic respiratory failure with hypoxia
-        "J9622",  # Acute and chronic respiratory failure with hypercapnia
-        "J9690",  # Respiratory failure, unspecified, unspecified whether with hypoxia or hypercapnia
-        "J9691",  # Respiratory failure, unspecified with hypoxia
-        "J9692",  # Respiratory failure, unspecified with hypercapnia
-        "J982",  # Interstitial emphysema
-        "J983",  # Compensatory emphysema
-        "K7010",  # Alcoholic hepatitis without ascites
-        "K7011",  # Alcoholic hepatitis with ascites
-        "K702",  # Alcoholic fibrosis and sclerosis of liver
-        "K7030",  # Alcoholic cirrhosis of liver without ascites
-        "K7031",  # Alcoholic cirrhosis of liver with ascites
-        "K7040",  # Alcoholic hepatic failure without coma
-        "K7041",  # Alcoholic hepatic failure with coma
-        "K709",  # Alcoholic liver disease, unspecified
-        "K7400",  # Hepatic fibrosis, unspecified
-        "K7401",  # Hepatic fibrosis, early fibrosis
-        "K7402",  # Hepatic fibrosis, advanced fibrosis
-        "K741",  # Hepatic sclerosis
-        "K742",  # Hepatic fibrosis with hepatic sclerosis
-        "K744",  # Secondary biliary cirrhosis
-        "K745",  # Biliary cirrhosis, unspecified
-        "K7460",  # Unspecified cirrhosis of liver
-        "K7469",  # Other cirrhosis of liver
-        "N185",  # Chronic kidney disease, stage 5
-        "N186",  # End stage renal disease
+        "I09.81",  # Rheumatic heart failure
+        "I11.0",  # Hypertensive heart disease with heart failure
+        "I12.0",  # Hypertensive chronic kidney disease with stage 5 chronic kidney disease or end stage renal disease
+        "I13.0",  # Hypertensive heart and chronic kidney disease with heart failure and stage 1 through stage 4 chro...
+        "I13.11",  # Hypertensive heart and chronic kidney disease without heart failure, with stage 5 chronic kidney ...
+        "I13.2",  # Hypertensive heart and chronic kidney disease with heart failure and with stage 5 chronic kidney ...
+        "I50.1",  # Left ventricular failure, unspecified
+        "I50.20",  # Unspecified systolic (congestive) heart failure
+        "I50.21",  # Acute systolic (congestive) heart failure
+        "I50.22",  # Chronic systolic (congestive) heart failure
+        "I50.23",  # Acute on chronic systolic (congestive) heart failure
+        "I50.30",  # Unspecified diastolic (congestive) heart failure
+        "I50.31",  # Acute diastolic (congestive) heart failure
+        "I50.32",  # Chronic diastolic (congestive) heart failure
+        "I50.33",  # Acute on chronic diastolic (congestive) heart failure
+        "I50.40",  # Unspecified combined systolic (congestive) and diastolic (congestive) heart failure
+        "I50.41",  # Acute combined systolic (congestive) and diastolic (congestive) heart failure
+        "I50.42",  # Chronic combined systolic (congestive) and diastolic (congestive) heart failure
+        "I50.43",  # Acute on chronic combined systolic (congestive) and diastolic (congestive) heart failure
+        "I50.810",  # Right heart failure, unspecified
+        "I50.811",  # Acute right heart failure
+        "I50.812",  # Chronic right heart failure
+        "I50.813",  # Acute on chronic right heart failure
+        "I50.814",  # Right heart failure due to left heart failure
+        "I50.82",  # Biventricular heart failure
+        "I50.83",  # High output heart failure
+        "I50.84",  # End stage heart failure
+        "I50.89",  # Other heart failure
+        "I50.9",  # Heart failure, unspecified
+        "J43.0",  # Unilateral pulmonary emphysema [MacLeod\'s syndrome]
+        "J43.1",  # Panlobular emphysema
+        "J43.2",  # Centrilobular emphysema
+        "J43.8",  # Other emphysema
+        "J43.9",  # Emphysema, unspecified
+        "J68.4",  # Chronic respiratory conditions due to chemicals, gases, fumes and vapors
+        "J84.10",  # Pulmonary fibrosis, unspecified
+        "J84.112",  # Idiopathic pulmonary fibrosis
+        "J84.170",  # Interstitial lung disease with progressive fibrotic phenotype in diseases classified elsewhere
+        "J84.178",  # Other interstitial pulmonary diseases with fibrosis in diseases classified elsewhere
+        "J96.10",  # Chronic respiratory failure, unspecified whether with hypoxia or hypercapnia
+        "J96.11",  # Chronic respiratory failure with hypoxia
+        "J96.12",  # Chronic respiratory failure with hypercapnia
+        "J96.20",  # Acute and chronic respiratory failure, unspecified whether with hypoxia or hypercapnia
+        "J96.21",  # Acute and chronic respiratory failure with hypoxia
+        "J96.22",  # Acute and chronic respiratory failure with hypercapnia
+        "J96.90",  # Respiratory failure, unspecified, unspecified whether with hypoxia or hypercapnia
+        "J96.91",  # Respiratory failure, unspecified with hypoxia
+        "J96.92",  # Respiratory failure, unspecified with hypercapnia
+        "J98.2",  # Interstitial emphysema
+        "J98.3",  # Compensatory emphysema
+        "K70.10",  # Alcoholic hepatitis without ascites
+        "K70.11",  # Alcoholic hepatitis with ascites
+        "K70.2",  # Alcoholic fibrosis and sclerosis of liver
+        "K70.30",  # Alcoholic cirrhosis of liver without ascites
+        "K70.31",  # Alcoholic cirrhosis of liver with ascites
+        "K70.40",  # Alcoholic hepatic failure without coma
+        "K70.41",  # Alcoholic hepatic failure with coma
+        "K70.9",  # Alcoholic liver disease, unspecified
+        "K74.00",  # Hepatic fibrosis, unspecified
+        "K74.01",  # Hepatic fibrosis, early fibrosis
+        "K74.02",  # Hepatic fibrosis, advanced fibrosis
+        "K74.1",  # Hepatic sclerosis
+        "K74.2",  # Hepatic fibrosis with hepatic sclerosis
+        "K74.4",  # Secondary biliary cirrhosis
+        "K74.5",  # Biliary cirrhosis, unspecified
+        "K74.60",  # Unspecified cirrhosis of liver
+        "K74.69",  # Other cirrhosis of liver
+        "N18.5",  # Chronic kidney disease, stage 5
+        "N18.6",  # End stage renal disease
     }
 
     SNOMEDCT = {
-        "1236965009",  # Metastatic renal cell carcinoma to kidney except renal pelvis (disorder)
-        "1240357005",  # Metastatic renal cell carcinoma to kidney (disorder)
-        "1254729000",  # Metastatic lobular carcinoma to breast (disorder)
-        "1254730005",  # Metastatic lobular carcinoma to left female breast (disorder)
-        "1254731009",  # Metastatic lobular carcinoma to right female breast (disorder)
-        "1263997005",  # Metastatic pilomatrix carcinoma to skin (disorder)
-        "1263998000",  # Metastatic cystic renal cell carcinoma to kidney (disorder)
-        "1264257008",  # Metastatic apocrine adenocarcinoma to skin (disorder)
-        "1264521002",  # Metastatic collecting duct carcinoma to kidney (disorder)
-        "1264523004",  # Metastatic cholangiocarcinoma to perihilar bile duct (disorder)
-        "1264524005",  # Metastatic cholangiocarcinoma to biliary tract (disorder)
-        "1268355005",  # Metastatic eccrine porocarcinoma to skin (disorder)
-        "781076008",  # Metastatic malignant neoplasm to colon and/or rectum (disorder)
-        "1237491009",  # Metastatic carcinoma to male breast (disorder)
-        "1264496004",  # Metastatic carcinoma to female breast (disorder)
-        "1264498003",  # Metastatic infiltrating duct carcinoma to female breast (disorder)
-        "233765002",  # Respiratory failure without hypercapnia (disorder)
-        "705176003",  # Metastatic carcinoid tumor (disorder)
-        "733185001",  # Dementia following injury caused by exposure to ionizing radiation (disorder)
-        "94176003",  # Metastatic malignant neoplasm to areola of female breast (disorder)
-        "94177007",  # Metastatic malignant neoplasm to areola of male breast (disorder)
-        "94182000",  # Metastatic malignant neoplasm to axillary tail of female breast (disorder)
-        "94244003",  # Metastatic malignant neoplasm to central portion of female breast (disorder)
-        "94276008",  # Metastatic malignant neoplasm to ectopic female breast tissue (disorder)
-        "94277004",  # Metastatic malignant neoplasm to ectopic male breast tissue (disorder)
-        "94297009",  # Metastatic malignant neoplasm to female breast (disorder)
-        "94385006",  # Metastatic malignant neoplasm to lower inner quadrant of female breast (disorder)
-        "94387003",  # Metastatic malignant neoplasm to lower outer quadrant of female breast (disorder)
-        "94401004",  # Metastatic malignant neoplasm to male breast (disorder)
-        "94443006",  # Metastatic malignant neoplasm to nipple of female breast (disorder)
-        "94444000",  # Metastatic malignant neoplasm to nipple of male breast (disorder)
-        "94653000",  # Metastatic malignant neoplasm to upper inner quadrant of female breast (disorder)
-        "94655007",  # Metastatic malignant neoplasm to upper outer quadrant of female breast (disorder)
         "100721000119109",  # High grade astrocytoma of brain (disorder)
         "100731000119107",  # Low grade astrocytoma of brain (disorder)
         "10091002",  # High output heart failure (disorder)
@@ -300,7 +267,7 @@ class AdvancedIllness(ValueSet):
         "1010334009",  # Emphysema of right lung (disorder)
         "1010616001",  # Cirrhosis of liver due to classical cystic fibrosis (disorder)
         "101281000119107",  # Congestive heart failure due to cardiomyopathy (disorder)
-        "101421000119107",  # Dementia due to Parkinson's disease (disorder)
+        "101421000119107",  # Dementia due to Parkinson\'s disease (disorder)
         "1017196003",  # Interstitial pulmonary fibrosis due to inhalation of substance (disorder)
         "1017197007",  # Interstitial pulmonary fibrosis due to inhalation of drug (disorder)
         "10335000",  # Chronic right-sided heart failure (disorder)
@@ -311,7 +278,7 @@ class AdvancedIllness(ValueSet):
         "105041000119109",  # Metastatic squamous cell carcinoma to lung (disorder)
         "105051000119106",  # Metastatic undifferentiated large cell carcinoma to lung (disorder)
         "10532003",  # Primary degenerative dementia of the Alzheimer type, presenile onset, with depression (disorder)
-        "105421000119105",  # Early onset Alzheimer's disease with behavioral disturbance (disorder)
+        "105421000119105",  # Early onset Alzheimer\'s disease with behavioral disturbance (disorder)
         "106021000119105",  # Multi-infarct dementia due to atherosclerosis (disorder)
         "10633002",  # Acute congestive heart failure (disorder)
         "10672271000119100",  # Acute-on-chronic hypoxemic respiratory failure (disorder)
@@ -472,6 +439,7 @@ class AdvancedIllness(ValueSet):
         "1236962007",  # Metastatic carcinoma to lateral part of floor of mouth (disorder)
         "1236963002",  # Metastatic carcinoma to hard palate (disorder)
         "1236964008",  # Metastatic carcinoma to soft palate (disorder)
+        "1236965009",  # Metastatic renal cell carcinoma to kidney except renal pelvis (disorder)
         "1236966005",  # Metastatic carcinoma to upper buccal sulcus (disorder)
         "1236967001",  # Metastatic carcinoma to lower buccal sulcus (disorder)
         "1236968006",  # Metastatic carcinoma to upper labial sulcus (disorder)
@@ -543,6 +511,7 @@ class AdvancedIllness(ValueSet):
         "1237488009",  # Metastatic carcinoma to palate (disorder)
         "1237489001",  # Metastatic carcinoma to tonsil (disorder)
         "1237490005",  # Metastatic carcinoma to genital organ (disorder)
+        "1237491009",  # Metastatic carcinoma to male breast (disorder)
         "1237492002",  # Metastatic carcinoma to endocervix (disorder)
         "1237493007",  # Metastatic carcinoma to exocervix (disorder)
         "1237494001",  # Metastatic carcinoma to extrahepatic bile duct (disorder)
@@ -566,12 +535,13 @@ class AdvancedIllness(ValueSet):
         "1237529000",  # Metastatic carcinoma to ampulla of Vater (disorder)
         "1237530005",  # Metastatic adenocarcinoma to carotid body (disorder)
         "1237531009",  # Metastatic adenocarcinoma to parathyroid (disorder)
-        "1237621006",  # Metastatic adenocarcinoma to Moll's gland (disorder)
+        "1237621006",  # Metastatic adenocarcinoma to Moll\'s gland (disorder)
         "1240346000",  # Metastatic adenocarcinoma to Meckel diverticulum (disorder)
         "1240351006",  # Metastatic carcinoma to lower gum (disorder)
         "1240352004",  # Metastatic carcinoma to upper gum (disorder)
         "1240353009",  # Metastatic squamous cell carcinoma to prostate (disorder)
         "1240355002",  # Metastatic squamous cell carcinoma to epididymis and spermatic cord (disorder)
+        "1240357005",  # Metastatic renal cell carcinoma to kidney (disorder)
         "1240359008",  # Metastatic small cell carcinoma to prostate (disorder)
         "1240362006",  # Metastatic small cell carcinoma (disorder)
         "1240363001",  # Metastatic small cell carcinoma to ovary (disorder)
@@ -619,6 +589,9 @@ class AdvancedIllness(ValueSet):
         "1254726007",  # Metastatic adenoid cystic carcinoma to salivary gland (disorder)
         "1254727003",  # Metastatic adenoid cystic carcinoma to submandibular gland (disorder)
         "1254728008",  # Metastatic adenoid cystic carcinoma to trachea (disorder)
+        "1254729000",  # Metastatic lobular carcinoma to breast (disorder)
+        "1254730005",  # Metastatic lobular carcinoma to left female breast (disorder)
+        "1254731009",  # Metastatic lobular carcinoma to right female breast (disorder)
         "1254732002",  # Metastatic large cell carcinoma to lung (disorder)
         "1254733007",  # Metastatic large cell carcinoma to right lung (disorder)
         "1254734001",  # Metastatic large cell carcinoma to left lung (disorder)
@@ -741,6 +714,8 @@ class AdvancedIllness(ValueSet):
         "1263912003",  # Metastatic carcinoma ex pleomorphic adenoma to lacrimal gland (disorder)
         "1263913008",  # Metastatic chromophobe renal cell carcinoma (disorder)
         "1263914002",  # Metastatic papillary renal cell carcinoma (disorder)
+        "1263997005",  # Metastatic pilomatrix carcinoma to skin (disorder)
+        "1263998000",  # Metastatic cystic renal cell carcinoma to kidney (disorder)
         "1263999008",  # Metastatic MiT family translocation renal cell carcinoma (disorder)
         "1264003007",  # Acute right ventricular failure following incision of heart (disorder)
         "1264066001",  # Metastatic keratinizing squamous cell carcinoma to nasopharynx (disorder)
@@ -750,6 +725,7 @@ class AdvancedIllness(ValueSet):
         "1264116009",  # Metastatic adenosquamous carcinoma (disorder)
         "1264117000",  # Metastatic adenosquamous carcinoma to cervix (disorder)
         "1264118005",  # Metastatic oxyphilic adenocarcinoma (disorder)
+        "1264257008",  # Metastatic apocrine adenocarcinoma to skin (disorder)
         "1264258003",  # Metastatic papillary squamous cell carcinoma (disorder)
         "1264357006",  # Metastatic mucinous cystadenocarcinoma to ovary (disorder)
         "1264358001",  # Metastatic mucinous cystadenocarcinoma to pancreas (disorder)
@@ -757,14 +733,20 @@ class AdvancedIllness(ValueSet):
         "1264367001",  # Metastatic sebaceous adenocarcinoma (disorder)
         "1264369003",  # Metastatic sebaceous adenocarcinoma to eyelid (disorder)
         "1264495000",  # Metastatic carcinoma to breast (disorder)
+        "1264496004",  # Metastatic carcinoma to female breast (disorder)
         "1264497008",  # Metastatic infiltrating duct carcinoma to breast (disorder)
+        "1264498003",  # Metastatic infiltrating duct carcinoma to female breast (disorder)
         "1264499006",  # Metastatic infiltrating duct carcinoma to pancreas (disorder)
         "1264500002",  # Metastatic infiltrating duct carcinoma to prostate (disorder)
         "1264501003",  # Metastatic papillary cystadenocarcinoma to kidney (disorder)
         "1264502005",  # Metastatic mucinous adenocarcinoma to gastrointestinal tract (disorder)
+        "1264521002",  # Metastatic collecting duct carcinoma to kidney (disorder)
+        "1264523004",  # Metastatic cholangiocarcinoma to perihilar bile duct (disorder)
+        "1264524005",  # Metastatic cholangiocarcinoma to biliary tract (disorder)
         "1268352008",  # Primary carcinoma of pituitary gland (disorder)
         "1268353003",  # Metastatic clear cell adenocarcinoma to ovary (disorder)
         "1268354009",  # Metastatic clear cell adenocarcinoma to peritoneum (disorder)
+        "1268355005",  # Metastatic eccrine porocarcinoma to skin (disorder)
         "1268386004",  # Metastatic undifferentiated carcinoma to corpus uteri (disorder)
         "1268388003",  # Metastatic undifferentiated carcinoma to esophagus (disorder)
         "1268390002",  # Metastatic undifferentiated carcinoma to liver and intrahepatic biliary tract (disorder)
@@ -797,8 +779,8 @@ class AdvancedIllness(ValueSet):
         "1269126000",  # Metastatic squamous cell carcinoma to stomach (disorder)
         "1279841001",  # Undifferentiated carcinoma with osteoclast-like giant cells of pancreas (disorder)
         "1279882001",  # Metastatic embryonal rhabdomyosarcoma (disorder)
-        "127991000119101",  # Hypertension concurrent and due to end stage renal disease on dialysis due to type 2 diabetes mellitus (disorder)
-        "128001000119105",  # Hypertension concurrent and due to end stage renal disease on dialysis due to type 1 diabetes mellitus (disorder)
+        "127991000119101",  # Hypertension concurrent and due to end stage renal disease on dialysis due to type 2 diabetes mel...
+        "128001000119105",  # Hypertension concurrent and due to end stage renal disease on dialysis due to type 1 diabetes mel...
         "128462008",  # Metastatic malignant neoplasm (disorder)
         "128465005",  # Metastatic malignant neoplasm to articular cartilage (disorder)
         "1286863002",  # Metastatic malignant neoplasm to cecum and/or colon and/or rectum (disorder)
@@ -850,11 +832,11 @@ class AdvancedIllness(ValueSet):
         "1339050006",  # Metastatic malignant glioma (disorder)
         "1339051005",  # Metastatic germinoma (disorder)
         "135091000119106",  # Secondary neuroendocrine carcinoma of peritoneum (disorder)
-        "13839000",  # Bernheim's syndrome (disorder)
+        "13839000",  # Bernheim\'s syndrome (disorder)
         "14070001",  # Multi-infarct dementia with depression (disorder)
-        "141991000119109",  # Delusions in Alzheimer's disease (disorder)
-        "142001000119106",  # Depressed mood in Alzheimer's disease (disorder)
-        "142011000119109",  # Alzheimer's disease co-occurrent with delirium (disorder)
+        "141991000119109",  # Delusions in Alzheimer\'s disease (disorder)
+        "142001000119106",  # Depressed mood in Alzheimer\'s disease (disorder)
+        "142011000119109",  # Alzheimer\'s disease co-occurrent with delirium (disorder)
         "143401000119106",  # Malignant carcinoid tumor of pancreas (disorder)
         "145501000119108",  # Metastatic malignant neoplasm to breast (disorder)
         "145511000119106",  # Metastatic malignant neoplasm to genital organ (disorder)
@@ -963,14 +945,14 @@ class AdvancedIllness(ValueSet):
         "191464005",  # Arteriosclerotic dementia with delirium (disorder)
         "191465006",  # Arteriosclerotic dementia with paranoia (disorder)
         "191466007",  # Arteriosclerotic dementia with depression (disorder)
-        "191471000",  # Korsakov's alcoholic psychosis with peripheral neuritis (disorder)
+        "191471000",  # Korsakov\'s alcoholic psychosis with peripheral neuritis (disorder)
         "191519005",  # Dementia associated with another disease (disorder)
         "192926004",  # Multiple sclerosis of the brainstem (disorder)
         "192927008",  # Multiple sclerosis of the spinal cord (disorder)
         "192929006",  # Exacerbation of multiple sclerosis (disorder)
         "194767001",  # Benign hypertensive heart disease with congestive cardiac failure (disorder)
         "194779001",  # Hypertensive heart and renal disease with (congestive) heart failure (disorder)
-        "194781004",  # Hypertensive heart and renal disease with both (congestive) heart failure and renal failure (disorder)
+        "194781004",  # Hypertensive heart and renal disease with both (congestive) heart failure and renal failure (diso...
         "195111005",  # Decompensated cardiac failure (disorder)
         "195112003",  # Compensated cardiac failure (disorder)
         "195114002",  # Acute left ventricular failure (disorder)
@@ -994,23 +976,23 @@ class AdvancedIllness(ValueSet):
         "22381000119105",  # Primary degenerative dementia (disorder)
         "230156002",  # Malignant meningitis (disorder)
         "230258005",  # Amyotrophic lateral sclerosis with dementia (disorder)
-        "230265002",  # Familial Alzheimer's disease of early onset (disorder)
-        "230266001",  # Non-familial Alzheimer's disease of early onset (disorder)
-        "230267005",  # Familial Alzheimer's disease of late onset (disorder)
-        "230268000",  # Non-familial Alzheimer's disease of late onset (disorder)
-        "230269008",  # Focal Alzheimer's disease (disorder)
-        "230271008",  # Pick's disease with Pick bodies (disorder)
-        "230272001",  # Pick's disease with Pick cells and no Pick bodies (disorder)
-        "230280008",  # Progressive aphasia in Alzheimer's disease (disorder)
+        "230265002",  # Familial Alzheimer\'s disease of early onset (disorder)
+        "230266001",  # Non-familial Alzheimer\'s disease of early onset (disorder)
+        "230267005",  # Familial Alzheimer\'s disease of late onset (disorder)
+        "230268000",  # Non-familial Alzheimer\'s disease of late onset (disorder)
+        "230269008",  # Focal Alzheimer\'s disease (disorder)
+        "230271008",  # Pick\'s disease with Pick bodies (disorder)
+        "230272001",  # Pick\'s disease with Pick cells and no Pick bodies (disorder)
+        "230280008",  # Progressive aphasia in Alzheimer\'s disease (disorder)
         "230282000",  # Post-traumatic dementia (disorder)
         "230285003",  # Vascular dementia of acute onset (disorder)
         "230286002",  # Subcortical vascular dementia (disorder)
         "230287006",  # Mixed cortical and subcortical vascular dementia (disorder)
         "230288001",  # Semantic dementia (disorder)
         "230289009",  # Patchy dementia (disorder)
-        "230299004",  # Juvenile onset Huntington's disease (disorder)
-        "230300007",  # Late onset Huntington's disease (disorder)
-        "230301006",  # Akinetic-rigid form of Huntington's disease (disorder)
+        "230299004",  # Juvenile onset Huntington\'s disease (disorder)
+        "230300007",  # Late onset Huntington\'s disease (disorder)
+        "230301006",  # Akinetic-rigid form of Huntington\'s disease (disorder)
         "230372003",  # Acute relapsing multiple sclerosis (disorder)
         "230499002",  # Sleep-related respiratory failure (disorder)
         "23341000119109",  # Congestive heart failure with right heart failure (disorder)
@@ -1022,12 +1004,13 @@ class AdvancedIllness(ValueSet):
         "233737004",  # Familial fibrous mediastinitis (disorder)
         "233758005",  # Mica pneumoconiosis (disorder)
         "233761006",  # Subacute silicosis (disorder)
+        "233765002",  # Respiratory failure without hypercapnia (disorder)
         "233924009",  # Heart failure as a complication of care (disorder)
         "233940007",  # Pulmonary tumor embolism (disorder)
         "235875008",  # Alcoholic hepatitis (disorder)
         "235880004",  # Alcoholic fibrosis and sclerosis of liver (disorder)
         "235881000",  # Alcoholic hepatic failure (disorder)
-        "235895002",  # Laennec's cirrhosis, non-alcoholic (disorder)
+        "235895002",  # Laennec\'s cirrhosis, non-alcoholic (disorder)
         "235896001",  # Infectious cirrhosis (disorder)
         "235897005",  # Hypoxia-associated cirrhosis (disorder)
         "235899008",  # Hepatic sclerosis (disorder)
@@ -1072,7 +1055,7 @@ class AdvancedIllness(ValueSet):
         "266471006",  # Juvenile portal cirrhosis (disorder)
         "26852004",  # Primary degenerative dementia of the Alzheimer type, senile onset, with depression (disorder)
         "268612007",  # Senile and presenile organic psychotic conditions (disorder)
-        "26929004",  # Alzheimer's disease (disorder)
+        "26929004",  # Alzheimer\'s disease (disorder)
         "269473008",  # Metastatic malignant neoplasm to respiratory and digestive systems (disorder)
         "271440004",  # Cirrhosis secondary to cholestasis (disorder)
         "27156006",  # Posthepatitic cirrhosis (disorder)
@@ -1183,7 +1166,7 @@ class AdvancedIllness(ValueSet):
         "404139001",  # Leukemic infiltration of skin in hairy-cell leukemia (disorder)
         "404154007",  # Leukemic infiltration of skin in monocytic leukemia (disorder)
         "404156009",  # Leukemic infiltration of skin (disorder)
-        "404157000",  # Specific skin infiltration in Hodgkin's disease (disorder)
+        "404157000",  # Specific skin infiltration in Hodgkin\'s disease (disorder)
         "405570007",  # Pulmonary fibrosis due to and following radiotherapy (disorder)
         "405843009",  # Widespread metastatic malignant neoplastic disease (disorder)
         "40640008",  # Massive fibrosis of lung co-occurrent and due to silicosis (disorder)
@@ -1213,7 +1196,7 @@ class AdvancedIllness(ValueSet):
         "424404003",  # Decompensated chronic heart failure (disorder)
         "424954002",  # Undifferentiated large cell carcinomatosis (disorder)
         "425303004",  # Squamous cell carcinomatosis (disorder)
-        "425390006",  # Dementia associated with Parkinson's Disease (disorder)
+        "425390006",  # Dementia associated with Parkinson\'s Disease (disorder)
         "425413006",  # Drug-induced cirrhosis of liver (disorder)
         "425500002",  # Secondary progressive multiple sclerosis (disorder)
         "426263006",  # Congestive heart failure due to left ventricular systolic dysfunction (disorder)
@@ -1227,7 +1210,7 @@ class AdvancedIllness(ValueSet):
         "428351000124105",  # Severe dementia (disorder)
         "428700003",  # Primary progressive multiple sclerosis (disorder)
         "429033009",  # Malignant neoplasm of cerebrum (disorder)
-        "429161000124103",  # Primary degenerative dementia of the Alzheimer type, senile onset, with behavioral disturbance (disorder)
+        "429161000124103",  # Primary degenerative dementia of the Alzheimer type, senile onset, with behavioral disturbance (d...
         "429458009",  # Dementia due to Creutzfeldt Jakob disease (disorder)
         "429998004",  # Vascular dementia (disorder)
         "430771000124100",  # Moderate dementia (disorder)
@@ -1235,7 +1218,7 @@ class AdvancedIllness(ValueSet):
         "43736008",  # Rheumatic left ventricular failure (disorder)
         "43904005",  # Macronodular cirrhosis (disorder)
         "439567002",  # Malignant multiple sclerosis (disorder)
-        "44047000",  # Zieve's syndrome (disorder)
+        "44047000",  # Zieve\'s syndrome (disorder)
         "441481004",  # Chronic systolic heart failure (disorder)
         "441530006",  # Chronic diastolic heart failure (disorder)
         "442344002",  # Dementia due to Huntington chorea (disorder)
@@ -1276,7 +1259,7 @@ class AdvancedIllness(ValueSet):
         "473419009",  # Intraductal papillary mucinous carcinoma in situ of pancreas (disorder)
         "4817008",  # Primary degenerative dementia of the Alzheimer type, senile onset, with delirium (disorder)
         "48447003",  # Chronic heart failure (disorder)
-        "49049000",  # Parkinson's disease (disorder)
+        "49049000",  # Parkinson\'s disease (disorder)
         "49584005",  # Acute cor pulmonale (disorder)
         "4981000",  # Panacinar emphysema (disorder)
         "50196008",  # Perialveolar fibrosis of lung (disorder)
@@ -1294,7 +1277,7 @@ class AdvancedIllness(ValueSet):
         "56675007",  # Acute heart failure (disorder)
         "56841008",  # Massive fibrosis of lung (disorder)
         "57686001",  # Emphysematous bleb of lung (disorder)
-        "58756001",  # Huntington's chorea (disorder)
+        "58756001",  # Huntington\'s chorea (disorder)
         "59773008",  # Simple pulmonary alveolitis (disorder)
         "62377009",  # Postpartum cardiomyopathy (disorder)
         "6475002",  # Primary degenerative dementia of the Alzheimer type, presenile onset, uncomplicated (disorder)
@@ -1362,6 +1345,7 @@ class AdvancedIllness(ValueSet):
         "703276005",  # Heart failure with reduced ejection fraction due to heart valve disease (disorder)
         "704152002",  # Metastatic neuroblastoma (disorder)
         "704667004",  # Hypertension concurrent and due to end stage renal disease on dialysis (disorder)
+        "705176003",  # Metastatic carcinoid tumor (disorder)
         "707324008",  # Anemia co-occurrent and due to end stage renal disease (disorder)
         "707434003",  # Pulmonary fibrosis due to Hermansky-Pudlak syndrome (disorder)
         "708030004",  # Pulmonary emphysema co-occurrent with fibrosis of lung (disorder)
@@ -1386,9 +1370,9 @@ class AdvancedIllness(ValueSet):
         "716662004",  # Autosomal dominant late onset Parkinson disease (disorder)
         "717840005",  # Congestive heart failure stage B (disorder)
         "717919005",  # Neuroendocrine tumor of pancreas (disorder)
-        "718685006",  # Orthostatic hypotension co-occurrent and due to Parkinson's disease (disorder)
-        "71892000",   # Cardiac asthma (disorder)
-        "719717006",  # Psychosis co-occurrent and due to Parkinson's disease (disorder)
+        "718685006",  # Orthostatic hypotension co-occurrent and due to Parkinson\'s disease (disorder)
+        "71892000",  # Cardiac asthma (disorder)
+        "719717006",  # Psychosis co-occurrent and due to Parkinson\'s disease (disorder)
         "721710005",  # Fibrosis of liver caused by alcohol (disorder)
         "721977007",  # Lung fibrosis, immunodeficiency, 46,XX gonadal dysgenesis syndrome (disorder)
         "722600006",  # Non-amnestic Alzheimer disease (disorder)
@@ -1413,12 +1397,13 @@ class AdvancedIllness(ValueSet):
         "725940006",  # Cirrhosis of liver caused by methyldopa (disorder)
         "733028000",  # Multiple sclerosis, ichthyosis, factor VIII deficiency syndrome (disorder)
         "733184002",  # Dementia caused by heavy metal exposure (disorder)
+        "733185001",  # Dementia following injury caused by exposure to ionizing radiation (disorder)
         "733190003",  # Dementia due to primary malignant neoplasm of brain (disorder)
         "733191004",  # Dementia due to chronic subdural hematoma (disorder)
         "733192006",  # Dementia due to herpes encephalitis (disorder)
         "733193001",  # Dementia co-occurrent and due to progressive multifocal leukoencephalopathy (disorder)
         "733194007",  # Dementia co-occurrent and due to Down syndrome (disorder)
-        "735386008",  # Acute hypoxemic respiratory failure co-occurrent with acute hypercapnic respiratory failure (disorder)
+        "735386008",  # Acute hypoxemic respiratory failure co-occurrent with acute hypercapnic respiratory failure (diso...
         "735733008",  # Cirrhosis of liver co-occurrent and due to primary sclerosing cholangitis (disorder)
         "735735001",  # Primary malignant neuroendocrine neoplasm of pancreas (disorder)
         "735757008",  # Primary ganglioneuroblastoma of brain (disorder)
@@ -1437,15 +1422,16 @@ class AdvancedIllness(ValueSet):
         "762707000",  # Subcortical dementia (disorder)
         "76301009",  # Florid cirrhosis (disorder)
         "766246000",  # Marburg acute multiple sclerosis (disorder)
-        "767444009",  # Germline BRCA-mutated human epidermal growth factor receptor 2 negative metastatic carcinoma of breast (disorder)
+        "767444009",  # Germline BRCA-mutated human epidermal growth factor receptor 2 negative metastatic carcinoma of b...
         "767448007",  # Pineoblastoma (disorder)
         "770602005",  # Squamous cell carcinoma of exocrine pancreas (disorder)
         "770727008",  # Spinal muscular atrophy with respiratory distress type 2 (disorder)
-        "771306007",  # Hereditary fibrosing poikiloderma, tendon contractures, myopathy, pulmonary fibrosis syndrome (disorder)
-        "774069007",  # Protein kinase cAMP-dependent type I regulatory subunit beta-related neurodegenerative dementia with intermediate filaments (disorder)
+        "771306007",  # Hereditary fibrosing poikiloderma, tendon contractures, myopathy, pulmonary fibrosis syndrome (di...
+        "774069007",  # Protein kinase cAMP-dependent type I regulatory subunit beta-related neurodegenerative dementia w...
         "776416004",  # Hyperuricemia, pulmonary hypertension, renal failure, alkalosis syndrome (disorder)
         "77690003",  # Interstitial emphysema of lung (disorder)
         "780821007",  # Invasive intraductal papillary-mucinous carcinoma of pancreas (disorder)
+        "781076008",  # Metastatic malignant neoplasm to colon and/or rectum (disorder)
         "782697005",  # Solid pseudopapillary carcinoma of pancreas (disorder)
         "783161005",  # Familial dementia British type (disorder)
         "783258000",  # Familial dementia Danish type (disorder)
@@ -1454,7 +1440,7 @@ class AdvancedIllness(ValueSet):
         "784341001",  # Amyotrophic lateral sclerosis type 4 (disorder)
         "78461000119105",  # Metastatic squamous cell carcinoma to skin (disorder)
         "785879009",  # Mucinous cystadenocarcinoma of pancreas (disorder)
-        "78862003",  # Ayerza's syndrome (disorder)
+        "78862003",  # Ayerza\'s syndrome (disorder)
         "788863007",  # Amnestic disorder caused by psychoactive substance (disorder)
         "788864001",  # Amnestic disorder caused by volatile solvent (disorder)
         "788898005",  # Dementia caused by volatile inhalant (disorder)
@@ -1470,7 +1456,7 @@ class AdvancedIllness(ValueSet):
         "80614003",  # Prolonged pulmonary alveolitis (disorder)
         "816205008",  # Malignant pituitary blastoma (disorder)
         "816984002",  # Progressive multiple sclerosis (disorder)
-        "82351000119105",  # Altered behavior due to Pick's disease (disorder)
+        "82351000119105",  # Altered behavior due to Pick\'s disease (disorder)
         "82361000119107",  # Altered behavior in dementia due to Huntington chorea (disorder)
         "82371000119101",  # Dementia due to multiple sclerosis with altered behavior (disorder)
         "82381000119103",  # Epileptic dementia with behavioral disturbance (disorder)
@@ -1564,9 +1550,12 @@ class AdvancedIllness(ValueSet):
         "94172001",  # Metastatic malignant neoplasm to anus (disorder)
         "94173006",  # Metastatic malignant neoplasm to aortic body (disorder)
         "94175004",  # Metastatic malignant neoplasm to appendix (disorder)
+        "94176003",  # Metastatic malignant neoplasm to areola of female breast (disorder)
+        "94177007",  # Metastatic malignant neoplasm to areola of male breast (disorder)
         "94179005",  # Metastatic malignant neoplasm to ascending colon (disorder)
         "94180008",  # Metastatic malignant neoplasm to axilla (disorder)
         "94181007",  # Metastatic malignant neoplasm to axillary lymph nodes (disorder)
+        "94182000",  # Metastatic malignant neoplasm to axillary tail of female breast (disorder)
         "94183005",  # Metastatic malignant neoplasm to back (disorder)
         "94184004",  # Metastatic malignant neoplasm to base of tongue (disorder)
         "94185003",  # Metastatic malignant neoplasm to biliary tract (disorder)
@@ -1624,6 +1613,7 @@ class AdvancedIllness(ValueSet):
         "94241006",  # Metastatic malignant neoplasm to cartilage of nose (disorder)
         "94242004",  # Metastatic malignant neoplasm to cauda equina (disorder)
         "94243009",  # Metastatic malignant neoplasm to central nervous system (disorder)
+        "94244003",  # Metastatic malignant neoplasm to central portion of female breast (disorder)
         "94245002",  # Metastatic malignant neoplasm to cerebellum (disorder)
         "94246001",  # Metastatic malignant neoplasm to cerebral meninges (disorder)
         "94247005",  # Metastatic malignant neoplasm to cerebral ventricle (disorder)
@@ -1654,6 +1644,8 @@ class AdvancedIllness(ValueSet):
         "94273000",  # Metastatic malignant neoplasm to dorsal surface of tongue (disorder)
         "94274006",  # Metastatic malignant neoplasm to thoracic vertebral column (disorder)
         "94275007",  # Metastatic malignant neoplasm to duodenum (disorder)
+        "94276008",  # Metastatic malignant neoplasm to ectopic female breast tissue (disorder)
+        "94277004",  # Metastatic malignant neoplasm to ectopic male breast tissue (disorder)
         "94278009",  # Metastatic malignant neoplasm to endocardium (disorder)
         "94279001",  # Metastatic malignant neoplasm to endocervix (disorder)
         "94280003",  # Metastatic malignant neoplasm to endocrine gland (disorder)
@@ -1673,6 +1665,7 @@ class AdvancedIllness(ValueSet):
         "94294002",  # Metastatic malignant neoplasm to facial nerve (disorder)
         "94295001",  # Metastatic malignant neoplasm to fallopian tube (disorder)
         "94296000",  # Metastatic malignant neoplasm to false vocal cord (disorder)
+        "94297009",  # Metastatic malignant neoplasm to female breast (disorder)
         "94298004",  # Metastatic malignant neoplasm to female genital organ (disorder)
         "94299007",  # Metastatic malignant neoplasm to femoral lymph nodes (disorder)
         "94300004",  # Metastatic malignant neoplasm to femur (disorder)
@@ -1745,7 +1738,7 @@ class AdvancedIllness(ValueSet):
         "94368009",  # Metastatic malignant neoplasm to laryngeal commissure (disorder)
         "94369001",  # Metastatic malignant neoplasm to laryngeal surface of epiglottis (disorder)
         "94370000",  # Metastatic malignant neoplasm to larynx (disorder)
-        "94371001",  # Metastatic malignant neoplasm to lateral portion floor of mouth (disorder)
+        "94371001",  # Metastatic malignant neoplasm to lateral portion of floor of mouth (disorder)
         "94372008",  # Metastatic malignant neoplasm to lateral wall of nasopharynx (disorder)
         "94373003",  # Metastatic malignant neoplasm to lateral wall of oropharynx (disorder)
         "94374009",  # Metastatic malignant neoplasm to lateral wall of urinary bladder (disorder)
@@ -1758,7 +1751,9 @@ class AdvancedIllness(ValueSet):
         "94382009",  # Metastatic malignant neoplasm to long bone of lower limb (disorder)
         "94383004",  # Metastatic malignant neoplasm to long bone of upper limb (disorder)
         "94384005",  # Metastatic malignant neoplasm to lower gum (disorder)
+        "94385006",  # Metastatic malignant neoplasm to lower inner quadrant of female breast (disorder)
         "94386007",  # Metastatic malignant neoplasm to lower limb (disorder)
+        "94387003",  # Metastatic malignant neoplasm to lower outer quadrant of female breast (disorder)
         "94388008",  # Metastatic malignant neoplasm to lower third of esophagus (disorder)
         "94389000",  # Metastatic malignant neoplasm to lumbar vertebral column (disorder)
         "94390009",  # Metastatic malignant neoplasm to lunate bone (disorder)
@@ -1772,12 +1767,13 @@ class AdvancedIllness(ValueSet):
         "94398002",  # Metastatic malignant neoplasm to lymph nodes of upper limb (disorder)
         "94399005",  # Metastatic malignant neoplasm to main bronchus (disorder)
         "94400003",  # Metastatic malignant neoplasm to major salivary gland (disorder)
+        "94401004",  # Metastatic malignant neoplasm to male breast (disorder)
         "94402006",  # Metastatic malignant neoplasm to male genital organ (disorder)
         "94403001",  # Metastatic malignant neoplasm to mandible (disorder)
         "94404007",  # Metastatic malignant neoplasm to mastoid air cells (disorder)
         "94405008",  # Metastatic malignant neoplasm to maxilla (disorder)
         "94406009",  # Metastatic malignant neoplasm to maxillary sinus (disorder)
-        "94407000",  # Metastatic malignant neoplasm to Meckel's diverticulum (disorder)
+        "94407000",  # Metastatic malignant neoplasm to Meckel\'s diverticulum (disorder)
         "94408005",  # Metastatic malignant neoplasm to mediastinal lymph nodes (disorder)
         "94409002",  # Metastatic malignant neoplasm to mediastinum (disorder)
         "94410007",  # Metastatic malignant neoplasm to mesenteric lymph nodes (disorder)
@@ -1812,6 +1808,8 @@ class AdvancedIllness(ValueSet):
         "94440009",  # Metastatic malignant neoplasm to scaphoid bone (disorder)
         "94441008",  # Metastatic malignant neoplasm to neck (disorder)
         "94442001",  # Metastatic malignant neoplasm to nervous system (disorder)
+        "94443006",  # Metastatic malignant neoplasm to nipple of female breast (disorder)
+        "94444000",  # Metastatic malignant neoplasm to nipple of male breast (disorder)
         "94445004",  # Metastatic malignant neoplasm to nose (disorder)
         "94446003",  # Metastatic malignant neoplasm to obturator lymph nodes (disorder)
         "94447007",  # Metastatic malignant neoplasm to occipital bone (disorder)
@@ -2017,7 +2015,9 @@ class AdvancedIllness(ValueSet):
         "94650002",  # Metastatic malignant neoplasm to ulna (disorder)
         "94651003",  # Metastatic malignant neoplasm to undescended testis (disorder)
         "94652005",  # Metastatic malignant neoplasm to upper gum (disorder)
+        "94653000",  # Metastatic malignant neoplasm to upper inner quadrant of female breast (disorder)
         "94654006",  # Metastatic malignant neoplasm to upper limb (disorder)
+        "94655007",  # Metastatic malignant neoplasm to upper outer quadrant of female breast (disorder)
         "94656008",  # Metastatic malignant neoplasm to upper respiratory tract (disorder)
         "94657004",  # Metastatic malignant neoplasm to upper third of esophagus (disorder)
         "94658009",  # Metastatic malignant neoplasm to urachus (disorder)
@@ -2044,15 +2044,607 @@ class AdvancedIllness(ValueSet):
         "94679009",  # Metastatic malignant neoplasm to vocal cord (disorder)
         "94680007",  # Metastatic malignant neoplasm to vomer (disorder)
         "94681006",  # Metastatic malignant neoplasm to vulva (disorder)
-        "94682004",  # Metastatic malignant neoplasm to Waldeyer's ring (disorder)
+        "94682004",  # Metastatic malignant neoplasm to Waldeyer\'s ring (disorder)
         "94683009",  # Metastatic malignant neoplasm to zygomatic bone (disorder)
         "96311000119109",  # Exacerbation of congestive heart failure (disorder)
         "96901000119105",  # Prostate cancer metastatic to eye (disorder)
         "97051000119105",  # Malignant melanoma metastatic to pancreas (disorder)
         "971918681000119107",  # Chronic respiratory failure due to obstructive sleep apnea (disorder)
-        "97751000119108",  # Altered behavior in Alzheimer's disease (disorder)
+        "97751000119108",  # Altered behavior in Alzheimer\'s disease (disorder)
         "99131000119108",  # Astrocytoma of cerebrum (disorder)
     }
+
+
+
+class FrailtyDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  potential indicators of frailty.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent that a diagnosis of potential frailty when coupled with older age: dependence on durable medical equipment for long-term use, limitation of activities of daily living due to disability, need for assistance with care, pressure ulcers, and falls.
+
+    **Exclusion Criteria:** Exclude concepts that indicate potential frailty when associated with pregnancy, fetal, juvenile, childhood or neonatal conditions; codes that indicate temporary need of durable medical equipment; codes that indicate accidental falls caused by another person, being pushed/shoved/collided into, falls on ice due to ice skates, falls due to impact against a baby buggy/shopping cart/wheelbarrow.
+
+    ** Used in:** CMS130v14
+    """
+
+    VALUE_SET_NAME = "Frailty Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.113.12.1074"
+    DEFINITION_VERSION = "20190315"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    ICD10CM = {
+        "L89.000",  # Pressure ulcer of unspecified elbow, unstageable
+        "L89.001",  # Pressure ulcer of unspecified elbow, stage 1
+        "L89.002",  # Pressure ulcer of unspecified elbow, stage 2
+        "L89.003",  # Pressure ulcer of unspecified elbow, stage 3
+        "L89.004",  # Pressure ulcer of unspecified elbow, stage 4
+        "L89.006",  # Pressure-induced deep tissue damage of unspecified elbow
+        "L89.009",  # Pressure ulcer of unspecified elbow, unspecified stage
+        "L89.010",  # Pressure ulcer of right elbow, unstageable
+        "L89.011",  # Pressure ulcer of right elbow, stage 1
+        "L89.012",  # Pressure ulcer of right elbow, stage 2
+        "L89.013",  # Pressure ulcer of right elbow, stage 3
+        "L89.014",  # Pressure ulcer of right elbow, stage 4
+        "L89.016",  # Pressure-induced deep tissue damage of right elbow
+        "L89.019",  # Pressure ulcer of right elbow, unspecified stage
+        "L89.020",  # Pressure ulcer of left elbow, unstageable
+        "L89.021",  # Pressure ulcer of left elbow, stage 1
+        "L89.022",  # Pressure ulcer of left elbow, stage 2
+        "L89.023",  # Pressure ulcer of left elbow, stage 3
+        "L89.024",  # Pressure ulcer of left elbow, stage 4
+        "L89.026",  # Pressure-induced deep tissue damage of left elbow
+        "L89.029",  # Pressure ulcer of left elbow, unspecified stage
+        "L89.100",  # Pressure ulcer of unspecified part of back, unstageable
+        "L89.101",  # Pressure ulcer of unspecified part of back, stage 1
+        "L89.102",  # Pressure ulcer of unspecified part of back, stage 2
+        "L89.103",  # Pressure ulcer of unspecified part of back, stage 3
+        "L89.104",  # Pressure ulcer of unspecified part of back, stage 4
+        "L89.106",  # Pressure-induced deep tissue damage of unspecified part of back
+        "L89.109",  # Pressure ulcer of unspecified part of back, unspecified stage
+        "L89.110",  # Pressure ulcer of right upper back, unstageable
+        "L89.111",  # Pressure ulcer of right upper back, stage 1
+        "L89.112",  # Pressure ulcer of right upper back, stage 2
+        "L89.113",  # Pressure ulcer of right upper back, stage 3
+        "L89.114",  # Pressure ulcer of right upper back, stage 4
+        "L89.116",  # Pressure-induced deep tissue damage of right upper back
+        "L89.119",  # Pressure ulcer of right upper back, unspecified stage
+        "L89.120",  # Pressure ulcer of left upper back, unstageable
+        "L89.121",  # Pressure ulcer of left upper back, stage 1
+        "L89.122",  # Pressure ulcer of left upper back, stage 2
+        "L89.123",  # Pressure ulcer of left upper back, stage 3
+        "L89.124",  # Pressure ulcer of left upper back, stage 4
+        "L89.126",  # Pressure-induced deep tissue damage of left upper back
+        "L89.129",  # Pressure ulcer of left upper back, unspecified stage
+        "L89.130",  # Pressure ulcer of right lower back, unstageable
+        "L89.131",  # Pressure ulcer of right lower back, stage 1
+        "L89.132",  # Pressure ulcer of right lower back, stage 2
+        "L89.133",  # Pressure ulcer of right lower back, stage 3
+        "L89.134",  # Pressure ulcer of right lower back, stage 4
+        "L89.136",  # Pressure-induced deep tissue damage of right lower back
+        "L89.139",  # Pressure ulcer of right lower back, unspecified stage
+        "L89.140",  # Pressure ulcer of left lower back, unstageable
+        "L89.141",  # Pressure ulcer of left lower back, stage 1
+        "L89.142",  # Pressure ulcer of left lower back, stage 2
+        "L89.143",  # Pressure ulcer of left lower back, stage 3
+        "L89.144",  # Pressure ulcer of left lower back, stage 4
+        "L89.146",  # Pressure-induced deep tissue damage of left lower back
+        "L89.149",  # Pressure ulcer of left lower back, unspecified stage
+        "L89.150",  # Pressure ulcer of sacral region, unstageable
+        "L89.151",  # Pressure ulcer of sacral region, stage 1
+        "L89.152",  # Pressure ulcer of sacral region, stage 2
+        "L89.153",  # Pressure ulcer of sacral region, stage 3
+        "L89.154",  # Pressure ulcer of sacral region, stage 4
+        "L89.156",  # Pressure-induced deep tissue damage of sacral region
+        "L89.159",  # Pressure ulcer of sacral region, unspecified stage
+        "L89.200",  # Pressure ulcer of unspecified hip, unstageable
+        "L89.201",  # Pressure ulcer of unspecified hip, stage 1
+        "L89.202",  # Pressure ulcer of unspecified hip, stage 2
+        "L89.203",  # Pressure ulcer of unspecified hip, stage 3
+        "L89.204",  # Pressure ulcer of unspecified hip, stage 4
+        "L89.206",  # Pressure-induced deep tissue damage of unspecified hip
+        "L89.209",  # Pressure ulcer of unspecified hip, unspecified stage
+        "L89.210",  # Pressure ulcer of right hip, unstageable
+        "L89.211",  # Pressure ulcer of right hip, stage 1
+        "L89.212",  # Pressure ulcer of right hip, stage 2
+        "L89.213",  # Pressure ulcer of right hip, stage 3
+        "L89.214",  # Pressure ulcer of right hip, stage 4
+        "L89.216",  # Pressure-induced deep tissue damage of right hip
+        "L89.219",  # Pressure ulcer of right hip, unspecified stage
+        "L89.220",  # Pressure ulcer of left hip, unstageable
+        "L89.221",  # Pressure ulcer of left hip, stage 1
+        "L89.222",  # Pressure ulcer of left hip, stage 2
+        "L89.223",  # Pressure ulcer of left hip, stage 3
+        "L89.224",  # Pressure ulcer of left hip, stage 4
+        "L89.226",  # Pressure-induced deep tissue damage of left hip
+        "L89.229",  # Pressure ulcer of left hip, unspecified stage
+        "L89.300",  # Pressure ulcer of unspecified buttock, unstageable
+        "L89.301",  # Pressure ulcer of unspecified buttock, stage 1
+        "L89.302",  # Pressure ulcer of unspecified buttock, stage 2
+        "L89.303",  # Pressure ulcer of unspecified buttock, stage 3
+        "L89.304",  # Pressure ulcer of unspecified buttock, stage 4
+        "L89.306",  # Pressure-induced deep tissue damage of unspecified buttock
+        "L89.309",  # Pressure ulcer of unspecified buttock, unspecified stage
+        "L89.310",  # Pressure ulcer of right buttock, unstageable
+        "L89.311",  # Pressure ulcer of right buttock, stage 1
+        "L89.312",  # Pressure ulcer of right buttock, stage 2
+        "L89.313",  # Pressure ulcer of right buttock, stage 3
+        "L89.314",  # Pressure ulcer of right buttock, stage 4
+        "L89.316",  # Pressure-induced deep tissue damage of right buttock
+        "L89.319",  # Pressure ulcer of right buttock, unspecified stage
+        "L89.320",  # Pressure ulcer of left buttock, unstageable
+        "L89.321",  # Pressure ulcer of left buttock, stage 1
+        "L89.322",  # Pressure ulcer of left buttock, stage 2
+        "L89.323",  # Pressure ulcer of left buttock, stage 3
+        "L89.324",  # Pressure ulcer of left buttock, stage 4
+        "L89.326",  # Pressure-induced deep tissue damage of left buttock
+        "L89.329",  # Pressure ulcer of left buttock, unspecified stage
+        "L89.40",  # Pressure ulcer of contiguous site of back, buttock and hip, unspecified stage
+        "L89.41",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 1
+        "L89.42",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 2
+        "L89.43",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 3
+        "L89.44",  # Pressure ulcer of contiguous site of back, buttock and hip, stage 4
+        "L89.45",  # Pressure ulcer of contiguous site of back, buttock and hip, unstageable
+        "L89.46",  # Pressure-induced deep tissue damage of contiguous site of back, buttock and hip
+        "L89.500",  # Pressure ulcer of unspecified ankle, unstageable
+        "L89.501",  # Pressure ulcer of unspecified ankle, stage 1
+        "L89.502",  # Pressure ulcer of unspecified ankle, stage 2
+        "L89.503",  # Pressure ulcer of unspecified ankle, stage 3
+        "L89.504",  # Pressure ulcer of unspecified ankle, stage 4
+        "L89.506",  # Pressure-induced deep tissue damage of unspecified ankle
+        "L89.509",  # Pressure ulcer of unspecified ankle, unspecified stage
+        "L89.510",  # Pressure ulcer of right ankle, unstageable
+        "L89.511",  # Pressure ulcer of right ankle, stage 1
+        "L89.512",  # Pressure ulcer of right ankle, stage 2
+        "L89.513",  # Pressure ulcer of right ankle, stage 3
+        "L89.514",  # Pressure ulcer of right ankle, stage 4
+        "L89.516",  # Pressure-induced deep tissue damage of right ankle
+        "L89.519",  # Pressure ulcer of right ankle, unspecified stage
+        "L89.520",  # Pressure ulcer of left ankle, unstageable
+        "L89.521",  # Pressure ulcer of left ankle, stage 1
+        "L89.522",  # Pressure ulcer of left ankle, stage 2
+        "L89.523",  # Pressure ulcer of left ankle, stage 3
+        "L89.524",  # Pressure ulcer of left ankle, stage 4
+        "L89.526",  # Pressure-induced deep tissue damage of left ankle
+        "L89.529",  # Pressure ulcer of left ankle, unspecified stage
+        "L89.600",  # Pressure ulcer of unspecified heel, unstageable
+        "L89.601",  # Pressure ulcer of unspecified heel, stage 1
+        "L89.602",  # Pressure ulcer of unspecified heel, stage 2
+        "L89.603",  # Pressure ulcer of unspecified heel, stage 3
+        "L89.604",  # Pressure ulcer of unspecified heel, stage 4
+        "L89.606",  # Pressure-induced deep tissue damage of unspecified heel
+        "L89.609",  # Pressure ulcer of unspecified heel, unspecified stage
+        "L89.610",  # Pressure ulcer of right heel, unstageable
+        "L89.611",  # Pressure ulcer of right heel, stage 1
+        "L89.612",  # Pressure ulcer of right heel, stage 2
+        "L89.613",  # Pressure ulcer of right heel, stage 3
+        "L89.614",  # Pressure ulcer of right heel, stage 4
+        "L89.616",  # Pressure-induced deep tissue damage of right heel
+        "L89.619",  # Pressure ulcer of right heel, unspecified stage
+        "L89.620",  # Pressure ulcer of left heel, unstageable
+        "L89.621",  # Pressure ulcer of left heel, stage 1
+        "L89.622",  # Pressure ulcer of left heel, stage 2
+        "L89.623",  # Pressure ulcer of left heel, stage 3
+        "L89.624",  # Pressure ulcer of left heel, stage 4
+        "L89.626",  # Pressure-induced deep tissue damage of left heel
+        "L89.629",  # Pressure ulcer of left heel, unspecified stage
+        "L89.810",  # Pressure ulcer of head, unstageable
+        "L89.811",  # Pressure ulcer of head, stage 1
+        "L89.812",  # Pressure ulcer of head, stage 2
+        "L89.813",  # Pressure ulcer of head, stage 3
+        "L89.814",  # Pressure ulcer of head, stage 4
+        "L89.816",  # Pressure-induced deep tissue damage of head
+        "L89.819",  # Pressure ulcer of head, unspecified stage
+        "L89.890",  # Pressure ulcer of other site, unstageable
+        "L89.891",  # Pressure ulcer of other site, stage 1
+        "L89.892",  # Pressure ulcer of other site, stage 2
+        "L89.893",  # Pressure ulcer of other site, stage 3
+        "L89.894",  # Pressure ulcer of other site, stage 4
+        "L89.896",  # Pressure-induced deep tissue damage of other site
+        "L89.899",  # Pressure ulcer of other site, unspecified stage
+        "L89.90",  # Pressure ulcer of unspecified site, unspecified stage
+        "L89.91",  # Pressure ulcer of unspecified site, stage 1
+        "L89.92",  # Pressure ulcer of unspecified site, stage 2
+        "L89.93",  # Pressure ulcer of unspecified site, stage 3
+        "L89.94",  # Pressure ulcer of unspecified site, stage 4
+        "L89.95",  # Pressure ulcer of unspecified site, unstageable
+        "L89.96",  # Pressure-induced deep tissue damage of unspecified site
+        "M62.50",  # Muscle wasting and atrophy, not elsewhere classified, unspecified site
+        "M62.81",  # Muscle weakness (generalized)
+        "M62.84",  # Sarcopenia
+        "R29.6",  # Repeated falls
+        "W01.0XXA",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against obje...
+        "W01.0XXD",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against obje...
+        "W01.0XXS",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against obje...
+        "W01.10XA",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.10XD",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.10XS",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.110A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp g...
+        "W01.110D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp g...
+        "W01.110S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp g...
+        "W01.111A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power t...
+        "W01.111D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power t...
+        "W01.111S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power t...
+        "W01.118A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other s...
+        "W01.118D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other s...
+        "W01.118S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other s...
+        "W01.119A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.119D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.119S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspeci...
+        "W01.190A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furnitu...
+        "W01.190D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furnitu...
+        "W01.190S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furnitu...
+        "W01.198A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other o...
+        "W01.198D",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other o...
+        "W01.198S",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other o...
+        "W06.XXXA",  # Fall from bed, initial encounter
+        "W06.XXXD",  # Fall from bed, subsequent encounter
+        "W06.XXXS",  # Fall from bed, sequela
+        "W07.XXXA",  # Fall from chair, initial encounter
+        "W07.XXXD",  # Fall from chair, subsequent encounter
+        "W07.XXXS",  # Fall from chair, sequela
+        "W08.XXXA",  # Fall from other furniture, initial encounter
+        "W08.XXXD",  # Fall from other furniture, subsequent encounter
+        "W08.XXXS",  # Fall from other furniture, sequela
+        "W10.0XXA",  # Fall (on)(from) escalator, initial encounter
+        "W10.0XXD",  # Fall (on)(from) escalator, subsequent encounter
+        "W10.0XXS",  # Fall (on)(from) escalator, sequela
+        "W10.1XXA",  # Fall (on)(from) sidewalk curb, initial encounter
+        "W10.1XXD",  # Fall (on)(from) sidewalk curb, subsequent encounter
+        "W10.1XXS",  # Fall (on)(from) sidewalk curb, sequela
+        "W10.2XXA",  # Fall (on)(from) incline, initial encounter
+        "W10.2XXD",  # Fall (on)(from) incline, subsequent encounter
+        "W10.2XXS",  # Fall (on)(from) incline, sequela
+        "W10.8XXA",  # Fall (on) (from) other stairs and steps, initial encounter
+        "W10.8XXD",  # Fall (on) (from) other stairs and steps, subsequent encounter
+        "W10.8XXS",  # Fall (on) (from) other stairs and steps, sequela
+        "W10.9XXA",  # Fall (on) (from) unspecified stairs and steps, initial encounter
+        "W10.9XXD",  # Fall (on) (from) unspecified stairs and steps, subsequent encounter
+        "W10.9XXS",  # Fall (on) (from) unspecified stairs and steps, sequela
+        "W18.00XA",  # Striking against unspecified object with subsequent fall, initial encounter
+        "W18.00XD",  # Striking against unspecified object with subsequent fall, subsequent encounter
+        "W18.00XS",  # Striking against unspecified object with subsequent fall, sequela
+        "W18.02XA",  # Striking against glass with subsequent fall, initial encounter
+        "W18.02XD",  # Striking against glass with subsequent fall, subsequent encounter
+        "W18.02XS",  # Striking against glass with subsequent fall, sequela
+        "W18.09XA",  # Striking against other object with subsequent fall, initial encounter
+        "W18.09XD",  # Striking against other object with subsequent fall, subsequent encounter
+        "W18.09XS",  # Striking against other object with subsequent fall, sequela
+        "W18.11XA",  # Fall from or off toilet without subsequent striking against object, initial encounter
+        "W18.11XD",  # Fall from or off toilet without subsequent striking against object, subsequent encounter
+        "W18.11XS",  # Fall from or off toilet without subsequent striking against object, sequela
+        "W18.12XA",  # Fall from or off toilet with subsequent striking against object, initial encounter
+        "W18.12XD",  # Fall from or off toilet with subsequent striking against object, subsequent encounter
+        "W18.12XS",  # Fall from or off toilet with subsequent striking against object, sequela
+        "W18.2XXA",  # Fall in (into) shower or empty bathtub, initial encounter
+        "W18.2XXD",  # Fall in (into) shower or empty bathtub, subsequent encounter
+        "W18.2XXS",  # Fall in (into) shower or empty bathtub, sequela
+        "W18.30XA",  # Fall on same level, unspecified, initial encounter
+        "W18.30XD",  # Fall on same level, unspecified, subsequent encounter
+        "W18.30XS",  # Fall on same level, unspecified, sequela
+        "W18.31XA",  # Fall on same level due to stepping on an object, initial encounter
+        "W18.31XD",  # Fall on same level due to stepping on an object, subsequent encounter
+        "W18.31XS",  # Fall on same level due to stepping on an object, sequela
+        "W18.39XA",  # Other fall on same level, initial encounter
+        "W18.39XD",  # Other fall on same level, subsequent encounter
+        "W18.39XS",  # Other fall on same level, sequela
+        "W19.XXXA",  # Unspecified fall, initial encounter
+        "W19.XXXD",  # Unspecified fall, subsequent encounter
+        "W19.XXXS",  # Unspecified fall, sequela
+        "Y92.199",  # Unspecified place in other specified residential institution as the place of occurrence of the ex...
+        "Z59.3",  # Problems related to living in residential institution
+        "Z73.6",  # Limitation of activities due to disability
+        "Z74.01",  # Bed confinement status
+        "Z74.09",  # Other reduced mobility
+        "Z74.1",  # Need for assistance with personal care
+        "Z74.2",  # Need for assistance at home and no other household member able to render care
+        "Z74.3",  # Need for continuous supervision
+        "Z74.8",  # Other problems related to care provider dependency
+        "Z74.9",  # Problem related to care provider dependency, unspecified
+        "Z91.81",  # History of falling
+        "Z99.11",  # Dependence on respirator [ventilator] status
+        "Z99.3",  # Dependence on wheelchair
+        "Z99.81",  # Dependence on supplemental oxygen
+        "Z99.89",  # Dependence on other enabling machines and devices
+    }
+
+    SNOMEDCT = {
+        "10637031000119106",  # Pressure injury of buttock stage I (disorder)
+        "10637071000119109",  # Pressure injury of buttock stage II (disorder)
+        "10637111000119102",  # Pressure injury of buttock stage III (disorder)
+        "10637151000119101",  # Pressure injury of buttock stage IV (disorder)
+        "129588001",  # Adult failure to thrive syndrome (disorder)
+        "138371000119104",  # Paresis as late effect of poliomyelitis (disorder)
+        "17886000",  # Fall from wheelchair (event)
+        "20902002",  # Fall from bed (event)
+        "214436006",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214437002",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214438007",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214439004",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214441003",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214442005",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214443000",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "214444006",  # Noncollision motor vehicle traffic accident involving fall down stairs of motor bus while boardin...
+        "217082002",  # Accidental fall (event)
+        "217083007",  # Fall on or from stairs or steps (event)
+        "217084001",  # Fall on or from escalator (event)
+        "217086004",  # Fall from escalator (event)
+        "217088003",  # Fall on or from stairs (event)
+        "217090002",  # Fall from stairs (event)
+        "217092005",  # Fall on or from steps (event)
+        "217093000",  # Fall on steps (event)
+        "217094006",  # Fall from steps (event)
+        "217142006",  # Fall from chair or bed (event)
+        "217154006",  # Fall on same level from slipping, tripping or stumbling (event)
+        "217155007",  # Fall on same level from slipping (event)
+        "217156008",  # Fall on same level from tripping (event)
+        "217157004",  # Fall on same level from stumbling (event)
+        "217158009",  # Fall on moving sidewalk (event)
+        "217173005",  # Fall from bump against object (event)
+        "225558004",  # Pressure injury of back (disorder)
+        "225562005",  # Pressure injury of sacral region of back (disorder)
+        "225563000",  # Pressure injury of buttock (disorder)
+        "242109009",  # Fall down stairs of motor bus while boarding or alighting (event)
+        "242389003",  # Fall due to wet surface (event)
+        "242390007",  # Fall due to polished surface (event)
+        "242391006",  # Fall due to discarded object (event)
+        "242392004",  # Fall in bath or shower (event)
+        "242395002",  # Fall due to trip on loose carpet (event)
+        "242396001",  # Fall due to uneven surface indoors (event)
+        "242413007",  # Fall from furniture (event)
+        "242414001",  # Fall from stool (event)
+        "242419006",  # Fall from toilet seat (event)
+        "269699007",  # Fall on same level from impact against object (event)
+        "274918000",  # Fall on same level due to nature of surface (event)
+        "33036003",  # Fall on same level (event)
+        "40104005",  # Fall in home (event)
+        "414190009",  # Fall on stairs (event)
+        "427849003",  # Fall on hard surface (event)
+        "428484005",  # Organic failure to thrive (disorder)
+        "429621003",  # Fall on concrete (event)
+        "44188002",  # Fall in shower (event)
+        "56307009",  # Fall from table (event)
+        "67223001",  # Fall on escalator (event)
+        "699214007",  # Pressure injury of hip (disorder)
+        "699216009",  # Pressure injury of coccygeal region of back (disorder)
+        "715504003",  # Spastic paraparesis co-occurrent with deafness (disorder)
+        "74541001",  # Fall from bench (event)
+        "763829004",  # Oculopharyngodistal myopathy (disorder)
+        "823018004",  # Muscle paresis due to and following neuromuscular blockade (disorder)
+        "83468000",  # Fall from chair (event)
+        "8960001000004106",  # Pressure injury of ischial tuberosity region of right buttock (disorder)
+        "90619006",  # Fall in bathtub (event)
+        "92341000119107",  # Weakness of extremities as sequela of stroke (disorder)
+    }
+
+class HospiceDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts that indicate a patient is receiving hospice care or services.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent hospice care or services.
+
+    **Exclusion Criteria:** No exclusions.
+
+    ** Used in:** CMS130v14
+    """
+
+    VALUE_SET_NAME = "Hospice Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.1165"
+    DEFINITION_VERSION = "20220818"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    SNOMEDCT = {
+        "170935008",  # Full care by hospice (finding)
+        "170936009",  # Shared care - hospice and general practitioner (finding)
+        "305911006",  # Seen in hospice (finding)
+    }
+
+class MalignantNeoplasmOfColon(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of  malignant neoplasms of the colon.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent a diagnosis of malignant neoplasms of the colon, rectum and anus.
+
+    **Exclusion Criteria:** No exclusions.
+
+    ** Used in:** CMS130v14
+    """
+
+    VALUE_SET_NAME = "Malignant Neoplasm of Colon"
+    OID = "2.16.840.1.113883.3.464.1003.108.12.1001"
+    DEFINITION_VERSION = "20240112"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    ICD10CM = {
+        "C18.0",  # Malignant neoplasm of cecum
+        "C18.1",  # Malignant neoplasm of appendix
+        "C18.2",  # Malignant neoplasm of ascending colon
+        "C18.3",  # Malignant neoplasm of hepatic flexure
+        "C18.4",  # Malignant neoplasm of transverse colon
+        "C18.5",  # Malignant neoplasm of splenic flexure
+        "C18.6",  # Malignant neoplasm of descending colon
+        "C18.7",  # Malignant neoplasm of sigmoid colon
+        "C18.8",  # Malignant neoplasm of overlapping sites of colon
+        "C18.9",  # Malignant neoplasm of colon, unspecified
+        "C19",  # Malignant neoplasm of rectosigmoid junction
+        "C20",  # Malignant neoplasm of rectum
+        "C21.2",  # Malignant neoplasm of cloacogenic zone
+        "C21.8",  # Malignant neoplasm of overlapping sites of rectum, anus and anal canal
+        "C78.5",  # Secondary malignant neoplasm of large intestine and rectum
+        "Z85.038",  # Personal history of other malignant neoplasm of large intestine
+        "Z85.048",  # Personal history of other malignant neoplasm of rectum, rectosigmoid junction, and anus
+    }
+
+    SNOMEDCT = {
+        "109838007",  # Overlapping malignant neoplasm of colon (disorder)
+        "109839004",  # Overlapping malignant neoplasm of rectum, anus and anal canal (disorder)
+        "109840002",  # Primary malignant neoplasm of cloacogenic zone (disorder)
+        "10987871000119109",  # History of malignant neoplasm of rectosigmoid junction (situation)
+        "1156783003",  # Leiomyosarcoma of rectum (disorder)
+        "1156788007",  # Leiomyosarcoma of colon (disorder)
+        "1156795003",  # Kaposi sarcoma of colon (disorder)
+        "1156797006",  # Kaposi sarcoma of rectum (disorder)
+        "1163568002",  # Primary malignant neoplasm of overlapping sites of colon (disorder)
+        "1197354001",  # Primary malignant mesenchymal neoplasm of colon (disorder)
+        "1197355000",  # Primary malignant mesenchymal neoplasm of rectum (disorder)
+        "1197359006",  # Familial colorectal cancer type X (disorder)
+        "1204448006",  # History of carcinoma of rectosigmoid junction (situation)
+        "123691000119104",  # Malignant carcinoid tumor of sigmoid colon (disorder)
+        "123701000119104",  # Malignant carcinoid tumor of descending colon (disorder)
+        "123721000119108",  # Malignant carcinoid tumor of ascending colon (disorder)
+        "1237454003",  # Metastatic carcinoma to splenic flexure (disorder)
+        "1237455002",  # Metastatic carcinoma to descending colon (disorder)
+        "1237456001",  # Metastatic carcinoma to hepatic flexure (disorder)
+        "1237458000",  # Metastatic carcinoma to transverse colon (disorder)
+        "1237460003",  # Metastatic carcinoma to ascending colon (disorder)
+        "1237480002",  # Metastatic carcinoma to sigmoid colon (disorder)
+        "1237484006",  # Metastatic carcinoma to colon (disorder)
+        "1237485007",  # Metastatic carcinoma to rectosigmoid junction (disorder)
+        "1259403004",  # Primary carcinoma of ascending colon (disorder)
+        "1259404005",  # Primary carcinoma of transverse colon (disorder)
+        "1259405006",  # Primary carcinoma of descending colon (disorder)
+        "1259406007",  # Primary carcinoma of hepatic flexure (disorder)
+        "1259407003",  # Primary carcinoma of splenic flexure (disorder)
+        "1259432001",  # Primary carcinoma of sigmoid colon (disorder)
+        "1259436003",  # Primary carcinoma of colon (disorder)
+        "1259437007",  # Primary carcinoma of rectosigmoid junction (disorder)
+        "1268633007",  # Primary squamous cell carcinoma of rectum (disorder)
+        "1268635000",  # Primary squamous cell carcinoma of colon (disorder)
+        "1269123008",  # Metastatic squamous cell carcinoma to rectum (disorder)
+        "130381000119103",  # Primary malignant neuroendocrine neoplasm of ascending colon (disorder)
+        "133751000119102",  # Lymphoma of colon (disorder)
+        "16636051000119105",  # Primary malignant gastrointestinal stromal neoplasm of colon (disorder)
+        "16636101000119105",  # Primary malignant gastrointestinal stromal neoplasm of rectum (disorder)
+        "1701000119104",  # Primary adenocarcinoma of colon (disorder)
+        "184881000119106",  # Primary adenocarcinoma of rectosigmoid junction (disorder)
+        "187757001",  # Malignant neoplasm, overlapping lesion of colon (disorder)
+        "187758006",  # Malignant neoplasm of other specified sites of colon (disorder)
+        "187760008",  # Malignant neoplasm of rectum, rectosigmoid junction and anus (disorder)
+        "254582000",  # Adenocarcinoma of rectum (disorder)
+        "254586002",  # Malignant tumor of anorectal junction (disorder)
+        "269533000",  # Carcinoma of colon (disorder)
+        "269544008",  # Carcinoma of rectosigmoid junction (disorder)
+        "276822007",  # Malignant melanoma of rectum (disorder)
+        "285312008",  # Carcinoma of sigmoid colon (disorder)
+        "285611007",  # Metastasis to colon of unknown primary (disorder)
+        "285612000",  # Metastasis to rectum of unknown primary (disorder)
+        "286771000119106",  # History of malignant carcinoid tumor of colon (situation)
+        "286791000119107",  # History of malignant carcinoid tumor of rectum (situation)
+        "301756000",  # Adenocarcinoma of sigmoid colon (disorder)
+        "312111009",  # Carcinoma of ascending colon (disorder)
+        "312112002",  # Carcinoma of transverse colon (disorder)
+        "312113007",  # Carcinoma of descending colon (disorder)
+        "312114001",  # Carcinoma of hepatic flexure (disorder)
+        "312115000",  # Carcinoma of splenic flexure (disorder)
+        "314965007",  # Local recurrence of malignant tumor of colon (disorder)
+        "314966008",  # Local recurrence of malignant tumor of rectum (disorder)
+        "315058005",  # Hereditary nonpolyposis colon cancer (disorder)
+        "363351006",  # Malignant tumor of rectum (disorder)
+        "363406005",  # Malignant neoplasm of colon (disorder)
+        "363407001",  # Malignant tumor of hepatic flexure (disorder)
+        "363408006",  # Malignant tumor of transverse colon (disorder)
+        "363409003",  # Malignant tumor of descending colon (disorder)
+        "363410008",  # Malignant tumor of sigmoid colon (disorder)
+        "363412000",  # Malignant tumor of ascending colon (disorder)
+        "363413005",  # Malignant tumor of splenic flexure (disorder)
+        "363414004",  # Malignant tumor of rectosigmoid junction (disorder)
+        "363491008",  # Malignant tumor of cloacogenic zone (disorder)
+        "363510005",  # Malignant tumor of large intestine (disorder)
+        "369448007",  # Malignant tumor involving rectum by direct extension from endometrium (disorder)
+        "369449004",  # Malignant tumor involving rectum by direct extension from fallopian tube (disorder)
+        "369450004",  # Malignant tumor involving rectum by direct extension from ovary (disorder)
+        "369451000",  # Malignant tumor involving rectum by direct extension from prostate (disorder)
+        "369452007",  # Malignant tumor involving rectum by direct extension from uterine cervix (disorder)
+        "369453002",  # Malignant tumor involving rectum by direct extension from uterus (disorder)
+        "369454008",  # Malignant tumor involving rectum by direct extension from vagina (disorder)
+        "369455009",  # Malignant tumor involving rectum by separate metastasis from endometrium (disorder)
+        "369456005",  # Malignant tumor involving rectum by separate metastasis from fallopian tube (disorder)
+        "369457001",  # Malignant tumor involving rectum by separate metastasis from ovary (disorder)
+        "369458006",  # Malignant tumor involving rectum by separate metastasis from prostate (disorder)
+        "369459003",  # Malignant tumor involving rectum by separate metastasis from uterine cervix (disorder)
+        "369460008",  # Malignant tumor involving rectum by separate metastasis from uterus (disorder)
+        "369461007",  # Malignant tumor involving rectum by separate metastasis from vagina (disorder)
+        "395705003",  # pTis: Carcinoma in situ, intraepithelial (colon/rectum) (finding)
+        "422375001",  # Carcinoma of colon, stage III (finding)
+        "422581008",  # Carcinoma of colon, stage II (finding)
+        "422985007",  # Carcinoma of colon, stage IV (finding)
+        "425178004",  # Adenocarcinoma of rectosigmoid junction (disorder)
+        "425213009",  # Carcinoma of colon, stage I (finding)
+        "429084005",  # History of malignant neoplasm of rectum (situation)
+        "429699009",  # History of malignant neoplasm of colon (situation)
+        "443488001",  # Malignant neoplasm of anorectum (disorder)
+        "447886005",  # Adenocarcinoma of anorectum (disorder)
+        "448994001",  # Malignant epithelial neoplasm of upper rectum (disorder)
+        "449218003",  # Lymphoma of sigmoid colon (disorder)
+        "681601000119101",  # Primary adenocarcinoma of ascending colon (disorder)
+        "681651000119102",  # Primary adenocarcinoma of descending colon (disorder)
+        "713573006",  # Malignant carcinoid tumor of rectum (disorder)
+        "721695008",  # Primary adenocarcinoma of ascending colon and right flexure (disorder)
+        "721696009",  # Primary adenocarcinoma of transverse colon (disorder)
+        "721697000",  # Primary neuroendocrine carcinoma of colon (disorder)
+        "721698005",  # Primary malignant neuroendocrine neoplasm of colon (disorder)
+        "721699002",  # Primary adenocarcinoma of descending colon and splenic flexure (disorder)
+        "721700001",  # Primary malignant neuroendocrine neoplasm of rectum (disorder)
+        "721701002",  # Primary neuroendocrine carcinoma of rectum (disorder)
+        "726654006",  # Malignant carcinoid tumor of colon (disorder)
+        "737058005",  # Microsatellite instability-high colorectal cancer (disorder)
+        "766979005",  # Squamous cell carcinoma of rectum (disorder)
+        "766981007",  # Squamous cell carcinoma of colon (disorder)
+        "93683002",  # Primary malignant neoplasm of ascending colon (disorder)
+        "93761005",  # Primary malignant neoplasm of colon (disorder)
+        "93771007",  # Primary malignant neoplasm of descending colon (disorder)
+        "93826009",  # Primary malignant neoplasm of hepatic flexure of colon (disorder)
+        "93980002",  # Primary malignant neoplasm of rectosigmoid junction (disorder)
+        "93984006",  # Primary malignant neoplasm of rectum (disorder)
+        "94006002",  # Primary malignant neoplasm of sigmoid colon (disorder)
+        "94072004",  # Primary malignant neoplasm of splenic flexure of colon (disorder)
+        "94105000",  # Primary malignant neoplasm of transverse colon (disorder)
+        "94179005",  # Metastatic malignant neoplasm to ascending colon (disorder)
+        "94260004",  # Metastatic malignant neoplasm to colon (disorder)
+        "94271003",  # Metastatic malignant neoplasm to descending colon (disorder)
+        "94328005",  # Metastatic malignant neoplasm to hepatic flexure of colon (disorder)
+        "94509004",  # Metastatic malignant neoplasm to rectosigmoid junction (disorder)
+        "94513006",  # Metastatic malignant neoplasm to rectum (disorder)
+        "94538001",  # Metastatic malignant neoplasm to sigmoid colon (disorder)
+        "94604000",  # Metastatic malignant neoplasm to splenic flexure of colon (disorder)
+        "94643001",  # Metastatic malignant neoplasm to transverse colon (disorder)
+        "96281000119107",  # Overlapping malignant neoplasm of colon and rectum (disorder)
+        "96981000119102",  # Primary malignant neoplasm of rectosigmoid junction metastatic to brain (disorder)
+    }
+
+class PalliativeCareDiagnosis(ValueSet):
+    """
+    **Clinical Focus:** The purpose of this value set is to represent concepts that indicate a patient is receiving palliative care or services.
+
+    **Data Element Scope:** This value set may use a model element related to Diagnosis.
+
+    **Inclusion Criteria:** Includes concepts that represent palliative care or services.
+
+    **Exclusion Criteria:** No exclusions.
+
+    ** Used in:** CMS130v14
+    """
+
+    VALUE_SET_NAME = "Palliative Care Diagnosis"
+    OID = "2.16.840.1.113883.3.464.1003.1167"
+    DEFINITION_VERSION = "20220820"
+    EXPANSION_VERSION = "eCQM Update 2025-05-08"
+
+    ICD10CM = {
+        "Z51.5",  # Encounter for palliative care
+    }
+
+    SNOMEDCT = {
+        "305686008",  # Seen by palliative care physician (finding)
+        "305824005",  # Seen by palliative care medicine service (finding)
+        "441874000",  # Seen by palliative care service (finding)
+    }
+
 
 
 class Diabetes(ValueSet):
@@ -2853,4 +3445,11 @@ class Diabetes(ValueSet):
     }
 
 
-__exports__ = (AdvancedIllness, Diabetes,)
+__exports__ = (
+    "AdvancedIllness",
+    "FrailtyDiagnosis",
+    "HospiceDiagnosis",
+    "MalignantNeoplasmOfColon",
+    "PalliativeCareDiagnosis",
+    "Diabetes",
+)
