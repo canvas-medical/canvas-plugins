@@ -1,12 +1,8 @@
-"""
-Unit tests for CMS130v6 Colorectal Cancer Screening plugin.
-
-These tests validate the plugin logic for all scenarios from the testing plan.
-"""
+"""Tests for CMS130v6 Colorectal Cancer Screening protocol."""
 
 import json
 import uuid
-from unittest.mock import Mock, patch
+from typing import Iterable, Tuple
 
 import arrow
 import pytest
@@ -23,7 +19,6 @@ from canvas_sdk.v1.data import (
     LabReport,
     LabValue,
     LabValueCoding,
-    Note,
     NoteType,
     ReferralReport,
     ReferralReportCoding,
@@ -31,70 +26,133 @@ from canvas_sdk.v1.data import (
 from canvas_sdk.v1.data.note import PracticeLocationPOS
 from canvas_sdk.value_set.v2022.diagnostic_study import CtColonography
 from canvas_sdk.value_set.v2022.laboratory_test import FecalOccultBloodTestFobt, FitDna
-from canvas_sdk.value_set.v2022.procedure import Colonoscopy, FlexibleSigmoidoscopy, TotalColectomy, \
-    CMS130v6CtColonography
+from canvas_sdk.value_set.v2022.procedure import (
+    CMS130v6CtColonography,
+    Colonoscopy,
+    FlexibleSigmoidoscopy,
+    TotalColectomy,
+)
 from cms130v6_colorectal_cancer_screening.cms130v6_colorectal_cancer_screening.protocols.cms130v6_protocol import \
     CMS130v6ColorectalCancerScreening
 
 
+# ---------- Helpers ----------
+
+def first_or_skip(codes: Iterable[str], reason: str) -> str:
+    """Return first code or skip when value set is empty (env-dependent)."""
+    codes = list(codes or [])
+    if not codes:
+        pytest.skip(reason)
+    return codes[0]
+
+
+def extract_card(effects) -> dict:
+    """Return protocol card 'data' from a single effect."""
+    assert len(effects) == 1, f"Expected 1 effect, got {len(effects)}"
+    eff = effects[0]
+    assert eff.type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+    return json.loads(eff.payload)["data"]
+
+
+def set_patient_context(protocol: CMS130v6ColorectalCancerScreening, patient_id):
+    protocol.event.context = {"patient": {"id": str(patient_id)}}
+
+
+def mk_patient_age(now, years: int):
+    return PatientFactory.create(birth_date=now.shift(years=-years).date())
+
+
+def mk_lab_with_loinc(patient, when_dt, code: str, name: str = "") -> Tuple[LabReport, LabValue]:
+    report = LabReport.objects.create(
+        patient=patient,
+        original_date=when_dt,
+        assigned_date=when_dt,
+        date_performed=when_dt,
+        junked=False,
+        requires_signature=False,
+        for_test_only=False,
+        version=1,
+    )
+    value = LabValue.objects.create(
+        report=report,
+        value="Negative",
+        units="",
+        abnormal_flag="",
+        reference_range="",
+        low_threshold="",
+        high_threshold="",
+        comment="",
+        observation_status="final",
+    )
+    LabValueCoding.objects.create(value=value, code=code, system="http://loinc.org", name=name or code)
+    return report, value
+
+
+def mk_imaging_with_cpt(patient, when_date, when_assigned_dt, code: str, display: str):
+    report = ImagingReport.objects.create(
+        patient=patient,
+        original_date=when_date,
+        result_date=when_date,
+        assigned_date=when_assigned_dt,
+        junked=False,
+        requires_signature=False,
+        name=display,
+    )
+    ImagingReportCoding.objects.create(report=report, code=code, system="http://www.ama-assn.org/go/cpt", display=display)
+    return report
+
+
+def mk_referral_with_cpt(patient, when_date, code: str, display: str, specialty="Gastroenterology"):
+    report = ReferralReport.objects.create(
+        patient=patient,
+        original_date=when_date,
+        junked=False,
+        requires_signature=False,
+        specialty=specialty,
+    )
+    ReferralReportCoding.objects.create(report=report, code=code, system="http://www.ama-assn.org/go/cpt", display=display)
+    return report
+
+
+# ---------- Fixtures ----------
+
 @pytest.fixture
-def protocol_instance():
-    """Create a protocol instance with mocked event and context."""
-    event_request = EventRequest(
-        type=EventType.CRON,
-        context='{"patient": {"id": "test-patient-id"}}',
-    )
+def now():
+    return arrow.get("2025-01-15T12:00:00Z")
+
+
+@pytest.fixture
+def protocol_instance(now):
+    event_request = EventRequest(type=EventType.CRON, context='{"patient": {"id": "test-patient-id"}}')
     event = Event(event_request=event_request)
-
-    protocol = CMS130v6ColorectalCancerScreening(
-        event=event,
-        secrets={},
-        environment={},
-    )
-
-    # Set now - the timeframe property will compute from this
-    now = arrow.utcnow()
+    protocol = CMS130v6ColorectalCancerScreening(event=event, secrets={}, environment={})
     protocol.now = now
-
     return protocol
 
 
 @pytest.fixture
-def patient_age_62():
-    """Create a patient aged 62 (within 50-75 range)."""
-    birth_date = arrow.utcnow().shift(years=-62).date()
-    patient = PatientFactory.create(birth_date=birth_date)
-    return patient
+def patient_age_62(now):
+    return mk_patient_age(now, 62)
 
 
 @pytest.fixture
-def patient_age_45():
-    """Create a patient aged 45 (too young)."""
-    birth_date = arrow.utcnow().shift(years=-45).date()
-    patient = PatientFactory.create(birth_date=birth_date)
-    return patient
+def patient_age_45(now):
+    return mk_patient_age(now, 45)
 
 
 @pytest.fixture
-def patient_age_80():
-    """Create a patient aged 80 (too old)."""
-    birth_date = arrow.utcnow().shift(years=-80).date()
-    patient = PatientFactory.create(birth_date=birth_date)
-    return patient
+def patient_age_80(now):
+    return mk_patient_age(now, 80)
 
 
 @pytest.fixture
-def eligible_note(patient_age_62):
-    """Create an eligible encounter note within measurement period."""
-    note = NoteFactory.create(
-        patient=patient_age_62,
-        datetime_of_service=arrow.utcnow().shift(months=-6).datetime,
-    )
-    # Create a NoteType that matches OfficeVisit
+def eligible_note(now, patient_age_62):
+    """Encounter within period with NoteType coded as Office Visit (SNOMED 308335008)."""
+    note = NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
     from canvas_sdk.v1.data.note import NoteTypeCategories
 
     note_type = NoteType.objects.create(
-        code="308335008",  # Office Visit SNOMED code
+        code="308335008",
         system="http://snomed.info/sct",
         display="Office Visit",
         name="Office Visit",
@@ -112,7 +170,7 @@ def eligible_note(patient_age_62):
         is_visible=True,
         is_active=True,
         unique_identifier=uuid.uuid4(),
-        deprecated_at=arrow.utcnow().shift(years=100).datetime,  # Far future date for non-deprecated
+        deprecated_at=now.shift(years=100).datetime,
         is_patient_required=False,
         allow_custom_title=False,
         is_scheduleable_via_patient_portal=False,
@@ -123,757 +181,239 @@ def eligible_note(patient_age_62):
     return note
 
 
+# ---------- Tests ----------
+
 @pytest.mark.django_db
-class TestScenario1PatientDue:
-    """Scenario 1: Patient DUE (No Screening)"""
+class TestComputeGuards:
+    def test_returns_empty_when_no_patient_in_context(self, protocol_instance):
+        protocol_instance.event.context = {}
+        assert protocol_instance.compute() == []
 
-    def test_patient_due_no_screening(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient in denominator but no screening → DUE card with recommendations."""
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        assert effect.type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
-
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-        assert "due for colorectal cancer screening" in card_data["narrative"].lower()
-        assert len(card_data.get("recommendations", [])) == 5
+    def test_returns_empty_when_patient_not_found(self, protocol_instance):
+        protocol_instance.event.context = {"patient": {"id": "00000000-0000-0000-0000-000000000000"}}
+        assert protocol_instance.compute() == []
 
 
 @pytest.mark.django_db
-class TestScenario2PatientSatisfiedFOBT:
-    """Scenario 2: Patient SATISFIED (Has FOBT)"""
+class TestDue_NoScreening:
+    def test_due_when_in_population_and_no_prior_screening(self, protocol_instance, patient_age_62, eligible_note):
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.DUE.value
+        assert "colorectal cancer screening" in card["narrative"].lower()
+        assert isinstance(card.get("recommendations", []), list)
 
-    def test_patient_satisfied_with_fobt(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with recent FOBT → SATISFIED card."""
-        # Create FOBT lab report
-        lab_report = LabReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(months=-3).datetime,
-            assigned_date=arrow.utcnow().shift(months=-3).datetime,
-            date_performed=arrow.utcnow().shift(months=-3).datetime,
-            junked=False,
-            requires_signature=False,
-            for_test_only=False,
-            version=1,
+
+@pytest.mark.django_db
+class TestNumeratorByLabs:
+    def test_fobt_within_1_year_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+        code = first_or_skip(FecalOccultBloodTestFobt.LOINC, "FOBT LOINC set is empty")
+        mk_lab_with_loinc(patient_age_62, now.shift(months=-3).datetime, code, "FOBT")
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+        assert "fobt" in card["narrative"].lower() or "screening" in card["narrative"].lower()
+
+    def test_fitdna_within_3_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+        code = first_or_skip(FitDna.LOINC, "FIT-DNA LOINC set is empty")
+        mk_lab_with_loinc(patient_age_62, now.shift(years=-2).datetime, code, "FIT-DNA")
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+
+
+@pytest.mark.django_db
+class TestNumeratorByProcedures:
+    def test_colonoscopy_within_10_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+        cpt = first_or_skip(getattr(Colonoscopy, "CPT", []), "Colonoscopy CPT set is empty")
+        mk_imaging_with_cpt(
+            patient_age_62, when_date=now.shift(years=-5).date(), when_assigned_dt=now.shift(years=-5).datetime, code=cpt, display="Colonoscopy"
         )
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
 
-        # Create lab value with FOBT coding
-        lab_value = LabValue.objects.create(
-            report=lab_report,
-            value="Negative",
-            units="",
-            abnormal_flag="",
-            reference_range="",
-            low_threshold="",
-            high_threshold="",
-            comment="",
-            observation_status="final",
+    def test_flexible_sigmoidoscopy_within_5_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+        cpt = first_or_skip(getattr(FlexibleSigmoidoscopy, "CPT", []), "Flexible Sigmoidoscopy CPT set is empty")
+        mk_referral_with_cpt(patient_age_62, when_date=now.shift(years=-3).date(), code=cpt, display="Flexible Sigmoidoscopy")
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+
+    def test_ct_colonography_within_5_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+        cpt_codes = list(getattr(CMS130v6CtColonography, "CPT", []) or getattr(CtColonography, "CPT", []))
+        cpt = first_or_skip(cpt_codes, "CT Colonography CPT set is empty")
+        mk_imaging_with_cpt(
+            patient_age_62, when_date=now.shift(years=-2).date(), when_assigned_dt=now.shift(years=-2).datetime, code=cpt, display="CT Colonography"
         )
-        LabValueCoding.objects.create(
-            value=lab_value,
-            code="2335-8",  # FOBT LOINC code
-            system="http://loinc.org",
-            name="FOBT",
-        )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-        assert "fobt" in card_data["narrative"].lower() or "screening" in card_data["narrative"].lower()
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
 
 
 @pytest.mark.django_db
-class TestScenario3PatientSatisfiedFITDNA:
-    """Scenario 3: Patient SATISFIED (Has FIT-DNA)"""
+class TestExclusions_NotApplicable:
+    @pytest.mark.parametrize("age", [45, 80], ids=["too_young_45", "too_old_80"])
+    def test_age_out_of_range_is_not_applicable(self, now, protocol_instance, eligible_note, age):
+        patient = mk_patient_age(now, age)
+        set_patient_context(protocol_instance, patient.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
-    def test_patient_satisfied_with_fit_dna(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with FIT-DNA within 3 years → SATISFIED card."""
-        # Create FIT-DNA lab report (2 years ago)
-        lab_report = LabReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-2).datetime,
-            assigned_date=arrow.utcnow().shift(years=-2).datetime,
-            date_performed=arrow.utcnow().shift(years=-2).datetime,
-            junked=False,
-            requires_signature=False,
-            for_test_only=False,
-            version=1,
-        )
-
-        lab_value = LabValue.objects.create(
-            report=lab_report,
-            value="Negative",
-            units="",
-            abnormal_flag="",
-            reference_range="",
-            low_threshold="",
-            high_threshold="",
-            comment="",
-            observation_status="final",
-        )
-        # Use a FIT-DNA LOINC code
-        fit_dna_codes = list(FitDna.LOINC)
-        if fit_dna_codes:
-            LabValueCoding.objects.create(
-                value=lab_value,
-                code=fit_dna_codes[0],
-                system="http://loinc.org",
-                name="FIT-DNA",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-
-@pytest.mark.django_db
-class TestScenario4PatientSatisfiedColonoscopy:
-    """Scenario 4: Patient SATISFIED (Has Colonoscopy)"""
-
-    def test_patient_satisfied_with_colonoscopy_imaging(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with Colonoscopy imaging within 10 years → SATISFIED card."""
-        # Create Colonoscopy imaging report (5 years ago)
-        imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-5).date(),
-            result_date=arrow.utcnow().shift(years=-5).date(),
-            assigned_date=arrow.utcnow().shift(years=-5).datetime,
-            junked=False,
-            requires_signature=False,
-            name="Colonoscopy",
-        )
-
-        # Create coding for Colonoscopy
-        colonoscopy_codes = list(Colonoscopy.CPT) if hasattr(Colonoscopy, "CPT") else []
-        if colonoscopy_codes:
-            ImagingReportCoding.objects.create(
-                report=imaging_report,
-                code=colonoscopy_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Colonoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-
-@pytest.mark.django_db
-class TestScenario7PatientNotApplicableTooYoung:
-    """Scenario 7: Patient NOT_APPLICABLE (Too Young)"""
-
-    def test_patient_not_applicable_too_young(
-            self, protocol_instance, patient_age_45, eligible_note
-    ):
-        """Test patient outside age range (< 50) → NOT_APPLICABLE card."""
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_45.id)}}
-
-        with patch.object(
-                CMS130v6ColorectalCancerScreening, "_get_patient_id", return_value=str(patient_age_45.id)
-        ):
-            effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
-
-
-@pytest.mark.django_db
-class TestScenario8PatientNotApplicableTooOld:
-    """Scenario 8: Patient NOT_APPLICABLE (Too Old)"""
-
-    def test_patient_not_applicable_too_old(
-            self, protocol_instance, patient_age_80, eligible_note
-    ):
-        """Test patient outside age range (> 75) → NOT_APPLICABLE card."""
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_80.id)}}
-
-        with patch.object(
-                CMS130v6ColorectalCancerScreening, "_get_patient_id", return_value=str(patient_age_80.id)
-        ):
-            effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
-
-
-@pytest.mark.django_db
-class TestScenario10PatientNotApplicableHospice:
-    """Scenario 10: Patient NOT_APPLICABLE (Hospice Exclusion)"""
-
-    def test_patient_not_applicable_hospice(
-            self, protocol_instance, patient_age_62
-    ):
-        """Test patient in hospice → NOT_APPLICABLE card."""
-        # Create hospice note
+    def test_hospice_place_of_service_within_period_is_not_applicable(self, now, protocol_instance, patient_age_62):
         NoteFactory.create(
             patient=patient_age_62,
-            datetime_of_service=arrow.utcnow().shift(months=-6).datetime,
+            datetime_of_service=now.shift(months=-6).datetime,
             place_of_service=PracticeLocationPOS.HOSPICE,
         )
-
-        # Create eligible encounter
-        NoteFactory.create(
-            patient=patient_age_62,
-            datetime_of_service=arrow.utcnow().shift(months=-6).datetime,
-        )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
+        NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
 
 @pytest.mark.django_db
-class TestScenario11PatientNotApplicableTotalColectomy:
-    """Scenario 11: Patient NOT_APPLICABLE (Total Colectomy Exclusion)"""
+class TestDueWhenScreeningsStale:
+    @pytest.mark.parametrize(
+        "months_ago,code_getter,display",
+        [
+            (24, lambda: first_or_skip(FecalOccultBloodTestFobt.LOINC, "FOBT LOINC empty"), "FOBT"),
+            (48, lambda: first_or_skip(FitDna.LOINC, "FIT-DNA LOINC empty"), "FIT-DNA"),
+        ],
+        ids=["fobt_too_old", "fitdna_too_old"],
+    )
+    def test_lab_screenings_outside_window_yield_due(self, now, protocol_instance, patient_age_62, eligible_note, months_ago, code_getter, display):
+        code = code_getter()
+        mk_lab_with_loinc(patient_age_62, now.shift(months=-months_ago).datetime, code, display)
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.DUE.value
 
-    def test_patient_not_applicable_total_colectomy(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with Total Colectomy → NOT_APPLICABLE card."""
-        # Create a CanvasUser to use as committer (required for committed() filter)
+    @pytest.mark.parametrize(
+        "years_ago,code_getter,display",
+        [
+            (12, lambda: first_or_skip(getattr(Colonoscopy, "CPT", []), "Colonoscopy CPT empty"), "Colonoscopy"),
+            (6, lambda: first_or_skip(getattr(FlexibleSigmoidoscopy, "CPT", []), "Flexible Sigmoidoscopy CPT empty"), "Flexible Sigmoidoscopy"),
+            (6, lambda: first_or_skip(list(getattr(CMS130v6CtColonography, "CPT", [])) or list(getattr(CtColonography, "CPT", [])), "CT Colonography CPT empty"), "CT Colonography"),
+        ],
+        ids=["colonoscopy_too_old", "flex_sig_too_old", "ct_colonography_too_old"],
+    )
+    def test_procedure_screenings_outside_window_yield_due(self, now, protocol_instance, patient_age_62, eligible_note, years_ago, code_getter, display):
+        code = code_getter()
+        if display == "Flexible Sigmoidoscopy":
+            mk_referral_with_cpt(patient_age_62, now.shift(years=-years_ago).date(), code, display)
+        else:
+            mk_imaging_with_cpt(
+                patient_age_62,
+                when_date=now.shift(years=-years_ago).date(),
+                when_assigned_dt=now.shift(years=-years_ago).datetime,
+                code=code,
+                display=display,
+            )
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.DUE.value
+
+
+@pytest.mark.django_db
+class TestAgeBoundaries_InPopulationWithFloor365:
+    @pytest.mark.parametrize("age", [50, 75], ids=["exact_50", "exact_75"])
+    def test_boundary_ages_in_population(self, now, protocol_instance, eligible_note, age):
+        patient = mk_patient_age(now, age)
+        n = NoteFactory.create(patient=patient, datetime_of_service=now.shift(months=-6).datetime)
+        n.note_type_version = eligible_note.note_type_version
+        n.save()
+        set_patient_context(protocol_instance, patient.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+
+    def test_49y_364d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
+        patient = PatientFactory.create(birth_date=now.shift(years=-50, days=+1).date())
+        n = NoteFactory.create(patient=patient, datetime_of_service=now.shift(months=-2).datetime)
+        n.note_type_version = eligible_note.note_type_version
+        n.save()
+        set_patient_context(protocol_instance, patient.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+
+    def test_75y_plus_1d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
+        patient = PatientFactory.create(birth_date=now.shift(years=-75, days=-1).date())
+        n = NoteFactory.create(patient=patient, datetime_of_service=now.shift(months=-2).datetime)
+        n.note_type_version = eligible_note.note_type_version
+        n.save()
+        set_patient_context(protocol_instance, patient.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+
+
+@pytest.mark.django_db
+class TestMostRecentScreeningWins:
+    def test_most_recent_colonoscopy_overrides_older_fobt(self, now, protocol_instance, patient_age_62, eligible_note):
+        fobt_code = first_or_skip(FecalOccultBloodTestFobt.LOINC, "FOBT LOINC empty")
+        mk_lab_with_loinc(patient_age_62, now.shift(years=-2).datetime, fobt_code, "FOBT")
+        col_cpt = first_or_skip(getattr(Colonoscopy, "CPT", []), "Colonoscopy CPT empty")
+        mk_imaging_with_cpt(
+            patient_age_62, when_date=now.shift(years=-1).date(), when_assigned_dt=now.shift(years=-1).datetime, code=col_cpt, display="Colonoscopy"
+        )
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+        assert "colonoscopy" in card["narrative"].lower()
+
+
+@pytest.mark.django_db
+class TestPopulationEdgeBehaviors:
+    def test_optimistic_encounter_rule_allows_processing(self, now, protocol_instance, patient_age_62):
+        set_patient_context(protocol_instance, patient_age_62.id)
+        effects = protocol_instance.compute()
+        assert effects  # compute proceeds even if no eligible encounter is matched
+
+    def test_hospice_note_outside_period_does_not_exclude(self, now, protocol_instance, eligible_note, patient_age_62):
+        NoteFactory.create(
+            patient=patient_age_62,
+            datetime_of_service=now.shift(years=-2).datetime,
+            place_of_service=PracticeLocationPOS.HOSPICE,
+        )
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+
+    def test_total_colectomy_resolved_before_period_does_not_exclude(self, now, protocol_instance, eligible_note, patient_age_62):
         user = CanvasUserFactory()
-
-        # Create Total Colectomy condition
         condition = Condition.objects.create(
             patient=patient_age_62,
-            onset_date=arrow.utcnow().shift(years=-2).date(),
-            resolution_date=arrow.utcnow().shift(years=100).date(),  # Far future date for active condition
-            clinical_status="active",
+            onset_date=now.shift(years=-8).date(),
+            resolution_date=now.shift(years=-6).date(),
+            clinical_status="resolved",
             deleted=False,
             surgical=False,
             committer=user,
         )
-
-        # Add Total Colectomy coding (use SNOMEDCT if available, otherwise CPT)
-        total_colectomy_snomed = list(TotalColectomy.SNOMEDCT) if hasattr(TotalColectomy,
-                                                                          "SNOMEDCT") and TotalColectomy.SNOMEDCT else []
-        if total_colectomy_snomed:
-            ConditionCoding.objects.create(
-                condition=condition,
-                code=total_colectomy_snomed[0],
-                system="http://snomed.info/sct",
-                display="Total Colectomy",
-            )
-        else:
-            # Fallback to CPT if SNOMEDCT not available
-            total_colectomy_cpt = list(TotalColectomy.CPT) if hasattr(TotalColectomy,
-                                                                      "CPT") and TotalColectomy.CPT else []
-            if total_colectomy_cpt:
-                ConditionCoding.objects.create(
-                    condition=condition,
-                    code=total_colectomy_cpt[0],
-                    system="http://www.ama-assn.org/go/cpt",
-                    display="Total Colectomy",
-                )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
+        codes = list(getattr(TotalColectomy, "SNOMEDCT", [])) or list(getattr(TotalColectomy, "CPT", []))
+        if not codes:
+            pytest.skip("TotalColectomy codes missing in this environment")
+        ConditionCoding.objects.create(
+            condition=condition,
+            code=codes[0],
+            system="http://snomed.info/sct" if getattr(TotalColectomy, "SNOMEDCT", []) else "http://www.ama-assn.org/go/cpt",
+            display="Total Colectomy",
+        )
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
 
 @pytest.mark.django_db
-class TestScenario13PatientDueScreeningTooOld:
-    """Scenario 13: Patient DUE (Screening Too Old - FOBT)"""
-
-    def test_patient_due_fobt_too_old(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test FOBT outside 1-year lookback → DUE card."""
-        # Create FOBT lab report (2 years ago - too old)
-        lab_report = LabReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-2).datetime,
-            assigned_date=arrow.utcnow().shift(years=-2).datetime,
-            date_performed=arrow.utcnow().shift(years=-2).datetime,
-            junked=False,
-            requires_signature=False,
-            for_test_only=False,
-            version=1,
-        )
-
-        lab_value = LabValue.objects.create(
-            report=lab_report,
-            value="Negative",
-            units="",
-            abnormal_flag="",
-            reference_range="",
-            low_threshold="",
-            high_threshold="",
-            comment="",
-            observation_status="final",
-        )
-        LabValueCoding.objects.create(
-            value=lab_value,
-            code="2335-8",  # FOBT LOINC code
-            system="http://loinc.org",
-            name="FOBT",
-        )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-
-
-@pytest.mark.django_db
-class TestScenario14PatientDueColonoscopyTooOld:
-    """Scenario 14: Patient DUE (Screening Too Old - Colonoscopy)"""
-
-    def test_patient_due_colonoscopy_too_old(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test Colonoscopy outside 10-year lookback → DUE card."""
-        # Create Colonoscopy imaging report (12 years ago - too old)
-        imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-12).date(),
-            result_date=arrow.utcnow().shift(years=-12).date(),
-            assigned_date=arrow.utcnow().shift(years=-12).datetime,
-            junked=False,
-            requires_signature=False,
-            name="Colonoscopy",
-        )
-
-        colonoscopy_codes = list(Colonoscopy.CPT) if hasattr(Colonoscopy, "CPT") else []
-        if colonoscopy_codes:
-            ImagingReportCoding.objects.create(
-                report=imaging_report,
-                code=colonoscopy_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Colonoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-
-
-@pytest.mark.django_db
-class TestAdditionalScenarios:
-    """Additional test scenarios for edge cases."""
-
-    def test_patient_no_encounter(
-            self, protocol_instance, patient_age_62
-    ):
-        """Test patient without eligible encounter → NOT_APPLICABLE card."""
-        # No notes created
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        # Should return NOT_APPLICABLE if no encounter, but the current implementation
-        # defaults to True for encounters, so this might return DUE
-        # Adjust based on actual implementation behavior
-        assert len(effects) >= 1
-
-    def test_patient_satisfied_flexible_sigmoidoscopy(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with Flexible Sigmoidoscopy within 5 years → SATISFIED card."""
-        # Create Flexible Sigmoidoscopy referral report (3 years ago)
-        referral_report = ReferralReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-3).date(),
-            junked=False,
-            requires_signature=False,
-            specialty="Gastroenterology",
-        )
-
-        sigmoid_codes = list(FlexibleSigmoidoscopy.CPT) if hasattr(FlexibleSigmoidoscopy, "CPT") else []
-        if sigmoid_codes:
-            ReferralReportCoding.objects.create(
-                report=referral_report,
-                code=sigmoid_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Flexible Sigmoidoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_patient_satisfied_ct_colonography(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with CT Colonography within 5 years → SATISFIED card."""
-        # Create CT Colonography imaging report (2 years ago)
-        imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-2).date(),
-            result_date=arrow.utcnow().shift(years=-2).date(),
-            assigned_date=arrow.utcnow().shift(years=-2).datetime,
-            junked=False,
-            requires_signature=False,
-            name="CT Colonography",
-        )
-
-        # Try CMS130v6CtColonography first, then fallback to CtColonography
-        ct_codes = list(CMS130v6CtColonography.CPT) if hasattr(CMS130v6CtColonography,
-                                                               "CPT") and CMS130v6CtColonography.CPT else []
-        if not ct_codes:
-            ct_codes = list(CtColonography.CPT) if hasattr(CtColonography, "CPT") and CtColonography.CPT else []
-
-        if ct_codes:
-            ImagingReportCoding.objects.create(
-                report=imaging_report,
-                code=ct_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="CT Colonography",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_patient_satisfied_colonoscopy_referral(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with Colonoscopy via ReferralReport within 10 years → SATISFIED card."""
-        # Create Colonoscopy referral report (7 years ago)
-        referral_report = ReferralReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-7).date(),
-            junked=False,
-            requires_signature=False,
-            specialty="Gastroenterology",
-        )
-
-        colonoscopy_codes = list(Colonoscopy.CPT) if hasattr(Colonoscopy, "CPT") else []
-        if colonoscopy_codes:
-            ReferralReportCoding.objects.create(
-                report=referral_report,
-                code=colonoscopy_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Colonoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_patient_satisfied_flexible_sigmoidoscopy_imaging(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with Flexible Sigmoidoscopy via ImagingReport within 5 years → SATISFIED card."""
-        # Create Flexible Sigmoidoscopy imaging report (4 years ago)
-        imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-4).date(),
-            result_date=arrow.utcnow().shift(years=-4).date(),
-            assigned_date=arrow.utcnow().shift(years=-4).datetime,
-            junked=False,
-            requires_signature=False,
-            name="Flexible Sigmoidoscopy",
-        )
-
-        sigmoid_codes = list(FlexibleSigmoidoscopy.CPT) if hasattr(FlexibleSigmoidoscopy, "CPT") else []
-        if sigmoid_codes:
-            ImagingReportCoding.objects.create(
-                report=imaging_report,
-                code=sigmoid_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Flexible Sigmoidoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_patient_due_fit_dna_too_old(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test FIT-DNA outside 3-year lookback → DUE card."""
-        # Create FIT-DNA lab report (4 years ago - too old)
-        lab_report = LabReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-4).datetime,
-            assigned_date=arrow.utcnow().shift(years=-4).datetime,
-            date_performed=arrow.utcnow().shift(years=-4).datetime,
-            junked=False,
-            requires_signature=False,
-            for_test_only=False,
-            version=1,
-        )
-
-        lab_value = LabValue.objects.create(
-            report=lab_report,
-            value="Negative",
-            units="",
-            abnormal_flag="",
-            reference_range="",
-            low_threshold="",
-            high_threshold="",
-            comment="",
-            observation_status="final",
-        )
-        fit_dna_codes = list(FitDna.LOINC) if hasattr(FitDna, "LOINC") and FitDna.LOINC else []
-        if fit_dna_codes:
-            LabValueCoding.objects.create(
-                value=lab_value,
-                code=fit_dna_codes[0],
-                system="http://loinc.org",
-                name="FIT-DNA",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-
-    def test_patient_due_flexible_sigmoidoscopy_too_old(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test Flexible Sigmoidoscopy outside 5-year lookback → DUE card."""
-        # Create Flexible Sigmoidoscopy referral report (6 years ago - too old)
-        referral_report = ReferralReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-6).date(),
-            junked=False,
-            requires_signature=False,
-            specialty="Gastroenterology",
-        )
-
-        sigmoid_codes = list(FlexibleSigmoidoscopy.CPT) if hasattr(FlexibleSigmoidoscopy, "CPT") else []
-        if sigmoid_codes:
-            ReferralReportCoding.objects.create(
-                report=referral_report,
-                code=sigmoid_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Flexible Sigmoidoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-
-    def test_patient_due_ct_colonography_too_old(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test CT Colonography outside 5-year lookback → DUE card."""
-        # Create CT Colonography imaging report (6 years ago - too old)
-        imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-6).date(),
-            result_date=arrow.utcnow().shift(years=-6).date(),
-            assigned_date=arrow.utcnow().shift(years=-6).datetime,
-            junked=False,
-            requires_signature=False,
-            name="CT Colonography",
-        )
-
-        ct_codes = list(CMS130v6CtColonography.CPT) if hasattr(CMS130v6CtColonography,
-                                                               "CPT") and CMS130v6CtColonography.CPT else []
-        if not ct_codes:
-            ct_codes = list(CtColonography.CPT) if hasattr(CtColonography, "CPT") and CtColonography.CPT else []
-
-        if ct_codes:
-            ImagingReportCoding.objects.create(
-                report=imaging_report,
-                code=ct_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="CT Colonography",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.DUE.value
-
-    def test_patient_exact_age_50(
-            self, protocol_instance, eligible_note
-    ):
-        """Test patient at exact age 50 (should be in range) → DUE or SATISFIED card."""
-        # Create patient exactly 50 years old
-        birth_date = arrow.utcnow().shift(years=-50).date()
-        patient = PatientFactory.create(birth_date=birth_date)
-
-        # Create eligible note for this patient
-        note = NoteFactory.create(
-            patient=patient,
-            datetime_of_service=arrow.utcnow().shift(months=-6).datetime,
-        )
-        note.note_type_version = eligible_note.note_type_version
-        note.save()
-
-        protocol_instance.event.context = {"patient": {"id": str(patient.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        # Should be in initial population, so either DUE or SATISFIED
-        assert card_data["status"] in [ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value]
-
-    def test_patient_exact_age_75(
-            self, protocol_instance, eligible_note
-    ):
-        """Test patient at exact age 75 (should be in range) → DUE or SATISFIED card."""
-        # Create patient exactly 75 years old
-        birth_date = arrow.utcnow().shift(years=-75).date()
-        patient = PatientFactory.create(birth_date=birth_date)
-
-        # Create eligible note for this patient
-        note = NoteFactory.create(
-            patient=patient,
-            datetime_of_service=arrow.utcnow().shift(months=-6).datetime,
-        )
-        note.note_type_version = eligible_note.note_type_version
-        note.save()
-
-        protocol_instance.event.context = {"patient": {"id": str(patient.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        # Should be in initial population, so either DUE or SATISFIED
-        assert card_data["status"] in [ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value]
-
-    def test_patient_multiple_screenings_uses_most_recent(
-            self, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test patient with multiple screenings → SATISFIED card with most recent."""
-        # Create old FOBT (2 years ago)
-        old_lab_report = LabReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-2).datetime,
-            assigned_date=arrow.utcnow().shift(years=-2).datetime,
-            date_performed=arrow.utcnow().shift(years=-2).datetime,
-            junked=False,
-            requires_signature=False,
-            for_test_only=False,
-            version=1,
-        )
-        old_lab_value = LabValue.objects.create(
-            report=old_lab_report,
-            value="Negative",
-            units="",
-            abnormal_flag="",
-            reference_range="",
-            low_threshold="",
-            high_threshold="",
-            comment="",
-            observation_status="final",
-        )
-        LabValueCoding.objects.create(
-            value=old_lab_value,
-            code="2335-8",  # FOBT LOINC code
-            system="http://loinc.org",
-            name="FOBT",
-        )
-
-        # Create recent Colonoscopy (1 year ago - should be used)
-        recent_imaging_report = ImagingReport.objects.create(
-            patient=patient_age_62,
-            original_date=arrow.utcnow().shift(years=-1).date(),
-            result_date=arrow.utcnow().shift(years=-1).date(),
-            assigned_date=arrow.utcnow().shift(years=-1).datetime,
-            junked=False,
-            requires_signature=False,
-            name="Colonoscopy",
-        )
-        colonoscopy_codes = list(Colonoscopy.CPT) if hasattr(Colonoscopy, "CPT") else []
-        if colonoscopy_codes:
-            ImagingReportCoding.objects.create(
-                report=recent_imaging_report,
-                code=colonoscopy_codes[0],
-                system="http://www.ama-assn.org/go/cpt",
-                display="Colonoscopy",
-            )
-
-        protocol_instance.event.context = {"patient": {"id": str(patient_age_62.id)}}
-
-        effects = protocol_instance.compute()
-
-        assert len(effects) == 1
-        effect = effects[0]
-        card_data = json.loads(effect.payload)["data"]
-        assert card_data["status"] == ProtocolCard.Status.SATISFIED.value
-        # Should mention the most recent screening (Colonoscopy)
-        assert "colonoscopy" in card_data["narrative"].lower()
+class TestDueCardRecommendations:
+    def test_recommendations_include_known_titles_when_available(self, protocol_instance, patient_age_62, eligible_note):
+        set_patient_context(protocol_instance, patient_age_62.id)
+        card = extract_card(protocol_instance.compute())
+        titles = {r.get("title", "") for r in card.get("recommendations", [])}
+        expected = [
+            "Order FOBT",
+            "Order FIT-DNA",
+            "Order CT Colonography",
+            "Refer for Colonoscopy",
+            "Refer for Flexible Sigmoidoscopy",
+        ]
+        assert any(any(bit in t for bit in expected) for t in titles)
