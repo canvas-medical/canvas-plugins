@@ -7,9 +7,11 @@ from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.condition import Condition, ConditionCoding
+from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.referral import ReferralReport
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
+from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
+from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.value_set.v2026.condition import (
     Diabetes,
     DiabeticRetinopathy,
@@ -19,7 +21,6 @@ from canvas_sdk.value_set.v2026.condition import (
     PalliativeCareDiagnosis,
 )
 from canvas_sdk.value_set.v2026.encounter import (
-    FrailtyEncounter,
     PalliativeCareEncounter,
     HospiceEncounter,
 )
@@ -27,8 +28,6 @@ from canvas_sdk.value_set.v2026.intervention import (
     HospiceCareAmbulatory,
     PalliativeCareIntervention,
 )
-from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
-from canvas_sdk.value_set.v2026.device import FrailtyDevice
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
 from canvas_sdk.value_set.v2022.condition import (
     DementiaAndMentalDegenerations,
@@ -38,7 +37,6 @@ from canvas_sdk.value_set.v2022.encounter import (
     CareServicesInLongTermResidentialFacility,
     NursingFacilityVisit,
 )
-from canvas_sdk.value_set.v2022.intervention import PalliativeOrHospiceCare
 from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
@@ -73,7 +71,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     AGE_RANGE_START = 18
     AGE_RANGE_END = 75
 
-    def _get_patient_id(self) -> str | None:
+    def _get_patient(self) -> tuple[Patient | None, Condition | None]:
         try:
             target_id = self.event.target.id
 
@@ -83,61 +81,42 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             ]:
                 condition = Condition.objects.filter(id=target_id).select_related("patient").first()
                 if condition and condition.patient:
-                    return condition.patient.id
+                    return condition.patient, condition
                 log.warning(f"CMS131v14: Could not find patient for condition {target_id}")
-                return None
+                return None, None
 
             log.warning(f"CMS131v14: Unhandled event type {self.event.type}")
 
-            return self.patient_id_from_target()
+            # Fallback: get patient ID and query patient
+            patient_id = self.patient_id_from_target()
+            if patient_id:
+                return Patient.objects.filter(id=patient_id).first(), None
+            return None, None
 
         except Exception as e:
-            log.error(f"CMS131v14: Error getting patient ID: {str(e)}")
-            return None
-
-    def _is_diabetes_code(self, coding) -> bool:
-        try:
-            normalized_system = coding.system.replace("-", "").upper()
-            normalized_code = coding.code.replace(".", "")
-
-            if normalized_system == "ICD10" or normalized_system == "ICD10CM":
-                diabetes_codes = getattr(Diabetes, "ICD10CM", set())
-                diabetes_codes_normalized = {code.replace(".", "") for code in diabetes_codes}
-                return normalized_code in diabetes_codes_normalized
-            elif normalized_system == "SNOMEDCT" or normalized_system == "SNOMED":
-                diabetes_codes = getattr(Diabetes, "SNOMEDCT", set())
-                return coding.code in diabetes_codes
-
-            return False
-
-        except Exception as e:
-            log.error(f"CMS131v14: Error checking if code is diabetes: {str(e)}")
-            return False
+            log.error(f"CMS131v14: Error getting patient: {str(e)}")
+            return None, None
 
     def _is_condition_diabetes(self, condition: Condition) -> bool:
         try:
-            condition_codings = ConditionCoding.objects.filter(condition=condition)
-            return any(self._is_diabetes_code(coding) for coding in condition_codings)
+            return Condition.objects.filter(id=condition.id).find(Diabetes).exists()
         except Exception as e:
             log.error(f"CMS131v14: Error checking if condition is diabetes: {str(e)}")
             return False
 
-    def _should_remove_card(self, patient: Patient) -> bool:
+    def _should_remove_card(self, patient: Patient, condition: Condition | None) -> bool:
         try:
-            condition_id = self.event.target.id
-            condition = Condition.objects.filter(id=condition_id).first()
-
             if not condition:
-                log.warning(f"CMS131v14: Could not find condition {condition_id}")
+                log.warning(f"CMS131v14: Could not find condition {self.event.target.id}")
                 return False
 
             if not self._is_condition_diabetes(condition):
-                log.info(f"CMS131v14: Condition {condition_id} is not diabetes, no action needed")
+                log.info(f"CMS131v14: Condition {condition.id} is not diabetes, no action needed")
                 return False
 
             if condition.entered_in_error:
                 log.info(
-                    f"CMS131v14: Diabetes condition {condition_id} marked as entered_in_error for patient {patient.id}"
+                    f"CMS131v14: Diabetes condition {condition.id} marked as entered_in_error for patient {patient.id}"
                 )
                 if not self._has_diabetes_diagnosis(patient):
                     log.info(f"CMS131v14: No other diabetes diagnoses found, removing card")
@@ -154,34 +133,29 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def compute(self) -> list[Effect]:
         try:
-            patient_id = self._get_patient_id()
-            if not patient_id:
-                log.warning("CMS131v14: Could not determine patient ID from event, skipping")
-                return []
-
-            log.info(f"CMS131v14: Processing event for patient_id={patient_id}")
-
-            patient = Patient.objects.filter(id=patient_id).first()
+            patient, condition = self._get_patient()
             if not patient:
-                log.warning(f"CMS131v14: Patient {patient_id} not found, skipping")
+                log.warning("CMS131v14: Could not determine patient from event, skipping")
                 return []
 
-            if self._should_remove_card(patient):
+            log.info(f"CMS131v14: Processing event for patient_id={patient.id}")
+
+            if self._should_remove_card(patient, condition):
                 return [self._create_not_applicable_card(patient)]
 
             if not self._in_initial_population(patient):
-                log.info(f"CMS131v14: Patient {patient_id} not in initial population")
+                log.info(f"CMS131v14: Patient {patient.id} not in initial population")
                 return [self._create_not_applicable_card(patient)]
 
             if not self._in_denominator(patient):
-                log.info(f"CMS131v14: Patient {patient_id} excluded from denominator")
+                log.info(f"CMS131v14: Patient {patient.id} excluded from denominator")
                 return [self._create_not_applicable_card(patient)]
 
             if self._in_numerator(patient):
-                log.info(f"CMS131v14: Patient {patient_id} meets numerator criteria")
+                log.info(f"CMS131v14: Patient {patient.id} meets numerator criteria")
                 return [self._create_satisfied_card(patient)]
             else:
-                log.info(f"CMS131v14: Patient {patient_id} does not meet numerator criteria")
+                log.info(f"CMS131v14: Patient {patient.id} does not meet numerator criteria")
                 return [self._create_due_card(patient)]
 
         except Exception as e:
@@ -247,20 +221,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_diabetes_diagnosis(self, patient: Patient) -> bool:
         try:
-            diabetes_conditions = Condition.objects.for_patient(patient.id).active()
-
-            log.info(
-                f"CMS131v14: Found {diabetes_conditions.count()} active conditions for patient {patient.id}"
-            )
-
-            for condition in diabetes_conditions:
-                for coding in condition.codings.all():
-                    if self._is_diabetes_code(coding):
-                        log.info(f"CMS131v14: Found diabetes diagnosis with code {coding.code}")
-                        return True
-
-            log.info(f"CMS131v14: No active diabetes diagnoses found for patient {patient.id}")
-            return False
+            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
+            
+            has_diabetes = diabetes_conditions.exists()
+            
+            if has_diabetes:
+                log.info(f"CMS131v14: Found diabetes diagnosis for patient {patient.id}")
+            else:
+                log.info(f"CMS131v14: No active diabetes diagnoses found for patient {patient.id}")
+            
+            return has_diabetes
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis: {str(e)}")
@@ -286,14 +256,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
         try:
-            diabetes_conditions = Condition.objects.for_patient(patient.id).active()
-
-            for condition in diabetes_conditions:
-                for coding in condition.codings.all():
-                    if self._is_diabetes_code(coding):
-                        return True
-
-            return False
+            return Condition.objects.for_patient(patient.id).find(Diabetes).active().exists()
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis overlapping period: {str(e)}")
@@ -304,38 +267,49 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_hospice_care_in_period(self, patient: Patient) -> bool:
         """
-        Check if patient is in hospice or palliative care during the measurement period.
+        Check if patient is in hospice care during the measurement period.
 
-        Checks for:
-        - Referral reports to hospice/palliative care services
-        - Active condition codings against hospice value sets
+        Checks for responses in the "Hospice & Frailty" questionnaire indicating hospice care.
+        The questionnaire tracks:
+        - Discharge to home for Hospice (SNOMED 428361000124107)
+        - Discharge to Health Care Facility For Hospice Care (SNOMED 428371000124100)
+        - Hospice Ambulatory Care (SNOMED 385765002)
         """
         try:
-            # Check for hospice/palliative care referral reports
-            hospice_reports = ReferralReport.objects.filter(
+            # Get all interviews for the patient during the measurement period
+            interviews = Interview.objects.filter(
                 patient=patient,
-                junked=False,
-                original_date__gte=self.timeframe.start.date(),
-                original_date__lte=self.timeframe.end.date(),
-            ).all()
+                deleted=False,
+                created__gte=self.timeframe.start.datetime,
+                created__lte=self.timeframe.end.datetime,
+            )
 
-            # Check if any reports are for hospice specialties
-            hospice_specialties = {"Hospice", "Palliative Care", "Palliative Medicine"}
-            for report in hospice_reports:
-                if report.specialty and any(
-                    hospice_specialty.lower() in report.specialty.lower()
-                    for hospice_specialty in hospice_specialties
-                ):
+            # Check for hospice-related responses in the interviews
+            # The hospice question has code "R-020" with SNOMED response codes
+            hospice_response_codes = {"428361000124107", "428371000124100", "385765002"}
+
+            # Check if there are any interviews for the patient
+            if not interviews.exists():
+                return False
+
+            interview_ids = list(interviews.values_list('pk', flat=True))
+
+            # Get all responses for the interviews
+            interview_responses = InterviewQuestionResponse.objects.filter(
+                interview_id__in=interview_ids,
+                status="AC",
+            ).select_related('response_option')
+            
+            # Check if any response has a hospice code
+            for response in interview_responses:
+                if response.response_option and response.response_option.code in hospice_response_codes:
                     log.info(
-                        f"CMS131v14: Found hospice referral report for patient {patient.id}"
+                        f"CMS131v14: Found hospice care response (code: {response.response_option.code}) for patient {patient.id}"
                     )
                     return True
 
-            # Additionally check condition codings against hospice value sets
-            return self._patient_has_any_code_in_value_sets(
-                patient,
-                [PalliativeOrHospiceCare, HospiceCareAmbulatory],
-            )
+            return False
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking hospice status: {str(e)}")
             return False
@@ -344,6 +318,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient is age 66+ with frailty indicators.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
+        Uses responses from the "Hospice & Frailty" questionnaire.
         """
         # Check age requirement
         age = self._calculate_age(patient)
@@ -351,45 +326,106 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         try:
-            # Check for frailty indicators
-            has_frailty = self._patient_has_any_code_in_value_sets(
-                patient,
-                [FrailtySymptom, FrailtyDevice, FrailtyEncounter],
+            # Check for frailty criteria using questionnaire responses
+            # Get all interviews for the patient during the measurement period
+            interviews = Interview.objects.filter(
+                patient=patient,
+                deleted=False,
+                created__gte=self.timeframe.start.datetime,
+                created__lte=self.timeframe.end.datetime,
             )
 
-            if has_frailty:
-                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty indicators")
+            log.info(f"CMS131v14: Found {interviews.count()} interviews for patient {patient.id}")
 
-            return has_frailty
+            # Check if there are any interviews for the patient
+            if not interviews.exists():
+                return False
+
+            interview_ids = list(interviews.values_list('pk', flat=True))
+
+            # Get all responses for the interviews
+            interview_responses = InterviewQuestionResponse.objects.filter(
+                interview_id__in=interview_ids,
+                status="AC",
+            ).select_related('response_option')
+
+            log.info(f"CMS131v14: Found {interview_responses.count()} interview responses for patient {patient.id}")
+            
+            # Check for frailty-related response codes (from "R-021" question)
+            frailty_response_codes = {"105501005"}  # Frailty Device
+            
+            # Check if any response has a frailty code
+            for response in interview_responses:
+                log.info(f"CMS131v14: Response option: {response.response_option}")
+                log.info(f"CMS131v14: Response option code: {response.response_option.code}")
+                if response.response_option and response.response_option.code in frailty_response_codes:
+                    log.info(
+                        f"CMS131v14: Found frailty response (code: {response.response_option.code}) for patient {patient.id}"
+                    )
+                    return True
+
+            return False
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking frailty: {str(e)}")
             return False
 
     def _has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
         """
-        Check if patient has advanced illness (dementia, cancer, chemotherapy) or HCPCS S0311.
+        Check if patient has advanced illness or dementia medications during the measurement period or year prior.
+        Per CMS131v14 CQL:
+        - Advanced illness diagnosis during the measurement period or the year prior
+        - OR taking dementia medications during the measurement period or the year prior
         """
         try:
-            # Check for advanced illness conditions and medications
-            has_advanced_illness = self._patient_has_any_code_in_value_sets(
-                patient,
-                [DementiaAndMentalDegenerations, Cancer, ChemotherapyForAdvancedCancer],
+            # Calculate the extended timeframe (measurement period + 1 year prior)
+            start_date = self.timeframe.start.shift(years=-1).datetime
+            end_date = self.timeframe.end.datetime
+            
+            # Check for advanced illness conditions using separate targeted queries
+            # Conditions are checked as active, which means they overlap the measurement period
+            has_advanced_illness = (
+                Condition.objects.for_patient(patient.id).active().find(DementiaAndMentalDegenerations).exists() or
+                Condition.objects.for_patient(patient.id).active().find(Cancer).exists() or
+                Condition.objects.for_patient(patient.id).active().find(ChemotherapyForAdvancedCancer).exists()
             )
 
-            if not has_advanced_illness:
-                conditions = Condition.objects.for_patient(patient.id).active()
-                for condition in conditions:
-                    for coding in condition.codings.all():
-                        if coding.system.replace("-", "").upper() == "HCPCS" and coding.code == "S0311":
-                            has_advanced_illness = True
-                            break
-                    if has_advanced_illness:
-                        break
+            log.info(f"CMS131v14: Found {has_advanced_illness} advanced illness conditions for patient {patient.id}")
 
             if has_advanced_illness:
-                log.info(f"CMS131v14: Patient {patient.id} has advanced illness or dementia meds")
+                log.info(f"CMS131v14: Patient {patient.id} has advanced illness")
+                return True
+            
+            # Check for dementia medications during measurement period or year prior
+            # First find all dementia medications for the patient
+            dementia_meds_queryset = (
+                Medication.objects.for_patient(patient.id)
+                .active()
+                .find(DementiaMedications)
+            )
+            
+            log.info(f"CMS131v14: Found {dementia_meds_queryset.count()} total dementia medications for patient {patient.id}")
+            
+            # Then filter by date range
+            dementia_meds_in_period = dementia_meds_queryset.filter(
+                start_date__lte=end_date,
+                end_date__gte=start_date
+            )
+            
+            log.info(f"CMS131v14: Found {dementia_meds_in_period.count()} dementia medications in period for patient {patient.id}")
+            log.info(f"CMS131v14: Date range: {start_date} to {end_date}")
+            
+            # Debug: show medication dates
+            for med in dementia_meds_queryset[:5]:  # Limit to first 5 for debugging
+                log.info(f"CMS131v14: Medication {med.id} dates: {med.start_date} to {med.end_date}")
+            
+            has_dementia_meds = dementia_meds_in_period.exists()
+            
+            if has_dementia_meds:
+                log.info(f"CMS131v14: Patient {patient.id} has dementia medications")
+                return True
 
-            return has_advanced_illness
+            return False
         except Exception as e:
             log.error(f"CMS131v14: Error checking advanced illness: {str(e)}")
             return False
@@ -437,11 +473,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if the patient received palliative care during the measurement period."""
         try:
-            # Check all palliative care value sets in conditions (one query)
-            if self._patient_has_any_code_in_value_sets(
-                patient,
-                [PalliativeCareDiagnosis, PalliativeCareEncounter, PalliativeCareIntervention]
-            ):
+            # Check all palliative care value sets in conditions using separate targeted queries
+            has_palliative_condition = (
+                Condition.objects.for_patient(patient.id).active().find(PalliativeCareDiagnosis).exists() or
+                Condition.objects.for_patient(patient.id).active().find(PalliativeCareEncounter).exists() or
+                Condition.objects.for_patient(patient.id).active().find(PalliativeCareIntervention).exists()
+            )
+            
+            if has_palliative_condition:
                 log.info(f"CMS131v14: Found palliative care in conditions for patient {patient.id}")
                 return True
             
@@ -544,13 +583,11 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _get_diabetes_diagnosis_codes(self, patient: Patient) -> list[str]:
         try:
             diagnosis_codes = []
-            diabetes_conditions = Condition.objects.for_patient(patient.id).active()
+            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
 
             for condition in diabetes_conditions:
                 for coding in condition.codings.all():
-                    if self._is_diabetes_code(coding):
-                        normalized_code = coding.code.replace(".", "")
-                        diagnosis_codes.append(normalized_code)
+                    diagnosis_codes.append(coding.code)
 
             log.info(
                 f"CMS131v14: Found {len(diagnosis_codes)} diabetes diagnosis codes for patient {patient.id}"
@@ -606,72 +643,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         )
 
         return card.apply()
-
-    def _patient_has_any_code_in_value_sets(
-        self, patient: Patient, value_set_classes: list
-    ) -> bool:
-        """
-        Helper to check if patient has any active condition coding present in given value sets.
-        
-        Args:
-            patient: The patient to check
-            value_set_classes: List of value set classes (e.g., [PalliativeOrHospiceCare, HospiceCareAmbulatory])
-        
-        Returns:
-            True if any active condition coding matches any of the value sets
-        """
-        try:
-            conditions = Condition.objects.for_patient(patient.id).active()
-
-            for condition in conditions:
-                for coding in condition.codings.all():
-                    for value_set_class in value_set_classes:
-                        if self._coding_in_value_set(coding, value_set_class):
-                            log.info(
-                                f"CMS131v14: Found matching code {coding.code} in value set for patient {patient.id}"
-                            )
-                            return True
-
-            return False
-        except Exception as e:
-            log.error(f"CMS131v14: Error checking codes in value sets: {str(e)}")
-            return False
-
-    def _coding_in_value_set(self, coding: ConditionCoding, value_set_class) -> bool:
-        """
-        Helper to check if a single coding belongs to a value set.
-        
-        Args:
-            coding: The ConditionCoding to check
-            value_set_class: Value set class to check against
-        
-        Returns:
-            True if the coding is found in the value set
-        """
-        try:
-            # Normalize the coding system for comparison
-            normalized_system = coding.system.replace("-", "").upper()
-
-            # Check common coding systems
-            if normalized_system in ["ICD10", "ICD10CM"]:
-                codes = getattr(value_set_class, "ICD10CM", set())
-                normalized_code = coding.code.replace(".", "")
-                codes_normalized = {code.replace(".", "") for code in codes}
-                return normalized_code in codes_normalized
-            elif normalized_system in ["SNOMEDCT", "SNOMED"]:
-                codes = getattr(value_set_class, "SNOMEDCT", set())
-                return coding.code in codes
-            elif normalized_system == "CPT":
-                codes = getattr(value_set_class, "CPT", set())
-                return coding.code in codes
-            elif normalized_system == "HCPCS":
-                codes = getattr(value_set_class, "HCPCS", set())
-                return coding.code in codes
-
-            return False
-        except Exception as e:
-            log.error(f"CMS131v14: Error checking coding in value set: {str(e)}")
-            return False
 
     def _calculate_age(self, patient: Patient) -> int | None:
         """
