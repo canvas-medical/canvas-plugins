@@ -6,7 +6,7 @@
    "components":{
       "protocols":[
          {
-            "class":"cms130v6_colorectal_cancer_screening.protocols.my_protocol:CMS130v6ColorectalCancerScreening",
+            "class":"cms130v6_colorectal_cancer_screening.protocols.cms130v6_protocol:CMS130v6ColorectalCancerScreening",
             "description":"Colorectal Cancer Screening - CMS130v6",
             "meta":{
                "title":"Colorectal Cancer Screening",

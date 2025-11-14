@@ -10,7 +10,7 @@ from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.appointment import Appointment
 from canvas_sdk.v1.data.condition import Condition, ConditionCoding
 from canvas_sdk.v1.data.imaging import ImagingReport
-from canvas_sdk.v1.data.lab import LabReport, LabTest
+from canvas_sdk.v1.data.lab import LabReport
 from canvas_sdk.v1.data.note import Note, NoteType, PracticeLocationPOS
 from canvas_sdk.v1.data.referral import ReferralReport
 # Import from v2022 (existing value sets)
@@ -44,7 +44,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130v6.html"
         ]
 
-    RESPONDS_TO = EventType.Name(EventType.APPOINTMENT_CREATED)
+    RESPONDS_TO = EventType.Name(EventType.CRON)
 
     # Age range constants
     AGE_RANGE_START = 50
@@ -69,8 +69,6 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             if not patient_id:
                 log.warning("CMS130v6: Could not determine patient ID from event, skipping")
                 return []
-
-            log.info(f"CMS130v6: Processing event for patient_id={patient_id}")
 
             patient = Patient.objects.filter(id=patient_id).first()
             if not patient:
@@ -99,18 +97,15 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
 
     def _in_initial_population(self, patient: Patient) -> bool:
         if not self._check_age_50_to_75(patient):
-            log.info(f"CMS130v6: Patient {patient.id} not in age 50-75 range")
             return False
 
         if not self._has_eligible_encounter_in_period(patient):
-            log.info(f"CMS130v6: Patient {patient.id} does not have eligible encounter in period")
             return False
 
         return True
 
     def _in_denominator(self, patient: Patient) -> bool:
         if not self._in_initial_population(patient):
-            log.info(f"CMS130v6: Patient {patient.id} not in initial population")
             return False
 
         if self._has_colon_exclusion(patient):
@@ -129,45 +124,55 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         fobt_period_start = self.timeframe.end.shift(years=-1)
         fobt_report = self._find_lab_report(patient, FecalOccultBloodTestFobt, fobt_period_start, self.timeframe.end)
         if fobt_report:
+            log.info(f"CMS130v6: Found FOBT report {fobt_report.id}, patient meets numerator")
             return True
 
         # FIT-DNA: within 3 years prior (measurement period + 2 years prior)
         fit_dna_period_start = self.timeframe.end.shift(years=-3)
         fit_dna_report = self._find_lab_report(patient, FitDna, fit_dna_period_start, self.timeframe.end)
         if fit_dna_report:
+            log.info(f"CMS130v6: Found FIT-DNA report {fit_dna_report.id}, patient meets numerator")
             return True
 
         # Flexible Sigmoidoscopy: within 5 years prior
         sigmoid_period_start = self.timeframe.end.shift(years=-5)
         sigmoid_imaging = self._find_imaging_report(patient, FlexibleSigmoidoscopy, sigmoid_period_start, self.timeframe.end)
         if sigmoid_imaging:
+            log.info(f"CMS130v6: Found Flexible Sigmoidoscopy report {sigmoid_imaging.id}, patient meets numerator")
             return True
         sigmoid_referral = self._find_referral_report(patient, FlexibleSigmoidoscopy, sigmoid_period_start, self.timeframe.end)
         if sigmoid_referral:
+            log.info(f"CMS130v6: Found Flexible Sigmoidoscopy referral {sigmoid_referral.id}, patient meets numerator")
             return True
 
         # CT Colonography: within 5 years prior
         ct_period_start = self.timeframe.end.shift(years=-5)
         ct_imaging = self._find_imaging_report(patient, CtColonography, ct_period_start, self.timeframe.end)
         if ct_imaging:
+            log.info(f"CMS130v6: Found CT Colonography report {ct_imaging.id}, patient meets numerator")
             return True
         ct_imaging_v6 = self._find_imaging_report(patient, CMS130v6CtColonography, ct_period_start, self.timeframe.end)
         if ct_imaging_v6:
+            log.info(f"CMS130v6: Found CT Colonography report {ct_imaging_v6.id}, patient meets numerator")
             return True
         ct_referral = self._find_referral_report(patient, CtColonography, ct_period_start, self.timeframe.end)
         if ct_referral:
+            log.info(f"CMS130v6: Found CT Colonography referral {ct_referral.id}, patient meets numerator")
             return True
         ct_referral_v6 = self._find_referral_report(patient, CMS130v6CtColonography, ct_period_start, self.timeframe.end)
         if ct_referral_v6:
+            log.info(f"CMS130v6: Found CT Colonography referral {ct_referral_v6.id}, patient meets numerator")
             return True
 
         # Colonoscopy: within 10 years prior
         colon_period_start = self.timeframe.end.shift(years=-10)
         colon_imaging = self._find_imaging_report(patient, Colonoscopy, colon_period_start, self.timeframe.end)
         if colon_imaging:
+            log.info(f"CMS130v6: Found Colonoscopy report {colon_imaging.id}, patient meets numerator")
             return True
         colon_referral = self._find_referral_report(patient, Colonoscopy, colon_period_start, self.timeframe.end)
         if colon_referral:
+            log.info(f"CMS130v6: Found Colonoscopy referral {colon_referral.id}, patient meets numerator")
             return True
 
         return False
@@ -175,19 +180,13 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
     def _check_age_50_to_75(self, patient: Patient) -> bool:
         try:
             if not getattr(patient, "birth_date", None):
-                log.info("CMS130v6: Missing birth_date; patient fails age check")
                 return False
 
-            # Use arrow.get which is allowed
             import arrow
             birth_date = arrow.get(patient.birth_date)
             age_years = (self.now - birth_date).days // 365
 
-            in_range = self.AGE_RANGE_START <= age_years <= self.AGE_RANGE_END
-            log.info(
-                f"CMS130v6: Patient {patient.id} age {age_years} in 50-75 range={in_range}"
-            )
-            return in_range
+            return self.AGE_RANGE_START <= age_years <= self.AGE_RANGE_END
         except Exception as e:
             log.error(f"CMS130v6: Error computing age: {str(e)}")
             return False
@@ -215,18 +214,13 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
                 if not note.note_type_version:
                     continue
 
-                # NoteType inherits from Coding, so it has code and system directly
                 note_type = note.note_type_version
                 for value_set_class in visit_value_sets:
                     if self._coding_in_value_set_for_note_type(note_type, value_set_class):
-                        log.info(
-                            f"CMS130v6: Found eligible encounter for patient {patient.id} on {note.datetime_of_service}"
-                        )
                         return True
 
             # If no matches found, return True for now (similar to CMS131v14)
             # This can be refined later when NoteType coding structure is better understood
-            log.info(f"CMS130v6: No matching visit types found, defaulting to True for patient {patient.id}")
             return True
         except Exception as e:
             log.error(f"CMS130v6: Error checking eligible encounters: {str(e)}")
@@ -245,15 +239,11 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
 
                 for coding in condition.codings.all():
                     if self._coding_in_value_set(coding, TotalColectomy):
-                        log.info(
-                            f"CMS130v6: Found TotalColectomy exclusion for patient {patient.id}"
-                        )
+                        log.info(f"CMS130v6: Found TotalColectomy exclusion: condition {condition.id}, coding {coding.code}")
                         return True
                     # TODO: fix importing
                     # if self._coding_in_value_set(coding, MalignantNeoplasmOfColon):
-                    #     log.info(
-                    #         f"CMS130v6: Found MalignantNeoplasmOfColon exclusion for patient {patient.id}"
-                    #     )
+                    #     log.info(f"CMS130v6: Found MalignantNeoplasmOfColon exclusion: condition {condition.id}")
                     #     return True
 
             return False
@@ -273,7 +263,6 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             if hospice_notes.exists():
-                log.info(f"CMS130v6: Found hospice care for patient {patient.id}")
                 return True
 
             return False
@@ -284,6 +273,15 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
     def _find_lab_report(
         self, patient: Patient, value_set_class, period_start: Any, period_end: Any
     ) -> LabReport | None:
+        """
+        Find a lab report matching a value set.
+        
+        This matches the legacy behavior:
+        patient.lab_reports.find(ValueSet).within(period).last()
+        
+        NOTE: Uses 'codings' not 'loinc_codes' - this is the plugin service
+        relationship name (LabValueCoding has related_name='codings').
+        """
         try:
             # Get value set codes (LOINC codes for lab tests)
             value_set_codes = set()
@@ -291,24 +289,23 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
                 value_set_codes.update(value_set_class.LOINC)
 
             if not value_set_codes:
-                log.warning(f"CMS130v6: No LOINC codes found in value set {value_set_class.__name__}")
                 return None
 
-            # Query LabTest objects that match the value set codes and are within timeframe
-            matching_tests = LabTest.objects.filter(
-                report__patient__id=patient.id,
-                report__original_date__range=(period_start.datetime, period_end.datetime),
-                report__junked=False,
-                ontology_test_code__in=value_set_codes,
-            ).select_related("report").order_by("-report__original_date")
+            # Query LabReport directly using relationship traversal
+            # This matches the legacy behavior: patient.lab_reports.find(ValueSet).within(period)
+            # Plugin service uses 'codings' not 'loinc_codes' (LabValueCoding has related_name='codings')
+            lab_reports = LabReport.objects.filter(
+                patient__id=patient.id,
+                values__codings__code__in=value_set_codes,  # Plugin service uses 'codings', not 'loinc_codes'
+                original_date__gte=period_start.datetime,
+                original_date__lte=period_end.datetime,
+                junked=False,
+            ).order_by("-original_date")
 
-            if matching_tests.exists():
-                test = matching_tests.first()
-                if test.report:
-                    log.info(
-                        f"CMS130v6: Found matching lab report {test.report.id} with test code {test.ontology_test_code}"
-                    )
-                    return test.report
+            log.info(f"LAB REPORTS: Found {len(lab_reports)} lab reports")
+
+            if lab_reports.exists():
+                return lab_reports.first()
 
             return None
         except Exception as e:
@@ -331,9 +328,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             if reports.exists():
-                report = reports.first()
-                log.info(f"CMS130v6: Found matching imaging report {report.id}")
-                return report
+                return reports.first()
 
             return None
         except Exception as e:
@@ -356,9 +351,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             if reports.exists():
-                report = reports.first()
-                log.info(f"CMS130v6: Found matching referral report {report.id}")
-                return report
+                return reports.first()
 
             return None
         except Exception as e:
@@ -421,11 +414,8 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         # Find most recent
         import arrow
         for screening_type, screening_date in screenings:
-            # Convert to arrow for consistent comparison
             if screening_date:
-                # Use arrow.get which is allowed (arrow.Arrow type is not allowed)
                 date_arrow = arrow.get(screening_date) if screening_date else None
-                
                 if date_arrow and (most_recent_date is None or date_arrow > most_recent_date):
                     most_recent_date = date_arrow
                     most_recent = {"type": screening_type, "date": date_arrow}
@@ -436,11 +426,10 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         card = ProtocolCard(
             patient_id=patient.id,
             key="CMS130v6",
-            title="Colorectal Cancer Screening",
+            title="Colorectal Cancer Screening - NOT APPLICABLE",
             narrative="",
             status=ProtocolCard.Status.NOT_APPLICABLE,
         )
-
         return card.apply()
 
     def _create_satisfied_card(self, patient: Patient, last_exam: dict | None) -> Effect:
@@ -454,13 +443,12 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         card = ProtocolCard(
             patient_id=patient.id,
             key="CMS130v6",
-            title="Colorectal Cancer Screening",
+            title="Colorectal Cancer Screening - SATISFIED",
             narrative=narrative,
             status=ProtocolCard.Status.SATISFIED,
             due_in=-1,
             can_be_snoozed=True,
         )
-
         return card.apply()
 
     def _create_due_card(self, patient: Patient) -> Effect:
@@ -469,7 +457,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         card = ProtocolCard(
             patient_id=patient.id,
             key="CMS130v6",
-            title="Colorectal Cancer Screening",
+            title="Colorectal Cancer Screening - DUE",
             narrative=narrative,
             status=ProtocolCard.Status.DUE,
             due_in=-1,
@@ -482,7 +470,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         if fobt_codes:
             fobt_command = LabOrderCommand(tests_order_codes=fobt_codes)
             card.recommendations.append(
-                fobt_command.recommend(title="Order FOBT (Fecal Occult Blood Test)", button="Order Lab")
+                fobt_command.recommend(title="Order FOBT (Fecal Occult Blood Test) - PLUGIN BAJO", button="Order Lab")
             )
 
         # FIT-DNA - LabOrderCommand
@@ -490,7 +478,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         if fit_dna_codes:
             fit_dna_command = LabOrderCommand(tests_order_codes=fit_dna_codes)
             card.recommendations.append(
-                fit_dna_command.recommend(title="Order FIT-DNA", button="Order Lab")
+                fit_dna_command.recommend(title="Order FIT-DNA - PLUGIN BAJO", button="Order Lab")
             )
 
         # CT Colonography - ImagingOrderCommand
@@ -499,7 +487,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
         if ct_cpt_codes:
             ct_command = ImagingOrderCommand(image_code=ct_cpt_codes[0])
             card.recommendations.append(
-                ct_command.recommend(title="Order CT Colonography", button="Order Imaging")
+                ct_command.recommend(title="Order CT Colonography - PLUGIN BAJO", button="Order Imaging")
             )
 
         # Colonoscopy - ReferCommand
@@ -514,7 +502,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             include_visit_note=False,
         )
         card.recommendations.append(
-            colonoscopy_command.recommend(title="Refer for Colonoscopy", button="Refer")
+            colonoscopy_command.recommend(title="Refer for Colonoscopy - PLUGIN BAJO", button="Refer")
         )
 
         # Flexible Sigmoidoscopy - ReferCommand
@@ -529,7 +517,7 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             include_visit_note=False,
         )
         card.recommendations.append(
-            sigmoid_command.recommend(title="Refer for Flexible Sigmoidoscopy", button="Refer")
+            sigmoid_command.recommend(title="Refer for Flexible Sigmoidoscopy - PLUGIN BAJO", button="Refer")
         )
 
         return card.apply()
@@ -537,8 +525,12 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
     def _coding_in_value_set(self, coding: ConditionCoding, value_set_class) -> bool:
         """Check if a ConditionCoding belongs to a value set."""
         try:
-            normalized_system = coding.system.replace("-", "").upper()
-            normalized_code = coding.code.replace(".", "")
+            normalized_system = coding.system.replace("-", "").upper() if coding.system else ""
+            normalized_code = coding.code.replace(".", "") if coding.code else ""
+            
+            # Extract SNOMED CT from URLs like http://snomed.info/sct
+            if "SNOMED" in normalized_system or "SCT" in normalized_system:
+                normalized_system = "SNOMEDCT"
 
             if normalized_system in ["ICD10", "ICD10CM"]:
                 codes = getattr(value_set_class, "ICD10CM", set())
@@ -568,6 +560,10 @@ class CMS130v6ColorectalCancerScreening(ClinicalQualityMeasure):
             # NoteType inherits from Coding, so it has code and system directly
             normalized_system = note_type.system.replace("-", "").upper() if note_type.system else ""
             normalized_code = note_type.code.replace(".", "") if note_type.code else ""
+            
+            # Extract SNOMED CT from URLs like http://snomed.info/sct
+            if "SNOMED" in normalized_system or "SCT" in normalized_system:
+                normalized_system = "SNOMEDCT"
 
             if normalized_system in ["ICD10", "ICD10CM"]:
                 codes = getattr(value_set_class, "ICD10CM", set())
