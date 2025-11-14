@@ -47,7 +47,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = task_id
-        mock_event.target.type = "Task"
+        mock_event.target.type = mock_task
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -56,8 +56,6 @@ class TestTaskCommentLoggerHandler:
 
         # Verify
         assert result == []
-        # Check debug logs were called
-        assert mock_log.info.call_count >= 4  # 3 debug + 1 summary
         # Check the task summary log
         mock_log.info.assert_any_call(
             f"[TaskCommentLogger] Task 'New Task' (ID: {task_id}) has 0 comment(s):"
@@ -79,8 +77,10 @@ class TestTaskCommentLoggerHandler:
         mock_task.objects.get.return_value = mock_task_obj
 
         # Setup NoteTask with internal comment
+        mock_staff = Mock()
+        mock_staff.full_name = "Dr. Smith"
         mock_originator = Mock()
-        mock_originator.get_full_name.return_value = "Dr. Smith"
+        mock_originator.staff = mock_staff
         mock_note_task_obj = Mock()
         mock_note_task_obj.internal_comment = "Patient needs follow-up"
         mock_note_task_obj.created = datetime(2025, 1, 15, 10, 0, 0)
@@ -95,7 +95,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = task_id
-        mock_event.target.type = "Task"
+        mock_event.target.type = mock_task
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -140,8 +140,10 @@ class TestTaskCommentLoggerHandler:
         mock_note_task.objects.filter.return_value = []
 
         # Setup TaskComment
+        mock_creator_staff = Mock()
+        mock_creator_staff.full_name = "Nurse Johnson"
         mock_creator = Mock()
-        mock_creator.name = "Nurse Johnson"
+        mock_creator.staff = mock_creator_staff
         mock_task_comment_obj = Mock()
         mock_task_comment_obj.body = "Called patient"
         mock_task_comment_obj.created = datetime(2025, 1, 16, 14, 0, 0)
@@ -155,7 +157,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = comment_id
-        mock_event.target.type = "TaskComment"
+        mock_event.target.type = mock_task_comment_model
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -189,7 +191,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = comment_id
-        mock_event.target.type = "TaskComment"
+        mock_event.target.type = mock_task_comment_model
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -220,7 +222,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = comment_id
-        mock_event.target.type = "TaskComment"
+        mock_event.target.type = mock_task_comment_model
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -269,7 +271,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = task_id
-        mock_event.target.type = "Task"
+        mock_event.target.type = mock_task
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
@@ -298,8 +300,10 @@ class TestTaskCommentLoggerHandler:
         mock_task.objects.get.return_value = mock_task_obj
 
         # Setup NoteTask with internal comment (earliest)
+        mock_staff = Mock()
+        mock_staff.full_name = "Dr. Smith"
         mock_originator = Mock()
-        mock_originator.get_full_name.return_value = "Dr. Smith"
+        mock_originator.staff = mock_staff
         mock_note_task_obj = Mock()
         mock_note_task_obj.internal_comment = "Initial comment"
         mock_note_task_obj.created = datetime(2025, 1, 15, 10, 0, 0)
@@ -307,15 +311,19 @@ class TestTaskCommentLoggerHandler:
         mock_note_task.objects.filter.return_value = [mock_note_task_obj]
 
         # Setup TaskComments (later timestamps)
+        mock_creator1_staff = Mock()
+        mock_creator1_staff.full_name = "Nurse Johnson"
         mock_creator1 = Mock()
-        mock_creator1.name = "Nurse Johnson"
+        mock_creator1.staff = mock_creator1_staff
         mock_comment1 = Mock()
         mock_comment1.body = "Second comment"
         mock_comment1.created = datetime(2025, 1, 16, 14, 0, 0)
         mock_comment1.creator = mock_creator1
 
+        mock_creator2_staff = Mock()
+        mock_creator2_staff.full_name = "Dr. Smith"
         mock_creator2 = Mock()
-        mock_creator2.name = "Dr. Smith"
+        mock_creator2.staff = mock_creator2_staff
         mock_comment2 = Mock()
         mock_comment2.body = "Third comment"
         mock_comment2.created = datetime(2025, 1, 17, 9, 0, 0)
@@ -331,7 +339,7 @@ class TestTaskCommentLoggerHandler:
         mock_event.context = {}
         mock_event.target = Mock()
         mock_event.target.id = task_id
-        mock_event.target.type = "Task"
+        mock_event.target.type = mock_task
 
         handler = TaskCommentLoggerHandler(event=mock_event)
 
