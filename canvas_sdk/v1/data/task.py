@@ -46,9 +46,7 @@ class Task(TimestampedModel, IdentifiableModel):
     assignee = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="assignee_tasks", null=True
     )
-    team = models.ForeignKey(
-        "v1.Team", on_delete=models.DO_NOTHING, related_name="tasks", null=True
-    )
+    team = models.ForeignKey("v1.Team", on_delete=models.SET_NULL, related_name="tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, blank=True, related_name="tasks", null=True
     )
