@@ -19,7 +19,7 @@ from logger import log
 
 class AppointmentRecurrence(BaseHandler):
     _appointment: AppointmentModel | None = None
-    _recurrence_type: RecurrenceEnum | None = None
+    _recurrence_type: str | None = None
     _recurrence_interval: int | None = None
     _recurrence_stops_after: int | None = None
 
@@ -27,7 +27,7 @@ class AppointmentRecurrence(BaseHandler):
     RESPONDS_TO = EventType.Name(EventType.APPOINTMENT_CREATED)
 
     @property
-    def appointment(self):
+    def appointment(self) -> AppointmentModel:
         """Get the appointment from the event."""
         if self._appointment is None:
             self._appointment = AppointmentModel.objects.get(id=self.event.target.id)
@@ -35,7 +35,7 @@ class AppointmentRecurrence(BaseHandler):
         return self._appointment
 
     @property
-    def recurrence_type(self) -> RecurrenceEnum:
+    def recurrence_type(self) -> str:
         """Determine the recurrence type from the appointment metadata."""
         if self._recurrence_type is None:
             self._recurrence_type = (
@@ -125,7 +125,7 @@ class AppointmentRecurrence(BaseHandler):
             note_type_id=self.appointment.note_type.id,
         )
 
-    def compute(self):
+    def compute(self) -> list:
         if not self.recurrence_type or self.recurrence_type == RecurrenceEnum.NONE.value:
             return []
 
