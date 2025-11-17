@@ -1,0 +1,49 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "fullscript",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "url_permissions": [
+        {
+            "url": "https://public-assets.fullscript.com/fullscript.js/3.0.1/fullscript-js.umd.min.js",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS"]
+        },
+        {
+            "url": "https://api-us-snd.fullscript.io/",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS"]
+        }
+
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "example-plugins.fullscript.applications.my_application:MyApplication",
+                "name": "fullscript",
+                "description": "An Application that does xyz...",
+                "scope": "patient_specific",
+                "icon": "assets/python-logo.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "example-plugins.fullscript.handlers.my_web_app:MyWebApp",
+                "description": "Serves the application",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
