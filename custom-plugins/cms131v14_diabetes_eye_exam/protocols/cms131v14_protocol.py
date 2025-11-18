@@ -709,10 +709,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             prior_year_end = self.timeframe.start.datetime
             
             left_eye_no_retinopathy_prior = self._observation_exists(
-                patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.LEFT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
             right_eye_no_retinopathy_prior = self._observation_exists(
-                patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.RIGHT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
             
             if left_eye_retinopathy and right_eye_no_retinopathy_prior:
