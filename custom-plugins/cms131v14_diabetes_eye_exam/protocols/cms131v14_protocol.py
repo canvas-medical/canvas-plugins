@@ -9,10 +9,11 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
-from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.v1.data.medication import Medication
+from canvas_sdk.v1.data.referral import ReferralReport
 from canvas_sdk.value_set.v2026.condition import (
     Diabetes,
     DiabeticRetinopathy,
@@ -21,6 +22,7 @@ from canvas_sdk.value_set.v2026.condition import (
     HospiceDiagnosis,
     PalliativeCareDiagnosis,
 )
+from canvas_sdk.value_set.v2026.communication import DiabeticRetinopathySeverityLevel,AutonomousEyeExamResultOrFinding
 from canvas_sdk.value_set.v2026.encounter import (
     PalliativeCareEncounter,
     HospiceEncounter,
@@ -30,6 +32,7 @@ from canvas_sdk.value_set.v2026.intervention import (
     PalliativeCareIntervention,
 )
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
+from canvas_sdk.value_set.v2026.physical_exam import RetinalOrDilatedEyeExam
 from canvas_sdk.value_set.v2022.condition import (
     DementiaAndMentalDegenerations,
     Cancer,
@@ -81,6 +84,13 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     # Age range constants
     AGE_RANGE_START = 18
     AGE_RANGE_END = 75
+
+    LOINC_SYSTEM_IDENTIFIERS = ["http://loinc.org", "LOINC"]
+
+    NO_APPARENT_RETINOPATHY_LOINC_CODE = "LA18643-9"
+    LEFT_EYE_LOINC_CODE = "71490-7"
+    RIGHT_EYE_LOINC_CODE = "71491-5"
+    AUTONOMOUS_EYE_EXAM_LOINC_CODE = "105914-6"
 
     def _get_patient(self) -> tuple[Patient | None, Condition | None]:
         try:
@@ -217,12 +227,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _in_numerator(self, patient: Patient) -> bool:
         if self._has_retinopathy_diagnosis_in_period(patient):
-            return self._has_retinal_exam_by_eye_care_professional_in_period(patient)
+            return self._has_retinal_exam_in_period(patient)
 
         if self._has_retinal_exam_in_period_or_year_prior(patient):
+            log.info(
+                    f"CMS131v14: Found retinal exam in measurement period or year prior for patient {patient.id}"
+                )
             return True
 
         if self._has_autonomous_eye_exam_in_period(patient):
+            log.info(f"CMS131v14: Found autonomous eye exam in measurement period for patient {patient.id}")
             return True
 
         if self._has_retinal_finding_with_severity_in_period(patient):
@@ -517,22 +531,152 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_retinopathy_diagnosis_in_period(self, patient: Patient) -> bool:
-        return False
+        """Check for retinopathy diagnosis in period."""
+        try:
+            has_retinopathy_diagnosis = Condition.objects.for_patient(patient.id).find(DiabeticRetinopathy).active().exists()
 
-    def _has_retinal_exam_by_eye_care_professional_in_period(self, patient: Patient) -> bool:
-        return False
+            return has_retinopathy_diagnosis
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking retinopathy diagnosis: {str(e)}")
+            return False
+        
+
+    def _referral_report_exists(self, patient: Patient, timeframe_start, timeframe_end) -> bool:
+        """Check if specified referral report exists in specified timeframe."""
+        try:
+            referral_reports = ReferralReport.objects.for_patient(patient.id).find(RetinalOrDilatedEyeExam).filter(
+                original_date__gte=timeframe_start,
+                original_date__lt=timeframe_end,
+            )
+
+            return referral_reports.exists()
+
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking referral report in period: {str(e)}")
+            return False
+
+
+    def _has_retinal_exam_in_period(self, patient: Patient) -> bool:
+        """Check for retinal or dilated eye exam in measurement period."""
+        try:
+            referral_reports = self._referral_report_exists(patient, self.timeframe.start.datetime, self.timeframe.end.datetime)
+
+            return referral_reports
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking retinal exam in period: {str(e)}")
+            return False
 
     def _has_retinal_exam_in_period_or_year_prior(self, patient: Patient) -> bool:
-        return False
+        """Check for retinal or dilated eye exam in measurement period OR year prior."""
+        try:
+            extended_start = self.timeframe.start.shift(years=-1)
+            referral_reports = self._referral_report_exists(patient, extended_start.datetime, self.timeframe.end.datetime)
+
+            return referral_reports
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking retinal exam in period or year prior: {str(e)}")
+            return False
+
+    def _observation_exists(self, patient: Patient, codings_code: str, value_codings_codes: set[str], timeframe_start, timeframe_end) -> bool:
+        """Check if specified observation exists in specified timeframe."""
+        try:
+            observations = (
+                Observation.objects.for_patient(patient.id)
+                .committed()
+                .filter(created__gte=timeframe_start, created__lt=timeframe_end, codings__code=codings_code, value_codings__code__in=value_codings_codes)
+            )
+            return observations.exists()
+
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking observation for code {codings_code} and value codes {value_codings_codes}: {str(e)}")
+            return False
 
     def _has_autonomous_eye_exam_in_period(self, patient: Patient) -> bool:
-        return False
+        """Check for autonomous AI eye exam with valid result in measurement period."""
+        try:
+            result_codes = set(AutonomousEyeExamResultOrFinding.LOINC)
+            
+            has_exam = self._observation_exists(patient, self.AUTONOMOUS_EYE_EXAM_LOINC_CODE, result_codes, self.timeframe.start.datetime, self.timeframe.end.datetime)
+
+            return has_exam
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking autonomous eye exam: {str(e)}")
+            return False
 
     def _has_retinal_finding_with_severity_in_period(self, patient: Patient) -> bool:
-        return False
+        """Check for retinal exam findings with retinopathy severity level in measurement period."""
+        try:
+            measurement_start = self.timeframe.start.datetime
+            measurement_end = self.timeframe.end.datetime
+            
+            severity_codes = set(DiabeticRetinopathySeverityLevel.LOINC)
+            left_eye_retinopathy = self._observation_exists(
+                patient, self.LEFT_EYE_LOINC_CODE, severity_codes, measurement_start, measurement_end
+            )
+            right_eye_retinopathy = self._observation_exists(
+                patient, self.RIGHT_EYE_LOINC_CODE, severity_codes, measurement_start, measurement_end
+            )
+            
+            if left_eye_retinopathy and right_eye_retinopathy:
+                log.info(f"CMS131v14: Both eyes have retinopathy severity for patient {patient.id}")
+                return True
+
+            prior_year_start = self.timeframe.start.shift(years=-1).datetime
+            prior_year_end = self.timeframe.start.datetime
+            
+            left_eye_no_retinopathy_prior = self._observation_exists(
+                patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+            )
+            right_eye_no_retinopathy_prior = self._observation_exists(
+                patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+            )
+            
+            if left_eye_retinopathy and right_eye_no_retinopathy_prior:
+                log.info(
+                    f"CMS131v14: Left eye has retinopathy, right eye no retinopathy in prior year for patient {patient.id}"
+                )
+                return True
+            
+            if right_eye_retinopathy and left_eye_no_retinopathy_prior:
+                log.info(
+                    f"CMS131v14: Right eye has retinopathy, left eye no retinopathy in prior year for patient {patient.id}"
+                )
+                return True
+            
+            return False
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking retinal finding with severity: {str(e)}")
+            return False
 
     def _has_retinal_finding_no_severity_in_prior_year(self, patient: Patient) -> bool:
-        return False
+        """Check for retinal exam findings with NO retinopathy severity in year prior."""
+        try:
+            prior_year_start = self.timeframe.start.shift(years=-1).datetime
+            prior_year_end = self.timeframe.start.datetime
+            
+            left_eye_no_retinopathy = self._observation_exists(
+                patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+            )
+            right_eye_no_retinopathy = self._observation_exists(
+                patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+            )
+            
+            if left_eye_no_retinopathy and right_eye_no_retinopathy:
+                log.info(
+                    f"CMS131v14: Both eyes have no retinopathy in year prior for patient {patient.id}"
+                )
+                return True
+            
+            return False
+        
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking retinal finding no severity in prior year: {str(e)}")
+            return False
 
     def _create_not_applicable_card(self, patient: Patient) -> Effect:
         card = ProtocolCard(
