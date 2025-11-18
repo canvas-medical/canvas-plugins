@@ -17,46 +17,46 @@ class InpatientFalls(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     ICD10CM = {
-        "W01.0XXA",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, initial encounter
-        "W01.10XA",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, initial encounter
-        "W01.110A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, initial encounter
-        "W01.111A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, initial encounter
-        "W01.118A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, initial encounter
-        "W01.119A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, initial encounter
-        "W01.190A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, initial encounter
-        "W01.198A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, initial encounter
-        "W03.XXXA",  # Other fall on same level due to collision with another person, initial encounter
-        "W04.XXXA",  # Fall while being carried or supported by other persons, initial encounter
-        "W05.0XXA",  # Fall from non-moving wheelchair, initial encounter
-        "W05.1XXA",  # Fall from non-moving nonmotorized scooter, initial encounter
-        "W05.2XXA",  # Fall from non-moving motorized mobility scooter, initial encounter
-        "W06.XXXA",  # Fall from bed, initial encounter
-        "W07.XXXA",  # Fall from chair, initial encounter
-        "W08.XXXA",  # Fall from other furniture, initial encounter
-        "W10.1XXA",  # Fall (on)(from) sidewalk curb, initial encounter
-        "W10.2XXA",  # Fall (on)(from) incline, initial encounter
-        "W10.8XXA",  # Fall (on) (from) other stairs and steps, initial encounter
-        "W10.9XXA",  # Fall (on) (from) unspecified stairs and steps, initial encounter
-        "W13.3XXA",  # Fall through floor, initial encounter
-        "W13.4XXA",  # Fall from, out of or through window, initial encounter
-        "W13.8XXA",  # Fall from, out of or through other building or structure, initial encounter
-        "W13.9XXA",  # Fall from, out of or through building, not otherwise specified, initial encounter
-        "W16.211A",  # Fall in (into) filled bathtub causing drowning and submersion, initial encounter
-        "W16.212A",  # Fall in (into) filled bathtub causing other injury, initial encounter
-        "W16.221A",  # Fall in (into) bucket of water causing drowning and submersion, initial encounter
-        "W16.222A",  # Fall in (into) bucket of water causing other injury, initial encounter
-        "W17.89XA",  # Other fall from one level to another, initial encounter
-        "W18.00XA",  # Striking against unspecified object with subsequent fall, initial encounter
-        "W18.01XA",  # Striking against sports equipment with subsequent fall, initial encounter
-        "W18.02XA",  # Striking against glass with subsequent fall, initial encounter
-        "W18.09XA",  # Striking against other object with subsequent fall, initial encounter
-        "W18.11XA",  # Fall from or off toilet without subsequent striking against object, initial encounter
-        "W18.12XA",  # Fall from or off toilet with subsequent striking against object, initial encounter
-        "W18.2XXA",  # Fall in (into) shower or empty bathtub, initial encounter
-        "W18.30XA",  # Fall on same level, unspecified, initial encounter
-        "W18.31XA",  # Fall on same level due to stepping on an object, initial encounter
-        "W18.39XA",  # Other fall on same level, initial encounter
-        "W19.XXXA",  # Unspecified fall, initial encounter
+        "W010XXA",  # Fall on same level from slipping, tripping and stumbling without subsequent striking against object, initial encounter
+        "W0110XA",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified object, initial encounter
+        "W01110A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against sharp glass, initial encounter
+        "W01111A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against power tool or machine, initial encounter
+        "W01118A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other sharp object, initial encounter
+        "W01119A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against unspecified sharp object, initial encounter
+        "W01190A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against furniture, initial encounter
+        "W01198A",  # Fall on same level from slipping, tripping and stumbling with subsequent striking against other object, initial encounter
+        "W03XXXA",  # Other fall on same level due to collision with another person, initial encounter
+        "W04XXXA",  # Fall while being carried or supported by other persons, initial encounter
+        "W050XXA",  # Fall from non-moving wheelchair, initial encounter
+        "W051XXA",  # Fall from non-moving nonmotorized scooter, initial encounter
+        "W052XXA",  # Fall from non-moving motorized mobility scooter, initial encounter
+        "W06XXXA",  # Fall from bed, initial encounter
+        "W07XXXA",  # Fall from chair, initial encounter
+        "W08XXXA",  # Fall from other furniture, initial encounter
+        "W101XXA",  # Fall (on)(from) sidewalk curb, initial encounter
+        "W102XXA",  # Fall (on)(from) incline, initial encounter
+        "W108XXA",  # Fall (on) (from) other stairs and steps, initial encounter
+        "W109XXA",  # Fall (on) (from) unspecified stairs and steps, initial encounter
+        "W133XXA",  # Fall through floor, initial encounter
+        "W134XXA",  # Fall from, out of or through window, initial encounter
+        "W138XXA",  # Fall from, out of or through other building or structure, initial encounter
+        "W139XXA",  # Fall from, out of or through building, not otherwise specified, initial encounter
+        "W16211A",  # Fall in (into) filled bathtub causing drowning and submersion, initial encounter
+        "W16212A",  # Fall in (into) filled bathtub causing other injury, initial encounter
+        "W16221A",  # Fall in (into) bucket of water causing drowning and submersion, initial encounter
+        "W16222A",  # Fall in (into) bucket of water causing other injury, initial encounter
+        "W1789XA",  # Other fall from one level to another, initial encounter
+        "W1800XA",  # Striking against unspecified object with subsequent fall, initial encounter
+        "W1801XA",  # Striking against sports equipment with subsequent fall, initial encounter
+        "W1802XA",  # Striking against glass with subsequent fall, initial encounter
+        "W1809XA",  # Striking against other object with subsequent fall, initial encounter
+        "W1811XA",  # Fall from or off toilet without subsequent striking against object, initial encounter
+        "W1812XA",  # Fall from or off toilet with subsequent striking against object, initial encounter
+        "W182XXA",  # Fall in (into) shower or empty bathtub, initial encounter
+        "W1830XA",  # Fall on same level, unspecified, initial encounter
+        "W1831XA",  # Fall on same level due to stepping on an object, initial encounter
+        "W1839XA",  # Other fall on same level, initial encounter
+        "W19XXXA",  # Unspecified fall, initial encounter
     }
 
     SNOMEDCT = {
