@@ -13,7 +13,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from AccessControl import ZopeGuards
+from AccessControl.ZopeGuards import guarded_sum
 from frozendict import frozendict
 from RestrictedPython import (
     CompileResult,
@@ -676,7 +676,7 @@ class Sandbox:
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
-                "sum": ZopeGuards.guarded_sum,
+                "sum": guarded_sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
             },
