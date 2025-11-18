@@ -13,7 +13,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from AccessControl.ZopeGuards import guarded_sum
 from frozendict import frozendict
 from RestrictedPython import (
     CompileResult,
@@ -23,6 +22,7 @@ from RestrictedPython import (
     safe_builtins,
     utility_builtins,
 )
+from RestrictedPython.Eval import default_guarded_getiter
 from RestrictedPython.Guards import (
     guarded_iter_unpack_sequence,
     guarded_unpack_sequence,
@@ -676,7 +676,7 @@ class Sandbox:
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
-                "sum": guarded_sum,
+                "sum": self._safe_sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
             },
@@ -937,6 +937,22 @@ class Sandbox:
             imported_module.__is_plugin__ = True  # type: ignore[attr-defined]
 
         return imported_module
+
+    def _safe_sum(self, iterable: Iterable[Any], start: Any = 0) -> Any:
+        """A safe version of the built-in sum function."""
+
+        class SafeIter:
+            def __init__(self, it: Iterable[Any]) -> None:
+                # Always get an iterator from the iterable
+                self._it: Any = iter(default_guarded_getiter(it))
+
+            def __iter__(self) -> SafeIter:
+                return self
+
+            def __next__(self) -> Any:
+                return next(self._it)
+
+        return sum(SafeIter(iterable), start)
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""
