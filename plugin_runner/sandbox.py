@@ -13,6 +13,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
+from AccessControl import ZopeGuards
 from frozendict import frozendict
 from RestrictedPython import (
     CompileResult,
@@ -201,9 +202,6 @@ STANDARD_LIBRARY_MODULES = {
 
 
 THIRD_PARTY_MODULES = {
-    "AccessControl": {
-        "ZopeGuards",
-    },
     "arrow": {
         "get",
         "now",
@@ -678,6 +676,7 @@ class Sandbox:
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
+                "sum": ZopeGuards.guarded_sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
             },
