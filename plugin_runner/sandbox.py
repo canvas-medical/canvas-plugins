@@ -201,6 +201,9 @@ STANDARD_LIBRARY_MODULES = {
 
 
 THIRD_PARTY_MODULES = {
+    "AccessControl": {
+        "ZopeGuards",
+    },
     "arrow": {
         "get",
         "now",
