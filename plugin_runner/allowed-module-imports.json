@@ -1521,15 +1521,51 @@
   "canvas_sdk.value_set.v2022.symptom": [
     "FrailtySymptom"
   ],
+  "canvas_sdk.value_set.v2026.communication": [
+    "AutonomousEyeExamResultOrFinding",
+    "DiabeticRetinopathySeverityLevel"
+  ],
   "canvas_sdk.value_set.v2026.condition": [
     "AdvancedIllness",
-    "Diabetes"
+    "Diabetes",
+    "DiabeticRetinopathy",
+    "FrailtyDiagnosis",
+    "HospiceDiagnosis",
+    "PalliativeCareDiagnosis"
+  ],
+  "canvas_sdk.value_set.v2026.device": [
+    "FrailtyDevice"
+  ],
+  "canvas_sdk.value_set.v2026.encounter": [
+    "AnnualWellnessVisit",
+    "EncounterInpatient",
+    "FrailtyEncounter",
+    "HomeHealthcareServices",
+    "HospiceEncounter",
+    "OfficeVisit",
+    "PreventiveCareServicesEstablishedOfficeVisit18AndUp",
+    "OphthalmologicalServices",
+    "PalliativeCareEncounter",
+    "TelephoneVisits"
+  ],
+  "canvas_sdk.value_set.v2026.individual_characteristic": [
+    "Ethnicity",
+    "FederalAdministrativeSex",
+    "PayerType",
+    "Race"
+  ],
+  "canvas_sdk.value_set.v2026.intervention": [
+    "HospiceCareAmbulatory",
+    "PalliativeCareIntervention"
   ],
   "canvas_sdk.value_set.v2026.medication": [
     "DementiaMedications"
-  ],    
-  "canvas_sdk.value_set.v2026.encounter": [
-    "AnnualWellnessVisit"
+  ],
+  "canvas_sdk.value_set.v2026.physical_exam": [
+    "RetinalOrDilatedEyeExam"
+  ],  
+  "canvas_sdk.value_set.v2026.symptom": [
+    "FrailtySymptom"
   ],
   "canvas_sdk.value_set.value_set": [
     "CodeConstants",
