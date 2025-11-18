@@ -278,6 +278,25 @@ ALLOWED_MODULES = frozendict(
 )
 
 
+class SafeIter:
+    """An iterator that only allows safe iteration."""
+
+    def __init__(self, it: Iterable[Any]) -> None:
+        # Always get an iterator from the iterable
+        self._it: Any = iter(default_guarded_getiter(it))
+
+    def __iter__(self) -> SafeIter:
+        return self
+
+    def __next__(self) -> Any:
+        return next(self._it)
+
+
+def _safe_sum(iterable: Iterable[Any], start: Any = 0) -> Any:
+    """A safe version of the built-in sum function."""
+    return sum(SafeIter(iterable), start)
+
+
 def _is_known_module(name: str) -> bool:
     return name in ALLOWED_MODULES
 
@@ -676,7 +695,7 @@ class Sandbox:
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
-                "sum": self._safe_sum,
+                "sum": _safe_sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
             },
@@ -937,22 +956,6 @@ class Sandbox:
             imported_module.__is_plugin__ = True  # type: ignore[attr-defined]
 
         return imported_module
-
-    def _safe_sum(self, iterable: Iterable[Any], start: Any = 0) -> Any:
-        """A safe version of the built-in sum function."""
-
-        class SafeIter:
-            def __init__(self, it: Iterable[Any]) -> None:
-                # Always get an iterator from the iterable
-                self._it: Any = iter(default_guarded_getiter(it))
-
-            def __iter__(self) -> SafeIter:
-                return self
-
-            def __next__(self) -> Any:
-                return next(self._it)
-
-        return sum(SafeIter(iterable), start)
 
     def execute(self) -> dict:
         """Execute the given code in a restricted sandbox."""
