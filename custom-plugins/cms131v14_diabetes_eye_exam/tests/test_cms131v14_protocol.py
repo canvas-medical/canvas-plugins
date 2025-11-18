@@ -618,6 +618,200 @@ def test_in_denominator_no_exclusions(
     assert result is True
 
 
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_true_with_retinopathy_exam(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Retinopathy diagnosis plus eye-care exam during measurement period qualifies numerator."""
+    mock_has_retinopathy.return_value = True
+    mock_exam_in_period_or_year_prior.return_value = True
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is True
+    mock_exam_in_period_or_year_prior.assert_called_once_with(mock_patient)
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_false_with_retinopathy_without_exam(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """If retinopathy lacks a supporting exam, numerator should not pass."""
+    mock_has_retinopathy.return_value = True
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_true_with_exam_in_measurement_or_prior_year(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Exam in measurement period or lookback year covers patients without retinopathy."""
+    mock_has_retinopathy.return_value = False
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = True
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is True
+    mock_exam_in_lookback.assert_called_once_with(mock_patient)
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_true_with_autonomous_eye_exam(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Autonomous AI exam path should independently satisfy numerator."""
+    mock_has_retinopathy.return_value = False
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = True
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is True
+    mock_autonomous_exam.assert_called_once_with(mock_patient)
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_true_with_retinopathy_severity_findings(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Retinal findings documenting severity in the period qualifies the patient."""
+    mock_has_retinopathy.return_value = False
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = True
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is True
+    mock_severity_finding.assert_called_once_with(mock_patient)
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_true_with_prior_year_no_retinopathy_documented(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Prior-year documentation of no retinopathy (both eyes) should satisfy numerator."""
+    mock_has_retinopathy.return_value = False
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = True
+
+    assert protocol_instance._in_numerator(mock_patient) is True
+    mock_no_severity_prior.assert_called_once_with(mock_patient)
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_no_severity_in_prior_year")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_finding_with_severity_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_autonomous_eye_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period_or_year_prior")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinal_exam_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_retinopathy_diagnosis_in_period")
+def test_in_numerator_false_when_no_criteria_met(
+    mock_has_retinopathy: MagicMock,
+    mock_exam_in_period_or_year_prior: MagicMock,
+    mock_exam_in_lookback: MagicMock,
+    mock_autonomous_exam: MagicMock,
+    mock_severity_finding: MagicMock,
+    mock_no_severity_prior: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """If every helper check fails, the numerator result should be False."""
+    mock_has_retinopathy.return_value = False
+    mock_exam_in_period_or_year_prior.return_value = False
+    mock_exam_in_lookback.return_value = False
+    mock_autonomous_exam.return_value = False
+    mock_severity_finding.return_value = False
+    mock_no_severity_prior.return_value = False
+
+    assert protocol_instance._in_numerator(mock_patient) is False
+
+
 @patch("canvas_sdk.effects.protocol_card.protocol_card.ProtocolCard.apply")
 def test_create_satisfied_card(
     mock_apply: MagicMock,
