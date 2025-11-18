@@ -71,7 +71,7 @@ class Staff(TimestampedModel):
     # language_secondary = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
     personal_meeting_room_link = models.URLField(null=True)
     state = models.JSONField(default=dict, blank=True)
-    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    user = models.OneToOneField("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
     schedule_column_ordering = models.IntegerField(default=999)
     default_supervising_provider = models.ForeignKey(
         "v1.Staff", on_delete=models.DO_NOTHING, related_name="supervising_team", null=True

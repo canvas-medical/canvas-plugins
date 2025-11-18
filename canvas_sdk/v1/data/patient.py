@@ -106,7 +106,7 @@ class Patient(TimestampedModel):
         blank=True,
         related_name="default_patients",
     )
-    user = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
+    user = models.OneToOneField("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
 
     @classmethod
     def find(cls, id: str) -> Patient:
