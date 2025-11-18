@@ -299,6 +299,57 @@ def test_has_diabetes_diagnosis_overlapping_period_false(
     assert result is False
 
 
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_has_eligible_encounter_in_period_has_office_visit(
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Test _has_eligible_encounter_in_period returns True when office visit encounter exists."""
+    mock_encounter_objects.filter.return_value.exists.return_value = True
+    
+    result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+def test_has_eligible_encounter_in_period_has_preventive_care_claim(
+    mock_claim_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Test _has_eligible_encounter_in_period returns True when preventive care claim exists."""
+    # No office visit encounters
+    mock_encounter_objects.filter.return_value.exists.return_value = True
+    
+    # Has preventive care claim
+    mock_claim = Mock()
+    mock_claim.proc_code = "99385"  # Preventive care established patient
+    mock_claim_objects.filter.return_value.exists.return_value = True
+    mock_claim_objects.filter.return_value.first.return_value = mock_claim
+    
+    result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+def test_has_eligible_encounter_in_period_false(
+    mock_claim_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Test _has_eligible_encounter_in_period returns False when no eligible encounters."""
+    mock_encounter_objects.filter.return_value.exists.return_value = False
+    mock_claim_objects.filter.return_value.exists.return_value = False
+    
+    result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
+    assert result is False
+
+
 @patch("canvas_sdk.v1.data.questionnaire.InterviewQuestionResponse.objects")
 @patch("canvas_sdk.v1.data.questionnaire.Interview.objects")
 def test_has_hospice_care_in_period_true(

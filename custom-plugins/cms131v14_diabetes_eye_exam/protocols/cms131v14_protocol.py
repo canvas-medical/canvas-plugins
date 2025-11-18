@@ -11,6 +11,7 @@ from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
+from canvas_sdk.v1.data.encounter import Encounter
 from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.referral import ReferralReport
@@ -24,6 +25,12 @@ from canvas_sdk.value_set.v2026.condition import (
 )
 from canvas_sdk.value_set.v2026.communication import DiabeticRetinopathySeverityLevel,AutonomousEyeExamResultOrFinding
 from canvas_sdk.value_set.v2026.encounter import (
+    OfficeVisit,
+    AnnualWellnessVisit,
+    PreventiveCareServicesEstablishedOfficeVisit18AndUp,
+    HomeHealthcareServices,
+    OphthalmologicalServices,
+    TelephoneVisits,
     PalliativeCareEncounter,
     HospiceEncounter,
 )
@@ -38,6 +45,7 @@ from canvas_sdk.value_set.v2022.condition import (
     Cancer,
 )
 from canvas_sdk.value_set.v2022.encounter import (
+    PreventiveCareServicesInitialOfficeVisit_18AndUp,
     CareServicesInLongTermResidentialFacility,
     NursingFacilityVisit,
 )
@@ -196,6 +204,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         if not self._has_eligible_encounter_in_period(patient):
+            log.info(f"CMS131v14: Patient {patient.id} has no eligible encounters in period")
             return False
 
         return True
@@ -273,7 +282,78 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_eligible_encounter_in_period(self, patient: Patient) -> bool:
-        return True
+        """
+        Check if patient has an eligible encounter during the measurement period.
+        
+        Per CMS131v14 CQL, eligible encounters include:
+        - Office Visit
+        - Annual Wellness Visit
+        - Preventive Care Services Established Office Visit, 18 and Up
+        - Preventive Care Services Initial Office Visit, 18 and Up
+        - Home Healthcare Services
+        - Ophthalmological Services
+        - Telephone Visits
+        """
+        try:
+            start_date = self.timeframe.start.datetime
+            end_date = self.timeframe.end.datetime
+            
+            # Check for office visit encounters
+            # Office visits are identified by note_type_version codes matching OfficeVisit SNOMED codes
+            # Filter for concluded encounters only (state="CON")
+            office_visit_codes = OfficeVisit.SNOMEDCT
+            
+            office_visits = Encounter.objects.filter(
+                note__patient=patient,
+                note__note_type_version__code="308335008", # Office Visit code
+                state="CON",
+                start_time__gte=start_date,
+                start_time__lte=end_date,
+            )
+
+            log.info(f"CMS131v14: Office visits: {office_visits.count()}")
+            
+            if office_visits.exists():
+                log.info(f"CMS131v14: Patient {patient.id} has office visit encounter")
+                return True
+            
+            # Check for encounters/services via claims (AWV, Preventive Care, etc.)
+            # Collect all CPT and HCPCS codes from the relevant value sets
+            eligible_codes = (
+                AnnualWellnessVisit.HCPCSLEVELII |
+                PreventiveCareServicesEstablishedOfficeVisit18AndUp.CPT |
+                PreventiveCareServicesEstablishedOfficeVisit18AndUp.HCPCSLEVELII |
+                PreventiveCareServicesInitialOfficeVisit_18AndUp.CPT |
+                PreventiveCareServicesInitialOfficeVisit_18AndUp.HCPCSLEVELII |
+                HomeHealthcareServices.CPT |
+                HomeHealthcareServices.HCPCSLEVELII |
+                OphthalmologicalServices.CPT |
+                TelephoneVisits.CPT
+            )
+            
+            # Query ClaimLineItem for any of these codes during the measurement period
+            eligible_claims = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=eligible_codes,
+            )
+
+            log.info(f"CMS131v14: Eligible claims: {eligible_claims.count()}")
+            if eligible_claims.exists():
+                found_code = eligible_claims.first().proc_code
+                log.info(
+                    f"CMS131v14: Patient {patient.id} has eligible encounter claim (code: {found_code})"
+                )
+                return True
+            
+            log.info(f"CMS131v14: Patient {patient.id} has no eligible encounters in period")
+            return False
+            
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking eligible encounters: {str(e)}")
+            return False
 
     def _has_hospice_care_in_period(self, patient: Patient) -> bool:
         """
