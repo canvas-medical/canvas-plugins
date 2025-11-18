@@ -1225,6 +1225,8 @@ message Event {
   string target = 2;
   string context = 3;
   string target_type = 4;
+  string actor = 5;
+  string source = 6;
 }
 
 message EventResponse {

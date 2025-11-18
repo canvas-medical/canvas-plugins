@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.77.0 (2025-11-17)
+
+### Features
+
+- Add event actor and source to events and effects
+  ([#1197](https://github.com/canvas-medical/canvas-plugins/pull/1197),
+  [`cd43a18`](https://github.com/canvas-medical/canvas-plugins/commit/cd43a188446fad980b51fec9568e889aa588caf8))
+
+
 ## v0.76.0 (2025-11-11)
 
 ### Chores
