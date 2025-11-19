@@ -2,6 +2,8 @@ import importlib
 import inspect
 import pkgutil
 
+import pytest
+
 
 def get_factory_classes_from_data() -> set[str]:
     """Collect names of all top-level factory classes."""
@@ -38,6 +40,7 @@ def test_all_factories_are_exported() -> None:
     assert not missing, f"Factories missing from __all__: {sorted(missing)}"
 
 
+@pytest.mark.django_db
 def test_factory_is_instantiable() -> None:
     """Ensure each factory can be instantiated without errors."""
     from canvas_sdk.test_utils import factories
