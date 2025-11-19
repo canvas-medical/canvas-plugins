@@ -277,3 +277,34 @@ def test_priority_setter_get_desired_priority_with_no_team() -> None:
 
     # Verify None is returned
     assert desired_priority is None
+
+
+def test_priority_setter_prevents_downgrade_from_routine_to_none() -> None:
+    """Test that priority is not changed from ROUTINE to None for non-refill teams.
+
+    This prevents accidentally clearing priority from tasks that are already prioritized
+    but not URGENT when they are assigned to teams without refill responsibilities.
+    """
+    # Create a mock event
+    mock_event = Mock()
+    mock_event.type = EventType.TASK_CREATED
+    mock_event.target = Mock()
+    mock_event.target.id = "task-routine"
+
+    # Create protocol instance
+    protocol = RefillTaskPriorityProtocol(event=mock_event)
+
+    # Mock task with ROUTINE priority and team without refill responsibilities
+    mock_task = Mock()
+    mock_task.status = TaskStatus.OPEN.value
+    mock_task.priority = TaskPriority.ROUTINE.value  # Key: non-URGENT priority
+    mock_team = Mock()
+    mock_team.responsibilities = []  # No refill responsibility = desired priority is None
+    mock_task.team = mock_team
+
+    with patch('refill_priority_setter_plugin.protocols.priority_setter.Task.objects.get', return_value=mock_task):
+        with patch('refill_priority_setter_plugin.protocols.priority_setter.log'):
+            effects = protocol.compute()
+
+        # Verify no effects were returned (priority not downgraded to None)
+        assert len(effects) == 0
