@@ -1,4 +1,3 @@
-import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import PerformCommand, ReferCommand
@@ -8,7 +7,7 @@ from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.condition import Condition, ClinicalStatus
 from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.v1.data.encounter import Encounter
@@ -257,7 +256,13 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_diabetes_diagnosis(self, patient: Patient) -> bool:
         try:
-            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
+
+            diabetes_conditions = (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+            )
 
             has_diabetes = diabetes_conditions.exists()
 
@@ -274,7 +279,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
         try:
-            return Condition.objects.for_patient(patient.id).find(Diabetes).active().exists()
+
+            return (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
+            )
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis overlapping period: {str(e)}")
@@ -439,9 +451,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
             # Check for advanced illness conditions using separate targeted queries
             has_advanced_illness = (
-                Condition.objects.for_patient(patient.id).active().find(DementiaAndMentalDegenerations).exists() or
-                Condition.objects.for_patient(patient.id).active().find(Cancer).exists() or
-                Condition.objects.for_patient(patient.id).active().find(ChemotherapyForAdvancedCancer).exists()
+                Condition.objects.for_patient(patient.id)
+                .find(DementiaAndMentalDegenerations)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
+                or Condition.objects.for_patient(patient.id)
+                .find(Cancer)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
             )
 
             if has_advanced_illness:
@@ -529,7 +548,11 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
             # Check palliative care diagnoses (using Condition model)
             has_palliative_diagnosis = (
-                Condition.objects.for_patient(patient.id).active().find(PalliativeCareDiagnosis).exists()
+                Condition.objects.for_patient(patient.id)
+                .find(PalliativeCareDiagnosis)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
             )
 
             if has_palliative_diagnosis:
@@ -567,6 +590,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 Condition.objects.for_patient(patient.id)
                 .active()
                 .filter(
+                    entered_in_error_id__isnull=True,
                     codings__code="15665641000119103",
                     codings__system__in=["SNOMED", "SNOMEDCT"]
                 )
@@ -587,7 +611,14 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_retinopathy_diagnosis_in_period(self, patient: Patient) -> bool:
         """Check for retinopathy diagnosis in period."""
         try:
-            has_retinopathy_diagnosis = Condition.objects.for_patient(patient.id).find(DiabeticRetinopathy).active().exists()
+
+            has_retinopathy_diagnosis = (
+                Condition.objects.for_patient(patient.id)
+                .find(DiabeticRetinopathy)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
+            )
 
             return has_retinopathy_diagnosis
 
@@ -761,7 +792,13 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _get_diabetes_diagnosis_codes(self, patient: Patient) -> list[str]:
         try:
             diagnosis_codes = []
-            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
+
+            diabetes_conditions = (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+            )
 
             for condition in diabetes_conditions:
                 for coding in condition.codings.all():
