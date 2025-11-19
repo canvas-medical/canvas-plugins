@@ -308,3 +308,35 @@ def test_priority_setter_prevents_downgrade_from_routine_to_none() -> None:
 
         # Verify no effects were returned (priority not downgraded to None)
         assert len(effects) == 0
+
+
+def test_priority_setter_command_event_assigned_to_user() -> None:
+    """Test that the protocol handles TASK_COMMAND__POST_UPDATE when assigned to a user (not a team).
+
+    When a task is assigned to a user instead of a team, no priority changes should occur.
+    """
+    # Create a mock event
+    mock_event = Mock()
+    mock_event.type = EventType.TASK_COMMAND__POST_UPDATE
+    mock_event.target = Mock()
+    mock_event.target.id = "task-command-user-assigned"
+
+    # Create protocol instance
+    protocol = RefillTaskPriorityProtocol(event=mock_event)
+
+    # Mock context for command event assigned to a user (not a team)
+    test_context = {
+        'fields': {
+            'assign_to': {
+                'value': 'user-789'  # Assigned to user, not team
+            },
+            'priority': None
+        }
+    }
+
+    with patch.object(type(protocol), 'context', property(lambda self: test_context)):
+        with patch('refill_priority_setter_plugin.protocols.priority_setter.log'):
+            effects = protocol.compute()
+
+        # Verify no effects were returned (no team = no priority update)
+        assert len(effects) == 0
