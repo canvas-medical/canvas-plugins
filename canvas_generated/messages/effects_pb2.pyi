@@ -49,6 +49,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     SEND_PRESCRIBE_COMMAND: _ClassVar[EffectType]
+    REVIEW_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     ORIGINATE_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
     EDIT_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
     DELETE_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
@@ -126,6 +127,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_REFILL_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_REFILL_COMMAND: _ClassVar[EffectType]
     SEND_REFILL_COMMAND: _ClassVar[EffectType]
+    REVIEW_REFILL_COMMAND: _ClassVar[EffectType]
     ORIGINATE_VITALS_COMMAND: _ClassVar[EffectType]
     EDIT_VITALS_COMMAND: _ClassVar[EffectType]
     DELETE_VITALS_COMMAND: _ClassVar[EffectType]
@@ -197,6 +199,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     SEND_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
+    REVIEW_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     ORIGINATE_CHART_SECTION_REVIEW_COMMAND: _ClassVar[EffectType]
     ORIGINATE_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
     EDIT_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
@@ -285,6 +288,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     GENERATE_FULL_CHART_PDF: _ClassVar[EffectType]
     CALENDAR__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
+    BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -327,6 +331,7 @@ DELETE_PRESCRIBE_COMMAND: EffectType
 COMMIT_PRESCRIBE_COMMAND: EffectType
 ENTER_IN_ERROR_PRESCRIBE_COMMAND: EffectType
 SEND_PRESCRIBE_COMMAND: EffectType
+REVIEW_PRESCRIBE_COMMAND: EffectType
 ORIGINATE_QUESTIONNAIRE_COMMAND: EffectType
 EDIT_QUESTIONNAIRE_COMMAND: EffectType
 DELETE_QUESTIONNAIRE_COMMAND: EffectType
@@ -404,6 +409,7 @@ DELETE_REFILL_COMMAND: EffectType
 COMMIT_REFILL_COMMAND: EffectType
 ENTER_IN_ERROR_REFILL_COMMAND: EffectType
 SEND_REFILL_COMMAND: EffectType
+REVIEW_REFILL_COMMAND: EffectType
 ORIGINATE_VITALS_COMMAND: EffectType
 EDIT_VITALS_COMMAND: EffectType
 DELETE_VITALS_COMMAND: EffectType
@@ -475,6 +481,7 @@ DELETE_ADJUST_PRESCRIPTION_COMMAND: EffectType
 COMMIT_ADJUST_PRESCRIPTION_COMMAND: EffectType
 ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: EffectType
 SEND_ADJUST_PRESCRIPTION_COMMAND: EffectType
+REVIEW_ADJUST_PRESCRIPTION_COMMAND: EffectType
 ORIGINATE_CHART_SECTION_REVIEW_COMMAND: EffectType
 ORIGINATE_IMMUNIZATION_STATEMENT_COMMAND: EffectType
 EDIT_IMMUNIZATION_STATEMENT_COMMAND: EffectType
@@ -563,17 +570,22 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: EffectType
 GENERATE_FULL_CHART_PDF: EffectType
 CALENDAR__CREATE: EffectType
 CALENDAR__EVENT__CREATE: EffectType
+BATCH_ORIGINATE_COMMANDS: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
+    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
     CLASSNAME_FIELD_NUMBER: _ClassVar[int]
     HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
     classname: str
     handler_name: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ...) -> None: ...
+    actor: str
+    source: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...

@@ -26,6 +26,7 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
+          UV_PYTHON: ${{ matrix.version }}
         run: |
           uv run \
             pytest \
@@ -35,6 +36,20 @@ jobs:
               --cov \
               --cov-branch \
               --cov-report=xml
+
+      - name: Run Pytest unit tests for the example plugins
+        env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
+        run: |
+          cd example-plugins
+          uv run \
+            pytest \
+              --ff \
+              --verbosity 2 \
+              --cov=. \
+              --cov-branch \
+              --cov-report=xml:../coverage.xml \
+              --cov-append
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
