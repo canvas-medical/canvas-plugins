@@ -4,25 +4,26 @@ from http import HTTPStatus
 
 import requests
 
+from canvas_sdk.commands.constants import Coding, CodeSystems
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
 from canvas_sdk.effects.simple_api import HTMLResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, api, StaffSessionAuthMixin
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data import Staff, Note, PatientExternalIdentifier, Patient
+from canvas_sdk.v1.data import Staff, Note, Patient
 from canvas_sdk.commands import MedicationStatementCommand
-from canvas_sdk.v1.data.coding import Coding
 from logger import log
 from canvas_sdk.caching.plugins import get_cache
+
 
 class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
     PREFIX = "/app"
 
+    FULLSCRIPT_TOKEN_URL = "https://api-us-snd.fullscript.io/api/oauth/token"
+
     # Serve templated HTML
     @api.get("/fullscript-app")
     def index(self) -> list[Response | Effect]:
-        # logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
-
         log.info(f"Fullscript app requested")
         log.info(f"--------------------------------")
 
@@ -87,8 +88,8 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
                         headers={"Content-Type": "application/json"},
                         json={
                             "grant_type": "refresh_token",
-                            "client_id": self.FULLSCRIPT_CLIENT_ID,
-                            "client_secret": self.FULLSCRIPT_CLIENT_SECRET,
+                            "client_id": self.secrets["FULLSCRIPT_CLIENT_ID"],
+                            "client_secret": self.secrets["FULLSCRIPT_CLIENT_SECRET"],
                             "refresh_token": existing_token["refresh_token"],
                             "redirect_uri": redirect_uri,
                         },
@@ -100,7 +101,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
 
                     return [
                         Response(
-                            json.dumps(access_token).encode(),
+                            json.dumps({ "token": access_token}).encode(),
                             status_code=HTTPStatus.OK,
                             content_type="application/json",
                         )
@@ -113,8 +114,8 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
                     headers={"Content-Type": "application/json"},
                     json={
                         "grant_type": "authorization_code",
-                        "client_id": self.FULLSCRIPT_CLIENT_ID,
-                        "client_secret": self.FULLSCRIPT_CLIENT_SECRET,
+                        "client_id": self.secrets["FULLSCRIPT_CLIENT_ID"],
+                        "client_secret": self.secrets["FULLSCRIPT_CLIENT_SECRET"],
                         "code": auth_code,
                         "redirect_uri": redirect_uri,
                     },
@@ -140,7 +141,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
 
             return [
                 Response(
-                    json.dumps(token_data.oauth.access_token).encode(),
+                    json.dumps({"token": token_data.get("oauth", {}).get("access_token", None)}).encode(),
                     status_code=HTTPStatus.OK,
                     content_type="application/json",
                 )
@@ -310,8 +311,9 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
             log.info(f"!! Treatment plan created event received: {body}")
 
             # Extract treatment plan items
-            data = body.get("data", {})
-            treatment_plan = data.get("treatmentPlan", {})
+            patient_id = body.get("patient_id", "")
+            treatment_plan = body.get("treatment", {}).get("data", {}).get("treatmentPlan", {})
+
             recommendations = treatment_plan.get("recommendations", [])
 
             if not recommendations:
@@ -339,9 +341,19 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
 
             access_token = cached_token.get("access_token")
 
-            # Process each item in the treatment plan
-            processed_items = []
             medications_list = []
+            patient = Patient.objects.get(id=patient_id)
+            note_id = patient.notes.last().id if patient.notes.exists() else None
+
+            if not note_id:
+                log.error(f"!! Missing note_id: {note_id}")
+                return [
+                    Response(
+                        json.dumps({"error": "Missing note"}).encode(),
+                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                        content_type="application/json",
+                    )
+                ]
 
             for item in recommendations:
                 variant_id = item.get("variantId")
@@ -368,44 +380,50 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
 
                 variant_data = variant_response.json()
 
-                # Combine treatment plan item with full product details
-                processed_item = {
-                    "variant_id": variant_id,
-                    "refill": item.get("refill"),
-                    "dosage": item.get("dosage").get("recommendedAmount"),
-                    "frequency": item.get("dosage").get("recommendedFrequency"),
-                    "format": item.get("dosage").get("format"),
-                    "quantity": item.get("unitsToPurchase"),
-                    "duration": item.get("dosage").get("recommendedDuration"),
-                    "instructions": item.get("additionalInfo"),
-                    "product_details": variant_data,
-                }
+                log.info(f"!! Fetching product variant details for variant_id: {variant_data}")
 
-                note_id = Note.objects.values_list("id", flat=True).last()
+                dosage = item.get("dosage", {})
+
+                quantity = dosage.get("recommendedAmount", None)
+                frequency = dosage.get("recommendedFrequency", None)
+                duration = dosage.get("recommendedDuration", None)
+                format = dosage.get("format", None)
+                refill = item.get("refill", None)
+
+                sku = f"fullscript-{variant_data.get("variant", {}).get("sku", "")}"
+                product_display_name = variant_data.get("variant", {}).get("product", {}).get("name", "")
+
+                log.info(f"!! Fetching product display name: {sku}")
+
+                sig = f"Dosage: {quantity}" if quantity is not None else ""
+                if format is not None:
+                    sig += f"\nFormat: {format}"
+                if frequency is not None:
+                    sig += f"\nFrequency: {frequency}"
+                if duration is not None:
+                    sig += f"\nDuration: {duration}"
+                if refill is not None:
+                    sig += f"\nRefill: {refill == True and 'Yes' or 'No'}"
 
                 coding = Coding(
-                    system="https://fullscript.com/",
-                    code=variant_data.get("sku", ""),
-                    display=variant_data.get("product", {}).get("name", "")
+                    system=CodeSystems.UNSTRUCTURED,
+                    code=sku,
+                    display=product_display_name
                 )
-
                 medication_command = MedicationStatementCommand(
                     fdb_code=coding,
-                    sig=f"{processed_item["instructions"]} Take {processed_item["dosage"]} {processed_item["format"]} {processed_item["frequency"]} for {processed_item["duration"]}.",
+                    sig=sig,
                     note_uuid=str(note_id),
                 )
 
                 medications_list.append(medication_command)
 
-                processed_items.append(processed_item)
                 log.info(f"!! Successfully processed variant {variant_id}")
-
-            log.info(f"!! Treatment plan processing complete. Processed {len(processed_items)} items.")
-
 
             return [
                 *[medication.originate() for medication in medications_list],
                 Response(
+                    json.dumps({"status": "ok"}).encode(),
                     status_code=HTTPStatus.OK,
                     content_type="application/json",
                 )
