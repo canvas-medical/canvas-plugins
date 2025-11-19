@@ -20,17 +20,22 @@ from canvas_sdk.value_set.v2026.condition import (
     FrailtyDiagnosis,
     HospiceDiagnosis,
     PalliativeCareDiagnosis,
+    DementiaAndMentalDegenerations,
+    Cancer,
 )
 from canvas_sdk.value_set.v2026.communication import DiabeticRetinopathySeverityLevel,AutonomousEyeExamResultOrFinding
 from canvas_sdk.value_set.v2026.encounter import (
     OfficeVisit,
     AnnualWellnessVisit,
     PreventiveCareServicesEstablishedOfficeVisit18AndUp,
+    PreventiveCareServicesInitialOfficeVisit18AndUp,
     HomeHealthcareServices,
     OphthalmologicalServices,
     TelephoneVisits,
     PalliativeCareEncounter,
     HospiceEncounter,
+    CareServicesInLongTermResidentialFacility,
+    NursingFacilityVisit,
 )
 from canvas_sdk.value_set.v2026.intervention import (
     HospiceCareAmbulatory,
@@ -38,16 +43,6 @@ from canvas_sdk.value_set.v2026.intervention import (
 )
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
 from canvas_sdk.value_set.v2026.physical_exam import RetinalOrDilatedEyeExam
-from canvas_sdk.value_set.v2022.condition import (
-    DementiaAndMentalDegenerations,
-    Cancer,
-)
-from canvas_sdk.value_set.v2022.encounter import (
-    PreventiveCareServicesInitialOfficeVisit_18AndUp,
-    CareServicesInLongTermResidentialFacility,
-    NursingFacilityVisit,
-)
-from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
 
@@ -278,15 +273,55 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
-        try:
+        """
+        Check if patient has diabetes diagnosis with prevalencePeriod overlapping measurement period.
 
-            return (
+        Per CMS131v14: DiabetesDx.prevalencePeriod overlaps day of "Measurement Period"
+
+        A condition's prevalencePeriod overlaps with measurement period if:
+        - Condition started before or during the measurement period (onset_date <= period_end)
+        - AND condition has not ended or ended during/after measurement period start
+          (resolution_date is null OR resolution_date >= period_start)
+
+        Per Canvas convention: If onset_date is NULL, the condition is treated as overlapping
+        with the measurement period (following the pattern in helper_date_ranges_overlap).
+        """
+        try:
+            measurement_start = self.timeframe.start.date()
+            measurement_end = self.timeframe.end.date()
+
+            # Build overlap query that handles NULL onset_date
+            # Per Canvas convention: NULL onset_date is treated as overlapping
+            overlap_query = (
+                # Case 1: onset_date is NULL (treated as overlapping per Canvas convention)
+                Q(onset_date__isnull=True) |
+                # Case 2: onset_date exists and overlaps with measurement period
+                (
+                    Q(onset_date__lte=measurement_end) &
+                    (
+                        # AND condition is still active (no resolution_date)
+                        Q(resolution_date__isnull=True) |
+                        # OR condition resolved after measurement period started
+                        Q(resolution_date__gte=measurement_start)
+                    )
+                )
+            )
+
+            has_overlap = (
                 Condition.objects.for_patient(patient.id)
                 .find(Diabetes)
-                .active()
+                .committed()
                 .filter(entered_in_error_id__isnull=True)
+                .filter(overlap_query)
                 .exists()
             )
+
+            if has_overlap:
+                log.info(f"CMS131v14: Patient {patient.id} has diabetes diagnosis overlapping measurement period")
+            else:
+                log.info(f"CMS131v14: Patient {patient.id} does NOT have diabetes diagnosis overlapping measurement period")
+
+            return has_overlap
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis overlapping period: {str(e)}")
@@ -342,7 +377,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 OfficeVisit.CPT |
                 AnnualWellnessVisit.HCPCSLEVELII |
                 PreventiveCareServicesEstablishedOfficeVisit18AndUp.CPT |
-                PreventiveCareServicesInitialOfficeVisit_18AndUp.CPT |
+                PreventiveCareServicesInitialOfficeVisit18AndUp.CPT |
                 HomeHealthcareServices.CPT |
                 OphthalmologicalServices.CPT |
                 TelephoneVisits.CPT
