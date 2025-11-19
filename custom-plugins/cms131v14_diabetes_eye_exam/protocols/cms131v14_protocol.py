@@ -481,25 +481,22 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient has advanced illness or dementia medications during the measurement period or year prior.
         Per CMS131v14 CQL:
-        - Advanced illness diagnosis during the measurement period or the year prior
+        - Advanced illness diagnosis that starts during the measurement period or the year prior
         - OR taking dementia medications during the measurement period or the year prior
         """
         try:
-            # Calculate the extended timeframe (measurement period + 1 year prior)
-            start_date = self.timeframe.start.shift(years=-1).datetime
-            end_date = self.timeframe.end.datetime
+            start_date = self.timeframe.start.shift(years=-1).date()
+            end_date = self.timeframe.end.date()
 
-            # Check for advanced illness conditions using separate targeted queries
             has_advanced_illness = (
                 Condition.objects.for_patient(patient.id)
-                .find(DementiaAndMentalDegenerations)
-                .active()
+                .find(AdvancedIllness)
+                .filter(
+                    onset_date__lte=end_date,
+                    onset_date__gte=start_date
+                )
                 .filter(entered_in_error_id__isnull=True)
-                .exists()
-                or Condition.objects.for_patient(patient.id)
-                .find(Cancer)
-                .active()
-                .filter(entered_in_error_id__isnull=True)
+                .committed()
                 .exists()
             )
 
@@ -507,18 +504,17 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 log.info(f"CMS131v14: Patient {patient.id} has advanced illness")
                 return True
 
-            # Check for dementia medications during measurement period or year prior
             has_dementia_meds = (
                 Medication.objects.for_patient(patient.id)
-                .active()
+                .committed()
                 .find(DementiaMedications)
                 .filter(
                     Q(
-                        start_date__lte=end_date,
-                        end_date__gte=start_date,
+                        start_date__date__lte=end_date,
+                        end_date__date__gte=start_date,
                         end_date__isnull=False
                     ) | Q(
-                        start_date__lte=end_date,
+                        start_date__date__lte=end_date,
                         end_date__isnull=True
                     )
                 )
