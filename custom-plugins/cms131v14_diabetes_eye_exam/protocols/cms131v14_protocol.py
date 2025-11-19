@@ -616,7 +616,21 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_bilateral_absence_of_eyes(self, patient: Patient) -> bool:
         """Check for bilateral absence of eyes."""
+        # https://www.ncbi.nlm.nih.gov/medgen/768661
+        # Bilateral anophthalmos of eyes
+        # Synonyms:
+            # Anophthalmos of bilateral eyes
+            # Anophthalmos of both eyes
+            # Bilateral Anophthalmos
+            # Bilateral anophthalmos
+        # SNOMED CT:
+            # Anophthalmos of bilateral eyes (15665641000119103)
+            # Anophthalmos of both eyes (15665641000119103)
+            # Bilateral anophthalmos (15665641000119103)
+            # Bilateral anophthalmos of eyes (15665641000119103)
         try:
+            measurement_end = self.timeframe.end.date()
+
             has_bilateral_absence = (
                 Condition.objects.for_patient(patient.id)
                 .active()
@@ -625,12 +639,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                     codings__code="15665641000119103",
                     codings__system__in=["SNOMED", "SNOMEDCT"]
                 )
+                .filter(
+                    Q(onset_date__isnull=True) | Q(onset_date__lte=measurement_end)
+                )
                 .exists()
             )
 
             if has_bilateral_absence:
                 log.info(
-                    f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) for patient {patient.id}"
+                    f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) "
+                    f"starting on or before {measurement_end} for patient {patient.id}"
                 )
 
             return has_bilateral_absence
