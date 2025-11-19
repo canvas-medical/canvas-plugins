@@ -319,11 +319,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             eligible_codes = (
                 AnnualWellnessVisit.HCPCSLEVELII |
                 PreventiveCareServicesEstablishedOfficeVisit18AndUp.CPT |
-                PreventiveCareServicesEstablishedOfficeVisit18AndUp.HCPCSLEVELII |
                 PreventiveCareServicesInitialOfficeVisit_18AndUp.CPT |
-                PreventiveCareServicesInitialOfficeVisit_18AndUp.HCPCSLEVELII |
                 HomeHealthcareServices.CPT |
-                HomeHealthcareServices.HCPCSLEVELII |
                 OphthalmologicalServices.CPT |
                 TelephoneVisits.CPT
             )
