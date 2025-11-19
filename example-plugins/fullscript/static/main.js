@@ -91,7 +91,10 @@ async function handleTreatmentPlanCreated(treatmentPlanEvent) {
         const response = await fetch("treatment-plan-created", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(treatmentPlanEvent)
+            body: JSON.stringify({
+                treatment: treatmentPlanEvent,
+                patient_id: window.patientKey
+            })
         });
 
         if (!response.ok) {
@@ -131,9 +134,9 @@ const mountFullscriptApp = (sessionGrantToken, fullScriptPatientId) => {
 
 async function initializeFullscript(oauthCode) {
     try {
-        const accessToken = await exchangeToken(oauthCode);
-        const sessionGrantData = await fetchSessionGrant(accessToken);
-        const fullScriptPatient = await getOrCreatePatient(accessToken);
+        const exchangeResponse = await exchangeToken(oauthCode);
+        const sessionGrantData = await fetchSessionGrant(exchangeResponse.token);
+        const fullScriptPatient = await getOrCreatePatient(exchangeResponse.token);
 
         console.log("Fullscript Patient ID:", fullScriptPatient.id);
 
@@ -148,9 +151,9 @@ async function initializeFullscript(oauthCode) {
 
 async function tryInitializeWithCachedToken() {
     try {
-        const accessToken = await exchangeToken(null);
-        const sessionGrantData = await fetchSessionGrant(accessToken);
-        const fullScriptPatient = await getOrCreatePatient(accessToken);
+        const exchangeResponse = await exchangeToken(null);
+        const sessionGrantData = await fetchSessionGrant(exchangeResponse.token);
+        const fullScriptPatient = await getOrCreatePatient(exchangeResponse.token);
 
         console.log("Fullscript Patient ID:", fullScriptPatient.id);
 
