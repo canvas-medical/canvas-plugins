@@ -17,4 +17,4 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.uv.sources]
-canvas = { path = "../" }
+canvas = { path = "../", editable = true }
