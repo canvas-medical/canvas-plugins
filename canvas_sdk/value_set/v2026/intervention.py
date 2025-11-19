@@ -21,13 +21,13 @@ class HospiceCareAmbulatory(ValueSet):
 
     CPT = {
         "99377",  # Supervision of a hospice patient (patient not present) requiring complex and multidisciplinary care modalities involving regular development and/or revision of care plans by that individual, review of subsequent reports of patient status, review of related laboratory and other studies, communication (including telephone calls) for purposes of assessment or care decisions with health care professional(s), family member(s), surrogate decision maker(s) (eg, legal guardian) and/or key caregiver(s) involved in patient's care, integration of new information into the medical treatment plan and/or adjustment of medical therapy, within a calendar month; 15-29 minutes
-        "99378",  # Supervision of a hospice patient (patient not present) requiring complex and multidisciplinary care modalities involving regular development and/or revision of care plans by that individual, review of subsequent reports of patient status, review of related laboratory and other studies, communication (including telephone calls) for purposes of assessment or care decisions with health care professional(s), family member(s), surrogate decision maker(s) (eg, legal guardian) and/or key caregiver(s) involved in patient's care, integration of new information into the medical treatment plan and/or adjustment of medical therapy, within a calendar month; 30 minutes or more   
+        "99378",  # Supervision of a hospice patient (patient not present) requiring complex and multidisciplinary care modalities involving regular development and/or revision of care plans by that individual, review of subsequent reports of patient status, review of related laboratory and other studies, communication (including telephone calls) for purposes of assessment or care decisions with health care professional(s), family member(s), surrogate decision maker(s) (eg, legal guardian) and/or key caregiver(s) involved in patient's care, integration of new information into the medical treatment plan and/or adjustment of medical therapy, within a calendar month; 30 minutes or more
     }
 
-    HCPSCLEVELII = {    
+    HCPCSLEVELII = {
         "G0182",  # Physician supervision of a patient under a medicare-approved hospice (patient not present) requiring complex and multidisciplinary care modalities involving regular physician development and/or revision of care plans, review of subsequent reports of patient status, review of laboratory and other studies, communication (including telephone calls) with other health care professionals involved in the patient's care, integration of new information into the medical treatment plan and/or adjustment of medical therapy, within a calendar month, 30 minutes or more
     }
-    
+
     SNOMEDCT = {
         "170935008",  # Full care by hospice (finding)
         "170936009",  # Shared care - hospice and general practitioner (finding)
@@ -65,6 +65,7 @@ class PalliativeCareIntervention(ValueSet):
         "433181000124107",  # Documentation of palliative care medication action plan (procedure)
     }
 
+
 class ComfortMeasures(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to define concepts for interventions of comfort measures care.
@@ -87,6 +88,7 @@ class ComfortMeasures(ValueSet):
         "385736008",  # Dying care (regime/therapy)
         "385763009",  # Hospice care (regime/therapy)
     }
+
 
 class PsychVisitPsychotherapy(ValueSet):
     """
@@ -125,6 +127,7 @@ class PsychVisitPsychotherapy(ValueSet):
         "75516001",  # Psychotherapy (regime/therapy)
         "90102008",  # Social psychotherapy (regime/therapy)
     }
+
 
 class SubstanceUseDisorderTreatment(ValueSet):
     """
@@ -207,6 +210,7 @@ class SubstanceUseDisorderTreatment(ValueSet):
         "792902005",  # Drug addiction therapy using buprenorphine and naloxone (regime/therapy)
     }
 
+
 class TobaccoUseCessationCounseling(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for tobacco cessation counseling.
@@ -249,6 +253,7 @@ class TobaccoUseCessationCounseling(ValueSet):
         "713700008",  # Smoking cessation drug therapy (regime/therapy)
     }
 
+
 class CognitiveAssessment(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments performed for the evaluation of cognition.
@@ -269,6 +274,7 @@ class CognitiveAssessment(ValueSet):
         "113024001",  # Assessment and interpretation of higher cerebral function, cognitive testing (procedure)
         "4719001",  # Psychologic cognitive testing and assessment (procedure)
     }
+
 
 class CounselingForNutrition(ValueSet):
     """
@@ -365,6 +371,7 @@ class CounselingForNutrition(ValueSet):
         "710881000",  # Education about eating pattern (procedure)
     }
 
+
 class CounselingForPhysicalActivity(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for physical activity counseling.
@@ -404,6 +411,7 @@ class CounselingForPhysicalActivity(ValueSet):
         "435551000124105",  # Counseling about physical activity (procedure)
         "710849009",  # Assessment of exercise behavior (procedure)
     }
+
 
 class DietaryRecommendations(ValueSet):
     """
@@ -508,6 +516,7 @@ class DietaryRecommendations(ValueSet):
         "770749002",  # Referral for combined healthy eating and physical education program (procedure)
     }
 
+
 class FollowUpWithin4Weeks(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for follow-up timing.
@@ -533,6 +542,7 @@ class FollowUpWithin4Weeks(ValueSet):
         "183622005",  # Follow-up 3 weeks (finding)
         "183623000",  # Follow-up 1 month (finding)
     }
+
 
 class FollowUpWithin6Months(ValueSet):
     """
@@ -564,6 +574,7 @@ class FollowUpWithin6Months(ValueSet):
         "300042001",  # Follow-up 6 months (finding)
     }
 
+
 class LifestyleRecommendation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for lifestyle needs and education related to hypertension.
@@ -586,6 +597,7 @@ class LifestyleRecommendation(ValueSet):
         "39155009",  # Hypertension education (procedure)
         "443402002",  # Lifestyle education regarding hypertension (procedure)
     }
+
 
 class RecommendationToIncreasePhysicalActivity(ValueSet):
     """
@@ -617,6 +629,7 @@ class RecommendationToIncreasePhysicalActivity(ValueSet):
         "386463000",  # Prescribed activity/exercise education (procedure)
         "410289001",  # Exercises education, guidance, and counseling (procedure)
     }
+
 
 class ReferralOrCounselingForAlcoholConsumption(ValueSet):
     """
@@ -660,6 +673,7 @@ class ReferralOrCounselingForAlcoholConsumption(ValueSet):
         "827094004",  # Alcohol detoxification (regime/therapy)
     }
 
+
 class ReferralToPrimaryCareOrAlternateProvider(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for referrals to an alternate or primary care provider.
@@ -687,6 +701,7 @@ class ReferralToPrimaryCareOrAlternateProvider(ValueSet):
         "308470006",  # Referral to general physician (procedure)
         "453641000124107",  # Referral to specialist pharmacist (procedure)
     }
+
 
 class WeightReductionRecommended(ValueSet):
     """
@@ -736,6 +751,7 @@ class WeightReductionRecommended(ValueSet):
         "445033007",  # Discussion about ideal body weight (procedure)
         "718361005",  # Weight management program (regime/therapy)
     }
+
 
 class FollowUpForAdolescentDepression(ValueSet):
     """
@@ -796,6 +812,7 @@ class FollowUpForAdolescentDepression(ValueSet):
         "88848003",  # Psychiatric follow-up (procedure)
     }
 
+
 class FollowUpForAdultDepression(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for follow-up plans used to document a plan is in place for the treatment of depression specifically pertaining to the adult population.
@@ -855,6 +872,7 @@ class FollowUpForAdultDepression(ValueSet):
         "88848003",  # Psychiatric follow-up (procedure)
     }
 
+
 class ReferralForAdolescentDepression(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for referrals for depression management for the child and adolescent population.
@@ -890,6 +908,7 @@ class ReferralForAdolescentDepression(ValueSet):
         "710914003",  # Referral to family therapy (procedure)
         "711281004",  # Referral to support group (procedure)
     }
+
 
 class ReferralForAdultDepression(ValueSet):
     """
@@ -928,6 +947,7 @@ class ReferralForAdultDepression(ValueSet):
         "711281004",  # Referral to support group (procedure)
     }
 
+
 class OpioidMedicationAssistedTreatmentMat(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group concepts that indicate an opioid medication assisted treatment (MAT).
@@ -949,6 +969,7 @@ class OpioidMedicationAssistedTreatmentMat(ValueSet):
         "792901003",  # Drug addiction therapy using buprenorphine (regime/therapy)
         "792902005",  # Drug addiction therapy using buprenorphine and naloxone (regime/therapy)
     }
+
 
 class PalliativeOrHospiceCare(ValueSet):
     """
@@ -979,6 +1000,7 @@ class PalliativeOrHospiceCare(ValueSet):
         "385763009",  # Hospice care (regime/therapy)
     }
 
+
 class BehavioralOrNeuropsychAssessment(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of encounters for neuropsychological assessments.
@@ -1002,6 +1024,7 @@ class BehavioralOrNeuropsychAssessment(ValueSet):
     SNOMEDCT = {
         "307808008",  # Neuropsychological testing (procedure)
     }
+
 
 class PsychVisitDiagnosticEvaluation(ValueSet):
     """
@@ -1030,6 +1053,7 @@ class PsychVisitDiagnosticEvaluation(ValueSet):
         "68338001",  # Interactive medical psychiatric diagnostic interview (procedure)
         "79094001",  # Initial psychiatric interview with mental status and evaluation (procedure)
     }
+
 
 class Referral(ValueSet):
     """
@@ -1259,15 +1283,16 @@ class Referral(ValueSet):
         "716634006",  # Referral to neurological physiotherapist (procedure)
     }
 
+
 class NonInvasiveOxygenTherapyByNasalCannulaOrMask(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for noninvasive oxygen therapy and oxygen administered by nasal cannula or mask
+    **Clinical Focus:** The purpose of this value set is to represent concepts for noninvasive oxygen therapy and oxygen administered by nasal cannula or mask.
 
-    **Data Element Scope:** This value set may use a model element related to Procedure
+    **Data Element Scope:** This value set may use a model element related to Procedure.
 
-    **Inclusion Criteria:** Includes concepts that represent noninvasive oxygen therapy and oxygen administered by nasal cannula or mask and not associated with mechanical ventilation
+    **Inclusion Criteria:** Includes concepts that represent noninvasive oxygen therapy and oxygen administered by nasal cannula or mask and not associated with mechanical ventilation.
 
-    **Exclusion Criteria:** Invasive oxygen therapies associated with mechanical ventilation
+    **Exclusion Criteria:** Invasive oxygen therapies associated with mechanical ventilation.
     """
 
     VALUE_SET_NAME = "Non Invasive Oxygen Therapy by Nasal Cannula or Mask"
@@ -1289,6 +1314,7 @@ class NonInvasiveOxygenTherapyByNasalCannulaOrMask(ValueSet):
         "71786000",  # Intranasal oxygen therapy (procedure)
         "870533002",  # Heated and humidified high flow oxygen therapy (procedure)
     }
+
 
 class FollowUpForAboveNormalBmi(ValueSet):
     """
@@ -1412,6 +1438,7 @@ class FollowUpForAboveNormalBmi(ValueSet):
         "870194003",  # Body mass index follow-up planning (procedure)
     }
 
+
 class FollowUpForBelowNormalBmi(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for follow-up with a body mass index (BMI) below normal measurement.
@@ -1500,6 +1527,7 @@ class FollowUpForBelowNormalBmi(ValueSet):
         "870194003",  # Body mass index follow-up planning (procedure)
     }
 
+
 class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a referral to multiple types of providers and settings for weight assessment.
@@ -1564,6 +1592,7 @@ class ReferralsWhereWeightAssessmentMayOccur(ValueSet):
         "78429003",  # Referral to physical rehabilitation service (procedure)
     }
 
+
 class DietitianReferral(ValueSet):
     """
     **Clinical Focus:** This set of values indicates that a dietitian referral was ordered.
@@ -1587,6 +1616,7 @@ class DietitianReferral(ValueSet):
         "408285001",  # Referral to pediatric dietitian (procedure)
     }
 
+
 class HospiceStatus(ValueSet):
     """
     **Clinical Focus:** This set of values indicates that a patient received hospice care.
@@ -1607,6 +1637,7 @@ class HospiceStatus(ValueSet):
         "182964004",  # Terminal care (regime/therapy)
         "385763009",  # Hospice care (regime/therapy)
     }
+
 
 class NutritionCarePlan(ValueSet):
     """
@@ -1633,6 +1664,7 @@ class NutritionCarePlan(ValueSet):
         "413315001",  # Nutrition / feeding management (regime/therapy)
         "445101000124100",  # Collaborating in nutrition therapy (procedure)
     }
+
 
 __exports__ = (
     "HospiceCareAmbulatory",

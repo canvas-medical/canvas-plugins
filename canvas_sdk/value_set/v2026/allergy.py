@@ -1,5 +1,6 @@
 from ..value_set import ValueSet
 
+
 class AceInhibitorOrArbOrArniIngredient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications of angiotensin-converting enzyme (ACE) inhibitor, angiotensin-receptor blocker (ARB), and angiotensin receptor/neprilysin inhibitor (ARNI) ingredients.
@@ -38,6 +39,7 @@ class AceInhibitorOrArbOrArniIngredient(ValueSet):
         "83818",  # irbesartan
     }
 
+
 class BetaBlockerTherapyIngredient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications containing ingredients for beta blocker therapy.
@@ -74,6 +76,7 @@ class BetaBlockerTherapyIngredient(ValueSet):
         "9947",  # sotalol
     }
 
+
 class StatinAllergen(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of an allergy to statin medications.
@@ -105,35 +108,9 @@ class StatinAllergen(ValueSet):
         "96302009",  # Product containing 3-hydroxy-3-methylglutaryl-coenzyme A reductase inhibitor (product)
     }
 
-class ThrombolyticMedications(ValueSet):
-    """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for thrombolytic medications used for treatment of ST-segment elevation myocardial infaction (STEMI).
-
-    **Data Element Scope:** This value set may use a model element related to Medication.
-
-    **Inclusion Criteria:** Includes RXNORM codes that represent ingredients in thrombolytic medications for STEMI treatment.
-
-    **Exclusion Criteria:** No exclusions
-    """
-
-    VALUE_SET_NAME = "Thrombolytic medications"
-    OID = "2.16.840.1.113762.1.4.1170.4"
-    DEFINITION_VERSION = "20211007"
-    EXPANSION_VERSION = "eCQM Update 2025-05-08"
-
-
-    RXNORM = {
-        "10106",  # streptokinase
-        "11055",  # urokinase
-        "259280",  # tenecteplase
-        "40028",  # anistreplase
-        "76895",  # reteplase
-        "8410",  # alteplase
-    }
 
 __exports__ = (
     "AceInhibitorOrArbOrArniIngredient",
     "BetaBlockerTherapyIngredient",
     "StatinAllergen",
-    "ThrombolyticMedications",
 )
