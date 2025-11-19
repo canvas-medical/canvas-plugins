@@ -1,29 +1,28 @@
 {
-  "sdk_version": "0.1.4",
-  "plugin_version": "1.0.0",
-  "name": "example_commands",
-  "description": "Example of commands being automatically populated once originated.",
-  "components": {
-    "protocols": [
-      {
-        "class": "example_commands.protocols.example_refer:AutoPopulateReferCommand",
-        "description": "Automatically populates a refer command when a referral command is originated."
-      },
-      {
-        "class": "example_commands.protocols.example_imaging_order:AutoPopulateImagingOrderCommand",
-        "description": "Automatically populates an imaging order command when an imaging order command is originated."
-      }
-    ],
-    "commands":[],
-    "content":[],
-    "effects":[],
-    "views":[]
-  },
-  "secrets":[],
-  "tags":{},
-  "references":[],
-  "license":"UNLICENSED",
-  "diagram":false,
-  "readme":"./README.md"
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_commands",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "protocols": [
+            {
+                "class": "example_commands.protocols.example_refer:AutoPopulateReferCommand",
+                "description": "Automatically populates a refer command when a referral command is originated."
+            },
+            {
+                "class": "example_commands.protocols.example_imaging_order:AutoPopulateImagingOrderCommand",
+                "description": "Automatically populates an imaging order command when an imaging order command is originated."
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
 }
-
