@@ -414,26 +414,98 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient is in hospice care during the measurement period.
 
-        Checks for observations with SNOMED codes indicating hospice care:
-        - Discharge to home for Hospice (SNOMED 428361000124107)
-        - Discharge to Health Care Facility For Hospice Care (SNOMED 428371000124100)
-        - Hospice Ambulatory Care (SNOMED 385765002)
+        Per CMS131v14 CQL "Hospice.Has Hospice Services", checks for:
+        - Inpatient encounter with discharge disposition to hospice (SNOMED 428361000124107, 428371000124100)
+        - Hospice Encounter overlapping measurement period
+        - Hospice care assessment (LOINC 45755-6) with result "Yes"
+        - Hospice Care Ambulatory intervention orders/performed
+        - Hospice Diagnosis overlapping measurement period
         """
         try:
-            # SNOMED codes for hospice care
-            hospice_codes = {"428361000124107", "428371000124100", "385765002"}
+            start_date = self.timeframe.start.datetime
+            end_date = self.timeframe.end.datetime
 
-            # Check for observations with hospice SNOMED codes as values during measurement period
-            has_hospice_observation = Observation.objects.for_patient(patient.id).filter(
-                Q(effective_datetime__isnull=True) |
-                Q(effective_datetime__gte=self.timeframe.start.datetime,
-                  effective_datetime__lte=self.timeframe.end.datetime),
-                value_codings__code__in=hospice_codes,
+            # 1. Check for hospice diagnosis (using Condition model)
+            has_hospice_diagnosis = (
+                Condition.objects.for_patient(patient.id)
+                .find(HospiceDiagnosis)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
+            )
+
+            if has_hospice_diagnosis:
+                log.info(f"CMS131v14: Found hospice diagnosis for patient {patient.id}")
+                return True
+
+            # 2. Check for hospice encounters (using Encounter model)
+            hospice_encounter_codes = (
+                (getattr(HospiceEncounter, 'SNOMEDCT', set()) or set()) |
+                (getattr(HospiceEncounter, 'ICD10CM', set()) or set())
+            )
+
+            if hospice_encounter_codes:
+                has_hospice_encounter = Encounter.objects.filter(
+                    note__patient=patient,
+                    note__note_type_version__code__in=hospice_encounter_codes,
+                    state__in=["CON", "STA"],
+                    start_time__gte=start_date,
+                    start_time__lte=end_date
+                ).exists()
+
+                if has_hospice_encounter:
+                    log.info(f"CMS131v14: Found hospice encounter for patient {patient.id}")
+                    return True
+
+            # 3. Check for discharge to hospice via observations (discharge disposition)
+            discharge_to_hospice_codes = {
+                "428361000124107",  # Discharge to home for hospice care
+                "428371000124100",  # Discharge to healthcare facility for hospice care
+            }
+
+            has_discharge_to_hospice = Observation.objects.for_patient(patient.id).filter(
+                effective_datetime__gte=start_date,
+                effective_datetime__lte=end_date,
+                value_codings__code__in=discharge_to_hospice_codes,
                 value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
             ).exists()
 
-            if has_hospice_observation:
-                log.info(f"CMS131v14: Found hospice care observation for patient {patient.id}")
+            if has_discharge_to_hospice:
+                log.info(f"CMS131v14: Found discharge to hospice for patient {patient.id}")
+                return True
+
+            # 4. Check for hospice care assessment (LOINC 45755-6 "Hospice care [Minimum Data Set]")
+            has_hospice_assessment = Observation.objects.for_patient(patient.id).filter(
+                effective_datetime__gte=start_date,
+                effective_datetime__lte=end_date,
+                codings__code="45755-6",
+                codings__system__in=self.LOINC_SYSTEM_IDENTIFIERS,
+                value_codings__code="373066001",  # Yes (qualifier value)
+                value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
+            ).exists()
+
+            if has_hospice_assessment:
+                log.info(f"CMS131v14: Found hospice care assessment for patient {patient.id}")
+                return True
+
+            # 5. Check for hospice care ambulatory interventions via claims (orders/performed)
+            hospice_intervention_codes = (
+                HospiceCareAmbulatory.CPT |
+                HospiceCareAmbulatory.HCPCSLEVELII |
+                HospiceCareAmbulatory.SNOMEDCT
+            )
+
+            hospice_claims = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=hospice_intervention_codes,
+            )
+
+            if hospice_claims.exists():
+                found_code = hospice_claims.first().proc_code
+                log.info(f"CMS131v14: Found hospice care claim (code: {found_code}) for patient {patient.id}")
                 return True
 
             return False
