@@ -10,7 +10,7 @@ from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.note.note import Note
-from canvas_sdk.v1.data.note import NoteTypeCategories
+from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 
 @pytest.fixture
@@ -356,7 +356,7 @@ def test_push_charges_missing_instance_id(mock_db_queries: dict[str, MagicMock])
 
     errors = exc_info.value.errors()
     msgs = [e["msg"] for e in errors]
-    assert "Field 'instance_id' is required to push charges from a note to a claim." in msgs
+    assert "Field 'instance_id' is required." in msgs
 
 
 def test_push_charges_note_does_not_exist(
@@ -405,6 +405,7 @@ def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
 
     fake_note = MagicMock()
     fake_note.note_type_version = MagicMock(is_billable=True)
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
     mock_db_queries["note"].filter.return_value.first.return_value = fake_note
 
     note = Note(instance_id=instance_id)
@@ -413,3 +414,200 @@ def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
     assert effect.type == EffectType.PUSH_NOTE_CHARGES
     payload = json.loads(effect.payload)
     assert payload["note"] == instance_id
+
+
+def test_lock_note_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that lock requires an instance_id."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required." in msgs
+
+
+def test_lock_note_does_not_exist(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that lock fails when the note does not exist."""
+    instance_id = str(uuid4())
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_sign_note_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign requires an instance_id."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required." in msgs
+
+
+def test_sign_note_does_not_exist(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign fails when the note does not exist."""
+    instance_id = str(uuid4())
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_sign_note_no_signature_required(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign fails when the note type does not require a signature."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(is_sig_required=False)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Cannot sign a note that does not require a signature." in msgs
+
+
+@pytest.mark.parametrize(
+    "category",
+    [NoteTypeCategories.MESSAGE, NoteTypeCategories.LETTER],
+    ids=[
+        "message",
+        "category",
+    ],
+)
+def test_note_state_change_unsupported_note_type(
+    mock_db_queries: dict[str, MagicMock], category: NoteTypeCategories
+) -> None:
+    """Test that state changes are rejected for unsupported note types."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(name=category, category=category)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert any(
+        f"Note with note type {fake_note.note_type_version.name} cannot perform action 'lock'." in m
+        for m in msgs
+    )
+
+
+@pytest.mark.parametrize(
+    "transition",
+    [
+        (NoteStates.NEW, "lock", NoteStates.LOCKED, True),
+        (NoteStates.NEW, "push_charges", NoteStates.PUSHED, True),
+        (NoteStates.LOCKED, "sign", NoteStates.SIGNED, True),
+        (NoteStates.LOCKED, "unlock", NoteStates.UNLOCKED, True),
+        (NoteStates.UNLOCKED, "lock", NoteStates.LOCKED, True),
+        (NoteStates.UNLOCKED, "push_charges", NoteStates.PUSHED, True),
+        (NoteStates.SIGNED, "unlock", NoteStates.UNLOCKED, True),
+        (NoteStates.SIGNED, "sign", NoteStates.SIGNED, True),
+        (NoteStates.PUSHED, "push_charges", NoteStates.PUSHED, True),
+        (NoteStates.PUSHED, "lock", NoteStates.LOCKED, True),
+        # Invalid transitions
+        (NoteStates.NEW, "sign", NoteStates.SIGNED, False),
+        (NoteStates.NEW, "unlock", NoteStates.UNLOCKED, False),
+        (NoteStates.UNLOCKED, "unlock", NoteStates.UNLOCKED, False),
+        (NoteStates.UNLOCKED, "sign", NoteStates.SIGNED, False),
+        (NoteStates.LOCKED, "push_charges", NoteStates.PUSHED, False),
+        (NoteStates.SIGNED, "push_charges", NoteStates.PUSHED, False),
+    ],
+    ids=[
+        "new_to_locked",
+        "new_to_pushed",
+        "locked_to_signed",
+        "locked_to_unlocked",
+        "unlocked_to_locked",
+        "unlocked_to_pushed",
+        "signed_to_unlocked",
+        "signed_to_signed",
+        "pushed_to_pushed",
+        "pushed_to_locked",
+        "new_to_signed_invalid",
+        "new_to_unlocked_invalid",
+        "unlocked_to_unlocked_invalid",
+        "unlocked_to_signed_invalid",
+        "locked_to_pushed_invalid",
+        "signed_to_pushed_invalid",
+    ],
+)
+def test_state_transitions_comprehensive(
+    mock_db_queries: dict[str, MagicMock], transition: tuple[NoteStates, str, NoteStates, bool]
+) -> None:
+    """Test all valid state transitions according to TRANSITION_STATE_MATRIX."""
+    instance_id = str(uuid4())
+
+    current_state, action, target_state, should_succeed = transition
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=current_state)
+    fake_note.note_type_version = MagicMock(
+        is_sig_required=True, category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    if should_succeed:
+        if action == "lock":
+            effect = note.lock()
+            assert effect.type == EffectType.LOCK_NOTE
+        elif action == "sign":
+            effect = note.sign()
+            assert effect.type == EffectType.SIGN_NOTE
+        elif action == "unlock":
+            effect = note.unlock()
+            assert effect.type == EffectType.UNLOCK_NOTE
+        elif action == "push_charges":
+            effect = note.push_charges()
+            assert effect.type == EffectType.PUSH_NOTE_CHARGES
+        else:
+            pytest.fail(f"Unknown action: {action}")
+    else:
+        with pytest.raises(ValidationError) as exc_info:
+            if action == "lock":
+                note.lock()
+            elif action == "sign":
+                note.sign()
+            elif action == "unlock":
+                note.unlock()
+            elif action == "push_charges":
+                note.push_charges()
+            else:
+                pytest.fail(f"Unknown action: {action}")
+
+        errors = exc_info.value.errors()
+        msgs = [e["msg"] for e in errors]
+        assert any(
+            f"Invalid state transition from {current_state} to {target_state}" in m for m in msgs
+        )

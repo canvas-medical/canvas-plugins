@@ -24,6 +24,7 @@ def test_current_note_state_event_editable() -> None:
         NoteStates.NOSHOW: False,
         NoteStates.REVERTED: False,
         NoteStates.CONFIRM_IMPORT: False,
+        NoteStates.SIGNED: False,
     }
 
     assert len(NoteStates) == len(note_state_editability), (
