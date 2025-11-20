@@ -1,3 +1,4 @@
+import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import PerformCommand, ReferCommand
@@ -928,8 +929,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 patient=patient,
                 codings_code="71007-9",
                 value_codings_codes=set(),  # No specific value required for this assessment
-                timeframe_start=self.timeframe.start,
-                timeframe_end=self.timeframe.end
+                timeframe_start=self.timeframe.start.datetime,
+                timeframe_end=self.timeframe.end.datetime
             )
 
             if has_palliative_assessment:
