@@ -44,8 +44,17 @@
                 }
             },
             {
-                "class": "fullscript.protocols.my_protocol:Medications",
+                "class": "fullscript.protocols.group_supplements:GroupSupplements",
                 "description": "group medications by fullscript code",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "fullscript.protocols.search_fullscript_supplements:SearchFullscriptSupplements",
+                "description": "search fullscript supplements protocol and return matching supplements",
                 "data_access": {
                     "event": "",
                     "read": [],
