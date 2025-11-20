@@ -931,7 +931,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             has_retinopathy_diagnosis = (
                 Condition.objects.for_patient(patient.id)
                 .find(DiabeticRetinopathy)
-                .active()
+                .filter(onset_date__gte=self.timeframe.start.date())
+                .filter(onset_date__lte=self.timeframe.end.date())
                 .filter(entered_in_error_id__isnull=True)
                 .exists()
             )
@@ -947,11 +948,11 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if eye exam referral report exists in specified timeframe.
 
-        Checks for referrals with CPT codes from RetinalOrDilatedEyeExam value set.
+        Checks for referrals with SNOMEDCT codes from RetinalOrDilatedEyeExam value set.
         """
         try:
             # Get CPT codes from RetinalOrDilatedEyeExam value set
-            eye_exam_codes = RetinalOrDilatedEyeExam.CPT if hasattr(RetinalOrDilatedEyeExam, 'CPT') else set()
+            eye_exam_codes = RetinalOrDilatedEyeExam.SNOMEDCT if hasattr(RetinalOrDilatedEyeExam, 'SNOMEDCT') else set()
 
             if eye_exam_codes:
                 # Filter by codings using the new relationship
@@ -987,7 +988,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_retinal_exam_in_period(self, patient: Patient) -> bool:
         """Check for retinal or dilated eye exam in measurement period."""
         try:
-            referral_reports = self._referral_report_exists(patient, self.timeframe.start.datetime, self.timeframe.end.datetime)
+            referral_reports = self._referral_report_exists(patient, self.timeframe.start.date(), self.timeframe.end.date())
 
             return referral_reports
 
@@ -999,7 +1000,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """Check for retinal or dilated eye exam in measurement period OR year prior."""
         try:
             extended_start = self.timeframe.start.shift(years=-1)
-            referral_reports = self._referral_report_exists(patient, extended_start.datetime, self.timeframe.end.datetime)
+            referral_reports = self._referral_report_exists(patient, extended_start.date(), self.timeframe.end.date())
 
             return referral_reports
 
@@ -1108,10 +1109,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             prior_year_end = self.timeframe.start.datetime
 
             left_eye_no_retinopathy = self._observation_exists(
-                patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.LEFT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
             right_eye_no_retinopathy = self._observation_exists(
-                patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.RIGHT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
 
             if left_eye_no_retinopathy and right_eye_no_retinopathy:
