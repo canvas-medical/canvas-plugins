@@ -720,7 +720,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             observations = (
                 Observation.objects.for_patient(patient.id)
                 .committed()
-                .filter(created__gte=timeframe_start, created__lt=timeframe_end, codings__code=codings_code, value_codings__code__in=value_codings_codes)
+                .filter(effective_datetime__gte=timeframe_start, effective_datetime__lt=timeframe_end, codings__code=codings_code, value_codings__code__in=value_codings_codes)
             )
             return observations.exists()
 
@@ -731,7 +731,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_autonomous_eye_exam_in_period(self, patient: Patient) -> bool:
         """Check for autonomous AI eye exam with valid result in measurement period."""
         try:
-            result_codes = set(AutonomousEyeExamResultOrFinding.LOINC)
+            result_codes = AutonomousEyeExamResultOrFinding.LOINC
 
             has_exam = self._observation_exists(patient, self.AUTONOMOUS_EYE_EXAM_LOINC_CODE, result_codes, self.timeframe.start.datetime, self.timeframe.end.datetime)
 
@@ -747,7 +747,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             measurement_start = self.timeframe.start.datetime
             measurement_end = self.timeframe.end.datetime
 
-            severity_codes = set(DiabeticRetinopathySeverityLevel.LOINC)
+            severity_codes = DiabeticRetinopathySeverityLevel.LOINC
             left_eye_retinopathy = self._observation_exists(
                 patient, self.LEFT_EYE_LOINC_CODE, severity_codes, measurement_start, measurement_end
             )
