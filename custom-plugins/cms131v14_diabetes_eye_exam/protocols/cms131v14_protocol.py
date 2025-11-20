@@ -843,6 +843,25 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 log.info(f"CMS131v14: Found palliative care diagnosis for patient {patient.id}")
                 return True
 
+            # Check palliative care encounters (using Encounter model)
+            palliative_encounter_codes = (
+                (getattr(PalliativeCareEncounter, 'SNOMEDCT', set()) or set()) |
+                (getattr(PalliativeCareEncounter, 'ICD10CM', set()) or set())
+            )
+
+            if palliative_encounter_codes:
+                has_palliative_encounter = Encounter.objects.filter(
+                    note__patient=patient,
+                    note__note_type_version__code__in=palliative_encounter_codes,
+                    state__in=["CON", "STA"],
+                    start_time__gte=start_date,
+                    start_time__lte=end_date
+                ).exists()
+
+                if has_palliative_encounter:
+                    log.info(f"CMS131v14: Found palliative care encounter for patient {patient.id}")
+                    return True
+
             # Check palliative care via claims (CPT, HCPCS, SNOMED codes)
             palliative_codes = (
                 PalliativeCareEncounter.HCPCSLEVELII |
