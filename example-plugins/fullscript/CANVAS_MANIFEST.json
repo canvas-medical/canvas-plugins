@@ -27,7 +27,16 @@
         "protocols": [
             {
                 "class": "fullscript.handlers.my_web_app:MyWebApp",
-                "description": "Serves the application",
+                "description": "Serves the application frontend files",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "fullscript.api.fullscriptAPI:FullscriptAPI",
+                "description": "Handles Fullscript API endpoints",
                 "data_access": {
                     "event": "",
                     "read": [],
