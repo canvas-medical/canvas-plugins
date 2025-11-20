@@ -245,7 +245,7 @@ def test_has_diabetes_diagnosis_true(
     mock_patient: Mock,
 ):
     """Test _has_diabetes_diagnosis returns True when diabetes exists."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         True
     )
 
@@ -261,7 +261,7 @@ def test_has_diabetes_diagnosis_false(
     mock_patient: Mock,
 ):
     """Test _has_diabetes_diagnosis returns False when no diabetes."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         False
     )
 
@@ -276,7 +276,7 @@ def test_has_diabetes_diagnosis_overlapping_period_true(
     mock_patient: Mock,
 ):
     """Test _has_diabetes_diagnosis_overlapping_period returns True."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
         True
     )
 
@@ -291,7 +291,7 @@ def test_has_diabetes_diagnosis_overlapping_period_false(
     mock_patient: Mock,
 ):
     """Test _has_diabetes_diagnosis_overlapping_period returns False."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
         False
     )
 
@@ -350,42 +350,108 @@ def test_has_eligible_encounter_in_period_false(
     assert result is False
 
 
-@patch("canvas_sdk.v1.data.questionnaire.InterviewQuestionResponse.objects")
-@patch("canvas_sdk.v1.data.questionnaire.Interview.objects")
-def test_has_hospice_care_in_period_true(
-    mock_interview_objects: MagicMock,
-    mock_response_objects: MagicMock,
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_has_condition(
+    mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
 ):
-    """Test _has_hospice_care_in_period returns True when hospice response found."""
-    # Mock interviews exist
-    mock_interview_objects.filter.return_value.exists.return_value = True
-    mock_interview_objects.filter.return_value.values_list.return_value = [
-        "interview-123"
-    ]
-
-    # Mock response with hospice code
-    mock_response_option = Mock()
-    mock_response_option.code = "428361000124107"  # Hospice code
-    mock_response = Mock()
-    mock_response.response_option = mock_response_option
-    mock_response_objects.filter.return_value.select_related.return_value = [
-        mock_response
-    ]
+    """Test _has_hospice_care_in_period returns True for hospice diagnosis."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
+        True
+    )
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
     assert result is True
 
 
-@patch("canvas_sdk.v1.data.questionnaire.Interview.objects")
-def test_has_hospice_care_in_period_false_no_interviews(
-    mock_interview_objects: MagicMock,
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_has_discharge_observation(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_observation_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
 ):
-    """Test _has_hospice_care_in_period returns False when no interviews."""
-    mock_interview_objects.filter.return_value.exists.return_value = False
+    """Test _has_hospice_care_in_period returns True for discharge to hospice observation."""
+    # No hospice diagnosis
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
+        False
+    )
+
+    # No hospice encounter
+    mock_encounter_objects.filter.return_value.exists.return_value = False
+
+    # Has discharge to hospice observation
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.return_value = True
+
+    result = protocol_instance._has_hospice_care_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_has_claim(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_observation_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Test _has_hospice_care_in_period returns True for hospice claim."""
+    # No hospice diagnosis
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
+        False
+    )
+
+    # No hospice encounter
+    mock_encounter_objects.filter.return_value.exists.return_value = False
+
+    # No discharge to hospice observation (first call for discharge)
+    # Has hospice assessment (second call for assessment)
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.side_effect = [False, False]
+
+    # Has hospice claim
+    mock_claim = Mock()
+    mock_claim.proc_code = "99377"
+    mock_claim_objects.filter.return_value.exists.return_value = True
+    mock_claim_objects.filter.return_value.first.return_value = mock_claim
+
+    result = protocol_instance._has_hospice_care_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_false(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_observation_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+):
+    """Test _has_hospice_care_in_period returns False when no hospice indicators exist."""
+    # No hospice diagnosis
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
+        False
+    )
+
+    # No hospice encounter
+    mock_encounter_objects.filter.return_value.exists.return_value = False
+
+    # No observations (discharge or assessment)
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.return_value = False
+
+    # No hospice claim
+    mock_claim_objects.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
     assert result is False
@@ -399,32 +465,15 @@ def test_is_age_66_plus_with_frailty_age_less_than_66(
     assert result is False
 
 
-@patch("canvas_sdk.v1.data.questionnaire.InterviewQuestionResponse.objects")
-@patch("canvas_sdk.v1.data.questionnaire.Interview.objects")
 def test_is_age_66_plus_with_frailty_true(
-    mock_interview_objects: MagicMock,
-    mock_response_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
 ):
     """Test _is_age_66_plus_with_frailty returns True when age 66+ with frailty."""
-    # Mock interviews exist
-    mock_interview_objects.filter.return_value.exists.return_value = True
-    mock_interview_objects.filter.return_value.values_list.return_value = [
-        "interview-123"
-    ]
-
-    # Mock response with frailty code
-    mock_response_option = Mock()
-    mock_response_option.code = "105501005"  # Frailty Device code
-    mock_response = Mock()
-    mock_response.response_option = mock_response_option
-    mock_response_objects.filter.return_value.select_related.return_value = [
-        mock_response
-    ]
-
-    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
-    assert result is True
+    # Mock one of the frailty check methods to return True
+    with patch.object(protocol_instance, '_has_frailty_device_orders', return_value=True):
+        result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+        assert result is True
 
 
 @patch("canvas_sdk.v1.data.condition.Condition.objects")
@@ -474,10 +523,16 @@ def test_has_advanced_illness_or_dementia_meds_false(
     mock_patient: Mock,
 ):
     """Test _has_advanced_illness_or_dementia_meds returns False when neither exists."""
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
+    # Mock the debug query
+    mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.committed.return_value.exists.return_value = False
+
+    # Mock the actual advanced illness check
+    mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.filter.return_value.exists.return_value = (
         False
     )
-    mock_medication_objects.for_patient.return_value.active.return_value.find.return_value.filter.return_value.exists.return_value = (
+
+    # Mock the dementia meds check
+    mock_medication_objects.for_patient.return_value.committed.return_value.find.return_value.filter.return_value.exists.return_value = (
         False
     )
 
@@ -562,17 +617,20 @@ def test_has_palliative_care_in_period_has_claim(
 
 
 @patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
 @patch("canvas_sdk.v1.data.condition.Condition.objects")
 def test_has_palliative_care_in_period_false(
     mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
 ):
     """Test _has_palliative_care_in_period returns False when neither exists."""
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         False
     )
+    mock_encounter_objects.filter.return_value.exists.return_value = False
     mock_claim_objects.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_palliative_care_in_period(mock_patient)
@@ -586,7 +644,7 @@ def test_has_bilateral_absence_of_eyes_true(
     mock_patient: Mock,
 ):
     """Test _has_bilateral_absence_of_eyes returns True when condition exists."""
-    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
         True
     )
 
@@ -601,7 +659,7 @@ def test_has_bilateral_absence_of_eyes_false(
     mock_patient: Mock,
 ):
     """Test _has_bilateral_absence_of_eyes returns False when condition doesn't exist."""
-    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.exists.return_value = (
+    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
         False
     )
 
