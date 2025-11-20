@@ -13,6 +13,7 @@ from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.v1.data.encounter import Encounter
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.referral import ReferralReport
+from canvas_sdk.v1.data.device import Device
 from canvas_sdk.value_set.v2026.condition import (
     Diabetes,
     DiabeticRetinopathy,
@@ -23,6 +24,8 @@ from canvas_sdk.value_set.v2026.condition import (
     DementiaAndMentalDegenerations,
     Cancer,
 )
+from canvas_sdk.value_set.v2026.device import FrailtyDevice
+from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.communication import DiabeticRetinopathySeverityLevel,AutonomousEyeExamResultOrFinding
 from canvas_sdk.value_set.v2026.encounter import (
     OfficeVisit,
@@ -36,6 +39,7 @@ from canvas_sdk.value_set.v2026.encounter import (
     HospiceEncounter,
     CareServicesInLongTermResidentialFacility,
     NursingFacilityVisit,
+    FrailtyEncounter,
 )
 from canvas_sdk.value_set.v2026.intervention import (
     HospiceCareAmbulatory,
@@ -442,34 +446,242 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         Check if patient is age 66+ with frailty indicators.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
 
-        Checks for observations with SNOMED code indicating frailty:
-        - Frailty Device (SNOMED 105501005)
+        Per CMS131v14 CQL "Has Criteria Indicating Frailty", checks for:
+        - Device orders for frailty devices
+        - Assessment observations with frailty device results
+        - Frailty diagnoses overlapping measurement period
+        - Frailty encounters overlapping measurement period
+        - Frailty symptoms overlapping measurement period
         """
         # Check age requirement
         if age < 66:
             return False
 
         try:
-            # SNOMED code for frailty device
-            FRAILTY_DEVICE_SNOMED = "105501005"
+            # Check all frailty indicators
+            if self._has_frailty_device_orders(patient):
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty device orders")
+                return True
 
-            # Check for observations with frailty SNOMED code as value during measurement period
-            # Include observations with null effective_datetime or within the measurement period
-            has_frailty_observation = Observation.objects.for_patient(patient.id).filter(
-                Q(effective_datetime__isnull=True) |
-                Q(effective_datetime__gte=self.timeframe.start.datetime,
-                  effective_datetime__lte=self.timeframe.end.datetime),
-                value_codings__code=FRAILTY_DEVICE_SNOMED,
-                value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
-            ).exists()
+            if self._has_frailty_device_observations(patient):
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty device observations")
+                return True
 
-            if has_frailty_observation:
-                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty")
+            if self._has_frailty_diagnoses(patient):
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty diagnoses")
+                return True
+
+            if self._has_frailty_encounters(patient):
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty encounters")
+                return True
+
+            if self._has_frailty_symptoms(patient):
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty symptoms")
                 return True
 
             return False
         except Exception as e:
             log.error(f"CMS131v14: Error checking frailty: {str(e)}")
+            return False
+
+    def _has_frailty_device_orders(self, patient: Patient) -> bool:
+        """
+        Check for device orders with frailty device codes during measurement period.
+        Per CMS131v14: Device, Order: "Frailty Device" - authorDatetime during day of "Measurement Period"
+
+        Note: Device model in SDK v1 doesn't have a note relationship, only note_id.
+        We primarily check via ClaimLineItem for DME codes instead.
+        """
+        try:
+            # Check ClaimLineItem for DME (Durable Medical Equipment) codes
+            # FrailtyDevice value set contains HCPCS codes for DME
+            frailty_device_hcpcs = FrailtyDevice.HCPCSLEVELII if hasattr(FrailtyDevice, 'HCPCSLEVELII') else set()
+
+            if frailty_device_hcpcs:
+                has_dme_claim = ClaimLineItem.objects.filter(
+                    claim__note__patient=patient,
+                    status="active",
+                    from_date__gte=self.timeframe.start.date().isoformat(),
+                    from_date__lte=self.timeframe.end.date().isoformat(),
+                    proc_code__in=frailty_device_hcpcs,
+                ).exists()
+
+                if has_dme_claim:
+                    log.info(f"CMS131v14: Found frailty device DME claim for patient {patient.id}")
+                    return True
+
+            # Also check Device model for any ordered devices (no date filter due to SDK limitation)
+            # This is a fallback check - less precise but catches device orders
+            has_device_order = Device.objects.filter(
+                patient=patient,
+                status="ordered",
+            ).exists()
+
+            if has_device_order:
+                log.info(f"CMS131v14: Found device order for patient {patient.id}")
+                return True
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty device orders: {str(e)}")
+            return False
+
+    def _has_frailty_device_observations(self, patient: Patient) -> bool:
+        """
+        Check for observations with frailty device codes in value_codings during measurement period.
+        Per CMS131v14: Assessment, Performed: "Medical equipment used" result in "Frailty Device"
+        """
+        try:
+            # Get all SNOMED codes from FrailtyDevice value set
+            frailty_device_snomed = FrailtyDevice.SNOMEDCT if hasattr(FrailtyDevice, 'SNOMEDCT') else set()
+
+            if not frailty_device_snomed:
+                return False
+
+            # Check for observations with frailty device codes as value codings
+            # Include observations with null effective_datetime or within the measurement period
+            has_observation = Observation.objects.for_patient(patient.id).filter(
+                Q(effective_datetime__isnull=True) |
+                Q(effective_datetime__gte=self.timeframe.start.datetime,
+                  effective_datetime__lte=self.timeframe.end.datetime),
+                value_codings__code__in=frailty_device_snomed,
+                value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
+            ).exists()
+
+            if has_observation:
+                log.info(f"CMS131v14: Found frailty device observation for patient {patient.id}")
+                return True
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty device observations: {str(e)}")
+            return False
+
+    def _has_frailty_diagnoses(self, patient: Patient) -> bool:
+        """
+        Check for frailty diagnoses overlapping measurement period.
+        Per CMS131v14: Diagnosis: "Frailty Diagnosis" - prevalencePeriod overlaps day of "Measurement Period"
+        """
+        try:
+            measurement_start = self.timeframe.start.date()
+            measurement_end = self.timeframe.end.date()
+
+            # Build overlap query similar to diabetes diagnosis check
+            overlap_query = (
+                Q(onset_date__isnull=True) |
+                (
+                    Q(onset_date__lte=measurement_end) &
+                    (
+                        Q(resolution_date__isnull=True) |
+                        Q(resolution_date__gte=measurement_start)
+                    )
+                )
+            )
+
+            has_frailty_diagnosis = (
+                Condition.objects.for_patient(patient.id)
+                .find(FrailtyDiagnosis)
+                .committed()
+                .filter(entered_in_error_id__isnull=True)
+                .filter(overlap_query)
+                .exists()
+            )
+
+            if has_frailty_diagnosis:
+                log.info(f"CMS131v14: Found frailty diagnosis for patient {patient.id}")
+
+            return has_frailty_diagnosis
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty diagnoses: {str(e)}")
+            return False
+
+    def _has_frailty_encounters(self, patient: Patient) -> bool:
+        """
+        Check for frailty encounters during measurement period.
+        Per CMS131v14: Encounter, Performed: "Frailty Encounter" - relevantPeriod overlaps day of "Measurement Period"
+        """
+        try:
+            start_date = self.timeframe.start.datetime
+            end_date = self.timeframe.end.datetime
+
+            # Check via Encounter model for SNOMED codes
+            frailty_snomed = FrailtyEncounter.SNOMEDCT if hasattr(FrailtyEncounter, 'SNOMEDCT') else set()
+
+            if frailty_snomed:
+                has_encounter = Encounter.objects.filter(
+                    note__patient=patient,
+                    note__note_type_version__code__in=frailty_snomed,
+                    state__in=["CON", "STA"],
+                    start_time__gte=start_date,
+                    start_time__lte=end_date
+                ).exists()
+
+                if has_encounter:
+                    log.info(f"CMS131v14: Found frailty encounter (SNOMED) for patient {patient.id}")
+                    return True
+
+            # Check via ClaimLineItem for CPT/HCPCS codes
+            frailty_cpt = FrailtyEncounter.CPT if hasattr(FrailtyEncounter, 'CPT') else set()
+            frailty_hcpcs = FrailtyEncounter.HCPCSLEVELII if hasattr(FrailtyEncounter, 'HCPCSLEVELII') else set()
+            frailty_codes = frailty_cpt | frailty_hcpcs
+
+            if frailty_codes:
+                has_claim = ClaimLineItem.objects.filter(
+                    claim__note__patient=patient,
+                    status="active",
+                    from_date__gte=self.timeframe.start.date().isoformat(),
+                    from_date__lte=self.timeframe.end.date().isoformat(),
+                    proc_code__in=frailty_codes
+                ).exists()
+
+                if has_claim:
+                    log.info(f"CMS131v14: Found frailty encounter (claim) for patient {patient.id}")
+                    return True
+
+            return False
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty encounters: {str(e)}")
+            return False
+
+    def _has_frailty_symptoms(self, patient: Patient) -> bool:
+        """
+        Check for frailty symptoms overlapping measurement period.
+        Per CMS131v14: Symptom: "Frailty Symptom" - prevalencePeriod overlaps day of "Measurement Period"
+
+        Note: SDK v1 doesn't expose the 'notes' field on Condition.
+        We check for frailty symptom codes without differentiating symptoms from diagnoses.
+        """
+        try:
+            measurement_start = self.timeframe.start.date()
+            measurement_end = self.timeframe.end.date()
+
+            # Build overlap query
+            overlap_query = (
+                Q(onset_date__isnull=True) |
+                (
+                    Q(onset_date__lte=measurement_end) &
+                    (
+                        Q(resolution_date__isnull=True) |
+                        Q(resolution_date__gte=measurement_start)
+                    )
+                )
+            )
+
+            has_frailty_symptom = (
+                Condition.objects.for_patient(patient.id)
+                .find(FrailtySymptom)
+                .committed()
+                .filter(entered_in_error_id__isnull=True)
+                .filter(overlap_query)
+                .exists()
+            )
+
+            if has_frailty_symptom:
+                log.info(f"CMS131v14: Found frailty symptom for patient {patient.id}")
+
+            return has_frailty_symptom
+        except Exception as e:
+            log.error(f"CMS131v14: Error checking frailty symptoms: {str(e)}")
             return False
 
     def _has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
@@ -483,15 +695,31 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             start_date = self.timeframe.start.shift(years=-1).date()
             end_date = self.timeframe.end.date()
 
+            # Debug: Check for advanced illness conditions without date filter
+            all_advanced_illness = (
+                Condition.objects.for_patient(patient.id)
+                .find(AdvancedIllness)
+                .filter(entered_in_error_id__isnull=True)
+                .committed()
+            )
+
+            if all_advanced_illness.exists():
+                log.info(f"CMS131v14: Found {all_advanced_illness.count()} advanced illness condition(s) for patient {patient.id} (checking dates...)")
+                for cond in all_advanced_illness:
+                    log.info(f"CMS131v14: Advanced illness condition {cond.id} - onset_date: {cond.onset_date}, within range: {cond.onset_date and start_date <= cond.onset_date <= end_date if cond.onset_date else 'NULL ONSET DATE'}")
+
             has_advanced_illness = (
                 Condition.objects.for_patient(patient.id)
                 .find(AdvancedIllness)
                 .filter(
-                    onset_date__lte=end_date,
-                    onset_date__gte=start_date
+                    Q(onset_date__isnull=True) |  # Include conditions with NULL onset date
+                    Q(
+                        onset_date__lte=end_date,
+                        onset_date__gte=start_date
+                    )
                 )
                 .filter(entered_in_error_id__isnull=True)
-                .committed()
+                # Not using .committed() to include uncommitted advanced illness conditions
                 .exists()
             )
 
@@ -537,26 +765,46 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
         try:
-            # Get CPT codes from the value sets
-            nursing_facility_codes = NursingFacilityVisit.CPT
-            long_term_care_codes = CareServicesInLongTermResidentialFacility.CPT
-            all_codes = nursing_facility_codes | long_term_care_codes
+            # Get codes from the value sets
+            # NursingFacilityVisit has CPT codes, CareServicesInLongTermResidentialFacility has SNOMED
+            nursing_facility_cpt = getattr(NursingFacilityVisit, 'CPT', set()) or set()
+            nursing_facility_snomed = getattr(NursingFacilityVisit, 'SNOMEDCT', set()) or set()
+            long_term_care_snomed = getattr(CareServicesInLongTermResidentialFacility, 'SNOMEDCT', set()) or set()
 
-            # Check for claim line items with these CPT codes within the measurement period
-            claim_line_items = ClaimLineItem.objects.filter(
-                claim__note__patient=patient,
-                status="active",
-                from_date__gte=self.timeframe.start.date().isoformat(),
-                from_date__lte=self.timeframe.end.date().isoformat(),
-                proc_code__in=all_codes,
-            )
+            # Combine all codes for claims (CPT/HCPCS)
+            all_claim_codes = nursing_facility_cpt
 
-            if claim_line_items.exists():
-                found_code = claim_line_items.first().proc_code
-                log.info(
-                    f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care claim (CPT: {found_code})"
+            # Check for claim line items with CPT codes
+            if all_claim_codes:
+                claim_line_items = ClaimLineItem.objects.filter(
+                    claim__note__patient=patient,
+                    status="active",
+                    from_date__gte=self.timeframe.start.date().isoformat(),
+                    from_date__lte=self.timeframe.end.date().isoformat(),
+                    proc_code__in=all_claim_codes,
                 )
-                return True
+
+                if claim_line_items.exists():
+                    found_code = claim_line_items.first().proc_code
+                    log.info(
+                        f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care claim (CPT: {found_code})"
+                    )
+                    return True
+
+            # Also check for encounters with SNOMED codes
+            all_snomed_codes = nursing_facility_snomed | long_term_care_snomed
+            if all_snomed_codes:
+                encounters = Encounter.objects.filter(
+                    note__patient=patient,
+                    note__note_type_version__code__in=all_snomed_codes,
+                    state__in=["CON", "STA"],
+                    start_time__gte=self.timeframe.start.datetime,
+                    start_time__lte=self.timeframe.end.datetime
+                )
+
+                if encounters.exists():
+                    log.info(f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care encounter")
+                    return True
 
             return False
         except Exception as e:
@@ -677,11 +925,37 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
 
     def _referral_report_exists(self, patient: Patient, timeframe_start, timeframe_end) -> bool:
-        """Check if specified referral report exists in specified timeframe."""
+        """
+        Check if eye exam referral report exists in specified timeframe.
+
+        Checks for referrals with CPT codes from RetinalOrDilatedEyeExam value set.
+        """
         try:
-            referral_reports = ReferralReport.objects.for_patient(patient.id).find(RetinalOrDilatedEyeExam).filter(
+            # Get CPT codes from RetinalOrDilatedEyeExam value set
+            eye_exam_codes = RetinalOrDilatedEyeExam.CPT if hasattr(RetinalOrDilatedEyeExam, 'CPT') else set()
+
+            if eye_exam_codes:
+                # Filter by codings using the new relationship
+                referral_reports = ReferralReport.objects.filter(
+                    patient=patient,
+                    original_date__gte=timeframe_start,
+                    original_date__lt=timeframe_end,
+                    codings__code__in=eye_exam_codes
+                )
+
+                if referral_reports.exists():
+                    return True
+
+            # Fallback: use specialty field for cases without coding
+            referral_reports = ReferralReport.objects.filter(
+                patient=patient,
                 original_date__gte=timeframe_start,
                 original_date__lt=timeframe_end,
+            ).filter(
+                Q(specialty__icontains="ophthalmol") |
+                Q(specialty__icontains="optometr") |
+                Q(specialty__icontains="retina") |
+                Q(specialty__icontains="eye")
             )
 
             return referral_reports.exists()
@@ -724,13 +998,11 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
         Also handles datetime fallbacks:
         - effective_datetime (when observation occurred - vitals, labs, imaging)
-        - note.datetime_of_service (for physical exams/questionnaires with NULL effective_datetime)
         - is_member_of.effective_datetime (for child observations like individual lab values or vital signs)
         """
         try:
             date_filter = (
                 Q(effective_datetime__gte=timeframe_start, effective_datetime__lte=timeframe_end) |
-                Q(note__datetime_of_service__gte=timeframe_start, note__datetime_of_service__lte=timeframe_end, effective_datetime__isnull=True) |
                 Q(is_member_of__effective_datetime__gte=timeframe_start, is_member_of__effective_datetime__lte=timeframe_end, effective_datetime__isnull=True)
             )
 
