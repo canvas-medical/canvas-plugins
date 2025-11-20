@@ -4,6 +4,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.task import Task
+from canvas_sdk.v1.data.coding import Coding
 
 
 class Referral(AuditedModel, IdentifiableModel):
@@ -85,4 +86,15 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
     priority = models.BooleanField(default=False)
 
 
-__exports__ = ("Referral", "ReferralReport")
+class ReferralReportCoding(Coding):
+    """ReferralReportCoding."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralreportcoding_001"
+
+    referral_report = models.ForeignKey(
+        ReferralReport, on_delete=models.DO_NOTHING, related_name="codings", null=True
+    )
+
+
+__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding")
