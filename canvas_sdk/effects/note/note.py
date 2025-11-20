@@ -1,6 +1,6 @@
 import datetime
 import json
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from pydantic_core import InitErrorDetails
@@ -51,7 +51,7 @@ class Note(NoteOrAppointmentABC):
         self._validate_before_effect("push_charges")
         return Effect(
             type=EffectType.PUSH_NOTE_CHARGES,
-            payload=json.dumps({"note": self.instance_id}),
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
     def unlock(self) -> Effect:
@@ -59,7 +59,7 @@ class Note(NoteOrAppointmentABC):
         self._validate_before_effect("unlock")
         return Effect(
             type=EffectType.UNLOCK_NOTE,
-            payload=json.dumps({"note": self.instance_id}),
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
     def lock(self) -> Effect:
@@ -67,7 +67,7 @@ class Note(NoteOrAppointmentABC):
         self._validate_before_effect("lock")
         return Effect(
             type=EffectType.LOCK_NOTE,
-            payload=json.dumps({"note": self.instance_id}),
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
     def sign(self) -> Effect:
@@ -75,7 +75,7 @@ class Note(NoteOrAppointmentABC):
         self._validate_before_effect("sign")
         return Effect(
             type=EffectType.SIGN_NOTE,
-            payload=json.dumps({"note": self.instance_id}),
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
     def _validate_state_transition(
@@ -89,12 +89,12 @@ class Note(NoteOrAppointmentABC):
                 "value", "Unsupported state transitions", next_state
             )
 
-        if next_state not in TRANSITION_STATE_MATRIX.get(cast(NoteStates, current_state), []):
-            return False, self._create_error_detail(
-                "value",
-                f"Invalid state transition from {current_state} to {next_state}.",
-                next_state,
-            )
+        # if next_state not in TRANSITION_STATE_MATRIX.get(cast(NoteStates, current_state), []):
+        #     return False, self._create_error_detail(
+        #         "value",
+        #         f"Invalid state transition from {current_state} to {next_state}.",
+        #         next_state,
+        #     )
 
         is_sig_required = note.note_type_version.is_sig_required
         if next_state == NoteStates.SIGNED and not is_sig_required:
