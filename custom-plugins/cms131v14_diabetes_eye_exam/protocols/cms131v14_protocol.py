@@ -1,4 +1,3 @@
-import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import PerformCommand, ReferCommand
@@ -8,11 +7,10 @@ from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.v1.data import Patient
-from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.condition import Condition, ClinicalStatus
 from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.v1.data.encounter import Encounter
-from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.referral import ReferralReport
 from canvas_sdk.value_set.v2026.condition import (
@@ -22,17 +20,22 @@ from canvas_sdk.value_set.v2026.condition import (
     FrailtyDiagnosis,
     HospiceDiagnosis,
     PalliativeCareDiagnosis,
+    DementiaAndMentalDegenerations,
+    Cancer,
 )
 from canvas_sdk.value_set.v2026.communication import DiabeticRetinopathySeverityLevel,AutonomousEyeExamResultOrFinding
 from canvas_sdk.value_set.v2026.encounter import (
     OfficeVisit,
     AnnualWellnessVisit,
     PreventiveCareServicesEstablishedOfficeVisit18AndUp,
+    PreventiveCareServicesInitialOfficeVisit18AndUp,
     HomeHealthcareServices,
     OphthalmologicalServices,
     TelephoneVisits,
     PalliativeCareEncounter,
     HospiceEncounter,
+    CareServicesInLongTermResidentialFacility,
+    NursingFacilityVisit,
 )
 from canvas_sdk.value_set.v2026.intervention import (
     HospiceCareAmbulatory,
@@ -40,16 +43,6 @@ from canvas_sdk.value_set.v2026.intervention import (
 )
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
 from canvas_sdk.value_set.v2026.physical_exam import RetinalOrDilatedEyeExam
-from canvas_sdk.value_set.v2022.condition import (
-    DementiaAndMentalDegenerations,
-    Cancer,
-)
-from canvas_sdk.value_set.v2022.encounter import (
-    PreventiveCareServicesInitialOfficeVisit_18AndUp,
-    CareServicesInLongTermResidentialFacility,
-    NursingFacilityVisit,
-)
-from canvas_sdk.value_set.v2022.medication import ChemotherapyForAdvancedCancer
 from logger import log
 
 
@@ -80,8 +73,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         EventType.Name(EventType.CONDITION_RESOLVED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
-        EventType.Name(EventType.INTERVIEW_CREATED),
-        EventType.Name(EventType.INTERVIEW_UPDATED),
+        EventType.Name(EventType.OBSERVATION_CREATED),
+        EventType.Name(EventType.OBSERVATION_UPDATED),
         EventType.Name(EventType.PATIENT_UPDATED),
         EventType.Name(EventType.ENCOUNTER_CREATED),
         EventType.Name(EventType.ENCOUNTER_UPDATED),
@@ -258,15 +251,21 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_diabetes_diagnosis(self, patient: Patient) -> bool:
         try:
-            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
-            
+
+            diabetes_conditions = (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+            )
+
             has_diabetes = diabetes_conditions.exists()
-            
+
             if has_diabetes:
                 log.info(f"CMS131v14: Found diabetes diagnosis for patient {patient.id}")
             else:
                 log.info(f"CMS131v14: No active diabetes diagnoses found for patient {patient.id}")
-            
+
             return has_diabetes
 
         except Exception as e:
@@ -274,8 +273,55 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _has_diabetes_diagnosis_overlapping_period(self, patient: Patient) -> bool:
+        """
+        Check if patient has diabetes diagnosis with prevalencePeriod overlapping measurement period.
+
+        Per CMS131v14: DiabetesDx.prevalencePeriod overlaps day of "Measurement Period"
+
+        A condition's prevalencePeriod overlaps with measurement period if:
+        - Condition started before or during the measurement period (onset_date <= period_end)
+        - AND condition has not ended or ended during/after measurement period start
+          (resolution_date is null OR resolution_date >= period_start)
+
+        Per Canvas convention: If onset_date is NULL, the condition is treated as overlapping
+        with the measurement period (following the pattern in helper_date_ranges_overlap).
+        """
         try:
-            return Condition.objects.for_patient(patient.id).find(Diabetes).active().exists()
+            measurement_start = self.timeframe.start.date()
+            measurement_end = self.timeframe.end.date()
+
+            # Build overlap query that handles NULL onset_date
+            # Per Canvas convention: NULL onset_date is treated as overlapping
+            overlap_query = (
+                # Case 1: onset_date is NULL (treated as overlapping per Canvas convention)
+                Q(onset_date__isnull=True) |
+                # Case 2: onset_date exists and overlaps with measurement period
+                (
+                    Q(onset_date__lte=measurement_end) &
+                    (
+                        # AND condition is still active (no resolution_date)
+                        Q(resolution_date__isnull=True) |
+                        # OR condition resolved after measurement period started
+                        Q(resolution_date__gte=measurement_start)
+                    )
+                )
+            )
+
+            has_overlap = (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .committed()
+                .filter(entered_in_error_id__isnull=True)
+                .filter(overlap_query)
+                .exists()
+            )
+
+            if has_overlap:
+                log.info(f"CMS131v14: Patient {patient.id} has diabetes diagnosis overlapping measurement period")
+            else:
+                log.info(f"CMS131v14: Patient {patient.id} does NOT have diabetes diagnosis overlapping measurement period")
+
+            return has_overlap
 
         except Exception as e:
             log.error(f"CMS131v14: Error checking diabetes diagnosis overlapping period: {str(e)}")
@@ -284,7 +330,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_eligible_encounter_in_period(self, patient: Patient) -> bool:
         """
         Check if patient has an eligible encounter during the measurement period.
-        
+
         Per CMS131v14 CQL, eligible encounters include:
         - Office Visit
         - Annual Wellness Visit
@@ -297,40 +343,46 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         try:
             start_date = self.timeframe.start.datetime
             end_date = self.timeframe.end.datetime
-            
-            # Check for office visit encounters
-            # Office visits are identified by note_type_version codes matching OfficeVisit SNOMED codes
-            # Filter for concluded encounters only (state="CON")
-            office_visit_codes = OfficeVisit.SNOMEDCT
-            
-            office_visits = Encounter.objects.filter(
+
+            # In api_notetype I found those snomed codes, the rest of the checks are to follow plugin specification
+            encounter_snomed_codes = (
+                {"308335008", "439708006", "185317003"} |
+                OfficeVisit.SNOMEDCT |
+                AnnualWellnessVisit.SNOMEDCT |
+                HomeHealthcareServices.SNOMEDCT |
+                OphthalmologicalServices.SNOMEDCT |
+                TelephoneVisits.SNOMEDCT
+            )
+
+            eligible_encounters = Encounter.objects.filter(
                 note__patient=patient,
-                note__note_type_version__code="308335008", # Office Visit code
-                state="CON",
+                note__note_type_version__code__in=encounter_snomed_codes,
+                state__in=["CON", "STA"],
                 start_time__gte=start_date,
                 start_time__lte=end_date,
             )
 
-            log.info(f"CMS131v14: Office visits: {office_visits.count()}")
-            
-            if office_visits.exists():
-                log.info(f"CMS131v14: Patient {patient.id} has office visit encounter")
+            if eligible_encounters.exists():
+                encounter = eligible_encounters.first()
+                log.info(
+                    f"CMS131v14: Patient {patient.id} has eligible encounter "
+                    f"via Encounter model (SNOMED: {encounter.note.note_type_version.code})"
+                )
                 return True
-            
-            # Check for encounters/services via claims (AWV, Preventive Care, etc.)
+
+            # Check for encounters/services via claims as fallback
             # Collect all CPT and HCPCS codes from the relevant value sets
+            # This catches encounters that may not be documented via Encounter model
             eligible_codes = (
+                OfficeVisit.CPT |
                 AnnualWellnessVisit.HCPCSLEVELII |
                 PreventiveCareServicesEstablishedOfficeVisit18AndUp.CPT |
-                PreventiveCareServicesEstablishedOfficeVisit18AndUp.HCPCSLEVELII |
-                PreventiveCareServicesInitialOfficeVisit_18AndUp.CPT |
-                PreventiveCareServicesInitialOfficeVisit_18AndUp.HCPCSLEVELII |
+                PreventiveCareServicesInitialOfficeVisit18AndUp.CPT |
                 HomeHealthcareServices.CPT |
-                HomeHealthcareServices.HCPCSLEVELII |
                 OphthalmologicalServices.CPT |
                 TelephoneVisits.CPT
             )
-            
+
             # Query ClaimLineItem for any of these codes during the measurement period
             eligible_claims = ClaimLineItem.objects.filter(
                 claim__note__patient=patient,
@@ -340,17 +392,16 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 proc_code__in=eligible_codes,
             )
 
-            log.info(f"CMS131v14: Eligible claims: {eligible_claims.count()}")
             if eligible_claims.exists():
                 found_code = eligible_claims.first().proc_code
                 log.info(
                     f"CMS131v14: Patient {patient.id} has eligible encounter claim (code: {found_code})"
                 )
                 return True
-            
+
             log.info(f"CMS131v14: Patient {patient.id} has no eligible encounters in period")
             return False
-            
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking eligible encounters: {str(e)}")
             return False
@@ -359,47 +410,29 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient is in hospice care during the measurement period.
 
-        Checks for responses in the "Hospice & Frailty" questionnaire indicating hospice care.
-        The questionnaire tracks:
+        Checks for observations with SNOMED codes indicating hospice care:
         - Discharge to home for Hospice (SNOMED 428361000124107)
         - Discharge to Health Care Facility For Hospice Care (SNOMED 428371000124100)
         - Hospice Ambulatory Care (SNOMED 385765002)
         """
         try:
-            # Get all interviews for the patient during the measurement period
-            interviews = Interview.objects.filter(
-                patient=patient,
-                deleted=False,
-                created__gte=self.timeframe.start.datetime,
-                created__lte=self.timeframe.end.datetime,
-            )
+            # SNOMED codes for hospice care
+            hospice_codes = {"428361000124107", "428371000124100", "385765002"}
 
-            # Check for hospice-related responses in the interviews
-            # The hospice question has code "R-020" with SNOMED response codes
-            hospice_response_codes = {"428361000124107", "428371000124100", "385765002"}
+            # Check for observations with hospice SNOMED codes as values during measurement period
+            has_hospice_observation = Observation.objects.for_patient(patient.id).filter(
+                Q(effective_datetime__isnull=True) |
+                Q(effective_datetime__gte=self.timeframe.start.datetime,
+                  effective_datetime__lte=self.timeframe.end.datetime),
+                value_codings__code__in=hospice_codes,
+                value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
+            ).exists()
 
-            # Check if there are any interviews for the patient
-            if not interviews.exists():
-                return False
-
-            interview_ids = list(interviews.values_list('pk', flat=True))
-
-            # Get all responses for the interviews
-            interview_responses = InterviewQuestionResponse.objects.filter(
-                interview_id__in=interview_ids,
-                status="AC",
-            ).select_related('response_option')
-            
-            # Check if any response has a hospice code
-            for response in interview_responses:
-                if response.response_option and response.response_option.code in hospice_response_codes:
-                    log.info(
-                        f"CMS131v14: Found hospice care response (code: {response.response_option.code}) for patient {patient.id}"
-                    )
-                    return True
+            if has_hospice_observation:
+                log.info(f"CMS131v14: Found hospice care observation for patient {patient.id}")
+                return True
 
             return False
-
         except Exception as e:
             log.error(f"CMS131v14: Error checking hospice status: {str(e)}")
             return False
@@ -408,48 +441,33 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient is age 66+ with frailty indicators.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
-        Uses responses from the "Hospice & Frailty" questionnaire.
+
+        Checks for observations with SNOMED code indicating frailty:
+        - Frailty Device (SNOMED 105501005)
         """
         # Check age requirement
         if age < 66:
             return False
 
         try:
-            # Check for frailty criteria using questionnaire responses
-            # Get all interviews for the patient during the measurement period
-            interviews = Interview.objects.filter(
-                patient=patient,
-                deleted=False,
-                created__gte=self.timeframe.start.datetime,
-                created__lte=self.timeframe.end.datetime,
-            )
+            # SNOMED code for frailty device
+            FRAILTY_DEVICE_SNOMED = "105501005"
 
-            # Check if there are any interviews for the patient
-            if not interviews.exists():
-                return False
+            # Check for observations with frailty SNOMED code as value during measurement period
+            # Include observations with null effective_datetime or within the measurement period
+            has_frailty_observation = Observation.objects.for_patient(patient.id).filter(
+                Q(effective_datetime__isnull=True) |
+                Q(effective_datetime__gte=self.timeframe.start.datetime,
+                  effective_datetime__lte=self.timeframe.end.datetime),
+                value_codings__code=FRAILTY_DEVICE_SNOMED,
+                value_codings__system__in=["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
+            ).exists()
 
-            interview_ids = list(interviews.values_list('pk', flat=True))
-
-            # Get all responses for the interviews
-            interview_responses = InterviewQuestionResponse.objects.filter(
-                interview_id__in=interview_ids,
-                status="AC",
-            ).select_related('response_option')
-
-            
-            # Check for frailty-related response codes (from "R-021" question)
-            frailty_response_codes = {"105501005"}  # Frailty Device
-            
-            # Check if any response has a frailty code
-            for response in interview_responses:
-                if response.response_option and response.response_option.code in frailty_response_codes:
-                    log.info(
-                        f"CMS131v14: Found frailty response (code: {response.response_option.code}) for patient {patient.id}"
-                    )
-                    return True
+            if has_frailty_observation:
+                log.info(f"CMS131v14: Patient {patient.id} age 66+ has frailty")
+                return True
 
             return False
-
         except Exception as e:
             log.error(f"CMS131v14: Error checking frailty: {str(e)}")
             return False
@@ -458,43 +476,46 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check if patient has advanced illness or dementia medications during the measurement period or year prior.
         Per CMS131v14 CQL:
-        - Advanced illness diagnosis during the measurement period or the year prior
+        - Advanced illness diagnosis that starts during the measurement period or the year prior
         - OR taking dementia medications during the measurement period or the year prior
         """
         try:
-            # Calculate the extended timeframe (measurement period + 1 year prior)
-            start_date = self.timeframe.start.shift(years=-1).datetime
-            end_date = self.timeframe.end.datetime
-            
-            # Check for advanced illness conditions using separate targeted queries
+            start_date = self.timeframe.start.shift(years=-1).date()
+            end_date = self.timeframe.end.date()
+
             has_advanced_illness = (
-                Condition.objects.for_patient(patient.id).active().find(DementiaAndMentalDegenerations).exists() or
-                Condition.objects.for_patient(patient.id).active().find(Cancer).exists() or
-                Condition.objects.for_patient(patient.id).active().find(ChemotherapyForAdvancedCancer).exists()
+                Condition.objects.for_patient(patient.id)
+                .find(AdvancedIllness)
+                .filter(
+                    onset_date__lte=end_date,
+                    onset_date__gte=start_date
+                )
+                .filter(entered_in_error_id__isnull=True)
+                .committed()
+                .exists()
             )
 
             if has_advanced_illness:
                 log.info(f"CMS131v14: Patient {patient.id} has advanced illness")
                 return True
-            
-            # Check for dementia medications during measurement period or year prior
+
             has_dementia_meds = (
                 Medication.objects.for_patient(patient.id)
-                .active()
+                .committed()
                 .find(DementiaMedications)
                 .filter(
                     Q(
-                        start_date__lte=end_date,
-                        end_date__gte=start_date,
+                        start_date__date__lte=end_date,
+                        end_date__date__gte=start_date,
                         end_date__isnull=False
                     ) | Q(
-                        start_date__lte=end_date,
+                        start_date__date__lte=end_date,
                         end_date__isnull=True
                     )
                 )
                 .exists()
             )
-            
+
             if has_dementia_meds:
                 log.info(f"CMS131v14: Patient {patient.id} has dementia medications")
                 return True
@@ -508,7 +529,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         """
         Check for long-term residential care or nursing facility codes.
         Per CMS131v14: This exclusion only applies to patients age 66 and older.
-        
+
         Checks for CPT codes in ClaimLineItem during the measurement period.
         """
         # Check age requirement
@@ -544,68 +565,94 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
 
     def _has_palliative_care_in_period(self, patient: Patient) -> bool:
         """
-        Check if the patient received palliative care during the measurement period."""
+        Check if the patient received palliative care during the measurement period.
+
+        Per CMS131v14 CQL, checks for:
+        - Palliative Care Assessment (LOINC 71007-9) - Note: May not be captured in standard Canvas data
+        - Palliative Care Diagnosis (ICD-10, SNOMED)
+        - Palliative Care Encounter (CPT, HCPCS, SNOMED, ICD-10)
+        - Palliative Care Intervention (SNOMED)
+        """
         try:
-            # Check all palliative care value sets in conditions using separate targeted queries
-            has_palliative_condition = (
-                Condition.objects.for_patient(patient.id).active().find(PalliativeCareDiagnosis).exists() or
-                Condition.objects.for_patient(patient.id).active().find(PalliativeCareEncounter).exists() or
-                Condition.objects.for_patient(patient.id).active().find(PalliativeCareIntervention).exists()
+            start_date = self.timeframe.start.datetime
+            end_date = self.timeframe.end.datetime
+
+            # Check palliative care diagnoses (using Condition model)
+            has_palliative_diagnosis = (
+                Condition.objects.for_patient(patient.id)
+                .find(PalliativeCareDiagnosis)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
             )
-            
-            if has_palliative_condition:
-                log.info(f"CMS131v14: Found palliative care in conditions for patient {patient.id}")
+
+            if has_palliative_diagnosis:
+                log.info(f"CMS131v14: Found palliative care diagnosis for patient {patient.id}")
                 return True
-            
-            # Combine all palliative care codes for claim line item check 
+
+            # Check palliative care via claims (CPT, HCPCS, SNOMED codes)
             palliative_codes = (
                 PalliativeCareEncounter.HCPCSLEVELII |
-                PalliativeCareEncounter.SNOMEDCT |
                 PalliativeCareIntervention.SNOMEDCT
             )
-            
-            # Check claim line items once with all combined codes
-            if palliative_codes:
-                palliative_claims = ClaimLineItem.objects.filter(
-                    claim__note__patient=patient,
-                    status="active",
-                    from_date__gte=self.timeframe.start.date().isoformat(),
-                    from_date__lte=self.timeframe.end.date().isoformat(),
-                    proc_code__in=palliative_codes,
-                )
-                
-                if palliative_claims.exists():
-                    log.info(
-                        f"CMS131v14: Found palliative care claim (CPT: {palliative_claims.first().proc_code}) for patient {patient.id}"
-                    )
-                    return True
-            
+
+            palliative_claims = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=palliative_codes,
+            )
+
+            if palliative_claims.exists():
+                found_code = palliative_claims.first().proc_code
+                log.info(f"CMS131v14: Found palliative care claim (code: {found_code}) for patient {patient.id}")
+                return True
+
             return False
-            
         except Exception as e:
             log.error(f"CMS131v14: Error checking palliative care: {str(e)}")
             return False
 
     def _has_bilateral_absence_of_eyes(self, patient: Patient) -> bool:
         """Check for bilateral absence of eyes."""
+        # https://www.ncbi.nlm.nih.gov/medgen/768661
+        # Bilateral anophthalmos of eyes
+        # Synonyms:
+            # Anophthalmos of bilateral eyes
+            # Anophthalmos of both eyes
+            # Bilateral Anophthalmos
+            # Bilateral anophthalmos
+        # SNOMED CT:
+            # Anophthalmos of bilateral eyes (15665641000119103)
+            # Anophthalmos of both eyes (15665641000119103)
+            # Bilateral anophthalmos (15665641000119103)
+            # Bilateral anophthalmos of eyes (15665641000119103)
         try:
+            measurement_end = self.timeframe.end.date()
+
             has_bilateral_absence = (
                 Condition.objects.for_patient(patient.id)
                 .active()
                 .filter(
+                    entered_in_error_id__isnull=True,
                     codings__code="15665641000119103",
                     codings__system__in=["SNOMED", "SNOMEDCT"]
                 )
+                .filter(
+                    Q(onset_date__isnull=True) | Q(onset_date__lte=measurement_end)
+                )
                 .exists()
-            ) 
-            
+            )
+
             if has_bilateral_absence:
                 log.info(
-                    f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) for patient {patient.id}"
+                    f"CMS131v14: Found bilateral eye absence (SNOMED 15665641000119103) "
+                    f"starting on or before {measurement_end} for patient {patient.id}"
                 )
-            
+
             return has_bilateral_absence
-            
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking bilateral eye absence: {str(e)}")
             return False
@@ -613,14 +660,21 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_retinopathy_diagnosis_in_period(self, patient: Patient) -> bool:
         """Check for retinopathy diagnosis in period."""
         try:
-            has_retinopathy_diagnosis = Condition.objects.for_patient(patient.id).find(DiabeticRetinopathy).active().exists()
+
+            has_retinopathy_diagnosis = (
+                Condition.objects.for_patient(patient.id)
+                .find(DiabeticRetinopathy)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+                .exists()
+            )
 
             return has_retinopathy_diagnosis
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking retinopathy diagnosis: {str(e)}")
             return False
-        
+
 
     def _referral_report_exists(self, patient: Patient, timeframe_start, timeframe_end) -> bool:
         """Check if specified referral report exists in specified timeframe."""
@@ -643,7 +697,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             referral_reports = self._referral_report_exists(patient, self.timeframe.start.datetime, self.timeframe.end.datetime)
 
             return referral_reports
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking retinal exam in period: {str(e)}")
             return False
@@ -655,19 +709,42 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             referral_reports = self._referral_report_exists(patient, extended_start.datetime, self.timeframe.end.datetime)
 
             return referral_reports
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking retinal exam in period or year prior: {str(e)}")
             return False
 
     def _observation_exists(self, patient: Patient, codings_code: str, value_codings_codes: set[str], timeframe_start, timeframe_end) -> bool:
-        """Check if specified observation exists in specified timeframe."""
+        """
+        Check if specified observation exists in specified timeframe.
+
+        Handles two patterns due to inconsistent home-app implementation:
+        1. Physical Exam Pattern: codings=exam type (LOINC), value_codings=result
+        2. Questionnaire Pattern: codings=finding (SNOMED) directly
+
+        Also handles datetime fallbacks:
+        - effective_datetime (when observation occurred - vitals, labs, imaging)
+        - note.datetime_of_service (for physical exams/questionnaires with NULL effective_datetime)
+        - is_member_of.effective_datetime (for child observations like individual lab values or vital signs)
+        """
         try:
+            date_filter = (
+                Q(effective_datetime__gte=timeframe_start, effective_datetime__lte=timeframe_end) |
+                Q(note__datetime_of_service__gte=timeframe_start, note__datetime_of_service__lte=timeframe_end, effective_datetime__isnull=True) |
+                Q(is_member_of__effective_datetime__gte=timeframe_start, is_member_of__effective_datetime__lte=timeframe_end, effective_datetime__isnull=True)
+            )
+
+            code_filter = (
+                Q(codings__code=codings_code, value_codings__code__in=value_codings_codes) |
+                Q(codings__code__in=value_codings_codes)
+            )
+
             observations = (
                 Observation.objects.for_patient(patient.id)
                 .committed()
-                .filter(created__gte=timeframe_start, created__lt=timeframe_end, codings__code=codings_code, value_codings__code__in=value_codings_codes)
+                .filter(date_filter, code_filter)
             )
+
             return observations.exists()
 
         except Exception as e:
@@ -677,12 +754,12 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _has_autonomous_eye_exam_in_period(self, patient: Patient) -> bool:
         """Check for autonomous AI eye exam with valid result in measurement period."""
         try:
-            result_codes = set(AutonomousEyeExamResultOrFinding.LOINC)
-            
+            result_codes = AutonomousEyeExamResultOrFinding.LOINC
+
             has_exam = self._observation_exists(patient, self.AUTONOMOUS_EYE_EXAM_LOINC_CODE, result_codes, self.timeframe.start.datetime, self.timeframe.end.datetime)
 
             return has_exam
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking autonomous eye exam: {str(e)}")
             return False
@@ -692,43 +769,43 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         try:
             measurement_start = self.timeframe.start.datetime
             measurement_end = self.timeframe.end.datetime
-            
-            severity_codes = set(DiabeticRetinopathySeverityLevel.LOINC)
+
+            severity_codes = DiabeticRetinopathySeverityLevel.LOINC
             left_eye_retinopathy = self._observation_exists(
                 patient, self.LEFT_EYE_LOINC_CODE, severity_codes, measurement_start, measurement_end
             )
             right_eye_retinopathy = self._observation_exists(
                 patient, self.RIGHT_EYE_LOINC_CODE, severity_codes, measurement_start, measurement_end
             )
-            
+
             if left_eye_retinopathy and right_eye_retinopathy:
                 log.info(f"CMS131v14: Both eyes have retinopathy severity for patient {patient.id}")
                 return True
 
             prior_year_start = self.timeframe.start.shift(years=-1).datetime
             prior_year_end = self.timeframe.start.datetime
-            
+
             left_eye_no_retinopathy_prior = self._observation_exists(
-                patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.LEFT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
             right_eye_no_retinopathy_prior = self._observation_exists(
-                patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
+                patient, self.RIGHT_EYE_LOINC_CODE, {self.NO_APPARENT_RETINOPATHY_LOINC_CODE}, prior_year_start, prior_year_end
             )
-            
+
             if left_eye_retinopathy and right_eye_no_retinopathy_prior:
                 log.info(
                     f"CMS131v14: Left eye has retinopathy, right eye no retinopathy in prior year for patient {patient.id}"
                 )
                 return True
-            
+
             if right_eye_retinopathy and left_eye_no_retinopathy_prior:
                 log.info(
                     f"CMS131v14: Right eye has retinopathy, left eye no retinopathy in prior year for patient {patient.id}"
                 )
                 return True
-            
+
             return False
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking retinal finding with severity: {str(e)}")
             return False
@@ -738,22 +815,22 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         try:
             prior_year_start = self.timeframe.start.shift(years=-1).datetime
             prior_year_end = self.timeframe.start.datetime
-            
+
             left_eye_no_retinopathy = self._observation_exists(
                 patient, self.LEFT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
             )
             right_eye_no_retinopathy = self._observation_exists(
                 patient, self.RIGHT_EYE_LOINC_CODE, set(self.NO_APPARENT_RETINOPATHY_LOINC_CODE), prior_year_start, prior_year_end
             )
-            
+
             if left_eye_no_retinopathy and right_eye_no_retinopathy:
                 log.info(
                     f"CMS131v14: Both eyes have no retinopathy in year prior for patient {patient.id}"
                 )
                 return True
-            
+
             return False
-        
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking retinal finding no severity in prior year: {str(e)}")
             return False
@@ -787,7 +864,13 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def _get_diabetes_diagnosis_codes(self, patient: Patient) -> list[str]:
         try:
             diagnosis_codes = []
-            diabetes_conditions = Condition.objects.for_patient(patient.id).find(Diabetes).active()
+
+            diabetes_conditions = (
+                Condition.objects.for_patient(patient.id)
+                .find(Diabetes)
+                .active()
+                .filter(entered_in_error_id__isnull=True)
+            )
 
             for condition in diabetes_conditions:
                 for coding in condition.codings.all():
