@@ -715,13 +715,36 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             return False
 
     def _observation_exists(self, patient: Patient, codings_code: str, value_codings_codes: set[str], timeframe_start, timeframe_end) -> bool:
-        """Check if specified observation exists in specified timeframe."""
+        """
+        Check if specified observation exists in specified timeframe.
+
+        Handles two patterns due to inconsistent home-app implementation:
+        1. Physical Exam Pattern: codings=exam type (LOINC), value_codings=result
+        2. Questionnaire Pattern: codings=finding (SNOMED) directly
+
+        Also handles datetime fallbacks:
+        - effective_datetime (when observation occurred - vitals, labs, imaging)
+        - note.datetime_of_service (for physical exams/questionnaires with NULL effective_datetime)
+        - is_member_of.effective_datetime (for child observations like individual lab values or vital signs)
+        """
         try:
+            date_filter = (
+                Q(effective_datetime__gte=timeframe_start, effective_datetime__lte=timeframe_end) |
+                Q(note__datetime_of_service__gte=timeframe_start, note__datetime_of_service__lte=timeframe_end, effective_datetime__isnull=True) |
+                Q(is_member_of__effective_datetime__gte=timeframe_start, is_member_of__effective_datetime__lte=timeframe_end, effective_datetime__isnull=True)
+            )
+
+            code_filter = (
+                Q(codings__code=codings_code, value_codings__code__in=value_codings_codes) |
+                Q(codings__code__in=value_codings_codes)
+            )
+
             observations = (
                 Observation.objects.for_patient(patient.id)
                 .committed()
-                .filter(effective_datetime__gte=timeframe_start, effective_datetime__lt=timeframe_end, codings__code=codings_code, value_codings__code__in=value_codings_codes)
+                .filter(date_filter, code_filter)
             )
+
             return observations.exists()
 
         except Exception as e:
