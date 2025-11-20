@@ -15,17 +15,81 @@ from canvas_sdk.caching.plugins import get_cache
 from logger import log
 
 
+def is_expired(token) -> bool:
+    """Check if the current access token is expired."""
+    expires_in = token["expires_in"]
+    created_at = token["created_at"]
+
+    return datetime.now(timezone.utc) > (
+        datetime.fromisoformat(created_at) + timedelta(seconds=expires_in)
+    )
+
+
 class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
     """API endpoints for Fullscript integration."""
     PREFIX = "/app"
 
     FULLSCRIPT_TOKEN_URL = "https://api-us-snd.fullscript.io/api/oauth/token"
 
+    @staticmethod
+    def get_valid_access_token(user_id: str, client_id: str, client_secret: str) -> dict:
+        """
+        Helper method to get a valid access token for a user.
+        Handles token refresh if the cached token is expired.
+        """
+        cache = get_cache()
+        cached_token = cache.get(user_id)
+
+        log.info(f"!! Getting valid access token for user {user_id}")
+
+        if not cached_token:
+            log.info("!! No cached token found")
+            return {"success": False, "error": "No cached token found"}
+
+        if not is_expired(cached_token):
+            # Token is still valid
+            log.info("!! Token is still valid")
+            return {"success": True, "access_token": cached_token.get("access_token")}
+
+        # Token is expired, refresh it
+        log.info("!! Token expired, refreshing")
+        refresh_token = cached_token.get("refresh_token")
+
+        try:
+            response = requests.post(
+                FullscriptAPI.FULLSCRIPT_TOKEN_URL,
+                headers={"Content-Type": "application/json"},
+                json={
+                    "grant_type": "refresh_token",
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "refresh_token": refresh_token,
+                },
+                timeout=10,
+            )
+
+            if response.status_code != 200:
+                log.error(f"!! Token refresh failed: {response.status_code} - {response.text}")
+                return {"success": False, "error": "Token refresh failed", "details": response.text}
+
+            token_data = response.json()
+            oauth_data = token_data["oauth"]
+
+            # Update cache with new token
+            cache.set(user_id, oauth_data)
+            log.info("!! Token refreshed successfully")
+
+            return {"success": True, "access_token": oauth_data.get("access_token")}
+
+        except requests.RequestException as e:
+            log.error(f"!! Token refresh error: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     # Exchange OAuth code for access token
     @api.post("/exchange-token")
     def exchange_token(self) -> list[Response | Effect]:
         """Exchange OAuth authorization code for access token."""
-        user_id = Staff.objects.values_list("id").get(id=self.request.headers["canvas-logged-in-user-id"])
+        user_id = Staff.objects.values_list("id", flat=True).get(id=self.request.headers["canvas-logged-in-user-id"])
         cache = get_cache()
 
         try:
@@ -38,12 +102,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             log.info(f"!! Existing token: {existing_token}")
 
             if existing_token:
-                expires_in = existing_token["expires_in"]
-                created_at = existing_token["created_at"]
-
-                is_expired = datetime.now(timezone.utc) > (datetime.fromisoformat(created_at) + timedelta(seconds=expires_in))
-
-                if is_expired:
+                if is_expired(existing_token):
                     log.info("!! Expired token, refreshing access token")
                     # Refresh access token
                     response = requests.post(
@@ -409,3 +468,36 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     content_type="application/json",
                 )
             ]
+
+    @staticmethod
+    def fetch_products(access_token: str, query: str | None) -> dict:
+        """
+        Helper method to fetch products from Fullscript catalog API.
+        """
+        try:
+            log.info(f"!! Fetching Fullscript products:")
+
+            response = requests.get(
+                f"https://api-us-snd.fullscript.io/api/catalog/search/products",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                params={
+                    "query": query
+                },
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                products = data.get("products", [])
+                log.info(f"!! Found {len(products)} Fullscript products")
+                return {"success": True, "products": products}
+            else:
+                log.error(f"!! Fullscript search failed: {response.status_code} - {response.text}")
+                return {"success": False, "error": "Failed to get products", "details": response.text}
+
+        except requests.RequestException as e:
+            log.error(f"!! Error fetching products: {str(e)}")
+            return {"success": False, "error": str(e)}
