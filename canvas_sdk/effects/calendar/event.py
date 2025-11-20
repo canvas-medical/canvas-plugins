@@ -87,8 +87,6 @@ class Event(_BaseEffect):
                 )
             )
 
-            return errors
-
         # event_id is required for update
         if method == "update" and not self.event_id:
             errors.append(
@@ -98,7 +96,6 @@ class Event(_BaseEffect):
                     None,
                 )
             )
-            return errors
 
         # event_id is required for delete
         if method == "delete" and not self.event_id:
@@ -109,7 +106,6 @@ class Event(_BaseEffect):
                     None,
                 )
             )
-            return errors
 
         if method == "create" or method == "update":
             if not self.title:
@@ -138,8 +134,6 @@ class Event(_BaseEffect):
                         None,
                     )
                 )
-
-            return errors
 
         return errors
 
