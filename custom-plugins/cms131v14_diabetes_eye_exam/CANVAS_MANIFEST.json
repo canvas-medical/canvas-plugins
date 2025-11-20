@@ -42,11 +42,7 @@
     ]
   },
   "secrets": [],
-  "tags": {
-    "clinical_quality_measure": "CMS131v14",
-    "category": "diabetes",
-    "measure_type": "preventive_care"
-  },
+  "tags": {},
   "references": [
     "https://ecqi.healthit.gov/ecqm/ec/2026/cms0131v14",
     "American Diabetes Association. Microvascular complications and foot care. Sec. 10. In Standards of Medical Care in Diabetes 2017. Diabetes Care 2017;40(Suppl. 1):S88-S98"
