@@ -128,7 +128,7 @@ class ClaimCoverageQuerySet(models.QuerySet):
         return self.filter(active=True)
 
 
-class ClaimCoverage(TimestampedModel):
+class ClaimCoverage(TimestampedModel, IdentifiableModel):
     """A model that represents the link between a claim and a specific insurance coverage."""
 
     class Meta:
@@ -353,6 +353,18 @@ class Claim(TimestampedModel, IdentifiableModel):
         """Return the active claim line items."""
         return self.line_items.active().exclude_copay_and_unlinked()
 
+    def get_coverage_by_payer_id(
+        self, payer_id: str, subscriber_number: str | None = None
+    ) -> ClaimCoverage | None:
+        """Finds the active coverage associated with a payer_id. Optionally checks if the subscriber_number matches,
+        which will choose the correct coverage in the case where a patient has two coverages with the same payer_id.
+        """
+        if not (coverages := self.coverages.active().filter(payer_id=payer_id)):
+            return None
+        if coverages.count() == 1 and not subscriber_number:
+            return coverages.first()
+        return coverages.filter(subscriber_number=subscriber_number).first() or coverages.first()
+
 
 class ClaimLabel(IdentifiableModel):
     """ClaimLabel."""
@@ -362,6 +374,20 @@ class ClaimLabel(IdentifiableModel):
 
     claim = models.ForeignKey("v1.Claim", on_delete=models.PROTECT, related_name="claim_labels")
     label = models.ForeignKey("v1.TaskLabel", on_delete=models.PROTECT, related_name="claim_labels")
+
+
+class ClaimSubmission(IdentifiableModel):
+    """ClaimSubmission."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimsubmission_001"
+
+    claim = models.ForeignKey("v1.Claim", on_delete=models.PROTECT, related_name="submissions")
+    coverage = models.ForeignKey(
+        "v1.ClaimCoverage", on_delete=models.PROTECT, related_name="submissions", null=True
+    )
+    clearinghouse_claim_id = models.CharField(max_length=255, default="", blank=True, null=True)
+    claim_index = models.PositiveIntegerField(default=0)
 
 
 __exports__ = (
@@ -375,6 +401,7 @@ __exports__ = (
     "ClaimProvider",
     "ClaimQueues",
     "ClaimQueueColumns",
+    "ClaimSubmission",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus",
