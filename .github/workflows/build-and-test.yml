@@ -37,24 +37,11 @@ jobs:
               --cov-branch \
               --cov-report=xml
 
-      - name: Run Pytest unit tests for the example plugins
-        env:
-          CUSTOMER_IDENTIFIER: "ci-unit-tests"
-        run: |
-          cd example-plugins
-          uv run \
-            pytest \
-              --ff \
-              --verbosity 2 \
-              --cov=. \
-              --cov-branch \
-              --cov-report=xml:../coverage.xml \
-              --cov-append
-
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: sdk-core
 
       - name: Install pipx
         run: pip install pipx
@@ -69,6 +56,68 @@ jobs:
           canvas --version
           rm -rf dist/
         shell: bash
+
+  discover-plugins:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.get-plugins.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Discover plugins with pyproject.toml
+        id: get-plugins
+        run: |
+          cd example-plugins
+          plugins=$(find . -maxdepth 2 -name "pyproject.toml" -type f | \
+            xargs -I {} dirname {} | \
+            xargs -I {} basename {} | \
+            jq -R -s -c 'split("\n")[:-1]')
+          echo "plugins=$plugins" >> $GITHUB_OUTPUT
+          echo "Discovered plugins: $plugins"
+
+  test-example-plugins:
+    needs: discover-plugins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJson(needs.discover-plugins.outputs.plugins) }}
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install-python-and-uv
+        with:
+          PYTHON_VERSION: "3.12"
+      - uses: ./.github/actions/install-canvas
+
+      - name: Test plugin ${{ matrix.plugin }}
+        env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
+        run: |
+          # Skip if no tests
+          if [ ! -d "example-plugins/${{ matrix.plugin }}/tests" ]; then
+            echo "⏭️  Skipping ${{ matrix.plugin }} (no tests directory)"
+            exit 0
+          fi
+
+          # Install the plugin in editable mode into the main venv
+          uv pip install -e example-plugins/${{ matrix.plugin }}
+
+          # Run tests using the main venv from the root directory
+          uv run pytest example-plugins/${{ matrix.plugin }}/tests \
+            --ff \
+            --verbosity 2 \
+            --cov=example-plugins/${{ matrix.plugin }} \
+            --cov-branch \
+            --cov-report=xml:example-plugins/${{ matrix.plugin }}/coverage.xml
+
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./example-plugins/${{ matrix.plugin }}/coverage.xml
+          flags: plugin-${{ matrix.plugin }}
 
   integration-tests:
     runs-on: ubuntu-latest
