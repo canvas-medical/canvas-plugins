@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "example_commands",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "Automatically populates command values with defaults when a command originates in a note",
     "components": {
         "protocols": [
             {
