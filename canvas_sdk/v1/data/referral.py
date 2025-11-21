@@ -3,8 +3,8 @@ import json
 from django.db import models
 
 from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
-from canvas_sdk.v1.data.task import Task
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.task import Task
 
 
 class Referral(AuditedModel, IdentifiableModel):

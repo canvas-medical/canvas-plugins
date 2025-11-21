@@ -1,20 +1,14 @@
+import os
+import sys
+from datetime import date, datetime
+from unittest.mock import MagicMock, Mock, patch
+
 import arrow
 import pytest
-from datetime import datetime, date
-from unittest.mock import MagicMock, Mock, patch
-from collections.abc import Generator
-from typing import Any
 
-from canvas_sdk.effects.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
-from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
-from canvas_sdk.v1.data.medication import Medication
-from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
-
-import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from protocols.cms131v14_protocol import CMS131v14DiabetesEyeExam
