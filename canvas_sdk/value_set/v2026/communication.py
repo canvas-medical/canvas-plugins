@@ -51,6 +51,7 @@ class AutonomousEyeExamResultOrFinding(ValueSet):
         "LA34399-8",  # ETDRS Level 35 or higher, with or without macular edema
     }
 
+
 class LevelOfSeverityOfRetinopathyFindings(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of the level of severity of retinopathy.
@@ -142,6 +143,7 @@ class LevelOfSeverityOfRetinopathyFindings(ValueSet):
         "97341000119105",  # Proliferative retinopathy with retinal edema due to type 2 diabetes mellitus (disorder)
     }
 
+
 class MacularEdemaFindingsPresent(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses to identify the presence of macular edema.
@@ -202,6 +204,7 @@ class MacularEdemaFindingsPresent(ValueSet):
         "871781003",  # Non centrally involved macular edema due to diabetes mellitus (disorder)
         "97331000119101",  # Macular edema and retinopathy due to type 2 diabetes mellitus (disorder)
     }
+
 
 class ConsultantReport(ValueSet):
     """
@@ -486,6 +489,7 @@ class ConsultantReport(ValueSet):
         "721916007",  # Physician consulting initial evaluation note (record artifact)
         "721927009",  # Referral note (record artifact)
     }
+
 
 __exports__ = (
     "AutonomousEyeExamResultOrFinding",
