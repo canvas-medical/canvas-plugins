@@ -94,20 +94,22 @@ jobs:
         env:
           CUSTOMER_IDENTIFIER: "ci-unit-tests"
         run: |
-          cd example-plugins/${{ matrix.plugin }}
-
           # Skip if no tests
-          if [ ! -d "tests" ]; then
+          if [ ! -d "example-plugins/${{ matrix.plugin }}/tests" ]; then
             echo "⏭️  Skipping ${{ matrix.plugin }} (no tests directory)"
             exit 0
           fi
 
-          uv run pytest \
+          # Install the plugin in editable mode into the main venv
+          uv pip install -e example-plugins/${{ matrix.plugin }}
+
+          # Run tests using the main venv from the root directory
+          uv run pytest example-plugins/${{ matrix.plugin }}/tests \
             --ff \
             --verbosity 2 \
-            --cov=. \
+            --cov=example-plugins/${{ matrix.plugin }} \
             --cov-branch \
-            --cov-report=xml
+            --cov-report=xml:example-plugins/${{ matrix.plugin }}/coverage.xml
 
       - name: Upload coverage
         if: always()
