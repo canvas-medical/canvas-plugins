@@ -60,6 +60,15 @@
                     "read": [],
                     "write": []
                 }
+            },
+            {
+                "class": "fullscript.protocols.search_fullscript_supplements:SearchFullscriptSupplementsForPrescribe",
+                "description": "search fullscript supplements protocol for prescribe and return matching supplements",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
             }
         ],
         "commands": [],
@@ -67,7 +76,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["FULLSCRIPT_CLIENT_ID", "FULLSCRIPT_CLIENT_SECRET"],
+    "secrets": ["FULLSCRIPT_CLIENT_ID", "FULLSCRIPT_CLIENT_SECRET", "FULLSCRIPT_SEARCH_PAGE_SIZE"],
     "tags": {},
     "references": [],
     "license": "",

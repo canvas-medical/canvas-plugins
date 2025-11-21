@@ -470,7 +470,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             ]
 
     @staticmethod
-    def fetch_products(access_token: str, query: str | None) -> dict:
+    def fetch_products(access_token: str, query: str | None, page_size: str | None) -> dict:
         """
         Helper method to fetch products from Fullscript catalog API.
         """
@@ -484,7 +484,8 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     "Authorization": f"Bearer {access_token}",
                 },
                 params={
-                    "query": query
+                    "query": query,
+                    "page[size]": page_size or 20,
                 },
                 timeout=10,
             )
