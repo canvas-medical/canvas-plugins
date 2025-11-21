@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Automatically synchronizes a patient's 'Coverage status' metadata field based on appointment label changes. Updates the metadata to 'Missing' when the MISSING_COVERAGE label is added, and to 'Active' when the label is removed."
+license = "MIT"
+name = "coverage_metadata_sync"
+readme = "coverage_metadata_sync/README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
