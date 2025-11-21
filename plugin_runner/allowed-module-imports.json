@@ -651,6 +651,7 @@
     "NewLineItemPayment",
     "Note",
     "NoteStateChangeEvent",
+    "NoteTask",
     "NoteType",
     "Observation",
     "ObservationCoding",
@@ -988,6 +989,7 @@
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
+    "NoteTask",
     "Task",
     "TaskComment",
     "TaskLabel",
