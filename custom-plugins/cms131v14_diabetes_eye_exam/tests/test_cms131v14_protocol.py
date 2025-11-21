@@ -108,9 +108,7 @@ def test_get_patient_when_condition_not_found(
     mock_condition_objects: MagicMock, protocol_instance: CMS131v14DiabetesEyeExam
 ) -> None:
     """Test _get_patient returns None when condition not found."""
-    mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
-        None
-    )
+    mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = None
 
     patient, condition = protocol_instance._get_patient()
 
@@ -125,9 +123,7 @@ def test_is_condition_diabetes_returns_true(
     mock_condition: Mock,
 ) -> None:
     """Test _is_condition_diabetes returns True for diabetes condition."""
-    mock_condition_objects.filter.return_value.find.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.filter.return_value.find.return_value.exists.return_value = True
     result = protocol_instance._is_condition_diabetes(mock_condition)
     assert result is True
     mock_condition_objects.filter.assert_called_once_with(id=mock_condition.id)
@@ -140,9 +136,7 @@ def test_is_condition_diabetes_returns_false(
     mock_condition: Mock,
 ) -> None:
     """Test _is_condition_diabetes returns False for non-diabetes condition."""
-    mock_condition_objects.filter.return_value.find.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.filter.return_value.find.return_value.exists.return_value = False
     result = protocol_instance._is_condition_diabetes(mock_condition)
     assert result is False
 
@@ -245,9 +239,7 @@ def test_has_diabetes_diagnosis_true(
     mock_patient: Mock,
 ) -> None:
     """Test _has_diabetes_diagnosis returns True when diabetes exists."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_diabetes_diagnosis(mock_patient)
     assert result is True
@@ -261,9 +253,7 @@ def test_has_diabetes_diagnosis_false(
     mock_patient: Mock,
 ) -> None:
     """Test _has_diabetes_diagnosis returns False when no diabetes."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_diabetes_diagnosis(mock_patient)
     assert result is False
@@ -276,9 +266,7 @@ def test_has_diabetes_diagnosis_overlapping_period_true(
     mock_patient: Mock,
 ) -> None:
     """Test _has_diabetes_diagnosis_overlapping_period returns True."""
-    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_diabetes_diagnosis_overlapping_period(mock_patient)
     assert result is True
@@ -291,9 +279,7 @@ def test_has_diabetes_diagnosis_overlapping_period_false(
     mock_patient: Mock,
 ) -> None:
     """Test _has_diabetes_diagnosis_overlapping_period returns False."""
-    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_diabetes_diagnosis_overlapping_period(mock_patient)
     assert result is False
@@ -307,7 +293,7 @@ def test_has_eligible_encounter_in_period_has_office_visit(
 ) -> None:
     """Test _has_eligible_encounter_in_period returns True when office visit encounter exists."""
     mock_encounter_objects.filter.return_value.exists.return_value = True
-    
+
     result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
     assert result is True
 
@@ -323,13 +309,13 @@ def test_has_eligible_encounter_in_period_has_preventive_care_claim(
     """Test _has_eligible_encounter_in_period returns True when preventive care claim exists."""
     # No office visit encounters
     mock_encounter_objects.filter.return_value.exists.return_value = True
-    
+
     # Has preventive care claim
     mock_claim = Mock()
     mock_claim.proc_code = "99385"  # Preventive care established patient
     mock_claim_objects.filter.return_value.exists.return_value = True
     mock_claim_objects.filter.return_value.first.return_value = mock_claim
-    
+
     result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
     assert result is True
 
@@ -345,7 +331,7 @@ def test_has_eligible_encounter_in_period_false(
     """Test _has_eligible_encounter_in_period returns False when no eligible encounters."""
     mock_encounter_objects.filter.return_value.exists.return_value = False
     mock_claim_objects.filter.return_value.exists.return_value = False
-    
+
     result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
     assert result is False
 
@@ -357,9 +343,7 @@ def test_has_hospice_care_in_period_has_condition(
     mock_patient: Mock,
 ) -> None:
     """Test _has_hospice_care_in_period returns True for hospice diagnosis."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
     assert result is True
@@ -377,9 +361,7 @@ def test_has_hospice_care_in_period_has_discharge_observation(
 ) -> None:
     """Test _has_hospice_care_in_period returns True for discharge to hospice observation."""
     # No hospice diagnosis
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
 
     # No hospice encounter
     mock_encounter_objects.filter.return_value.exists.return_value = False
@@ -405,16 +387,17 @@ def test_has_hospice_care_in_period_has_claim(
 ) -> None:
     """Test _has_hospice_care_in_period returns True for hospice claim."""
     # No hospice diagnosis
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
 
     # No hospice encounter
     mock_encounter_objects.filter.return_value.exists.return_value = False
 
     # No discharge to hospice observation (first call for discharge)
     # Has hospice assessment (second call for assessment)
-    mock_observation_objects.for_patient.return_value.filter.return_value.exists.side_effect = [False, False]
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.side_effect = [
+        False,
+        False,
+    ]
 
     # Has hospice claim
     mock_claim = Mock()
@@ -440,15 +423,15 @@ def test_has_hospice_care_in_period_false(
 ) -> None:
     """Test _has_hospice_care_in_period returns False when no hospice indicators exist."""
     # No hospice diagnosis
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
 
     # No hospice encounter
     mock_encounter_objects.filter.return_value.exists.return_value = False
 
     # No observations (discharge or assessment)
-    mock_observation_objects.for_patient.return_value.filter.return_value.exists.return_value = False
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.return_value = (
+        False
+    )
 
     # No hospice claim
     mock_claim_objects.filter.return_value.exists.return_value = False
@@ -471,7 +454,7 @@ def test_is_age_66_plus_with_frailty_true(
 ) -> None:
     """Test _is_age_66_plus_with_frailty returns True when age 66+ with frailty."""
     # Mock one of the frailty check methods to return True
-    with patch.object(protocol_instance, '_has_frailty_device_orders', return_value=True):
+    with patch.object(protocol_instance, "_has_frailty_device_orders", return_value=True):
         result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
         assert result is True
 
@@ -483,9 +466,7 @@ def test_has_advanced_illness_or_dementia_meds_has_advanced_illness(
     mock_patient: Mock,
 ) -> None:
     """Test _has_advanced_illness_or_dementia_meds returns True for advanced illness."""
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = True
 
     result = protocol_instance._has_advanced_illness_or_dementia_meds(mock_patient)
     assert result is True
@@ -501,14 +482,10 @@ def test_has_advanced_illness_or_dementia_meds_has_dementia_meds(
 ) -> None:
     """Test _has_advanced_illness_or_dementia_meds returns True for dementia meds."""
     # No advanced illness
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = False
 
     # Has dementia meds
-    mock_medication_objects.for_patient.return_value.active.return_value.find.return_value.filter.return_value.exists.return_value = (
-        True
-    )
+    mock_medication_objects.for_patient.return_value.active.return_value.find.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_advanced_illness_or_dementia_meds(mock_patient)
     assert result is True
@@ -527,14 +504,10 @@ def test_has_advanced_illness_or_dementia_meds_false(
     mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.committed.return_value.exists.return_value = False
 
     # Mock the actual advanced illness check
-    mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.filter.return_value.exists.return_value = False
 
     # Mock the dementia meds check
-    mock_medication_objects.for_patient.return_value.committed.return_value.find.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_medication_objects.for_patient.return_value.committed.return_value.find.return_value.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_advanced_illness_or_dementia_meds(mock_patient)
     assert result is False
@@ -584,9 +557,7 @@ def test_has_palliative_care_in_period_has_condition(
     mock_patient: Mock,
 ) -> None:
     """Test _has_palliative_care_in_period returns True for palliative condition."""
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = True
 
     result = protocol_instance._has_palliative_care_in_period(mock_patient)
     assert result is True
@@ -602,9 +573,7 @@ def test_has_palliative_care_in_period_has_claim(
 ) -> None:
     """Test _has_palliative_care_in_period returns True for palliative claim."""
     # No palliative condition
-    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = False
 
     # Has palliative claim
     mock_claim = Mock()
@@ -627,9 +596,7 @@ def test_has_palliative_care_in_period_false(
     mock_patient: Mock,
 ) -> None:
     """Test _has_palliative_care_in_period returns False when neither exists."""
-    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
     mock_encounter_objects.filter.return_value.exists.return_value = False
     mock_claim_objects.filter.return_value.exists.return_value = False
 
@@ -644,9 +611,7 @@ def test_has_bilateral_absence_of_eyes_true(
     mock_patient: Mock,
 ) -> None:
     """Test _has_bilateral_absence_of_eyes returns True when condition exists."""
-    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
-        True
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_bilateral_absence_of_eyes(mock_patient)
     assert result is True
@@ -659,9 +624,7 @@ def test_has_bilateral_absence_of_eyes_false(
     mock_patient: Mock,
 ) -> None:
     """Test _has_bilateral_absence_of_eyes returns False when condition doesn't exist."""
-    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
-        False
-    )
+    mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_bilateral_absence_of_eyes(mock_patient)
     assert result is False
