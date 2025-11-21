@@ -1488,6 +1488,7 @@
     "ChemotherapyAdministration",
     "Colonoscopy",
     "CystectomyForUrologyCare",
+    "CMS130v6CtColonography",
     "DialysisServices",
     "DtapVaccineAdministered",
     "FlexibleSigmoidoscopy",
@@ -1523,6 +1524,16 @@
   ],
   "canvas_sdk.value_set.v2022.symptom": [
     "FrailtySymptom"
+  ],
+  "canvas_sdk.value_set.v2026.condition": [
+    "AdvancedIllness",
+    "Diabetes"
+  ],
+  "canvas_sdk.value_set.v2026.medication": [
+    "DementiaMedications"
+  ],    
+  "canvas_sdk.value_set.v2026.encounter": [
+    "AnnualWellnessVisit"
   ],
   "canvas_sdk.value_set.value_set": [
     "CodeConstants",

@@ -33,7 +33,12 @@ from .discount import Discount
 from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
-from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .imaging import (
+    ImagingOrder,
+    ImagingReport,
+    ImagingReportCoding,
+    ImagingReview,
+)
 from .immunization import (
     Immunization,
     ImmunizationCoding,
@@ -113,7 +118,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .referral import Referral, ReferralReport
+from .referral import Referral, ReferralReport, ReferralReportCoding
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
@@ -166,6 +171,7 @@ __all__ = __exports__ = (
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
@@ -231,6 +237,7 @@ __all__ = __exports__ = (
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
