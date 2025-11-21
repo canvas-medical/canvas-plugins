@@ -1,6 +1,6 @@
 import arrow
 import pytest
-from datetime import datetime
+from datetime import datetime, date
 from unittest.mock import MagicMock, Mock, patch
 from collections.abc import Generator
 from typing import Any
@@ -29,7 +29,7 @@ def mock_patient() -> Mock:
     patient.last_name = "Doe"
     patient.birth_date = "1970-01-01"
 
-    def age_at(date):
+    def age_at(date: datetime | date | arrow.Arrow | str) -> int:
         birth = arrow.get("1970-01-01")
         target = date if isinstance(date, arrow.Arrow) else arrow.get(date)
         age = target.year - birth.year
@@ -78,7 +78,7 @@ def mock_timeframe() -> Mock:
 
 
 @pytest.fixture
-def protocol_instance(mock_event, mock_timeframe) -> CMS131v14DiabetesEyeExam:
+def protocol_instance(mock_event: Mock, mock_timeframe: Mock) -> CMS131v14DiabetesEyeExam:
     """Create a protocol instance with mocked dependencies."""
     protocol = CMS131v14DiabetesEyeExam(mock_event)
     return protocol
@@ -90,7 +90,7 @@ def test_get_patient_with_condition_created_event(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test _get_patient returns patient and condition for CONDITION_CREATED event."""
     mock_condition.patient = mock_patient
     mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
@@ -106,7 +106,7 @@ def test_get_patient_with_condition_created_event(
 @patch("canvas_sdk.v1.data.condition.Condition.objects")
 def test_get_patient_when_condition_not_found(
     mock_condition_objects: MagicMock, protocol_instance: CMS131v14DiabetesEyeExam
-):
+) -> None:
     """Test _get_patient returns None when condition not found."""
     mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
         None
@@ -123,7 +123,7 @@ def test_is_condition_diabetes_returns_true(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_condition: Mock,
-):
+) -> None:
     """Test _is_condition_diabetes returns True for diabetes condition."""
     mock_condition_objects.filter.return_value.find.return_value.exists.return_value = (
         True
@@ -138,7 +138,7 @@ def test_is_condition_diabetes_returns_false(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_condition: Mock,
-):
+) -> None:
     """Test _is_condition_diabetes returns False for non-diabetes condition."""
     mock_condition_objects.filter.return_value.find.return_value.exists.return_value = (
         False
@@ -149,7 +149,7 @@ def test_is_condition_diabetes_returns_false(
 
 def test_should_remove_card_with_no_condition(
     protocol_instance: CMS131v14DiabetesEyeExam, mock_patient: Mock
-):
+) -> None:
     """Test _should_remove_card returns False when condition is None."""
     result = protocol_instance._should_remove_card(mock_patient, None)
     assert result is False
@@ -161,7 +161,7 @@ def test_should_remove_card_with_non_diabetes_condition(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test _should_remove_card returns False for non-diabetes condition."""
     mock_is_diabetes.return_value = False
 
@@ -178,7 +178,7 @@ def test_should_remove_card_diabetes_entered_in_error_no_other_diabetes(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test _should_remove_card returns True when diabetes entered in error and no other diabetes."""
     mock_condition.entered_in_error = True
     mock_is_diabetes.return_value = True
@@ -191,7 +191,7 @@ def test_should_remove_card_diabetes_entered_in_error_no_other_diabetes(
 
 def test_in_initial_population_age_too_young(
     protocol_instance: CMS131v14DiabetesEyeExam, mock_patient: Mock
-):
+) -> None:
     """Test _in_initial_population returns False for age < 18."""
     result = protocol_instance._in_initial_population(mock_patient, age=17)
     assert result is False
@@ -199,7 +199,7 @@ def test_in_initial_population_age_too_young(
 
 def test_in_initial_population_age_too_old(
     protocol_instance: CMS131v14DiabetesEyeExam, mock_patient: Mock
-):
+) -> None:
     """Test _in_initial_population returns False for age > 75."""
     result = protocol_instance._in_initial_population(mock_patient, age=76)
     assert result is False
@@ -212,7 +212,7 @@ def test_in_initial_population_no_diabetes(
     mock_has_encounter: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _in_initial_population returns False when no diabetes."""
     mock_has_diabetes.return_value = False
 
@@ -229,7 +229,7 @@ def test_in_initial_population_all_criteria_met(
     mock_has_encounter: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _in_initial_population returns True when all criteria met."""
     mock_has_diabetes.return_value = True
     mock_has_encounter.return_value = True
@@ -243,7 +243,7 @@ def test_has_diabetes_diagnosis_true(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_diabetes_diagnosis returns True when diabetes exists."""
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         True
@@ -259,7 +259,7 @@ def test_has_diabetes_diagnosis_false(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_diabetes_diagnosis returns False when no diabetes."""
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         False
@@ -274,7 +274,7 @@ def test_has_diabetes_diagnosis_overlapping_period_true(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_diabetes_diagnosis_overlapping_period returns True."""
     mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
         True
@@ -289,7 +289,7 @@ def test_has_diabetes_diagnosis_overlapping_period_false(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_diabetes_diagnosis_overlapping_period returns False."""
     mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = (
         False
@@ -304,7 +304,7 @@ def test_has_eligible_encounter_in_period_has_office_visit(
     mock_encounter_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_eligible_encounter_in_period returns True when office visit encounter exists."""
     mock_encounter_objects.filter.return_value.exists.return_value = True
     
@@ -319,7 +319,7 @@ def test_has_eligible_encounter_in_period_has_preventive_care_claim(
     mock_encounter_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_eligible_encounter_in_period returns True when preventive care claim exists."""
     # No office visit encounters
     mock_encounter_objects.filter.return_value.exists.return_value = True
@@ -341,7 +341,7 @@ def test_has_eligible_encounter_in_period_false(
     mock_encounter_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_eligible_encounter_in_period returns False when no eligible encounters."""
     mock_encounter_objects.filter.return_value.exists.return_value = False
     mock_claim_objects.filter.return_value.exists.return_value = False
@@ -355,7 +355,7 @@ def test_has_hospice_care_in_period_has_condition(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_hospice_care_in_period returns True for hospice diagnosis."""
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         True
@@ -374,7 +374,7 @@ def test_has_hospice_care_in_period_has_discharge_observation(
     mock_observation_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_hospice_care_in_period returns True for discharge to hospice observation."""
     # No hospice diagnosis
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
@@ -402,7 +402,7 @@ def test_has_hospice_care_in_period_has_claim(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_hospice_care_in_period returns True for hospice claim."""
     # No hospice diagnosis
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
@@ -437,7 +437,7 @@ def test_has_hospice_care_in_period_false(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_hospice_care_in_period returns False when no hospice indicators exist."""
     # No hospice diagnosis
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
@@ -459,7 +459,7 @@ def test_has_hospice_care_in_period_false(
 
 def test_is_age_66_plus_with_frailty_age_less_than_66(
     protocol_instance: CMS131v14DiabetesEyeExam, mock_patient: Mock
-):
+) -> None:
     """Test _is_age_66_plus_with_frailty returns False for age < 66."""
     result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=65)
     assert result is False
@@ -468,7 +468,7 @@ def test_is_age_66_plus_with_frailty_age_less_than_66(
 def test_is_age_66_plus_with_frailty_true(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _is_age_66_plus_with_frailty returns True when age 66+ with frailty."""
     # Mock one of the frailty check methods to return True
     with patch.object(protocol_instance, '_has_frailty_device_orders', return_value=True):
@@ -481,7 +481,7 @@ def test_has_advanced_illness_or_dementia_meds_has_advanced_illness(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_advanced_illness_or_dementia_meds returns True for advanced illness."""
     mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
         True
@@ -498,7 +498,7 @@ def test_has_advanced_illness_or_dementia_meds_has_dementia_meds(
     mock_medication_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_advanced_illness_or_dementia_meds returns True for dementia meds."""
     # No advanced illness
     mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
@@ -521,7 +521,7 @@ def test_has_advanced_illness_or_dementia_meds_false(
     mock_medication_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_advanced_illness_or_dementia_meds returns False when neither exists."""
     # Mock the debug query
     mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.committed.return_value.exists.return_value = False
@@ -542,7 +542,7 @@ def test_has_advanced_illness_or_dementia_meds_false(
 
 def test_is_age_66_plus_in_nursing_home_age_less_than_66(
     protocol_instance: CMS131v14DiabetesEyeExam, mock_patient: Mock
-):
+) -> None:
     """Test _is_age_66_plus_in_nursing_home returns False for age < 66."""
     result = protocol_instance._is_age_66_plus_in_nursing_home(mock_patient, age=65)
     assert result is False
@@ -553,7 +553,7 @@ def test_is_age_66_plus_in_nursing_home_true(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _is_age_66_plus_in_nursing_home returns True when nursing home claim found."""
     mock_claim = Mock()
     mock_claim.proc_code = "99304"
@@ -569,7 +569,7 @@ def test_is_age_66_plus_in_nursing_home_false(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _is_age_66_plus_in_nursing_home returns False when no nursing home claim."""
     mock_claim_objects.filter.return_value.exists.return_value = False
 
@@ -582,7 +582,7 @@ def test_has_palliative_care_in_period_has_condition(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_palliative_care_in_period returns True for palliative condition."""
     mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
         True
@@ -599,7 +599,7 @@ def test_has_palliative_care_in_period_has_claim(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_palliative_care_in_period returns True for palliative claim."""
     # No palliative condition
     mock_condition_objects.for_patient.return_value.active.return_value.find.return_value.exists.return_value = (
@@ -625,7 +625,7 @@ def test_has_palliative_care_in_period_false(
     mock_claim_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_palliative_care_in_period returns False when neither exists."""
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = (
         False
@@ -642,7 +642,7 @@ def test_has_bilateral_absence_of_eyes_true(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_bilateral_absence_of_eyes returns True when condition exists."""
     mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
         True
@@ -657,7 +657,7 @@ def test_has_bilateral_absence_of_eyes_false(
     mock_condition_objects: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _has_bilateral_absence_of_eyes returns False when condition doesn't exist."""
     mock_condition_objects.for_patient.return_value.active.return_value.filter.return_value.filter.return_value.exists.return_value = (
         False
@@ -672,7 +672,7 @@ def test_in_denominator_excluded_by_hospice(
     mock_has_hospice: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _in_denominator returns False when patient in hospice."""
     mock_has_hospice.return_value = True
 
@@ -689,7 +689,7 @@ def test_in_denominator_excluded_by_frailty_and_advanced_illness(
     mock_has_advanced_illness: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _in_denominator returns False when age 66+ with frailty and advanced illness."""
     mock_has_hospice.return_value = False
     mock_is_frailty.return_value = True
@@ -714,7 +714,7 @@ def test_in_denominator_no_exclusions(
     mock_has_bilateral: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _in_denominator returns True when no exclusions apply."""
     mock_has_hospice.return_value = False
     mock_is_frailty.return_value = False
@@ -742,7 +742,7 @@ def test_in_numerator_true_with_retinopathy_exam(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Retinopathy diagnosis plus eye-care exam during measurement period qualifies numerator."""
     mock_has_retinopathy.return_value = True
     mock_exam_in_period_or_year_prior.return_value = True
@@ -770,7 +770,7 @@ def test_in_numerator_false_with_retinopathy_without_exam(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """If retinopathy lacks a supporting exam, numerator should not pass."""
     mock_has_retinopathy.return_value = True
     mock_exam_in_period_or_year_prior.return_value = False
@@ -797,7 +797,7 @@ def test_in_numerator_true_with_exam_in_measurement_or_prior_year(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Exam in measurement period or lookback year covers patients without retinopathy."""
     mock_has_retinopathy.return_value = False
     mock_exam_in_period_or_year_prior.return_value = False
@@ -825,7 +825,7 @@ def test_in_numerator_true_with_autonomous_eye_exam(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Autonomous AI exam path should independently satisfy numerator."""
     mock_has_retinopathy.return_value = False
     mock_exam_in_period_or_year_prior.return_value = False
@@ -853,7 +853,7 @@ def test_in_numerator_true_with_retinopathy_severity_findings(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Retinal findings documenting severity in the period qualifies the patient."""
     mock_has_retinopathy.return_value = False
     mock_exam_in_period_or_year_prior.return_value = False
@@ -881,7 +881,7 @@ def test_in_numerator_true_with_prior_year_no_retinopathy_documented(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Prior-year documentation of no retinopathy (both eyes) should satisfy numerator."""
     mock_has_retinopathy.return_value = False
     mock_exam_in_period_or_year_prior.return_value = False
@@ -909,7 +909,7 @@ def test_in_numerator_false_when_no_criteria_met(
     mock_no_severity_prior: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """If every helper check fails, the numerator result should be False."""
     mock_has_retinopathy.return_value = False
     mock_exam_in_period_or_year_prior.return_value = False
@@ -926,7 +926,7 @@ def test_create_satisfied_card(
     mock_apply: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _create_satisfied_card creates card with SATISFIED status."""
     mock_apply.return_value = "SATISFIED_EFFECT"
 
@@ -942,7 +942,7 @@ def test_create_due_card(
     mock_get_codes: MagicMock,
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
-):
+) -> None:
     """Test _create_due_card creates card with DUE status and recommendations."""
     mock_apply.return_value = "DUE_EFFECT"
     mock_get_codes.return_value = ["E11.9", "E11.21"]
@@ -956,7 +956,7 @@ def test_create_due_card(
 @patch.object(CMS131v14DiabetesEyeExam, "_get_patient")
 def test_compute_patient_not_found(
     mock_get_patient: MagicMock, protocol_instance: CMS131v14DiabetesEyeExam
-):
+) -> None:
     """Test compute returns empty list when patient not found."""
     mock_get_patient.return_value = (None, None)
 
@@ -974,7 +974,7 @@ def test_compute_should_remove_card(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test compute returns NOT_APPLICABLE card when should remove card."""
     mock_get_patient.return_value = (mock_patient, mock_condition)
     mock_should_remove.return_value = True
@@ -997,7 +997,7 @@ def test_compute_not_in_initial_population(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test compute returns NOT_APPLICABLE card when not in initial population."""
     mock_get_patient.return_value = (mock_patient, mock_condition)
     mock_should_remove.return_value = False
@@ -1022,7 +1022,7 @@ def test_compute_excluded_from_denominator(
     protocol_instance: CMS131v14DiabetesEyeExam,
     mock_patient: Mock,
     mock_condition: Mock,
-):
+) -> None:
     """Test compute returns NOT_APPLICABLE card when excluded from denominator."""
     mock_get_patient.return_value = (mock_patient, mock_condition)
     mock_should_remove.return_value = False
