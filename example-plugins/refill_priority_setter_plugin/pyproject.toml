@@ -1,0 +1,20 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Sets task priority to URGENT for teams with refill processing responsibilities."
+license = "MIT"
+name = "refill_priority_setter_plugin"
+readme = "refill_priority_setter_plugin/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
+pythonpath = ["."]
+
+[tool.uv.sources]
+canvas = { path = "../../", editable = true }
