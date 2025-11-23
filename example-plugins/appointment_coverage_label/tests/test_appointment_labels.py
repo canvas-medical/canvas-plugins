@@ -2,13 +2,15 @@
 
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
+
 from canvas_sdk.events import EventType
 
 
 class TestAppointmentLabelsProtocol:
     """Test suite for AppointmentLabelsProtocol."""
 
-    def test_responds_to_correct_events(self):
+    def test_responds_to_correct_events(self) -> None:
         """Test that protocol responds to both COVERAGE_CREATED and APPOINTMENT_CREATED events."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -20,7 +22,7 @@ class TestAppointmentLabelsProtocol:
         ]
         assert expected_events == AppointmentLabelsProtocol.RESPONDS_TO
 
-    def test_compute_routes_to_coverage_created_handler(self, monkeypatch):
+    def test_compute_routes_to_coverage_created_handler(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() routes COVERAGE_CREATED events to correct handler."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -42,7 +44,7 @@ class TestAppointmentLabelsProtocol:
             protocol.compute()
             mock_handler.assert_called_once()
 
-    def test_compute_routes_to_appointment_created_handler(self, monkeypatch):
+    def test_compute_routes_to_appointment_created_handler(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() routes APPOINTMENT_CREATED events to correct handler."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -64,7 +66,7 @@ class TestAppointmentLabelsProtocol:
             protocol.compute()
             mock_handler.assert_called_once()
 
-    def test_compute_with_unexpected_event_type(self, monkeypatch):
+    def test_compute_with_unexpected_event_type(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() handles unexpected event types gracefully."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -84,7 +86,7 @@ class TestAppointmentLabelsProtocol:
         result = protocol.compute()
         assert result == []
 
-    def test_handle_coverage_created_removes_labels(self, monkeypatch):
+    def test_handle_coverage_created_removes_labels(self, monkeypatch: MonkeyPatch) -> None:
         """Test that handle_coverage_created removes MISSING_COVERAGE labels."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -137,7 +139,9 @@ class TestAppointmentLabelsProtocol:
                     assert mock_effect_class.call_count == 2
                     assert len(result) == 2
 
-    def test_handle_coverage_created_no_appointments_to_update(self, monkeypatch):
+    def test_handle_coverage_created_no_appointments_to_update(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test handle_coverage_created when no appointments need labels removed."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -170,7 +174,7 @@ class TestAppointmentLabelsProtocol:
                 result = protocol.handle_coverage_created()
                 assert result == []
 
-    def test_handle_coverage_created_patient_not_found(self, monkeypatch):
+    def test_handle_coverage_created_patient_not_found(self, monkeypatch: MonkeyPatch) -> None:
         """Test handle_coverage_created when patient doesn't exist."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -193,7 +197,9 @@ class TestAppointmentLabelsProtocol:
             result = protocol.handle_coverage_created()
             assert result == []
 
-    def test_handle_appointment_created_adds_labels_when_no_coverage(self, monkeypatch):
+    def test_handle_appointment_created_adds_labels_when_no_coverage(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test that handle_appointment_created adds labels when patient has no coverage."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -255,7 +261,9 @@ class TestAppointmentLabelsProtocol:
                         assert mock_effect_class.call_count == 2
                         assert len(result) == 2
 
-    def test_handle_appointment_created_no_labels_when_has_coverage(self, monkeypatch):
+    def test_handle_appointment_created_no_labels_when_has_coverage(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test that handle_appointment_created doesn't add labels when patient has coverage."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -288,7 +296,9 @@ class TestAppointmentLabelsProtocol:
                 result = protocol.handle_appointment_created()
                 assert result == []
 
-    def test_handle_appointment_created_all_appointments_already_labeled(self, monkeypatch):
+    def test_handle_appointment_created_all_appointments_already_labeled(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test handle_appointment_created when all appointments already have labels."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -330,7 +340,7 @@ class TestAppointmentLabelsProtocol:
                     result = protocol.handle_appointment_created()
                     assert result == []
 
-    def test_handle_appointment_created_patient_not_found(self, monkeypatch):
+    def test_handle_appointment_created_patient_not_found(self, monkeypatch: MonkeyPatch) -> None:
         """Test handle_appointment_created when patient doesn't exist."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -353,7 +363,9 @@ class TestAppointmentLabelsProtocol:
             result = protocol.handle_appointment_created()
             assert result == []
 
-    def test_handle_coverage_created_handles_effect_exception(self, monkeypatch):
+    def test_handle_coverage_created_handles_effect_exception(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test that handle_coverage_created handles exceptions when creating effects."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -390,19 +402,23 @@ class TestAppointmentLabelsProtocol:
                 mock_filter.return_value.prefetch_related.return_value = mock_queryset
 
                 # Mock log.error to prevent exc_info TypeError
-                with patch("appointment_coverage_label.protocols.appointment_labels.log"):
-                    with patch(
+                with (
+                    patch("appointment_coverage_label.protocols.appointment_labels.log"),
+                    patch(
                         "appointment_coverage_label.protocols.appointment_labels.RemoveAppointmentLabel"
-                    ) as mock_effect_class:
-                        # Make the effect creation raise an exception
-                        mock_effect_class.side_effect = Exception("Effect creation failed")
+                    ) as mock_effect_class,
+                ):
+                    # Make the effect creation raise an exception
+                    mock_effect_class.side_effect = Exception("Effect creation failed")
 
-                        result = protocol.handle_coverage_created()
+                    result = protocol.handle_coverage_created()
 
-                        # Should handle exception gracefully and return empty list
-                        assert result == []
+                    # Should handle exception gracefully and return empty list
+                    assert result == []
 
-    def test_handle_appointment_created_handles_effect_exception(self, monkeypatch):
+    def test_handle_appointment_created_handles_effect_exception(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test that handle_appointment_created handles exceptions when creating effects."""
         from appointment_coverage_label.protocols.appointment_labels import (
             AppointmentLabelsProtocol,
@@ -447,14 +463,16 @@ class TestAppointmentLabelsProtocol:
                     mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     # Mock log.error to prevent exc_info TypeError
-                    with patch("appointment_coverage_label.protocols.appointment_labels.log"):
-                        with patch(
+                    with (
+                        patch("appointment_coverage_label.protocols.appointment_labels.log"),
+                        patch(
                             "appointment_coverage_label.protocols.appointment_labels.AddAppointmentLabel"
-                        ) as mock_effect_class:
-                            # Make the effect creation raise an exception
-                            mock_effect_class.side_effect = Exception("Effect creation failed")
+                        ) as mock_effect_class,
+                    ):
+                        # Make the effect creation raise an exception
+                        mock_effect_class.side_effect = Exception("Effect creation failed")
 
-                            result = protocol.handle_appointment_created()
+                        result = protocol.handle_appointment_created()
 
-                            # Should handle exception gracefully and return empty list
-                            assert result == []
+                        # Should handle exception gracefully and return empty list
+                        assert result == []

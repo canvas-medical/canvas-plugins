@@ -52,4 +52,3 @@ If accessing a partner API requires authorization, this can define the auth secr
 
 ### simpleapi-api-key
 This is the authorization needed for Canvas when using APIKeyAuthMixin. [Read more](https://docs.canvasmedical.com/sdk/handlers-simple-api-http/#session)
-

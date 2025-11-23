@@ -2,13 +2,15 @@
 
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
+
 from canvas_sdk.events import EventType
 
 
 class TestAbnormalLabProtocol:
     """Test suite for AbnormalLabProtocol."""
 
-    def test_responds_to_correct_event(self):
+    def test_responds_to_correct_event(self) -> None:
         """Test that AbnormalLabProtocol responds to LAB_REPORT_CREATED event."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -16,7 +18,7 @@ class TestAbnormalLabProtocol:
 
         assert EventType.Name(EventType.LAB_REPORT_CREATED) == AbnormalLabProtocol.RESPONDS_TO
 
-    def test_compute_with_abnormal_lab_values(self, monkeypatch):
+    def test_compute_with_abnormal_lab_values(self, monkeypatch: MonkeyPatch) -> None:
         """Test that protocol creates task when lab report has abnormal values."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -81,7 +83,7 @@ class TestAbnormalLabProtocol:
                 # Verify result
                 assert result == [mock_applied_effect]
 
-    def test_compute_with_no_abnormal_values(self):
+    def test_compute_with_no_abnormal_values(self) -> None:
         """Test that protocol returns empty list when no abnormal values."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -121,7 +123,7 @@ class TestAbnormalLabProtocol:
 
             assert result == []
 
-    def test_compute_with_lab_report_not_found(self):
+    def test_compute_with_lab_report_not_found(self) -> None:
         """Test that protocol returns empty list when lab report not found."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -145,7 +147,7 @@ class TestAbnormalLabProtocol:
 
             assert result == []
 
-    def test_compute_filters_test_and_junked_reports(self):
+    def test_compute_filters_test_and_junked_reports(self) -> None:
         """Test that protocol properly filters out test and junked reports."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -172,7 +174,7 @@ class TestAbnormalLabProtocol:
                 id="test-lab-report-id", for_test_only=False, junked=False, patient__isnull=False
             )
 
-    def test_compute_handles_exception(self):
+    def test_compute_handles_exception(self) -> None:
         """Test that protocol handles exceptions gracefully."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -194,7 +196,7 @@ class TestAbnormalLabProtocol:
             # Should return empty list on exception
             assert result == []
 
-    def test_compute_with_whitespace_abnormal_flag(self):
+    def test_compute_with_whitespace_abnormal_flag(self) -> None:
         """Test that protocol ignores abnormal flags that are only whitespace."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,
@@ -232,7 +234,7 @@ class TestAbnormalLabProtocol:
             # Should return empty list since whitespace is stripped
             assert result == []
 
-    def test_compute_single_abnormal_value(self):
+    def test_compute_single_abnormal_value(self) -> None:
         """Test task title with single abnormal value."""
         from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
             AbnormalLabProtocol,

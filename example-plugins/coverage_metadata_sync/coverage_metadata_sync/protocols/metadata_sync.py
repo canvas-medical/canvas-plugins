@@ -104,10 +104,7 @@ class CoverageStatusSyncProtocol(BaseProtocol):
         # Create and return the metadata update effect
         try:
             # Create an instance of the PatientMetadata effect
-            metadata_effect_instance = PatientMetadata(
-                patient_id=patient_id,
-                key=METADATA_KEY
-            )
+            metadata_effect_instance = PatientMetadata(patient_id=patient_id, key=METADATA_KEY)
 
             # Call .upsert() to generate the final Effect object with the new value
             # This will create the metadata field if it doesn't exist, or update it if it does
@@ -125,7 +122,6 @@ class CoverageStatusSyncProtocol(BaseProtocol):
                 f"Failed to create PatientMetadata effect for patient {patient_id}. "
                 f"Metadata key: '{METADATA_KEY}', intended value: '{new_status}'. "
                 f"Error: {e}",
-                exc_info=True
+                exc_info=True,
             )
             return []
-

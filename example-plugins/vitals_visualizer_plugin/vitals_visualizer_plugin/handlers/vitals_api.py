@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
@@ -29,9 +29,8 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             log.error(f"Error in VitalsVisualizerAPI: {str(e)}")
             return [JSONResponse({"error": str(e)}, status_code=500)]
 
-    def _get_vitals_data(self, patient_id: str) -> Dict[str, List[Dict[str, Any]]]:
+    def _get_vitals_data(self, patient_id: str) -> dict[str, list[dict[str, Any]]]:
         """Get vitals data for the patient using Canvas vitals structure."""
-
         try:
             # Get individual vital observations from vital signs panels
             vital_observations = (
@@ -47,7 +46,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 .order_by("effective_datetime")
             )
 
-            vitals_data = {
+            vitals_data: dict[str, list[dict[str, object]]] = {
                 "weight": [],
                 "body_temperature": [],
                 "oxygen_saturation": [],
@@ -103,7 +102,7 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             log.error(f"Error collecting vitals data: {str(e)}")
             return {"weight": [], "body_temperature": [], "oxygen_saturation": []}
 
-    def _generate_visualization_html(self, vitals_data: Dict[str, List[Dict[str, Any]]]) -> str:
+    def _generate_visualization_html(self, vitals_data: dict[str, list[dict[str, Any]]]) -> str:
         """Generate the HTML for the vitals visualization using template."""
         context = {"vitals_data": json.dumps(vitals_data)}
         return render_to_string("templates/vitals_visualization.html", context)

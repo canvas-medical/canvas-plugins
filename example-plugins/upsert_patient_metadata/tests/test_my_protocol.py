@@ -1,12 +1,15 @@
 from unittest.mock import patch
 
 import pytest
+from pytest import MonkeyPatch
 from upsert_patient_metadata.protocols.my_protocol import Protocol
 
 
 class DummyEvent:
     """Dummy event for Protocol instantiation in tests."""
+
     pass
+
 
 @pytest.mark.parametrize(
     "narrative,key,value,should_upsert",
@@ -18,7 +21,13 @@ class DummyEvent:
         ("value=onlyvalue", None, None, False),
     ],
 )
-def test_protocol_compute(monkeypatch, narrative, key, value, should_upsert):
+def test_protocol_compute(
+    monkeypatch: MonkeyPatch,
+    narrative: str,
+    key: str | None,
+    value: str | None,
+    should_upsert: bool,
+) -> None:
     """Test Protocol.compute for various narrative patterns and upsert behavior."""
     dummy_patient_id = 123
     dummy_context = {
@@ -30,7 +39,9 @@ def test_protocol_compute(monkeypatch, narrative, key, value, should_upsert):
     monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
 
     # Patch PatientMetadata and its upsert method
-    with patch("upsert_patient_metadata.protocols.my_protocol.PatientMetadata") as MockPatientMetadata:
+    with patch(
+        "upsert_patient_metadata.protocols.my_protocol.PatientMetadata"
+    ) as MockPatientMetadata:
         mock_instance = MockPatientMetadata.return_value
         mock_upsert = mock_instance.upsert
         mock_upsert.return_value = "upserted-effect"

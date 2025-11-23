@@ -33,7 +33,7 @@ class SearchAppointmentsSlotsHandler(BaseHandler):
             self._respond_with(payload),
         ]
 
-    def _respond_with(self, payload: dict) -> Effect:
+    def _respond_with(self, payload: dict | None) -> Effect:
         """Helper method to create a response effect."""
         return Effect(
             type=EffectType.PATIENT_PORTAL__APPOINTMENTS__SLOTS__POST_SEARCH_RESULTS,

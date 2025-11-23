@@ -4,7 +4,7 @@ from typing import Any
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from canvas_sdk.v1.data import CareTeamMembership, Appointment, Patient
+from canvas_sdk.v1.data import Appointment, CareTeamMembership
 from canvas_sdk.v1.data.care_team import CareTeamMembershipStatus
 from logger import log
 
@@ -29,7 +29,6 @@ class Providers(BaseHandler):
         Returns:
             List[Effect]: A single effect containing the filtered provider list
         """
-
         # Extract providers from context
         context = self.event.context
         providers = context.get("providers", [])
@@ -125,7 +124,6 @@ class Locations(BaseHandler):
         Returns:
             List[Effect]: A single effect containing the filtered location list
         """
-
         # Extract locations from context
         context = self.event.context
         locations = context.get("locations", [])
@@ -184,7 +182,7 @@ class Locations(BaseHandler):
                 .distinct()
             )
 
-            return set(str(location_id) for location_id in location_ids)
+            return {str(location_id) for location_id in location_ids}
 
         except Exception as e:
             log.error(f"Error fetching patient appointment locations: {str(e)}")

@@ -21,7 +21,7 @@ For more, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sd
 It is used to display a compact widget in the Patient Portal that lists the
 active care team members for a patient.
 
-It renders a scrollable list in a compact plugin format of all active members. 
+It renders a scrollable list in a compact plugin format of all active members.
 
 For more information, visit the [Canvas SDK documentation](https://docs.canvasmedical.com/sdk/data-care-team/).
 

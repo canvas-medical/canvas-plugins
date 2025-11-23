@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import cast
 from uuid import UUID
 
 from django.db.models.expressions import Subquery
@@ -21,13 +21,13 @@ class ResolveConditionCommand(BaseCommand):
     show_in_condition_list: bool = False
     rationale: str | None = Field(max_length=1024, default=None)
 
-    def _get_error_details(
-        self, method: Literal["originate", "edit", "delete", "commit", "enter_in_error"]
-    ) -> list[InitErrorDetails]:
+    def _get_error_details(self, method: str) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
         if self.condition_id:
-            subquery = Subquery(Note.objects.filter(id=self.note_uuid).values("patient_id")[:1])
+            subquery = Subquery(
+                Note.objects.filter(id=cast(str, self.note_uuid)).values("patient_id")[:1]
+            )
             if (
                 not Condition.objects.active()
                 .filter(id=self.condition_id, patient=subquery)

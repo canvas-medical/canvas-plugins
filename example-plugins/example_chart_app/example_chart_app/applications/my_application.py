@@ -1,22 +1,22 @@
-import arrow
-
 from http import HTTPStatus
+
+import arrow
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
-from canvas_sdk.effects.simple_api import Response, JSONResponse, HTMLResponse
+from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
 from canvas_sdk.effects.task import AddTask, TaskStatus
-
 from canvas_sdk.handlers.application import Application
-from canvas_sdk.handlers.simple_api import StaffSessionAuthMixin, SimpleAPI, api
-
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
-
 from canvas_sdk.v1.data.staff import Staff
 
 
 class MyChartApplication(Application):
+    """Application that opens a custom chart UI in a modal."""
+
     def on_open(self) -> Effect:
+        """Launch the custom chart application modal."""
         patient_id = self.context["patient"]["id"]
         return LaunchModalEffect(
             url=f"/plugin-io/api/example_chart_app/custom-ui?patient={patient_id}",
@@ -25,8 +25,11 @@ class MyChartApplication(Application):
 
 
 class MyApi(StaffSessionAuthMixin, SimpleAPI):
+    """API endpoints for the chart application."""
+
     @api.get("/custom-ui")
     def custom_ui(self) -> list[Response | Effect]:
+        """Render the custom UI for the chart application."""
         logged_in_staff = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
 
         context = {
@@ -42,6 +45,7 @@ class MyApi(StaffSessionAuthMixin, SimpleAPI):
 
     @api.post("/add-task")
     def add_task(self) -> list[Response | Effect]:
+        """Add a task to the patient from the chart application."""
         add_task = AddTask(
             title="This came from the custom patient ui.",
             patient_id=self.request.json()["patient_id"],

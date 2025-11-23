@@ -2,19 +2,21 @@
 
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
+
 from canvas_sdk.events import EventType
 
 
 class TestSupervisingProviderPrescribeProtocolCard:
     """Test suite for supervising_provider_prescribe_protocol Protocol."""
 
-    def test_responds_to_correct_event(self):
+    def test_responds_to_correct_event(self) -> None:
         """Test that Protocol responds to NOTE_STATE_CHANGE_EVENT_CREATED event."""
         from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
 
         assert EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED) == Protocol.RESPONDS_TO
 
-    def test_compute_with_staff_available(self, monkeypatch):
+    def test_compute_with_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute creates protocol card with prescribe recommendation when staff available."""
         from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
 
@@ -85,7 +87,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
                     # Verify result
                     assert result == [mock_applied_card]
 
-    def test_compute_without_staff_available(self, monkeypatch):
+    def test_compute_without_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute returns empty list when no staff is available."""
         from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
 
@@ -110,7 +112,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
             # Should return empty list when no staff found
             assert result == []
 
-    def test_compute_uses_context_patient_id(self, monkeypatch):
+    def test_compute_uses_context_patient_id(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute uses patient_id from context."""
         from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
 

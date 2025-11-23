@@ -306,4 +306,3 @@ coverage_metadata_sync/
 **Plugin Version:** 1.0.0  
 **SDK Version:** 0.1.4  
 **License:** UNLICENSED
-

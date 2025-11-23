@@ -7,7 +7,7 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 
 
-def test_import_protocol():
+def test_import_protocol() -> None:
     """Test that Protocol can be imported without errors."""
     from my_first_plugin.protocols.protocol import Protocol
 
@@ -18,16 +18,16 @@ def test_import_protocol():
     assert hasattr(Protocol, "NARRATIVE_STRING")
 
 
-def test_protocol_configuration():
+def test_protocol_configuration() -> None:
     """Test that Protocol has correct configuration."""
     from my_first_plugin.protocols.protocol import Protocol
 
     # Verify configuration
-    assert Protocol.RESPONDS_TO == EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+    assert EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED) == Protocol.RESPONDS_TO
     assert Protocol.NARRATIVE_STRING == "zebra"
 
 
-def test_compute_creates_log_effect():
+def test_compute_creates_log_effect() -> None:
     """Test that compute method creates a LOG effect with correct payload."""
     from my_first_plugin.protocols.protocol import Protocol
 
@@ -36,7 +36,7 @@ def test_compute_creates_log_effect():
     mock_event.context = {"note": {"uuid": "test-note-uuid-123"}}
 
     # Create protocol instance
-    protocol = Protocol(event=mock_event)  # type: ignore[arg-type]
+    protocol = Protocol(event=mock_event)
 
     # Mock the logger to prevent actual logging
     with patch("my_first_plugin.protocols.protocol.log"):
@@ -57,7 +57,7 @@ def test_compute_creates_log_effect():
     }
 
 
-def test_compute_logs_narrative_string():
+def test_compute_logs_narrative_string() -> None:
     """Test that compute method logs the narrative string."""
     from my_first_plugin.protocols.protocol import Protocol
 
@@ -66,7 +66,7 @@ def test_compute_logs_narrative_string():
     mock_event.context = {"note": {"uuid": "another-uuid"}}
 
     # Create protocol instance
-    protocol = Protocol(event=mock_event)  # type: ignore[arg-type]
+    protocol = Protocol(event=mock_event)
 
     # Mock the logger and verify it's called with NARRATIVE_STRING
     with patch("my_first_plugin.protocols.protocol.log") as mock_log:

@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
 from vitals_visualizer_plugin.handlers.vitals_button import VitalsVisualizerButton
 
 
-def test_vitals_visualizer_button_configuration():
+def test_vitals_visualizer_button_configuration() -> None:
     """Test that the VitalsVisualizerButton has the correct configuration."""
     assert VitalsVisualizerButton.BUTTON_TITLE == "Visualize"
     assert VitalsVisualizerButton.BUTTON_KEY == "vitals_visualizer_button"
@@ -14,7 +15,7 @@ def test_vitals_visualizer_button_configuration():
     assert VitalsVisualizerButton.PRIORITY == 1
 
 
-def test_vitals_visualizer_button_handle(monkeypatch):
+def test_vitals_visualizer_button_handle(monkeypatch: MonkeyPatch) -> None:
     """Test that the button creates a LaunchModalEffect with correct URL and patient ID."""
     # Create button instance with mocked event
     button = VitalsVisualizerButton(event=MagicMock())
@@ -36,7 +37,9 @@ def test_vitals_visualizer_button_handle(monkeypatch):
         result = button.handle()
 
         # Verify LaunchModalEffect was created with correct parameters
-        expected_url = f"/plugin-io/api/vitals_visualizer_plugin/visualize?patient_id={test_patient_id}"
+        expected_url = (
+            f"/plugin-io/api/vitals_visualizer_plugin/visualize?patient_id={test_patient_id}"
+        )
         mock_effect_class.assert_called_once_with(
             url=expected_url,
             target=mock_effect_class.TargetType.RIGHT_CHART_PANE_LARGE,

@@ -6,7 +6,6 @@ from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.utils import Http
 from canvas_sdk.v1.data.patient import Patient
-from logger import log
 
 
 class PatientSync(BaseHandler):

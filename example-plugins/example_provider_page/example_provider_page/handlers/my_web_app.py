@@ -11,16 +11,20 @@ from canvas_sdk.v1.data.staff import Staff
 
 
 class MyWebApp(SimpleAPI):
+    """Web application for provider pages."""
+
     PREFIX = "/app"
 
     # Using session credentials allows us to ensure only logged in users can
     # access this.
     def authenticate(self, credentials: SessionCredentials) -> bool:
-        return credentials.logged_in_user != None
+        """Authenticate using session credentials."""
+        return credentials.logged_in_user is not None
 
     # Serve templated HTML
     @api.get("/provider-application")
     def index(self) -> list[Response | Effect]:
+        """Serve the main provider application page."""
         logged_in_user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
 
         context = {
@@ -38,6 +42,7 @@ class MyWebApp(SimpleAPI):
     # Serve the contents of a js file
     @api.get("/main.js")
     def get_main_js(self) -> list[Response | Effect]:
+        """Serve the main JavaScript file."""
         return [
             Response(
                 render_to_string("static/main.js").encode(),
@@ -49,6 +54,7 @@ class MyWebApp(SimpleAPI):
     # Serve the contents of a css file
     @api.get("/styles.css")
     def get_css(self) -> list[Response | Effect]:
+        """Serve the CSS styles file."""
         return [
             Response(
                 render_to_string("static/styles.css").encode(),

@@ -81,7 +81,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             except Exception as e:
                 log.error(
                     f"Failed to create RemoveAppointmentLabel effect for appointment {appt.id}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
         log.info(
@@ -120,8 +120,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
 
         if has_coverage:
             log.info(
-                f"Patient {patient_id} has insurance coverage. "
-                "No 'MISSING_COVERAGE' label needed."
+                f"Patient {patient_id} has insurance coverage. No 'MISSING_COVERAGE' label needed."
             )
             return []
 
@@ -166,7 +165,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             except Exception as e:
                 log.error(
                     f"Failed to create AddAppointmentLabel effect for appointment {appt.id}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
         log.info(
@@ -186,9 +185,7 @@ class AppointmentLabelsProtocol(BaseProtocol):
             list[Effect]: List of effects from the appropriate handler, or empty list if
                          event type is not recognized
         """
-        log.info(
-            f"AppointmentLabelsProtocol.compute() called for event type: {self.event.type}"
-        )
+        log.info(f"AppointmentLabelsProtocol.compute() called for event type: {self.event.type}")
 
         if self.event.type == EventType.APPOINTMENT_CREATED:
             return self.handle_appointment_created()
@@ -200,4 +197,3 @@ class AppointmentLabelsProtocol(BaseProtocol):
             "No handler available."
         )
         return []
-

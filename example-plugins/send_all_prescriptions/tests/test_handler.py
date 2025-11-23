@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
 from send_all_prescriptions.handlers.handler import SendPrescriptionButtonHandler
 
 
-def test_send_prescription_button_configuration():
+def test_send_prescription_button_configuration() -> None:
     """Test that the SendPrescriptionButtonHandler has the correct configuration."""
     assert SendPrescriptionButtonHandler.BUTTON_TITLE == "Send Prescriptions"
     assert SendPrescriptionButtonHandler.BUTTON_KEY == "SEND_ALL_PRESCRIPTIONS"
@@ -13,7 +14,7 @@ def test_send_prescription_button_configuration():
     )
 
 
-def test_send_prescription_button_handle_no_prescriptions(monkeypatch):
+def test_send_prescription_button_handle_no_prescriptions(monkeypatch: MonkeyPatch) -> None:
     """Test that handle() returns empty list when there are no prescriptions."""
     # Create handler instance with mocked event
     dummy_context = {"note_id": "test-note-id"}
@@ -31,7 +32,7 @@ def test_send_prescription_button_handle_no_prescriptions(monkeypatch):
     assert effects == []
 
 
-def test_send_prescription_button_handle_with_prescriptions(monkeypatch):
+def test_send_prescription_button_handle_with_prescriptions(monkeypatch: MonkeyPatch) -> None:
     """Test that handle() creates send effects for all committed prescriptions."""
     # Create handler instance with mocked event
     dummy_context = {"note_id": "test-note-id"}
@@ -73,10 +74,10 @@ def test_send_prescription_button_handle_with_prescriptions(monkeypatch):
     mock_prescribe_instance2.send.assert_called_once()
 
 
-def test_send_prescription_button_handle_no_note_id(monkeypatch):
+def test_send_prescription_button_handle_no_note_id(monkeypatch: MonkeyPatch) -> None:
     """Test that handle() works when note_id is not in context."""
     # Create handler instance with mocked event
-    dummy_context = {}
+    dummy_context: dict[str, str] = {}
     handler = SendPrescriptionButtonHandler(event=MagicMock())
     monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
