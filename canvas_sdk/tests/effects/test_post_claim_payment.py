@@ -207,6 +207,89 @@ def test_post_claim_payment_requires_existing_move_to_queue_name(
             "expected_substring": "Specify a payer to transfer the adjusted amount",
         },
         {
+            "name": "transfer_to_same_coverage",
+            "line_items_map": {"line-5": MagicMock(proc_code="PROC")},
+            "active_coverages_filter_result": [1],
+            "alloc_kwargs": {
+                "claim_coverage_id": "coverage-1",
+                "line_item_transactions": [
+                    LineItemTransaction(
+                        claim_line_item_id="line-5",
+                        adjustment=Decimal("1.00"),
+                        adjustment_code="Transfer",
+                        transfer_remaining_balance_to="coverage-1",
+                    )
+                ],
+            },
+            "expected_substring": "Can't create transfers to same payer",
+        },
+        {
+            "name": "copay_adjustment_transfer_not_allowed",
+            "line_items_map": {"line-5": MagicMock(proc_code="COPAY")},
+            "active_coverages_filter_result": [1],
+            "alloc_kwargs": {
+                "claim_coverage_id": "coverage-1",
+                "line_item_transactions": [
+                    LineItemTransaction(
+                        claim_line_item_id="line-5",
+                        adjustment=Decimal("1.00"),
+                        adjustment_code="Transfer",
+                        transfer_remaining_balance_to="patient",
+                    )
+                ],
+            },
+            "expected_substring": "Adjustments and transfers not allowed for COPAY charges",
+        },
+        {
+            "name": "adjustment_required_when_adjustment_code",
+            "line_items_map": {"line-5": MagicMock(proc_code="PROC")},
+            "active_coverages_filter_result": [1],
+            "alloc_kwargs": {
+                "claim_coverage_id": "coverage-1",
+                "line_item_transactions": [
+                    LineItemTransaction(
+                        claim_line_item_id="line-5",
+                        payment=Decimal("1.00"),
+                        adjustment_code="Transfer",
+                        transfer_remaining_balance_to="patient",
+                    )
+                ],
+            },
+            "expected_substring": "Enter an adjustment amount for the specified adjustment type",
+        },
+        {
+            "name": "adjustment_required_when_transfer_remaining_balance_to",
+            "line_items_map": {"line-5": MagicMock(proc_code="PROC")},
+            "active_coverages_filter_result": [1],
+            "alloc_kwargs": {
+                "claim_coverage_id": "coverage-1",
+                "line_item_transactions": [
+                    LineItemTransaction(
+                        claim_line_item_id="line-5",
+                        payment=Decimal("1.00"),
+                        transfer_remaining_balance_to="patient",
+                    )
+                ],
+            },
+            "expected_substring": "Enter an adjustment amount to transfer",
+        },
+        {
+            "name": "adjustment_required_when_write_off",
+            "line_items_map": {"line-5": MagicMock(proc_code="PROC")},
+            "active_coverages_filter_result": [1],
+            "alloc_kwargs": {
+                "claim_coverage_id": "coverage-1",
+                "line_item_transactions": [
+                    LineItemTransaction(
+                        claim_line_item_id="line-5",
+                        payment=Decimal("1.00"),
+                        write_off=True,
+                    )
+                ],
+            },
+            "expected_substring": "Enter an adjustment amount to write off",
+        },
+        {
             "name": "adjustment_conflict",
             "line_items_map": {"line-6": MagicMock(proc_code="PROC")},
             "active_coverages_filter_result": [1],
