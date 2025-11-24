@@ -1,5 +1,6 @@
 from .claim import (
     ClaimCommentFactory,
+    ClaimCoverageFactory,
     ClaimFactory,
     ClaimLabelFactory,
     ClaimProviderFactory,
@@ -7,6 +8,7 @@ from .claim import (
     ClaimSubmissionFactory,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
+from .coverage import CoverageFactory
 from .facility import FacilityFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
@@ -39,11 +41,13 @@ __all__ = (
     "CanvasUserFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
+    "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
+    "CoverageFactory",
     "FacilityFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",

@@ -3,11 +3,22 @@ import factory
 from canvas_sdk.v1.data import (
     Claim,
     ClaimComment,
+    ClaimCoverage,
     ClaimLabel,
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
 )
+
+
+class ClaimCoverageFactory(factory.django.DjangoModelFactory[ClaimCoverage]):
+    """Factory for creating ClaimCoverage."""
+
+    class Meta:
+        model = ClaimCoverage
+
+    claim = factory.SubFactory("canvas_sdk.test_utils.factories.claim.ClaimFactory")
+    coverage = factory.SubFactory("canvas_sdk.test_utils.factories.CoverageFactory")
 
 
 class ClaimQueueFactory(factory.django.DjangoModelFactory[ClaimQueue]):
