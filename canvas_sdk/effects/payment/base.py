@@ -32,7 +32,7 @@ class PostPaymentBase(_BaseEffect):
     deposit_date: date | None = None
     method: PaymentMethod
     payment_description: str | None = None
-    total_collected: Decimal = Field(decimal_places=2, ge=Decimal("0.00"))
+    total_collected: Decimal = Field(decimal_places=2)
 
     @property
     def payment_collection_values(self) -> dict[str, Any]:
@@ -71,10 +71,10 @@ class LineItemTransaction:
     """Data for creating a line item transaction on a ClaimPayment."""
 
     claim_line_item_id: str | UUID
-    charged: Decimal | None = Field(decimal_places=2, ge=Decimal("0.00"), default=None)
-    allowed: Decimal | None = Field(decimal_places=2, ge=Decimal("0.00"), default=None)
-    payment: Decimal | None = Field(decimal_places=2, ge=Decimal("0.00"), default=None)
-    adjustment: Decimal | None = Field(decimal_places=2, ge=Decimal("0.00"), default=None)
+    charged: Decimal | None = Field(decimal_places=2, default=None)
+    allowed: Decimal | None = Field(decimal_places=2, default=None)
+    payment: Decimal | None = Field(decimal_places=2, default=None)
+    adjustment: Decimal | None = Field(decimal_places=2, default=None)
     adjustment_code: str | None = None
     transfer_remaining_balance_to: str | UUID | Literal["patient"] | None = None
     write_off: bool = False
