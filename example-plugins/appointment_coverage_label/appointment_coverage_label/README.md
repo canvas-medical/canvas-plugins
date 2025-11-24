@@ -224,4 +224,3 @@ appointment_coverage_label/
 **Plugin Version:** 1.0.0  
 **SDK Version:** 0.1.4  
 **License:** UNLICENSED
-

@@ -1,8 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from coverage_metadata_sync.protocols.metadata_sync import CoverageStatusSyncProtocol
+from pytest import MonkeyPatch
 
 from canvas_sdk.events import EventType
 
@@ -10,7 +9,7 @@ from canvas_sdk.events import EventType
 class TestCoverageStatusSyncProtocol:
     """Tests for the CoverageStatusSyncProtocol."""
 
-    def test_compute_label_added_missing_coverage(self, monkeypatch):
+    def test_compute_label_added_missing_coverage(self, monkeypatch: MonkeyPatch) -> None:
         """Test that adding MISSING_COVERAGE label sets coverage_status to 'Missing'."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -48,7 +47,7 @@ class TestCoverageStatusSyncProtocol:
             assert len(effects) == 1
             assert effects[0] == mock_upsert_effect
 
-    def test_compute_label_removed_missing_coverage(self, monkeypatch):
+    def test_compute_label_removed_missing_coverage(self, monkeypatch: MonkeyPatch) -> None:
         """Test that removing MISSING_COVERAGE label sets coverage_status to 'Active'."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -81,7 +80,7 @@ class TestCoverageStatusSyncProtocol:
             assert len(effects) == 1
             assert effects[0] == mock_upsert_effect
 
-    def test_compute_ignores_other_labels(self, monkeypatch):
+    def test_compute_ignores_other_labels(self, monkeypatch: MonkeyPatch) -> None:
         """Test that events for other labels are ignored."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -101,7 +100,7 @@ class TestCoverageStatusSyncProtocol:
         # Should return empty list
         assert effects == []
 
-    def test_compute_no_patient_id(self, monkeypatch):
+    def test_compute_no_patient_id(self, monkeypatch: MonkeyPatch) -> None:
         """Test that missing patient ID returns empty list."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -121,7 +120,7 @@ class TestCoverageStatusSyncProtocol:
         # Should return empty list
         assert effects == []
 
-    def test_compute_no_label(self, monkeypatch):
+    def test_compute_no_label(self, monkeypatch: MonkeyPatch) -> None:
         """Test that missing label returns empty list."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -140,7 +139,7 @@ class TestCoverageStatusSyncProtocol:
         # Should return empty list
         assert effects == []
 
-    def test_compute_handles_exception(self, monkeypatch):
+    def test_compute_handles_exception(self, monkeypatch: MonkeyPatch) -> None:
         """Test that exceptions during metadata creation are handled gracefully."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())
@@ -166,7 +165,7 @@ class TestCoverageStatusSyncProtocol:
         # Should return empty list when exception occurs
         assert effects == []
 
-    def test_compute_with_unexpected_event_type(self, monkeypatch):
+    def test_compute_with_unexpected_event_type(self, monkeypatch: MonkeyPatch) -> None:
         """Test that unexpected event types are handled gracefully."""
         # Create protocol instance
         protocol = CoverageStatusSyncProtocol(event=MagicMock())

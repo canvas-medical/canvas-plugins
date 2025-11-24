@@ -1,16 +1,18 @@
-import arrow
 from http import HTTPStatus
+
+import arrow
+from charting_api_examples.util import get_note_from_path_params, note_not_found_response
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.note import Note as NoteEffect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyAuthMixin, SimpleAPI, api
-from canvas_sdk.v1.data.note import Note, CurrentNoteStateEvent
-
-from charting_api_examples.util import get_note_from_path_params, note_not_found_response
+from canvas_sdk.v1.data.note import CurrentNoteStateEvent, Note
 
 
 class NoteAPI(APIKeyAuthMixin, SimpleAPI):
+    """API for managing notes."""
+
     PREFIX = "/notes"
 
     """
@@ -20,6 +22,7 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.get("/")
     def index(self) -> list[Response | Effect]:
+        """Get a list of notes with pagination support."""
         notes = Note.objects.select_related("patient", "provider", "note_type_version").order_by(
             "dbid"
         )
@@ -111,6 +114,7 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.post("/")
     def create(self) -> list[Response | Effect]:
+        """Create a new note."""
         required_attributes = {
             "note_type_id",
             "datetime_of_service",
@@ -163,6 +167,7 @@ class NoteAPI(APIKeyAuthMixin, SimpleAPI):
 
     @api.get("/<id>/")
     def read(self) -> list[Response | Effect]:
+        """Get a specific note by ID."""
         note = get_note_from_path_params(self.request.path_params)
         if not note:
             return note_not_found_response()

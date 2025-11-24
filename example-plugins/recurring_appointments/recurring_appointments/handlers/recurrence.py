@@ -1,25 +1,28 @@
 import datetime
+
 from dateutil.relativedelta import relativedelta
 
+from canvas_sdk.effects.base import Effect
 from canvas_sdk.effects.note import ScheduleEvent
-from canvas_sdk.events import EventType
 from canvas_sdk.effects.note.appointment import Appointment
-from canvas_sdk.v1.data import Appointment as AppointmentModel, AppointmentMetadata
+from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
+from canvas_sdk.v1.data import Appointment as AppointmentModel
+from canvas_sdk.v1.data import AppointmentMetadata
 from canvas_sdk.v1.data.note import NoteTypeCategories
 from recurring_appointments.utils.constants import (
-    RecurrenceEnum,
-    FIELD_RECURRENCE_TYPE_KEY,
     FIELD_RECURRENCE_INTERVAL_KEY,
     FIELD_RECURRENCE_STOP_AFTER_KEY,
+    FIELD_RECURRENCE_TYPE_KEY,
+    RecurrenceEnum,
 )
-
-from logger import log
 
 
 class AppointmentRecurrence(BaseHandler):
+    """Handler for creating recurring appointments based on appointment metadata."""
+
     _appointment: AppointmentModel | None = None
-    _recurrence_type: RecurrenceEnum | None = None
+    _recurrence_type: str | None = None
     _recurrence_interval: int | None = None
     _recurrence_stops_after: int | None = None
 
@@ -27,7 +30,7 @@ class AppointmentRecurrence(BaseHandler):
     RESPONDS_TO = EventType.Name(EventType.APPOINTMENT_CREATED)
 
     @property
-    def appointment(self):
+    def appointment(self) -> AppointmentModel:
         """Get the appointment from the event."""
         if self._appointment is None:
             self._appointment = AppointmentModel.objects.get(id=self.event.target.id)
@@ -35,7 +38,7 @@ class AppointmentRecurrence(BaseHandler):
         return self._appointment
 
     @property
-    def recurrence_type(self) -> RecurrenceEnum:
+    def recurrence_type(self) -> str:
         """Determine the recurrence type from the appointment metadata."""
         if self._recurrence_type is None:
             self._recurrence_type = (
@@ -61,7 +64,7 @@ class AppointmentRecurrence(BaseHandler):
                     .values_list("value", flat=True)
                     .first()
                 )
-            except:
+            except Exception:
                 self._recurrence_interval = 1
 
         return self._recurrence_interval
@@ -78,7 +81,7 @@ class AppointmentRecurrence(BaseHandler):
                     .values_list("value", flat=True)
                     .first()
                 )
-            except:
+            except Exception:
                 self._recurrence_stops_after = 30
 
         return self._recurrence_stops_after
@@ -125,7 +128,8 @@ class AppointmentRecurrence(BaseHandler):
             note_type_id=self.appointment.note_type.id,
         )
 
-    def compute(self):
+    def compute(self) -> list[Effect]:
+        """Create recurring appointments based on recurrence configuration."""
         if not self.recurrence_type or self.recurrence_type == RecurrenceEnum.NONE.value:
             return []
 

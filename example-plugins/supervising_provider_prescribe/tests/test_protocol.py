@@ -2,19 +2,21 @@
 
 from unittest.mock import MagicMock, patch
 
+from pytest import MonkeyPatch
+
 from canvas_sdk.events import EventType
 
 
 class TestSupervisingProviderPrescribeProtocol:
     """Test suite for supervising_provider_prescribe Protocol."""
 
-    def test_responds_to_correct_event(self):
+    def test_responds_to_correct_event(self) -> None:
         """Test that Protocol responds to PRESCRIBE_COMMAND__POST_ORIGINATE event."""
         from supervising_provider_prescribe.protocols.my_protocol import Protocol
 
         assert EventType.Name(EventType.PRESCRIBE_COMMAND__POST_ORIGINATE) == Protocol.RESPONDS_TO
 
-    def test_compute_with_staff_available(self, monkeypatch):
+    def test_compute_with_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute creates edit effect when staff is available."""
         from supervising_provider_prescribe.protocols.my_protocol import Protocol
 
@@ -62,7 +64,7 @@ class TestSupervisingProviderPrescribeProtocol:
                 # Verify result
                 assert result == [mock_edit_effect]
 
-    def test_compute_without_staff_available(self, monkeypatch):
+    def test_compute_without_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute returns empty list when no staff is available."""
         from supervising_provider_prescribe.protocols.my_protocol import Protocol
 
@@ -88,7 +90,7 @@ class TestSupervisingProviderPrescribeProtocol:
             # Should return empty list when no staff found
             assert result == []
 
-    def test_compute_uses_target_as_command_uuid(self, monkeypatch):
+    def test_compute_uses_target_as_command_uuid(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute correctly uses the target as command_uuid."""
         from supervising_provider_prescribe.protocols.my_protocol import Protocol
 
