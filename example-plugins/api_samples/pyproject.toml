@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Example usages of the SimpleAPI handler"
+license = "MIT"
+name = "api_samples"
+readme = "api_samples/README.md"
+requires-python = ">=3.11"
+version = "0.0.2"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

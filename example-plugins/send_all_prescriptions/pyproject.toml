@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Adds a 'Send Prescriptions' button to note footers that allows providers to send all committed prescriptions in a note with a single click, streamlining the prescription workflow."
+license = "MIT"
+name = "send_all_prescriptions"
+readme = "send_all_prescriptions/README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
