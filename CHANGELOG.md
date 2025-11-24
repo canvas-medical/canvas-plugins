@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v0.78.0 (2025-11-24)
+
+### Chores
+
+- Fix pre-commit linting errors for example-plugins
+  ([#1297](https://github.com/canvas-medical/canvas-plugins/pull/1297),
+  [`67354f9`](https://github.com/canvas-medical/canvas-plugins/commit/67354f9e6a1f4f4a46d0604c21d69691d3c879ac))
+
+- Update pyproject for tests to grab local directory
+  ([#1285](https://github.com/canvas-medical/canvas-plugins/pull/1285),
+  [`3029217`](https://github.com/canvas-medical/canvas-plugins/commit/302921791291c3c2143531d64cb4d6a711ab5709))
+
+- Update structure for all example-plugins
+  ([#1296](https://github.com/canvas-medical/canvas-plugins/pull/1296),
+  [`caed95b`](https://github.com/canvas-medical/canvas-plugins/commit/caed95b1c369be7f7e179d1c5600bb4ef566257e))
+
+### Features
+
+- Adds PracticeLocationAddress and allowed imports for PDMP plugin
+  ([#1190](https://github.com/canvas-medical/canvas-plugins/pull/1190),
+  [`9a99933`](https://github.com/canvas-medical/canvas-plugins/commit/9a9993369b4304c58fe2c43cb44cc1c854d8f76b))
+
+Co-authored-by: Reba Magier <reba.magier@canvasmedical.com>
+
+
 ## v0.77.0 (2025-11-17)
 
 ### Features
