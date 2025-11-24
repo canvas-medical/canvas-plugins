@@ -403,14 +403,33 @@ class TestExclusionsNotApplicable:
         
         assert card["status"] == ProtocolCard.Status.DUE.value
 
-    def test_hospice_place_of_service_within_period_is_not_applicable(self, now, protocol_instance, patient_age_62):
-        """Scenario 10: Hospice exclusion."""
-        NoteFactory.create(
+    def test_hospice_place_of_service_within_period_is_not_applicable(self, now, protocol_instance, patient_age_62, eligible_note):
+        """Scenario 10: Hospice exclusion via discharge to hospice observation."""
+        from canvas_sdk.v1.data import Observation, ObservationValueCoding
+        
+        # Create a note first (required for observation)
+        note = NoteFactory.create(
             patient=patient_age_62,
             datetime_of_service=now.shift(months=-6).datetime,
-            place_of_service=PracticeLocationPOS.HOSPICE,
         )
-        NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
+        
+        # Create observation with discharge to hospice SNOMED code (discharge disposition)
+        observation = Observation.objects.create(
+            patient=patient_age_62,
+            note_id=note.dbid,
+            effective_datetime=now.shift(months=-6).datetime,
+            category="vital-signs",
+            units="",
+            value="",
+            name="Discharge disposition",
+        )
+        ObservationValueCoding.objects.create(
+            observation=observation,
+            code="428361000124107",  # Discharge to home for Hospice
+            system="http://snomed.info/sct",
+            display="Discharge to home for Hospice",
+        )
+        
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
         
@@ -628,7 +647,10 @@ class TestPriorityImagingBeforeReferral:
         
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         # Should use Imaging Report (checked first), even though Referral is more recent
-        assert str(imaging.original_date.year) in card["narrative"] or expected_keyword in card["narrative"].lower()
+        # Verify the narrative contains the imaging report's date (2-digit year format) to confirm priority
+        year_2digit = str(imaging.original_date.year)[-2:]
+        assert year_2digit in card["narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        assert expected_keyword in card["narrative"].lower()
 
     def test_referral_report_fallback_when_no_imaging_flexible_sigmoidoscopy(self, now, protocol_instance, patient_age_62, eligible_note):
         """Scenario 22: Referral Report used when Imaging Report doesn't exist."""
@@ -651,8 +673,10 @@ class TestPriorityImagingBeforeReferral:
         card = extract_card(protocol_instance.compute())
         
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
-        # Should use Imaging Report (checked first)
-        assert str(imaging.original_date.year) in card["narrative"] or "colonography" in card["narrative"].lower()
+        # Should use Imaging Report (checked first) - verify by checking the date (2-digit year) in narrative
+        year_2digit = str(imaging.original_date.year)[-2:]
+        assert year_2digit in card["narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        assert "colonography" in card["narrative"].lower()
 
 
 @pytest.mark.django_db
@@ -715,12 +739,17 @@ class TestEdgeCases:
 
     def test_multiple_ct_colonography_value_sets(self, now, protocol_instance, patient_age_62, eligible_note):
         """Scenario 28: Both CtColonography and CMS130v6CtColonography value sets checked."""
-        create_ct_colonography_report(patient_age_62, now, years_ago=3, report_type="imaging")
+        # Create report using one of the value sets (helper handles both CPT and LOINC)
+        report = create_ct_colonography_report(patient_age_62, now, years_ago=3, report_type="imaging")
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify the report is found and satisfies the protocol
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         assert "colonography" in card["narrative"].lower()
+        # Verify the report's date (2-digit year format) appears in the narrative to confirm it was used
+        year_2digit = str(report.original_date.year)[-2:]
+        assert year_2digit in card["narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
 
 
 @pytest.mark.django_db
@@ -757,6 +786,8 @@ class TestAgeBoundariesInPopulation:
         set_patient_context(protocol_instance, patient.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify patient is in population (not excluded)
+        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
         assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
     def test_49y_364d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
@@ -766,6 +797,8 @@ class TestAgeBoundariesInPopulation:
         set_patient_context(protocol_instance, patient.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify patient is in population (not excluded due to age)
+        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
         assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
     def test_75y_plus_1d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
@@ -775,6 +808,8 @@ class TestAgeBoundariesInPopulation:
         set_patient_context(protocol_instance, patient.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify patient is in population (not excluded due to age)
+        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
         assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
 
@@ -785,19 +820,42 @@ class TestPopulationEdgeBehaviors:
     def test_optimistic_encounter_rule_allows_processing(self, now, protocol_instance, patient_age_62):
         """Test that protocol allows processing even without eligible encounter (optimistic rule)."""
         set_patient_context(protocol_instance, patient_age_62.id)
-        effects = protocol_instance.compute()
-        assert effects  # compute proceeds even if no eligible encounter is matched
+        card = extract_card(protocol_instance.compute())
+        # Verify protocol processes patient and returns DUE card (no screening, no encounter)
+        assert card["status"] == ProtocolCard.Status.DUE.value
 
     def test_hospice_note_outside_period_does_not_exclude(self, now, protocol_instance, eligible_note, patient_age_62):
-        """Test that hospice note outside measurement period does not exclude patient."""
-        NoteFactory.create(
+        """Test that hospice observation outside measurement period does not exclude patient."""
+        from canvas_sdk.v1.data import Observation, ObservationValueCoding
+        
+        # Create a note first (required for observation)
+        note = NoteFactory.create(
             patient=patient_age_62,
             datetime_of_service=now.shift(years=-2).datetime,
-            place_of_service=PracticeLocationPOS.HOSPICE,
         )
+        
+        # Create observation with discharge to hospice SNOMED code, but outside measurement period
+        observation = Observation.objects.create(
+            patient=patient_age_62,
+            note_id=note.dbid,
+            effective_datetime=now.shift(years=-2).datetime,  # Outside measurement period
+            category="vital-signs",
+            units="",
+            value="",
+            name="Discharge disposition",
+        )
+        ObservationValueCoding.objects.create(
+            observation=observation,
+            code="428361000124107",  # Discharge to home for Hospice
+            system="http://snomed.info/sct",
+            display="Discharge to home for Hospice",
+        )
+        
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify patient is NOT excluded (hospice care outside measurement period should not exclude)
+        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
         assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
     def test_total_colectomy_resolved_before_period_does_not_exclude(self, now, protocol_instance, eligible_note, patient_age_62):
@@ -818,6 +876,8 @@ class TestPopulationEdgeBehaviors:
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
         
+        # Verify patient is NOT excluded (resolved condition before period should not exclude)
+        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
         assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
 
 
@@ -829,7 +889,14 @@ class TestDueCardRecommendations:
         """Test that DUE card includes recommendations with expected keywords."""
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
-        titles = {r.get("title", "") for r in card.get("recommendations", [])}
+        
+        # Verify card is DUE (should have recommendations)
+        assert card["status"] == ProtocolCard.Status.DUE.value
+        
+        recommendations = card.get("recommendations", [])
+        assert len(recommendations) > 0, "DUE card should have at least one recommendation"
+        
+        titles = {r.get("title", "").lower() for r in recommendations}
         expected_keywords = [
             "fobt",
             "fit",
@@ -838,4 +905,5 @@ class TestDueCardRecommendations:
             "sigmoidoscopy",
         ]
         # At least one recommendation should contain one of the expected keywords
-        assert any(any(keyword in t.lower() for keyword in expected_keywords) for t in titles), f"Expected recommendations with keywords {expected_keywords}, got {titles}"
+        found_keyword = any(any(keyword in title for keyword in expected_keywords) for title in titles)
+        assert found_keyword, f"Expected at least one recommendation with keywords {expected_keywords}, got titles: {titles}"
