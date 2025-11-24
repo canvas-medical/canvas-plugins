@@ -1,136 +1,288 @@
-"""
-Test for the abnormal lab task notification plugin.
+"""Comprehensive tests for abnormal_lab_task_notification plugin."""
 
-These tests validate the plugin logic for creating tasks when abnormal lab values are detected.
-"""
+from unittest.mock import MagicMock, patch
 
-from unittest.mock import Mock
+from pytest import MonkeyPatch
 
-from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.events import EventType
 
 
-class MockLabValue:
-    """Mock lab value for testing."""
+class TestAbnormalLabProtocol:
+    """Test suite for AbnormalLabProtocol."""
 
-    def __init__(self, abnormal_flag="", value="", units="", reference_range=""):
-        self.id = "test-value-id"
-        self.abnormal_flag = abnormal_flag
-        self.value = value
-        self.units = units
-        self.reference_range = reference_range
+    def test_responds_to_correct_event(self) -> None:
+        """Test that AbnormalLabProtocol responds to LAB_REPORT_CREATED event."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
 
+        assert EventType.Name(EventType.LAB_REPORT_CREATED) == AbnormalLabProtocol.RESPONDS_TO
 
-class MockLabReport:
-    """Mock lab report for testing."""
+    def test_compute_with_abnormal_lab_values(self, monkeypatch: MonkeyPatch) -> None:
+        """Test that protocol creates task when lab report has abnormal values."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
 
-    def __init__(self, patient_id="test-patient", for_test_only=False, junked=False, values=None):
-        self.id = "test-lab-report-id"
-        self.patient_id = patient_id
-        self.for_test_only = for_test_only
-        self.junked = junked
-        self.values = Mock()
-        self.values.all.return_value = values or []
+        from canvas_sdk.effects.task import TaskStatus
 
+        # Mock event with lab report ID
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
 
-def test_plugin_responds_to_correct_event():
-    """Test that the plugin responds to LAB_REPORT_CREATED events."""
-    # This test would be run in a Django environment where we can import the plugin
-    # For now, we'll test the event type matching
-    expected_event = EventType.Name(EventType.LAB_REPORT_CREATED)
-    assert expected_event == "LAB_REPORT_CREATED"
+        # Mock patient
+        mock_patient = MagicMock()
+        mock_patient.id = "test-patient-id"
 
+        # Mock abnormal lab values
+        mock_abnormal_value1 = MagicMock()
+        mock_abnormal_value1.abnormal_flag = "H"  # High
 
-def test_abnormal_lab_detection():
-    """Test the logic for detecting abnormal lab values."""
-    # Test case 1: Normal values (no abnormal flag)
-    normal_value = MockLabValue(abnormal_flag="")
-    assert not normal_value.abnormal_flag.strip()
+        mock_abnormal_value2 = MagicMock()
+        mock_abnormal_value2.abnormal_flag = "L"  # Low
 
-    # Test case 2: Abnormal values (has abnormal flag)
-    abnormal_value = MockLabValue(abnormal_flag="HIGH")
-    assert abnormal_value.abnormal_flag.strip()
+        # Mock lab report
+        mock_lab_report = MagicMock()
+        mock_lab_report.patient = mock_patient
+        mock_lab_report.values.all.return_value = [mock_abnormal_value1, mock_abnormal_value2]
 
-    # Test case 3: Whitespace only abnormal flag (should be treated as normal)
-    whitespace_value = MockLabValue(abnormal_flag="   ")
-    assert not whitespace_value.abnormal_flag.strip()
+        # Mock LabReport queryset
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = mock_lab_report
 
-    # Test case 4: None abnormal flag (defensive programming)
-    none_value = MockLabValue(abnormal_flag=None)
-    # Simulate getattr with None fallback
-    flag = getattr(none_value, "abnormal_flag", None) or ""
-    assert not flag.strip()
+        # Patch LabReport.objects.filter
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
 
+            # Mock AddTask effect
+            with patch(
+                "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.AddTask"
+            ) as mock_task_class:
+                mock_task_instance = MagicMock()
+                mock_applied_effect = MagicMock()
+                mock_task_instance.apply.return_value = mock_applied_effect
+                mock_task_class.return_value = mock_task_instance
 
-def test_task_creation_logic():
-    """Test the task creation parameters."""
-    # Test parameters for AddTask
-    task = AddTask(
-        patient_id="test-patient-id",
-        title="Review Abnormal Lab Values (2 abnormal)",
-        status=TaskStatus.OPEN,
-        labels=["abnormal-lab", "urgent-review"],
-    )
+                # Execute protocol
+                protocol = AbnormalLabProtocol(event=mock_event)
+                result = protocol.compute()
 
-    assert task.patient_id == "test-patient-id"
-    assert task.title == "Review Abnormal Lab Values (2 abnormal)"
-    assert task.status == TaskStatus.OPEN
-    assert "abnormal-lab" in task.labels
-    assert "urgent-review" in task.labels
+                # Verify task was created with correct parameters
+                mock_task_class.assert_called_once_with(
+                    patient_id="test-patient-id",
+                    title="Review Abnormal Lab Values (2 abnormal)",
+                    status=TaskStatus.OPEN,
+                    labels=["abnormal-lab", "urgent-review"],
+                )
 
+                # Verify task was applied
+                mock_task_instance.apply.assert_called_once()
 
-def test_task_apply_method():
-    """Test that AddTask has apply() method (structure validation)."""
-    task = AddTask(patient_id="test-patient-id", title="Test Task", status=TaskStatus.OPEN)
+                # Verify result
+                assert result == [mock_applied_effect]
 
-    # Verify apply method exists
-    assert hasattr(task, "apply")
-    assert callable(getattr(task, "apply"))
+    def test_compute_with_no_abnormal_values(self) -> None:
+        """Test that protocol returns empty list when no abnormal values."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
 
-    # Note: We can't actually call apply() without Django environment
-    # but we can verify the method exists for the protocol to use
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
 
+        # Mock patient
+        mock_patient = MagicMock()
+        mock_patient.id = "test-patient-id"
 
-def test_filtered_reports():
-    """Test that test-only and junked reports are filtered out."""
-    # Test case 1: Test-only report should be filtered
-    test_report = MockLabReport(for_test_only=True)
-    assert test_report.for_test_only
+        # Mock normal lab values (no abnormal flag)
+        mock_normal_value1 = MagicMock()
+        mock_normal_value1.abnormal_flag = ""
 
-    # Test case 2: Junked report should be filtered
-    junked_report = MockLabReport(junked=True)
-    assert junked_report.junked
+        mock_normal_value2 = MagicMock()
+        mock_normal_value2.abnormal_flag = None
 
-    # Test case 3: Normal report should not be filtered
-    normal_report = MockLabReport(for_test_only=False, junked=False)
-    assert not normal_report.for_test_only and not normal_report.junked
+        # Mock lab report
+        mock_lab_report = MagicMock()
+        mock_lab_report.patient = mock_patient
+        mock_lab_report.values.all.return_value = [mock_normal_value1, mock_normal_value2]
 
+        # Mock LabReport queryset
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = mock_lab_report
 
-def test_multiple_abnormal_values():
-    """Test handling of multiple abnormal values in a single report."""
-    abnormal_values = [
-        MockLabValue(abnormal_flag="HIGH", value="180", units="mg/dL", reference_range="70-100"),
-        MockLabValue(abnormal_flag="LOW", value="9.2", units="g/dL", reference_range="12-16"),
-        MockLabValue(
-            abnormal_flag="CRITICAL", value="2.1", units="mmol/L", reference_range="3.5-5.0"
-        ),
-    ]
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
 
-    # Count abnormal values
-    abnormal_count = len([v for v in abnormal_values if v.abnormal_flag.strip()])
-    assert abnormal_count == 3
+            protocol = AbnormalLabProtocol(event=mock_event)
+            result = protocol.compute()
 
-    # Test title generation
-    expected_title = f"Review Abnormal Lab Values ({abnormal_count} abnormal)"
-    assert expected_title == "Review Abnormal Lab Values (3 abnormal)"
+            assert result == []
 
+    def test_compute_with_lab_report_not_found(self) -> None:
+        """Test that protocol returns empty list when lab report not found."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
 
-if __name__ == "__main__":
-    # Run basic validation tests
-    test_plugin_responds_to_correct_event()
-    test_abnormal_lab_detection()
-    test_task_creation_logic()
-    test_task_apply_method()
-    test_filtered_reports()
-    test_multiple_abnormal_values()
-    print("All tests passed!")
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "nonexistent-lab-report-id"
+
+        # Mock empty queryset
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = None
+
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
+
+            protocol = AbnormalLabProtocol(event=mock_event)
+            result = protocol.compute()
+
+            assert result == []
+
+    def test_compute_filters_test_and_junked_reports(self) -> None:
+        """Test that protocol properly filters out test and junked reports."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
+
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
+
+        # Mock empty queryset (filtered out)
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = None
+
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
+
+            protocol = AbnormalLabProtocol(event=mock_event)
+            protocol.compute()
+
+            # Verify filter was called with correct parameters
+            mock_filter.assert_called_once_with(
+                id="test-lab-report-id", for_test_only=False, junked=False, patient__isnull=False
+            )
+
+    def test_compute_handles_exception(self) -> None:
+        """Test that protocol handles exceptions gracefully."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
+
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
+
+        # Mock LabReport.objects.filter to raise exception
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.side_effect = Exception("Database error")
+
+            protocol = AbnormalLabProtocol(event=mock_event)
+            result = protocol.compute()
+
+            # Should return empty list on exception
+            assert result == []
+
+    def test_compute_with_whitespace_abnormal_flag(self) -> None:
+        """Test that protocol ignores abnormal flags that are only whitespace."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
+
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
+
+        # Mock patient
+        mock_patient = MagicMock()
+        mock_patient.id = "test-patient-id"
+
+        # Mock lab value with whitespace abnormal flag
+        mock_value_with_whitespace = MagicMock()
+        mock_value_with_whitespace.abnormal_flag = "   "  # Only whitespace
+
+        # Mock lab report
+        mock_lab_report = MagicMock()
+        mock_lab_report.patient = mock_patient
+        mock_lab_report.values.all.return_value = [mock_value_with_whitespace]
+
+        # Mock LabReport queryset
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = mock_lab_report
+
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
+
+            protocol = AbnormalLabProtocol(event=mock_event)
+            result = protocol.compute()
+
+            # Should return empty list since whitespace is stripped
+            assert result == []
+
+    def test_compute_single_abnormal_value(self) -> None:
+        """Test task title with single abnormal value."""
+        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
+            AbnormalLabProtocol,
+        )
+
+        from canvas_sdk.effects.task import TaskStatus
+
+        # Mock event
+        mock_event = MagicMock()
+        mock_event.target.id = "test-lab-report-id"
+
+        # Mock patient
+        mock_patient = MagicMock()
+        mock_patient.id = "test-patient-id"
+
+        # Mock single abnormal lab value
+        mock_abnormal_value = MagicMock()
+        mock_abnormal_value.abnormal_flag = "H"
+
+        # Mock lab report
+        mock_lab_report = MagicMock()
+        mock_lab_report.patient = mock_patient
+        mock_lab_report.values.all.return_value = [mock_abnormal_value]
+
+        # Mock LabReport queryset
+        mock_queryset = MagicMock()
+        mock_queryset.first.return_value = mock_lab_report
+
+        with patch(
+            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+        ) as mock_filter:
+            mock_filter.return_value = mock_queryset
+
+            with patch(
+                "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.AddTask"
+            ) as mock_task_class:
+                mock_task_instance = MagicMock()
+                mock_applied_effect = MagicMock()
+                mock_task_instance.apply.return_value = mock_applied_effect
+                mock_task_class.return_value = mock_task_instance
+
+                protocol = AbnormalLabProtocol(event=mock_event)
+                protocol.compute()
+
+                # Verify task title for single abnormal value
+                mock_task_class.assert_called_once_with(
+                    patient_id="test-patient-id",
+                    title="Review Abnormal Lab Values (1 abnormal)",
+                    status=TaskStatus.OPEN,
+                    labels=["abnormal-lab", "urgent-review"],
+                )

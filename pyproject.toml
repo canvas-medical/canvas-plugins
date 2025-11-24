@@ -59,12 +59,10 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.75.0"
+version = "0.77.0"
 
 [project.optional-dependencies]
-test-utils = [
-  "pytest-canvas"
-]
+test-utils = ["pytest-canvas"]
 
 [project.scripts]
 canvas = "canvas_cli.main:app"
@@ -151,6 +149,7 @@ norecursedirs = [
   "__pycache__",
   "canvas_cli/templates",
   "custom-plugins",
+  "example-plugins",
   "node_modules",
   "static",
   "static-files"
@@ -158,7 +157,7 @@ norecursedirs = [
 python_files = ["*_tests.py", "test_*.py", "tests.py"]
 
 [tool.ruff]
-exclude = ["canvas_generated/"]
+exclude = ["canvas_cli/templates/", "canvas_generated/"]
 line-length = 100
 target-version = "py311"
 
@@ -196,7 +195,7 @@ version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
 
 [tool.uv]
-required-version = "~=0.8.0"
+required-version = ">=0.8.0"
 
 [[tool.uv.index]]
 default = true

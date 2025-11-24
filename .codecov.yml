@@ -1,10 +1,21 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+
 ignore:
   - "canvas_cli/templates/**"
   - "canvas_generated/**"
   - "canvas_sdk/tests/**"
-  - "example-plugins/**"
+  - "example-plugins/**/tests/**"
   - "import_tracing/**"
   - "protobufs/**"
   - "**/test_*.py"
   - "**/tests.py"
   - "**/conftest.py"
+  - "settings.py"

@@ -2,7 +2,7 @@ import functools
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import typer
 
@@ -47,22 +47,22 @@ class CLIContext:
     _token_expiration_date: str | None = None
 
     @staticmethod
-    def persistent(fn: F | None = None, **options: Any) -> Callable[[F], F] | F:
+    def persistent(fn: Callable[..., Any] | None = None, **options: Any) -> Callable[..., Any]:
         """A decorator to store a config value in the file everytime it's changed."""
 
-        def _decorator(fn: F) -> F:
+        def _decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
             @functools.wraps(fn)
             def wrapper(self: "CLIContext", *args: Any, **kwargs: Any) -> Any:
-                fn(self, *args, **kwargs)
-                value = args[0]
+                result = fn(self, *args, **kwargs)
+                if args:  # Only store if there are arguments (setter case)
+                    value = args[0]
+                    print(f"Storing {fn.__name__}={value} in the config file")
+                    self._config_file[fn.__name__] = str(value)
+                    with open(self._config_file_path, "w") as f:
+                        json.dump(self._config_file, f)
+                return result
 
-                print(f"Storing {fn.__name__}={value} in the config file")
-
-                self._config_file[fn.__name__] = value
-                with open(self._config_file_path, "w") as f:
-                    json.dump(self._config_file, f)
-
-            return cast(F, wrapper)
+            return wrapper
 
         return _decorator(fn) if fn else _decorator
 

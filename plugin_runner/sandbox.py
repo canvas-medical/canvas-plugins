@@ -90,6 +90,18 @@ STANDARD_LIBRARY_MODULES = {
         "Counter",
         "defaultdict",
     },
+    "dataclasses": {
+        "asdict",
+        "astuple",
+        "dataclass",
+        "field",
+        "Field",
+        "fields",
+        "InitVar",
+        "is_dataclass",
+        "make_dataclass",
+        "replace",
+    },
     "datetime": {
         "date",
         "datetime",
