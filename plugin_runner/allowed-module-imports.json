@@ -3,9 +3,7 @@
     "CacheConfigurationError",
     "CachingException"
   ],
-  "canvas_sdk.caching.plugins": [
-    "get_cache"
-  ],
+  "canvas_sdk.caching.plugins": ["get_cache"],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -55,63 +53,35 @@
     "AllergenType",
     "AllergyCommand"
   ],
-  "canvas_sdk.commands.commands.assess": [
-    "AssessCommand"
-  ],
-  "canvas_sdk.commands.commands.change_medication": [
-    "ChangeMedicationCommand"
-  ],
+  "canvas_sdk.commands.commands.assess": ["AssessCommand"],
+  "canvas_sdk.commands.commands.change_medication": ["ChangeMedicationCommand"],
   "canvas_sdk.commands.commands.chart_section_review": [
     "ChartSectionReviewCommand"
   ],
-  "canvas_sdk.commands.commands.close_goal": [
-    "CloseGoalCommand"
-  ],
-  "canvas_sdk.commands.commands.diagnose": [
-    "DiagnoseCommand"
-  ],
-  "canvas_sdk.commands.commands.exam": [
-    "PhysicalExamCommand"
-  ],
-  "canvas_sdk.commands.commands.family_history": [
-    "FamilyHistoryCommand"
-  ],
-  "canvas_sdk.commands.commands.follow_up": [
-    "FollowUpCommand"
-  ],
-  "canvas_sdk.commands.commands.goal": [
-    "GoalCommand"
-  ],
+  "canvas_sdk.commands.commands.close_goal": ["CloseGoalCommand"],
+  "canvas_sdk.commands.commands.diagnose": ["DiagnoseCommand"],
+  "canvas_sdk.commands.commands.exam": ["PhysicalExamCommand"],
+  "canvas_sdk.commands.commands.family_history": ["FamilyHistoryCommand"],
+  "canvas_sdk.commands.commands.follow_up": ["FollowUpCommand"],
+  "canvas_sdk.commands.commands.goal": ["GoalCommand"],
   "canvas_sdk.commands.commands.history_present_illness": [
     "HistoryOfPresentIllnessCommand"
   ],
-  "canvas_sdk.commands.commands.imaging_order": [
-    "ImagingOrderCommand"
-  ],
+  "canvas_sdk.commands.commands.imaging_order": ["ImagingOrderCommand"],
   "canvas_sdk.commands.commands.immunization_statement": [
     "ImmunizationStatementCommand"
   ],
-  "canvas_sdk.commands.commands.instruct": [
-    "InstructCommand"
-  ],
-  "canvas_sdk.commands.commands.lab_order": [
-    "LabOrderCommand"
-  ],
-  "canvas_sdk.commands.commands.medical_history": [
-    "MedicalHistoryCommand"
-  ],
+  "canvas_sdk.commands.commands.instruct": ["InstructCommand"],
+  "canvas_sdk.commands.commands.lab_order": ["LabOrderCommand"],
+  "canvas_sdk.commands.commands.medical_history": ["MedicalHistoryCommand"],
   "canvas_sdk.commands.commands.medication_statement": [
     "MedicationStatementCommand"
   ],
   "canvas_sdk.commands.commands.past_surgical_history": [
     "PastSurgicalHistoryCommand"
   ],
-  "canvas_sdk.commands.commands.perform": [
-    "PerformCommand"
-  ],
-  "canvas_sdk.commands.commands.plan": [
-    "PlanCommand"
-  ],
+  "canvas_sdk.commands.commands.perform": ["PerformCommand"],
+  "canvas_sdk.commands.commands.plan": ["PlanCommand"],
   "canvas_sdk.commands.commands.prescribe": [
     "ClinicalQuantity",
     "CompoundMedicationData",
@@ -130,27 +100,13 @@
     "ResponseOption",
     "TextQuestion"
   ],
-  "canvas_sdk.commands.commands.reason_for_visit": [
-    "ReasonForVisitCommand"
-  ],
-  "canvas_sdk.commands.commands.refer": [
-    "ReferCommand"
-  ],
-  "canvas_sdk.commands.commands.refill": [
-    "RefillCommand"
-  ],
-  "canvas_sdk.commands.commands.remove_allergy": [
-    "RemoveAllergyCommand"
-  ],
-  "canvas_sdk.commands.commands.resolve_condition": [
-    "ResolveConditionCommand"
-  ],
-  "canvas_sdk.commands.commands.review_of_systems": [
-    "ReviewOfSystemsCommand"
-  ],
-  "canvas_sdk.commands.commands.stop_medication": [
-    "StopMedicationCommand"
-  ],
+  "canvas_sdk.commands.commands.reason_for_visit": ["ReasonForVisitCommand"],
+  "canvas_sdk.commands.commands.refer": ["ReferCommand"],
+  "canvas_sdk.commands.commands.refill": ["RefillCommand"],
+  "canvas_sdk.commands.commands.remove_allergy": ["RemoveAllergyCommand"],
+  "canvas_sdk.commands.commands.resolve_condition": ["ResolveConditionCommand"],
+  "canvas_sdk.commands.commands.review_of_systems": ["ReviewOfSystemsCommand"],
+  "canvas_sdk.commands.commands.stop_medication": ["StopMedicationCommand"],
   "canvas_sdk.commands.commands.structured_assessment": [
     "StructuredAssessmentCommand"
   ],
@@ -159,26 +115,16 @@
     "TaskAssigner",
     "TaskCommand"
   ],
-  "canvas_sdk.commands.commands.update_diagnosis": [
-    "UpdateDiagnosisCommand"
-  ],
-  "canvas_sdk.commands.commands.update_goal": [
-    "UpdateGoalCommand"
-  ],
-  "canvas_sdk.commands.commands.vitals": [
-    "VitalsCommand"
-  ],
+  "canvas_sdk.commands.commands.update_diagnosis": ["UpdateDiagnosisCommand"],
+  "canvas_sdk.commands.commands.update_goal": ["UpdateGoalCommand"],
+  "canvas_sdk.commands.commands.vitals": ["VitalsCommand"],
   "canvas_sdk.commands.constants": [
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
     "ServiceProvider"
   ],
-  "canvas_sdk.effects": [
-    "Effect",
-    "EffectType",
-    "_BaseEffect"
-  ],
+  "canvas_sdk.effects": ["Effect", "EffectType", "_BaseEffect"],
   "canvas_sdk.effects.appointments_metadata": [
     "AppointmentsMetadata",
     "AppointmentsMetadataCreateFormEffect",
@@ -190,26 +136,12 @@
     "FormField",
     "InputType"
   ],
-  "canvas_sdk.effects.appointments_metadata.base": [
-    "AppointmentsMetadata"
-  ],
-  "canvas_sdk.effects.banner_alert": [
-    "AddBannerAlert",
-    "RemoveBannerAlert"
-  ],
-  "canvas_sdk.effects.banner_alert.add_banner_alert": [
-    "AddBannerAlert"
-  ],
-  "canvas_sdk.effects.banner_alert.remove_banner_alert": [
-    "RemoveBannerAlert"
-  ],
-  "canvas_sdk.effects.base": [
-    "EffectType",
-    "_BaseEffect"
-  ],
-  "canvas_sdk.effects.batch_originate": [
-    "BatchOriginateCommandEffect"
-  ],
+  "canvas_sdk.effects.appointments_metadata.base": ["AppointmentsMetadata"],
+  "canvas_sdk.effects.banner_alert": ["AddBannerAlert", "RemoveBannerAlert"],
+  "canvas_sdk.effects.banner_alert.add_banner_alert": ["AddBannerAlert"],
+  "canvas_sdk.effects.banner_alert.remove_banner_alert": ["RemoveBannerAlert"],
+  "canvas_sdk.effects.base": ["EffectType", "_BaseEffect"],
+  "canvas_sdk.effects.batch_originate": ["BatchOriginateCommandEffect"],
   "canvas_sdk.effects.billing_line_item": [
     "AddBillingLineItem",
     "RemoveBillingLineItem",
@@ -243,33 +175,17 @@
     "Label",
     "RemoveClaimLabel"
   ],
-  "canvas_sdk.effects.claim_line_item": [
-    "UpdateClaimLineItem"
-  ],
-  "canvas_sdk.effects.claim_queue": [
-    "MoveClaimToQueue"
-  ],
-  "canvas_sdk.effects.compound_medications": [
-    "CompoundMedication"
-  ],
+  "canvas_sdk.effects.claim_line_item": ["UpdateClaimLineItem"],
+  "canvas_sdk.effects.claim_queue": ["MoveClaimToQueue"],
+  "canvas_sdk.effects.compound_medications": ["CompoundMedication"],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
-  "canvas_sdk.effects.fax": [
-    "FaxNoteEffect"
-  ],
-  "canvas_sdk.effects.generate_full_chart_pdf": [
-    "GenerateFullChartPDFEffect"
-  ],
-  "canvas_sdk.effects.group": [
-    "Group"
-  ],
-  "canvas_sdk.effects.launch_modal": [
-    "LaunchModalEffect"
-  ],
-  "canvas_sdk.effects.metadata": [
-    "Metadata"
-  ],
+  "canvas_sdk.effects.fax": ["FaxNoteEffect"],
+  "canvas_sdk.effects.generate_full_chart_pdf": ["GenerateFullChartPDFEffect"],
+  "canvas_sdk.effects.group": ["Group"],
+  "canvas_sdk.effects.launch_modal": ["LaunchModalEffect"],
+  "canvas_sdk.effects.metadata": ["Metadata"],
   "canvas_sdk.effects.note": [
     "AddAppointmentLabel",
     "Appointment",
@@ -289,15 +205,9 @@
     "AppointmentIdentifier",
     "NoteOrAppointmentABC"
   ],
-  "canvas_sdk.effects.note.message": [
-    "Message"
-  ],
-  "canvas_sdk.effects.note.note": [
-    "Note"
-  ],
-  "canvas_sdk.effects.panel_configuration": [
-    "PanelConfiguration"
-  ],
+  "canvas_sdk.effects.note.message": ["Message"],
+  "canvas_sdk.effects.note.note": ["Note"],
+  "canvas_sdk.effects.panel_configuration": ["PanelConfiguration"],
   "canvas_sdk.effects.patient": [
     "CreatePatientExternalIdentifier",
     "CreatePatientPreferredPharmacies",
@@ -322,9 +232,7 @@
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
   ],
-  "canvas_sdk.effects.patient_chart_group": [
-    "PatientChartGroup"
-  ],
+  "canvas_sdk.effects.patient_chart_group": ["PatientChartGroup"],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
   ],
@@ -334,9 +242,7 @@
     "PatientMetadata",
     "PatientMetadataCreateFormEffect"
   ],
-  "canvas_sdk.effects.patient_metadata.base": [
-    "PatientMetadata"
-  ],
+  "canvas_sdk.effects.patient_metadata.base": ["PatientMetadata"],
   "canvas_sdk.effects.patient_metadata.patient_metadata_create_form": [
     "FormField",
     "InputType",
@@ -345,9 +251,7 @@
   "canvas_sdk.effects.patient_portal.application_configuration": [
     "PatientPortalApplicationConfiguration"
   ],
-  "canvas_sdk.effects.patient_portal.form_result": [
-    "FormResult"
-  ],
+  "canvas_sdk.effects.patient_portal.form_result": ["FormResult"],
   "canvas_sdk.effects.patient_portal_menu_configuration": [
     "PatientPortalMenuConfiguration"
   ],
@@ -362,26 +266,17 @@
     "PaymentProcessorMetadata",
     "RemovePaymentMethodResponse"
   ],
-  "canvas_sdk.effects.protocol_card": [
-    "ProtocolCard",
-    "Recommendation"
-  ],
+  "canvas_sdk.effects.protocol_card": ["ProtocolCard", "Recommendation"],
   "canvas_sdk.effects.protocol_card.protocol_card": [
     "ProtocolCard",
     "Recommendation"
   ],
-  "canvas_sdk.effects.questionnaire_result": [
-    "CreateQuestionnaireResult"
-  ],
+  "canvas_sdk.effects.questionnaire_result": ["CreateQuestionnaireResult"],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
-  "canvas_sdk.effects.send_invite": [
-    "SendInviteEffect"
-  ],
-  "canvas_sdk.effects.show_button": [
-    "ShowButtonEffect"
-  ],
+  "canvas_sdk.effects.send_invite": ["SendInviteEffect"],
+  "canvas_sdk.effects.show_button": ["ShowButtonEffect"],
   "canvas_sdk.effects.simple_api": [
     "AcceptConnection",
     "Broadcast",
@@ -416,48 +311,18 @@
     "TaskStatus",
     "UpdateTask"
   ],
-  "canvas_sdk.effects.update_user": [
-    "UpdateUserEffect"
-  ],
-  "canvas_sdk.effects.widgets": [
-    "PortalWidget"
-  ],
-  "canvas_sdk.effects.widgets.portal_widget": [
-    "PortalWidget"
-  ],
-  "canvas_sdk.events": [
-    "Event",
-    "EventRequest",
-    "EventResponse",
-    "EventType"
-  ],
-  "canvas_sdk.events.base": [
-    "Event",
-    "TargetType"
-  ],
-  "canvas_sdk.handlers": [
-    "BaseHandler"
-  ],
-  "canvas_sdk.handlers.action_button": [
-    "ActionButton",
-    "SHOW_BUTTON_REGEX"
-  ],
-  "canvas_sdk.handlers.application": [
-    "Application"
-  ],
-  "canvas_sdk.handlers.base": [
-    "BaseHandler",
-    "version"
-  ],
-  "canvas_sdk.handlers.cron_task": [
-    "CronTask"
-  ],
-  "canvas_sdk.handlers.payment_processors.base": [
-    "PaymentProcessor"
-  ],
-  "canvas_sdk.handlers.payment_processors.card": [
-    "CardPaymentProcessor"
-  ],
+  "canvas_sdk.effects.update_user": ["UpdateUserEffect"],
+  "canvas_sdk.effects.widgets": ["PortalWidget"],
+  "canvas_sdk.effects.widgets.portal_widget": ["PortalWidget"],
+  "canvas_sdk.events": ["Event", "EventRequest", "EventResponse", "EventType"],
+  "canvas_sdk.events.base": ["Event", "TargetType"],
+  "canvas_sdk.handlers": ["BaseHandler"],
+  "canvas_sdk.handlers.action_button": ["ActionButton", "SHOW_BUTTON_REGEX"],
+  "canvas_sdk.handlers.application": ["Application"],
+  "canvas_sdk.handlers.base": ["BaseHandler", "version"],
+  "canvas_sdk.handlers.cron_task": ["CronTask"],
+  "canvas_sdk.handlers.payment_processors.base": ["PaymentProcessor"],
+  "canvas_sdk.handlers.payment_processors.card": ["CardPaymentProcessor"],
   "canvas_sdk.handlers.simple_api": [
     "APIKeyAuthMixin",
     "APIKeyCredentials",
@@ -518,38 +383,20 @@
     "ValueType",
     "separate_headers"
   ],
-  "canvas_sdk.handlers.simple_api.websocket": [
-    "WebSocket",
-    "WebSocketAPI"
-  ],
-  "canvas_sdk.protocols": [
-    "BaseProtocol",
-    "ClinicalQualityMeasure"
-  ],
-  "canvas_sdk.protocols.base": [
-    "BaseProtocol"
-  ],
-  "canvas_sdk.protocols.clinical_quality_measure": [
-    "ClinicalQualityMeasure"
-  ],
-  "canvas_sdk.protocols.timeframe": [
-    "Timeframe"
-  ],
-  "canvas_sdk.questionnaires": [
-    "questionnaire_from_yaml"
-  ],
+  "canvas_sdk.handlers.simple_api.websocket": ["WebSocket", "WebSocketAPI"],
+  "canvas_sdk.protocols": ["BaseProtocol", "ClinicalQualityMeasure"],
+  "canvas_sdk.protocols.base": ["BaseProtocol"],
+  "canvas_sdk.protocols.clinical_quality_measure": ["ClinicalQualityMeasure"],
+  "canvas_sdk.protocols.timeframe": ["Timeframe"],
+  "canvas_sdk.questionnaires": ["questionnaire_from_yaml"],
   "canvas_sdk.questionnaires.utils": [
     "Draft7Validator",
     "ExtendedDraft7Validator",
     "QuestionnaireConfig",
     "from_yaml"
   ],
-  "canvas_sdk.templates": [
-    "render_to_string"
-  ],
-  "canvas_sdk.templates.utils": [
-    "render_to_string"
-  ],
+  "canvas_sdk.templates": ["render_to_string"],
+  "canvas_sdk.templates.utils": ["render_to_string"],
   "canvas_sdk.utils": [
     "Http",
     "batch_get",
@@ -557,9 +404,7 @@
     "batch_post",
     "batch_put"
   ],
-  "canvas_sdk.utils.db": [
-    "thread_cleanup"
-  ],
+  "canvas_sdk.utils.db": ["thread_cleanup"],
   "canvas_sdk.utils.http": [
     "Http",
     "ThreadPoolExecutor",
@@ -714,30 +559,20 @@
     "AppointmentMetadata",
     "AppointmentProgressStatus"
   ],
-  "canvas_sdk.v1.data.assessment": [
-    "Assessment",
-    "AssessmentStatus"
-  ],
-  "canvas_sdk.v1.data.banner_alert": [
-    "BannerAlert"
-  ],
+  "canvas_sdk.v1.data.assessment": ["Assessment", "AssessmentStatus"],
+  "canvas_sdk.v1.data.banner_alert": ["BannerAlert"],
   "canvas_sdk.v1.data.billing": [
     "BillingLineItem",
     "BillingLineItemModifier",
     "BillingLineItemStatus"
   ],
-  "canvas_sdk.v1.data.business_line": [
-    "BusinessLine",
-    "BusinessLineState"
-  ],
+  "canvas_sdk.v1.data.business_line": ["BusinessLine", "BusinessLineState"],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
     "CareTeamMembershipStatus",
     "CareTeamRole"
   ],
-  "canvas_sdk.v1.data.charge_description_master": [
-    "ChargeDescriptionMaster"
-  ],
+  "canvas_sdk.v1.data.charge_description_master": ["ChargeDescriptionMaster"],
   "canvas_sdk.v1.data.claim": [
     "Claim",
     "ClaimComment",
@@ -753,18 +588,14 @@
     "InstallmentPlan",
     "InstallmentPlanStatus"
   ],
-  "canvas_sdk.v1.data.claim_diagnosis_code": [
-    "ClaimDiagnosisCode"
-  ],
+  "canvas_sdk.v1.data.claim_diagnosis_code": ["ClaimDiagnosisCode"],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
   ],
-  "canvas_sdk.v1.data.command": [
-    "Command"
-  ],
+  "canvas_sdk.v1.data.command": ["Command"],
   "canvas_sdk.v1.data.common": [
     "AddressState",
     "AddressType",
@@ -781,9 +612,7 @@
     "ReviewStatus",
     "TaxIDType"
   ],
-  "canvas_sdk.v1.data.compound_medication": [
-    "CompoundMedication"
-  ],
+  "canvas_sdk.v1.data.compound_medication": ["CompoundMedication"],
   "canvas_sdk.v1.data.condition": [
     "ClinicalStatus",
     "Condition",
@@ -806,20 +635,14 @@
     "DetectedIssue",
     "DetectedIssueEvidence"
   ],
-  "canvas_sdk.v1.data.device": [
-    "Device"
-  ],
-  "canvas_sdk.v1.data.discount": [
-    "Discount"
-  ],
+  "canvas_sdk.v1.data.device": ["Device"],
+  "canvas_sdk.v1.data.discount": ["Discount"],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
     "EncounterMedium",
     "EncounterState"
   ],
-  "canvas_sdk.v1.data.facility": [
-    "Facility"
-  ],
+  "canvas_sdk.v1.data.facility": ["Facility"],
   "canvas_sdk.v1.data.goal": [
     "Goal",
     "GoalAchievementStatus",
@@ -865,20 +688,14 @@
     "NewLineItemAdjustment",
     "NewLineItemPayment"
   ],
-  "canvas_sdk.v1.data.medication": [
-    "Medication",
-    "MedicationCoding",
-    "Status"
-  ],
+  "canvas_sdk.v1.data.medication": ["Medication", "MedicationCoding", "Status"],
   "canvas_sdk.v1.data.medication_history": [
     "MedicationHistoryMedication",
     "MedicationHistoryMedicationCoding",
     "MedicationHistoryResponse",
     "MedicationHistoryResponseStatus"
   ],
-  "canvas_sdk.v1.data.medication_statement": [
-    "MedicationStatement"
-  ],
+  "canvas_sdk.v1.data.medication_statement": ["MedicationStatement"],
   "canvas_sdk.v1.data.message": [
     "Message",
     "MessageAttachment",
@@ -902,9 +719,7 @@
     "ObservationComponentCoding",
     "ObservationValueCoding"
   ],
-  "canvas_sdk.v1.data.organization": [
-    "Organization"
-  ],
+  "canvas_sdk.v1.data.organization": ["Organization"],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",
     "ContactPointSystem",
@@ -927,9 +742,7 @@
     "PaymentCollection",
     "PostingMethods"
   ],
-  "canvas_sdk.v1.data.payor_specific_charge": [
-    "PayorSpecificCharge"
-  ],
+  "canvas_sdk.v1.data.payor_specific_charge": ["PayorSpecificCharge"],
   "canvas_sdk.v1.data.posting": [
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -967,16 +780,9 @@
     "ResponseOption",
     "ResponseOptionSet"
   ],
-  "canvas_sdk.v1.data.reason_for_visit": [
-    "ReasonForVisitSettingCoding"
-  ],
-  "canvas_sdk.v1.data.referral": [
-    "Referral",
-    "ReferralReport"
-  ],
-  "canvas_sdk.v1.data.service_provider": [
-    "ServiceProvider"
-  ],
+  "canvas_sdk.v1.data.reason_for_visit": ["ReasonForVisitSettingCoding"],
+  "canvas_sdk.v1.data.referral": ["Referral", "ReferralReport"],
+  "canvas_sdk.v1.data.service_provider": ["ServiceProvider"],
   "canvas_sdk.v1.data.staff": [
     "Staff",
     "StaffAddress",
@@ -985,9 +791,7 @@
     "StaffPhoto",
     "StaffRole"
   ],
-  "canvas_sdk.v1.data.stop_medication_event": [
-    "StopMedicationEvent"
-  ],
+  "canvas_sdk.v1.data.stop_medication_event": ["StopMedicationEvent"],
   "canvas_sdk.v1.data.task": [
     "EventType",
     "Task",
@@ -999,14 +803,8 @@
     "TaskTaskLabel",
     "TaskType"
   ],
-  "canvas_sdk.v1.data.team": [
-    "Team",
-    "TeamContactPoint",
-    "TeamResponsibility"
-  ],
-  "canvas_sdk.v1.data.user": [
-    "CanvasUser"
-  ],
+  "canvas_sdk.v1.data.team": ["Team", "TeamContactPoint", "TeamResponsibility"],
+  "canvas_sdk.v1.data.user": ["CanvasUser"],
   "canvas_sdk.value_set.custom": [
     "Antiarrhythmics",
     "DiabetesCirculatoryClassConditionSuspect",
@@ -1021,12 +819,8 @@
     "HypertensiveChronicKidneyDisease",
     "LabReportCreatinine"
   ],
-  "canvas_sdk.value_set.hcc2018": [
-    "HCCConditions"
-  ],
-  "canvas_sdk.value_set.v2022.adverse_event": [
-    "StatinAllergen"
-  ],
+  "canvas_sdk.value_set.hcc2018": ["HCCConditions"],
+  "canvas_sdk.value_set.v2022.adverse_event": ["StatinAllergen"],
   "canvas_sdk.value_set.v2022.allergy": [
     "AceInhibitorOrArbIngredient",
     "BetaBlockerTherapyIngredient",
@@ -1225,10 +1019,7 @@
     "VascularDisordersOfIrisAndCiliaryBody",
     "VisualFieldDefects"
   ],
-  "canvas_sdk.value_set.v2022.device": [
-    "CardiacPacer",
-    "FrailtyDevice"
-  ],
+  "canvas_sdk.value_set.v2022.device": ["CardiacPacer", "FrailtyDevice"],
   "canvas_sdk.value_set.v2022.diagnostic_study": [
     "BoneScan",
     "CtColonography",
@@ -1490,6 +1281,7 @@
     "ChemotherapyAdministration",
     "Colonoscopy",
     "CystectomyForUrologyCare",
+    "CMS130v6CtColonography",
     "DialysisServices",
     "DtapVaccineAdministered",
     "FlexibleSigmoidoscopy",
@@ -1523,9 +1315,714 @@
     "UnilateralMastectomyRight",
     "VaricellaZosterVaccineVzvAdministered"
   ],
-  "canvas_sdk.value_set.v2022.symptom": [
-    "FrailtySymptom"
+  "canvas_sdk.value_set.v2022.symptom": ["FrailtySymptom"],
+  "canvas_sdk.value_set.v2026.adverse_event": [
+    "InpatientFalls",
+    "ThrombolyticMedications"
   ],
+  "canvas_sdk.value_set.v2026.allergy": [
+    "AceInhibitorOrArbOrArniIngredient",
+    "BetaBlockerTherapyIngredient",
+    "StatinAllergen"
+  ],
+  "canvas_sdk.value_set.v2026.assessment": [
+    "AbnormalPresentation",
+    "EmergencyDepartmentEvaluation",
+    "EstimatedGestationalAgeAtDelivery",
+    "FallsScreening",
+    "HistoryOfAtrialAblation",
+    "MalnutritionRiskScreening",
+    "NonInvasiveOxygenTherapy",
+    "NutritionAssessment",
+    "Phq9AndPhq9mTools",
+    "StandardizedPainAssessmentTool",
+    "StandardizedToolsScoreForAssessmentOfCognition",
+    "TobaccoUseScreening"
+  ],
+  "canvas_sdk.value_set.v2026.communication": [
+    "AutonomousEyeExamResultOrFinding",
+    "ConsultantReport",
+    "DiabeticRetinopathySeverityLevel",
+    "LevelOfSeverityOfRetinopathyFindings",
+    "MacularEdemaFindingsPresent"
+  ],
+  "canvas_sdk.value_set.v2026.condition": [
+    "ActiveBleedingOrBleedingDiathesisExcludingMenses",
+    "AcuteAndSubacuteIridocyclitis",
+    "AcutePepticUlcer",
+    "AcutePharyngitis",
+    "AcuteTonsillitis",
+    "AdvancedIllness",
+    "AlcoholWithdrawal",
+    "AllergyToAceInhibitorOrArb",
+    "AllergyToBetaBlockerTherapy",
+    "AllergyToThrombolytics",
+    "Amblyopia",
+    "AnaphylacticReactionToDtapVaccine",
+    "AorticDissectionOrRupturedAorticAneurysm",
+    "Arrhythmia",
+    "Asthma",
+    "AtherosclerosisAndPeripheralArterialDisease",
+    "AtrialFibrillationOrFlutter",
+    "AtrioventricularBlock",
+    "BenzodiazepineWithdrawal",
+    "BipolarDisorder",
+    "BladderCancerForUrologyCare",
+    "Bradycardia",
+    "Breastfeeding",
+    "BurnConfinedToEyeAndAdnexa",
+    "Cancer",
+    "CancerRelatedPain",
+    "CardiacPacerInSitu",
+    "CardiopulmonaryEmergency",
+    "CataractCongenital",
+    "CataractMatureOrHypermature",
+    "CataractPosteriorPolar",
+    "CataractSecondaryToOcularDisorders",
+    "CentralCornealUlcer",
+    "CerebralVascularLesion",
+    "CerebrovascularDiseaseStrokeOrTia",
+    "CertainTypesOfIridocyclitis",
+    "ChoroidalDegenerations",
+    "ChoroidalDetachment",
+    "ChoroidalHemorrhageAndRupture",
+    "ChronicIridocyclitis",
+    "ChronicKidneyDiseaseStage5",
+    "ClosedHeadAndFacialTrauma",
+    "CloudyCornea",
+    "ComorbidConditionsForRespiratoryConditions",
+    "CompetingConditionsForRespiratoryConditions",
+    "ComplicationsOfPregnancyChildbirthAndThePuerperium",
+    "CongenitalOrAcquiredAbsenceOfCervix",
+    "CornealEdema",
+    "CoronaryArteryDiseaseNoMi",
+    "DegenerationOfMaculaAndPosteriorPole",
+    "DegenerativeDisordersOfGlobe",
+    "DementiaAndMentalDegenerations",
+    "DementiaAndRelatedIntracranialPathologies",
+    "DentalCaries",
+    "Diabetes",
+    "DiabeticMacularEdema",
+    "DiabeticRetinopathy",
+    "DiagnosesUsedToIndicateSexualActivity",
+    "DiagnosisOfHypertension",
+    "DisordersOfCorneaIncludingCornealOpacity",
+    "DisordersOfOpticChiasm",
+    "DisordersOfTheImmuneSystem",
+    "DisordersOfVisualCortex",
+    "DisseminatedChorioretinitisAndDisseminatedRetinochoroiditis",
+    "Dysthymia",
+    "EncephalitisDueToDiphtheriaTetanusOrPertussisVaccine",
+    "EndStageRenalDisease",
+    "EssentialHypertension",
+    "FamilialHypercholesterolemia",
+    "FocalChorioretinitisAndFocalRetinochoroiditis",
+    "FrailtyDiagnosis",
+    "GeneralizedAnxietyDisorder",
+    "Glaucoma",
+    "GlaucomaAssociatedWithCongenitalAnomaliesAndDystrophiesAndSystemicSyndromes",
+    "HeartFailure",
+    "HeartTransplantComplications",
+    "HepatitisA",
+    "HepatitisB",
+    "HereditaryChoroidalDystrophies",
+    "HereditaryCornealDystrophies",
+    "HereditaryRetinalDystrophies",
+    "HistoryOfAtrialAblation",
+    "HistoryOfBilateralMastectomy",
+    "Hiv",
+    "HospiceDiagnosis",
+    "Hypotension",
+    "HypotonyOfEye",
+    "ImmunocompromisedConditions",
+    "InitialMyocardialInfarction",
+    "InjuryToOpticNerveAndPathways",
+    "IntoleranceToAceInhibitorOrArb",
+    "IntoleranceToBetaBlockerTherapy",
+    "IntravenousOrIntraarterialThrombolyticTpaTherapyPriorToArrival",
+    "Intussusception",
+    "IschemicHeartDiseaseOrRelatedDiagnoses",
+    "IschemicStroke",
+    "KidneyTransplantRecipient",
+    "LeftVentricularAssistDeviceComplications",
+    "LimitedLifeExpectancy",
+    "LiverDisease",
+    "LowerBodyFracturesExcludingAnkleAndFoot",
+    "MacularScarOfPosteriorPolar",
+    "MajorDepression",
+    "MajorDepressionIncludingRemission",
+    "MalignantIntracranialNeoplasmGroup",
+    "MalignantNeoplasmOfColon",
+    "MalignantNeoplasmOfLymphaticAndHematopoieticTissue",
+    "MalignantNeoplasmsOfLowerAndUnspecifiedLimbs",
+    "MalnutritionDiagnosis",
+    "Measles",
+    "MechanicalComplicationsExcludingUpperBody",
+    "MixedHistologyUrothelialCellCarcinomaForUrologyCare",
+    "ModerateOrSevereLvsd",
+    "MorbidObesity",
+    "MorgagnianCataract",
+    "Mumps",
+    "MyocardialInfarction",
+    "Narcolepsy",
+    "NeurologicImpairment",
+    "NystagmusAndOtherIrregularEyeMovements",
+    "OpenWoundOfEyeball",
+    "OpioidUseDisorder",
+    "OpticAtrophy",
+    "OpticNeuritis",
+    "OtherAndUnspecifiedFormsOfChorioretinitisAndRetinochoroiditis",
+    "OtherBackgroundRetinopathyAndRetinalVascularChanges",
+    "OtherDisordersOfOpticNerve",
+    "OtherEndophthalmitis",
+    "OtherProliferativeRetinopathy",
+    "OverweightOrObese",
+    "PainWarrantingFurtherInvestigationForProstateCancer",
+    "PalliativeCareDiagnosis",
+    "PathologicMyopia",
+    "PersonalityDisorderEmotionallyLabile",
+    "PervasiveDevelopmentalDisorder",
+    "PosteriorLenticonus",
+    "PrediabetesBorderlineDiabetes",
+    "Pregnancy",
+    "PregnantState",
+    "PrimaryOpenAngleGlaucoma",
+    "PriorPenetratingKeratoplasty",
+    "ProstateCancer",
+    "PurulentEndophthalmitis",
+    "RemSleepBehaviorDisorder",
+    "RetinalDetachmentWithRetinalDefect",
+    "RetinalVascularOcclusion",
+    "RetrolentalFibroplasias",
+    "Rhabdomyolysis",
+    "Rubella",
+    "Schizophrenia",
+    "SchizophreniaOrPsychoticDisorder",
+    "Scleritis",
+    "SeizureDisorder",
+    "SeparationOfRetinalLayers",
+    "SevereCombinedImmunodeficiency",
+    "SickleCellDiseaseWithAndWithoutCrisis",
+    "StableAndUnstableAngina",
+    "StatinAssociatedMuscleSymptoms",
+    "StatusPostLeftMastectomy",
+    "StatusPostRightMastectomy",
+    "Stemi",
+    "SubstanceUseDisorder",
+    "TraumaticCataract",
+    "TuberculosisForUrologyCare",
+    "Underweight",
+    "UnilateralMastectomyUnspecifiedLaterality",
+    "UpperRespiratoryInfection",
+    "UrinaryRetention",
+    "Uveitis",
+    "VaricellaZoster",
+    "VascularDisordersOfIrisAndCiliaryBody",
+    "VenousThromboembolism",
+    "VisualFieldDefects"
+  ],
+  "canvas_sdk.value_set.v2026.device": [
+    "FrailtyDevice",
+    "GraduatedCompressionStockings",
+    "IntermittentPneumaticCompressionDevices",
+    "NonInvasiveOxygenTherapyDeviceCodes",
+    "VenousFootPumps"
+  ],
+  "canvas_sdk.value_set.v2026.diagnostic_study": [
+    "BoneScan",
+    "CtColonography",
+    "CupToDiscRatio",
+    "DexaBoneDensityForUrologyCare",
+    "DiagnosticStudiesDuringPregnancy",
+    "EjectionFraction",
+    "ImagingRelatedToVte",
+    "MacularExam",
+    "Mammography",
+    "OpticDiscExamForStructuralAbnormalities",
+    "XrayStudy"
+  ],
+  "canvas_sdk.value_set.v2026.encounter": [
+    "AnnualWellnessVisit",
+    "AudioVisualTelehealthEncounter",
+    "AudiologyVisit",
+    "BehavioralHealthFollowUpVisit",
+    "BehavioralOrNeuropsychAssessment",
+    "CareServicesInLongTermResidentialFacility",
+    "ClinicalOralEvaluation",
+    "ContactOrOfficeVisit",
+    "DecisionToAdmitToHospitalInpatient",
+    "DecisionToTransfer",
+    "DetoxificationVisit",
+    "DischargeServicesHospitalInpatient",
+    "DischargeServicesHospitalInpatientSameDayDischarge",
+    "DischargeServicesNursingFacility",
+    "EdVisitAndObTriage",
+    "ElectiveInpatientEncounter",
+    "EmergencyDepartmentEvaluationAndManagementVisit",
+    "EmergencyDepartmentVisit",
+    "EncounterInpatient",
+    "EncounterToDocumentMedications",
+    "EncounterToEvaluateBmi",
+    "EncounterToScreenForBloodPressure",
+    "EncounterToScreenForDepression",
+    "EsrdMonthlyOutpatientServices",
+    "FaceToFaceInteraction",
+    "FrailtyEncounter",
+    "GroupPsychotherapy",
+    "HomeHealthcareServices",
+    "HospiceEncounter",
+    "HospitalServicesForUrologyCare",
+    "InitialHospitalInpatientVisit",
+    "MedicalDisabilityExam",
+    "NonelectiveInpatientEncounter",
+    "NursingFacilityVisit",
+    "NutritionServices",
+    "ObservationServices",
+    "OccupationalTherapyEvaluation",
+    "OfficeVisit",
+    "OphthalmologicalServices",
+    "OutpatientClinicalEncounters",
+    "OutpatientConsultation",
+    "OutpatientEncounter",
+    "OutpatientEncountersForPreventiveCare",
+    "OutpatientSurgeryService",
+    "PalliativeCareEncounter",
+    "PatientProviderInteraction",
+    "PhysicalTherapyEvaluation",
+    "PreventativeClinicalEncounters",
+    "PreventiveCareEstablishedOfficeVisit0To17",
+    "PreventiveCareServicesEstablishedOfficeVisit18AndUp",
+    "PreventiveCareServicesGroupCounseling",
+    "PreventiveCareServicesIndividualCounseling",
+    "PreventiveCareServicesInitialOfficeVisit0To17",
+    "PreventiveCareServicesInitialOfficeVisit18AndUp",
+    "PsychVisitDiagnosticEvaluation",
+    "PsychVisitForFamilyPsychotherapy",
+    "PsychVisitPsychotherapy",
+    "Psychoanalysis",
+    "PsychotherapyAndPharmacologicManagement",
+    "RadiationTreatmentManagement",
+    "SpeechAndHearingEvaluation",
+    "TelemedicineServices",
+    "TelephoneVisits",
+    "Triage",
+    "VirtualEncounter"
+  ],
+  "canvas_sdk.value_set.v2026.immunization": [
+    "ChildInfluenzaVaccine",
+    "DtapVaccine",
+    "HepatitisAVaccine",
+    "HepatitisBVaccine",
+    "HibVaccine3DoseSchedule",
+    "HibVaccine4DoseSchedule",
+    "InactivatedPolioVaccineIpv",
+    "InfluenzaVirusLaivVaccine",
+    "MeaslesMumpsAndRubellaMmrVaccine",
+    "PneumococcalConjugateVaccine",
+    "RotavirusVaccine3DoseSchedule",
+    "VaricellaZosterVaccineVzv"
+  ],
+  "canvas_sdk.value_set.v2026.individual_characteristic": [
+    "Ethnicity",
+    "FederalAdministrativeSex",
+    "MedicareAdvantagePayer",
+    "MedicareFfsPayer",
+    "PayerType",
+    "Race"
+  ],
+  "canvas_sdk.value_set.v2026.intervention": [
+    "BehavioralOrNeuropsychAssessment",
+    "CognitiveAssessment",
+    "ComfortMeasures",
+    "CounselingForNutrition",
+    "CounselingForPhysicalActivity",
+    "DietaryRecommendations",
+    "DietitianReferral",
+    "FollowUpForAboveNormalBmi",
+    "FollowUpForAdolescentDepression",
+    "FollowUpForAdultDepression",
+    "FollowUpForBelowNormalBmi",
+    "FollowUpWithin4Weeks",
+    "FollowUpWithin6Months",
+    "HospiceCareAmbulatory",
+    "HospiceStatus",
+    "LifestyleRecommendation",
+    "NonInvasiveOxygenTherapyByNasalCannulaOrMask",
+    "NutritionCarePlan",
+    "OpioidMedicationAssistedTreatmentMat",
+    "PalliativeCareIntervention",
+    "PalliativeOrHospiceCare",
+    "PsychVisitDiagnosticEvaluation",
+    "PsychVisitPsychotherapy",
+    "RecommendationToIncreasePhysicalActivity",
+    "Referral",
+    "ReferralForAdolescentDepression",
+    "ReferralForAdultDepression",
+    "ReferralOrCounselingForAlcoholConsumption",
+    "ReferralToPrimaryCareOrAlternateProvider",
+    "ReferralsWhereWeightAssessmentMayOccur",
+    "SubstanceUseDisorderTreatment",
+    "TobaccoUseCessationCounseling",
+    "WeightReductionRecommended"
+  ],
+  "canvas_sdk.value_set.v2026.laboratory_test": [
+    "AlbuminLabTest",
+    "ArterialBloodPh",
+    "AspartateTransaminaseLabTest",
+    "BicarbonateLabTest",
+    "BilirubinLabTest",
+    "BloodUreaNitrogenLabTest",
+    "CarbonDioxidePartialPressureInArterialBlood",
+    "ChlamydiaScreening",
+    "CreatinineLabTest",
+    "CreatinineMassPerVolume",
+    "EstimatedGlomerularFiltrationRate",
+    "FecalOccultBloodTestFobt",
+    "GlucoseLabTest",
+    "GlucoseLabTestMassPerVolume",
+    "GlycemicScreeningTests",
+    "GonorrheaScreening",
+    "GroupAStreptococcusTest",
+    "Hba1cLaboratoryTest",
+    "HematocritLabTest",
+    "HemoglobinLabTest",
+    "HivLabTests",
+    "HivViralLoadTests",
+    "HpvTest",
+    "Inr",
+    "LabTestsDuringPregnancy",
+    "LabTestsForSexuallyTransmittedInfections",
+    "LaboratoryTestsForHypertension",
+    "LdlCholesterol",
+    "LeukocyteCountLabTest",
+    "OxygenPartialPressureInArterialBlood",
+    "PapTest",
+    "PlateletCountLabTest",
+    "PotassiumLabTest",
+    "PregnancyTest",
+    "ProstateSpecificAntigenTest",
+    "SdnaFitTest",
+    "SodiumLabTest",
+    "SyphilisTests",
+    "UrineAlbumin",
+    "UrineAlbuminCreatinineRatio",
+    "UrineCreatinine",
+    "WhiteBloodCellsCountLabTest"
+  ],
+  "canvas_sdk.value_set.v2026.medication": [
+    "AceInhibitorOrArbOrArni",
+    "AdolescentDepressionMedications",
+    "AdultDepressionMedications",
+    "AndrogenDeprivationTherapyForUrologyCare",
+    "AntibioticMedicationsForPharyngitis",
+    "AntibioticMedicationsForUpperRespiratoryInfection",
+    "AnticoagulantMedications",
+    "AnticoagulantTherapy",
+    "AnticoagulantsForAllIndications",
+    "AntidepressantMedication",
+    "Antidepressants",
+    "Antihypertensives",
+    "AntithromboticTherapyForIschemicStroke",
+    "Atomoxetine",
+    "BacillusCalmetteGuerinForUrologyCare",
+    "BetaBlockerTherapy",
+    "BetaBlockerTherapyForLvsd",
+    "CentralNervousSystemDepressants",
+    "ChemotherapyAgentsForAdvancedCancer",
+    "Clonidine",
+    "ContraceptiveMedications",
+    "DementiaMedications",
+    "DesiccatedThyroidMedications",
+    "Dexmethylphenidate",
+    "Dextroamphetamine",
+    "DigoxinMedications",
+    "DipyridamoleMedications",
+    "DirectThrombinInhibitor",
+    "Diuretics",
+    "DoxepinMedications",
+    "FibrinolyticTherapy",
+    "GlycoproteinIibIiiaInhibitors",
+    "GuanfacineMedications",
+    "HighIntensityStatinTherapy",
+    "HypoglycemicsSevereHypoglycemia",
+    "HypoglycemicsTreatmentMedications",
+    "ImmunosuppressiveDrugsForUrologyCare",
+    "InjectableFactorXaInhibitorForVteProphylaxis",
+    "Isotretinoin",
+    "Lisdexamfetamine",
+    "LowDoseUnfractionatedHeparinForVteProphylaxis",
+    "LowIntensityStatinTherapy",
+    "LowMolecularWeightHeparinForVteProphylaxis",
+    "MedicationsForAboveNormalBmi",
+    "MedicationsForBelowNormalBmi",
+    "MedicationsForOpioidUseDisorderMoud",
+    "MegestrolMedications",
+    "MeperidineMedications",
+    "MeprobamateMedications",
+    "Methylphenidate",
+    "ModerateIntensityStatinTherapy",
+    "NifedipineMedications",
+    "OpioidAntagonist",
+    "Opioids",
+    "OpioidsAll",
+    "OralAnticoagulantMedications",
+    "OralFactorXaInhibitorForVteProphylaxisOrVteTreatment",
+    "PharmacologicTherapyForHypertension",
+    "PharmacologicalContraindicationsForAntithromboticTherapy",
+    "PotentiallyHarmfulAntidepressantsForOlderAdults",
+    "PotentiallyHarmfulAntihistaminesForOlderAdults",
+    "PotentiallyHarmfulAntiinfectivesForOlderAdults",
+    "PotentiallyHarmfulAntiparkinsonianAgentsForOlderAdults",
+    "PotentiallyHarmfulAntipsychoticsForOlderAdults",
+    "PotentiallyHarmfulBarbituratesForOlderAdults",
+    "PotentiallyHarmfulBenzodiazepinesForOlderAdults",
+    "PotentiallyHarmfulEstrogensForOlderAdults",
+    "PotentiallyHarmfulGastrointestinalAntispasmodicsForOlderAdults",
+    "PotentiallyHarmfulNonbenzodiazepineHypnoticsForOlderAdults",
+    "PotentiallyHarmfulPainMedicationsForOlderAdults",
+    "PotentiallyHarmfulSkeletalMuscleRelaxantsForOlderAdults",
+    "PotentiallyHarmfulSulfonylureasForOlderAdults",
+    "RivaroxabanForVteProphylaxis",
+    "ScheduleIiIiiAndIvOpioidMedications",
+    "ScheduleIvBenzodiazepines",
+    "SubstanceUseDisorderLongActingMedication",
+    "SubstanceUseDisorderShortActingMedication",
+    "ThrombolyticTpaTherapy",
+    "TobaccoUseCessationPharmacotherapy",
+    "UnfractionatedHeparin",
+    "Viloxazine",
+    "Warfarin"
+  ],
+  "canvas_sdk.value_set.v2026.no_qdm_category_assigned": [
+    "AbnormalWeightLoss",
+    "AcuteHeartFailure",
+    "AcuteMyocardialInfarction",
+    "AcuteOrPersistentAsthma",
+    "AcuteRenalFailure",
+    "AcuteRespiratoryDistressSyndrome",
+    "AcuteRespiratoryFailure",
+    "AdmitInpatient",
+    "AirAndThromboticEmbolism",
+    "Ambulatory",
+    "AmnioticFluidEmbolism",
+    "Anemia",
+    "AorticAneurysm",
+    "AsaPhysicalStatusClass",
+    "AutoimmuneDisease",
+    "AutonomousEyeExamResultOrFinding",
+    "BariatricSurgery",
+    "BleedingDisorder",
+    "CardiacArrestVentricularFibrillation",
+    "CardiacDisease",
+    "CoagulationDisorders",
+    "DegenerativeNeurologicalDisorder",
+    "DeliriumOrDementiaAndOtherPsychoses",
+    "DeliveryOfSingleton",
+    "Depression",
+    "DiabeticRetinopathySeverityLevel",
+    "DischargeToAcuteCareFacility",
+    "DischargedToHealthCareFacilityForHospiceCare",
+    "DischargedToHomeForHospiceCare",
+    "DisseminatedIntravascularCoagulation",
+    "DrugInterventionNotIndicatedContraindicated",
+    "Eclampsia",
+    "EconomicHousingInstability",
+    "EmergencyDepartmentLocation",
+    "EmergencyDepartmentTreatmentLocation",
+    "Epilepsy",
+    "FindingOfElevatedBloodPressureOrHypertension",
+    "GastrointestinalDisease",
+    "GenitalHerpes",
+    "GestationalDiabetes",
+    "HeartFailureCardiacArrestRelatedToProcedureOrSurgery",
+    "HemorrhagicStroke",
+    "HighRiskDiagnosisForAki",
+    "HivInPregnancyChildbirthAndPuerperium",
+    "HospiceCareReferralOrAdmission",
+    "Hypertension",
+    "IntensiveCareUnit",
+    "IntravenousRoute",
+    "IschemicStroke",
+    "LeftAgainstMedicalAdvice",
+    "LeukemiaOrLymphoma",
+    "LiverDiseaseModerateToSevere",
+    "LongTermAnticoagulantUse",
+    "LowRisk",
+    "MajorDepressiveDisorderActive",
+    "MajorInjuries",
+    "MalignantBoneDisease",
+    "Malnutrition",
+    "MalnutritionScreeningFindingOfAtRiskResult",
+    "MalnutritionScreeningFindingOfNotAtRiskResult",
+    "MedicalReason",
+    "MedicalReasonForNotProvidingTreatment",
+    "MentalBehavioralAndNeurodevelopmentalDisorders",
+    "MentalHealthDiagnoses",
+    "MentalHealthDiagnosisWithoutSubstanceUseDisorders",
+    "MentalHealthDisorder",
+    "MildOrModeratePreeclampsia",
+    "ModerateInjuries",
+    "ModerateOrSevere",
+    "MorbidOrSevereObesity",
+    "MultiplePregnancy",
+    "NeurologicMovementAndRelatedDisorders",
+    "NeuromuscularDisease",
+    "NeuromuscularDisorder",
+    "NotPresentOnAdmissionOrDocumentationInsufficientToDetermine",
+    "NutritionAssessmentStatusFindingOfModeratelyMalnourished",
+    "NutritionAssessmentStatusFindingOfSeverelyMalnourished",
+    "NutritionAssessmentStatusFindingOfWellNourishedOrNotMalnourishedOrMildlyMalnourished",
+    "Obesity",
+    "ObstetricalOrPregnancyRelatedConditions",
+    "ObstetricsVte",
+    "Osteoporosis",
+    "PatientDeclined",
+    "PatientExpired",
+    "PatientReason",
+    "PatientReasonForAceInhibitorOrArbDecline",
+    "PatientRefusal",
+    "PeripheralNeuropathy",
+    "PlacentaAccreta",
+    "PlacentaAccretaSpectrumPreviaOrVasaPrevia",
+    "PlacentaIncretaOrPercreta",
+    "PlacentaPrevia",
+    "PlacentalAbruption",
+    "PreexistingDiabetes",
+    "PresentOnAdmissionIsNoOrUnableToDetermine",
+    "PresentOnAdmissionIsYesOrExempt",
+    "PresentOnAdmissionOrClinicallyUndetermined",
+    "PressureInjuryDeepTissue",
+    "PressureInjuryDeepTissueDiagnoses",
+    "PressureInjuryStage234OrUnstageable",
+    "PressureInjuryStage234OrUnstageableDiagnoses",
+    "PretermBirth",
+    "PreviousCesarean",
+    "ProceduralHospitalLocations",
+    "ProcedureNotIndicatedContraindicated",
+    "ProviderTypes",
+    "PuerperalCerebrovascularDisorder",
+    "PulmonaryEdema",
+    "PulmonaryHypertension",
+    "RenalDisease",
+    "RoutesOfAdministrationForOpioidAntagonists",
+    "Sepsis",
+    "SevereAnesthesiaComplications",
+    "SevereMaternalMorbidityDiagnoses",
+    "SeverePreeclampsia",
+    "Shock",
+    "SickleCellDiseaseWithCrisis",
+    "SmokingStatus",
+    "Stroke",
+    "SubcutaneousRoute",
+    "SubstanceAbuse",
+    "SuicideAttempt",
+    "ThirtySevenToFortyTwoPlusWeeksGestation",
+    "ThrombolyticsAdverseEvent",
+    "Thyrotoxicosis",
+    "TobaccoNonUser",
+    "TobaccoUser",
+    "TracheostomyDiagnoses",
+    "TwentyToFortyTwoPlusWeeksGestation",
+    "UnavailabilityOfBacillusCalmetteGuerinForUrologyCare",
+    "UndetectableLabResultValue",
+    "VenousThromboembolismInPregnancy",
+    "VisualAcuity2040OrBetter",
+    "VteDiagnoses",
+    "VteSymptoms"
+  ],
+  "canvas_sdk.value_set.v2026.physical_exam": [
+    "BestCorrectedVisualAcuityExamUsingSnellenChart",
+    "BmiPercentile",
+    "BodyTemperature",
+    "BodyWeight",
+    "HeartRate",
+    "Height",
+    "OxygenSaturationByPulseOximetry",
+    "RespiratoryRate",
+    "RetinalOrDilatedEyeExam",
+    "SystolicBloodPressure",
+    "Weight"
+  ],
+  "canvas_sdk.value_set.v2026.procedure": [
+    "AnesthesiaRequiringMonitoredCare",
+    "ApplicationOfGraduatedCompressionStockings",
+    "ApplicationOfIntermittentPneumaticCompressionDevices",
+    "ApplicationOfVenousFootPumps",
+    "AtrialAblation",
+    "BilateralMastectomy",
+    "BloodTransfusion",
+    "CabgOrPciProcedure",
+    "CabgSurgeries",
+    "CardiacPacer",
+    "CardiacSurgery",
+    "CarotidIntervention",
+    "CataractSurgery",
+    "CesareanBirth",
+    "ChemotherapyAdministration",
+    "ChildInfluenzaVaccineAdministered",
+    "Colonoscopy",
+    "ConversionOfCardiacRhythm",
+    "CystectomyForUrologyCare",
+    "DeliveryProcedures",
+    "DialysisServices",
+    "DtapVaccineAdministered",
+    "EndotrachealIntubation",
+    "FlexibleSigmoidoscopy",
+    "FluorideVarnishApplicationForChildren",
+    "GeneralAndNeuraxialAnesthesia",
+    "GeneralOrNeuraxialAnesthesia",
+    "GeneralSurgery",
+    "GynecologicalSurgery",
+    "HeadNeckAndThoracicSurgeriesWithHighRiskAirwayCompromise",
+    "HeartTransplant",
+    "HepatitisAVaccineAdministered",
+    "HepatitisBVaccineAdministered",
+    "HibVaccine3DoseScheduleAdministered",
+    "HibVaccine4DoseScheduleAdministered",
+    "HighRiskProceduresForAki",
+    "HipFractureSurgery",
+    "HipReplacementSurgery",
+    "HospitalBasedDialysisServices",
+    "Hysterectomy",
+    "HysterectomyWithNoResidualCervix",
+    "InactivatedPolioVaccineIpvAdministered",
+    "InfluenzaVirusLaivVaccineAdministered",
+    "IntracranialNeurosurgery",
+    "IntracranialOrIntraspinalSurgery",
+    "IntravenousOrIntraarterialThrombolyticTpaTherapy",
+    "Intubation",
+    "KidneyTransplant",
+    "KneeReplacementSurgery",
+    "LeftVentricularAssistDevicePlacement",
+    "MajorSurgicalProcedure",
+    "MeaslesMumpsAndRubellaMmrVaccineAdministered",
+    "MechanicalCirculatoryAssistDevice",
+    "MechanicalVentilation",
+    "NonInvasiveOxygenTherapyByNasalCannulaOrMask",
+    "PartialArthroplastyOfHip",
+    "Pci",
+    "PercutaneousCoronaryIntervention",
+    "PneumococcalConjugateVaccineAdministered",
+    "PrimaryThaProcedure",
+    "ProceduresUsedToIndicateSexualActivity",
+    "ProstateCancerTreatment",
+    "RemovalRevisionAndSupplementProceduresOfTheLowerBodyAndSpine",
+    "RotavirusVaccine2DoseScheduleAdministered",
+    "RotavirusVaccine3DoseScheduleAdministered",
+    "SalvageTherapy",
+    "SevereMaternalMorbidityProcedures",
+    "SubstanceUseDisorderLongActingMedicationAdministration",
+    "SubstanceUseDisorderShortActingMedicationAdministration",
+    "TotalColectomy",
+    "Tracheostomy",
+    "TracheostomyProcedures",
+    "UnilateralMastectomyLeft",
+    "UnilateralMastectomyRight",
+    "UrologicalSurgery",
+    "VaricellaZosterVaccineVzvAdministered",
+    "Ventilation"
+  ],
+  "canvas_sdk.value_set.v2026.symptom": ["FrailtySymptom"],
   "canvas_sdk.value_set.value_set": [
     "CodeConstants",
     "CodeConstantsURLMappingMixin",
@@ -1533,7 +2030,5 @@
     "ValueSet",
     "ValueSystems"
   ],
-  "logger": [
-    "log"
-  ]
+  "logger": ["log"]
 }
