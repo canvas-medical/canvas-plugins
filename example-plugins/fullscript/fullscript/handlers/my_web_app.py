@@ -2,24 +2,28 @@ from http import HTTPStatus
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import HTMLResponse, Response
-from canvas_sdk.handlers.simple_api import SimpleAPI, api, StaffSessionAuthMixin
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.templates import render_to_string
 from logger import log
 
 
 class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
     """Web app handler for serving Fullscript frontend files."""
+
     PREFIX = "/app"
 
     # Serve templated HTML
     @api.get("/fullscript-app")
     def index(self) -> list[Response | Effect]:
-        log.info(f"Fullscript app requested")
-        log.info(f"--------------------------------")
+        """Serve the Fullscript web app HTML page with templated context."""
+        log.info("Fullscript app requested")
+        log.info("--------------------------------")
 
         log.info(f"query_string: {self.request.query_string}")
 
-        query_params = dict(param.split('=', 1) for param in self.request.query_string.split('&') if '=' in param)
+        query_params = dict(
+            param.split("=", 1) for param in self.request.query_string.split("&") if "=" in param
+        )
 
         log.info(f"params: {query_params}")
 
@@ -40,6 +44,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
     # Serve the contents of a js file
     @api.get("/main.js")
     def get_main_js(self) -> list[Response | Effect]:
+        """Serve the Fullscript web app main.js file."""
         return [
             Response(
                 render_to_string("static/main.js").encode(),

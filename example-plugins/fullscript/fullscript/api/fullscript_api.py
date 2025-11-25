@@ -15,18 +15,17 @@ from canvas_sdk.v1.data import Patient, Staff
 from logger import log
 
 
-def is_expired(token) -> bool:
+def is_expired(token: dict) -> bool:
     """Check if the current access token is expired."""
     expires_in = token["expires_in"]
     created_at = token["created_at"]
 
-    return datetime.now(UTC) > (
-        datetime.fromisoformat(created_at) + timedelta(seconds=expires_in)
-    )
+    return datetime.now(UTC) > (datetime.fromisoformat(created_at) + timedelta(seconds=expires_in))
 
 
 class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
     """API endpoints for Fullscript integration."""
+
     PREFIX = "/app"
 
     FULLSCRIPT_TOKEN_URL = "https://api-us-snd.fullscript.io/api/oauth/token"
@@ -89,7 +88,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/exchange-token")
     def exchange_token(self) -> list[Response | Effect]:
         """Exchange OAuth authorization code for access token."""
-        user_id = Staff.objects.values_list("id", flat=True).get(id=self.request.headers["canvas-logged-in-user-id"])
+        user_id = Staff.objects.values_list("id", flat=True).get(
+            id=self.request.headers["canvas-logged-in-user-id"]
+        )
         cache = get_cache()
 
         try:
@@ -163,7 +164,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
             return [
                 Response(
-                    json.dumps({"token": token_data.get("oauth", {}).get("access_token", None)}).encode(),
+                    json.dumps(
+                        {"token": token_data.get("oauth", {}).get("access_token", None)}
+                    ).encode(),
                     status_code=HTTPStatus.OK,
                     content_type="application/json",
                 )
@@ -211,7 +214,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 log.error(f"!! Session grant creation failed: {response.text}")
                 return [
                     Response(
-                        json.dumps({"error": "Failed to create session grant", "details": response.text}).encode(),
+                        json.dumps(
+                            {"error": "Failed to create session grant", "details": response.text}
+                        ).encode(),
                         status_code=HTTPStatus.BAD_GATEWAY,
                         content_type="application/json",
                     )
@@ -249,7 +254,11 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             patient_id = body.get("patient_id", "")
 
             patient = Patient.objects.get(id=patient_id)
-            fullscript_id = patient.external_identifiers.filter(system="Fullscript").values_list('value', flat=True).last()
+            fullscript_id = (
+                patient.external_identifiers.filter(system="Fullscript")
+                .values_list("value", flat=True)
+                .last()
+            )
 
             log.info(f"!! Patient {patient.id}")
             log.info(f"!! Fullscript id {fullscript_id}")
@@ -263,7 +272,11 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     )
                 ]
             else:
-                email = patient.telecom.filter(system="email").first().value if patient.telecom.filter(system="email").exists() else ""
+                email = (
+                    patient.telecom.filter(system="email").first().value
+                    if patient.telecom.filter(system="email").exists()
+                    else ""
+                )
 
                 log.info(f"!! Patient email {email}")
 
@@ -285,7 +298,12 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     log.error(f"!! Get or create patient failed: {response.text}")
                     return [
                         Response(
-                            json.dumps({"error": "Failed to get or create patient", "details": response.text}).encode(),
+                            json.dumps(
+                                {
+                                    "error": "Failed to get or create patient",
+                                    "details": response.text,
+                                }
+                            ).encode(),
                             status_code=HTTPStatus.BAD_GATEWAY,
                             content_type="application/json",
                         )
@@ -307,7 +325,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                         json.dumps({"id": fullscript_patient_id}).encode(),
                         status_code=HTTPStatus.OK,
                         content_type="application/json",
-                    )
+                    ),
                 ]
 
         except requests.RequestException as e:
@@ -324,7 +342,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/treatment-plan-created")
     def treatment_plan_created(self) -> list[Response | Effect]:
         """Handle treatment plan created event from Fullscript embed."""
-        user_id = Staff.objects.values_list("id").get(id=self.request.headers["canvas-logged-in-user-id"])
+        user_id = Staff.objects.values_list("id").get(
+            id=self.request.headers["canvas-logged-in-user-id"]
+        )
         cache = get_cache()
 
         try:
@@ -414,7 +434,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 refill = item.get("refill", None)
 
                 sku = f"fullscript-{variant_data.get('variant', {}).get('sku', '')}"
-                product_display_name = variant_data.get("variant", {}).get("product", {}).get("name", "")
+                product_display_name = (
+                    variant_data.get("variant", {}).get("product", {}).get("name", "")
+                )
 
                 log.info(f"!! Fetching product display name: {sku}")
 
@@ -429,9 +451,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     sig += f"\nRefill: {'Yes' if refill else 'No'}"
 
                 coding = Coding(
-                    system=CodeSystems.UNSTRUCTURED,
-                    code=sku,
-                    display=product_display_name
+                    system=CodeSystems.UNSTRUCTURED, code=sku, display=product_display_name
                 )
                 medication_command = MedicationStatementCommand(
                     fdb_code=coding,
@@ -449,7 +469,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     json.dumps({"status": "ok"}).encode(),
                     status_code=HTTPStatus.OK,
                     content_type="application/json",
-                )
+                ),
             ]
 
         except requests.RequestException as e:
@@ -499,7 +519,11 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 return {"success": True, "products": products}
             else:
                 log.error(f"!! Fullscript search failed: {response.status_code} - {response.text}")
-                return {"success": False, "error": "Failed to get products", "details": response.text}
+                return {
+                    "success": False,
+                    "error": "Failed to get products",
+                    "details": response.text,
+                }
 
         except requests.RequestException as e:
             log.error(f"!! Error fetching products: {str(e)}")
