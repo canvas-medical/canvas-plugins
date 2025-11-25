@@ -1,17 +1,17 @@
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
 import requests
 
+from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.commands import MedicationStatementCommand
-from canvas_sdk.commands.constants import Coding, CodeSystems
+from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
 from canvas_sdk.effects.simple_api import Response
-from canvas_sdk.handlers.simple_api import SimpleAPI, api, StaffSessionAuthMixin
-from canvas_sdk.v1.data import Staff, Patient
-from canvas_sdk.caching.plugins import get_cache
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
+from canvas_sdk.v1.data import Patient, Staff
 from logger import log
 
 
@@ -20,7 +20,7 @@ def is_expired(token) -> bool:
     expires_in = token["expires_in"]
     created_at = token["created_at"]
 
-    return datetime.now(timezone.utc) > (
+    return datetime.now(UTC) > (
         datetime.fromisoformat(created_at) + timedelta(seconds=expires_in)
     )
 
@@ -159,7 +159,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             token_data = response.json()
             cache.set(user_id, token_data["oauth"])
 
-            log.info(f"!! Token exchange successful")
+            log.info("!! Token exchange successful")
 
             return [
                 Response(
@@ -366,6 +366,8 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             patient = Patient.objects.get(id=patient_id)
             note_id = patient.notes.last().id if patient.notes.exists() else None
 
+            # TODO: should we create a new note if none exists?
+
             if not note_id:
                 log.error(f"!! Missing note_id: {note_id}")
                 return [
@@ -424,7 +426,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 if duration is not None:
                     sig += f"\nDuration: {duration}"
                 if refill is not None:
-                    sig += f"\nRefill: {refill == True and 'Yes' or 'No'}"
+                    sig += f"\nRefill: {'Yes' if refill else 'No'}"
 
                 coding = Coding(
                     system=CodeSystems.UNSTRUCTURED,
@@ -475,10 +477,10 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
         Helper method to fetch products from Fullscript catalog API.
         """
         try:
-            log.info(f"!! Fetching Fullscript products:")
+            log.info("!! Fetching Fullscript products:")
 
             response = requests.get(
-                f"https://api-us-snd.fullscript.io/api/catalog/search/products",
+                "https://api-us-snd.fullscript.io/api/catalog/search/products",
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {access_token}",
