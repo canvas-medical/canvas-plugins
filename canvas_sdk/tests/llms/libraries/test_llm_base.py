@@ -97,6 +97,7 @@ def test_add_prompt() -> None:
     tested.add_prompt(LlmTurn(role="system", text=["sys"]))
     tested.add_prompt(LlmTurn(role="user", text=["usr"]))
     tested.add_prompt(LlmTurn(role="model", text=["mdl"]))
+    tested.add_prompt(LlmTurn(role="unknown", text=["unknown"]))
 
     assert len(tested.prompts) == 3
     assert tested.prompts[0].role == "system"

@@ -130,7 +130,13 @@ def test_request_multiple_output_messages(mock_post: MagicMock) -> None:
     # Mock response with multiple outputs
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.text = '{"output": [{"type": "message", "content": [{"text": "part1"}]}, {"type": "message", "content": [{"text": "part2"}]}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
+    mock_response.text = (
+        '{"output": ['
+        '{"type": "message", "content": [{"text": "part1"}]}, '
+        '{"type": "something", "content": [{"text": "nope"}]}, '
+        '{"type": "message", "content": [{"text": "part2"}]}], '
+        '"usage": {"input_tokens": 10, "output_tokens": 20}}'
+    )
     mock_post.side_effect = [mock_response]
 
     result = tested.request()
