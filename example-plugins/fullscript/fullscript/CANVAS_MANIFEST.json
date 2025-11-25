@@ -35,7 +35,7 @@
                 }
             },
             {
-                "class": "fullscript.api.fullscriptAPI:FullscriptAPI",
+                "class": "fullscript.api.fullscript_api:FullscriptAPI",
                 "description": "Handles Fullscript API endpoints",
                 "data_access": {
                     "event": "",

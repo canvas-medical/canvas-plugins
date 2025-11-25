@@ -4,6 +4,7 @@ from canvas_sdk.effects.patient_chart_group import PatientChartGroup
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 
+
 class GroupSupplements(BaseHandler):
     """Groups supplement medications together in the patient summary chart."""
 
