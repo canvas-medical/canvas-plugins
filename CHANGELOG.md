@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.79.0 (2025-11-25)
+
+### Features
+
+- Improve logging ([#1077](https://github.com/canvas-medical/canvas-plugins/pull/1077),
+  [`f57b9e2`](https://github.com/canvas-medical/canvas-plugins/commit/f57b9e23f5feaab9c3808ea0df1efe60d6369716))
+
+
 ## v0.78.0 (2025-11-24)
 
 ### Chores
