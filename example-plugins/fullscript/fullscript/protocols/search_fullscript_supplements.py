@@ -1,20 +1,23 @@
 import json
 
-from canvas_sdk.commands.constants import CodeSystems
-from canvas_sdk.events import EventType
-from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.protocols import BaseProtocol
-from logger import log
-
 # Import the helper methods from the API
 from fullscript.api.fullscriptAPI import FullscriptAPI
 
+from canvas_sdk.commands.constants import CodeSystems
+from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.events import EventType
+from canvas_sdk.protocols import BaseProtocol
+from logger import log
+
 
 class SearchFullscriptSupplements(BaseProtocol):
+    """Protocol to add Fullscript supplement products to medication statement search results."""
+
     RESPONDS_TO = EventType.Name(EventType.MEDICATION_STATEMENT__MEDICATION__POST_SEARCH)
 
     def compute(self):
-        log.info(f"!! Fullscript search protocol")
+        """Fetch Fullscript products and add them to the medication search autocomplete results."""
+        log.info("!! Fullscript search protocol")
 
         user_id = self.context.get("user", {}).get("staff", None)
         query = self.context.get("search_term", None)
@@ -83,10 +86,13 @@ class SearchFullscriptSupplements(BaseProtocol):
 
 
 class SearchFullscriptSupplementsForPrescribe(BaseProtocol):
+    """Protocol to add Fullscript supplement products to prescribe search results with clinical quantities."""
+
     RESPONDS_TO = EventType.Name(EventType.PRESCRIBE__PRESCRIBE__POST_SEARCH)
 
     def compute(self):
-        log.info(f"!! Fullscript search protocol")
+        """Fetch Fullscript products and add them to the prescribe autocomplete with clinical quantities."""
+        log.info("!! Fullscript search protocol")
 
         user_id = self.context.get("user", {}).get("staff", None)
         query = self.context.get("search_term", None)
