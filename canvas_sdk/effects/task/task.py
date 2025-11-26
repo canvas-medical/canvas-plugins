@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.effects.metadata import BaseMetadata
 from canvas_sdk.v1.data import Task
+from canvas_sdk.v1.data.task import TaskPriority
 
 
 class TaskStatus(Enum):
@@ -41,6 +42,7 @@ class AddTask(_BaseEffect):
     title: str | None = None
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
+    priority: TaskPriority | None = None
     labels: list[str] = []
     linked_object_id: str | UUID | None = None
     linked_object_type: LinkableObjectType | None = None
@@ -71,6 +73,7 @@ class AddTask(_BaseEffect):
             "team": {"id": self.team_id},
             "title": self.title,
             "status": self.status.value,
+            "priority": self.priority.value if self.priority else None,
             "labels": self.labels,
             "author_id": str(self.author_id) if self.author_id else None,
             "linked_object": {
@@ -122,6 +125,7 @@ class UpdateTask(_BaseEffect):
     title: str | None = None
     due: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
+    priority: TaskPriority | None = None
     labels: list[str] = []
 
     @property
@@ -138,6 +142,8 @@ class UpdateTask(_BaseEffect):
                 value_dict[field] = cast(datetime, val).isoformat()
             elif field == "status":
                 value_dict[field] = cast(TaskStatus, val).value
+            elif field == "priority":
+                value_dict[field] = val.value if val else None
             else:
                 value_dict[field] = getattr(self, field)
         return value_dict
@@ -172,6 +178,7 @@ class TaskMetadata(BaseMetadata):
 __exports__ = (
     "AddTask",
     "AddTaskComment",
+    "TaskPriority",
     "TaskStatus",
     "TaskMetadata",
     "UpdateTask",

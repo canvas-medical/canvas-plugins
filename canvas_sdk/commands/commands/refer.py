@@ -25,6 +25,7 @@ class ReferCommand(BaseCommand):
 
         ROUTINE = "Routine"
         URGENT = "Urgent"
+        STAT = "STAT"
 
     service_provider: ServiceProvider | None = Field(
         default=None, json_schema_extra={"commands_api_name": "refer_to"}
