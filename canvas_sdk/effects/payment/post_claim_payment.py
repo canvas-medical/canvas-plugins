@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any
 
 from pydantic_core import InitErrorDetails
@@ -15,6 +16,18 @@ class PostClaimPayment(PostPaymentBase):
         effect_type = EffectType.POST_CLAIM_PAYMENT
 
     claim: ClaimAllocation
+
+    @property
+    def total_collected(self) -> str:
+        """The total amount collected for this payment, calculated as sum of payments from line item transactions."""
+        total = sum((item.payment or Decimal(0)) for item in self.claim.line_item_transactions)
+        return str(total)
+
+    @property
+    def payment_collection_values(self) -> dict[str, Any]:
+        """The values for the payment collection part of the payload."""
+        base_values = super().payment_collection_values
+        return base_values | {"total_collected": self.total_collected}
 
     @property
     def values(self) -> dict[str, Any]:

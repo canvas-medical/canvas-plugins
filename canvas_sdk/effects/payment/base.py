@@ -32,7 +32,7 @@ class PostPaymentBase(_BaseEffect):
     deposit_date: date | None = None
     method: PaymentMethod
     payment_description: str | None = None
-    total_collected: Decimal = Field(decimal_places=2)
+    # total_collected: Decimal = Field(decimal_places=2)
 
     @property
     def payment_collection_values(self) -> dict[str, Any]:
@@ -43,7 +43,7 @@ class PostPaymentBase(_BaseEffect):
             "deposit_date": self.deposit_date.isoformat() if self.deposit_date else None,
             "method": self.method.value,
             "payment_description": self.payment_description,
-            "total_collected": str(self.total_collected),
+            # "total_collected": str(self.total_collected),
         }
 
     def validate_payment_method_fields(self) -> list[InitErrorDetails]:
