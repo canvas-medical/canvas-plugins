@@ -1,11 +1,10 @@
 import shutil
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
-
-from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
 
 BASE_DIR = Path(__file__).parent
 FIXTURES_PLUGIN_DIR = BASE_DIR / "plugin_runner" / "tests" / "fixtures" / "plugins"
@@ -58,12 +57,34 @@ def install_test_plugin(request: pytest.FixtureRequest) -> Generator[Path, None,
 @pytest.fixture
 def load_test_plugins() -> Generator[None, None, None]:
     """Manages the lifecycle of test plugins by loading and unloading them."""
+    from plugin_runner.plugin_runner import EVENT_HANDLER_MAP, LOADED_PLUGINS, load_plugins
+
+    modules_before = set[str](sys.modules)
+
     try:
         load_plugins()
         yield
     finally:
         LOADED_PLUGINS.clear()
         EVENT_HANDLER_MAP.clear()
+
+        # Clean up any plugin modules that were added to sys.modules during the test
+        # This prevents stale module state from interfering with subsequent tests
+        modules_to_remove: list[str] = [
+            name
+            for name in sys.modules
+            if name not in modules_before
+            and any(
+                name.startswith(prefix)
+                for prefix in (
+                    "test_",
+                    "example_plugin",
+                )
+            )
+        ]
+        for module_name in modules_to_remove:
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
 
 @pytest.fixture(scope="session")
