@@ -375,11 +375,14 @@ class Claim(TimestampedModel, IdentifiableModel):
         """Finds the active coverage associated with a payer_id. Optionally checks if the subscriber_number matches,
         which will choose the correct coverage in the case where a patient has two coverages with the same payer_id.
         """
-        if not (coverages := self.coverages.active().filter(payer_id=payer_id)):
-            return None
-        if coverages.count() == 1 and not subscriber_number:
-            return coverages.first()
-        return coverages.filter(subscriber_number=subscriber_number).first() or coverages.first()
+    base_qs = self.coverages.active().filter(payer_id=payer_id)
+
+    if subscriber_number:
+        qs = base_qs.filter(subscriber_number=subscriber_number)
+    else:
+        qs = base_qs
+
+    return qs.first() or base_qs.first()
 
 
 class ClaimLabel(IdentifiableModel):
