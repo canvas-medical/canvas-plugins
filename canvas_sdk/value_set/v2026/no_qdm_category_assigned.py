@@ -1,8 +1,9 @@
 from ..value_set import ValueSet
 
+
 class AbnormalWeightLoss(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for abnormal weight loss
+    **Clinical Focus:** The purpose of this value set is to represent concepts for abnormal weight loss.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -21,6 +22,7 @@ class AbnormalWeightLoss(ValueSet):
         "R64",  # Cachexia
         "Z681",  # Body mass index [BMI] 19.9 or less, adult
     }
+
 
 class CoagulationDisorders(ValueSet):
     """
@@ -86,9 +88,10 @@ class CoagulationDisorders(ValueSet):
         "D699",  # Hemorrhagic condition, unspecified
     }
 
+
 class DeliriumOrDementiaAndOtherPsychoses(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for delirium, dementia, and other psychoses
+    **Clinical Focus:** The purpose of this value set is to represent concepts for delirium, dementia, and other psychoses.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -271,9 +274,10 @@ class DeliriumOrDementiaAndOtherPsychoses(ValueSet):
         "R410",  # Disorientation, unspecified
     }
 
+
 class Depression(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for depression
+    **Clinical Focus:** The purpose of this value set is to represent concepts for depression.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -313,9 +317,10 @@ class Depression(ValueSet):
         "F530",  # Postpartum depression
     }
 
+
 class Epilepsy(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for epilepsy
+    **Clinical Focus:** The purpose of this value set is to represent concepts for epilepsy.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -390,9 +395,10 @@ class Epilepsy(ValueSet):
         "R569",  # Unspecified convulsions
     }
 
+
 class LeukemiaOrLymphoma(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of leukemia or lymphoma
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of leukemia or lymphoma.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -889,9 +895,10 @@ class LeukemiaOrLymphoma(ValueSet):
         "D47Z9",  # Other specified neoplasms of uncertain behavior of lymphoid, hematopoietic and related tissue
     }
 
+
 class LiverDiseaseModerateToSevere(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of moderate to severe liver disease
+    **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnosis of moderate to severe liver disease.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -925,6 +932,7 @@ class LiverDiseaseModerateToSevere(ValueSet):
         "K767",  # Hepatorenal syndrome
         "K9182",  # Postprocedural hepatic failure
     }
+
 
 class MajorInjuries(ValueSet):
     """
@@ -4357,9 +4365,10 @@ class MajorInjuries(ValueSet):
         "S8292XC",  # Unspecified fracture of left lower leg, initial encounter for open fracture type IIIA, IIIB, or IIIC
     }
 
+
 class MalignantBoneDisease(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for malignant bone disease
+    **Clinical Focus:** The purpose of this value set is to represent concepts for malignant bone disease.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -4403,9 +4412,10 @@ class MalignantBoneDisease(ValueSet):
         "C800",  # Disseminated malignant neoplasm, unspecified
     }
 
+
 class Malnutrition(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for malnutrition
+    **Clinical Focus:** The purpose of this value set is to represent concepts for malnutrition.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -4436,9 +4446,10 @@ class Malnutrition(ValueSet):
         "O253",  # Malnutrition in the puerperium
     }
 
+
 class ModerateInjuries(ValueSet):
     """
-    **Clinical Focus:** The purpose of this ICD-10-CM value set is to identify moderate injuries that could occur as a result of a fall
+    **Clinical Focus:** The purpose of this ICD-10-CM value set is to identify moderate injuries that could occur as a result of a fall.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -5331,9 +5342,10 @@ class ModerateInjuries(ValueSet):
         "S96919A",  # Strain of unspecified muscle and tendon at ankle and foot level, unspecified foot, initial encounter
     }
 
+
 class NeurologicMovementAndRelatedDisorders(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for neurologic movement and related disorders
+    **Clinical Focus:** The purpose of this value set is to represent concepts for neurologic movement and related disorders.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -5447,6 +5459,7 @@ class NeurologicMovementAndRelatedDisorders(ValueSet):
         "P9163",  # Severe hypoxic ischemic encephalopathy [HIE]
     }
 
+
 class NotPresentOnAdmissionOrDocumentationInsufficientToDetermine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for indicating a diagnosis is not present on admission (N) or Documentation insufficient to determine if the condition was present at the time of inpatient admission (U).
@@ -5468,9 +5481,10 @@ class NotPresentOnAdmissionOrDocumentationInsufficientToDetermine(ValueSet):
         "U",  # Documentation insufficient to determine if the condition was present at the time of inpatient admission
     }
 
+
 class Obesity(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for obesity
+    **Clinical Focus:** The purpose of this value set is to represent concepts for obesity.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -5513,9 +5527,10 @@ class Obesity(ValueSet):
         "Z6845",  # Body mass index [BMI] 70 or greater, adult
     }
 
+
 class Osteoporosis(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for osteoporosis diagnoses
+    **Clinical Focus:** The purpose of this value set is to represent concepts for osteoporosis diagnoses.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis or Condition
 
@@ -5856,9 +5871,10 @@ class Osteoporosis(ValueSet):
         "M808B9S",  # Other osteoporosis with current pathological fracture, unspecified pelvis, sequela
     }
 
+
 class PeripheralNeuropathy(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for peripheral neuropathy
+    **Clinical Focus:** The purpose of this value set is to represent concepts for peripheral neuropathy.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -5950,6 +5966,7 @@ class PeripheralNeuropathy(ValueSet):
         "M3483",  # Systemic sclerosis with polyneuropathy
     }
 
+
 class PresentOnAdmissionOrClinicallyUndetermined(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for indicating a diagnosis is present on admission (Y) or clinically undetermined on admission (W).
@@ -5971,9 +5988,10 @@ class PresentOnAdmissionOrClinicallyUndetermined(ValueSet):
         "Y",  # Diagnosis was present at time of inpatient admission
     }
 
+
 class Stroke(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for stroke
+    **Clinical Focus:** The purpose of this value set is to represent concepts for stroke.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -6250,9 +6268,10 @@ class Stroke(ValueSet):
         "I69993",  # Ataxia following unspecified cerebrovascular disease
     }
 
+
 class SuicideAttempt(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for stroke
+    **Clinical Focus:** The purpose of this value set is to represent concepts for stroke.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -6269,6 +6288,7 @@ class SuicideAttempt(ValueSet):
     ICD10CM = {
         "T1491XA",  # Suicide attempt, initial encounter
     }
+
 
 class TwentyToFortyTwoPlusWeeksGestation(ValueSet):
     """
@@ -6343,6 +6363,7 @@ class TwentyToFortyTwoPlusWeeksGestation(ValueSet):
         "90797000",  # Gestation period, 28 weeks (finding)
     }
 
+
 class AcuteHeartFailure(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of acute heart failure.
@@ -6381,6 +6402,7 @@ class AcuteHeartFailure(ValueSet):
         "I509",  # Heart failure, unspecified
     }
 
+
 class AcuteMyocardialInfarction(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of acute myocardial infarction.
@@ -6418,6 +6440,7 @@ class AcuteMyocardialInfarction(ValueSet):
         "I229",  # Subsequent ST elevation (STEMI) myocardial infarction of unspecified site
     }
 
+
 class AcuteRenalFailure(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of acute renal failure.
@@ -6443,6 +6466,7 @@ class AcuteRenalFailure(ValueSet):
         "O9041",  # Hepatorenal syndrome following labor and delivery
         "O9049",  # Other postpartum acute kidney failure
     }
+
 
 class AcuteRespiratoryDistressSyndrome(ValueSet):
     """
@@ -6480,6 +6504,7 @@ class AcuteRespiratoryDistressSyndrome(ValueSet):
         "R092",  # Respiratory arrest
     }
 
+
 class AcuteOrPersistentAsthma(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of asthma with an indication of acute, persistent, and/or asthmaticus status.
@@ -6516,6 +6541,7 @@ class AcuteOrPersistentAsthma(ValueSet):
         "O9952",  # Diseases of the respiratory system complicating childbirth
         "O9953",  # Diseases of the respiratory system complicating the puerperium
     }
+
 
 class AirAndThromboticEmbolism(ValueSet):
     """
@@ -6567,6 +6593,7 @@ class AirAndThromboticEmbolism(ValueSet):
         "T800XXA",  # Air embolism following infusion, transfusion and therapeutic injection, initial encounter
     }
 
+
 class AmnioticFluidEmbolism(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of amniotic fluid embolisms.
@@ -6590,6 +6617,7 @@ class AmnioticFluidEmbolism(ValueSet):
         "O8812",  # Amniotic fluid embolism in childbirth
         "O8813",  # Amniotic fluid embolism in the puerperium
     }
+
 
 class Anemia(ValueSet):
     """
@@ -6663,6 +6691,7 @@ class Anemia(ValueSet):
         "O9902",  # Anemia complicating childbirth
     }
 
+
 class AorticAneurysm(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of aortic aneurysm.
@@ -6713,6 +6742,7 @@ class AorticAneurysm(ValueSet):
         "I719",  # Aortic aneurysm of unspecified site, without rupture
         "I790",  # Aneurysm of aorta in diseases classified elsewhere
     }
+
 
 class AutoimmuneDisease(ValueSet):
     """
@@ -6817,6 +6847,7 @@ class AutoimmuneDisease(ValueSet):
         "M368",  # Systemic disorders of connective tissue in other diseases classified elsewhere
     }
 
+
 class BariatricSurgery(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of bariatric surgery.
@@ -6840,6 +6871,7 @@ class BariatricSurgery(ValueSet):
         "O99844",  # Bariatric surgery status complicating childbirth
         "O99845",  # Bariatric surgery status complicating the puerperium
     }
+
 
 class BleedingDisorder(ValueSet):
     """
@@ -6897,6 +6929,7 @@ class BleedingDisorder(ValueSet):
         "D699",  # Hemorrhagic condition, unspecified
     }
 
+
 class CardiacArrestVentricularFibrillation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of cardiac arrest and ventricular fibrillation or flutter.
@@ -6920,6 +6953,7 @@ class CardiacArrestVentricularFibrillation(ValueSet):
         "I4901",  # Ventricular fibrillation
         "I4902",  # Ventricular flutter
     }
+
 
 class CardiacDisease(ValueSet):
     """
@@ -7213,6 +7247,7 @@ class CardiacDisease(ValueSet):
         "Q249",  # Congenital malformation of heart, unspecified
     }
 
+
 class DisseminatedIntravascularCoagulation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of disseminated intravascular coagulation (DIC).
@@ -7260,6 +7295,7 @@ class DisseminatedIntravascularCoagulation(ValueSet):
         "O670",  # Intrapartum hemorrhage with coagulation defect
     }
 
+
 class Eclampsia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of eclampsia.
@@ -7284,6 +7320,7 @@ class Eclampsia(ValueSet):
         "O152",  # Eclampsia complicating the puerperium
         "O159",  # Eclampsia, unspecified as to time period
     }
+
 
 class EconomicHousingInstability(ValueSet):
     """
@@ -7326,6 +7363,7 @@ class EconomicHousingInstability(ValueSet):
         "Z5989",  # Other problems related to housing and economic circumstances
         "Z599",  # Problem related to housing and economic circumstances, unspecified
     }
+
 
 class GastrointestinalDisease(ValueSet):
     """
@@ -7622,6 +7660,7 @@ class GastrointestinalDisease(ValueSet):
         "O26649",  # Intrahepatic cholestasis of pregnancy, unspecified trimester
     }
 
+
 class GestationalDiabetes(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of gestational diabetes.
@@ -7653,6 +7692,7 @@ class GestationalDiabetes(ValueSet):
         "O24439",  # Gestational diabetes mellitus in the puerperium, unspecified control
     }
 
+
 class HivInPregnancyChildbirthAndPuerperium(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of human immunodeficiency virus (HIV) during pregnancy, childbirth, and puerperium.
@@ -7679,6 +7719,7 @@ class HivInPregnancyChildbirthAndPuerperium(ValueSet):
         "O9873",  # Human immunodeficiency virus [HIV] disease complicating the puerperium
     }
 
+
 class HeartFailureCardiacArrestRelatedToProcedureOrSurgery(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of heart failure and cardiac arrest occurring during or post procedure.
@@ -7703,6 +7744,7 @@ class HeartFailureCardiacArrestRelatedToProcedureOrSurgery(ValueSet):
         "I97710",  # Intraoperative cardiac arrest during cardiac surgery
         "I97711",  # Intraoperative cardiac arrest during other surgery
     }
+
 
 class Hypertension(ValueSet):
     """
@@ -7760,6 +7802,7 @@ class Hypertension(ValueSet):
         "O1093",  # Unspecified pre-existing hypertension complicating the puerperium
     }
 
+
 class LongTermAnticoagulantUse(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses for long term use of anticoagulants.
@@ -7779,6 +7822,7 @@ class LongTermAnticoagulantUse(ValueSet):
     ICD10CM = {
         "Z7901",  # Long term (current) use of anticoagulants
     }
+
 
 class MentalHealthDisorder(ValueSet):
     """
@@ -7926,6 +7970,7 @@ class MentalHealthDisorder(ValueSet):
         "F609",  # Personality disorder, unspecified
     }
 
+
 class MildOrModeratePreeclampsia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of mild or moderate pre-eclampsia.
@@ -7961,6 +8006,7 @@ class MildOrModeratePreeclampsia(ValueSet):
         "O1495",  # Unspecified pre-eclampsia, complicating the puerperium
     }
 
+
 class MorbidOrSevereObesity(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of morbid obesity.
@@ -7982,6 +8028,7 @@ class MorbidOrSevereObesity(ValueSet):
         "E662",  # Morbid (severe) obesity with alveolar hypoventilation
         "E66813",  # Obesity, class 3
     }
+
 
 class MultiplePregnancy(ValueSet):
     """
@@ -8246,6 +8293,7 @@ class MultiplePregnancy(ValueSet):
         "Z377",  # Other multiple births, all stillborn
     }
 
+
 class NeuromuscularDisease(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of neuromuscular disease.
@@ -8331,6 +8379,7 @@ class NeuromuscularDisease(ValueSet):
         "G709",  # Myoneural disorder, unspecified
     }
 
+
 class PatientExpired(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter with a discharge disposition of patient who has died in the hospital.
@@ -8350,6 +8399,7 @@ class PatientExpired(ValueSet):
     SNOMEDCT = {
         "371828006",  # Patient deceased during stay (discharge status = dead) (finding)
     }
+
 
 class PlacentaAccreta(ValueSet):
     """
@@ -8372,6 +8422,7 @@ class PlacentaAccreta(ValueSet):
         "O43213",  # Placenta accreta, third trimester
         "O43219",  # Placenta accreta, unspecified trimester
     }
+
 
 class PlacentaIncretaOrPercreta(ValueSet):
     """
@@ -8397,6 +8448,7 @@ class PlacentaIncretaOrPercreta(ValueSet):
         "O43233",  # Placenta percreta, third trimester
         "O43239",  # Placenta percreta, unspecified trimester
     }
+
 
 class PlacentaPrevia(ValueSet):
     """
@@ -8424,6 +8476,7 @@ class PlacentaPrevia(ValueSet):
         "O4430",  # Partial placenta previa with hemorrhage, unspecified trimester
         "O4433",  # Partial placenta previa with hemorrhage, third trimester
     }
+
 
 class PlacentalAbruption(ValueSet):
     """
@@ -8467,6 +8520,7 @@ class PlacentalAbruption(ValueSet):
         "O4592",  # Premature separation of placenta, unspecified, second trimester
         "O4593",  # Premature separation of placenta, unspecified, third trimester
     }
+
 
 class PreexistingDiabetes(ValueSet):
     """
@@ -8949,6 +9003,7 @@ class PreexistingDiabetes(ValueSet):
         "Z794",  # Long term (current) use of insulin
     }
 
+
 class PresentOnAdmissionIsYesOrExempt(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify that diagnosis is present on admission or exempt from POA status.
@@ -8969,6 +9024,7 @@ class PresentOnAdmissionIsYesOrExempt(ValueSet):
         "1",  # Unreported/Not used. Exempt from POA reporting
         "Y",  # Diagnosis was present at time of inpatient admission
     }
+
 
 class PresentOnAdmissionIsNoOrUnableToDetermine(ValueSet):
     """
@@ -8991,6 +9047,7 @@ class PresentOnAdmissionIsNoOrUnableToDetermine(ValueSet):
         "U",  # Documentation insufficient to determine if the condition was present at the time of inpatient admission
         "W",  # Clinically undetermined
     }
+
 
 class PretermBirth(ValueSet):
     """
@@ -9028,6 +9085,7 @@ class PretermBirth(ValueSet):
         "Z3A36",  # 36 weeks gestation of pregnancy
     }
 
+
 class PreviousCesarean(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of a previous cesarean section.
@@ -9050,6 +9108,7 @@ class PreviousCesarean(ValueSet):
         "O34218",  # Maternal care for other type scar from previous cesarean delivery
         "O34219",  # Maternal care for unspecified type scar from previous cesarean delivery
     }
+
 
 class PuerperalCerebrovascularDisorder(ValueSet):
     """
@@ -9269,6 +9328,7 @@ class PuerperalCerebrovascularDisorder(ValueSet):
         "O873",  # Cerebral venous thrombosis in the puerperium
     }
 
+
 class PulmonaryEdema(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of a pulmonary edema.
@@ -9288,6 +9348,7 @@ class PulmonaryEdema(ValueSet):
     ICD10CM = {
         "J810",  # Acute pulmonary edema
     }
+
 
 class PulmonaryHypertension(ValueSet):
     """
@@ -9314,6 +9375,7 @@ class PulmonaryHypertension(ValueSet):
         "I2724",  # Chronic thromboembolic pulmonary hypertension
         "I2729",  # Other secondary pulmonary hypertension
     }
+
 
 class RenalDisease(ValueSet):
     """
@@ -9410,6 +9472,7 @@ class RenalDisease(ValueSet):
         "O26839",  # Pregnancy related renal disease, unspecified trimester
     }
 
+
 class Sepsis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of sepsis.
@@ -9457,6 +9520,7 @@ class Sepsis(ValueSet):
         "T8144XA",  # Sepsis following a procedure, initial encounter
     }
 
+
 class SevereAnesthesiaComplications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of severe anesthesia complications.
@@ -9500,6 +9564,7 @@ class SevereAnesthesiaComplications(ValueSet):
         "T882XXA",  # Shock due to anesthesia, initial encounter
         "T883XXA",  # Malignant hyperthermia due to anesthesia, initial encounter
     }
+
 
 class SevereMaternalMorbidityDiagnoses(ValueSet):
     """
@@ -9993,6 +10058,7 @@ class SevereMaternalMorbidityDiagnoses(ValueSet):
         "T886XXA",  # Anaphylactic reaction due to adverse effect of correct drug or medicament properly administered, initial encounter
     }
 
+
 class SeverePreeclampsia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of severe pre-eclampsia.
@@ -10028,6 +10094,7 @@ class SeverePreeclampsia(ValueSet):
         "O1425",  # HELLP syndrome, complicating the puerperium
     }
 
+
 class Shock(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify diagnoses of shock.
@@ -10056,6 +10123,7 @@ class Shock(ValueSet):
         "T8119XA",  # Other postprocedural shock, initial encounter
         "T886XXA",  # Anaphylactic reaction due to adverse effect of correct drug or medicament properly administered, initial encounter
     }
+
 
 class SickleCellDiseaseWithCrisis(ValueSet):
     """
@@ -10111,6 +10179,7 @@ class SickleCellDiseaseWithCrisis(ValueSet):
         "D57818",  # Other sickle-cell disorders with crisis with other specified complication
         "D57819",  # Other sickle-cell disorders with crisis, unspecified
     }
+
 
 class SubstanceAbuse(ValueSet):
     """
@@ -10600,6 +10669,7 @@ class SubstanceAbuse(ValueSet):
         "O99325",  # Drug use complicating the puerperium
     }
 
+
 class Thyrotoxicosis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of thyrotoxicosis.
@@ -10632,6 +10702,7 @@ class Thyrotoxicosis(ValueSet):
         "E0590",  # Thyrotoxicosis, unspecified without thyrotoxic crisis or storm
         "E0591",  # Thyrotoxicosis, unspecified with thyrotoxic crisis or storm
     }
+
 
 class VenousThromboembolismInPregnancy(ValueSet):
     """
@@ -10668,6 +10739,7 @@ class VenousThromboembolismInPregnancy(ValueSet):
         "O2293",  # Venous complication in pregnancy, unspecified, third trimester
     }
 
+
 class DischargeToAcuteCareFacility(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter with the discharge of a patient to an acute care facility.
@@ -10690,6 +10762,7 @@ class DischargeToAcuteCareFacility(ValueSet):
         "434781000124105",  # Discharge to acute care hospital (procedure)
     }
 
+
 class DischargedToHealthCareFacilityForHospiceCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter with a discharge disposition of a patient to a health care facility for hospice care.
@@ -10710,6 +10783,7 @@ class DischargedToHealthCareFacilityForHospiceCare(ValueSet):
         "428371000124100",  # Discharge to healthcare facility for hospice care (procedure)
     }
 
+
 class DischargedToHomeForHospiceCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter with the discharge of a patient to home for hospice care.
@@ -10729,6 +10803,7 @@ class DischargedToHomeForHospiceCare(ValueSet):
     SNOMEDCT = {
         "428361000124107",  # Discharge to home for hospice care (procedure)
     }
+
 
 class IschemicStroke(ValueSet):
     """
@@ -10868,6 +10943,7 @@ class IschemicStroke(ValueSet):
         "426107000",  # Acute lacunar infarction (disorder)
     }
 
+
 class LeftAgainstMedicalAdvice(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter with a patient discharge of leaving against medical advice.
@@ -10887,6 +10963,7 @@ class LeftAgainstMedicalAdvice(ValueSet):
     SNOMEDCT = {
         "445060000",  # Left against medical advice (finding)
     }
+
 
 class MedicalReasonForNotProvidingTreatment(ValueSet):
     """
@@ -10924,6 +11001,7 @@ class MedicalReasonForNotProvidingTreatment(ValueSet):
         "79899007",  # Drug interaction (finding)
     }
 
+
 class PatientRefusal(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of negation rationale for a patient's refusal of treatment.
@@ -10960,6 +11038,7 @@ class PatientRefusal(ValueSet):
         "443390004",  # Refused (qualifier value)
         "895451009",  # Referral to service declined by subject (situation)
     }
+
 
 class HemorrhagicStroke(ValueSet):
     """
@@ -11047,6 +11126,7 @@ class HemorrhagicStroke(ValueSet):
         "95454007",  # Brain stem hemorrhage (disorder)
     }
 
+
 class IntensiveCareUnit(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of locations of adult or pediatric intensive care units (ICUs).
@@ -11105,6 +11185,7 @@ class IntensiveCareUnit(ValueSet):
         "448391000124102",  # Trauma intensive care unit (environment)
     }
 
+
 class IntravenousRoute(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts of a procedure of medication administered intravenously.
@@ -11127,9 +11208,10 @@ class IntravenousRoute(ValueSet):
         "47625008",  # Intravenous route (qualifier value)
     }
 
+
 class LowRisk(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to describe concepts for an assessment with a measurement containing results of "low."
+    **Clinical Focus:** The purpose of this value set is to describe concepts for an assessment with a measurement containing results of "low.".
 
     **Data Element Scope:** This value set may use a model element related to Assessment.
 
@@ -11148,6 +11230,7 @@ class LowRisk(ValueSet):
         "62482003",  # Low (qualifier value)
         "723505004",  # Low risk (qualifier value)
     }
+
 
 class MentalHealthDiagnoses(ValueSet):
     """
@@ -13592,6 +13675,7 @@ class MentalHealthDiagnoses(ValueSet):
         "9674006",  # Adjustment disorder with withdrawal (disorder)
         "97751000119108",  # Altered behavior in Alzheimer's disease (disorder)
     }
+
 
 class ObstetricalOrPregnancyRelatedConditions(ValueSet):
     """
@@ -17189,6 +17273,7 @@ class ObstetricalOrPregnancyRelatedConditions(ValueSet):
         "9901000",  # Essential hypertension complicating AND/OR reason for care during puerperium (disorder)
     }
 
+
 class ObstetricsVte(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnoses to identify patients who have venous thromboembolism (VTE) related to pregnancy or obstetrics.
@@ -17268,6 +17353,7 @@ class ObstetricsVte(ValueSet):
         "82153002",  # Miscarriage with pulmonary embolism (disorder)
     }
 
+
 class SubcutaneousRoute(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a medication administered by subcutaneous route.
@@ -17288,9 +17374,10 @@ class SubcutaneousRoute(ValueSet):
         "34206005",  # Subcutaneous route (qualifier value)
     }
 
+
 class ProviderTypes(ValueSet):
     """
-    **Clinical Focus:** Provider Types
+    **Clinical Focus:** Provider Types.
 
     **Data Element Scope:** Provider Types
 
@@ -17314,9 +17401,10 @@ class ProviderTypes(ValueSet):
         "62247001",  # Family medicine specialist (occupation)
     }
 
+
 class VteDiagnoses(ValueSet):
     """
-    **Clinical Focus:** This value set is used to identify VTE conditions
+    **Clinical Focus:** This value set is used to identify VTE conditions.
 
     **Data Element Scope:** VTE diagnosis codes
 
@@ -17433,9 +17521,10 @@ class VteDiagnoses(ValueSet):
         "I82819",  # Embolism and thrombosis of superficial veins of unspecified lower extremity
     }
 
+
 class VteSymptoms(ValueSet):
     """
-    **Clinical Focus:** VTE Symptoms during PCP visit
+    **Clinical Focus:** VTE Symptoms during PCP visit.
 
     **Data Element Scope:** Diagnosis
 
@@ -17477,9 +17566,10 @@ class VteSymptoms(ValueSet):
         "91019004",  # Paresthesia (finding)
     }
 
+
 class AsaPhysicalStatusClass(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for the American Society of Anesthesiologists (ASA) physical status classes
+    **Clinical Focus:** The purpose of this value set is to represent concepts for the American Society of Anesthesiologists (ASA) physical status classes.
 
     **Data Element Scope:** This value set may use a model element related to Observation
 
@@ -17502,9 +17592,10 @@ class AsaPhysicalStatusClass(ValueSet):
         "413500003",  # American Society of Anesthesiologists physical status class 6 (finding)
     }
 
+
 class AcuteRespiratoryFailure(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for acute respiratory failure
+    **Clinical Focus:** The purpose of this value set is to represent concepts for acute respiratory failure.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis or Condition
 
@@ -17534,9 +17625,10 @@ class AcuteRespiratoryFailure(ValueSet):
         "Z9912",  # Encounter for respirator [ventilator] dependence during power failure
     }
 
+
 class DegenerativeNeurologicalDisorder(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for degenerative neurological disorders
+    **Clinical Focus:** The purpose of this value set is to represent concepts for degenerative neurological disorders.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis or Condition
 
@@ -17615,9 +17707,10 @@ class DegenerativeNeurologicalDisorder(ValueSet):
         "82351000119105",  # Altered behavior due to Pick's disease (disorder)
     }
 
+
 class NeuromuscularDisorder(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for neuromuscular disorders
+    **Clinical Focus:** The purpose of this value set is to represent concepts for neuromuscular disorders.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis or Condition
 
@@ -18040,9 +18133,10 @@ class NeuromuscularDisorder(ValueSet):
         "95647008",  # Upper motor neuron disease (disorder)
     }
 
+
 class ProceduralHospitalLocations(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for these procedural hospital locations: operating room/suite, cardiac catheterization suite, interventional radiology, and endoscopy suite
+    **Clinical Focus:** The purpose of this value set is to represent concepts for these procedural hospital locations: operating room/suite, cardiac catheterization suite, interventional radiology, and endoscopy suite.
 
     **Data Element Scope:** This value set may use a model element related to facility location
 
@@ -18063,9 +18157,10 @@ class ProceduralHospitalLocations(ValueSet):
         "1203-9",  # Interventional Radiology
     }
 
+
 class SmokingStatus(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for smoking status
+    **Clinical Focus:** The purpose of this value set is to represent concepts for smoking status.
 
     **Data Element Scope:** This value set may use a model element related to Observation or Assessment
 
@@ -18132,9 +18227,10 @@ class SmokingStatus(ValueSet):
         "87739003",  # Tolerant non-smoker (finding)
     }
 
+
 class TracheostomyDiagnoses(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for tracheostomy diagnoses
+    **Clinical Focus:** The purpose of this value set is to represent concepts for tracheostomy diagnoses.
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis or Condition
 
@@ -18159,6 +18255,7 @@ class TracheostomyDiagnoses(ValueSet):
         "Z930",  # Tracheostomy status
     }
 
+
 class AdmitInpatient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of an assessment result of decision to admit to inpatient hospitalization.
@@ -18180,6 +18277,7 @@ class AdmitInpatient(ValueSet):
         "452541000124103",  # Transition of care from emergency department to acute care (finding)
         "707852009",  # Inpatient management required (finding)
     }
+
 
 class EmergencyDepartmentLocation(ValueSet):
     """
@@ -18209,9 +18307,10 @@ class EmergencyDepartmentLocation(ValueSet):
         "74018000",  # Free-standing emergency care center (environment)
     }
 
+
 class EmergencyDepartmentTreatmentLocation(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for ED treatment locations
+    **Clinical Focus:** The purpose of this value set is to represent concepts for ED treatment locations.
 
     **Data Element Scope:** This value set may use the data element Encounter.
 
@@ -18236,6 +18335,7 @@ class EmergencyDepartmentTreatmentLocation(ValueSet):
         "1212-0",  # Mixed Age Mixed Acuity Unit
         "1272-4",  # Onsite Overflow Critical Care
     }
+
 
 class MentalHealthDiagnosisWithoutSubstanceUseDisorders(ValueSet):
     """
@@ -21712,6 +21812,7 @@ class MentalHealthDiagnosisWithoutSubstanceUseDisorders(ValueSet):
         "9674006",  # Adjustment disorder with withdrawal (disorder)
     }
 
+
 class AutonomousEyeExamResultOrFinding(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an Autonomous Eye Exam Result or Finding.
@@ -21732,6 +21833,7 @@ class AutonomousEyeExamResultOrFinding(ValueSet):
         "LA34398-0",  # ETDRS Level 20 or lower, without macular edema
         "LA34399-8",  # ETDRS Level 35 or higher, with or without macular edema
     }
+
 
 class DiabeticRetinopathySeverityLevel(ValueSet):
     """
@@ -21757,6 +21859,7 @@ class DiabeticRetinopathySeverityLevel(ValueSet):
         "LA18648-8",  # Proliferative retinopathy
     }
 
+
 class VisualAcuity2040OrBetter(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a physical exam with visual acuity findings that are 20/40 or better.
@@ -21780,6 +21883,7 @@ class VisualAcuity2040OrBetter(ValueSet):
         "423862000",  # Distance vision 20/15 (finding)
         "424703005",  # Distance vision 20/30 (finding)
     }
+
 
 class MedicalReason(ValueSet):
     """
@@ -21815,6 +21919,7 @@ class MedicalReason(ValueSet):
         "79899007",  # Drug interaction (finding)
     }
 
+
 class ModerateOrSevere(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of severe and moderate levels of severity.
@@ -21835,6 +21940,7 @@ class ModerateOrSevere(ValueSet):
         "24484000",  # Severe (severity modifier) (qualifier value)
         "6736007",  # Moderate (severity modifier) (qualifier value)
     }
+
 
 class PatientReason(ValueSet):
     """
@@ -21884,6 +21990,7 @@ class PatientReason(ValueSet):
         "713247000",  # Procedure discontinued by patient (situation)
     }
 
+
 class PatientReasonForAceInhibitorOrArbDecline(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for communication of a patient reason for declining angiotensin-converting enzyme (ACE) inhibitor or angiotensin ii receptor blocker (ARB) therapy.
@@ -21904,6 +22011,7 @@ class PatientReasonForAceInhibitorOrArbDecline(ValueSet):
         "134397009",  # Angiotensin converting enzyme inhibitor declined (situation)
         "401084003",  # Angiotensin II receptor antagonist declined (situation)
     }
+
 
 class Ambulatory(ValueSet):
     """
@@ -21926,6 +22034,7 @@ class Ambulatory(ValueSet):
         "440655000",  # Outpatient environment (environment)
         "722171005",  # Diagnostic institution (environment)
     }
+
 
 class MentalBehavioralAndNeurodevelopmentalDisorders(ValueSet):
     """
@@ -25117,6 +25226,7 @@ class MentalBehavioralAndNeurodevelopmentalDisorders(ValueSet):
         "97751000119108",  # Altered behavior in Alzheimer's disease (disorder)
     }
 
+
 class TobaccoNonUser(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an observation of tobacco non-user status.
@@ -25180,6 +25290,7 @@ class TobaccoNonUser(ValueSet):
         "87739003",  # Tolerant non-smoker (finding)
     }
 
+
 class TobaccoUser(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an observation of tobacco user status.
@@ -25241,6 +25352,7 @@ class TobaccoUser(ValueSet):
         "81703003",  # Chews tobacco (finding)
         "82302008",  # Pipe smoker (finding)
     }
+
 
 class MajorDepressiveDisorderActive(ValueSet):
     """
@@ -25337,6 +25449,7 @@ class MajorDepressiveDisorderActive(ValueSet):
         "87512008",  # Mild major depression (disorder)
     }
 
+
 class FindingOfElevatedBloodPressureOrHypertension(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses of elevated blood pressure or hypertension.
@@ -25398,6 +25511,7 @@ class FindingOfElevatedBloodPressureOrHypertension(ValueSet):
         "89242004",  # Malignant secondary hypertension (disorder)
     }
 
+
 class PatientDeclined(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts indicating a reason for patient refusal.
@@ -25420,6 +25534,7 @@ class PatientDeclined(ValueSet):
         "413311005",  # Patient non-compliant - declined intervention / support (situation)
         "895451009",  # Referral to service declined by subject (situation)
     }
+
 
 class ThirtySevenToFortyTwoPlusWeeksGestation(ValueSet):
     """
@@ -25457,6 +25572,7 @@ class ThirtySevenToFortyTwoPlusWeeksGestation(ValueSet):
         "80487005",  # Gestation period, 39 weeks (finding)
     }
 
+
 class DeliveryOfSingleton(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group diagnoses of a delivery of a single live born newborn.
@@ -25480,6 +25596,7 @@ class DeliveryOfSingleton(ValueSet):
     SNOMEDCT = {
         "169826009",  # Single live birth (finding)
     }
+
 
 class GenitalHerpes(ValueSet):
     """
@@ -25523,6 +25640,7 @@ class GenitalHerpes(ValueSet):
         "440714005",  # Genital Herpes simplex type 1 infection (disorder)
         "59819007",  # Herpetic ulceration of vulva (disorder)
     }
+
 
 class PlacentaAccretaSpectrumPreviaOrVasaPrevia(ValueSet):
     """
@@ -25587,6 +25705,7 @@ class PlacentaAccretaSpectrumPreviaOrVasaPrevia(ValueSet):
         "87814002",  # Intrapartum hemorrhage due to marginal placenta previa (disorder)
     }
 
+
 class HospiceCareReferralOrAdmission(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an encounter of hospice care.
@@ -25615,6 +25734,7 @@ class HospiceCareReferralOrAdmission(ValueSet):
         "444933003",  # Home hospice service (qualifier value)
     }
 
+
 class UnavailabilityOfBacillusCalmetteGuerinForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts for the unavailability of Bacillus Calmette Guerin (BCG).
@@ -25642,9 +25762,10 @@ class UnavailabilityOfBacillusCalmetteGuerinForUrologyCare(ValueSet):
         "452671000124105",  # Medication not available from wholesaler (finding)
     }
 
+
 class RoutesOfAdministrationForOpioidAntagonists(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for routes of administration for opioid antagonist administration to reverse opioid overdose which includes intranasal spray, inhalation, intramuscular, subcutaneous, or intravenous injection
+    **Clinical Focus:** The purpose of this value set is to represent concepts for routes of administration for opioid antagonist administration to reverse opioid overdose which includes intranasal spray, inhalation, intramuscular, subcutaneous, or intravenous injection.
 
     **Data Element Scope:** This value set may use a model element related to routes of medication administrations for opioid antagonists
 
@@ -25667,6 +25788,7 @@ class RoutesOfAdministrationForOpioidAntagonists(ValueSet):
         "47625008",  # Intravenous route (qualifier value)
         "78421000",  # Intramuscular route (qualifier value)
     }
+
 
 class PressureInjuryDeepTissue(ValueSet):
     """
@@ -25699,6 +25821,7 @@ class PressureInjuryDeepTissue(ValueSet):
         "82479641000119102",  # Pressure injury of deep tissue of head (disorder)
         "959201281000119107",  # Pressure injury of deep tissue of left buttock (disorder)
     }
+
 
 class PressureInjuryDeepTissueDiagnoses(ValueSet):
     """
@@ -25743,6 +25866,7 @@ class PressureInjuryDeepTissueDiagnoses(ValueSet):
         "L89896",  # Pressure-induced deep tissue damage of other site
         "L8996",  # Pressure-induced deep tissue damage of unspecified site
     }
+
 
 class PressureInjuryStage234OrUnstageable(ValueSet):
     """
@@ -25891,6 +26015,7 @@ class PressureInjuryStage234OrUnstageable(ValueSet):
         "78433671000119100",  # Unstageable pressure injury of toe of left foot (disorder)
     }
 
+
 class PressureInjuryStage234OrUnstageableDiagnoses(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for stage 2, stage 3, stage 4, and unstageable pressure injuries.
@@ -26010,9 +26135,10 @@ class PressureInjuryStage234OrUnstageableDiagnoses(ValueSet):
         "L8995",  # Pressure ulcer of unspecified site, unstageable
     }
 
+
 class HighRiskDiagnosisForAki(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses that puts patients at risk for developing acute kidney injury (AKI)
+    **Clinical Focus:** The purpose of this value set is to represent concepts for diagnoses that puts patients at risk for developing acute kidney injury (AKI).
 
     **Data Element Scope:** This value set may use a model element related to Diagnosis
 
@@ -26098,6 +26224,7 @@ class HighRiskDiagnosisForAki(ValueSet):
         "T3199",  # Burns involving 90% or more of body surface with 90% or more third degree burns
     }
 
+
 class UndetectableLabResultValue(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent undetectable lab result values for urine albumin or urine creatinine.
@@ -26127,6 +26254,7 @@ class UndetectableLabResultValue(ValueSet):
         "47492008",  # Not seen (qualifier value)
     }
 
+
 class MalnutritionScreeningFindingOfAtRiskResult(ValueSet):
     """
     **Clinical Focus:** Malnutrition screening result of at risk for malnutrition.
@@ -26154,6 +26282,7 @@ class MalnutritionScreeningFindingOfAtRiskResult(ValueSet):
         "704361005",  # At increased risk of deficient food intake (finding)
     }
 
+
 class MalnutritionScreeningFindingOfNotAtRiskResult(ValueSet):
     """
     **Clinical Focus:** Malnutrition screening result of not at risk for malnutrition.
@@ -26173,6 +26302,7 @@ class MalnutritionScreeningFindingOfNotAtRiskResult(ValueSet):
     LOINC = {
         "LA33699-2",  # Not at risk for malnutrition
     }
+
 
 class NutritionAssessmentStatusFindingOfModeratelyMalnourished(ValueSet):
     """
@@ -26207,6 +26337,7 @@ class NutritionAssessmentStatusFindingOfModeratelyMalnourished(ValueSet):
         "65404009",  # Undernutrition (disorder)
         "70241007",  # Nutritional deficiency disorder (disorder)
     }
+
 
 class NutritionAssessmentStatusFindingOfSeverelyMalnourished(ValueSet):
     """
@@ -26249,7 +26380,10 @@ class NutritionAssessmentStatusFindingOfSeverelyMalnourished(ValueSet):
         "788876001",  # Cachexia due to malignant neoplastic disease (finding)
     }
 
-class NutritionAssessmentStatusFindingOfWellNourishedOrNotMalnourishedOrMildlyMalnourished(ValueSet):
+
+class NutritionAssessmentStatusFindingOfWellNourishedOrNotMalnourishedOrMildlyMalnourished(
+    ValueSet
+):
     """
     **Clinical Focus:** This set of values indicates that a nutrition assessment, completed by a health professional, finds the individual to be well nourished or not malnourished or mildly malnourished.
 
@@ -26275,9 +26409,10 @@ class NutritionAssessmentStatusFindingOfWellNourishedOrNotMalnourishedOrMildlyMa
         "248324001",  # Well nourished (finding)
     }
 
+
 class DrugInterventionNotIndicatedContraindicated(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts of contraindication for drug intervention
+    **Clinical Focus:** The purpose of this value set is to represent concepts of contraindication for drug intervention.
 
     **Data Element Scope:** This value set may use a model element related to Negation Rationale.
 
@@ -26303,9 +26438,10 @@ class DrugInterventionNotIndicatedContraindicated(ValueSet):
         "79899007",  # Drug interaction (finding)
     }
 
+
 class ProcedureNotIndicatedContraindicated(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts of procedure not indicated/contraindicated
+    **Clinical Focus:** The purpose of this value set is to represent concepts of procedure not indicated/contraindicated.
 
     **Data Element Scope:** This value set may use a model element related to Negation Rationale.
 
@@ -26327,6 +26463,7 @@ class ProcedureNotIndicatedContraindicated(ValueSet):
         "410536001",  # Contraindicated (qualifier value)
         "428119001",  # Procedure not indicated (situation)
     }
+
 
 class ThrombolyticsAdverseEvent(ValueSet):
     """
@@ -26353,6 +26490,7 @@ class ThrombolyticsAdverseEvent(ValueSet):
         "293573005",  # Alteplase adverse reaction (disorder)
         "293574004",  # Anistreplase adverse reaction (disorder)
     }
+
 
 __exports__ = (
     "AbnormalWeightLoss",
