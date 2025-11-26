@@ -33,7 +33,7 @@ from .discount import Discount
 from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
-from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .imaging import ImagingOrder, ImagingReport, ImagingReportCoding, ImagingReview
 from .immunization import (
     Immunization,
     ImmunizationCoding,
@@ -166,6 +166,7 @@ __all__ = __exports__ = (
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
