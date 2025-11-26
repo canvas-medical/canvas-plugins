@@ -6,6 +6,69 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.llms": [
+    "LlmAnthropic",
+    "LlmGoogle",
+    "LlmOpenai",
+    "LlmResponse",
+    "LlmSettings",
+    "LlmSettingsGpt5",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.libraries": [
+    "LlmAnthropic",
+    "LlmGoogle",
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_anthropic": [
+    "LlmAnthropic"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_base": [
+    "LlmBase"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_google": [
+    "LlmGoogle"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_openai": [
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.structures": [
+    "LlmResponse",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_response": [
+    "LlmResponse"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_tokens": [
+    "LlmTokens"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_turn": [
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.settings": [
+    "LlmSettings",
+    "LlmSettingsAnthropic",
+    "LlmSettingsGemini",
+    "LlmSettingsGpt4",
+    "LlmSettingsGpt5"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings": [
+    "LlmSettings"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_anthropic": [
+    "LlmSettingsAnthropic"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gemini": [
+    "LlmSettingsGemini"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt4": [
+    "LlmSettingsGpt4"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
+    "LlmSettingsGpt5"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -521,69 +584,6 @@
   "canvas_sdk.handlers.simple_api.websocket": [
     "WebSocket",
     "WebSocketAPI"
-  ],
-  "canvas_sdk.llms": [
-    "LlmAnthropic",
-    "LlmGoogle",
-    "LlmOpenai",
-    "LlmResponse",
-    "LlmSettings",
-    "LlmSettingsGpt5",
-    "LlmTokens",
-    "LlmTurn"
-  ],
-  "canvas_sdk.llms.libraries": [
-    "LlmAnthropic",
-    "LlmGoogle",
-    "LlmOpenai"
-  ],
-  "canvas_sdk.llms.libraries.llm_anthropic": [
-    "LlmAnthropic"
-  ],
-  "canvas_sdk.llms.libraries.llm_base": [
-    "LlmBase"
-  ],
-  "canvas_sdk.llms.libraries.llm_google": [
-    "LlmGoogle"
-  ],
-  "canvas_sdk.llms.libraries.llm_openai": [
-    "LlmOpenai"
-  ],
-  "canvas_sdk.llms.structures": [
-    "LlmResponse",
-    "LlmTokens",
-    "LlmTurn"
-  ],
-  "canvas_sdk.llms.structures.llm_response": [
-    "LlmResponse"
-  ],
-  "canvas_sdk.llms.structures.llm_tokens": [
-    "LlmTokens"
-  ],
-  "canvas_sdk.llms.structures.llm_turn": [
-    "LlmTurn"
-  ],
-  "canvas_sdk.llms.structures.settings": [
-    "LlmSettings",
-    "LlmSettingsAnthropic",
-    "LlmSettingsGemini",
-    "LlmSettingsGpt4",
-    "LlmSettingsGpt5"
-  ],
-  "canvas_sdk.llms.structures.settings.llm_settings": [
-    "LlmSettings"
-  ],
-  "canvas_sdk.llms.structures.settings.llm_settings_anthropic": [
-    "LlmSettingsAnthropic"
-  ],
-  "canvas_sdk.llms.structures.settings.llm_settings_gemini": [
-    "LlmSettingsGemini"
-  ],
-  "canvas_sdk.llms.structures.settings.llm_settings_gpt4": [
-    "LlmSettingsGpt4"
-  ],
-  "canvas_sdk.llms.structures.settings.llm_settings_gpt5": [
-    "LlmSettingsGpt5"
   ],
   "canvas_sdk.protocols": [
     "BaseProtocol",
