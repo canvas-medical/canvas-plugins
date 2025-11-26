@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -118,17 +118,17 @@ def test_request() -> None:
 
 
 @patch.object(LlmBase, "request")
-def test_attempt_requests(mock_request: MagicMock) -> None:
+def test_attempt_requests(request: MagicMock) -> None:
     """Test attempt_requests retries until success or max attempts."""
 
     def reset_mocks() -> None:
-        mock_request.reset_mock()
+        request.reset_mock()
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmBase(settings)
 
     # Test successful on first attempt
-    mock_request.side_effect = [
+    request.side_effect = [
         LlmResponse(
             code=HTTPStatus.OK,
             response="success",
@@ -145,12 +145,13 @@ def test_attempt_requests(mock_request: MagicMock) -> None:
         )
     ]
     assert result == expected
-    assert len(result) == 1
-    assert mock_request.call_count == 1
+
+    calls = [call()]
+    assert request.mock_calls == calls
     reset_mocks()
 
     # Test successful on second attempt
-    mock_request.side_effect = [
+    request.side_effect = [
         LlmResponse(
             code=HTTPStatus.TOO_MANY_REQUESTS,
             response="rate limit",
@@ -177,31 +178,45 @@ def test_attempt_requests(mock_request: MagicMock) -> None:
         ),
     ]
     assert result == expected
-    assert len(result) == 2
-    assert mock_request.call_count == 2
+
+    calls = [call(), call()]
+    assert request.mock_calls == calls
     reset_mocks()
 
     # Test all attempts fail
-    mock_request.side_effect = [
+    request.side_effect = [
         LlmResponse(
-            code=HTTPStatus.TOO_MANY_REQUESTS,
+            code=HTTPStatus.TOO_EARLY,
             response="error1",
             tokens=LlmTokens(prompt=0, generated=0),
         ),
         LlmResponse(
-            code=HTTPStatus.BAD_REQUEST,
+            code=HTTPStatus.BAD_GATEWAY,
             response="error2",
             tokens=LlmTokens(prompt=0, generated=0),
         ),
     ]
 
     result = tested.attempt_requests(2)
-    assert len(result) == 3
-    assert result[0].code == HTTPStatus.TOO_MANY_REQUESTS
-    assert result[0].response == "error1"
-    assert result[1].code == HTTPStatus.BAD_REQUEST
-    assert result[1].response == "error2"
-    assert result[2].code == HTTPStatus.TOO_MANY_REQUESTS
-    assert "max attempts (2) exceeded" in result[2].response
-    assert mock_request.call_count == 2
+    expected = [
+        LlmResponse(
+            code=HTTPStatus.TOO_EARLY,
+            response="error1",
+            tokens=LlmTokens(prompt=0, generated=0),
+        ),
+        LlmResponse(
+            code=HTTPStatus.BAD_GATEWAY,
+            response="error2",
+            tokens=LlmTokens(prompt=0, generated=0),
+        ),
+        LlmResponse(
+            code=HTTPStatus.TOO_MANY_REQUESTS,
+            response="Http error: max attempts (2) exceeded.",
+            tokens=LlmTokens(prompt=0, generated=0),
+        ),
+    ]
+    assert result == expected
+
+    calls = [call(), call()]
+    assert request.mock_calls == calls
     reset_mocks()

@@ -1,5 +1,8 @@
 from http import HTTPStatus
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, call, patch
+
+from requests import exceptions
 
 from canvas_sdk.clients.llms.libraries.llm_openai import LlmOpenai
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
@@ -14,138 +17,157 @@ def test_to_dict() -> None:
     tested = LlmOpenai(settings)
 
     # Test with system, user, and model prompts
-    tested.add_prompt(LlmTurn(role="system", text=["system prompt"]))
-    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
-    tested.add_prompt(LlmTurn(role="model", text=["model response"]))
+    tested.add_prompt(LlmTurn(role="system", text=["system prompt 1"]))
+    tested.add_prompt(LlmTurn(role="user", text=["user message 1"]))
+    tested.add_prompt(LlmTurn(role="user", text=["user message 2"]))
+    tested.add_prompt(LlmTurn(role="user", text=["user message 3"]))
+    tested.add_prompt(LlmTurn(role="model", text=["model response 1"]))
+    tested.add_prompt(LlmTurn(role="model", text=["model response 2"]))
+    tested.add_prompt(LlmTurn(role="system", text=["system prompt 2"]))
+    tested.add_prompt(LlmTurn(role="user", text=["user message 4"]))
 
     result = tested.to_dict()
 
+    # System prompts replace each other (only last one is kept), others are in input
     expected = {
-        "model": "test_model",
-        "instructions": "system prompt",
         "input": [
             {
+                "content": [{"text": "user message 1", "type": "input_text"}],
                 "role": "user",
-                "content": [{"type": "input_text", "text": "user message"}],
             },
             {
+                "content": [{"text": "user message 2", "type": "input_text"}],
+                "role": "user",
+            },
+            {
+                "content": [{"text": "user message 3", "type": "input_text"}],
+                "role": "user",
+            },
+            {
+                "content": [{"text": "model response 1", "type": "output_text"}],
                 "role": "assistant",
-                "content": [{"type": "output_text", "text": "model response"}],
+            },
+            {
+                "content": [{"text": "model response 2", "type": "output_text"}],
+                "role": "assistant",
+            },
+            {
+                "content": [{"text": "user message 4", "type": "input_text"}],
+                "role": "user",
             },
         ],
+        "instructions": "system prompt 2",
+        "model": "test_model",
     }
+
     assert result == expected
 
 
-def test_to_dict_multiple_system_prompts() -> None:
-    """Test that second system prompt replaces first in instructions."""
-    settings = LlmSettings(api_key="test_key", model="test_model")
-    tested = LlmOpenai(settings)
-
-    # Add two system prompts (second replaces first)
-    tested.add_prompt(LlmTurn(role="system", text=["system1"]))
-    tested.add_prompt(LlmTurn(role="system", text=["system2"]))
-    tested.add_prompt(LlmTurn(role="user", text=["user1"]))
-
-    result = tested.to_dict()
-
-    # Second system prompt replaces the first
-    assert result["instructions"] == "system2"
-    assert len(result["input"]) == 1
-
-
-@patch("canvas_sdk.clients.llms.libraries.llm_openai.requests_post")
-def test_request_success(mock_post: MagicMock) -> None:
+@patch("canvas_sdk.clients.llms.libraries.llm_openai.Http")
+def test_request(http: MagicMock) -> None:
     """Test successful API request to OpenAI."""
 
     def reset_mocks() -> None:
-        mock_post.reset_mock()
+        http.reset_mock()
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmOpenai(settings)
     tested.add_prompt(LlmTurn(role="user", text=["test"]))
 
-    # Mock successful response
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = '{"output": [{"type": "message", "content": [{"text": "response text"}]}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
-    mock_post.side_effect = [mock_response]
+    # exceptions
+    exception_no_response = exceptions.RequestException("Connection error")
+    exception_with_response = exceptions.RequestException("Server error")
+    exception_with_response.response = SimpleNamespace(status_code=404, text="not found")  # type: ignore[assignment]
 
-    result = tested.request()
+    tests = [
+        # success
+        (
+            SimpleNamespace(
+                status_code=200,
+                text="{"
+                '"output": [{"type": "message", "content": [{"text": "response text"}]}], '
+                '"usage": {"input_tokens": 10, "output_tokens": 20}'
+                "}",
+            ),
+            LlmResponse(
+                code=HTTPStatus.OK,
+                response="response text",
+                tokens=LlmTokens(prompt=10, generated=20),
+            ),
+        ),
+        # error
+        (
+            SimpleNamespace(
+                status_code=429,
+                text="Rate limit exceeded",
+            ),
+            LlmResponse(
+                code=HTTPStatus.TOO_MANY_REQUESTS,
+                response="Rate limit exceeded",
+                tokens=LlmTokens(prompt=0, generated=0),
+            ),
+        ),
+        # multiple output messages
+        (
+            SimpleNamespace(
+                status_code=200,
+                text="{"
+                '"output": ['
+                '{"type": "message", "content": [{"text": "part1"}]}, '
+                '{"type": "something", "content": [{"text": "nope"}]}, '
+                '{"type": "message", "content": [{"text": "part2"}]}'
+                "], "
+                '"usage": {"input_tokens": 10, "output_tokens": 20}'
+                "}",
+            ),
+            LlmResponse(
+                code=HTTPStatus.OK,
+                response="part1part2",
+                tokens=LlmTokens(prompt=10, generated=20),
+            ),
+        ),
+        # exception -- no response
+        (
+            exception_no_response,
+            LlmResponse(
+                code=HTTPStatus.BAD_REQUEST,
+                response="Request failed: Connection error",
+                tokens=LlmTokens(prompt=0, generated=0),
+            ),
+        ),
+        # exception -- with response
+        (
+            exception_with_response,
+            LlmResponse(
+                code=HTTPStatus.NOT_FOUND,
+                response="not found",
+                tokens=LlmTokens(prompt=0, generated=0),
+            ),
+        ),
+    ]
+    for response, expected in tests:
+        http.return_value.post.side_effect = [response]
 
-    expected = LlmResponse(
-        code=HTTPStatus.OK,
-        response="response text",
-        tokens=LlmTokens(prompt=10, generated=20),
-    )
-    assert result == expected
+        result = tested.request()
+        assert result == expected
 
-    # Verify request was made correctly
-    calls = mock_post.call_args_list
-    assert len(calls) == 1
-    assert calls[0][0][0] == "https://us.api.openai.com/v1/responses"
-    assert calls[0][1]["headers"]["Authorization"] == "Bearer test_key"
-    reset_mocks()
-
-
-@patch("canvas_sdk.clients.llms.libraries.llm_openai.requests_post")
-def test_request_error(mock_post: MagicMock) -> None:
-    """Test API request error handling."""
-
-    def reset_mocks() -> None:
-        mock_post.reset_mock()
-
-    settings = LlmSettings(api_key="test_key", model="test_model")
-    tested = LlmOpenai(settings)
-    tested.add_prompt(LlmTurn(role="user", text=["test"]))
-
-    # Mock error response
-    mock_response = MagicMock()
-    mock_response.status_code = 429
-    mock_response.text = "Rate limit exceeded"
-    mock_post.side_effect = [mock_response]
-
-    result = tested.request()
-
-    expected = LlmResponse(
-        code=HTTPStatus.TOO_MANY_REQUESTS,
-        response="Rate limit exceeded",
-        tokens=LlmTokens(prompt=0, generated=0),
-    )
-    assert result == expected
-    reset_mocks()
-
-
-@patch("canvas_sdk.clients.llms.libraries.llm_openai.requests_post")
-def test_request_multiple_output_messages(mock_post: MagicMock) -> None:
-    """Test handling multiple message outputs."""
-
-    def reset_mocks() -> None:
-        mock_post.reset_mock()
-
-    settings = LlmSettings(api_key="test_key", model="test_model")
-    tested = LlmOpenai(settings)
-    tested.add_prompt(LlmTurn(role="user", text=["test"]))
-
-    # Mock response with multiple outputs
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = (
-        '{"output": ['
-        '{"type": "message", "content": [{"text": "part1"}]}, '
-        '{"type": "something", "content": [{"text": "nope"}]}, '
-        '{"type": "message", "content": [{"text": "part2"}]}], '
-        '"usage": {"input_tokens": 10, "output_tokens": 20}}'
-    )
-    mock_post.side_effect = [mock_response]
-
-    result = tested.request()
-
-    # Multiple message outputs should be concatenated
-    expected = LlmResponse(
-        code=HTTPStatus.OK,
-        response="part1part2",
-        tokens=LlmTokens(prompt=10, generated=20),
-    )
-    assert result == expected
-    reset_mocks()
+        calls = [
+            call("https://us.api.openai.com/v1/responses"),
+            call().post(
+                "",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer test_key",
+                },
+                data="{"
+                '"model": "test_model", '
+                '"instructions": "", '
+                '"input": [{'
+                '"role": "user", '
+                '"content": [{"type": "input_text", "text": "test"}]'
+                "}]"
+                "}",
+            ),
+        ]
+        assert http.mock_calls == calls
+        reset_mocks()
