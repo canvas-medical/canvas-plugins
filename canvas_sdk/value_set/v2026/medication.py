@@ -55,9 +55,10 @@ class DementiaMedications(ValueSet):
         "997229",  # donepezil hydrochloride 5 MG Oral Tablet
     }
 
+
 class AnticoagulantsForAllIndications(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for anticoagulant medications
+    **Clinical Focus:** The purpose of this value set is to represent concepts for anticoagulant medications.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -138,9 +139,10 @@ class AnticoagulantsForAllIndications(ValueSet):
         "978777",  # dalteparin sodium 25000 UNT/ML Injectable Solution
     }
 
+
 class Antidepressants(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for antidepressants
+    **Clinical Focus:** The purpose of this value set is to represent concepts for antidepressants.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -279,9 +281,10 @@ class Antidepressants(ValueSet):
         "966793",  # doxepin 6 MG Oral Tablet
     }
 
+
 class Antihypertensives(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for antihypertensives
+    **Clinical Focus:** The purpose of this value set is to represent concepts for antihypertensives.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -645,9 +648,10 @@ class Antihypertensives(ValueSet):
         "999996",  # amlodipine 5 MG / hydrochlorothiazide 12.5 MG / olmesartan medoxomil 40 MG Oral Tablet
     }
 
+
 class CentralNervousSystemDepressants(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for prescription central nervous system (CNS) medications capable of slowing brain activity
+    **Clinical Focus:** The purpose of this value set is to represent concepts for prescription central nervous system (CNS) medications capable of slowing brain activity.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -1147,9 +1151,10 @@ class CentralNervousSystemDepressants(ValueSet):
         "996921",  # clozapine 200 MG Disintegrating Oral Tablet
     }
 
+
 class Diuretics(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for diuretics
+    **Clinical Focus:** The purpose of this value set is to represent concepts for diuretics.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -1218,6 +1223,7 @@ class Diuretics(ValueSet):
         "977880",  # amiloride hydrochloride 5 MG Oral Tablet
         "977883",  # amiloride hydrochloride 5 MG / hydrochlorothiazide 50 MG Oral Tablet
     }
+
 
 class Opioids(ValueSet):
     """
@@ -1549,6 +1555,7 @@ class Opioids(ValueSet):
         "997296",  # codeine sulfate 60 MG Oral Tablet
     }
 
+
 class AntithromboticTherapyForIschemicStroke(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of medications that are anticoagulant and antiplatelet medications used to reduce stroke mortality and morbidity.
@@ -1693,6 +1700,7 @@ class AntithromboticTherapyForIschemicStroke(ValueSet):
         "994535",  # aspirin 770 MG / caffeine 60 MG / orphenadrine citrate 50 MG Oral Tablet
     }
 
+
 class PharmacologicalContraindicationsForAntithromboticTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications indicating pharmacological contraindications for antithrombotic therapy.
@@ -1713,6 +1721,7 @@ class PharmacologicalContraindicationsForAntithromboticTherapy(ValueSet):
         "855812",  # prasugrel 10 MG Oral Tablet
         "855818",  # prasugrel 5 MG Oral Tablet
     }
+
 
 class DirectThrombinInhibitor(ValueSet):
     """
@@ -1748,6 +1757,7 @@ class DirectThrombinInhibitor(ValueSet):
         "308769",  # bivalirudin 250 MG Injection
     }
 
+
 class GlycoproteinIibIiiaInhibitors(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications to identify glycoprotein IIb/IIIa inhibitors.
@@ -1773,6 +1783,7 @@ class GlycoproteinIibIiiaInhibitors(ValueSet):
         "200349",  # 100 ML eptifibatide 0.75 MG/ML Injection
     }
 
+
 class InjectableFactorXaInhibitorForVteProphylaxis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications of injectable factor Xa inhibitors used for venous thromboembolism (VTE) prophylaxis.
@@ -1795,6 +1806,7 @@ class InjectableFactorXaInhibitorForVteProphylaxis(ValueSet):
         "861363",  # 0.4 ML fondaparinux sodium 12.5 MG/ML Prefilled Syringe
         "861365",  # 0.6 ML fondaparinux sodium 12.5 MG/ML Prefilled Syringe
     }
+
 
 class LowDoseUnfractionatedHeparinForVteProphylaxis(ValueSet):
     """
@@ -1827,6 +1839,7 @@ class LowDoseUnfractionatedHeparinForVteProphylaxis(ValueSet):
         "1798389",  # 1 ML heparin sodium, porcine 5000 UNT/ML Prefilled Syringe
         "2121591",  # 0.5 ML heparin sodium, porcine 10000 UNT/ML Prefilled Syringe
     }
+
 
 class LowMolecularWeightHeparinForVteProphylaxis(ValueSet):
     """
@@ -1865,6 +1878,7 @@ class LowMolecularWeightHeparinForVteProphylaxis(ValueSet):
         "978777",  # dalteparin sodium 25000 UNT/ML Injectable Solution
     }
 
+
 class OralFactorXaInhibitorForVteProphylaxisOrVteTreatment(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications of oral factor Xa inhibitors indicated for venous thromboembolism (VTE) prophylaxis and treatment.
@@ -1889,6 +1903,7 @@ class OralFactorXaInhibitorForVteProphylaxisOrVteTreatment(ValueSet):
         "1599555",  # edoxaban 60 MG Oral Tablet
         "1992427",  # {74 (apixaban 5 MG Oral Tablet) } Pack
     }
+
 
 class RivaroxabanForVteProphylaxis(ValueSet):
     """
@@ -1915,6 +1930,7 @@ class RivaroxabanForVteProphylaxis(ValueSet):
         "2588062",  # rivaroxaban 1 MG/ML Oral Suspension
     }
 
+
 class UnfractionatedHeparin(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of medication for continuous infusion of heparin formulations to treat venous thromboembolism (VTE).
@@ -1937,6 +1953,7 @@ class UnfractionatedHeparin(ValueSet):
         "1659195",  # 500 ML heparin sodium, porcine 50 UNT/ML Injection
         "1659197",  # 250 ML heparin sodium, porcine 50 UNT/ML Injection
     }
+
 
 class Warfarin(ValueSet):
     """
@@ -1966,9 +1983,10 @@ class Warfarin(ValueSet):
         "855344",  # warfarin sodium 7.5 MG Oral Tablet
     }
 
+
 class AnticoagulantMedications(ValueSet):
     """
-    **Clinical Focus:** Commonly prescribed anticoagulants
+    **Clinical Focus:** Commonly prescribed anticoagulants.
 
     **Data Element Scope:** Anticoagulant medications active during measurement year
 
@@ -2134,6 +2152,7 @@ class AnticoagulantMedications(ValueSet):
         "978777",  # dalteparin sodium 25000 UNT/ML Injectable Solution
         "978778",  # dalteparin sodium 25000 UNT/ML Injectable Solution [Fragmin]
     }
+
 
 class AntidepressantMedication(ValueSet):
     """
@@ -2332,6 +2351,7 @@ class AntidepressantMedication(ValueSet):
         "993691",  # bupropion hydrochloride 75 MG Oral Tablet
     }
 
+
 class AceInhibitorOrArbOrArni(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of medications of angiotensin-converting enzyme (ACE) inhibitor, angiotensin-receptor blocker (ARB), and angiotensin receptor-neprilysin inhibitor (ARNI) therapies.
@@ -2502,6 +2522,7 @@ class AceInhibitorOrArbOrArni(ValueSet):
         "999996",  # amlodipine 5 MG / hydrochlorothiazide 12.5 MG / olmesartan medoxomil 40 MG Oral Tablet
     }
 
+
 class Atomoxetine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for atomoxetine medications.
@@ -2527,6 +2548,7 @@ class Atomoxetine(ValueSet):
         "608139",  # atomoxetine 100 MG Oral Capsule
         "608143",  # atomoxetine 80 MG Oral Capsule
     }
+
 
 class Clonidine(ValueSet):
     """
@@ -2556,6 +2578,7 @@ class Clonidine(ValueSet):
         "998675",  # 168 HR clonidine 0.00833 MG/HR Transdermal System
         "998679",  # 168 HR clonidine 0.0125 MG/HR Transdermal System
     }
+
 
 class Dexmethylphenidate(ValueSet):
     """
@@ -2589,6 +2612,7 @@ class Dexmethylphenidate(ValueSet):
         "899548",  # dexmethylphenidate hydrochloride 10 MG Oral Tablet
         "899557",  # dexmethylphenidate hydrochloride 2.5 MG Oral Tablet
     }
+
 
 class Dextroamphetamine(ValueSet):
     """
@@ -2637,6 +2661,7 @@ class Dextroamphetamine(ValueSet):
         "884684",  # dextroamphetamine sulfate 15 MG Oral Tablet
     }
 
+
 class GuanfacineMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for guanfacine medications.
@@ -2661,6 +2686,7 @@ class GuanfacineMedications(ValueSet):
         "862019",  # 24 HR guanfacine 3 MG Extended Release Oral Tablet
         "862025",  # 24 HR guanfacine 4 MG Extended Release Oral Tablet
     }
+
 
 class Lisdexamfetamine(ValueSet):
     """
@@ -2693,6 +2719,7 @@ class Lisdexamfetamine(ValueSet):
         "854846",  # lisdexamfetamine dimesylate 60 MG Oral Capsule
         "854850",  # lisdexamfetamine dimesylate 50 MG Oral Capsule
     }
+
 
 class Methylphenidate(ValueSet):
     """
@@ -2774,9 +2801,10 @@ class Methylphenidate(ValueSet):
         "753441",  # 9 HR methylphenidate 3.33 MG/HR Transdermal System
     }
 
+
 class Viloxazine(ValueSet):
     """
-    **Clinical Focus:** N/A
+    **Clinical Focus:** N/A.
 
     **Data Element Scope:** N/A
 
@@ -2795,6 +2823,7 @@ class Viloxazine(ValueSet):
         "2536750",  # 24 HR viloxazine 150 MG Extended Release Oral Capsule
         "2536756",  # 24 HR viloxazine 200 MG Extended Release Oral Capsule
     }
+
 
 class SubstanceUseDisorderLongActingMedication(ValueSet):
     """
@@ -2827,6 +2856,7 @@ class SubstanceUseDisorderLongActingMedication(ValueSet):
         "2639043",  # 0.36 ML buprenorphine 356 MG/ML Prefilled Syringe
         "637213",  # naltrexone 380 MG Injection
     }
+
 
 class SubstanceUseDisorderShortActingMedication(ValueSet):
     """
@@ -2867,6 +2897,7 @@ class SubstanceUseDisorderShortActingMedication(ValueSet):
         "351267",  # buprenorphine 8 MG / naloxone 2 MG Sublingual Tablet
         "835726",  # acamprosate calcium 333 MG Delayed Release Oral Tablet
     }
+
 
 class TobaccoUseCessationPharmacotherapy(ValueSet):
     """
@@ -2916,6 +2947,7 @@ class TobaccoUseCessationPharmacotherapy(ValueSet):
         "993691",  # bupropion hydrochloride 75 MG Oral Tablet
     }
 
+
 class BetaBlockerTherapyForLvsd(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of medications for beta blocker therapy for left ventricular systolic dysfunction (LVSD).
@@ -2958,6 +2990,7 @@ class BetaBlockerTherapyForLvsd(ValueSet):
         "866461",  # 24 HR hydrochlorothiazide 12.5 MG / metoprolol succinate 25 MG Extended Release Oral Tablet
         "866472",  # 24 HR hydrochlorothiazide 12.5 MG / metoprolol succinate 50 MG Extended Release Oral Tablet
     }
+
 
 class BetaBlockerTherapy(ValueSet):
     """
@@ -3064,6 +3097,7 @@ class BetaBlockerTherapy(ValueSet):
         "998685",  # acebutolol 400 MG Oral Capsule
         "998689",  # acebutolol 200 MG Oral Capsule
     }
+
 
 class AntibioticMedicationsForPharyngitis(ValueSet):
     """
@@ -3313,6 +3347,7 @@ class AntibioticMedicationsForPharyngitis(ValueSet):
         "901399",  # doxycycline anhydrous 40 MG Delayed Release Oral Capsule
     }
 
+
 class ContraceptiveMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for contraceptive medications.
@@ -3437,6 +3472,7 @@ class ContraceptiveMedications(ValueSet):
         "978949",  # {5 (dienogest 2 MG / estradiol valerate 2 MG Oral Tablet) / 17 (dienogest 3 MG / estradiol valerate 2 MG Oral Tablet) / 2 (estradiol valerate 1 MG Oral Tablet) / 2 (estradiol valerate 3 MG Oral Tablet) / 2 (inert ingredients 1 MG Oral Tablet) } Pack
     }
 
+
 class Isotretinoin(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for isotretinoin medications.
@@ -3465,6 +3501,7 @@ class Isotretinoin(ValueSet):
         "2262729",  # Micronized isotretinoin 8 MG Oral Capsule
         "403930",  # isotretinoin 30 MG Oral Capsule
     }
+
 
 class AntibioticMedicationsForUpperRespiratoryInfection(ValueSet):
     """
@@ -3831,6 +3868,7 @@ class AntibioticMedicationsForUpperRespiratoryInfection(ValueSet):
         "901610",  # aztreonam 75 MG/ML Inhalation Solution
     }
 
+
 class DesiccatedThyroidMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for desiccated thyroid medications.
@@ -3871,6 +3909,7 @@ class DesiccatedThyroidMedications(ValueSet):
         "728581",  # thyroid (USP) 16.25 MG Oral Tablet
     }
 
+
 class DigoxinMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for digoxin medications.
@@ -3896,6 +3935,7 @@ class DigoxinMedications(ValueSet):
         "393245",  # digoxin 0.05 MG/ML Oral Solution
     }
 
+
 class DipyridamoleMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for antithrombotic medications.
@@ -3917,6 +3957,7 @@ class DipyridamoleMedications(ValueSet):
         "309952",  # dipyridamole 25 MG Oral Tablet
         "309955",  # dipyridamole 75 MG Oral Tablet
     }
+
 
 class DoxepinMedications(ValueSet):
     """
@@ -3946,6 +3987,7 @@ class DoxepinMedications(ValueSet):
         "966793",  # doxepin 6 MG Oral Tablet
     }
 
+
 class MegestrolMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for megestrol medications.
@@ -3968,6 +4010,7 @@ class MegestrolMedications(ValueSet):
         "860221",  # megestrol acetate 40 MG Oral Tablet
         "860225",  # megestrol acetate 40 MG/ML Oral Suspension
     }
+
 
 class MeperidineMedications(ValueSet):
     """
@@ -4005,6 +4048,7 @@ class MeperidineMedications(ValueSet):
         "861494",  # 1 ML meperidine hydrochloride 25 MG/ML Cartridge
     }
 
+
 class MeprobamateMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for meprobamate medications.
@@ -4025,6 +4069,7 @@ class MeprobamateMedications(ValueSet):
         "197928",  # meprobamate 200 MG Oral Tablet
         "197929",  # meprobamate 400 MG Oral Tablet
     }
+
 
 class NifedipineMedications(ValueSet):
     """
@@ -4047,9 +4092,10 @@ class NifedipineMedications(ValueSet):
         "198033",  # nifedipine 20 MG Oral Capsule
     }
 
+
 class PotentiallyHarmfulAntidepressantsForOlderAdults(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antidepressants for older adults as described in the 2023 American Geriatrics Society BEERS criteria
+    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antidepressants for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
 
     **Data Element Scope:** This value set may use a model element related to Medication.
 
@@ -4117,9 +4163,10 @@ class PotentiallyHarmfulAntidepressantsForOlderAdults(ValueSet):
         "857305",  # clomipramine hydrochloride 75 MG Oral Capsule
     }
 
+
 class PotentiallyHarmfulAntihistaminesForOlderAdults(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antihistamines for older adults as described in the 2023 American Geriatrics Society BEERS criteria
+    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antihistamines for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
 
     **Data Element Scope:** This value set may use a model element related to Medication.
 
@@ -4477,6 +4524,7 @@ class PotentiallyHarmfulAntihistaminesForOlderAdults(ValueSet):
         "998254",  # chlorpheniramine maleate 4 MG / pseudoephedrine hydrochloride 60 MG Oral Tablet
     }
 
+
 class PotentiallyHarmfulAntiinfectivesForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful ant infectives for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -4501,9 +4549,10 @@ class PotentiallyHarmfulAntiinfectivesForOlderAdults(ValueSet):
         "422434",  # nitrofurantoin 10 MG/ML Oral Suspension
     }
 
+
 class PotentiallyHarmfulAntiparkinsonianAgentsForOlderAdults(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antiparkinsonian agents for older adults as described in the 2023 American Geriatrics Society BEERS criteria
+    **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful antiparkinsonian agents for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
 
     **Data Element Scope:** This value set may use a model element related to Medication.
 
@@ -4525,6 +4574,7 @@ class PotentiallyHarmfulAntiparkinsonianAgentsForOlderAdults(ValueSet):
         "905273",  # trihexyphenidyl hydrochloride 0.4 MG/ML Oral Solution
         "905283",  # trihexyphenidyl hydrochloride 5 MG Oral Tablet
     }
+
 
 class PotentiallyHarmfulAntipsychoticsForOlderAdults(ValueSet):
     """
@@ -4756,6 +4806,7 @@ class PotentiallyHarmfulAntipsychoticsForOlderAdults(ValueSet):
         "996921",  # clozapine 200 MG Disintegrating Oral Tablet
     }
 
+
 class PotentiallyHarmfulBarbituratesForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful barbituates for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -4809,6 +4860,7 @@ class PotentiallyHarmfulBarbituratesForOlderAdults(ValueSet):
         "993943",  # acetaminophen 325 MG / butalbital 50 MG / caffeine 40 MG / codeine phosphate 30 MG Oral Capsule
         "994237",  # aspirin 325 MG / butalbital 50 MG / caffeine 40 MG / codeine phosphate 30 MG Oral Capsule
     }
+
 
 class PotentiallyHarmfulBenzodiazepinesForOlderAdults(ValueSet):
     """
@@ -4914,6 +4966,7 @@ class PotentiallyHarmfulBenzodiazepinesForOlderAdults(ValueSet):
         "998211",  # 2 ML midazolam 1 MG/ML Prefilled Syringe
     }
 
+
 class PotentiallyHarmfulEstrogensForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful estrogens for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -4996,6 +5049,7 @@ class PotentiallyHarmfulEstrogensForOlderAdults(ValueSet):
         "978949",  # {5 (dienogest 2 MG / estradiol valerate 2 MG Oral Tablet) / 17 (dienogest 3 MG / estradiol valerate 2 MG Oral Tablet) / 2 (estradiol valerate 1 MG Oral Tablet) / 2 (estradiol valerate 3 MG Oral Tablet) / 2 (inert ingredients 1 MG Oral Tablet) } Pack
     }
 
+
 class PotentiallyHarmfulGastrointestinalAntispasmodicsForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful Gastrointestinal Antispasmodics for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -5056,6 +5110,7 @@ class PotentiallyHarmfulGastrointestinalAntispasmodicsForOlderAdults(ValueSet):
         "998726",  # hyoscyamine sulfate 0.0625 MG / phenyltoloxamine citrate 15 MG Oral Capsule
     }
 
+
 class PotentiallyHarmfulNonbenzodiazepineHypnoticsForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful Nonbenzodiazepine Hypnotics for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -5090,6 +5145,7 @@ class PotentiallyHarmfulNonbenzodiazepineHypnoticsForOlderAdults(ValueSet):
         "854894",  # zolpidem tartrate 6.25 MG Extended Release Oral Tablet
     }
 
+
 class PotentiallyHarmfulPainMedicationsForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful pain medications for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -5123,6 +5179,7 @@ class PotentiallyHarmfulPainMedicationsForOlderAdults(ValueSet):
         "860114",  # 1 ML ketorolac tromethamine 30 MG/ML Prefilled Syringe
         "860115",  # 2 ML ketorolac tromethamine 30 MG/ML Prefilled Syringe
     }
+
 
 class PotentiallyHarmfulSkeletalMuscleRelaxantsForOlderAdults(ValueSet):
     """
@@ -5166,6 +5223,7 @@ class PotentiallyHarmfulSkeletalMuscleRelaxantsForOlderAdults(ValueSet):
         "994535",  # aspirin 770 MG / caffeine 60 MG / orphenadrine citrate 50 MG Oral Tablet
     }
 
+
 class PotentiallyHarmfulSulfonylureasForOlderAdults(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for potentially harmful Sulfonylureas for older adults as described in the 2023 American Geriatrics Society BEERS criteria.
@@ -5201,6 +5259,7 @@ class PotentiallyHarmfulSulfonylureasForOlderAdults(ValueSet):
         "861748",  # glyburide 2.5 MG / metformin hydrochloride 500 MG Oral Tablet
         "861753",  # glyburide 5 MG / metformin hydrochloride 500 MG Oral Tablet
     }
+
 
 class PharmacologicTherapyForHypertension(ValueSet):
     """
@@ -5656,6 +5715,7 @@ class PharmacologicTherapyForHypertension(ValueSet):
         "999996",  # amlodipine 5 MG / hydrochlorothiazide 12.5 MG / olmesartan medoxomil 40 MG Oral Tablet
     }
 
+
 class AdolescentDepressionMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent medications used to treat depression in the child and adolescent population.
@@ -5731,6 +5791,7 @@ class AdolescentDepressionMedications(ValueSet):
         "903887",  # fluvoxamine maleate 25 MG Oral Tablet
         "903891",  # fluvoxamine maleate 50 MG Oral Tablet
     }
+
 
 class AdultDepressionMedications(ValueSet):
     """
@@ -5951,6 +6012,7 @@ class AdultDepressionMedications(ValueSet):
         "993691",  # bupropion hydrochloride 75 MG Oral Tablet
     }
 
+
 class HighIntensityStatinTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications that are high intensity statins as defined by the 2013 American College of Cardiology (ACC) and the American Heart Association (AHA) guideline.
@@ -5987,6 +6049,7 @@ class HighIntensityStatinTherapy(ValueSet):
         "859751",  # rosuvastatin calcium 20 MG Oral Tablet
     }
 
+
 class LowIntensityStatinTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of low intensity statin medications as defined by the 2013 American College of Cardiology (ACC) and the American Heart Association (AHA) guideline.
@@ -6015,6 +6078,7 @@ class LowIntensityStatinTherapy(ValueSet):
         "904458",  # pravastatin sodium 10 MG Oral Tablet
         "904467",  # pravastatin sodium 20 MG Oral Tablet
     }
+
 
 class ModerateIntensityStatinTherapy(ValueSet):
     """
@@ -6072,6 +6136,7 @@ class ModerateIntensityStatinTherapy(ValueSet):
         "904481",  # pravastatin sodium 80 MG Oral Tablet
     }
 
+
 class MedicationsForOpioidUseDisorderMoud(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group concepts that represent medications for opioid use disorders.
@@ -6120,6 +6185,7 @@ class MedicationsForOpioidUseDisorderMoud(ValueSet):
         "904880",  # 168 HR buprenorphine 0.005 MG/HR Transdermal System
         "991147",  # methadone hydrochloride 10 MG/ML Oral Solution
     }
+
 
 class ScheduleIiIiiAndIvOpioidMedications(ValueSet):
     """
@@ -6519,6 +6585,7 @@ class ScheduleIiIiiAndIvOpioidMedications(ValueSet):
         "998213",  # 1 ML morphine sulfate 4 MG/ML Prefilled Syringe
     }
 
+
 class ScheduleIvBenzodiazepines(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications that are Schedule IV benzodiazepine medication.
@@ -6632,6 +6699,7 @@ class ScheduleIvBenzodiazepines(ValueSet):
         "998211",  # 2 ML midazolam 1 MG/ML Prefilled Syringe
     }
 
+
 class AndrogenDeprivationTherapyForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications for androgen deprivation therapy as identified for urology care.
@@ -6672,6 +6740,7 @@ class AndrogenDeprivationTherapyForUrologyCare(ValueSet):
         "905062",  # triptorelin 11.25 MG Injection
     }
 
+
 class BacillusCalmetteGuerinForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of medications of Bacillus Calmette Guerin (BCG) .
@@ -6692,6 +6761,7 @@ class BacillusCalmetteGuerinForUrologyCare(ValueSet):
         "1653484",  # BCG, live, Tice strain 50 MG/ML Topical Suspension
         "1653579",  # BCG, live, Tice strain 50 MG Injection
     }
+
 
 class ChemotherapyAgentsForAdvancedCancer(ValueSet):
     """
@@ -6882,6 +6952,7 @@ class ChemotherapyAgentsForAdvancedCancer(ValueSet):
         "829926",  # 10 ML arsenic trioxide 1 MG/ML Injection
     }
 
+
 class ImmunosuppressiveDrugsForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is represent concepts of medications for immunosuppressive drugs .
@@ -7025,6 +7096,7 @@ class ImmunosuppressiveDrugsForUrologyCare(ValueSet):
         "998189",  # everolimus 2.5 MG Oral Tablet
     }
 
+
 class MedicationsForAboveNormalBmi(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications prescribed for weight loss to patients with an above normal body mass index (BMI) measurement.
@@ -7107,6 +7179,7 @@ class MedicationsForAboveNormalBmi(ValueSet):
         "993691",  # bupropion hydrochloride 75 MG Oral Tablet
     }
 
+
 class MedicationsForBelowNormalBmi(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications prescribed for weight gain to patients with a below normal body mass index (BMI) measurement.
@@ -7133,6 +7206,7 @@ class MedicationsForBelowNormalBmi(ValueSet):
         "860221",  # megestrol acetate 40 MG Oral Tablet
         "860225",  # megestrol acetate 40 MG/ML Oral Suspension
     }
+
 
 class AnticoagulantTherapy(ValueSet):
     """
@@ -7210,6 +7284,7 @@ class AnticoagulantTherapy(ValueSet):
         "978777",  # dalteparin sodium 25000 UNT/ML Injectable Solution
     }
 
+
 class ThrombolyticTpaTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for medications prescribed for thrombolytic (t-PA) therapy for treatment of ischemic stroke.
@@ -7231,6 +7306,7 @@ class ThrombolyticTpaTherapy(ValueSet):
         "1804804",  # alteplase 50 MG Injection
         "313212",  # tenecteplase 50 MG Injection
     }
+
 
 class HypoglycemicsSevereHypoglycemia(ValueSet):
     """
@@ -7343,9 +7419,10 @@ class HypoglycemicsSevereHypoglycemia(ValueSet):
         "861753",  # glyburide 5 MG / metformin hydrochloride 500 MG Oral Tablet
     }
 
+
 class OpioidAntagonist(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for the opioid antagonist medications naloxone and nalmefine administered to reverse over-administration of opioids in the hospital setting
+    **Clinical Focus:** The purpose of this value set is to represent concepts for the opioid antagonist medications naloxone and nalmefine administered to reverse over-administration of opioids in the hospital setting.
 
     **Data Element Scope:** This value set may use a model element related to Medication
 
@@ -7373,6 +7450,7 @@ class OpioidAntagonist(ValueSet):
         "2596175",  # 0.4 ML naloxone hydrochloride 25 MG/ML Auto-Injector
         "2639721",  # nalmefene 27 MG/ML Nasal Spray
     }
+
 
 class OpioidsAll(ValueSet):
     """
@@ -7803,6 +7881,7 @@ class OpioidsAll(ValueSet):
         "998213",  # 1 ML morphine sulfate 4 MG/ML Prefilled Syringe
     }
 
+
 class HypoglycemicsTreatmentMedications(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for insulin and non-insulin injectable and oral antidiabetic medications capable of causing hypoglycemia.
@@ -8060,6 +8139,7 @@ class HypoglycemicsTreatmentMedications(ValueSet):
         "897122",  # 3 ML liraglutide 6 MG/ML Pen Injector
     }
 
+
 class FibrinolyticTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for fibrinolytic therapy used in the treatment of ST-segment elevation myocardial infarction (STEMI).
@@ -8082,6 +8162,7 @@ class FibrinolyticTherapy(ValueSet):
         "313212",  # tenecteplase 50 MG Injection
         "763138",  # reteplase 10 UNT Injection
     }
+
 
 class OralAnticoagulantMedications(ValueSet):
     """
@@ -8131,6 +8212,7 @@ class OralAnticoagulantMedications(ValueSet):
         "855338",  # warfarin sodium 6 MG Oral Tablet
         "855344",  # warfarin sodium 7.5 MG Oral Tablet
     }
+
 
 __exports__ = (
     "DementiaMedications",

@@ -1,5 +1,6 @@
 from ..value_set import ValueSet
 
+
 class HematocritLabTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring hematocrit.
@@ -32,6 +33,7 @@ class HematocritLabTest(ValueSet):
         "71833-8",  # Hematocrit [Pure volume fraction] of Blood by Automated count
     }
 
+
 class WhiteBloodCellsCountLabTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring white blood cells.
@@ -58,6 +60,7 @@ class WhiteBloodCellsCountLabTest(ValueSet):
         "92635-2",  # Leukocytes [#/volume] in Buffy Coat
     }
 
+
 class Inr(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory test for international normalized ratio (INR).
@@ -82,9 +85,10 @@ class Inr(ValueSet):
         "6301-6",  # INR in Platelet poor plasma by Coagulation assay
     }
 
+
 class GlycemicScreeningTests(ValueSet):
     """
-    **Clinical Focus:** Screening for pre-diabetes
+    **Clinical Focus:** Screening for pre-diabetes.
 
     **Data Element Scope:** Allowable glycemic tests for pre-diabetes screening
 
@@ -122,6 +126,7 @@ class GlycemicScreeningTests(ValueSet):
         "4549-2",  # Hemoglobin A1c/Hemoglobin.total in Blood by Electrophoresis
         "96595-4",  # Hemoglobin A1c/Hemoglobin.total in DBS
     }
+
 
 class HivViralLoadTests(ValueSet):
     """
@@ -161,6 +166,7 @@ class HivViralLoadTests(ValueSet):
         "69354-9",  # HIV 2 RNA [Units/volume] (viral load) in Serum or Plasma by NAA with probe detection
         "70241-5",  # HIV 1 RNA [#/volume] (viral load) in Plasma by Probe and target amplification method detection limit = 20 copies/mL
     }
+
 
 class ChlamydiaScreening(ValueSet):
     """
@@ -232,6 +238,7 @@ class ChlamydiaScreening(ValueSet):
         "91873-0",  # Chlamydia trachomatis Ag [Presence] in Throat by Immunofluorescence
     }
 
+
 class GonorrheaScreening(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent lab test concepts for gonorrhea.
@@ -294,6 +301,7 @@ class GonorrheaScreening(ValueSet):
         "97626-6",  # Neisseria gonorrhoeae DNA [Presence] in Synovial fluid by NAA with non-probe detection
         "99779-1",  # Neisseria gonorrhoeae rRNA [Presence] in Conjunctival specimen by NAA with probe detection
     }
+
 
 class SyphilisTests(ValueSet):
     """
@@ -371,9 +379,10 @@ class SyphilisTests(ValueSet):
         "91846-6",  # Treponema pallidum DNA [Presence] in Genital specimen by NAA with probe detection
     }
 
+
 class AlbuminLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for albumin blood tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for albumin blood tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -392,9 +401,10 @@ class AlbuminLabTest(ValueSet):
         "54347-0",  # Albumin [Moles/volume] in Serum or Plasma
     }
 
+
 class ArterialBloodPh(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for arterial blood pH tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for arterial blood pH tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory test
 
@@ -413,9 +423,10 @@ class ArterialBloodPh(ValueSet):
         "33254-4",  # pH of Arterial blood adjusted to patient's actual temperature
     }
 
+
 class AspartateTransaminaseLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for Aspartate transaminase (AST, SGOT) lab tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for Aspartate transaminase (AST, SGOT) lab tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -434,6 +445,7 @@ class AspartateTransaminaseLabTest(ValueSet):
         "30239-8",  # Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma by With P-5'-P
         "88112-8",  # Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma by No addition of P-5'-P
     }
+
 
 class BicarbonateLabTest(ValueSet):
     """
@@ -479,9 +491,10 @@ class BicarbonateLabTest(ValueSet):
         "97545-8",  # Carbon dioxide, total [Moles/volume] in Central venous blood
     }
 
+
 class BilirubinLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for bilirubin lab tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for bilirubin lab tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -508,9 +521,10 @@ class BilirubinLabTest(ValueSet):
         "97770-2",  # Bilirubin.total [Moles/volume] in Capillary blood
     }
 
+
 class BloodUreaNitrogenLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for blood urea nitrogen (BUN) blood tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for blood urea nitrogen (BUN) blood tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -540,9 +554,10 @@ class BloodUreaNitrogenLabTest(ValueSet):
         "6299-2",  # Urea nitrogen [Mass/volume] in Blood
     }
 
+
 class CarbonDioxidePartialPressureInArterialBlood(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for carbon dioxide partial pressure in arterial blood
+    **Clinical Focus:** The purpose of this value set is to represent concepts for carbon dioxide partial pressure in arterial blood.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -560,6 +575,7 @@ class CarbonDioxidePartialPressureInArterialBlood(ValueSet):
         "2019-8",  # Carbon dioxide [Partial pressure] in Arterial blood
         "32771-8",  # Carbon dioxide [Partial pressure] adjusted to patient's actual temperature in Arterial blood
     }
+
 
 class CreatinineLabTest(ValueSet):
     """
@@ -591,9 +607,10 @@ class CreatinineLabTest(ValueSet):
         "77140-2",  # Creatinine [Moles/volume] in Serum, Plasma or Blood
     }
 
+
 class HemoglobinLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for hemoglobin blood tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for hemoglobin blood tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -621,9 +638,10 @@ class HemoglobinLabTest(ValueSet):
         "97550-8",  # Hemoglobin [Mass/volume] in Central venous blood by calculation
     }
 
+
 class LeukocyteCountLabTest(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for leukocyte count blood tests
+    **Clinical Focus:** The purpose of this value set is to represent concepts for leukocyte count blood tests.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -645,9 +663,10 @@ class LeukocyteCountLabTest(ValueSet):
         "804-5",  # Leukocytes [#/volume] in Blood by Manual count
     }
 
+
 class OxygenPartialPressureInArterialBlood(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for oxygen partial pressure in arterial blood
+    **Clinical Focus:** The purpose of this value set is to represent concepts for oxygen partial pressure in arterial blood.
 
     **Data Element Scope:** This value set may use a model element related to Laboratory Test
 
@@ -666,6 +685,7 @@ class OxygenPartialPressureInArterialBlood(ValueSet):
         "19255-9",  # Oxygen [Partial pressure] adjusted to patient's actual temperature in Arterial blood
         "2703-7",  # Oxygen [Partial pressure] in Arterial blood
     }
+
 
 class PlateletCountLabTest(ValueSet):
     """
@@ -695,6 +715,7 @@ class PlateletCountLabTest(ValueSet):
         "97995-5",  # Platelets [#/volume] in Blood by Automated count.optical
     }
 
+
 class SodiumLabTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring sodium in blood, serum, or plasma.
@@ -720,6 +741,7 @@ class SodiumLabTest(ValueSet):
         "77139-4",  # Sodium [Moles/volume] in Serum, Plasma or Blood
     }
 
+
 class Hba1cLaboratoryTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for hemoglobin A1c tests.
@@ -743,6 +765,7 @@ class Hba1cLaboratoryTest(ValueSet):
         "4549-2",  # Hemoglobin A1c/Hemoglobin.total in Blood by Electrophoresis
         "96595-4",  # Hemoglobin A1c/Hemoglobin.total in DBS
     }
+
 
 class HpvTest(ValueSet):
     """
@@ -781,6 +804,7 @@ class HpvTest(ValueSet):
         "95539-3",  # Human papilloma virus 31 DNA [Presence] in Cervix by NAA with probe detection
     }
 
+
 class PapTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for cervical cytology tests.
@@ -810,6 +834,7 @@ class PapTest(ValueSet):
         "47528-5",  # Cytology report of Cervical or vaginal smear or scraping Cyto stain
     }
 
+
 class ProstateSpecificAntigenTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring the prostate specific antigen (PSA).
@@ -832,6 +857,7 @@ class ProstateSpecificAntigenTest(ValueSet):
         "35741-8",  # Prostate specific Ag [Mass/volume] in Serum or Plasma by Detection limit <= 0.01 ng/mL
         "83112-3",  # Prostate specific Ag [Mass/volume] in Serum or Plasma by Immunoassay
     }
+
 
 class FecalOccultBloodTestFobt(ValueSet):
     """
@@ -868,6 +894,7 @@ class FecalOccultBloodTestFobt(ValueSet):
         "80372-6",  # Hemoglobin.gastrointestinal [Presence] in Stool by Rapid immunoassay
     }
 
+
 class SdnaFitTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for colorectal cancer screening tests that include a combination of stool DNA and fecal immunochemical testing.
@@ -888,6 +915,7 @@ class SdnaFitTest(ValueSet):
         "77353-1",  # Noninvasive colorectal cancer DNA and occult blood screening [Interpretation] in Stool Narrative
         "77354-9",  # Noninvasive colorectal cancer DNA and occult blood screening [Presence] in Stool
     }
+
 
 class GroupAStreptococcusTest(ValueSet):
     """
@@ -923,6 +951,7 @@ class GroupAStreptococcusTest(ValueSet):
         "68954-7",  # Streptococcus pyogenes rRNA [Presence] in Throat by Probe
         "78012-2",  # Streptococcus pyogenes Ag [Presence] in Throat by Rapid immunoassay
     }
+
 
 class LabTestsDuringPregnancy(ValueSet):
     """
@@ -967,6 +996,7 @@ class LabTestsDuringPregnancy(ValueSet):
         "83073-7",  # Alpha-1-Fetoprotein [Mass/volume] in Serum or Plasma by Immunoassay
         "83074-5",  # Alpha-1-Fetoprotein [Units/volume] in Amniotic fluid by Immunoassay
     }
+
 
 class LabTestsForSexuallyTransmittedInfections(ValueSet):
     """
@@ -1199,6 +1229,7 @@ class LabTestsForSexuallyTransmittedInfections(ValueSet):
         "98223-1",  # Treponema pallidum IgM bands [Identifier] in Serum by Immunoblot
     }
 
+
 class PregnancyTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for pregnancy tests.
@@ -1245,6 +1276,7 @@ class PregnancyTest(ValueSet):
         "99104-2",  # Choriogonadotropin [Mass/volume] in Urine
     }
 
+
 class LaboratoryTestsForHypertension(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for lab tests that are commonly performed on patients with hypertension.
@@ -1277,6 +1309,7 @@ class LaboratoryTestsForHypertension(ValueSet):
         "58410-2",  # CBC panel - Blood by Automated count
         "69742-5",  # CBC W Differential panel, method unspecified - Blood
     }
+
 
 class LdlCholesterol(ValueSet):
     """
@@ -1315,6 +1348,7 @@ class LdlCholesterol(ValueSet):
         "96259-7",  # Cholesterol in LDL [Mass/volume] in Serum or Plasma by Calculated by Martin-Hopkins
         "96597-0",  # Cholesterol in LDL [Mass/volume] in DBS by Direct assay
     }
+
 
 class HivLabTests(ValueSet):
     """
@@ -1505,6 +1539,7 @@ class HivLabTests(ValueSet):
         "9821-0",  # HIV 1 p24 Ag [Presence] in Serum
     }
 
+
 class GlucoseLabTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring glucose.
@@ -1561,6 +1596,7 @@ class GlucoseLabTest(ValueSet):
         "77145-1",  # Fasting glucose [Moles/volume] in Serum, Plasma or Blood
     }
 
+
 class PotassiumLabTest(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring potassium in blood, serum, or plasma.
@@ -1590,6 +1626,7 @@ class PotassiumLabTest(ValueSet):
         "75940-7",  # Potassium [Mass/volume] in Blood
         "77142-8",  # Potassium [Moles/volume] in Serum, Plasma or Blood
     }
+
 
 class GlucoseLabTestMassPerVolume(ValueSet):
     """
@@ -1626,6 +1663,7 @@ class GlucoseLabTestMassPerVolume(ValueSet):
         "99504-3",  # Glucose [Mass/volume] in Interstitial fluid
     }
 
+
 class CreatinineMassPerVolume(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for laboratory tests measuring creatinine and reported as Mass Per Volume (mg/dL).
@@ -1647,6 +1685,7 @@ class CreatinineMassPerVolume(ValueSet):
         "2160-0",  # Creatinine [Mass/volume] in Serum or Plasma
         "38483-4",  # Creatinine [Mass/volume] in Blood
     }
+
 
 class EstimatedGlomerularFiltrationRate(ValueSet):
     """
@@ -1679,6 +1718,7 @@ class EstimatedGlomerularFiltrationRate(ValueSet):
         "98979-8",  # Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)
         "98980-6",  # Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine and Cystatin C-based formula (CKD-EPI 2021)
     }
+
 
 class UrineAlbumin(ValueSet):
     """
@@ -1723,6 +1763,7 @@ class UrineAlbumin(ValueSet):
         "77940-5",  # Albumin [Mass/volume] by Electrophoresis in Urine collected for unspecified duration
     }
 
+
 class UrineAlbuminCreatinineRatio(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent urine albumin creatinine ratio (uACR) tests.
@@ -1755,6 +1796,7 @@ class UrineAlbuminCreatinineRatio(ValueSet):
         "9318-7",  # Albumin/Creatinine [Mass Ratio] in Urine
     }
 
+
 class UrineCreatinine(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent lab tests commonly used for urine creatinine measurement.
@@ -1784,6 +1826,7 @@ class UrineCreatinine(ValueSet):
         "57346-9",  # Creatinine [Mass/volume] in 12 hour Urine
         "58951-5",  # Creatinine [Mass/volume] in Urine --2nd specimen
     }
+
 
 __exports__ = (
     "HematocritLabTest",
