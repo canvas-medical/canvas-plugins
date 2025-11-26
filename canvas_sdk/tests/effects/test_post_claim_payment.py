@@ -67,9 +67,7 @@ def test_post_claim_payment_requires_existing_claim(mock_db_queries: dict[str, M
         line_item_transactions=[],
     )
 
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("0.00")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
     with pytest.raises(ValidationError) as e:
         post.apply()
     err_msg = repr(e.value)
@@ -90,9 +88,7 @@ def test_post_claim_payment_requires_claim_coverage_id_that_is_active_coverage(
         claim_coverage_id="coverage-1",
         line_item_transactions=[],
     )
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("0.00")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
     with pytest.raises(ValidationError) as e:
         post.apply()
     err_msg = repr(e.value)
@@ -114,9 +110,7 @@ def test_post_claim_payment_requires_existing_move_to_queue_name(
         line_item_transactions=[],
         move_to_queue_name="beep-boop",
     )
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("0.00")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
     with pytest.raises(ValidationError) as e:
         post.apply()
     err_msg = repr(e.value)
@@ -385,9 +379,7 @@ def test_post_claim_payment_line_item_validation(
         **s["alloc_kwargs"],
     )
 
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("0.00")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
 
     with pytest.raises(ValidationError) as e:
         post.apply()
@@ -407,9 +399,7 @@ def test_post_claim_payment_check_method_has_required_fields(
         line_item_transactions=[],
     )
 
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CHECK, total_collected=Decimal("0.00")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CHECK)
 
     with pytest.raises(ValidationError) as e:
         post.apply()
@@ -439,9 +429,7 @@ def test_valid_post_claim_payment_patient_payload_is_correct(
         claim_coverage_id="patient",
         line_item_transactions=[lit1, lit2],
     )
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("8.50")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
 
     result = post.apply()
 
@@ -521,9 +509,7 @@ def test_valid_post_claim_payment_coverage_payload_is_correct(
         line_item_transactions=[lit1, lit2, lit3],
     )
 
-    post = PostClaimPayment(
-        claim=claim_alloc, method=PaymentMethod.CASH, total_collected=Decimal("17.75")
-    )
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
 
     result = post.apply()
 
