@@ -1,0 +1,41 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "cms130v14_colorectal_cancer_screening",
+    "description": "CMS130v14 - Colorectal Cancer Screening. Percentage of adults 45-75 years of age who had appropriate screening for colorectal cancer.",
+    "components": {
+        "protocols": [
+            {
+                "class": "cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol:CMS130v14ColorectalCancerScreening",
+                "description": "Colorectal Cancer Screening - CMS130v14",
+                "meta": {
+                    "title": "Colorectal Cancer Screening",
+                    "description": "Percentage of adults 45-75 years of age who had appropriate screening for colorectal cancer.",
+                    "version": "2026-01-01v14",
+                    "information": "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130-v14.0.000-QDM.html",
+                    "identifiers": ["CMS130v14"],
+                    "types": ["CQM"],
+                    "authors": ["National Committee for Quality Assurance"],
+                    "references": [
+                        "Howlader N, Noone AM, Krapcho M, Miller D, Brest A, Yu M, Ruhl J, Tatalovich Z, Mariotto A, Lewis DR, Chen HS, Feuer EJ, Cronin KA (2020). SEER Cancer Statistics Review, 195-2017. Retrieved September 22, 2020, https://seer.cancer.gov/csr/1975_2017/",
+                        "SEER. (n.d.). Cancer of the Colon and Rectum. https://seer.cancer.gov/statfacts/html/colorect.html",
+                        "US Preventive Services Task Force, Davidson, K. W., Barry, M. J., Mangione, C. M., Cabana, M., Caughey, A. B., Davis, E. M., Donahue, K. E., Doubeni, C. A., Krist, A. H., Kubik, M., Li, L., Ogedegbe, G., Owens, D. K., Pbert, L., Silverstein, M., Stevermer, J., Tseng, C. W., & Wong, J. B. (2021). Screening for Colorectal Cancer: US Preventive Services Task Force Recommendation Statement. JAMA, 325(19), 1965–1977. https://doi.org/10.1001/jama.2021.6238"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [
+        "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130-v14.0.000-QDM.html",
+        "Howlader N, Noone AM, Krapcho M, Miller D, Brest A, Yu M, Ruhl J, Tatalovich Z, Mariotto A, Lewis DR, Chen HS, Feuer EJ, Cronin KA (2020). SEER Cancer Statistics Review, 195-2017. Retrieved September 22, 2020, https://seer.cancer.gov/csr/1975_2017/"
+    ],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
