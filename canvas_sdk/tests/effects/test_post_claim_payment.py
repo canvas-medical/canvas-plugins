@@ -415,6 +415,36 @@ def test_post_claim_payment_check_method_has_required_fields(
     )
 
 
+def test_post_claim_payment_total_collected_property(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that total_collected property sums payments correctly and returns a string."""
+    mock_claim = mock_db_queries["mock_claim"]
+
+    # Setup mock for claim.line_items.active().filter(id=...) to always return a valid line item
+    def filter_side_effect(**kwargs: Any) -> QuerySet:
+        qs = MagicMock()
+        qs.first.return_value = MagicMock(id=kwargs.get("id"), proc_code="PROC")
+        return qs
+
+    mock_claim.line_items.active.return_value.filter.side_effect = filter_side_effect
+
+    # Create several line item transactions with payments
+    lit1 = LineItemTransaction(claim_line_item_id="line-1", payment=Decimal("5.00"))
+    lit2 = LineItemTransaction(claim_line_item_id="line-2", payment=Decimal("3.50"))
+    lit3 = LineItemTransaction(claim_line_item_id="line-3", payment=Decimal("1.25"))
+
+    claim_alloc = ClaimAllocation(
+        claim_id=mock_claim.id,
+        claim_coverage_id="patient",
+        line_item_transactions=[lit1, lit2, lit3],
+        move_to_queue_name=None,
+        description=None,
+    )
+
+    post = PostClaimPayment(claim=claim_alloc, method=PaymentMethod.CASH)
+
+    assert post.total_collected == "9.75"
+
+
 def test_valid_post_claim_payment_patient_payload_is_correct(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
