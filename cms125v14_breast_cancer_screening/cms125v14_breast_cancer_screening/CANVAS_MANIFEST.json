@@ -1,0 +1,47 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "1.0.0",
+  "name": "cms125v14_breast_cancer_screening",
+  "description": "CMS125v14 Breast Cancer Screening - Clinical Quality Measure for women 42-74 years of age who had a mammogram",
+  "components": {
+    "protocols": [
+      {
+        "class": "cms125v14_breast_cancer_screening.protocols.cms125v14_protocol:ClinicalQualityMeasure125v14",
+        "description": "Breast Cancer Screening protocol - monitors mammography screening compliance for women aged 42-74",
+        "data_access": {
+          "event": "ASSESS_COMMAND__CONDITION_SELECTED",
+          "read": ["patients", "conditions", "billing_line_items", "imaging_reports", "medications", "coverages", "protocol_overrides"],
+          "write": []
+        },
+        "meta": {
+          "title": "Breast Cancer Screening",
+          "version": "v14.0.0",
+          "description": "Women 42-74 years of age who have not had a mammogram to screen for breast cancer within the last 27 months.",
+          "information": "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html",
+          "identifiers": ["CMS125v14"],
+          "types": ["CQM"],
+          "authors": ["National Committee for Quality Assurance"],
+          "references": [
+            "American Cancer Society. 2010. Cancer Facts & Figures 2010. Atlanta: American Cancer Society.",
+            "National Cancer Institute. 2010. \"Breast Cancer Screening.\" http://www.cancer.gov/cancertopics/pdq/screening/breast/healthprofessional",
+            "National Business Group on Health. 2011. Pathways to Managing Cancer in the Workplace. Washington: National Business Group on Health.",
+            "U.S. Preventive Services Task Force (USPSTF). 2009. 1) \"Screening for breast cancer: U.S. Preventive Services Task Force recommendation statement.\" 2) \"December 2009 addendum.\" Ann Intern Med 151(10):716-726.",
+            "BreastCancer.org. 2012. U.S. Breast Cancer Statistics. http://www.breastcancer.org/symptoms/understand_bc/statistics.jsp"
+          ]
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [],
+  "tags": ["CQM", "screening", "breast-cancer", "quality-measure"],
+  "references": [
+    "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html"
+  ],
+  "license": "MIT",
+  "diagram": false,
+  "readme": "./README.md"
+}

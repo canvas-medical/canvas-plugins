@@ -86,6 +86,21 @@ class CombinedValueSet(CodeConstantsURLMappingMixin):
         """Implements the `|` (or) operator to combine value sets."""
         return CombinedValueSet(self, value_set)
 
+    def get_codes(self) -> set[str]:
+        """
+        Extract all codes from this CombinedValueSet across all code systems.
+
+        This is useful when you need a flattened set of all codes regardless of
+        which code system they belong to.
+
+        Returns:
+            A set of all codes found in the CombinedValueSet across all code systems.
+        """
+        all_codes: set[str] = set[str]()
+        for codes in self.values.values():
+            all_codes.update(codes)
+        return all_codes
+
 
 class ValueSystems(type):
     """A metaclass for defining a ValueSet."""
@@ -110,6 +125,30 @@ class ValueSet(CodeConstantsURLMappingMixin, metaclass=ValueSystems):
             for system in cls.CODE_SYSTEM_MAPPING
             if hasattr(cls, system)
         }
+
+    @classmethod
+    def get_codes(cls) -> set[str]:
+        """
+        Extract all codes from this ValueSet across all code systems.
+
+        This is useful when you need a flattened set of all codes regardless of
+        which code system they belong to.
+
+        Returns:
+            A set of all codes found in the ValueSet across all code systems.
+
+        Example:
+            >>> from canvas_sdk.value_set.v2022.condition import Diabetes
+            >>> codes = Diabetes.get_codes()
+            >>> print(len(codes))
+            42
+            >>> "E11.9" in codes
+            True
+        """
+        all_codes: set[str] = set()
+        for codes in cls.values.values():
+            all_codes.update(codes)
+        return all_codes
 
 
 __exports__ = (

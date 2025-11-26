@@ -1,3 +1,5 @@
+"""Factories for imaging-related models."""
+
 import datetime
 import json
 
@@ -12,7 +14,7 @@ from canvas_sdk.v1.data.common import (
     ReviewPatientCommunicationMethod,
     ReviewStatus,
 )
-from canvas_sdk.v1.data.imaging import ImagingReport as ImagingReportModel
+from canvas_sdk.v1.data.imaging import ImagingReportCoding
 
 
 class ImagingOrderFactory(factory.django.DjangoModelFactory[ImagingOrder]):
@@ -61,7 +63,7 @@ class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
     assigned_date = factory.LazyFunction(lambda: timezone.now())
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
     order = None  # Optional field
-    source = ImagingReportModel.ImagingReportSource.DIRECTLY_REPORT
+    source = ImagingReport.ImagingReportSource.DIRECTLY_REPORT
     name = factory.Faker("text", max_nb_chars=255)
     result_date = FuzzyDate(
         start_date=datetime.date.today() - datetime.timedelta(days=365),
@@ -72,3 +74,15 @@ class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
         end_date=datetime.date.today(),
     )
     review = None  # Optional field
+
+
+class ImagingReportCodingFactory(factory.django.DjangoModelFactory[ImagingReportCoding]):
+    """Factory for creating an ImagingReportCoding."""
+
+    class Meta:
+        model = ImagingReportCoding
+
+    report = factory.SubFactory(ImagingReportFactory)
+    system = "http://loinc.org"
+    code = factory.Faker("bothify", text="#####-#")
+    display = factory.Faker("text", max_nb_chars=256)
