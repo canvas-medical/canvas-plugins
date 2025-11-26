@@ -12,7 +12,7 @@ from .medication_history import (
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
-from .note import NoteFactory, NoteStateChangeEventFactory
+from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
 from .organization import OrganizationFactory
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
 from .practicelocation import (
@@ -52,6 +52,7 @@ __all__ = (
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
+    "NoteTypeFactory",
     "OrganizationFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
