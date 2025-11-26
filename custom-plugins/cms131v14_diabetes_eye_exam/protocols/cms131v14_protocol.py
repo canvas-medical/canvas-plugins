@@ -15,7 +15,6 @@ from canvas_sdk.v1.data.claim_line_item import ClaimLineItem
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.device import Device
 from canvas_sdk.v1.data.encounter import Encounter
-from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.referral import ReferralReport
@@ -83,8 +82,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
         EventType.Name(EventType.CONDITION_RESOLVED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
-        EventType.Name(EventType.INTERVIEW_CREATED),
-        EventType.Name(EventType.INTERVIEW_UPDATED),
+        EventType.Name(EventType.OBSERVATION_CREATED),
+        EventType.Name(EventType.OBSERVATION_UPDATED),
         EventType.Name(EventType.PATIENT_UPDATED),
         EventType.Name(EventType.ENCOUNTER_CREATED),
         EventType.Name(EventType.ENCOUNTER_UPDATED),
@@ -454,7 +453,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 proc_code__in=eligible_codes,
             )
 
-            log.info(f"CMS131v14: Eligible claims: {eligible_claims.count()}")
             if eligible_claims.exists():
                 first_claim = eligible_claims.first()
                 if first_claim:
@@ -1049,7 +1047,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 return True
 
             return False
-            
+
         except Exception as e:
             log.error(f"CMS131v14: Error checking palliative care: {str(e)}")
             return False
