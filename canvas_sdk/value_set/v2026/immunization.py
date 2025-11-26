@@ -1,5 +1,6 @@
 from ..value_set import ValueSet
 
+
 class ChildInfluenzaVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with influenza vaccines for use in children 2 and younger.
@@ -29,6 +30,7 @@ class ChildInfluenzaVaccine(ValueSet):
         "88",  # influenza virus vaccine, unspecified formulation
     }
 
+
 class DtapVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with diphtheria, tetanus, and pertussis (DTaP) vaccines.
@@ -56,6 +58,7 @@ class DtapVaccine(ValueSet):
         "50",  # DTaP-Haemophilus influenzae type b conjugate vaccine
     }
 
+
 class HepatitisAVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with Hepatitis A vaccines.
@@ -77,6 +80,7 @@ class HepatitisAVaccine(ValueSet):
         "83",  # hepatitis A vaccine, pediatric/adolescent dosage, 2 dose schedule
         "85",  # hepatitis A vaccine, unspecified formulation
     }
+
 
 class HepatitisBVaccine(ValueSet):
     """
@@ -104,6 +108,7 @@ class HepatitisBVaccine(ValueSet):
         "51",  # Haemophilus influenzae type b conjugate and Hepatitis B vaccine
     }
 
+
 class HibVaccine3DoseSchedule(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with 3-dose haemophilus influenzae type b (Hib) vaccines.
@@ -125,6 +130,7 @@ class HibVaccine3DoseSchedule(ValueSet):
         "49",  # Haemophilus influenzae type b vaccine, PRP-OMP conjugate
         "51",  # Haemophilus influenzae type b conjugate and Hepatitis B vaccine
     }
+
 
 class HibVaccine4DoseSchedule(ValueSet):
     """
@@ -148,6 +154,7 @@ class HibVaccine4DoseSchedule(ValueSet):
         "148",  # Meningococcal Groups C and Y and Haemophilus b Tetanus Toxoid Conjugate Vaccine
         "48",  # Haemophilus influenzae type b vaccine, PRP-T conjugate
     }
+
 
 class InactivatedPolioVaccineIpv(ValueSet):
     """
@@ -173,6 +180,7 @@ class InactivatedPolioVaccineIpv(ValueSet):
         "89",  # poliovirus vaccine, unspecified formulation
     }
 
+
 class InfluenzaVirusLaivVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent live attenuated influenza vaccine.
@@ -194,6 +202,7 @@ class InfluenzaVirusLaivVaccine(ValueSet):
         "149",  # Influenza, live, quadrivalent, intranasal
     }
 
+
 class MeaslesMumpsAndRubellaMmrVaccine(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with measles, mumps and rubella (MMR) vaccines.
@@ -214,6 +223,7 @@ class MeaslesMumpsAndRubellaMmrVaccine(ValueSet):
         "03",  # measles, mumps and rubella virus vaccine
         "94",  # measles, mumps, rubella, and varicella virus vaccine
     }
+
 
 class PneumococcalConjugateVaccine(ValueSet):
     """
@@ -239,6 +249,7 @@ class PneumococcalConjugateVaccine(ValueSet):
         "216",  # Pneumococcal conjugate vaccine 20-valent (PCV20), polysaccharide CRM197 conjugate, adjuvant, preservative free
     }
 
+
 class RotavirusVaccine3DoseSchedule(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with 3-dose rotavirus vaccines.
@@ -260,6 +271,7 @@ class RotavirusVaccine3DoseSchedule(ValueSet):
         "122",  # rotavirus vaccine, unspecified formulation
     }
 
+
 class VaricellaZosterVaccineVzv(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for immunizations with varicella zoster vaccines.
@@ -280,6 +292,7 @@ class VaricellaZosterVaccineVzv(ValueSet):
         "21",  # varicella virus vaccine
         "94",  # measles, mumps, rubella, and varicella virus vaccine
     }
+
 
 __exports__ = (
     "ChildInfluenzaVaccine",
