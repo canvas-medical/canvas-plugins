@@ -70,6 +70,7 @@ class FrailtySymptom(ValueSet):
         "R64",  # Cachexia
     }
 
+
     SNOMEDCT = {
         "102492002",  # Failure to maintain weight (finding)
         "102568007",  # Paresis of lower extremity (finding)
@@ -619,4 +620,6 @@ class FrailtySymptom(ValueSet):
     }
 
 
-__exports__ = ("FrailtySymptom",)
+__exports__ = (
+    "FrailtySymptom",
+)
