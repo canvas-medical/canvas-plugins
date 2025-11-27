@@ -76,6 +76,7 @@ SCREENING_LOOKBACK_YEARS = {
 DISCHARGE_TO_HOME_HOSPICE_SNOMED = "428361000124107"
 DISCHARGE_TO_FACILITY_HOSPICE_SNOMED = "428371000124100"
 LOINC_SYSTEM_IDENTIFIERS = ["LOINC", "http://loinc.org"]
+SNOMED_SYSTEM_IDENTIFIERS = ["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
 HOUSING_STATUS_LOINC = "71802-3"
 LIVES_IN_NURSING_HOME_SNOMED = "160734000"
 PALLIATIVE_CARE_ASSESSMENT_LOINC = "71007-9"
@@ -99,7 +100,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     class Meta:
         title = "Colorectal Cancer Screening"
         description = (
-            "Percentage of adults 45-75 years of age who had appropriate screening for colorectal cancer."
+            "Percentage of adults 46-75 years of age who had appropriate screening for colorectal cancer."
         )
         version = "2026-01-01v14"
         default_display_interval_in_days = 365 * 9
@@ -593,11 +594,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                     effective_datetime__gte=start_date,
                     effective_datetime__lte=end_date,
                     value_codings__code__in=discharge_to_hospice_codes,
-                    value_codings__system__in=[
-                        "SNOMED",
-                        "SNOMEDCT",
-                        "http://snomed.info/sct",
-                    ],
+                    value_codings__system__in=SNOMED_SYSTEM_IDENTIFIERS,
                 )
                 .exists()
             )
@@ -616,11 +613,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                     codings__code="45755-6",
                     codings__system__in=LOINC_SYSTEM_IDENTIFIERS,
                     value_codings__code="373066001",  # Yes (qualifier value)
-                    value_codings__system__in=[
-                        "SNOMED",
-                        "SNOMEDCT",
-                        "http://snomed.info/sct",
-                    ],
+                    value_codings__system__in=SNOMED_SYSTEM_IDENTIFIERS,
                 )
                 .exists()
             )
@@ -767,11 +760,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                         effective_datetime__lte=self.timeframe.end.datetime,
                     ),
                     value_codings__code__in=frailty_device_snomed,
-                    value_codings__system__in=[
-                        "SNOMED",
-                        "SNOMEDCT",
-                        "http://snomed.info/sct",
-                    ],
+                    value_codings__system__in=SNOMED_SYSTEM_IDENTIFIERS,
                 )
                 .exists()
             )
@@ -916,7 +905,6 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             end_date = self.timeframe.end.date()
 
             # Check for advanced illness conditions in measurement period or year prior
-            from django.db.models import Q
             has_advanced_illness = (
                 Condition.objects.for_patient(patient.id)
                 .find(AdvancedIllness)
@@ -978,6 +966,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         try:
             # Per CMS130v14: Check for housing status assessment with result "Lives in nursing home"
             # The assessment must be on or before the end of the measurement period
+            # Per spec: "ends on or before day of end of 'Measurement Period'"
             # TODO: check if this is correct!
             has_housing_status = (
                 Observation.objects.for_patient(patient.id)
@@ -986,11 +975,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                     codings__code=HOUSING_STATUS_LOINC,
                     codings__system__in=LOINC_SYSTEM_IDENTIFIERS,
                     value_codings__code=LIVES_IN_NURSING_HOME_SNOMED,
-                    value_codings__system__in=[
-                        "SNOMED",
-                        "SNOMEDCT",
-                        "http://snomed.info/sct",
-                    ],
+                    value_codings__system__in=SNOMED_SYSTEM_IDENTIFIERS,
                 )
                 .order_by("-effective_datetime")
                 .first()
@@ -1040,7 +1025,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             # Per CMS130v14: Assessment, Performed: "Functional Assessment of Chronic Illness Therapy - Palliative Care Questionnaire (FACIT-Pal)"
             has_palliative_assessment = self._observation_exists(
                 patient=patient,
-                codings_code="71007-9",
+                codings_code=PALLIATIVE_CARE_ASSESSMENT_LOINC,
                 value_codings_codes=set(),  # No specific value required for this assessment
                 timeframe_start=self.timeframe.start.datetime,
                 timeframe_end=self.timeframe.end.datetime,

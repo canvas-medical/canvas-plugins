@@ -23,11 +23,12 @@ from canvas_sdk.v1.data import (
     MedicationCoding,
     NoteType,
     Observation,
+    ObservationCoding,
     ObservationValueCoding,
     ReferralReport,
     ReferralReportCoding,
 )
-from canvas_sdk.v1.data.note import PracticeLocationPOS
+from canvas_sdk.v1.data.note import NoteTypeCategories, PracticeLocationPOS
 from canvas_sdk.value_set.v2026.condition import (
     AdvancedIllness,
     FrailtyDiagnosis,
@@ -230,7 +231,6 @@ def create_medication_with_coding(patient, start_date, code: str, system: str, d
     user = CanvasUserFactory()
     # If end_date is None, set it to a far future date to satisfy NOT NULL constraint
     if end_date is None:
-        import arrow
         end_date = arrow.utcnow().shift(years=100).date()
     medication = Medication.objects.create(
         patient=patient,
@@ -258,7 +258,6 @@ def create_observation_with_coding(patient, effective_datetime, codings_code: st
         name="Test Observation",
     )
     # Add codings (e.g., LOINC code for the observation type)
-    from canvas_sdk.v1.data import ObservationCoding
     ObservationCoding.objects.create(
         observation=observation,
         code=codings_code,
@@ -340,7 +339,6 @@ def patient_age_70(now):
 def eligible_note(now, patient_age_62):
     """Encounter within period with NoteType coded as Office Visit (SNOMED 308335008)."""
     note = NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
-    from canvas_sdk.v1.data.note import NoteTypeCategories
 
     note_type = NoteType.objects.create(
         code="308335008",
@@ -1120,8 +1118,6 @@ class TestV14NewEncounterTypes:
         self, now, protocol_instance, patient_age_62
     ):
         """Test that Virtual Encounter qualifies for initial population."""
-        from canvas_sdk.v1.data.note import NoteTypeCategories
-
         # Create Virtual Encounter note type
         virtual_note_type = NoteType.objects.create(
             code="448337001",
@@ -1164,8 +1160,6 @@ class TestV14NewEncounterTypes:
         self, now, protocol_instance, patient_age_62
     ):
         """Test that Telephone Visit qualifies for initial population."""
-        from canvas_sdk.v1.data.note import NoteTypeCategories
-
         # Create Telephone Visit note type
         telephone_note_type = NoteType.objects.create(
             code="185349003",
@@ -1209,113 +1203,90 @@ class TestV14NewEncounterTypes:
 class TestV14UpdatedLookbackPeriods:
     """Tests for v14 updated lookback periods."""
 
-    def test_fit_dna_within_2_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
-        """Test that FIT-DNA within 2 years (v14) satisfies."""
+    @pytest.mark.parametrize(
+        "months_ago,expected_status",
+        [
+            (18, ProtocolCard.Status.SATISFIED.value),  # Within 2-year window
+            (30, ProtocolCard.Status.DUE.value),  # Outside 2-year window
+        ],
+        ids=["fit_dna_within_2_years", "fit_dna_outside_2_years"],
+    )
+    def test_fit_dna_lookback_period(self, now, protocol_instance, patient_age_62, eligible_note, months_ago, expected_status):
+        """Test FIT-DNA lookback period (v14: 2 years)."""
         code = first_or_skip(SdnaFitTest.LOINC, "FIT-DNA LOINC empty")
-        # 18 months = within 2-year window
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-18).datetime, code, "FIT-DNA")
+        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago).datetime, code, "FIT-DNA")
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
-        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+        assert card["status"] == expected_status
 
-    def test_fit_dna_outside_2_years_due(self, now, protocol_instance, patient_age_62, eligible_note):
-        """Test that FIT-DNA outside 2 years (v14) yields DUE."""
-        code = first_or_skip(SdnaFitTest.LOINC, "FIT-DNA LOINC empty")
-        # 30 months = outside 2-year window
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-30).datetime, code, "FIT-DNA")
-        set_patient_context(protocol_instance, patient_age_62.id)
-        card = extract_card(protocol_instance.compute())
-
-        assert card["status"] == ProtocolCard.Status.DUE.value
-
-    def test_flexible_sigmoidoscopy_within_4_years_satisfies(
-        self, now, protocol_instance, patient_age_62, eligible_note
+    @pytest.mark.parametrize(
+        "years_ago,expected_status",
+        [
+            (3, ProtocolCard.Status.SATISFIED.value),  # Within 4-year window
+            (5, ProtocolCard.Status.DUE.value),  # Outside 4-year window
+        ],
+        ids=["flexible_sigmoidoscopy_within_4_years", "flexible_sigmoidoscopy_outside_4_years"],
+    )
+    def test_flexible_sigmoidoscopy_lookback_period(
+        self, now, protocol_instance, patient_age_62, eligible_note, years_ago, expected_status
     ):
-        """Test that Flexible Sigmoidoscopy within 4 years (v14) satisfies."""
+        """Test Flexible Sigmoidoscopy lookback period (v14: 4 years)."""
         codes = list(getattr(FlexibleSigmoidoscopy, "CPT", []) or [])
         if not codes:
             pytest.skip("FlexibleSigmoidoscopy CPT codes missing")
         create_referral_report_with_cpt(
-            patient_age_62, when_date=now.shift(years=-3).date(), code=codes[0], display="Flexible Sigmoidoscopy"
+            patient_age_62, when_date=now.shift(years=-years_ago).date(), code=codes[0], display="Flexible Sigmoidoscopy"
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
-        assert card["status"] == ProtocolCard.Status.SATISFIED.value
+        assert card["status"] == expected_status
 
-    def test_flexible_sigmoidoscopy_outside_4_years_due(
-        self, now, protocol_instance, patient_age_62, eligible_note
+    @pytest.mark.parametrize(
+        "years_ago,expected_status",
+        [
+            (3, ProtocolCard.Status.SATISFIED.value),  # Within 4-year window
+            (5, ProtocolCard.Status.DUE.value),  # Outside 4-year window
+        ],
+        ids=["ct_colonography_within_4_years", "ct_colonography_outside_4_years"],
+    )
+    def test_ct_colonography_lookback_period(
+        self, now, protocol_instance, patient_age_62, eligible_note, years_ago, expected_status
     ):
-        """Test that Flexible Sigmoidoscopy outside 4 years (v14) yields DUE."""
-        codes = list(getattr(FlexibleSigmoidoscopy, "CPT", []) or [])
-        if not codes:
-            pytest.skip("FlexibleSigmoidoscopy CPT codes missing")
-        create_referral_report_with_cpt(
-            patient_age_62, when_date=now.shift(years=-5).date(), code=codes[0], display="Flexible Sigmoidoscopy"
-        )
+        """Test CT Colonography lookback period (v14: 4 years)."""
+        create_ct_colonography_report(patient_age_62, now, years_ago=years_ago, report_type="imaging")
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
-        assert card["status"] == ProtocolCard.Status.DUE.value
+        assert card["status"] == expected_status
 
-    def test_ct_colonography_within_4_years_satisfies(
-        self, now, protocol_instance, patient_age_62, eligible_note
+    @pytest.mark.parametrize(
+        "years_ago,expected_status",
+        [
+            (8, ProtocolCard.Status.SATISFIED.value),  # Within 9-year window
+            (10, ProtocolCard.Status.DUE.value),  # Outside 9-year window
+        ],
+        ids=["colonoscopy_within_9_years", "colonoscopy_outside_9_years"],
+    )
+    def test_colonoscopy_lookback_period(
+        self, now, protocol_instance, patient_age_62, eligible_note, years_ago, expected_status
     ):
-        """Test that CT Colonography within 4 years (v14) satisfies."""
-        create_ct_colonography_report(patient_age_62, now, years_ago=3, report_type="imaging")
-        set_patient_context(protocol_instance, patient_age_62.id)
-        card = extract_card(protocol_instance.compute())
-
-        assert card["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_ct_colonography_outside_4_years_due(
-        self, now, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test that CT Colonography outside 4 years (v14) yields DUE."""
-        create_ct_colonography_report(patient_age_62, now, years_ago=5, report_type="imaging")
-        set_patient_context(protocol_instance, patient_age_62.id)
-        card = extract_card(protocol_instance.compute())
-
-        assert card["status"] == ProtocolCard.Status.DUE.value
-
-    def test_colonoscopy_within_9_years_satisfies(
-        self, now, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test that Colonoscopy within 9 years (v14) satisfies."""
+        """Test Colonoscopy lookback period (v14: 9 years)."""
         codes = list(getattr(Colonoscopy, "CPT", []) or [])
         if not codes:
             pytest.skip("Colonoscopy CPT codes missing")
         create_imaging_report_with_cpt(
             patient_age_62,
-            when_date=now.shift(years=-8).date(),
-            when_assigned_dt=now.shift(years=-8).datetime,
+            when_date=now.shift(years=-years_ago).date(),
+            when_assigned_dt=now.shift(years=-years_ago).datetime,
             code=codes[0],
             display="Colonoscopy",
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
-        assert card["status"] == ProtocolCard.Status.SATISFIED.value
-
-    def test_colonoscopy_outside_9_years_due(
-        self, now, protocol_instance, patient_age_62, eligible_note
-    ):
-        """Test that Colonoscopy outside 9 years (v14) yields DUE."""
-        codes = list(getattr(Colonoscopy, "CPT", []) or [])
-        if not codes:
-            pytest.skip("Colonoscopy CPT codes missing")
-        create_imaging_report_with_cpt(
-            patient_age_62,
-            when_date=now.shift(years=-10).date(),
-            when_assigned_dt=now.shift(years=-10).datetime,
-            code=codes[0],
-            display="Colonoscopy",
-        )
-        set_patient_context(protocol_instance, patient_age_62.id)
-        card = extract_card(protocol_instance.compute())
-
-        assert card["status"] == ProtocolCard.Status.DUE.value
+        assert card["status"] == expected_status
 
 
 @pytest.mark.django_db
