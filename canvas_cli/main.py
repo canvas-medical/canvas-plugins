@@ -22,7 +22,9 @@ app.command(short_help="Enable a plugin from a Canvas instance")(plugin.enable)
 app.command(short_help="Disable a plugin from a Canvas instance")(plugin.disable)
 app.command(short_help="List all plugins from a Canvas instance")(plugin.list)
 app.command(short_help="Validate the Canvas Manifest json file")(plugin.validate_manifest)
-app.command(short_help="Listen and print log streams from a Canvas instance")(logs_command)
+app.command(
+    short_help="Listen and print log streams or fetches historical logs from a Canvas instance."
+)(logs_command)
 app.command(
     short_help="Send an event fixture to your locally running plugin-runner process, and print any resultant effects."
 )(emit)

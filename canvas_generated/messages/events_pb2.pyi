@@ -103,6 +103,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMPOUND_MEDICATION_UPDATED: _ClassVar[EventType]
     APPOINTMENT_LABEL_ADDED: _ClassVar[EventType]
     APPOINTMENT_LABEL_REMOVED: _ClassVar[EventType]
+    CLAIM_CREATED: _ClassVar[EventType]
+    CLAIM_UPDATED: _ClassVar[EventType]
     PRE_COMMAND_ORIGINATE: _ClassVar[EventType]
     POST_COMMAND_ORIGINATE: _ClassVar[EventType]
     PRE_COMMAND_UPDATE: _ClassVar[EventType]
@@ -1031,6 +1033,8 @@ COMPOUND_MEDICATION_CREATED: EventType
 COMPOUND_MEDICATION_UPDATED: EventType
 APPOINTMENT_LABEL_ADDED: EventType
 APPOINTMENT_LABEL_REMOVED: EventType
+CLAIM_CREATED: EventType
+CLAIM_UPDATED: EventType
 PRE_COMMAND_ORIGINATE: EventType
 POST_COMMAND_ORIGINATE: EventType
 PRE_COMMAND_UPDATE: EventType
@@ -1867,16 +1871,20 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD: EventType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE: EventType
 
 class Event(_message.Message):
-    __slots__ = ("type", "target", "context", "target_type")
+    __slots__ = ("type", "target", "context", "target_type", "actor", "source")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TARGET_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TARGET_TYPE_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     type: EventType
     target: str
     context: str
     target_type: str
-    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ...) -> None: ...
+    actor: str
+    source: str
+    def __init__(self, type: _Optional[_Union[EventType, str]] = ..., target: _Optional[str] = ..., context: _Optional[str] = ..., target_type: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
 class EventResponse(_message.Message):
     __slots__ = ("success", "effects")

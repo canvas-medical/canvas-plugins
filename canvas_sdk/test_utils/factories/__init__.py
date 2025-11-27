@@ -1,4 +1,10 @@
-from .claim import ClaimFactory, ClaimQueueFactory
+from .claim import (
+    ClaimCommentFactory,
+    ClaimFactory,
+    ClaimLabelFactory,
+    ClaimProviderFactory,
+    ClaimQueueFactory,
+)
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
 from .medication_history import (
@@ -9,7 +15,11 @@ from .medication_history import (
 from .note import NoteFactory, NoteStateChangeEventFactory
 from .organization import OrganizationFactory
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
-from .practicelocation import PracticeLocationFactory, PracticeLocationSettingFactory
+from .practicelocation import (
+    PracticeLocationAddressFactory,
+    PracticeLocationFactory,
+    PracticeLocationSettingFactory,
+)
 from .protocol_current import ProtocolCurrentFactory
 from .staff import (
     StaffAddressFactory,
@@ -31,7 +41,10 @@ from .user import CanvasUserFactory
 __all__ = (
     "CanvasUserFactory",
     "ClaimFactory",
+    "ClaimCommentFactory",
     "ClaimDiagnosisCodeFactory",
+    "ClaimLabelFactory",
+    "ClaimProviderFactory",
     "ClaimQueueFactory",
     "FacilityFactory",
     "MedicationHistoryMedicationFactory",
@@ -44,6 +57,7 @@ __all__ = (
     "PatientFacilityAddressFactory",
     "PatientFactory",
     "PracticeLocationFactory",
+    "PracticeLocationAddressFactory",
     "PracticeLocationSettingFactory",
     "ProtocolCurrentFactory",
     "StaffFactory",

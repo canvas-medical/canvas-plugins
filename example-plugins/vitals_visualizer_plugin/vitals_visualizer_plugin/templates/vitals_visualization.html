@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitals Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 20px;
+        background-color: #f8f9fa;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .selector {
+        margin-bottom: 20px;
+      }
+      .selector label {
+        font-weight: 600;
+        margin-right: 10px;
+      }
+      .selector select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 30px;
+      }
+      .table-container {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f1f3f4;
+        font-weight: 600;
+      }
+      .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Patient Vital Signs Visualization</h2>
+      </div>
+
+      <div class="selector">
+        <label for="vitalSelect">Select Vital Sign:</label>
+        <select id="vitalSelect" onchange="updateVisualization()">
+          <option value="weight">Weight</option>
+          <option value="body_temperature">Body Temperature</option>
+          <option value="oxygen_saturation">Oxygen Saturation</option>
+        </select>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="vitalsChart"></canvas>
+      </div>
+
+      <div class="table-container">
+        <table id="vitalsTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Value</th>
+              <th>Units</th>
+            </tr>
+          </thead>
+          <tbody id="vitalsTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const vitalsData = {{ vitals_data|safe }};
+      let chart = null;
+
+      function updateVisualization() {
+        const selectedVital = document.getElementById('vitalSelect').value;
+        const data = vitalsData[selectedVital] || [];
+
+        updateChart(selectedVital, data);
+        updateTable(data);
+      }
+
+      function updateChart(vitalType, data) {
+        const chartContainer = document.querySelector('.chart-container');
+
+        if (chart) {
+          chart.destroy();
+        }
+
+        if (data.length === 0) {
+          chartContainer.innerHTML =
+            '<div class="no-data">No data available for this vital sign</div>';
+          return;
+        }
+
+            // Restore canvas if it was replaced
+        if (!document.getElementById('vitalsChart')) {
+          chartContainer.innerHTML = '<canvas id="vitalsChart"></canvas>';
+        }
+
+        const ctx = document.getElementById('vitalsChart').getContext('2d');
+
+        const labels = data.map(d => new Date(d.date).toLocaleDateString());
+        const values = data.map(d => parseFloat(d.value) || 0);
+        const units = data.length > 0 ? data[0].units : '';
+
+        const vitalLabels = {
+          'weight': 'Weight',
+          'body_temperature': 'Body Temperature',
+          'oxygen_saturation': 'Oxygen Saturation'
+        };
+
+        const colors = {
+          'weight': 'rgba(54, 162, 235, 0.8)',
+          'body_temperature': 'rgba(255, 99, 132, 0.8)',
+          'oxygen_saturation': 'rgba(75, 192, 192, 0.8)'
+        };
+
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: vitalLabels[vitalType],
+              data: values,
+              backgroundColor: colors[vitalType],
+              borderColor: colors[vitalType].replace('0.8', '1'),
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.dataset.label + ': ' + context.parsed.y + ' ' + units;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                title: {
+                  display: true,
+                  text: vitalLabels[vitalType] + ' (' + units + ')'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Date'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      function updateTable(data) {
+        const tbody = document.getElementById('vitalsTableBody');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="no-data">No data available</td></tr>';
+          return;
+        }
+
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+                    <td>${new Date(item.date).toLocaleDateString()}</td>
+                    <td>${item.value}</td>
+                    <td>${item.units}</td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+        // Initialize with weight data or show message if no data
+      document.addEventListener('DOMContentLoaded', function() {
+        updateVisualization();
+
+            // Show a message if no data is available at all
+        const hasData = Object.values(vitalsData).some(arr => arr.length > 0);
+        if (!hasData) {
+          document.querySelector('.container').innerHTML +=
+            '<div class="no-data" style="margin-top: 20px; font-size: 16px;">' +
+          'No vital signs data found for this patient. Vital signs will appear here once they are recorded.' +
+          '</div>';
+        }
+      });
+    </script>
+  </body>
+</html>

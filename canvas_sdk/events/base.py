@@ -8,6 +8,7 @@ from django.db import models
 
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_generated.messages.events_pb2 import EventType
+from canvas_sdk.v1.data import CanvasUser
 
 
 @dataclasses.dataclass
@@ -21,6 +22,18 @@ class TargetType:
     def instance(self) -> models.Model | None:
         """Return the instance of the target."""
         return self.type._default_manager.filter(id=self.id).first() if self.type else None
+
+
+@dataclasses.dataclass
+class Actor:
+    """The actor that triggered the event."""
+
+    id: str | None
+
+    @cached_property
+    def instance(self) -> CanvasUser | None:
+        """Return the instance of the actor."""
+        return CanvasUser._default_manager.filter(dbid=self.id).first() if self.id else None
 
 
 class Event:
@@ -46,6 +59,8 @@ class Event:
         self.name = EventType.Name(self.type)
         self.context = context
         self.target = TargetType(id=event_request.target, type=target_model)
+        self.actor = Actor(id=event_request.actor)
+        self.source = event_request.source
 
 
 __exports__ = ("TargetType", "Event")

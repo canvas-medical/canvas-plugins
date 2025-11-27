@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Adds configurable recurring appointment functionality with customizable intervals, recurrence types (days/weeks/months), and flexible end conditions that automatically creates follow-up appointments"
+license = "MIT"
+name = "recurring_appointments"
+readme = "recurring_appointments/README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

@@ -113,6 +113,9 @@ enum EventType {
   APPOINTMENT_LABEL_ADDED = 94;
   APPOINTMENT_LABEL_REMOVED = 95;
 
+  CLAIM_CREATED = 98;
+  CLAIM_UPDATED = 99;
+
   // General Command Events
 
   PRE_COMMAND_ORIGINATE = 100;
@@ -1222,6 +1225,8 @@ message Event {
   string target = 2;
   string context = 3;
   string target_type = 4;
+  string actor = 5;
+  string source = 6;
 }
 
 message EventResponse {

@@ -90,6 +90,18 @@ STANDARD_LIBRARY_MODULES = {
         "Counter",
         "defaultdict",
     },
+    "dataclasses": {
+        "asdict",
+        "astuple",
+        "dataclass",
+        "field",
+        "Field",
+        "fields",
+        "InitVar",
+        "is_dataclass",
+        "make_dataclass",
+        "replace",
+    },
     "datetime": {
         "date",
         "datetime",
@@ -126,6 +138,7 @@ STANDARD_LIBRARY_MODULES = {
     "json": {
         "dumps",
         "loads",
+        "JSONDecodeError",
     },
     "operator": {
         "and_",
@@ -181,6 +194,9 @@ STANDARD_LIBRARY_MODULES = {
     "uuid": {
         "uuid4",
         "UUID",
+    },
+    "defusedxml.ElementTree": {
+        "fromstring",
     },
     "zoneinfo": {
         "ZoneInfo",
