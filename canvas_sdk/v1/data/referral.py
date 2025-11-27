@@ -92,9 +92,8 @@ class ReferralReportCoding(Coding):
     class Meta:
         db_table = "canvas_sdk_data_api_referralreportcoding_001"
 
-    referral_report = models.ForeignKey(
-        ReferralReport, on_delete=models.DO_NOTHING, related_name="codings", null=True
-    )
+    report = models.ForeignKey(ReferralReport, on_delete=models.CASCADE, related_name="codings")
+    value = models.CharField(max_length=1000)
 
 
 __exports__ = ("Referral", "ReferralReport", "ReferralReportCoding")

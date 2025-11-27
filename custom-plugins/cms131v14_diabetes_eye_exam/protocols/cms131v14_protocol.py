@@ -95,8 +95,6 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     AGE_RANGE_START = 18
     AGE_RANGE_END = 75
 
-    LOINC_SYSTEM_IDENTIFIERS = ["http://loinc.org", "LOINC"]
-
     NO_APPARENT_RETINOPATHY_LOINC_CODE = "LA18643-9"
     LEFT_EYE_LOINC_CODE = "71490-7"
     RIGHT_EYE_LOINC_CODE = "71491-5"
@@ -117,7 +115,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     # Bilateral absence of eyes diagnostic code
     BILATERAL_ANOPHTHALMOS_SNOMED = "15665641000119103"
 
-    def _get_patient(self) -> tuple[Patient | None, Condition | None]:
+    def _get_patient_and_condition(self) -> tuple[Patient | None, Condition | None]:
         try:
             target_id = self.event.target.id
 
@@ -218,7 +216,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
     def compute(self) -> list[Effect]:
         """Main compute method for CMS131v14 Diabetes Eye Exam measure."""
         try:
-            patient, condition = self._get_patient()
+            patient, condition = self._get_patient_and_condition()
             if not patient:
                 log.warning("CMS131v14: Could not determine patient from event, skipping")
                 return []
@@ -418,9 +416,8 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 start_time__lte=end_date,
             )
 
-            if eligible_encounters.exists():
-                encounter = eligible_encounters.first()
-                if encounter and encounter.note and encounter.note.note_type_version:
+            if encounter := eligible_encounters.first():
+                if encounter.note and encounter.note.note_type_version:
                     log.info(
                         f"CMS131v14: Patient {patient.id} has eligible encounter "
                         f"via Encounter model (SNOMED: {encounter.note.note_type_version.code})"
@@ -453,12 +450,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 proc_code__in=eligible_codes,
             )
 
-            if eligible_claims.exists():
-                first_claim = eligible_claims.first()
-                if first_claim:
-                    log.info(
-                        f"CMS131v14: Patient {patient.id} has eligible encounter claim (code: {first_claim.proc_code})"
-                    )
+            if first_claim := eligible_claims.first():
+                log.info(
+                    f"CMS131v14: Patient {patient.id} has eligible encounter claim (code: {first_claim.proc_code})"
+                )
                 return True
 
             log.info(f"CMS131v14: Patient {patient.id} has no eligible encounters in period")
@@ -546,7 +541,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                     effective_datetime__gte=start_date,
                     effective_datetime__lte=end_date,
                     codings__code="45755-6",
-                    codings__system__in=self.LOINC_SYSTEM_IDENTIFIERS,
+                    codings__system__in=[CodeSystems.LOINC, "LOINC"],
                     value_codings__code="373066001",  # Yes (qualifier value)
                     value_codings__system__in=[
                         "SNOMED",
@@ -576,12 +571,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 proc_code__in=hospice_intervention_codes,
             )
 
-            if hospice_claims.exists():
-                first_claim = hospice_claims.first()
-                if first_claim:
-                    log.info(
-                        f"CMS131v14: Found hospice care claim (code: {first_claim.proc_code}) for patient {patient.id}"
-                    )
+            if first_claim := hospice_claims.first():
+                log.info(
+                    f"CMS131v14: Found hospice care claim (code: {first_claim.proc_code}) for patient {patient.id}"
+                )
                 return True
 
             return False
@@ -934,12 +927,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                     proc_code__in=all_claim_codes,
                 )
 
-                if claim_line_items.exists():
-                    first_claim = claim_line_items.first()
-                    if first_claim:
-                        log.info(
-                            f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care claim (CPT: {first_claim.proc_code})"
-                        )
+                if first_claim := claim_line_items.first():
+                    log.info(
+                        f"CMS131v14: Patient {patient.id} age 66+ has nursing home/long-term care claim (CPT: {first_claim.proc_code})"
+                    )
                     return True
 
             # Also check for encounters with SNOMED codes
@@ -1038,12 +1029,10 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 proc_code__in=palliative_codes,
             )
 
-            if palliative_claims.exists():
-                first_claim = palliative_claims.first()
-                if first_claim:
-                    log.info(
-                        f"CMS131v14: Found palliative care claim (code: {first_claim.proc_code}) for patient {patient.id}"
-                    )
+            if first_claim := palliative_claims.first():
+                log.info(
+                    f"CMS131v14: Found palliative care claim (code: {first_claim.proc_code}) for patient {patient.id}"
+                )
                 return True
 
             return False
