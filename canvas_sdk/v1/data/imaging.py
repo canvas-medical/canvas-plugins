@@ -121,15 +121,15 @@ class ImagingReportQuerySet(
         return self.filter(q_filter).distinct()
 
 
-class ImagingReportManager(models.Manager):
-    """Custom manager for ImagingReport that doesn't filter by deleted field."""
+class BaseImagingReportManager(models.Manager):
+    """Base manager for ImagingReport that doesn't filter by deleted field."""
     
     def get_queryset(self):
         """Return queryset without filtering by deleted (ImagingReport uses junked instead)."""
         return ImagingReportQuerySet(self.model, using=self._db)
 
 
-ImagingReportManager = ImagingReportManager.from_queryset(ImagingReportQuerySet)
+ImagingReportManager = BaseImagingReportManager.from_queryset(ImagingReportQuerySet)
 
 
 class ImagingReport(TimestampedModel, IdentifiableModel):
