@@ -99,15 +99,15 @@ class ReferralReportQuerySet(
         return self.filter(q_filter).distinct()
 
 
-class ReferralReportManager(models.Manager):
-    """Custom manager for ReferralReport that doesn't filter by deleted field."""
-
+class BaseReferralReportManager(models.Manager):
+    """Base manager for ReferralReport that doesn't filter by deleted field."""
+    
     def get_queryset(self):
         """Return queryset without filtering by deleted (ReferralReport uses junked instead)."""
         return ReferralReportQuerySet(self.model, using=self._db)
 
 
-ReferralReportManager = ReferralReportManager.from_queryset(ReferralReportQuerySet)
+ReferralReportManager = BaseReferralReportManager.from_queryset(ReferralReportQuerySet)
 
 
 class ReferralReport(TimestampedModel, IdentifiableModel):
