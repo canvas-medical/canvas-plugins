@@ -101,7 +101,7 @@ class ReferralReportQuerySet(
 
 class BaseReferralReportManager(models.Manager):
     """Base manager for ReferralReport that doesn't filter by deleted field."""
-    
+
     def get_queryset(self):
         """Return queryset without filtering by deleted (ReferralReport uses junked instead)."""
         return ReferralReportQuerySet(self.model, using=self._db)
@@ -144,7 +144,7 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
 
 
 class ReferralReportCoding(Coding):
-    """A class representing a referral report coding."""
+    """ReferralReportCoding."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referralreportcoding_001"
@@ -152,7 +152,7 @@ class ReferralReportCoding(Coding):
     report = models.ForeignKey(
         ReferralReport, on_delete=models.DO_NOTHING, related_name="codings", null=True, db_column="report_id"
     )
-    value = models.TextField(blank=True, default="")
+    value = models.CharField(max_length=1000)
 
 
 __exports__ = ("Referral", "ReferralReport", "ReferralReportCoding")
