@@ -12,6 +12,8 @@ from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.v1.data import Patient, Staff
+from canvas_sdk.v1.data.common import ContactPointSystem
+from canvas_sdk.v1.data.patient import SexAtBirth
 from logger import log
 
 
@@ -21,6 +23,35 @@ def is_expired(token: dict) -> bool:
     created_at = token["created_at"]
 
     return datetime.now(UTC) > (datetime.fromisoformat(created_at) + timedelta(seconds=expires_in))
+
+
+def get_patient_data(patient: Patient) -> dict:
+    """Helper method to extract patient data for Fullscript API."""
+    email = patient.telecom.filter(system=ContactPointSystem.EMAIL).first()
+    email = email.value if email else ""
+
+    phone_number = patient.telecom.filter(system=ContactPointSystem.PHONE).first()
+    phone_number = f"+1{phone_number.value}" if phone_number else ""
+
+    gender = (
+        "male"
+        if patient.sex_at_birth == SexAtBirth.MALE
+        else ("female" if patient.sex_at_birth == SexAtBirth.FEMALE else "x")
+    )
+
+    log.info(f"!! Patient name {patient.first_name} {patient.last_name}")
+    log.info(f"!! Patient email {email}")
+    log.info(f"!! Patient phone {phone_number}")
+    log.info(f"!! Patient gender {gender}")
+
+    return {
+        "first_name": patient.first_name,
+        "last_name": patient.last_name,
+        "email": email,
+        "date_of_birth": patient.birth_date.isoformat() if patient.birth_date else None,
+        "gender": gender,
+        "mobile_number": phone_number,
+    }
 
 
 class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
@@ -152,7 +183,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                         json.dumps(
                             {"error": "Failed to exchange token", "details": response.text}
                         ).encode(),
-                        status_code=HTTPStatus.BAD_GATEWAY,
+                        status_code=HTTPStatus.BAD_REQUEST,
                         content_type="application/json",
                     )
                 ]
@@ -217,7 +248,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                         json.dumps(
                             {"error": "Failed to create session grant", "details": response.text}
                         ).encode(),
-                        status_code=HTTPStatus.BAD_GATEWAY,
+                        status_code=HTTPStatus.BAD_REQUEST,
                         content_type="application/json",
                     )
                 ]
@@ -264,6 +295,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             log.info(f"!! Fullscript id {fullscript_id}")
 
             if fullscript_id:
+                # update existing patient
+                self.update_patient(access_token, patient, fullscript_id)
+
                 return [
                     Response(
                         json.dumps({"id": fullscript_id}).encode(),
@@ -272,13 +306,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     )
                 ]
             else:
-                email = (
-                    patient.telecom.filter(system="email").first().value
-                    if patient.telecom.filter(system="email").exists()
-                    else ""
-                )
-
-                log.info(f"!! Patient email {email}")
+                patient_data = get_patient_data(patient)
 
                 response = requests.post(
                     "https://api-us-snd.fullscript.io/api/clinic/patients",
@@ -286,11 +314,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {access_token}",
                     },
-                    json={
-                        "first_name": patient.first_name,
-                        "last_name": patient.last_name,
-                        "email": email,
-                    },
+                    json=patient_data,
                     timeout=10,
                 )
 
@@ -304,7 +328,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                                     "details": response.text,
                                 }
                             ).encode(),
-                            status_code=HTTPStatus.BAD_GATEWAY,
+                            status_code=HTTPStatus.BAD_REQUEST,
                             content_type="application/json",
                         )
                     ]
@@ -340,9 +364,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
     # Handle treatment plan created event
     @api.post("/treatment-plan-created")
-    def treatment_plan_created(self) -> list[Response | Effect]:
+    def treatment_plan_created(self) -> list[Response]:
         """Handle treatment plan created event from Fullscript embed."""
-        user_id = Staff.objects.values_list("id").get(
+        user_id = Staff.objects.values_list("id", flat=True).get(
             id=self.request.headers["canvas-logged-in-user-id"]
         )
         cache = get_cache()
@@ -353,6 +377,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
             # Extract treatment plan items
             patient_id = body.get("patient_id", "")
+            note_id = body.get("note_id", None)
             treatment_plan = body.get("treatment", {}).get("data", {}).get("treatmentPlan", {})
 
             recommendations = treatment_plan.get("recommendations", [])
@@ -370,6 +395,8 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             # Get cached access token for API requests
             cached_token = cache.get(user_id)
 
+            log.info(f"!! Cached token: {cached_token}")
+
             if not cached_token:
                 log.error("!! No cached access token found for user")
                 return [
@@ -384,7 +411,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
             medications_list = []
             patient = Patient.objects.get(id=patient_id)
-            note_id = patient.notes.last().id if patient.notes.exists() else None
+
+            if not note_id:
+                note_id = patient.notes.last().id if patient.notes else None
 
             # TODO: should we create a new note if none exists?
 
@@ -433,12 +462,12 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 format = dosage.get("format", None)
                 refill = item.get("refill", None)
 
-                sku = f"fullscript-{variant_data.get('variant', {}).get('sku', '')}"
+                product_id = f"fullscript-{variant_data.get('variant', {}).get('id', '')}"
                 product_display_name = (
                     variant_data.get("variant", {}).get("product", {}).get("name", "")
                 )
 
-                log.info(f"!! Fetching product display name: {sku}")
+                log.info(f"!! Fetching product display name: {product_display_name}")
 
                 sig = f"Dosage: {quantity}" if quantity is not None else ""
                 if format is not None:
@@ -451,7 +480,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     sig += f"\nRefill: {'Yes' if refill else 'No'}"
 
                 coding = Coding(
-                    system=CodeSystems.UNSTRUCTURED, code=sku, display=product_display_name
+                    system=CodeSystems.UNSTRUCTURED, code=product_id, display=product_display_name
                 )
                 medication_command = MedicationStatementCommand(
                     fdb_code=coding,
@@ -490,6 +519,127 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     content_type="application/json",
                 )
             ]
+
+    @staticmethod
+    def create_treatment_plan(access_token: str, medications: list, patient_id: str) -> dict:
+        """Create a Fullscript treatment plan using access token and treatment details."""
+        log.info("!! Create treatment plan")
+
+        patient = Patient.objects.get(id=patient_id)
+        patient_fullscript_id = (
+            patient.external_identifiers.filter(system="Fullscript")
+            .values_list("value", flat=True)
+            .last()
+        )
+
+        if not patient_fullscript_id:
+            log.error("!! No Fullscript patient identifier found")
+            return {"success": False, "error": "No Fullscript patient identifier found"}
+
+        try:
+            response = requests.post(
+                f"https://api-us-snd.fullscript.io/api/clinic/patients/{patient_fullscript_id}/treatment_plans",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                json={"recommendations": medications},
+                timeout=10,
+            )
+
+            if response.status_code != 201:
+                log.error(f"!! Create treatment plan failed: {response.text}")
+                return {
+                    "success": False,
+                    "error": "Failed to create treatment plan",
+                    "details": response.text,
+                }
+
+            data = response.json()
+            log.info("!! Treatment plan created successfully")
+
+            return {"success": True, "treatment_plan_id": data.get("treatment_plan", {}).get("id")}
+
+        except requests.RequestException as e:
+            log.error(f"!! Create treatment plan error: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def create_treatment_checkout(access_token: str, treatment_plan_id: str) -> dict:
+        """
+        Helper method to create a Fullscript treatment checkout via API.
+        """
+        try:
+            log.info(f"!! Creating Fullscript treatment checkout for plan {treatment_plan_id}")
+
+            response = requests.post(
+                f"https://api-us-snd.fullscript.io/api/clinic/treatment_plans/{treatment_plan_id}/in_office_checkout",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                timeout=10,
+            )
+
+            if response.status_code == 201:
+                data = response.json()
+                log.info("!! Treatment checkout created successfully")
+                return {
+                    "success": True,
+                    "checkout_url": data.get("in_office_checkout", {}).get("url", ""),
+                }
+            else:
+                log.error(
+                    f"!! Fullscript treatment checkout creation failed: {response.status_code} - {response.text}"
+                )
+                return {
+                    "success": False,
+                    "error": "Failed to create treatment checkout",
+                    "details": response.text,
+                }
+
+        except requests.RequestException as e:
+            log.error(f"!! Error creating treatment checkout: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def update_patient(access_token: str, patient: Patient, fullscript_patient_id: str) -> dict:
+        """
+        Helper method to update a Fullscript patient via API.
+        """
+        try:
+            log.info(f"!! Updating Fullscript patient {patient.first_name} {patient.last_name}")
+            log.info(f"!! Fullscript id {fullscript_patient_id}")
+
+            patient_data = get_patient_data(patient)
+
+            response = requests.put(
+                f"https://api-us-snd.fullscript.io/api/clinic/patients/{fullscript_patient_id}",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                json=patient_data,
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                log.info("!! Patient updated successfully")
+                return {"success": True, "patient": data.get("patient", {})}
+            else:
+                log.error(
+                    f"!! Fullscript patient update failed: {response.status_code} - {response.text}"
+                )
+                return {
+                    "success": False,
+                    "error": "Failed to update patient",
+                    "details": response.text,
+                }
+
+        except requests.RequestException as e:
+            log.error(f"!! Error updating patient: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def fetch_products(access_token: str, query: str | None, page_size: str | None) -> dict:

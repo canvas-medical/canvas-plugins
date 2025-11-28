@@ -11,6 +11,11 @@ const fullscriptClient = Fullscript({
   env: 'us-snd'
 })
 
+function showError (message) {
+  document.getElementById('app').innerHTML =
+    '<div style="padding: 20px; font-family: sans-serif; background-color: #e8fae7; text-align: center; line-height: 24px; border: 1px solid #0e5414; border-radius: 4px; color: #469641;">' + message + '</div>'
+}
+
 function startOAuthFlow () {
   const authUrl = new URL(OAUTH_CONFIG.authUrl)
   authUrl.searchParams.append('client_id', OAUTH_CONFIG.clientId)
@@ -76,7 +81,7 @@ async function getOrCreatePatient (accessToken) {
     const errorData = await patientResponse.json()
     console.warn(errorData.error || 'Failed to get or create patient')
 
-    // email can't be blank, we need to warn the provider to set an email
+    showError('This patient is missing required information.\nPlease add an email address in Canvas, then reopen the Fullscript application to continue.')
 
     return { id: null }
   }
@@ -93,8 +98,9 @@ async function handleTreatmentPlanCreated (treatmentPlanEvent) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        treatment: treatmentPlanEvent,
-        patient_id: window.patientKey
+          treatment: treatmentPlanEvent,
+          patient_id: window.patientKey,
+          note_id: window.noteId
       })
     })
 
@@ -141,11 +147,14 @@ async function initializeFullscript (oauthCode) {
 
     console.log('Fullscript Patient ID:', fullScriptPatient.id)
 
-    mountFullscriptApp(sessionGrantData.token, fullScriptPatient.id)
+    // Only mount if patient was successfully created/retrieved
+    if (fullScriptPatient.id) {
+      mountFullscriptApp(sessionGrantData.token, fullScriptPatient.id)
+    }
+    // Error message already shown by getOrCreatePatient
   } catch (error) {
     console.error('Error initializing Fullscript:', error)
-    document.getElementById('app').innerHTML =
-            '<div style="padding: 20px; color: red;">Error loading Fullscript: ' + error.message + '</div>'
+    showError('Error loading Fullscript: ' + error.message)
   }
 }
 
@@ -157,9 +166,13 @@ async function tryInitializeWithCachedToken () {
 
     console.log('Fullscript Patient ID:', fullScriptPatient.id)
 
-    mountFullscriptApp(sessionGrantData.token, fullScriptPatient.id)
-
-    return true
+    // Only mount if patient was successfully created/retrieved
+    if (fullScriptPatient.id) {
+      mountFullscriptApp(sessionGrantData.token, fullScriptPatient.id)
+      return true
+    }
+    // Error message already shown by getOrCreatePatient
+    return false
   } catch (error) {
     console.log('Cached token failed or expired:', error.message)
     return false

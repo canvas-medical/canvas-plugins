@@ -4,6 +4,22 @@ from canvas_sdk.handlers.application import Application
 from logger import log
 
 
+def get_application_url(
+    params: dict, patient_key: str | None = None, note_id: str | None = None
+) -> str:
+    """Get the path to the Fullscript application."""
+    url = "/plugin-io/api/fullscript/app/fullscript-app"
+
+    if patient_key:
+        url += f"?patient={patient_key}"
+    for param in params:
+        url += f"&{param}={params[param]}"
+    if note_id:
+        url += f"&noteId={note_id}"
+
+    return url
+
+
 class MyApplication(Application):
     """An embeddable application that can be registered to Canvas."""
 
@@ -14,13 +30,9 @@ class MyApplication(Application):
         log.info(self.context)
 
         patient_key = self.context["patient"].get("id") if self.context.get("patient") else None
-        params = self.context["params"] if self.context.get("params") else []
+        params = self.context["params"] if self.context.get("params") else {}
 
-        url = "/plugin-io/api/fullscript/app/fullscript-app"
-        if patient_key:
-            url += f"?patient={patient_key}"
-        for param in params:
-            url += f"&{param}={params[param]}"
+        url = get_application_url(params, patient_key)
 
         return LaunchModalEffect(
             url=url,
