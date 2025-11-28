@@ -30,6 +30,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
         context = {
             "oauthCode": query_params.get("code", ""),
             "patientKey": query_params.get("patient", ""),
+            "noteId": query_params.get("noteId", ""),
         }
 
         log.info(f"context: {context}")

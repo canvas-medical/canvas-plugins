@@ -27,48 +27,31 @@
         "protocols": [
             {
                 "class": "fullscript.handlers.my_web_app:MyWebApp",
-                "description": "Serves the application frontend files",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Serves the application frontend files"
             },
             {
                 "class": "fullscript.api.fullscript_api:FullscriptAPI",
-                "description": "Handles Fullscript API endpoints",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "Handles Fullscript API endpoints"
             },
             {
                 "class": "fullscript.protocols.group_supplements:GroupSupplements",
-                "description": "group medications by fullscript code",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
-            },
-            {
-                "class": "fullscript.protocols.search_fullscript_supplements:SearchFullscriptSupplements",
-                "description": "search fullscript supplements protocol and return matching supplements",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "group medications by fullscript code"
             },
             {
                 "class": "fullscript.protocols.search_fullscript_supplements:SearchFullscriptSupplementsForPrescribe",
-                "description": "search fullscript supplements protocol for prescribe and return matching supplements",
-                "data_access": {
-                    "event": "",
-                    "read": [],
-                    "write": []
-                }
+                "description": "search fullscript supplements protocol for prescribe and return matching supplements"
+            },
+            {
+                "class": "fullscript.protocols.create_treatment_plan:CreateTreatmentPlan",
+                "description": "create treatment plan in fullscript based on canvas prescribe"
+            },
+            {
+                "class": "fullscript.protocols.create_treatment_plan:CreateTreatmentPlanButton",
+                "description": "Add a button to a Note to create a treatment plan"
+            },
+            {
+                "class": "fullscript.protocols.create_treatment_plan:LaunchFullscriptApplicationButton",
+                "description": "Add a button to a Note to launch the Fullscript application"
             }
         ],
         "commands": [],
