@@ -1,5 +1,3 @@
-import os
-import sys
 from datetime import date, datetime
 from unittest.mock import MagicMock, Mock, patch
 
@@ -10,8 +8,7 @@ from canvas_sdk.events import EventType
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from protocols.cms131v14_protocol import CMS131v14DiabetesEyeExam
+from ..protocols.cms131v14_protocol import CMS131v14DiabetesEyeExam
 
 
 @pytest.fixture
@@ -85,13 +82,13 @@ def test_get_patient_with_condition_created_event(
     mock_patient: Mock,
     mock_condition: Mock,
 ) -> None:
-    """Test _get_patient returns patient and condition for CONDITION_CREATED event."""
+    """Test _get_patient_and_condition returns patient and condition for CONDITION_CREATED event."""
     mock_condition.patient = mock_patient
     mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
         mock_condition
     )
 
-    patient, condition = protocol_instance._get_patient()
+    patient, condition = protocol_instance._get_patient_and_condition()
     assert patient == mock_patient
     assert condition == mock_condition
     mock_condition_objects.filter.assert_called_once_with(id="condition-123")
@@ -101,10 +98,10 @@ def test_get_patient_with_condition_created_event(
 def test_get_patient_when_condition_not_found(
     mock_condition_objects: MagicMock, protocol_instance: CMS131v14DiabetesEyeExam
 ) -> None:
-    """Test _get_patient returns None when condition not found."""
+    """Test _get_patient_and_condition returns None when condition not found."""
     mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = None
 
-    patient, condition = protocol_instance._get_patient()
+    patient, condition = protocol_instance._get_patient_and_condition()
 
     assert patient is None
     assert condition is None
@@ -323,8 +320,8 @@ def test_has_eligible_encounter_in_period_false(
     mock_patient: Mock,
 ) -> None:
     """Test _has_eligible_encounter_in_period returns False when no eligible encounters."""
-    mock_encounter_objects.filter.return_value.exists.return_value = False
-    mock_claim_objects.filter.return_value.exists.return_value = False
+    mock_encounter_objects.filter.return_value.first.return_value = None
+    mock_claim_objects.filter.return_value.first.return_value = None
 
     result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
     assert result is False
@@ -428,7 +425,7 @@ def test_has_hospice_care_in_period_false(
     )
 
     # No hospice claim
-    mock_claim_objects.filter.return_value.exists.return_value = False
+    mock_claim_objects.filter.return_value.first.return_value = None
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
     assert result is False
@@ -538,7 +535,7 @@ def test_is_age_66_plus_in_nursing_home_false(
     mock_patient: Mock,
 ) -> None:
     """Test _is_age_66_plus_in_nursing_home returns False when no nursing home claim."""
-    mock_claim_objects.filter.return_value.exists.return_value = False
+    mock_claim_objects.filter.return_value.first.return_value = None
 
     result = protocol_instance._is_age_66_plus_in_nursing_home(mock_patient, age=70)
     assert result is False
@@ -592,7 +589,7 @@ def test_has_palliative_care_in_period_false(
     """Test _has_palliative_care_in_period returns False when neither exists."""
     mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
     mock_encounter_objects.filter.return_value.exists.return_value = False
-    mock_claim_objects.filter.return_value.exists.return_value = False
+    mock_claim_objects.filter.return_value.first.return_value = None
 
     result = protocol_instance._has_palliative_care_in_period(mock_patient)
     assert result is False
@@ -910,7 +907,7 @@ def test_create_due_card(
     mock_get_codes.assert_called_once_with(mock_patient)
 
 
-@patch.object(CMS131v14DiabetesEyeExam, "_get_patient")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
 def test_compute_patient_not_found(
     mock_get_patient: MagicMock, protocol_instance: CMS131v14DiabetesEyeExam
 ) -> None:
@@ -923,7 +920,7 @@ def test_compute_patient_not_found(
 
 @patch.object(CMS131v14DiabetesEyeExam, "_create_not_applicable_card")
 @patch.object(CMS131v14DiabetesEyeExam, "_should_remove_card")
-@patch.object(CMS131v14DiabetesEyeExam, "_get_patient")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
 def test_compute_should_remove_card(
     mock_get_patient: MagicMock,
     mock_should_remove: MagicMock,
@@ -945,7 +942,7 @@ def test_compute_should_remove_card(
 @patch.object(CMS131v14DiabetesEyeExam, "_create_not_applicable_card")
 @patch.object(CMS131v14DiabetesEyeExam, "_in_initial_population")
 @patch.object(CMS131v14DiabetesEyeExam, "_should_remove_card")
-@patch.object(CMS131v14DiabetesEyeExam, "_get_patient")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
 def test_compute_not_in_initial_population(
     mock_get_patient: MagicMock,
     mock_should_remove: MagicMock,
@@ -969,7 +966,7 @@ def test_compute_not_in_initial_population(
 @patch.object(CMS131v14DiabetesEyeExam, "_in_denominator")
 @patch.object(CMS131v14DiabetesEyeExam, "_in_initial_population")
 @patch.object(CMS131v14DiabetesEyeExam, "_should_remove_card")
-@patch.object(CMS131v14DiabetesEyeExam, "_get_patient")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
 def test_compute_excluded_from_denominator(
     mock_get_patient: MagicMock,
     mock_should_remove: MagicMock,

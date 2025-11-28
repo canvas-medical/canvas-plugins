@@ -148,7 +148,7 @@ class HomeHealthcareServices(ValueSet):
         "704126008",  # Home visit for anticoagulant drug monitoring (procedure)
     }
 
-
+    
 class HospiceEncounter(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for hospice care services..
@@ -256,7 +256,7 @@ class PreventiveCareServicesEstablishedOfficeVisit18AndUp(ValueSet):
     OID = "2.16.840.1.113883.3.464.1003.101.12.1025"
     DEFINITION_VERSION = "20170504"
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
-
+    
     CPT = {
         "99395",  # Periodic comprehensive preventive medicine reevaluation and management, established patient; 18-39 years
         "99396",  # Periodic comprehensive preventive medicine reevaluation and management, established patient; 40-64 years
@@ -318,17 +318,17 @@ class PalliativeCareEncounter(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     HCPCSLEVELII = {
-        "G9054",  # Oncology; primary focus of visit; supervising, coordinating or managing care of patient with terminal cancer or for whom other medical illness prevents further cancer treatment; includes symptom management, end-of-life care planning, management of palliative therapies (for use in a medicare-approved demonstration project)
-    }
+        "G9054", # Oncology; primary focus of visit; supervising, coordinating or managing care of patient with terminal cancer or for whom other medical illness prevents further cancer treatment; includes symptom management, end-of-life care planning, management of palliative therapies (for use in a medicare-approved demonstration project)
+        }
 
     SNOMEDCT = {
-        "305284002",  # Admission by palliative care physician (procedure)
-        "305381007",  # Admission to palliative care department (procedure)
-        "305686008",  # Seen by palliative care physician (finding)
-        "305824005",  # Seen by palliative care medicine service (finding)
-        "441874000",  # Seen by palliative care service (finding)
-        "4901000124101",  # Palliative care education (procedure)
-        "713281006",  # Consultation for palliative care (procedure)
+        "305284002",     # Admission by palliative care physician (procedure)
+        "305381007",     # Admission to palliative care department (procedure)
+        "305686008",     # Seen by palliative care physician (finding)
+        "305824005",     # Seen by palliative care medicine service (finding)
+        "441874000",     # Seen by palliative care service (finding)
+        "4901000124101", # Palliative care education (procedure)
+        "713281006",     # Consultation for palliative care (procedure)
     }
 
     ICD10CM = {
@@ -379,7 +379,6 @@ class TelephoneVisits(ValueSet):
         "401267002",  # Telephone triage encounter (procedure)
     }
 
-
 class EmergencyDepartmentVisit(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters in the emergency department (ED).
@@ -400,7 +399,6 @@ class EmergencyDepartmentVisit(ValueSet):
         "4525004",  # Emergency department patient visit (procedure)
     }
 
-
 class ObservationServices(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for observation.
@@ -420,7 +418,6 @@ class ObservationServices(ValueSet):
     SNOMEDCT = {
         "448951000124107",  # Admission to observation unit (procedure)
     }
-
 
 class EdVisitAndObTriage(ValueSet):
     """
@@ -443,7 +440,6 @@ class EdVisitAndObTriage(ValueSet):
         "4525004",  # Emergency department patient visit (procedure)
     }
 
-
 class NonelectiveInpatientEncounter(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of encounters for non-elective inpatient admission.
@@ -465,7 +461,6 @@ class NonelectiveInpatientEncounter(ValueSet):
         "32485007",  # Hospital admission (procedure)
         "442281000124108",  # Emergency hospital admission from observation unit (procedure)
     }
-
 
 class OutpatientClinicalEncounters(ValueSet):
     """
@@ -539,7 +534,6 @@ class OutpatientClinicalEncounters(ValueSet):
         "77406008",  # Confirmatory medical consultation (procedure)
     }
 
-
 class PreventativeClinicalEncounters(ValueSet):
     """
     **Clinical Focus:** Preventative care outpatient encounters for diabetes screening
@@ -596,7 +590,6 @@ class PreventativeClinicalEncounters(ValueSet):
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
 
-
 class FaceToFaceInteraction(ValueSet):
     """
     **Clinical Focus:** This value set identifies patients who have had a face-to-face interaction with a member of their medical care team.
@@ -631,7 +624,6 @@ class FaceToFaceInteraction(ValueSet):
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
 
-
 class OutpatientConsultation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for outpatient interactions with a member of the medical care team.
@@ -660,7 +652,6 @@ class OutpatientConsultation(ValueSet):
         "77406008",  # Confirmatory medical consultation (procedure)
     }
 
-
 class PreventiveCareServicesInitialOfficeVisit18AndUp(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for preventive care.
@@ -682,7 +673,6 @@ class PreventiveCareServicesInitialOfficeVisit18AndUp(ValueSet):
         "99386",  # Initial comprehensive preventive medicine evaluation and management of an individual including an age and gender appropriate history, examination, counseling/anticipatory guidance/risk factor reduction interventions, and the ordering of laboratory/diagnostic procedures, new patient; 40-64 years
         "99387",  # Initial comprehensive preventive medicine evaluation and management of an individual including an age and gender appropriate history, examination, counseling/anticipatory guidance/risk factor reduction interventions, and the ordering of laboratory/diagnostic procedures, new patient; 65 years and older
     }
-
 
 class PreventiveCareServicesInitialOfficeVisit0To17(ValueSet):
     """
@@ -707,7 +697,6 @@ class PreventiveCareServicesInitialOfficeVisit0To17(ValueSet):
         "99384",  # Initial comprehensive preventive medicine evaluation and management of an individual including an age and gender appropriate history, examination, counseling/anticipatory guidance/risk factor reduction interventions, and the ordering of laboratory/diagnostic procedures, new patient; adolescent (age 12 through 17 years)
     }
 
-
 class PreventiveCareEstablishedOfficeVisit0To17(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for preventative care.
@@ -730,7 +719,6 @@ class PreventiveCareEstablishedOfficeVisit0To17(ValueSet):
         "99393",  # Periodic comprehensive preventive medicine reevaluation and management of an individual including an age and gender appropriate history, examination, counseling/anticipatory guidance/risk factor reduction interventions, and the ordering of laboratory/diagnostic procedures, established patient; late childhood (age 5 through 11 years)
         "99394",  # Periodic comprehensive preventive medicine reevaluation and management of an individual including an age and gender appropriate history, examination, counseling/anticipatory guidance/risk factor reduction interventions, and the ordering of laboratory/diagnostic procedures, established patient; adolescent (age 12 through 17 years)
     }
-
 
 class OutpatientEncounter(ValueSet):
     """
@@ -816,7 +804,6 @@ class OutpatientEncounter(ValueSet):
         "84251009",  # Comprehensive consultation (procedure)
     }
 
-
 class VirtualEncounter(ValueSet):
     """
     **Clinical Focus:** Includes concepts that represent an encounter using online modalities.
@@ -855,7 +842,6 @@ class VirtualEncounter(ValueSet):
         "G2252",  # Brief communication technology-based service, e.g. virtual check-in, by a physician or other qualified health care professional who can report evaluation and management services, provided to an established patient, not originating from a related e/m service provided within the previous 7 days nor leading to an e/m service or procedure within the next 24 hours or soonest available appointment; 11-20 minutes of medical discussion
     }
 
-
 class ElectiveInpatientEncounter(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of elective inpatient encounters
@@ -879,7 +865,6 @@ class ElectiveInpatientEncounter(ValueSet):
         "8715000",  # Hospital admission, elective (procedure)
     }
 
-
 class OutpatientSurgeryService(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that are used to identify outpatient surgery encounter types.
@@ -901,7 +886,6 @@ class OutpatientSurgeryService(ValueSet):
         "709063003",  # Admission to same day surgery center (procedure)
         "711580002",  # Minor ambulatory surgery (procedure)
     }
-
 
 class NutritionServices(ValueSet):
     """
@@ -1006,7 +990,6 @@ class NutritionServices(ValueSet):
         "710881000",  # Education about eating pattern (procedure)
     }
 
-
 class DecisionToAdmitToHospitalInpatient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a decision to admit to hospital inpatient order.
@@ -1029,7 +1012,6 @@ class DecisionToAdmitToHospitalInpatient(ValueSet):
         "432661000124104",  # Hospital admission, transfer from emergency department (procedure)
         "73607007",  # Hospital admission, emergency, from emergency room (procedure)
     }
-
 
 class EmergencyDepartmentEvaluationAndManagementVisit(ValueSet):
     """
@@ -1059,7 +1041,6 @@ class EmergencyDepartmentEvaluationAndManagementVisit(ValueSet):
         "4525004",  # Emergency department patient visit (procedure)
     }
 
-
 class Triage(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for nurse/non-billable encounters.
@@ -1084,7 +1065,6 @@ class Triage(ValueSet):
         "386478007",  # Triage: emergency center (procedure)
     }
 
-
 class DecisionToTransfer(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent procedures used to identify transfer from emergency department (ED) locations.
@@ -1105,7 +1085,6 @@ class DecisionToTransfer(ValueSet):
         "19712007",  # Patient transfer, to another health care facility (procedure)
         "448551000124100",  # Patient transfer to another hospital (procedure)
     }
-
 
 class NursingFacilityVisit(ValueSet):
     """
@@ -1140,7 +1119,6 @@ class NursingFacilityVisit(ValueSet):
         "207195004",  # History and physical examination with evaluation and management of nursing facility patient (procedure)
     }
 
-
 class PsychVisitDiagnosticEvaluation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for diagnostic psychiatric evaluations.
@@ -1168,7 +1146,6 @@ class PsychVisitDiagnosticEvaluation(ValueSet):
         "68338001",  # Interactive medical psychiatric diagnostic interview (procedure)
         "79094001",  # Initial psychiatric interview with mental status and evaluation (procedure)
     }
-
 
 class PsychVisitPsychotherapy(ValueSet):
     """
@@ -1208,7 +1185,6 @@ class PsychVisitPsychotherapy(ValueSet):
         "90102008",  # Social psychotherapy (regime/therapy)
     }
 
-
 class CareServicesInLongTermResidentialFacility(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for patients living in assisted living, domiciliary care or rest homes.
@@ -1229,7 +1205,6 @@ class CareServicesInLongTermResidentialFacility(ValueSet):
         "209099002",  # History and physical examination with management of domiciliary or rest home patient (procedure)
         "210098006",  # Domiciliary or rest home patient evaluation and management (procedure)
     }
-
 
 class PatientProviderInteraction(ValueSet):
     """
@@ -1274,7 +1249,6 @@ class PatientProviderInteraction(ValueSet):
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
 
-
 class BehavioralHealthFollowUpVisit(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for a behavioral health follow-up visit.
@@ -1299,7 +1273,6 @@ class BehavioralHealthFollowUpVisit(ValueSet):
         "99510",  # Home visit for individual, family, or marriage counseling
     }
 
-
 class PreventiveCareServicesGroupCounseling(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for group counseling services.
@@ -1320,7 +1293,6 @@ class PreventiveCareServicesGroupCounseling(ValueSet):
         "99411",  # Preventive medicine counseling and/or risk factor reduction intervention(s) provided to individuals in a group setting (separate procedure); approximately 30 minutes
         "99412",  # Preventive medicine counseling and/or risk factor reduction intervention(s) provided to individuals in a group setting (separate procedure); approximately 60 minutes
     }
-
 
 class PreventiveCareServicesIndividualCounseling(ValueSet):
     """
@@ -1344,7 +1316,6 @@ class PreventiveCareServicesIndividualCounseling(ValueSet):
         "99403",  # Preventive medicine counseling and/or risk factor reduction intervention(s) provided to an individual (separate procedure); approximately 45 minutes
         "99404",  # Preventive medicine counseling and/or risk factor reduction intervention(s) provided to an individual (separate procedure); approximately 60 minutes
     }
-
 
 class PsychotherapyAndPharmacologicManagement(ValueSet):
     """
@@ -1370,7 +1341,6 @@ class PsychotherapyAndPharmacologicManagement(ValueSet):
         "90875",  # Individual psychophysiological therapy incorporating biofeedback training by any modality (face-to-face with the patient), with psychotherapy (eg, insight oriented, behavior modifying or supportive psychotherapy); 30 minutes
         "90876",  # Individual psychophysiological therapy incorporating biofeedback training by any modality (face-to-face with the patient), with psychotherapy (eg, insight oriented, behavior modifying or supportive psychotherapy); 45 minutes
     }
-
 
 class DetoxificationVisit(ValueSet):
     """
@@ -1402,7 +1372,6 @@ class DetoxificationVisit(ValueSet):
         "87106005",  # Combined alcohol and drug detoxification (regime/therapy)
     }
 
-
 class DischargeServicesHospitalInpatient(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for inpatient hospital discharge services.
@@ -1423,7 +1392,6 @@ class DischargeServicesHospitalInpatient(ValueSet):
         "99238",  # Hospital inpatient or observation discharge day management; 30 minutes or less on the date of the encounter
         "99239",  # Hospital inpatient or observation discharge day management; more than 30 minutes on the date of the encounter
     }
-
 
 class DischargeServicesHospitalInpatientSameDayDischarge(ValueSet):
     """
@@ -1447,7 +1415,6 @@ class DischargeServicesHospitalInpatientSameDayDischarge(ValueSet):
         "99236",  # Hospital inpatient or observation care, for the evaluation and management of a patient including admission and discharge on the same date, which requires a medically appropriate history and/or examination and high level of medical decision making. When using total time on the date of the encounter for code selection, 85 minutes must be met or exceeded.
     }
 
-
 class InitialHospitalInpatientVisit(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for inpatient hospital care.
@@ -1469,7 +1436,6 @@ class InitialHospitalInpatientVisit(ValueSet):
         "99222",  # Initial hospital inpatient or observation care, per day, for the evaluation and management of a patient, which requires a medically appropriate history and/or examination and moderate level of medical decision making. When using total time on the date of the encounter for code selection, 55 minutes must be met or exceeded.
         "99223",  # Initial hospital inpatient or observation care, per day, for the evaluation and management of a patient, which requires a medically appropriate history and/or examination and high level of medical decision making. When using total time on the date of the encounter for code selection, 75 minutes must be met or exceeded.
     }
-
 
 class OccupationalTherapyEvaluation(ValueSet):
     """
@@ -1505,7 +1471,6 @@ class OccupationalTherapyEvaluation(ValueSet):
         "84478008",  # Occupational therapy (regime/therapy)
     }
 
-
 class PhysicalTherapyEvaluation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for a physical therapy evaluation.
@@ -1538,7 +1503,6 @@ class PhysicalTherapyEvaluation(ValueSet):
         "424291000",  # Physical therapy surveillance (regime/therapy)
     }
 
-
 class Psychoanalysis(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for psychoanalysis.
@@ -1563,7 +1527,6 @@ class Psychoanalysis(ValueSet):
         "28988002",  # Psychoanalysis in depth (procedure)
         "61436009",  # Psychoanalysis (procedure)
     }
-
 
 class SpeechAndHearingEvaluation(ValueSet):
     """
@@ -1598,7 +1561,6 @@ class SpeechAndHearingEvaluation(ValueSet):
         "91515000",  # Special audiologic evaluation for functional hearing loss (procedure)
     }
 
-
 class AudiologyVisit(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters with nystagmus testing.
@@ -1622,7 +1584,6 @@ class AudiologyVisit(ValueSet):
         "92548",  # Computerized dynamic posturography sensory organization test (CDP-SOT), 6 conditions (ie, eyes open, eyes closed, visual sway, platform sway, eyes closed platform sway, platform and visual sway), including interpretation and report
     }
 
-
 class DischargeServicesNursingFacility(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for discharges from a nursing facility.
@@ -1644,7 +1605,6 @@ class DischargeServicesNursingFacility(ValueSet):
         "99316",  # Nursing facility discharge management; more than 30 minutes total time on the date of the encounter
     }
 
-
 class MedicalDisabilityExam(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for work related or medical disability examinations
@@ -1665,7 +1625,6 @@ class MedicalDisabilityExam(ValueSet):
         "99455",  # Work related or medical disability examination by the treating physician that includes: Completion of a medical history commensurate with the patient's condition; Performance of an examination commensurate with the patient's condition; Formulation of a diagnosis, assessment of capabilities and stability, and calculation of impairment; Development of future medical treatment plan; and Completion of necessary documentation/certificates and report.
         "99456",  # Work related or medical disability examination by other than the treating physician that includes: Completion of a medical history commensurate with the patient's condition; Performance of an examination commensurate with the patient's condition; Formulation of a diagnosis, assessment of capabilities and stability, and calculation of impairment; Development of future medical treatment plan; and Completion of necessary documentation/certificates and report.
     }
-
 
 class BehavioralOrNeuropsychAssessment(ValueSet):
     """
@@ -1690,7 +1649,6 @@ class BehavioralOrNeuropsychAssessment(ValueSet):
     SNOMEDCT = {
         "307808008",  # Neuropsychological testing (procedure)
     }
-
 
 class AudioVisualTelehealthEncounter(ValueSet):
     """
@@ -1725,7 +1683,6 @@ class AudioVisualTelehealthEncounter(ValueSet):
         "763184009",  # Telepractice consultation (procedure)
     }
 
-
 class RadiationTreatmentManagement(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for the procedure of radiation management.
@@ -1752,7 +1709,6 @@ class RadiationTreatmentManagement(ValueSet):
     SNOMEDCT = {
         "84755001",  # Radiation therapy treatment management (procedure)
     }
-
 
 class ContactOrOfficeVisit(ValueSet):
     """
@@ -1816,7 +1772,6 @@ class ContactOrOfficeVisit(ValueSet):
         "G0439",  # Annual wellness visit, includes a personalized prevention plan of service (pps), subsequent visit
     }
 
-
 class EsrdMonthlyOutpatientServices(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for end-stage renal disease (ESRD) outpatient services.
@@ -1861,7 +1816,6 @@ class EsrdMonthlyOutpatientServices(ValueSet):
         "99512",  # Home visit for hemodialysis
     }
 
-
 class GroupPsychotherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for group psychotherapy.
@@ -1889,7 +1843,6 @@ class GroupPsychotherapy(ValueSet):
         "76168009",  # Group psychotherapy (regime/therapy)
     }
 
-
 class PsychVisitForFamilyPsychotherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for family psychotherapy.
@@ -1916,7 +1869,6 @@ class PsychVisitForFamilyPsychotherapy(ValueSet):
         "302247005",  # Narrative family psychotherapy (regime/therapy)
         "361229007",  # Structural family psychotherapy (regime/therapy)
     }
-
 
 class EncounterToScreenForBloodPressure(ValueSet):
     """
@@ -2056,7 +2008,6 @@ class EncounterToScreenForBloodPressure(ValueSet):
         "86013001",  # Periodic reevaluation and management of healthy individual (procedure)
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
-
 
 class EncounterToScreenForDepression(ValueSet):
     """
@@ -2216,7 +2167,6 @@ class EncounterToScreenForDepression(ValueSet):
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
 
-
 class OutpatientEncountersForPreventiveCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of an encounter for outpatient visits.
@@ -2251,7 +2201,6 @@ class OutpatientEncountersForPreventiveCare(ValueSet):
         "86013001",  # Periodic reevaluation and management of healthy individual (procedure)
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
-
 
 class TelemedicineServices(ValueSet):
     """
@@ -2288,7 +2237,6 @@ class TelemedicineServices(ValueSet):
         "98015",  # Synchronous audio-only visit for the evaluation and management of an established patient, which requires a medically appropriate history and/or examination, high medical decision making, and more than 10 minutes of medical discussion. When using total time on the date of the encounter for code selection, 40 minutes must be met or exceeded.
         "98016",  # Brief communication technology-based service (eg, virtual check-in) by a physician or other qualified health care professional who can report evaluation and management services, provided to an established patient, not originating from a related evaluation and management service provided within the previous 7 days nor leading to an evaluation and management service or procedure within the next 24 hours or soonest available appointment, 5-10 minutes of medical discussion
     }
-
 
 class EncounterToDocumentMedications(ValueSet):
     """
@@ -2499,7 +2447,6 @@ class EncounterToDocumentMedications(ValueSet):
         "91573000",  # Tympanometry testing (procedure)
     }
 
-
 class EncounterToEvaluateBmi(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters where body mass index (BMI) could be assessed.
@@ -2637,7 +2584,6 @@ class EncounterToEvaluateBmi(ValueSet):
         "90526000",  # Initial evaluation and management of healthy individual (procedure)
     }
 
-
 class ClinicalOralEvaluation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for encounters for clinical oral evaluations.
@@ -2663,7 +2609,6 @@ class ClinicalOralEvaluation(ValueSet):
         "D0170",  # re-evaluation - limited, problem focused (established patient; not post-operative visit)
         "D0180",  # comprehensive periodontal evaluation - new or established patient
     }
-
 
 class HospitalServicesForUrologyCare(ValueSet):
     """
@@ -2699,7 +2644,6 @@ class HospitalServicesForUrologyCare(ValueSet):
         "99284",  # Emergency department visit for the evaluation and management of a patient, which requires a medically appropriate history and/or examination and moderate level of medical decision making
         "99285",  # Emergency department visit for the evaluation and management of a patient, which requires a medically appropriate history and/or examination and high level of medical decision making
     }
-
 
 __exports__ = (
     "AnnualWellnessVisit",

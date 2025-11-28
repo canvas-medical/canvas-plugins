@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Automatically manages appointment labels based on patient insurance coverage status. Adds a 'MISSING_COVERAGE' label to appointments for patients without coverage, and removes the label when coverage is subsequently added."
+license = "MIT"
+name = "appointment_coverage_label"
+readme = "appointment_coverage_label/README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
