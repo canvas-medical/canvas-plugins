@@ -1,5 +1,8 @@
 from datetime import datetime
 
+import pytest
+from pydantic_core import ValidationError
+
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.calendar import (
     DaysOfWeek,
@@ -185,3 +188,182 @@ def test_delete_event_with_uuid() -> None:
         payload.payload
         == '{"data": {"event_id": "87654321-4321-8765-4321-876543218765", "calendar_id": null, "title": null, "starts_at": null, "ends_at": null, "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": null}}'
     )
+
+
+def test_create_event_missing_calendar_id() -> None:
+    """Test that creating an event without calendar_id raises ValidationError."""
+    event = Event(
+        title="Appointment",
+        starts_at=datetime(2025, 1, 15, 10, 0, 0),
+        ends_at=datetime(2025, 1, 15, 11, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "calendar_id" in errors[0]["msg"]
+    assert "required to create an event" in errors[0]["msg"]
+
+
+def test_create_event_missing_title() -> None:
+    """Test that creating an event without title raises ValidationError."""
+    event = Event(
+        calendar_id="calendar-id",
+        starts_at=datetime(2025, 1, 15, 10, 0, 0),
+        ends_at=datetime(2025, 1, 15, 11, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "title" in errors[0]["msg"]
+    assert "required to create an event" in errors[0]["msg"]
+
+
+def test_create_event_missing_starts_at() -> None:
+    """Test that creating an event without starts_at raises ValidationError."""
+    event = Event(
+        calendar_id="calendar-id",
+        title="Appointment",
+        ends_at=datetime(2025, 1, 15, 11, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "starts_at" in errors[0]["msg"]
+    assert "required to create an event" in errors[0]["msg"]
+
+
+def test_create_event_missing_ends_at() -> None:
+    """Test that creating an event without ends_at raises ValidationError."""
+    event = Event(
+        calendar_id="calendar-id",
+        title="Appointment",
+        starts_at=datetime(2025, 1, 15, 10, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "ends_at" in errors[0]["msg"]
+    assert "required to create an event" in errors[0]["msg"]
+
+
+def test_create_event_missing_multiple_fields() -> None:
+    """Test that creating an event with multiple missing fields raises ValidationError with all errors."""
+    event = Event(calendar_id="calendar-id")
+    with pytest.raises(ValidationError) as exc_info:
+        event.create()
+
+    errors = exc_info.value.errors()
+    # Should have errors for: title, starts_at, ends_at
+    assert len(errors) == 3
+    error_messages = [error["msg"] for error in errors]
+    assert any("title" in msg for msg in error_messages)
+    assert any("starts_at" in msg for msg in error_messages)
+    assert any("ends_at" in msg for msg in error_messages)
+
+
+def test_update_event_missing_event_id() -> None:
+    """Test that updating an event without event_id raises ValidationError."""
+    event = Event(
+        title="Updated Appointment",
+        starts_at=datetime(2025, 1, 15, 11, 0, 0),
+        ends_at=datetime(2025, 1, 15, 12, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "event_id" in errors[0]["msg"]
+    assert "required to update an event" in errors[0]["msg"]
+
+
+def test_update_event_missing_title() -> None:
+    """Test that updating an event without title raises ValidationError."""
+    event = Event(
+        event_id="event-id",
+        starts_at=datetime(2025, 1, 15, 11, 0, 0),
+        ends_at=datetime(2025, 1, 15, 12, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "title" in errors[0]["msg"]
+    assert "required to update an event" in errors[0]["msg"]
+
+
+def test_update_event_missing_starts_at() -> None:
+    """Test that updating an event without starts_at raises ValidationError."""
+    event = Event(
+        event_id="event-id",
+        title="Updated Appointment",
+        ends_at=datetime(2025, 1, 15, 12, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "starts_at" in errors[0]["msg"]
+    assert "required to update an event" in errors[0]["msg"]
+
+
+def test_update_event_missing_ends_at() -> None:
+    """Test that updating an event without ends_at raises ValidationError."""
+    event = Event(
+        event_id="event-id",
+        title="Updated Appointment",
+        starts_at=datetime(2025, 1, 15, 11, 0, 0),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "ends_at" in errors[0]["msg"]
+    assert "required to update an event" in errors[0]["msg"]
+
+
+def test_update_event_missing_multiple_fields() -> None:
+    """Test that updating an event with multiple missing fields raises ValidationError with all errors."""
+    event = Event(event_id="event-id")
+    with pytest.raises(ValidationError) as exc_info:
+        event.update()
+
+    errors = exc_info.value.errors()
+    # Should have errors for: title, starts_at, ends_at
+    assert len(errors) == 3
+    error_messages = [error["msg"] for error in errors]
+    assert any("title" in msg for msg in error_messages)
+    assert any("starts_at" in msg for msg in error_messages)
+    assert any("ends_at" in msg for msg in error_messages)
+
+
+def test_delete_event_missing_event_id() -> None:
+    """Test that deleting an event without event_id raises ValidationError."""
+    event = Event()
+    with pytest.raises(ValidationError) as exc_info:
+        event.delete()
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert "event_id" in errors[0]["msg"]
+    assert "required to delete an event" in errors[0]["msg"]

@@ -87,32 +87,24 @@ class Event(_BaseEffect):
                 )
             )
 
-        # event_id is required for update
-        if method == "update" and not self.event_id:
+        if method in ("update", "delete") and not self.event_id:
             errors.append(
                 self._create_error_detail(
                     "missing",
-                    "Field 'event_id' is required to update an event.",
+                    f"Field 'event_id' is required to {method} an event.",
                     None,
                 )
             )
 
-        # event_id is required for delete
-        if method == "delete" and not self.event_id:
-            errors.append(
-                self._create_error_detail(
-                    "missing",
-                    "Field 'event_id' is required to delete an event.",
-                    None,
-                )
-            )
-
-        if method == "create" or method == "update":
+        if method in (
+            "create",
+            "update",
+        ):
             if not self.title:
                 errors.append(
                     self._create_error_detail(
                         "missing",
-                        "Field 'title' is required to create or update an event.",
+                        f"Field 'title' is required to {method} an event.",
                         None,
                     )
                 )
@@ -121,7 +113,7 @@ class Event(_BaseEffect):
                 errors.append(
                     self._create_error_detail(
                         "missing",
-                        "Field 'starts_at' is required to create or update an event.",
+                        f"Field 'starts_at' is required to {method} an event.",
                         None,
                     )
                 )
@@ -130,7 +122,7 @@ class Event(_BaseEffect):
                 errors.append(
                     self._create_error_detail(
                         "missing",
-                        "Field 'ends_at' is required to create or update an event.",
+                        f"Field 'ends_at' is required to {method} an event.",
                         None,
                     )
                 )
