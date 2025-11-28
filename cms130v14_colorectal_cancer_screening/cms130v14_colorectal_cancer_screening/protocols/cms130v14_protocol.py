@@ -120,8 +120,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         EventType.Name(EventType.CONDITION_RESOLVED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
-        EventType.Name(EventType.PATIENT_CREATED),
-        EventType.Name(EventType.PATIENT_UPDATED),
+            EventType.Name(EventType.PATIENT_CREATED),
+            EventType.Name(EventType.PATIENT_UPDATED),
         EventType.Name(EventType.OBSERVATION_CREATED),
         EventType.Name(EventType.OBSERVATION_UPDATED),
         EventType.Name(EventType.CLAIM_CREATED),
@@ -134,39 +134,79 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         self._last_exam = None
         self._not_applicable_reason = None
 
-    def compute(self) -> list:
-        """Compute protocol result for the patient."""
+    def _get_patient_from_event(self) -> Patient | None:
+        """
+        Get patient from event based on event type.
+        
+        Returns:
+            Patient object if found, None otherwise
+        """
         try:
-            patient_id = None
+            target_id = self.event.target.id
 
-            # Events with patient ID in context: CONDITION_*, MEDICATION_*, OBSERVATION_*, CLAIM_*
-            # Events with empty context: PATIENT_*
+            # For CONDITION events, get patient from condition
+            if self.event.type in [
+                EventType.CONDITION_CREATED,
+                EventType.CONDITION_UPDATED,
+                EventType.CONDITION_RESOLVED,
+            ]:
+                condition = Condition.objects.filter(id=target_id).select_related("patient").first()
+                if condition and condition.patient:
+                    log.debug(f"CMS130v14: Got patient from condition {target_id} for event {self.event.name}")
+                    return condition.patient
+                log.warning(f"CMS130v14: Could not find patient for condition {target_id}")
+                return None
+
+            # For PATIENT events, get patient directly from target
             if self.event.type in [
                 EventType.PATIENT_CREATED,
                 EventType.PATIENT_UPDATED,
             ]:
-                # These events have empty context, get patient ID from event target
                 try:
                     patient_id = self.patient_id_from_target()
-                    log.debug(f"CMS130v14: Got patient ID from event target for {self.event.name}: {patient_id}")
+                    patient = Patient.objects.filter(id=patient_id).first()
+                    if patient:
+                        log.debug(f"CMS130v14: Got patient from event target for {self.event.name}: {patient_id}")
+                        return patient
+                    log.warning(f"CMS130v14: Patient {patient_id} not found for event {self.event.name}")
+                    return None
                 except (ValueError, AttributeError) as e:
                     log.warning(f"CMS130v14: Could not get patient ID from event target for {self.event.name}: {str(e)}")
-                    return []
-            else:
-                # For other events (CONDITION_*, MEDICATION_*, OBSERVATION_*, CLAIM_*), get from context
-                patient_id = self.context.get("patient", {}).get("id")
-                if not patient_id:
-                    log.warning(f"CMS130v14: Could not get patient ID from context for {self.event.name}, skipping")
-                    return []
-                log.debug(f"CMS130v14: Got patient ID from context for {self.event.name}: {patient_id}")
+                    return None
 
-            if not patient_id:
-                log.warning(f"CMS130v14: Could not determine patient ID from event {self.event.name}, skipping")
-                return []
+            # For other events (MEDICATION_*, OBSERVATION_*, CLAIM_*), get patient ID from context
+            patient_id = self.context.get("patient", {}).get("id")
+            if patient_id:
+                patient = Patient.objects.filter(id=patient_id).first()
+                if patient:
+                    log.debug(f"CMS130v14: Got patient from context for {self.event.name}: {patient_id}")
+                    return patient
+                log.warning(f"CMS130v14: Patient {patient_id} from context not found for event {self.event.name}")
+                return None
 
-            patient = Patient.objects.filter(id=patient_id).first()
+            # Fallback: try patient_id_from_target for supported event types
+            try:
+                patient_id = self.patient_id_from_target()
+                patient = Patient.objects.filter(id=patient_id).first()
+                if patient:
+                    log.debug(f"CMS130v14: Got patient from event target (fallback) for {self.event.name}: {patient_id}")
+                    return patient
+            except (ValueError, AttributeError):
+                pass
+
+            log.warning(f"CMS130v14: Could not determine patient from event {self.event.name}")
+            return None
+
+        except Exception as e:
+            log.error(f"CMS130v14: Error getting patient from event {self.event.name}: {str(e)}")
+            return None
+
+    def compute(self) -> list:
+        """Compute protocol result for the patient."""
+        try:
+            patient = self._get_patient_from_event()
             if not patient:
-                log.warning(f"CMS130v14: Patient {patient_id} not found, skipping")
+                log.warning(f"CMS130v14: Could not get patient from event {self.event.name}, skipping")
                 return []
 
             log.info(f"CMS130v14: Processing patient {patient.id} ({patient.first_name} {patient.last_name}) for event {self.event.name}")
@@ -1252,7 +1292,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         patient_id_str = str(patient.id) if patient.id else None
         
         # Use stored reason if available, otherwise use default
-        narrative = self._not_applicable_reason or f"{patient.first_name} is not eligible for colorectal cancer screening."
+        base_narrative = self._not_applicable_reason or f"{patient.first_name} is not eligible for colorectal cancer screening."
+        narrative = f"DEBUGGING: {base_narrative}"
         
         card = ProtocolCard(
             patient_id=patient_id_str,
@@ -1298,7 +1339,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         if last_exam and last_exam.get("date"):
             exam_date = arrow.get(last_exam["date"])
             date_with_relative = self._format_date_with_relative_time(exam_date)
-            narrative = f"{patient.first_name} had a {last_exam.get('what', 'screening')} {date_with_relative}."
+            base_narrative = f"{patient.first_name} had a {last_exam.get('what', 'screening')} {date_with_relative}."
+            narrative = f"DEBUGGING: {base_narrative}"
 
             if last_exam.get("days"):
                 next_due_date = exam_date.shift(days=last_exam["days"])
@@ -1307,7 +1349,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             else:
                 due_in = -1
         else:
-            narrative = f"{patient.first_name} has had appropriate colorectal cancer screening."
+            base_narrative = f"{patient.first_name} has had appropriate colorectal cancer screening."
+            narrative = f"DEBUGGING: {base_narrative}"
             due_in = -1
 
         card = ProtocolCard(
@@ -1411,7 +1454,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             self._recent_exam_context(patient),
             self._screening_interval_context(),
         ]
-        narrative = "\n".join(narrative_parts)
+        base_narrative = "\n".join(narrative_parts)
+        narrative = f"DEBUGGING: {base_narrative}"
 
         card = ProtocolCard(
             patient_id=patient_id_str,
