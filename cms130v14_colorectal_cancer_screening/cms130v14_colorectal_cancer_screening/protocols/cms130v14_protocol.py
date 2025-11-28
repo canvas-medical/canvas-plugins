@@ -521,7 +521,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             ) | Q(codings__code__in=value_codings_codes)
 
             observations = (
-                Observation.objects.for_patient(patient.id)
+                Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .committed()
                 .filter(date_filter, code_filter)
             )
@@ -551,7 +551,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
             # 1. Check for hospice diagnosis (using Condition model)
             has_hospice_diagnosis = (
-                Condition.objects.for_patient(patient.id)
+                Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(HospiceDiagnosis)
                 .active()
                 .filter(entered_in_error_id__isnull=True)
@@ -589,7 +589,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             }
 
             has_discharge_to_hospice = (
-                Observation.objects.for_patient(patient.id)
+                Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .filter(
                     effective_datetime__gte=start_date,
                     effective_datetime__lte=end_date,
@@ -606,7 +606,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
             # 4. Check for hospice care assessment (LOINC 45755-6 "Hospice care [Minimum Data Set]")
             has_hospice_assessment = (
-                Observation.objects.for_patient(patient.id)
+                Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .filter(
                     effective_datetime__gte=start_date,
                     effective_datetime__lte=end_date,
@@ -638,12 +638,10 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 proc_code__in=hospice_intervention_codes,
             )
 
-            if hospice_claims.exists():
-                first_claim = hospice_claims.first()
-                if first_claim:
-                    log.info(
-                        f"CMS130v14: Found hospice care claim (code: {first_claim.proc_code}) for patient {patient.id}"
-                    )
+            if first_claim := hospice_claims.first():
+                log.info(
+                    f"CMS130v14: Found hospice care claim (code: {first_claim.proc_code}) for patient {patient.id}"
+                )
                 self._not_applicable_reason = f"{patient.first_name} is receiving hospice care and is excluded from colorectal cancer screening."
                 return True
 
@@ -752,7 +750,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             # Check for observations with frailty device codes as value codings
             # Include observations with null effective_datetime or within the measurement period
             has_observation = (
-                Observation.objects.for_patient(patient.id)
+                Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .filter(
                     Q(effective_datetime__isnull=True)
                     | Q(
@@ -788,7 +786,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             overlap_query = self._build_period_overlap_query(start_date, end_date)
 
             has_frailty_diagnosis = (
-                Condition.objects.for_patient(patient.id)
+                Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(FrailtyDiagnosis)
                 .committed()
                 .filter(entered_in_error_id__isnull=True)
@@ -876,7 +874,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             overlap_query = self._build_period_overlap_query(start_date, end_date)
 
             has_frailty_symptom = (
-                Condition.objects.for_patient(patient.id)
+                Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(FrailtySymptom)
                 .committed()
                 .filter(entered_in_error_id__isnull=True)
@@ -905,8 +903,10 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             end_date = self.timeframe.end.date()
 
             # Check for advanced illness conditions in measurement period or year prior
+            # Note: Intentionally not using .committed() to include uncommitted advanced illness conditions
+            # per CMS131v14 interpretation for early detection of frailty exclusion criteria
             has_advanced_illness = (
-                Condition.objects.for_patient(patient.id)
+                Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(AdvancedIllness)
                 .filter(
                     Q(onset_date__isnull=True)  # Include conditions with NULL onset date
@@ -920,7 +920,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 log.info(f"CMS130v14: Patient {patient.id} has advanced illness")
                 return True
 
-            # Convert dates to datetime for efficient comparison
+            # Convert dates to datetime for efficient comparison (avoids __date lookups that prevent index usage)
             import arrow
             start_datetime = arrow.get(start_date).datetime
             end_datetime = (
@@ -930,7 +930,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             has_dementia_meds = (
-                Medication.objects.for_patient(patient.id)
+                Medication.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .committed()
                 .find(DementiaMedications)
                 .filter(
@@ -967,9 +967,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             # Per CMS130v14: Check for housing status assessment with result "Lives in nursing home"
             # The assessment must be on or before the end of the measurement period
             # Per spec: "ends on or before day of end of 'Measurement Period'"
-            # TODO: check if this is correct!
+            # TODO: double check this
             has_housing_status = (
-                Observation.objects.for_patient(patient.id)
+                Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .filter(
                     effective_datetime__lte=self.timeframe.end.datetime,
                     codings__code=HOUSING_STATUS_LOINC,
@@ -998,7 +998,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         Check if the patient received palliative care during the measurement period.
         
         Per CMS130v14 CQL, checks for:
-        - Palliative Care Assessment (LOINC 71007-9)
+        - Palliative Care Assessment (LOINC 71007-9) - Note: May not be captured in standard Canvas data
         - Palliative Care Diagnosis (ICD-10, SNOMED)
         - Palliative Care Encounter (CPT, HCPCS, SNOMED, ICD-10)
         - Palliative Care Intervention (SNOMED)
@@ -1009,7 +1009,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
             # Check palliative care diagnoses (using Condition model)
             has_palliative_diagnosis = (
-                Condition.objects.for_patient(patient.id)
+                Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(PalliativeCareDiagnosis)
                 .active()
                 .filter(entered_in_error_id__isnull=True)
@@ -1070,12 +1070,10 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 proc_code__in=palliative_codes,
             )
 
-            if palliative_claims.exists():
-                first_claim = palliative_claims.first()
-                if first_claim:
-                    log.info(
-                        f"CMS130v14: Found palliative care claim (code: {first_claim.proc_code}) for patient {patient.id}"
-                    )
+            if first_claim := palliative_claims.first():
+                log.info(
+                    f"CMS130v14: Found palliative care claim (code: {first_claim.proc_code}) for patient {patient.id}"
+                )
                 self._not_applicable_reason = f"{patient.first_name} is receiving palliative care and is excluded from colorectal cancer screening."
                 return True
 
