@@ -117,10 +117,15 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     RESPONDS_TO = [
         EventType.Name(EventType.CONDITION_CREATED),
         EventType.Name(EventType.CONDITION_UPDATED),
+        EventType.Name(EventType.CONDITION_RESOLVED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
         EventType.Name(EventType.PATIENT_CREATED),
         EventType.Name(EventType.PATIENT_UPDATED),
         EventType.Name(EventType.OBSERVATION_CREATED),
         EventType.Name(EventType.OBSERVATION_UPDATED),
+        EventType.Name(EventType.CLAIM_CREATED),
+        EventType.Name(EventType.CLAIM_UPDATED),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -132,9 +137,31 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def compute(self) -> list:
         """Compute protocol result for the patient."""
         try:
-            patient_id = self.context.get("patient", {}).get("id")
+            patient_id = None
+
+            # Events with patient ID in context: CONDITION_*, MEDICATION_*, OBSERVATION_*, CLAIM_*
+            # Events with empty context: PATIENT_*
+            if self.event.type in [
+                EventType.PATIENT_CREATED,
+                EventType.PATIENT_UPDATED,
+            ]:
+                # These events have empty context, get patient ID from event target
+                try:
+                    patient_id = self.patient_id_from_target()
+                    log.debug(f"CMS130v14: Got patient ID from event target for {self.event.name}: {patient_id}")
+                except (ValueError, AttributeError) as e:
+                    log.warning(f"CMS130v14: Could not get patient ID from event target for {self.event.name}: {str(e)}")
+                    return []
+            else:
+                # For other events (CONDITION_*, MEDICATION_*, OBSERVATION_*, CLAIM_*), get from context
+                patient_id = self.context.get("patient", {}).get("id")
+                if not patient_id:
+                    log.warning(f"CMS130v14: Could not get patient ID from context for {self.event.name}, skipping")
+                    return []
+                log.debug(f"CMS130v14: Got patient ID from context for {self.event.name}: {patient_id}")
+
             if not patient_id:
-                log.warning("CMS130v14: Could not determine patient ID from event, skipping")
+                log.warning(f"CMS130v14: Could not determine patient ID from event {self.event.name}, skipping")
                 return []
 
             patient = Patient.objects.filter(id=patient_id).first()
@@ -142,27 +169,40 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 log.warning(f"CMS130v14: Patient {patient_id} not found, skipping")
                 return []
 
+            log.info(f"CMS130v14: Processing patient {patient.id} ({patient.first_name} {patient.last_name}) for event {self.event.name}")
+
             # Reset reason tracking
             self._not_applicable_reason = None
 
             if not self._in_initial_population(patient):
+                log.info(f"CMS130v14: Patient {patient.id} not in initial population")
                 return [self._create_not_applicable_card(patient)]
+
+            log.info(f"CMS130v14: Patient {patient.id} in initial population")
 
             if not self._in_denominator(patient):
+                log.info(f"CMS130v14: Patient {patient.id} excluded from denominator")
                 return [self._create_not_applicable_card(patient)]
 
+            log.info(f"CMS130v14: Patient {patient.id} in denominator")
+
             if self._in_numerator(patient):
+                log.info(f"CMS130v14: Patient {patient.id} in numerator - creating SATISFIED card")
                 return [self._create_satisfied_card(patient, self._last_exam)]
             else:
+                log.info(f"CMS130v14: Patient {patient.id} not in numerator - creating DUE card")
                 return [self._create_due_card(patient)]
 
         except Exception as e:
-            log.error(f"CMS130v14: Error in protocol compute: {str(e)}")
+            log.error(f"CMS130v14: Error in protocol compute for event {self.event.name}: {str(e)}")
             return []
 
     def _in_initial_population(self, patient: Patient) -> bool:
         """Check if patient is in initial population (age 46-75 with eligible encounter)."""
-        return self._check_age_46_to_75(patient) and self._has_eligible_encounter_in_period(patient)
+        age_check = self._check_age_46_to_75(patient)
+        encounter_check = self._has_eligible_encounter_in_period(patient)
+        log.debug(f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}")
+        return age_check and encounter_check
 
     def _in_denominator(self, patient: Patient) -> bool:
         """
@@ -179,26 +219,35 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         - Exclude patients receiving palliative care for any part of the measurement period
         """
         if self._has_colon_exclusion(patient):
+            log.info(f"CMS130v14: Patient {patient.id} excluded due to colon exclusion")
             return False
 
         if self._has_hospice_care_in_period(patient):
+            log.info(f"CMS130v14: Patient {patient.id} excluded due to hospice care")
             return False
 
         # Check age once for age 66+ exclusions
         age = self._calculate_age(patient)
         if age is not None and age >= 66:
+            log.debug(f"CMS130v14: Patient {patient.id} is age {age} (66+), checking frailty and nursing home exclusions")
             # Exclude patients 66+ with frailty AND (advanced illness OR dementia meds)
-            if self._has_frailty_indicators(patient) and self._has_advanced_illness_or_dementia_meds(patient):
+            has_frailty = self._has_frailty_indicators(patient)
+            has_advanced_illness_or_dementia = self._has_advanced_illness_or_dementia_meds(patient)
+            if has_frailty and has_advanced_illness_or_dementia:
+                log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ with frailty and advanced illness/dementia meds")
                 self._not_applicable_reason = f"{patient.first_name} is age 66 or older with frailty and advanced illness or dementia medications and is excluded from colorectal cancer screening."
                 return False
 
             # Exclude patients 66+ living long term in nursing home
             if self._is_living_in_nursing_home(patient):
+                log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ living in nursing home")
                 return False
 
         if self._has_palliative_care_in_period(patient):
+            log.info(f"CMS130v14: Patient {patient.id} excluded due to palliative care")
             return False
 
+        log.debug(f"CMS130v14: Patient {patient.id} passed all denominator exclusion checks")
         return True
 
     def _in_numerator(self, patient: Patient) -> bool:
@@ -211,25 +260,31 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         self._last_exam = None
 
         if exam := self._check_fobt(patient):
+            log.info(f"CMS130v14: Found FOBT screening for patient {patient.id} on {exam.get('date')}")
             self._last_exam = exam
             return True
 
         if exam := self._check_fit_dna(patient):
+            log.info(f"CMS130v14: Found FIT-DNA screening for patient {patient.id} on {exam.get('date')}")
             self._last_exam = exam
             return True
 
         if exam := self._check_flexible_sigmoidoscopy(patient):
+            log.info(f"CMS130v14: Found Flexible Sigmoidoscopy for patient {patient.id} on {exam.get('date')}")
             self._last_exam = exam
             return True
 
         if exam := self._check_ct_colonography(patient):
+            log.info(f"CMS130v14: Found CT Colonography for patient {patient.id} on {exam.get('date')}")
             self._last_exam = exam
             return True
 
         if exam := self._check_colonoscopy(patient):
+            log.info(f"CMS130v14: Found Colonoscopy for patient {patient.id} on {exam.get('date')}")
             self._last_exam = exam
             return True
 
+        log.info(f"CMS130v14: No valid screening found for patient {patient.id}")
         return False
 
     def _check_fobt(self, patient: Patient) -> dict | None:
@@ -237,6 +292,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["FOBT"])
         report = self._find_lab_report(patient, FecalOccultBloodTestFobt, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found FOBT lab report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "FOBT",
@@ -249,6 +305,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["FIT-DNA"])
         report = self._find_lab_report(patient, SdnaFitTest, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found FIT-DNA lab report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "FIT-DNA",
@@ -262,6 +319,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_imaging_report(patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found Flexible Sigmoidoscopy imaging report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "Flexible sigmoidoscopy",
@@ -270,6 +328,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_referral_report(patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found Flexible Sigmoidoscopy referral report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "Flexible sigmoidoscopy",
@@ -283,6 +342,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_imaging_report(patient, CtColonography, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found CT Colonography imaging report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "CT Colonography",
@@ -291,6 +351,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_referral_report(patient, CtColonography, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found CT Colonography referral report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "CT Colonography",
@@ -304,6 +365,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_imaging_report(patient, Colonoscopy, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found Colonoscopy imaging report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "Colonoscopy",
@@ -312,6 +374,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_referral_report(patient, Colonoscopy, period_start, self.timeframe.end)
         if report:
+            log.debug(f"CMS130v14: Found Colonoscopy referral report for patient {patient.id} dated {report.original_date}")
             return {
                 "date": report.original_date,
                 "what": "Colonoscopy",
@@ -338,19 +401,24 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         try:
             if not getattr(patient, "birth_date", None):
                 self._not_applicable_reason = f"{patient.first_name} does not meet the age criteria (46-75 years) for colorectal cancer screening."
+                log.info(f"CMS130v14: Patient {patient.id} has no birth date")
                 return False
 
             import arrow
             birth_date = arrow.get(patient.birth_date)
             age_years = (self.timeframe.end - birth_date).days // 365
+            log.debug(f"CMS130v14: Patient {patient.id} age calculated as {age_years} years")
 
             if age_years < AGE_RANGE_START:
                 self._not_applicable_reason = f"{patient.first_name} is under {AGE_RANGE_START} years of age and does not meet the criteria for colorectal cancer screening."
+                log.info(f"CMS130v14: Patient {patient.id} age {age_years} is below minimum {AGE_RANGE_START}")
                 return False
             elif age_years > AGE_RANGE_END:
                 self._not_applicable_reason = f"{patient.first_name} is over {AGE_RANGE_END} years of age and does not meet the criteria for colorectal cancer screening."
+                log.info(f"CMS130v14: Patient {patient.id} age {age_years} is above maximum {AGE_RANGE_END}")
                 return False
 
+            log.debug(f"CMS130v14: Patient {patient.id} age {age_years} is within range {AGE_RANGE_START}-{AGE_RANGE_END}")
             return True
         except Exception as e:
             log.error(f"CMS130v14: Error computing age: {str(e)}")
@@ -378,15 +446,22 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 TelephoneVisits,
             ]
 
+            eligible_count = 0
             for note in notes:
                 if not note.note_type_version:
                     continue
 
                 if self._coding_in_value_set_for_note_type(note.note_type_version, visit_value_sets):
-                    return True
+                    eligible_count += 1
+                    log.debug(f"CMS130v14: Found eligible encounter for patient {patient.id}: {note.note_type_version.code}")
+
+            if eligible_count > 0:
+                log.debug(f"CMS130v14: Patient {patient.id} has {eligible_count} eligible encounter(s)")
+                return True
 
             # Optimistic rule: allow processing even without matched encounter
             # Don't set reason here as this is expected behavior
+            log.debug(f"CMS130v14: Patient {patient.id} has no eligible encounters, using optimistic rule")
             return True
         except Exception as e:
             log.error(f"CMS130v14: Error checking eligible encounters: {str(e)}")

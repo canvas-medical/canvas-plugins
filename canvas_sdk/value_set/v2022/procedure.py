@@ -4039,37 +4039,6 @@ class FluorideVarnishApplicationForChildren(ValueSet):
     }
 
 
-class CMS130v6CtColonography(ValueSet):
-    """
-    **Clinical Focus:** Special value set for CMS130v6 CT Colonography.
-
-    **Note:** This is a placeholder with dummy values. Replace with actual value set codes when available.
-
-    ** Used in:** CMS130v6
-    """
-
-    VALUE_SET_NAME = "CMS130v6 CT Colonography"
-    OID = "2.16.840.1.113883.3.464.1003.108.12.XXXX"  # TODO: Replace with actual OID
-    DEFINITION_VERSION = "20270101"
-    EXPANSION_VERSION = "eCQM Update 2027-01-01"
-
-    # Dummy values - replace with actual codes when available
-    # For now, using same codes as CtColonography
-    LOINC = {
-        "60515-4",  # CT Colon and Rectum W air contrast PR
-        "72531-7",  # CT Colon and Rectum W contrast IV and W air contrast PR
-        "79069-1",  # CT Colon and Rectum for screening WO contrast IV and W air contrast PR
-        "79071-7",  # CT Colon and Rectum WO contrast IV and W air contrast PR
-        "79101-2",  # CT Colon and Rectum for screening W air contrast PR
-        "82688-3",  # CT Colon and Rectum WO and W contrast IV and W air contrast PR
-    }
-    CPT = {
-        "74261",  # CT colonography, screening
-        "74262",  # CT colonography, diagnostic
-        "74263",  # CT colonography, with contrast
-    }
-
-
 __exports__ = (
     "BilateralMastectomy",
     "Cabg_PciProcedure",
@@ -4080,7 +4049,6 @@ __exports__ = (
     "ChemotherapyAdministration",
     "Colonoscopy",
     "CystectomyForUrologyCare",
-    "CMS130v6CtColonography",
     "DialysisServices",
     "DtapVaccineAdministered",
     "FlexibleSigmoidoscopy",
