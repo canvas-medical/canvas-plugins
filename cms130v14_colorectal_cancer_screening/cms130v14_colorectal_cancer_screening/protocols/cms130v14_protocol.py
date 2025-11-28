@@ -5,7 +5,7 @@ from typing import Any
 from django.db.models import Q
 
 from canvas_sdk.commands import ImagingOrderCommand, LabOrderCommand, ReferCommand
-from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.commands.constants import CodeSystems, ServiceProvider
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
@@ -75,7 +75,7 @@ SCREENING_LOOKBACK_YEARS = {
 }
 DISCHARGE_TO_HOME_HOSPICE_SNOMED = "428361000124107"
 DISCHARGE_TO_FACILITY_HOSPICE_SNOMED = "428371000124100"
-LOINC_SYSTEM_IDENTIFIERS = ["LOINC", "http://loinc.org"]
+LOINC_SYSTEM_IDENTIFIERS = ["LOINC", CodeSystems.LOINC]
 SNOMED_SYSTEM_IDENTIFIERS = ["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
 HOUSING_STATUS_LOINC = "71802-3"
 LIVES_IN_NURSING_HOME_SNOMED = "160734000"
