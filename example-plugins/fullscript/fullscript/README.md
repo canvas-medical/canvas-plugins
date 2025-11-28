@@ -3,7 +3,8 @@ fullscript
 
 ## Description
 
-A description of this plugin
+This plugin integrates Canvas with Fullscript, allowing healthcare providers to seamlessly prescribe supplements and manage treatment plans within the Canvas platform.
+
 
 ### Important Note!
 

@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "fullscript",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "This plugin integrates Canvas with Fullscript, allowing healthcare providers to seamlessly prescribe supplements and manage treatment plans within the Canvas platform.",
     "url_permissions": [
         {
             "url": "https://public-assets.fullscript.com/fullscript.js/3.0.1/fullscript-js.umd.min.js",
@@ -19,7 +19,7 @@
             {
                 "class": "fullscript.applications.my_application:MyApplication",
                 "name": "fullscript",
-                "description": "An Application that does xyz...",
+                "description": "Application that embeds Fullscript within Canvas",
                 "scope": "patient_specific",
                 "icon": "assets/python-logo.png"
             }
