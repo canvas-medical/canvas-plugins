@@ -12,19 +12,24 @@ This test suite focuses on:
 
 import arrow
 import pytest
-from cms125v14_breast_cancer_screening.canvas_sdk_test_utils import (
-    BillingLineItemFactory,
-    ConditionFactory,
-    create_condition_with_coding,
-    create_imaging_report_with_coding,
-    create_protocol_instance,
-    create_qualifying_visit,
-)
 from cms125v14_breast_cancer_screening.protocols.cms125v14_protocol import (
     ClinicalQualityMeasure125v14,
 )
 
-from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
+from canvas_sdk.test_utils.factories import (
+    BillingLineItemFactory,
+    ConditionFactory,
+    NoteFactory,
+    PatientFactory,
+)
+from canvas_sdk.test_utils.helpers import (
+    create_condition_with_coding,
+    create_imaging_report_with_coding,
+    create_protocol_instance,
+)
+from canvas_sdk.test_utils.helpers import (
+    create_encounter_with_billing as create_qualifying_visit,
+)
 from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
 from canvas_sdk.v1.data.medication import Medication, MedicationCoding
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride
