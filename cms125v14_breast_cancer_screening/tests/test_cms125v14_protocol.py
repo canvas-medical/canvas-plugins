@@ -2,20 +2,21 @@ from unittest.mock import Mock
 
 import arrow
 import pytest
-from cms125v14_breast_cancer_screening.canvas_sdk_test_utils import (
-    BillingLineItemFactory,
-    create_condition_with_coding,
-    create_imaging_report_with_coding,
-    create_protocol_instance,
-    create_qualifying_visit,
-)
 from cms125v14_breast_cancer_screening.protocols.cms125v14_protocol import (
     ClinicalQualityMeasure125v14,
 )
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.events import EventType
-from canvas_sdk.test_utils.factories import NoteFactory, PatientFactory
+from canvas_sdk.test_utils.factories import BillingLineItemFactory, NoteFactory, PatientFactory
+from canvas_sdk.test_utils.helpers import (
+    create_condition_with_coding,
+    create_imaging_report_with_coding,
+    create_protocol_instance,
+)
+from canvas_sdk.test_utils.helpers import (
+    create_encounter_with_billing as create_qualifying_visit,
+)
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride
 from canvas_sdk.v1.data.protocol_override import Status as ProtocolOverrideStatus
 from canvas_sdk.value_set.v2026.condition import (
