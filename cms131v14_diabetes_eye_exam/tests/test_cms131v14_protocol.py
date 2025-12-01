@@ -985,3 +985,1196 @@ def test_compute_excluded_from_denominator(
 
     effects = protocol_instance.compute()
     assert effects == ["NOT_APPLICABLE_CARD"]
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
+def test_compute_exception_handling(
+    mock_get_patient: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test compute handles exceptions gracefully."""
+    mock_get_patient.side_effect = Exception("Test exception")
+
+    effects = protocol_instance.compute()
+    assert effects == []
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_get_patient_and_condition_no_patient(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_condition: Mock,
+) -> None:
+    """Test _get_patient_and_condition when condition has no patient."""
+    mock_condition.patient = None
+    mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
+        mock_condition
+    )
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient is None
+    assert condition is None
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_diabetes_diagnosis")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_condition_diabetes")
+def test_should_remove_card_diabetes_entered_in_error_with_other_diabetes(
+    mock_is_diabetes: MagicMock,
+    mock_has_diabetes: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test _should_remove_card returns False when diabetes entered in error but other diabetes exists."""
+    mock_condition.entered_in_error = True
+    mock_is_diabetes.return_value = True
+    mock_has_diabetes.return_value = True
+
+    result = protocol_instance._should_remove_card(mock_patient, mock_condition)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_is_condition_diabetes")
+def test_should_remove_card_exception(
+    mock_is_diabetes: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test _should_remove_card handles exceptions."""
+    mock_is_diabetes.side_effect = Exception("Test exception")
+
+    result = protocol_instance._should_remove_card(mock_patient, mock_condition)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_is_condition_diabetes_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_condition: Mock,
+) -> None:
+    """Test _is_condition_diabetes handles exceptions."""
+    mock_condition_objects.filter.side_effect = Exception("Test exception")
+
+    result = protocol_instance._is_condition_diabetes(mock_condition)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_has_eligible_encounter_in_period_exception(
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_eligible_encounter_in_period handles exceptions."""
+    mock_encounter_objects.filter.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.referral.ReferralReport.objects")
+def test_referral_report_exists_exception(
+    mock_referral_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _referral_report_exists handles exceptions."""
+    mock_referral_objects.filter.side_effect = Exception("Test exception")
+
+    result = protocol_instance._referral_report_exists(
+        mock_patient,
+        arrow.get("2024-01-01").datetime,
+        arrow.get("2024-12-31").datetime,
+    )
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_get_diabetes_diagnosis_codes_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _get_diabetes_diagnosis_codes handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._get_diabetes_diagnosis_codes(mock_patient)
+    assert result == []
+
+
+def test_get_value_set_codes(
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test _get_value_set_codes retrieves codes from value set attributes."""
+
+    class MockValueSet:
+        SNOMEDCT = {"123456", "789012"}
+        ICD10CM = {"E119"}
+
+    codes = protocol_instance._get_value_set_codes(MockValueSet, "SNOMEDCT", "ICD10CM")
+    assert "123456" in codes
+    assert "789012" in codes
+    assert "E119" in codes
+
+
+def test_get_value_set_codes_no_attributes(
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test _get_value_set_codes returns empty set when no attributes exist."""
+
+    class MockValueSet:
+        pass
+
+    codes = protocol_instance._get_value_set_codes(MockValueSet, "SNOMEDCT")
+    assert codes == set()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_observations")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_device_observations(
+    mock_device_orders: MagicMock,
+    mock_device_observations: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty returns True for device observations."""
+    mock_device_orders.return_value = False
+    mock_device_observations.return_value = True
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_symptoms")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_encounters")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_diagnoses")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_observations")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_all_checks_false(
+    mock_device_orders: MagicMock,
+    mock_device_observations: MagicMock,
+    mock_frailty_diagnoses: MagicMock,
+    mock_frailty_encounters: MagicMock,
+    mock_frailty_symptoms: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty returns False when all checks fail."""
+    mock_device_orders.return_value = False
+    mock_device_observations.return_value = False
+    mock_frailty_diagnoses.return_value = False
+    mock_frailty_encounters.return_value = False
+    mock_frailty_symptoms.return_value = False
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_exception(
+    mock_device_orders: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty handles exceptions."""
+    mock_device_orders.side_effect = Exception("Test exception")
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+def test_has_frailty_device_observations_exception(
+    mock_observation_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_device_observations handles exceptions."""
+    mock_observation_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_frailty_device_observations(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_with_severity_exception(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_with_severity handles exceptions."""
+    mock_observation_exists.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_retinal_finding_with_severity_in_period(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_no_severity_in_prior_year_exception(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_no_severity_in_prior_year handles exceptions."""
+    mock_observation_exists.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_retinal_finding_no_severity_in_prior_year(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_is_age_66_plus_in_nursing_home_via_encounter(
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_in_nursing_home returns True when encounter exists."""
+    with patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects") as mock_claim_objects:
+        mock_claim_objects.filter.return_value.first.return_value = None
+        mock_encounter_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._is_age_66_plus_in_nursing_home(mock_patient, age=70)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_is_age_66_plus_in_nursing_home_exception(
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_in_nursing_home handles exceptions."""
+    mock_encounter_objects.filter.side_effect = Exception("Test exception")
+
+    result = protocol_instance._is_age_66_plus_in_nursing_home(mock_patient, age=70)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_palliative_care_in_period_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_palliative_care_in_period handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_palliative_care_in_period(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_bilateral_absence_of_eyes_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_bilateral_absence_of_eyes handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_bilateral_absence_of_eyes(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_retinopathy_diagnosis_in_period_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinopathy_diagnosis_in_period handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_retinopathy_diagnosis_in_period(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_referral_report_exists")
+def test_has_retinal_exam_in_period_exception(
+    mock_referral_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_exam_in_period handles exceptions."""
+    mock_referral_exists.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_retinal_exam_in_period(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_referral_report_exists")
+def test_has_retinal_exam_in_period_or_year_prior_exception(
+    mock_referral_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_exam_in_period_or_year_prior handles exceptions."""
+    mock_referral_exists.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_retinal_exam_in_period_or_year_prior(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+def test_observation_exists_exception(
+    mock_observation_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _observation_exists handles exceptions."""
+    mock_observation_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._observation_exists(
+        mock_patient,
+        "45755-6",
+        {"373066001"},
+        arrow.get("2024-01-01").datetime,
+        arrow.get("2024-12-31").datetime,
+    )
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_autonomous_eye_exam_in_period_exception(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_autonomous_eye_exam_in_period handles exceptions."""
+    mock_observation_exists.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_autonomous_eye_exam_in_period(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_diabetes_diagnosis_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_diabetes_diagnosis handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_diabetes_diagnosis(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_diabetes_diagnosis_overlapping_period_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_diabetes_diagnosis_overlapping_period handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_diabetes_diagnosis_overlapping_period(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_bilateral_absence_of_eyes")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_palliative_care_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_in_nursing_home")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_advanced_illness_or_dementia_meds")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_with_frailty")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_hospice_care_in_period")
+def test_in_denominator_excluded_by_nursing_home(
+    mock_has_hospice: MagicMock,
+    mock_is_frailty: MagicMock,
+    mock_has_advanced_illness: MagicMock,
+    mock_is_nursing_home: MagicMock,
+    mock_has_palliative: MagicMock,
+    mock_has_bilateral: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _in_denominator returns False when patient is age 66+ in nursing home."""
+    mock_has_hospice.return_value = False
+    mock_is_frailty.return_value = False
+    mock_has_advanced_illness.return_value = False
+    mock_is_nursing_home.return_value = True
+    mock_has_palliative.return_value = False
+    mock_has_bilateral.return_value = False
+
+    result = protocol_instance._in_denominator(mock_patient, age=70)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_bilateral_absence_of_eyes")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_palliative_care_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_in_nursing_home")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_advanced_illness_or_dementia_meds")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_with_frailty")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_hospice_care_in_period")
+def test_in_denominator_excluded_by_palliative_care(
+    mock_has_hospice: MagicMock,
+    mock_is_frailty: MagicMock,
+    mock_has_advanced_illness: MagicMock,
+    mock_is_nursing_home: MagicMock,
+    mock_has_palliative: MagicMock,
+    mock_has_bilateral: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _in_denominator returns False when patient has palliative care."""
+    mock_has_hospice.return_value = False
+    mock_is_frailty.return_value = False
+    mock_has_advanced_illness.return_value = False
+    mock_is_nursing_home.return_value = False
+    mock_has_palliative.return_value = True
+    mock_has_bilateral.return_value = False
+
+    result = protocol_instance._in_denominator(mock_patient, age=50)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_bilateral_absence_of_eyes")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_palliative_care_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_in_nursing_home")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_advanced_illness_or_dementia_meds")
+@patch.object(CMS131v14DiabetesEyeExam, "_is_age_66_plus_with_frailty")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_hospice_care_in_period")
+def test_in_denominator_excluded_by_bilateral_absence(
+    mock_has_hospice: MagicMock,
+    mock_is_frailty: MagicMock,
+    mock_has_advanced_illness: MagicMock,
+    mock_is_nursing_home: MagicMock,
+    mock_has_palliative: MagicMock,
+    mock_has_bilateral: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _in_denominator returns False when patient has bilateral absence of eyes."""
+    mock_has_hospice.return_value = False
+    mock_is_frailty.return_value = False
+    mock_has_advanced_illness.return_value = False
+    mock_is_nursing_home.return_value = False
+    mock_has_palliative.return_value = False
+    mock_has_bilateral.return_value = True
+
+    result = protocol_instance._in_denominator(mock_patient, age=50)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_symptoms")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_encounters")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_diagnoses")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_observations")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_diagnoses(
+    mock_device_orders: MagicMock,
+    mock_device_observations: MagicMock,
+    mock_frailty_diagnoses: MagicMock,
+    mock_frailty_encounters: MagicMock,
+    mock_frailty_symptoms: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty returns True for frailty diagnoses."""
+    mock_device_orders.return_value = False
+    mock_device_observations.return_value = False
+    mock_frailty_diagnoses.return_value = True
+    mock_frailty_encounters.return_value = False
+    mock_frailty_symptoms.return_value = False
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_symptoms")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_encounters")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_diagnoses")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_observations")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_encounters(
+    mock_device_orders: MagicMock,
+    mock_device_observations: MagicMock,
+    mock_frailty_diagnoses: MagicMock,
+    mock_frailty_encounters: MagicMock,
+    mock_frailty_symptoms: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty returns True for frailty encounters."""
+    mock_device_orders.return_value = False
+    mock_device_observations.return_value = False
+    mock_frailty_diagnoses.return_value = False
+    mock_frailty_encounters.return_value = True
+    mock_frailty_symptoms.return_value = False
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_symptoms")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_encounters")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_diagnoses")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_observations")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_frailty_device_orders")
+def test_is_age_66_plus_with_frailty_symptoms(
+    mock_device_orders: MagicMock,
+    mock_device_observations: MagicMock,
+    mock_frailty_diagnoses: MagicMock,
+    mock_frailty_encounters: MagicMock,
+    mock_frailty_symptoms: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _is_age_66_plus_with_frailty returns True for frailty symptoms."""
+    mock_device_orders.return_value = False
+    mock_device_observations.return_value = False
+    mock_frailty_diagnoses.return_value = False
+    mock_frailty_encounters.return_value = False
+    mock_frailty_symptoms.return_value = True
+
+    result = protocol_instance._is_age_66_plus_with_frailty(mock_patient, age=70)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.device.Device.objects")
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol.FrailtyDevice")
+def test_has_frailty_device_orders_via_dme_claim(
+    mock_frailty_device: MagicMock,
+    mock_claim_objects: MagicMock,
+    mock_device_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_device_orders returns True when DME claim exists."""
+    mock_frailty_device.HCPCSLEVELII = {"E0160", "E0161"}
+    mock_claim_objects.filter.return_value.exists.return_value = True
+    mock_device_objects.filter.return_value.exists.return_value = False
+
+    result = protocol_instance._has_frailty_device_orders(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.device.Device.objects")
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol.FrailtyDevice")
+def test_has_frailty_device_orders_no_hcpcs_attribute(
+    mock_frailty_device: MagicMock,
+    mock_claim_objects: MagicMock,
+    mock_device_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_device_orders handles case when HCPCSLEVELII attribute doesn't exist."""
+    delattr(mock_frailty_device, "HCPCSLEVELII") if hasattr(
+        mock_frailty_device, "HCPCSLEVELII"
+    ) else None
+    mock_device_objects.filter.return_value.exists.return_value = True
+
+    result = protocol_instance._has_frailty_device_orders(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+def test_has_frailty_device_observations_no_snomed_codes(
+    mock_observation_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_device_observations returns False when no SNOMED codes available."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value=set()):
+        result = protocol_instance._has_frailty_device_observations(mock_patient)
+        assert result is False
+
+
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+def test_has_frailty_device_observations_with_observation(
+    mock_observation_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_device_observations returns True when observation exists."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value={"123456"}):
+        mock_observation_objects.for_patient.return_value.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_frailty_device_observations(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_frailty_diagnoses_true(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_diagnoses returns True when frailty diagnosis exists."""
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = True
+
+    result = protocol_instance._has_frailty_diagnoses(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_has_frailty_encounters_via_snomed(
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_encounters returns True when SNOMED encounter exists."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value={"123456"}):
+        mock_encounter_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_frailty_encounters(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol.FrailtyEncounter")
+def test_has_frailty_encounters_via_cpt_claim(
+    mock_frailty_encounter: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_encounters returns True when CPT claim exists."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value=set()):
+        mock_frailty_encounter.CPT = {"99304"}
+        mock_frailty_encounter.HCPCSLEVELII = set()
+        mock_encounter_objects.filter.return_value.exists.return_value = False
+        mock_claim_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_frailty_encounters(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol.FrailtyEncounter")
+def test_has_frailty_encounters_via_hcpcs_claim(
+    mock_frailty_encounter: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_encounters returns True when HCPCS claim exists."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value=set()):
+        mock_frailty_encounter.CPT = set()
+        mock_frailty_encounter.HCPCSLEVELII = {"G0156"}
+        mock_encounter_objects.filter.return_value.exists.return_value = False
+        mock_claim_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_frailty_encounters(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol.FrailtyEncounter")
+def test_has_frailty_encounters_no_cpt_hcpcs_attributes(
+    mock_frailty_encounter: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_encounters handles case when CPT/HCPCS attributes don't exist."""
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value=set()):
+        if hasattr(mock_frailty_encounter, "CPT"):
+            delattr(mock_frailty_encounter, "CPT")
+        if hasattr(mock_frailty_encounter, "HCPCSLEVELII"):
+            delattr(mock_frailty_encounter, "HCPCSLEVELII")
+        mock_encounter_objects.filter.return_value.exists.return_value = False
+
+        result = protocol_instance._has_frailty_encounters(mock_patient)
+        assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_frailty_symptoms_true(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_symptoms returns True when frailty symptom exists."""
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = True
+
+    result = protocol_instance._has_frailty_symptoms(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_get_patient_with_condition_updated_event(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test _get_patient_and_condition returns patient and condition for CONDITION_UPDATED event."""
+    protocol_instance.event.type = EventType.CONDITION_UPDATED
+    mock_condition.patient = mock_patient
+    mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
+        mock_condition
+    )
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient == mock_patient
+    assert condition == mock_condition
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_get_patient_with_condition_resolved_event(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test _get_patient_and_condition returns patient and condition for CONDITION_RESOLVED event."""
+    protocol_instance.event.type = EventType.CONDITION_RESOLVED
+    mock_condition.patient = mock_patient
+    mock_condition_objects.filter.return_value.select_related.return_value.first.return_value = (
+        mock_condition
+    )
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient == mock_patient
+    assert condition == mock_condition
+
+
+@patch("canvas_sdk.v1.data.patient.Patient.objects")
+def test_get_patient_from_event_context(
+    mock_patient_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _get_patient_and_condition gets patient from event context."""
+    protocol_instance.event.type = EventType.OBSERVATION_CREATED
+    protocol_instance.event.context = {"patient": {"id": "patient-123"}}
+    mock_patient_objects.filter.return_value.first.return_value = mock_patient
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient == mock_patient
+    assert condition is None
+    mock_patient_objects.filter.assert_called_once_with(id="patient-123")
+
+
+@patch("canvas_sdk.v1.data.patient.Patient.objects")
+@patch.object(CMS131v14DiabetesEyeExam, "patient_id_from_target")
+def test_get_patient_from_patient_id_from_target_fallback(
+    mock_patient_id_from_target: MagicMock,
+    mock_patient_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _get_patient_and_condition uses patient_id_from_target as fallback."""
+    protocol_instance.event.type = EventType.MEDICATION_LIST_ITEM_CREATED
+    protocol_instance.event.context = {}
+    mock_patient_id_from_target.return_value = "patient-123"
+    mock_patient_objects.filter.return_value.first.return_value = mock_patient
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient == mock_patient
+    assert condition is None
+    mock_patient_id_from_target.assert_called_once()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "patient_id_from_target")
+def test_get_patient_handles_value_error_from_patient_id_from_target(
+    mock_patient_id_from_target: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test _get_patient_and_condition handles ValueError from patient_id_from_target."""
+    protocol_instance.event.type = EventType.OBSERVATION_CREATED
+    protocol_instance.event.context = {}
+    mock_patient_id_from_target.side_effect = ValueError("Event type not supported")
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient is None
+    assert condition is None
+
+
+@patch("canvas_sdk.v1.data.patient.Patient.objects")
+@patch.object(CMS131v14DiabetesEyeExam, "patient_id_from_target")
+def test_get_patient_no_patient_found_anywhere(
+    mock_patient_id_from_target: MagicMock,
+    mock_patient_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test _get_patient_and_condition returns None when patient not found in any path."""
+    protocol_instance.event.type = EventType.OBSERVATION_CREATED
+    protocol_instance.event.context = {}
+    mock_patient_id_from_target.side_effect = ValueError("Event type not supported")
+    mock_patient_objects.filter.return_value.first.return_value = None
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient is None
+    assert condition is None
+
+
+@patch("canvas_sdk.v1.data.patient.Patient.objects")
+def test_get_patient_from_context_patient_not_found(
+    mock_patient_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+) -> None:
+    """Test _get_patient_and_condition when patient ID in context but patient not found."""
+    protocol_instance.event.type = EventType.OBSERVATION_CREATED
+    protocol_instance.event.context = {"patient": {"id": "patient-123"}}
+    mock_patient_objects.filter.return_value.first.return_value = None
+
+    patient, condition = protocol_instance._get_patient_and_condition()
+    assert patient is None
+    assert condition is None
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_get_diabetes_diagnosis_codes_with_multiple_conditions_and_codings(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _get_diabetes_diagnosis_codes extracts codes from multiple conditions with multiple codings."""
+    mock_condition1 = Mock()
+    mock_coding1 = Mock()
+    mock_coding1.code = "E119"
+    mock_coding2 = Mock()
+    mock_coding2.code = "E1121"
+    mock_condition1.codings.all.return_value = [mock_coding1, mock_coding2]
+
+    mock_condition2 = Mock()
+    mock_coding3 = Mock()
+    mock_coding3.code = "E1165"
+    mock_condition2.codings.all.return_value = [mock_coding3]
+
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value = [
+        mock_condition1,
+        mock_condition2,
+    ]
+
+    result = protocol_instance._get_diabetes_diagnosis_codes(mock_patient)
+    assert "E119" in result
+    assert "E1121" in result
+    assert "E1165" in result
+    assert len(result) == 3
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_no_severity_in_prior_year_both_eyes(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_no_severity_in_prior_year returns True when both eyes have no retinopathy."""
+    mock_observation_exists.side_effect = [True, True]
+
+    result = protocol_instance._has_retinal_finding_no_severity_in_prior_year(mock_patient)
+    assert result is True
+    assert mock_observation_exists.call_count == 2
+
+
+@patch("canvas_sdk.effects.protocol_card.protocol_card.ProtocolCard.apply")
+def test_create_not_applicable_card(
+    mock_apply: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _create_not_applicable_card creates card with NOT_APPLICABLE status."""
+    mock_apply.return_value = "NOT_APPLICABLE_EFFECT"
+
+    effect = protocol_instance._create_not_applicable_card(mock_patient)
+    assert effect == "NOT_APPLICABLE_EFFECT"
+    mock_apply.assert_called_once()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_with_severity_both_eyes(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_with_severity returns True when both eyes have retinopathy."""
+    mock_observation_exists.side_effect = [True, True, False, False]
+
+    result = protocol_instance._has_retinal_finding_with_severity_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.referral.ReferralReport.objects")
+def test_referral_report_exists_with_specialty_fallback(
+    mock_referral_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _referral_report_exists uses specialty fallback when no codings match."""
+    mock_referral_objects.filter.return_value.exists.return_value = False
+    mock_referral_specialty = Mock()
+    mock_referral_specialty.exists.return_value = True
+    mock_referral_objects.filter.return_value.filter.return_value = mock_referral_specialty
+
+    result = protocol_instance._referral_report_exists(
+        mock_patient,
+        arrow.get("2024-01-01").datetime,
+        arrow.get("2024-12-31").datetime,
+    )
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_referral_report_exists")
+def test_has_retinal_exam_in_period_true(
+    mock_referral_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_exam_in_period returns True when referral report exists."""
+    mock_referral_exists.return_value = True
+
+    result = protocol_instance._has_retinal_exam_in_period(mock_patient)
+    assert result is True
+    mock_referral_exists.assert_called_once()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_referral_report_exists")
+def test_has_retinal_exam_in_period_or_year_prior_true(
+    mock_referral_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_exam_in_period_or_year_prior returns True when referral report exists."""
+    mock_referral_exists.return_value = True
+
+    result = protocol_instance._has_retinal_exam_in_period_or_year_prior(mock_patient)
+    assert result is True
+    mock_referral_exists.assert_called_once()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_palliative_care_in_period_via_assessment(
+    mock_condition_objects: MagicMock,
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_palliative_care_in_period returns True for palliative care assessment."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
+    mock_observation_exists.return_value = True
+
+    result = protocol_instance._has_palliative_care_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_palliative_care_in_period_via_encounter(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_palliative_care_in_period returns True for palliative care encounter."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
+    with (
+        patch.object(protocol_instance, "_observation_exists", return_value=False),
+        patch.object(protocol_instance, "_get_value_set_codes", return_value={"123456"}),
+    ):
+        mock_encounter_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_palliative_care_in_period(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_palliative_care_in_period_via_claim(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_palliative_care_in_period returns True for palliative care claim."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
+    with (
+        patch.object(protocol_instance, "_observation_exists", return_value=False),
+        patch.object(protocol_instance, "_get_value_set_codes", return_value=set()),
+    ):
+        mock_encounter_objects.filter.return_value.exists.return_value = False
+        mock_claim = Mock()
+        mock_claim.proc_code = "M1141"
+        mock_claim_objects.filter.return_value.first.return_value = mock_claim
+
+        result = protocol_instance._has_palliative_care_in_period(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.medication.Medication.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_advanced_illness_or_dementia_meds_dementia_meds(
+    mock_condition_objects: MagicMock,
+    mock_medication_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_advanced_illness_or_dementia_meds returns True for dementia meds."""
+    mock_condition_objects.for_patient.return_value.find.return_value.filter.return_value.filter.return_value.exists.return_value = False
+    mock_medication_objects.for_patient.return_value.committed.return_value.find.return_value.filter.return_value.exists.return_value = True
+
+    result = protocol_instance._has_advanced_illness_or_dementia_meds(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.medication.Medication.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_advanced_illness_or_dementia_meds_exception(
+    mock_condition_objects: MagicMock,
+    mock_medication_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_advanced_illness_or_dementia_meds handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_advanced_illness_or_dementia_meds(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_via_assessment(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_observation_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_hospice_care_in_period returns True for hospice care assessment."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
+    mock_encounter_objects.filter.return_value.exists.return_value = False
+    mock_observation_objects.for_patient.return_value.filter.return_value.exists.side_effect = [
+        False,
+        True,
+    ]
+
+    result = protocol_instance._has_hospice_care_in_period(mock_patient)
+    assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.observation.Observation.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_exception(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    mock_observation_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_hospice_care_in_period handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_hospice_care_in_period(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_hospice_care_in_period_via_encounter(
+    mock_condition_objects: MagicMock,
+    mock_encounter_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_hospice_care_in_period returns True for hospice encounter."""
+    mock_condition_objects.for_patient.return_value.find.return_value.active.return_value.filter.return_value.exists.return_value = False
+    with patch.object(protocol_instance, "_get_value_set_codes", return_value={"123456"}):
+        mock_encounter_objects.filter.return_value.exists.return_value = True
+
+        result = protocol_instance._has_hospice_care_in_period(mock_patient)
+        assert result is True
+
+
+@patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
+@patch("canvas_sdk.v1.data.encounter.Encounter.objects")
+def test_has_eligible_encounter_in_period_via_claim(
+    mock_encounter_objects: MagicMock,
+    mock_claim_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_eligible_encounter_in_period returns True when eligible claim exists."""
+    mock_encounter_objects.filter.return_value.first.return_value = None
+    mock_claim = Mock()
+    mock_claim.proc_code = "99385"
+    mock_claim_objects.filter.return_value.first.return_value = mock_claim
+
+    result = protocol_instance._has_eligible_encounter_in_period(mock_patient)
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_create_due_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_create_satisfied_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_numerator")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_denominator")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_initial_population")
+@patch.object(CMS131v14DiabetesEyeExam, "_should_remove_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
+def test_compute_creates_satisfied_card(
+    mock_get_patient: MagicMock,
+    mock_should_remove: MagicMock,
+    mock_in_initial: MagicMock,
+    mock_in_denominator: MagicMock,
+    mock_in_numerator: MagicMock,
+    mock_create_satisfied: MagicMock,
+    mock_create_due: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test compute returns SATISFIED card when patient is in numerator."""
+    mock_get_patient.return_value = (mock_patient, mock_condition)
+    mock_should_remove.return_value = False
+    mock_in_initial.return_value = True
+    mock_in_denominator.return_value = True
+    mock_in_numerator.return_value = True
+    mock_create_satisfied.return_value = "SATISFIED_CARD"
+
+    effects = protocol_instance.compute()
+    assert effects == ["SATISFIED_CARD"]
+    mock_create_satisfied.assert_called_once_with(mock_patient)
+    mock_create_due.assert_not_called()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_create_due_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_create_satisfied_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_numerator")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_denominator")
+@patch.object(CMS131v14DiabetesEyeExam, "_in_initial_population")
+@patch.object(CMS131v14DiabetesEyeExam, "_should_remove_card")
+@patch.object(CMS131v14DiabetesEyeExam, "_get_patient_and_condition")
+def test_compute_creates_due_card(
+    mock_get_patient: MagicMock,
+    mock_should_remove: MagicMock,
+    mock_in_initial: MagicMock,
+    mock_in_denominator: MagicMock,
+    mock_in_numerator: MagicMock,
+    mock_create_satisfied: MagicMock,
+    mock_create_due: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+    mock_condition: Mock,
+) -> None:
+    """Test compute returns DUE card when patient is not in numerator."""
+    mock_get_patient.return_value = (mock_patient, mock_condition)
+    mock_should_remove.return_value = False
+    mock_in_initial.return_value = True
+    mock_in_denominator.return_value = True
+    mock_in_numerator.return_value = False
+    mock_create_due.return_value = "DUE_CARD"
+
+    effects = protocol_instance.compute()
+    assert effects == ["DUE_CARD"]
+    mock_create_due.assert_called_once_with(mock_patient)
+    mock_create_satisfied.assert_not_called()
