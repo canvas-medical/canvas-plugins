@@ -3,12 +3,11 @@ from unittest.mock import MagicMock, Mock, patch
 
 import arrow
 import pytest
+from cms131v14_diabetes_eye_exam.protocols.cms131v14_protocol import CMS131v14DiabetesEyeExam
 
 from canvas_sdk.events import EventType
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.condition import Condition
-
-from ..protocols.cms131v14_protocol import CMS131v14DiabetesEyeExam
 
 
 @pytest.fixture
