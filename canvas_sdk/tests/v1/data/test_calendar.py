@@ -2,29 +2,25 @@
 
 import pytest
 
+from canvas_sdk.test_utils.factories import CalendarFactory
 from canvas_sdk.v1.data.calendar import Calendar, CalendarQuerySet
 
 
 @pytest.fixture(autouse=True)
-def setup_calendars() -> None:
+def setup_calendars(db: None) -> None:
     """Set up test data for calendar tests."""
     # Create test calendars with different naming patterns
-    calendar1 = Calendar(title="Dr. Smith: Office Visit", description="Office visits for Dr. Smith")
-    calendar1.save()
-
-    calendar2 = Calendar(
+    CalendarFactory.create(
+        title="Dr. Smith: Office Visit", description="Office visits for Dr. Smith"
+    )
+    CalendarFactory.create(
         title="Dr. Smith: Office Visit: Room A", description="Office visits in Room A"
     )
-    calendar2.save()
-
-    calendar3 = Calendar(title="Dr. Jones: Telemedicine", description="Telemedicine appointments")
-    calendar3.save()
-
-    calendar4 = Calendar(
+    CalendarFactory.create(title="Dr. Jones: Telemedicine", description="Telemedicine appointments")
+    CalendarFactory.create(
         title="Dr. Jones: Telemedicine: Virtual Room 1",
         description="Virtual appointments in room 1",
     )
-    calendar4.save()
 
 
 @pytest.mark.django_db
