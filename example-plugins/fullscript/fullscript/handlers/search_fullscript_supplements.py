@@ -89,8 +89,6 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
                                 "erx_quantity": units,
                                 "representative_ndc": "",
                                 "clinical_quantity_description": quantity_description,
-                                "erx_ncpdp_script_quantity_qualifier_code": "F111",  # TODO: Map properly
-                                "erx_ncpdp_script_quantity_qualifier_description": quantity_description,
                             }
                         ],
                     },
