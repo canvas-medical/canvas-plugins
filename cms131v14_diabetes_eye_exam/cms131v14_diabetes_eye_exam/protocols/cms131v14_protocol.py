@@ -122,6 +122,7 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
             if self.event.type in [
                 EventType.CONDITION_CREATED,
                 EventType.CONDITION_UPDATED,
+                EventType.CONDITION_RESOLVED,
             ]:
                 condition = Condition.objects.filter(id=target_id).select_related("patient").first()
                 if condition and condition.patient:
@@ -129,12 +130,20 @@ class CMS131v14DiabetesEyeExam(ClinicalQualityMeasure):
                 log.warning(f"CMS131v14: Could not find patient for condition {target_id}")
                 return None, None
 
-            log.warning(f"CMS131v14: Unhandled event type {self.event.type}")
-
-            # Fallback: get patient ID and query patient
-            patient_id = self.patient_id_from_target()
+            patient_id = self.event.context.get("patient", {}).get("id")
             if patient_id:
                 return Patient.objects.filter(id=patient_id).first(), None
+
+            # Fallback: try patient_id_from_target for supported event types
+            try:
+                patient_id = self.patient_id_from_target()
+                if patient_id:
+                    return Patient.objects.filter(id=patient_id).first(), None
+            except ValueError:
+                log.debug(
+                    f"CMS131v14: Event type {self.event.type} not supported by patient_id_from_target()"
+                )
+
             return None, None
 
         except Exception as e:
