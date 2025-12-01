@@ -1,4 +1,4 @@
-from canvas_sdk.effects.calendar.calendar import CalendarType, CreateCalendar
+from canvas_sdk.effects.calendar.calendar import Calendar, CalendarType
 from canvas_sdk.effects.calendar.event import (
     DaysOfWeek,
     Event,
@@ -6,7 +6,7 @@ from canvas_sdk.effects.calendar.event import (
 )
 
 __all__ = __exports__ = (
-    "CreateCalendar",
+    "Calendar",
     "CalendarType",
     "Event",
     "EventRecurrence",

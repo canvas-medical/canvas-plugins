@@ -241,15 +241,15 @@
     "UpdateBillingLineItem"
   ],
   "canvas_sdk.effects.calendar": [
+    "Calendar",
     "CalendarType",
-    "CreateCalendar",
     "DaysOfWeek",
     "Event",
     "EventRecurrence"
   ],
   "canvas_sdk.effects.calendar.calendar": [
-    "CalendarType",
-    "CreateCalendar"
+    "Calendar",
+    "CalendarType"
   ],
   "canvas_sdk.effects.calendar.event": [
     "DaysOfWeek",

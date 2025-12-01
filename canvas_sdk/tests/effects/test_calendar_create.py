@@ -1,11 +1,11 @@
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.calendar import CalendarType, CreateCalendar
+from canvas_sdk.effects.calendar import Calendar, CalendarType
 
 
 def test_create_calendar_minimal_required_fields() -> None:
-    """Test CreateCalendar with only required fields."""
-    create = CreateCalendar(provider="provider-id", type=CalendarType.Clinic)
-    payload = create.apply()
+    """Test Calendar with only required fields."""
+    calendar = Calendar(provider="provider-id", type=CalendarType.Clinic)
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -14,15 +14,15 @@ def test_create_calendar_minimal_required_fields() -> None:
 
 
 def test_create_calendar_with_all_fields() -> None:
-    """Test CreateCalendar with all fields populated."""
-    create = CreateCalendar(
+    """Test Calendar with all fields populated."""
+    calendar = Calendar(
         id="calendar-id",
         provider="provider-id",
         type=CalendarType.Clinic,
         location="Building A, Room 101",
         description="Primary care clinic calendar",
     )
-    payload = create.apply()
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -31,10 +31,10 @@ def test_create_calendar_with_all_fields() -> None:
 
 
 def test_create_calendar_with_uuid_provider() -> None:
-    """Test CreateCalendar with UUID for provider."""
+    """Test Calendar with UUID for provider."""
     provider_uuid = "12345678-1234-5678-1234-567812345678"
-    create = CreateCalendar(provider=provider_uuid, type=CalendarType.Administrative)
-    payload = create.apply()
+    calendar = Calendar(provider=provider_uuid, type=CalendarType.Administrative)
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -43,14 +43,14 @@ def test_create_calendar_with_uuid_provider() -> None:
 
 
 def test_create_calendar_with_uuid_id() -> None:
-    """Test CreateCalendar with UUID for id."""
+    """Test Calendar with UUID for id."""
     calendar_uuid = "87654321-4321-8765-4321-876543218765"
-    create = CreateCalendar(
+    calendar = Calendar(
         id=calendar_uuid,
         provider="provider-id",
         type=CalendarType.Clinic,
     )
-    payload = create.apply()
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -59,13 +59,13 @@ def test_create_calendar_with_uuid_id() -> None:
 
 
 def test_create_calendar_administrative_type() -> None:
-    """Test CreateCalendar with Administrative calendar type."""
-    create = CreateCalendar(
+    """Test Calendar with Administrative calendar type."""
+    calendar = Calendar(
         provider="provider-id",
         type=CalendarType.Administrative,
         description="Administrative meetings calendar",
     )
-    payload = create.apply()
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -74,13 +74,13 @@ def test_create_calendar_administrative_type() -> None:
 
 
 def test_create_calendar_with_location_only() -> None:
-    """Test CreateCalendar with location but no description."""
-    create = CreateCalendar(
+    """Test Calendar with location but no description."""
+    calendar = Calendar(
         provider="provider-id",
         type=CalendarType.Clinic,
         location="Telehealth",
     )
-    payload = create.apply()
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload
@@ -89,13 +89,13 @@ def test_create_calendar_with_location_only() -> None:
 
 
 def test_create_calendar_with_description_only() -> None:
-    """Test CreateCalendar with description but no location."""
-    create = CreateCalendar(
+    """Test Calendar with description but no location."""
+    calendar = Calendar(
         provider="provider-id",
         type=CalendarType.Clinic,
         description="Evening clinic hours",
     )
-    payload = create.apply()
+    payload = calendar.create()
     assert payload.type == EffectType.CALENDAR__CREATE
     assert (
         payload.payload

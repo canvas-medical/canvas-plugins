@@ -2,13 +2,14 @@
 
 import pytest
 
-from canvas_sdk.test_utils.factories import CalendarFactory
 from canvas_sdk.v1.data.calendar import Calendar, CalendarQuerySet
 
 
 @pytest.fixture(autouse=True)
 def setup_calendars(db: None) -> None:
     """Set up test data for calendar tests."""
+    from canvas_sdk.test_utils.factories import CalendarFactory
+
     # Create test calendars with different naming patterns
     CalendarFactory.create(
         title="Dr. Smith: Office Visit", description="Office visits for Dr. Smith"
