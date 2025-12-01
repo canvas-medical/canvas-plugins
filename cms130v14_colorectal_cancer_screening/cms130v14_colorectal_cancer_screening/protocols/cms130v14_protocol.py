@@ -241,7 +241,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         """Check if patient is in initial population (age 46-75 with eligible encounter)."""
         age_check = self._check_age_46_to_75(patient)
         encounter_check = self._has_eligible_encounter_in_period(patient)
-        log.debug(f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}")
+        log.info(f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}")
         return age_check and encounter_check
 
     def _in_denominator(self, patient: Patient) -> bool:
@@ -258,21 +258,26 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         - Exclude patients 66 and older who are living long term in a nursing home
         - Exclude patients receiving palliative care for any part of the measurement period
         """
+        log.debug(f"CMS130v14: Checking denominator exclusions for patient {patient.id}")
+        
         if self._has_colon_exclusion(patient):
             log.info(f"CMS130v14: Patient {patient.id} excluded due to colon exclusion")
             return False
+        log.debug(f"CMS130v14: Patient {patient.id} passed colon exclusion check")
 
         if self._has_hospice_care_in_period(patient):
             log.info(f"CMS130v14: Patient {patient.id} excluded due to hospice care")
             return False
+        log.debug(f"CMS130v14: Patient {patient.id} passed hospice care exclusion check")
 
         # Check age once for age 66+ exclusions
         age = self._calculate_age(patient)
         if age is not None and age >= 66:
-            log.debug(f"CMS130v14: Patient {patient.id} is age {age} (66+), checking frailty and nursing home exclusions")
+            log.info(f"CMS130v14: Patient {patient.id} is age {age} (66+), checking frailty and nursing home exclusions")
             # Exclude patients 66+ with frailty AND (advanced illness OR dementia meds)
             has_frailty = self._has_frailty_indicators(patient)
             has_advanced_illness_or_dementia = self._has_advanced_illness_or_dementia_meds(patient)
+            log.debug(f"CMS130v14: Patient {patient.id} age 66+: frailty={has_frailty}, advanced_illness_or_dementia={has_advanced_illness_or_dementia}")
             if has_frailty and has_advanced_illness_or_dementia:
                 log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ with frailty and advanced illness/dementia meds")
                 self._not_applicable_reason = f"{patient.first_name} is age 66 or older with frailty and advanced illness or dementia medications and is excluded from colorectal cancer screening."
@@ -282,12 +287,16 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             if self._is_living_in_nursing_home(patient):
                 log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ living in nursing home")
                 return False
+            log.debug(f"CMS130v14: Patient {patient.id} age 66+ passed frailty and nursing home exclusion checks")
+        else:
+            log.debug(f"CMS130v14: Patient {patient.id} is age {age} (<66), skipping age 66+ exclusion checks")
 
         if self._has_palliative_care_in_period(patient):
             log.info(f"CMS130v14: Patient {patient.id} excluded due to palliative care")
             return False
+        log.debug(f"CMS130v14: Patient {patient.id} passed palliative care exclusion check")
 
-        log.debug(f"CMS130v14: Patient {patient.id} passed all denominator exclusion checks")
+        log.info(f"CMS130v14: Patient {patient.id} passed all denominator exclusion checks")
         return True
 
     def _in_numerator(self, patient: Patient) -> bool:
@@ -330,6 +339,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _check_fobt(self, patient: Patient) -> dict | None:
         """Check for FOBT within 1 year."""
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["FOBT"])
+        log.debug(f"CMS130v14: Checking FOBT for patient {patient.id}: period_start={period_start.date()}, period_end={self.timeframe.end.date()}")
         report = self._find_lab_report(patient, FecalOccultBloodTestFobt, period_start, self.timeframe.end)
         if report:
             log.debug(f"CMS130v14: Found FOBT lab report for patient {patient.id} dated {report.original_date}")
@@ -338,6 +348,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 "what": "FOBT",
                 "days": SCREENING_INTERVALS_DAYS["FOBT"],
             }
+        log.debug(f"CMS130v14: No FOBT found for patient {patient.id} within 1 year lookback period")
         return None
 
     def _check_fit_dna(self, patient: Patient) -> dict | None:
@@ -1295,6 +1306,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         base_narrative = self._not_applicable_reason or f"{patient.first_name} is not eligible for colorectal cancer screening."
         narrative = f"DEBUGGING: {base_narrative}"
         
+        log.info(f"CMS130v14: Creating NOT_APPLICABLE card for patient {patient.id}: {base_narrative}")
+        
         card = ProtocolCard(
             patient_id=patient_id_str,
             key="CMS130v14",
@@ -1523,12 +1536,39 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
     def _add_ct_colonography_recommendation(self, card: ProtocolCard):
         """Add CT Colonography recommendation (Rank 4)."""
-        ct_cpt_codes = list(CtColonography.CPT)[:1] if hasattr(CtColonography, "CPT") else []
+        # Try CPT codes first (preferred for ImagingOrderCommand)
+        ct_cpt_codes = list(CtColonography.CPT)[:1] if hasattr(CtColonography, "CPT") and CtColonography.CPT else []
         if ct_cpt_codes:
             command = ImagingOrderCommand(image_code=ct_cpt_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
             recommendation = command.recommend(title="Order a CT Colonography", button="Order")
             self._add_recommendation_context(recommendation, specialties=["Radiology"])
             card.recommendations.append(recommendation)
+        else:
+            # Try LOINC codes if CPT codes are not available
+            # CT Colonography value set typically has LOINC codes
+            ct_loinc_codes = list(CtColonography.LOINC)[:1] if hasattr(CtColonography, "LOINC") and CtColonography.LOINC else []
+            if ct_loinc_codes:
+                # Use LOINC code with ImagingOrderCommand
+                command = ImagingOrderCommand(image_code=ct_loinc_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
+                recommendation = command.recommend(title="Order a CT Colonography", button="Order")
+                self._add_recommendation_context(recommendation, specialties=["Radiology"])
+                card.recommendations.append(recommendation)
+            else:
+                # Final fallback: Use ReferCommand if no codes are available
+                command = ReferCommand(
+                    service_provider=ServiceProvider(
+                        first_name="Referral",
+                        last_name="Radiology",
+                        specialty="Radiology",
+                        practice_name="Radiology Referral Network",
+                        notes="For CT Colonography screening.",
+                    ),
+                    diagnosis_codes=[SCREENING_DIAGNOSIS_CODE],
+                    include_visit_note=False,
+                )
+                recommendation = command.recommend(title="Order a CT Colonography", button="Order")
+                self._add_recommendation_context(recommendation, specialties=["Radiology"])
+                card.recommendations.append(recommendation)
 
     def _add_colonoscopy_recommendation(self, card: ProtocolCard):
         """Add Colonoscopy recommendation (Rank 5)."""
