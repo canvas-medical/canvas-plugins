@@ -264,7 +264,20 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             access_token = body.get("access_token")
             patient_id = body.get("patient_id", "")
 
-            patient = Patient.objects.get(id=patient_id)
+            try:
+                patient = Patient.objects.get(id=patient_id)
+            except Patient.DoesNotExist:
+                log.error(f"Patient with ID {patient_id} not found")
+                return [
+                    JSONResponse(
+                        {
+                            "error": "Patient not found",
+                            "details": f"Patient with ID {patient_id} not found",
+                        },
+                        status_code=HTTPStatus.BAD_REQUEST,
+                    )
+                ]
+
             fullscript_id = (
                 patient.external_identifiers.filter(system="Fullscript")
                 .values_list("value", flat=True)
@@ -382,7 +395,16 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             access_token = cached_token.get("access_token")
 
             medications_list = []
-            patient = Patient.objects.get(id=patient_id)
+
+            try:
+                patient = Patient.objects.get(id=patient_id)
+            except Patient.DoesNotExist:
+                return [
+                    JSONResponse(
+                        {"error": f"Patient with ID {patient_id} not found"},
+                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                    )
+                ]
 
             if note_id:
                 note_id = Note.objects.filter(dbid=note_id).values_list("id", flat=True).first()
@@ -501,7 +523,12 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
         """Create a Fullscript treatment plan using access token and treatment details."""
         log.info("!! Create treatment plan")
 
-        patient = Patient.objects.get(id=patient_id)
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            log.error(f"Patient with ID {patient_id} not found")
+            return {"success": False, "error": "Patient not found"}
+
         patient_fullscript_id = (
             patient.external_identifiers.filter(system="Fullscript")
             .values_list("value", flat=True)
