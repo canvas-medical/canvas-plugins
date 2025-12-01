@@ -6,7 +6,7 @@ from canvas_sdk.commands.commands.review.base import _BaseReview
 
 def test_base_review_init_subclass_raises_error_when_meta_key_missing() -> None:
     """Test that __init_subclass__ raises an error when Meta.key is missing on a review command."""
-    with pytest.raises(ImproperlyConfigured, match="must specify a unique Meta.key"):
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
 
         class ReviewWithoutKey(_BaseReview):
             class Meta:
@@ -15,7 +15,7 @@ def test_base_review_init_subclass_raises_error_when_meta_key_missing() -> None:
 
 def test_base_review_init_subclass_raises_error_when_meta_key_empty() -> None:
     """Test that __init_subclass__ raises an error when Meta.key is an empty string on a review command."""
-    with pytest.raises(ImproperlyConfigured, match="must specify a unique Meta.key"):
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
 
         class ReviewWithEmptyKey(_BaseReview):
             class Meta:

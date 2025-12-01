@@ -1,7 +1,6 @@
 import datetime
 import json
 import uuid
-from abc import ABC
 from enum import Enum
 
 import pytest
@@ -236,13 +235,13 @@ def test_init_subclass_raises_error_when_meta_key_empty() -> None:
                 key = ""
 
 
-def test_init_subclass_allows_abc_without_meta_key() -> None:
-    """Test that __init_subclass__ allows abstract base classes (ABC) to not have Meta.key."""
+def test_init__raises_error_when_abstract_class() -> None:
+    """Test that __init__ raised an error if Meta.abstract is True."""
 
     # Should not raise an error
-    class AbstractCommand(_BaseCommand, ABC):
-        pass
+    class AbstractCommand(_BaseCommand):
+        class Meta:
+            abstract = True
 
-    # Verify we can create the abstract class without errors
-    assert issubclass(AbstractCommand, _BaseCommand)
-    assert issubclass(AbstractCommand, ABC)
+    with pytest.raises(TypeError, match="Cannot instantiate abstract class 'AbstractCommand'"):
+        AbstractCommand()

@@ -1,4 +1,3 @@
-from abc import ABC
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -28,19 +27,16 @@ class ReviewMode(StrEnum):
     REVIEW_NOT_REQUIRED = "RN"
 
 
-class _BaseReview(_BaseCommand, ABC):
+class _BaseReview(_BaseCommand):
     """A base class for review commands."""
 
     class Meta:
-        key = ""
+        abstract = True
         model = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that concrete review commands have a unique key and model."""
-        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
-            raise ImproperlyConfigured(
-                f"Review command {cls.__name__!r} must specify a unique Meta.key "
-            )
+        super().__init_subclass__(**kwargs)
 
         if not hasattr(cls.Meta, "model") or cls.Meta.model is None:
             raise ImproperlyConfigured(f"Review command {cls.__name__!r} must specify Meta.model.")
