@@ -1,4 +1,3 @@
-import json
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
@@ -9,9 +8,9 @@ from canvas_sdk.commands import MedicationStatementCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
-from canvas_sdk.effects.simple_api import Response
+from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
-from canvas_sdk.v1.data import Patient, Staff
+from canvas_sdk.v1.data import Note, Patient, Staff
 from canvas_sdk.v1.data.common import ContactPointSystem
 from canvas_sdk.v1.data.patient import SexAtBirth
 from logger import log
@@ -153,13 +152,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     log.info(f"!! Token valid, returning cached access token: {existing_token}")
                     access_token = existing_token["access_token"]
 
-                    return [
-                        Response(
-                            json.dumps({"token": access_token}).encode(),
-                            status_code=HTTPStatus.OK,
-                            content_type="application/json",
-                        )
-                    ]
+                    return [JSONResponse({"token": access_token}, status_code=HTTPStatus.OK)]
             else:
                 log.info("!! No existing token, exchanging code for access token")
                 # Exchange code for access token
@@ -179,12 +172,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             if response.status_code != 200:
                 log.error(f"!! Token exchange failed: {response.text}")
                 return [
-                    Response(
-                        json.dumps(
-                            {"error": "Failed to exchange token", "details": response.text}
-                        ).encode(),
-                        status_code=HTTPStatus.BAD_REQUEST,
-                        content_type="application/json",
+                    JSONResponse(
+                        {"error": "Failed to exchange token", "details": response.text},
+                        status_code=HTTPStatus(response.status_code),
                     )
                 ]
 
@@ -194,22 +184,18 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             log.info("!! Token exchange successful")
 
             return [
-                Response(
-                    json.dumps(
-                        {"token": token_data.get("oauth", {}).get("access_token", None)}
-                    ).encode(),
-                    status_code=HTTPStatus.OK,
-                    content_type="application/json",
+                JSONResponse(
+                    {"token": token_data.get("oauth", {}).get("access_token", None)},
+                    status_code=HTTPStatus(response.status_code),
                 )
             ]
 
         except requests.RequestException as e:
             log.error(f"Token exchange error: {str(e)}")
             return [
-                Response(
-                    json.dumps({"error": str(e)}).encode(),
+                JSONResponse(
+                    {"error": str(e)},
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content_type="application/json",
                 )
             ]
 
@@ -223,10 +209,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
             if not access_token:
                 return [
-                    Response(
-                        json.dumps({"error": "Missing access token"}).encode(),
+                    JSONResponse(
+                        {"error": "Missing access token"},
                         status_code=HTTPStatus.BAD_REQUEST,
-                        content_type="application/json",
                     )
                 ]
 
@@ -244,12 +229,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             if response.status_code != 200:
                 log.error(f"!! Session grant creation failed: {response.text}")
                 return [
-                    Response(
-                        json.dumps(
-                            {"error": "Failed to create session grant", "details": response.text}
-                        ).encode(),
-                        status_code=HTTPStatus.BAD_REQUEST,
-                        content_type="application/json",
+                    JSONResponse(
+                        {"error": "Failed to create session grant", "details": response.text},
+                        status_code=HTTPStatus(response.status_code),
                     )
                 ]
 
@@ -257,20 +239,18 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             log.info("!! Session grant created successfully")
 
             return [
-                Response(
-                    json.dumps({"token": data.get("secret_token")}).encode(),
-                    status_code=HTTPStatus.OK,
-                    content_type="application/json",
+                JSONResponse(
+                    {"token": data.get("secret_token")},
+                    status_code=HTTPStatus(response.status_code),
                 )
             ]
 
         except requests.RequestException as e:
             log.error(f"!! Session grant error: {str(e)}")
             return [
-                Response(
-                    json.dumps({"error": str(e)}).encode(),
+                JSONResponse(
+                    {"error": str(e)},
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content_type="application/json",
                 )
             ]
 
@@ -299,10 +279,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 self.update_patient(access_token, patient, fullscript_id)
 
                 return [
-                    Response(
-                        json.dumps({"id": fullscript_id}).encode(),
+                    JSONResponse(
+                        {"id": fullscript_id},
                         status_code=HTTPStatus.OK,
-                        content_type="application/json",
                     )
                 ]
             else:
@@ -321,15 +300,12 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 if response.status_code != 201:
                     log.error(f"!! Get or create patient failed: {response.text}")
                     return [
-                        Response(
-                            json.dumps(
-                                {
-                                    "error": "Failed to get or create patient",
-                                    "details": response.text,
-                                }
-                            ).encode(),
-                            status_code=HTTPStatus.BAD_REQUEST,
-                            content_type="application/json",
+                        JSONResponse(
+                            {
+                                "error": "Failed to get or create patient",
+                                "details": response.text,
+                            },
+                            status_code=HTTPStatus(response.status_code),
                         )
                     ]
 
@@ -345,20 +321,18 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
                 return [
                     patient_external_identifier.create(),
-                    Response(
-                        json.dumps({"id": fullscript_patient_id}).encode(),
-                        status_code=HTTPStatus.OK,
-                        content_type="application/json",
+                    JSONResponse(
+                        {"id": fullscript_patient_id},
+                        status_code=HTTPStatus(response.status_code),
                     ),
                 ]
 
         except requests.RequestException as e:
             log.error(f"!! Get or create patient error: {str(e)}")
             return [
-                Response(
-                    json.dumps({"error": str(e)}).encode(),
+                JSONResponse(
+                    {"error": str(e)},
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content_type="application/json",
                 )
             ]
 
@@ -385,10 +359,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             if not recommendations:
                 log.info("!! No items found in treatment plan")
                 return [
-                    Response(
-                        json.dumps({"error": "No items in treatment plan"}).encode(),
+                    JSONResponse(
+                        {"error": "No items in treatment plan"},
                         status_code=HTTPStatus.BAD_REQUEST,
-                        content_type="application/json",
                     )
                 ]
 
@@ -400,10 +373,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             if not cached_token:
                 log.error("!! No cached access token found for user")
                 return [
-                    Response(
-                        json.dumps({"error": "User not authenticated with Fullscript"}).encode(),
+                    JSONResponse(
+                        {"error": "User not authenticated with Fullscript"},
                         status_code=HTTPStatus.UNAUTHORIZED,
-                        content_type="application/json",
                     )
                 ]
 
@@ -412,18 +384,21 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             medications_list = []
             patient = Patient.objects.get(id=patient_id)
 
-            if not note_id:
+            if note_id:
+                note_id = Note.objects.filter(dbid=note_id).values_list("id", flat=True).first()
+                log.info(f"!! Note retrieved or created successfully: {note_id}")
+            else:
                 note_id = patient.notes.last().id if patient.notes else None
+                log.info(f"!! Note retrieved or created successfully from patient: {note_id}")
 
             # TODO: should we create a new note if none exists?
 
             if not note_id:
                 log.error(f"!! Missing note_id: {note_id}")
                 return [
-                    Response(
-                        json.dumps({"error": "Missing note"}).encode(),
+                    JSONResponse(
+                        {"error": "Missing note"},
                         status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                        content_type="application/json",
                     )
                 ]
 
@@ -462,10 +437,14 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 format = dosage.get("format", None)
                 refill = item.get("refill", None)
 
-                product_id = f"fullscript-{variant_data.get('variant', {}).get('id', '')}"
-                product_display_name = (
-                    variant_data.get("variant", {}).get("product", {}).get("name", "")
-                )
+                product_variant = variant_data.get("variant", None)
+
+                if product_variant is None:
+                    log.error(f"!! missing 'product variant': {variant_data}")
+                    continue
+
+                product_id = f"fullscript-{product_variant.get('id', '')}"
+                product_display_name = product_variant.get("product", {}).get("name", "")
 
                 log.info(f"!! Fetching product display name: {product_display_name}")
 
@@ -488,35 +467,32 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     note_uuid=str(note_id),
                 )
 
-                medications_list.append(medication_command)
+                medications_list.append(medication_command.originate())
 
                 log.info(f"!! Successfully processed variant {variant_id}")
 
             return [
-                *[medication.originate() for medication in medications_list],
-                Response(
-                    json.dumps({"status": "ok"}).encode(),
+                *medications_list,
+                JSONResponse(
+                    {"status": "ok"},
                     status_code=HTTPStatus.OK,
-                    content_type="application/json",
                 ),
             ]
 
         except requests.RequestException as e:
             log.error(f"!! Error fetching product variant details: {str(e)}")
             return [
-                Response(
-                    json.dumps({"error": f"Failed to fetch product details: {str(e)}"}).encode(),
+                JSONResponse(
+                    {"error": f"Failed to fetch product details: {str(e)}"},
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content_type="application/json",
                 )
             ]
         except Exception as e:
             log.error(f"!! Unexpected error processing treatment plan: {str(e)}")
             return [
-                Response(
-                    json.dumps({"error": str(e)}).encode(),
+                JSONResponse(
+                    {"error": str(e)},
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content_type="application/json",
                 )
             ]
 
