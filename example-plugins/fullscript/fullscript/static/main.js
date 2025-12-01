@@ -1,13 +1,13 @@
 /* global Fullscript */
 // OAuth Configuration
 const OAUTH_CONFIG = {
-  clientId: 'DlLXo2nPWVM2OqXBICWIUbpvZEU0dnoX-caHtuZzp8A', // Replace with your actual client ID
+  clientId: window.fullscriptClientId, // Replace with your actual client ID
   redirectUri: window.location.origin + '/application/auth/patient/ZnVsbHNjcmlwdC5hcHBsaWNhdGlvbnMubXlfYXBwbGljYXRpb246TXlBcHBsaWNhdGlvbg', // Redirect back to main app
   authUrl: 'https://us-snd.fullscript.io/oauth/authorize'
 }
 
 const fullscriptClient = Fullscript({
-  publicKey: 'DlLXo2nPWVM2OqXBICWIUbpvZEU0dnoX-caHtuZzp8A',
+  publicKey: OAUTH_CONFIG.clientId,
   env: 'us-snd'
 })
 

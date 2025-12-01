@@ -17,20 +17,13 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
     def index(self) -> list[Response | Effect]:
         """Serve the Fullscript web app HTML page with templated context."""
         log.info("Fullscript app requested")
-        log.info("--------------------------------")
-
-        log.info(f"query_string: {self.request.query_string}")
-
-        query_params = dict(
-            param.split("=", 1) for param in self.request.query_string.split("&") if "=" in param
-        )
-
-        log.info(f"params: {query_params}")
+        log.info(f"params: {self.request.query_params}")
 
         context = {
-            "oauthCode": query_params.get("code", ""),
-            "patientKey": query_params.get("patient", ""),
-            "noteId": query_params.get("noteId", ""),
+            "oauthCode": self.request.query_params.get("code", ""),
+            "patientKey": self.request.query_params.get("patient", ""),
+            "noteId": self.request.query_params.get("noteId", ""),
+            "fullscriptClientId": self.secrets["FULLSCRIPT_CLIENT_ID"],
         }
 
         log.info(f"context: {context}")

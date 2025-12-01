@@ -21,11 +21,10 @@ def get_application_url(
 
 
 class MyApplication(Application):
-    """An embeddable application that can be registered to Canvas."""
+    """Fullscript Application Handler. Opens the Fullscript embed in a modal."""
 
     def on_open(self) -> Effect:
         """Handle the on_open event."""
-        # Implement this method to handle the application on_open event.
         log.info("Application opened")
         log.info(self.context)
 

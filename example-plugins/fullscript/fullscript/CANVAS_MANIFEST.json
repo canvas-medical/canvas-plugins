@@ -34,23 +34,23 @@
                 "description": "Handles Fullscript API endpoints"
             },
             {
-                "class": "fullscript.protocols.group_supplements:GroupSupplements",
+                "class": "fullscript.handlers.group_supplements:GroupSupplements",
                 "description": "group medications by fullscript code"
             },
             {
-                "class": "fullscript.protocols.search_fullscript_supplements:SearchFullscriptSupplementsForPrescribe",
+                "class": "fullscript.handlers.search_fullscript_supplements:SearchFullscriptSupplementsForPrescribe",
                 "description": "search fullscript supplements protocol for prescribe and return matching supplements"
             },
             {
-                "class": "fullscript.protocols.create_treatment_plan:CreateTreatmentPlan",
+                "class": "fullscript.handlers.create_treatment_plan:CreateTreatmentPlan",
                 "description": "create treatment plan in fullscript based on canvas prescribe"
             },
             {
-                "class": "fullscript.protocols.create_treatment_plan:CreateTreatmentPlanButton",
+                "class": "fullscript.handlers.create_treatment_plan:CreateTreatmentPlanButton",
                 "description": "Add a button to a Note to create a treatment plan"
             },
             {
-                "class": "fullscript.protocols.create_treatment_plan:LaunchFullscriptApplicationButton",
+                "class": "fullscript.handlers.create_treatment_plan:LaunchFullscriptApplicationButton",
                 "description": "Add a button to a Note to launch the Fullscript application"
             }
         ],
