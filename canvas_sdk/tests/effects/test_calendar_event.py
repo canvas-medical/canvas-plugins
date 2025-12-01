@@ -86,12 +86,12 @@ def test_create_event_with_allowed_note_types() -> None:
         title="Specialist Consultation",
         starts_at=datetime(2025, 1, 15, 10, 0, 0),
         ends_at=datetime(2025, 1, 15, 11, 0, 0),
-        allowed_note_types=["Progress Note", "SOAP Note"],
+        allowed_note_types=["100", "101"],
     ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Specialist Consultation", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": ["Progress Note", "SOAP Note"]}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Specialist Consultation", "starts_at": "2025-01-15T10:00:00", "ends_at": "2025-01-15T11:00:00", "recurrence": "", "recurrence_ends_at": null, "allowed_note_types": ["100", "101"]}}'
     )
 
 
@@ -106,12 +106,12 @@ def test_create_event_with_all_fields() -> None:
         recurrence_interval=2,
         recurrence_days=[DaysOfWeek.Tuesday, DaysOfWeek.Thursday],
         recurrence_ends_at=datetime(2025, 12, 31, 23, 59, 59),
-        allowed_note_types=["Follow-up Note"],
+        allowed_note_types=["100"],
     ).create()
     assert payload.type == EffectType.CALENDAR__EVENT__CREATE
     assert (
         payload.payload
-        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Recurring Appointment", "starts_at": "2025-01-15T13:00:00", "ends_at": "2025-01-15T14:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH", "recurrence_ends_at": "2025-12-31T23:59:59", "allowed_note_types": ["Follow-up Note"]}}'
+        == '{"data": {"event_id": null, "calendar_id": "calendar-id", "title": "Recurring Appointment", "starts_at": "2025-01-15T13:00:00", "ends_at": "2025-01-15T14:00:00", "recurrence": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH", "recurrence_ends_at": "2025-12-31T23:59:59", "allowed_note_types": ["100"]}}'
     )
 
 
