@@ -35,7 +35,7 @@ class Calendar(_BaseEffect):
         }
 
     def create(self) -> Effect:
-        """Send a CREATE effect for the calendar event."""
+        """Send a CREATE effect for the calendar."""
         self._validate_before_effect("create")
 
         return Effect(
