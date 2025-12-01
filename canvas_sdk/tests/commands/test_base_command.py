@@ -1,9 +1,11 @@
 import datetime
 import json
 import uuid
+from abc import ABC
 from enum import Enum
 
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands.base import _BaseCommand
@@ -215,3 +217,32 @@ def test_enter_in_error_raises_error_when_required_fields_not_set() -> None:
 
     with pytest.raises(ValueError, match="command_uuid"):
         cmd.enter_in_error()
+
+
+def test_init_subclass_raises_error_when_meta_key_missing() -> None:
+    """Test that __init_subclass__ raises an error when Meta.key is missing on a concrete (non-ABC) class."""
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
+
+        class CommandWithoutKey(_BaseCommand):
+            pass
+
+
+def test_init_subclass_raises_error_when_meta_key_empty() -> None:
+    """Test that __init_subclass__ raises an error when Meta.key is an empty string on a concrete class."""
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
+
+        class CommandWithEmptyKey(_BaseCommand):
+            class Meta:
+                key = ""
+
+
+def test_init_subclass_allows_abc_without_meta_key() -> None:
+    """Test that __init_subclass__ allows abstract base classes (ABC) to not have Meta.key."""
+
+    # Should not raise an error
+    class AbstractCommand(_BaseCommand, ABC):
+        pass
+
+    # Verify we can create the abstract class without errors
+    assert issubclass(AbstractCommand, _BaseCommand)
+    assert issubclass(AbstractCommand, ABC)

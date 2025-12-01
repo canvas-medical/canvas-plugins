@@ -1,5 +1,6 @@
 import json
 import re
+from abc import ABC
 from enum import EnumType
 from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
@@ -34,7 +35,7 @@ class _BaseCommand(TrackableFieldsModel):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that the command has a key and required fields."""
-        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
+        if (not hasattr(cls.Meta, "key") or not cls.Meta.key) and not issubclass(cls, ABC):
             raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify Meta.key.")
 
         if hasattr(cls.Meta, "commit_required_fields"):
