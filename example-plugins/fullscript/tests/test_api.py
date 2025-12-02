@@ -243,7 +243,7 @@ def test_exchange_token_failure() -> None:
     # Verify error response
     assert len(result) == 1
     response = result[0]
-    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
     data = json.loads(response.content.decode())
     assert "error" in data
@@ -320,7 +320,7 @@ def test_create_session_grant_failure() -> None:
     # Verify error response
     assert len(result) == 1
     response = result[0]
-    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
     data = json.loads(response.content.decode())
     assert "error" in data
@@ -463,7 +463,7 @@ def test_get_or_create_patient_api_failure() -> None:
     # Verify error response
     assert len(result) == 1
     response = result[0]
-    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 # ==================== treatment_plan_created tests ====================
