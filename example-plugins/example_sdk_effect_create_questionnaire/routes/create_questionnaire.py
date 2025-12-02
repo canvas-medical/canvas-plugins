@@ -1,8 +1,12 @@
-import yaml
+from typing import Any, cast
 
+from jsonschema import ValidationError
+
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.questionnaire import CreateQuestionnaire
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPIRoute
+from canvas_sdk.questionnaires.utils import QuestionnaireConfig
 
 # POST /plugin-io/api/example_sdk_effect_create_questionnaire/create-questionnaire
 # Headers: "Authorization <your value for 'api-key'>"
@@ -11,17 +15,17 @@ from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPIRoute
 class CreateQuestionnaireAPI(SimpleAPIRoute):
     """API endpoint that creates a questionnaire from JSON input.
 
-    This endpoint accepts JSON input describing a questionnaire and converts it
-    to YAML format before passing it to the CREATE_QUESTIONNAIRE effect.
+    This endpoint accepts JSON input describing a questionnaire
+    and creates a questionnaire using the Effect.
     """
 
     PATH = "/create-questionnaire"
 
-    def authenticate(self, credentials: APIKeyCredentials) -> bool:
+    def authenticate(self, credentials: APIKeyCredentials) -> bool:  # type: ignore[override]
         """Simple API key authentication."""
         return credentials.key == self.secrets["api-key"]
 
-    def post(self) -> list[Response]:
+    def post(self) -> list[Response | Effect]:
         """Create a questionnaire from JSON input.
 
         Expected JSON body:
@@ -29,8 +33,7 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
             "name": "Test questionnaire",
             "form_type": "QUES",
             "code_system": "INTERNAL",
-            "code": 123,
-            "active": true,
+            "code": "123",
             "can_originate_in_charting": true,
             "prologue": "Prologue of the test questionnaire",
             "display_results_in_social_history_section": true,
@@ -53,27 +56,25 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
         }
         """
         try:
-            # Get JSON body from request
-            questionnaire_data = self.request.json()
+            questionnaire_data: dict[str, Any] = cast(dict[str, Any], self.request.json())
 
-            # Validate required fields
-            required_fields = ["name", "form_type", "code_system", "code", "can_originate_in_charting", "questions"]
-            missing_fields = [field for field in required_fields if field not in questionnaire_data]
+            # Construct QuestionnaireConfig
+            questionnaire_config: QuestionnaireConfig = {
+                "name": questionnaire_data["name"],
+                "form_type": questionnaire_data["form_type"],
+                "code_system": questionnaire_data["code_system"],
+                "code": str(questionnaire_data["code"]),  # Convert to string
+                "can_originate_in_charting": questionnaire_data["can_originate_in_charting"],
+                "questions": questionnaire_data["questions"],
+            }
 
-            if missing_fields:
-                return [JSONResponse(
-                    {"error": f"Missing required fields: {', '.join(missing_fields)}"},
-                    status_code=400
-                )]
+            # Add optional fields if present
+            if "prologue" in questionnaire_data:
+                questionnaire_config["prologue"] = questionnaire_data["prologue"]
+            if "display_results_in_social_history_section" in questionnaire_data:
+                questionnaire_config["display_results_in_social_history_section"] = questionnaire_data["display_results_in_social_history_section"]
 
-            # Normalize the data structure for YAML conversion
-            normalized_data = self._normalize_questionnaire_data(questionnaire_data)
-
-            # Convert to YAML
-            questionnaire_yaml = yaml.dump(normalized_data, default_flow_style=False, sort_keys=False)
-
-            # Create the questionnaire using the effect
-            effect = CreateQuestionnaire(questionnaire_yaml=questionnaire_yaml)
+            effect = CreateQuestionnaire(questionnaire_config=questionnaire_config)
 
             return [
                 effect.apply(),
@@ -83,70 +84,17 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
                 })
             ]
 
+        except ValidationError as e:
+            return [JSONResponse(
+                {
+                    "error": "Invalid questionnaire configuration",
+                    "details": str(e)
+                },
+                status_code=400
+            )]
+
         except Exception as e:
             return [JSONResponse(
                 {"error": f"Failed to create questionnaire: {str(e)}"},
                 status_code=500
             )]
-
-    def _normalize_questionnaire_data(self, data: dict) -> dict:
-        """Normalize questionnaire data to match the expected YAML schema.
-
-        This handles:
-        - Converting code to string if it's an integer
-        - Adding default values for optional fields
-        - Filtering out fields not in the YAML schema (like 'active')
-        """
-        normalized = {
-            "name": data["name"],
-            "form_type": data["form_type"],
-            "code_system": data["code_system"],
-            "code": str(data["code"]),  # Ensure code is a string
-            "can_originate_in_charting": data["can_originate_in_charting"],
-            "questions": []
-        }
-
-        # Add optional top-level fields if present
-        if "prologue" in data:
-            normalized["prologue"] = data["prologue"]
-
-        if "display_results_in_social_history_section" in data:
-            normalized["display_results_in_social_history_section"] = data["display_results_in_social_history_section"]
-
-        # Normalize questions
-        for question in data["questions"]:
-            normalized_question = {
-                "content": question["content"],
-                "code_system": question["code_system"],
-                "code": question["code"],
-                "code_description": question.get("code_description", ""),
-                "responses_code_system": question["responses_code_system"],
-                "responses_type": question["responses_type"]
-            }
-
-            # Add optional question-level fields
-            if "display_result_in_social_history_section" in question:
-                normalized_question["display_result_in_social_history_section"] = question["display_result_in_social_history_section"]
-
-            # Add branching logic fields if present (must come before responses)
-            if "enabled_behavior" in question:
-                normalized_question["enabled_behavior"] = question["enabled_behavior"]
-
-            if "enabled_conditions" in question and question["enabled_conditions"]:
-                normalized_question["enabled_conditions"] = question["enabled_conditions"]
-
-            # Normalize responses (add responses array last)
-            normalized_responses = []
-            for response in question["responses"]:
-                normalized_response = {
-                    "name": response["name"],
-                    "code": response["code"],
-                    "code_description": response.get("code_description", ""),
-                    "value": response.get("value", "")
-                }
-                normalized_responses.append(normalized_response)
-
-            normalized_question["responses"] = normalized_responses
-            normalized["questions"].append(normalized_question)
-
-        return normalized
