@@ -2178,3 +2178,83 @@ def test_compute_creates_due_card(
     assert effects == ["DUE_CARD"]
     mock_create_due.assert_called_once_with(mock_patient)
     mock_create_satisfied.assert_not_called()
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_has_eligible_encounter_in_period")
+@patch.object(CMS131v14DiabetesEyeExam, "_has_diabetes_diagnosis_overlapping_period")
+def test_in_initial_population_no_eligible_encounter(
+    mock_has_diabetes: MagicMock,
+    mock_has_encounter: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _in_initial_population returns False when no eligible encounter."""
+    mock_has_diabetes.return_value = True
+    mock_has_encounter.return_value = False
+
+    result = protocol_instance._in_initial_population(mock_patient, age=50)
+    assert result is False
+    mock_has_diabetes.assert_called_once_with(mock_patient)
+    mock_has_encounter.assert_called_once_with(mock_patient)
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_frailty_diagnoses_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_diagnoses handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_frailty_diagnoses(mock_patient)
+    assert result is False
+
+
+@patch("canvas_sdk.v1.data.condition.Condition.objects")
+def test_has_frailty_symptoms_exception(
+    mock_condition_objects: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_frailty_symptoms handles exceptions."""
+    mock_condition_objects.for_patient.side_effect = Exception("Test exception")
+
+    result = protocol_instance._has_frailty_symptoms(mock_patient)
+    assert result is False
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_with_severity_left_eye_retinopathy_right_eye_no_retinopathy_prior(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_with_severity returns True when left eye has retinopathy and right eye has no retinopathy in prior year."""
+    mock_observation_exists.side_effect = [
+        True,  # left_eye_retinopathy
+        False,  # right_eye_retinopathy
+        False,  # left_eye_no_retinopathy_prior
+        True,  # right_eye_no_retinopathy_prior
+    ]
+
+    result = protocol_instance._has_retinal_finding_with_severity_in_period(mock_patient)
+    assert result is True
+
+
+@patch.object(CMS131v14DiabetesEyeExam, "_observation_exists")
+def test_has_retinal_finding_with_severity_right_eye_retinopathy_left_eye_no_retinopathy_prior(
+    mock_observation_exists: MagicMock,
+    protocol_instance: CMS131v14DiabetesEyeExam,
+    mock_patient: Mock,
+) -> None:
+    """Test _has_retinal_finding_with_severity returns True when right eye has retinopathy and left eye has no retinopathy in prior year."""
+    mock_observation_exists.side_effect = [
+        False,  # left_eye_retinopathy
+        True,  # right_eye_retinopathy
+        True,  # left_eye_no_retinopathy_prior
+        False,  # right_eye_no_retinopathy_prior
+    ]
+
+    result = protocol_instance._has_retinal_finding_with_severity_in_period(mock_patient)
+    assert result is True
