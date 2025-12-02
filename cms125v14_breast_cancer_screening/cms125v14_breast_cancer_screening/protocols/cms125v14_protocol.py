@@ -121,7 +121,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     ]
     NARRATIVE_STRING = "Breast Cancer Screening CMS125v14"
 
-    _on_date = None
+    _on_date: "arrow.Arrow | None" = None
     AGE_RANGE_START = 42
     AGE_RANGE_END = 74
     EXTRA_SCREENING_MONTHS = 15
@@ -140,10 +140,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         "nursing facility",
         "skilled nursing",
     )
-
-    # ─────────────────────────────────────────────────────────────────────────────
-    # Helper methods for query patterns
-    # ─────────────────────────────────────────────────────────────────────────────
 
     def _get_billing_within_timeframe(self, patient: Patient):  # type: ignore[no-untyped-def]
         """Get billing line items within the measurement period."""
@@ -213,9 +209,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                     combined_codes[system_lower].update(codes)
         return [{"system": system, "code": list(codes)} for system, codes in combined_codes.items()]
 
-    # ─────────────────────────────────────────────────────────────────────────────
-    # Event handling
-    # ─────────────────────────────────────────────────────────────────────────────
 
     def patient_id_from_target(self) -> str:
         """
@@ -258,21 +251,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return super().patient_id_from_target()
 
     def compute(self) -> list[Effect]:
-        """Compute the protocol result and return effects.
-
-        Checks for active snooze overrides and passes the snoozed state
-        to the protocol card to preserve snooze behavior set by Canvas.
-        """
-        # Get patient from event target
+        """Compute the protocol result and return effects."""
         try:
             patient_id = self.patient_id_from_target()
         except Exception as e:
             log.error(f"CMS125v14: Failed to get patient_id from target: {e}")
             return []
-
-        # Check for active snooze
-        protocol_key = self.protocol_key()
-        is_snoozed, snooze_date = self._check_snooze(patient_id, protocol_key)
 
         try:
             patient = Patient.objects.get(id=patient_id)
@@ -280,48 +264,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             log.error(f"CMS125v14: Patient not found with id: {patient_id}")
             return []
 
-        # snooze_date is already an ISO string from _check_snooze
-        return self.compute_results(patient, is_snoozed=is_snoozed, snooze_date=snooze_date)
-
-    def _check_snooze(self, patient_id: str, protocol_key: str) -> tuple[bool, str | None]:
-        """Check if this protocol is currently snoozed for the patient.
-
-        Returns (True, snooze_date) if snoozed, (False, None) otherwise.
-        snooze_date is an ISO date string (YYYY-MM-DD) or None if not snoozed.
-
-        Note: ProtocolOverride stores just the class name (e.g., 'ClinicalQualityMeasure125v14'),
-        NOT the combined key with plugin name that ProtocolCurrent uses.
-        """
-        import datetime
-
-        from django.db.models import Q
-
-        today = self.now.date()
-
-        # Check for snooze override that is:
-        # - For this protocol (using plain class name, not combined key)
-        # - is_snooze=True
-        # - Not deleted
-        # - snooze_date >= today (not expired)
-        snooze = (
-            ProtocolOverride.objects.filter(
-                patient__id=patient_id,
-                protocol_key=protocol_key,
-                is_snooze=True,
-                deleted=False,
-            )
-            .filter(Q(snooze_date__gte=today))
-            .first()
-        )
-
-        if snooze:
-            # Calculate actual snooze expiry: snooze_date + snoozed_days
-            if snooze.snooze_date and snooze.snoozed_days:
-                expiry_date = snooze.snooze_date + datetime.timedelta(days=snooze.snoozed_days)
-                return True, expiry_date.isoformat()
-            return True, snooze.snooze_date.isoformat() if snooze.snooze_date else None
-
-        return False, None
+        return self.compute_results(patient)
 
     def had_mastectomy(self, patient: Patient) -> bool:
         """Check if patient had a bilateral mastectomy or equivalent."""
@@ -375,9 +318,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         Check if patient had a qualifying visit during the measurement period.
 
-        Qualifying visits include:
+        Per CMS125v14 spec, qualifying visits include:
         - Office Visit
-        - Preventive Care Services
+        - Preventive Care Services (Established/Initial, 18+)
         - Annual Wellness Visit
         - Home Healthcare Services
         """
@@ -394,9 +337,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         Initial population: Women 42-74 years of age with a visit during the measurement period.
 
-        Note: The visit requirement only applies to CONTEXT_REPORT (HEDIS reporting).
-        For health maintenance display (protocol cards), we show the card regardless of
-        visit status - matching the behavior of the original canvas_workflow_kit implementation.
+        Per CMS125v14 spec, the initial population requires a qualifying encounter.
         """
         patient_age = patient.age_at(self.timeframe.end)
 
@@ -404,10 +345,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if not (self.AGE_RANGE_START <= patient_age <= self.AGE_RANGE_END):
             return False
 
-        # For health maintenance (protocol card display), don't require a qualifying visit.
-        # The visit requirement is only for HEDIS reporting (CONTEXT_REPORT).
-        # Since we're always in health maintenance context for protocol cards, return True.
-        return patient.sex_at_birth == "F"
+        if patient.sex_at_birth != "F":
+            return False
+
+        # Check for qualifying visit per CMS125v14 spec
+        return self.has_qualifying_visit(patient)
 
     def in_hospice_care(self, patient: Patient) -> bool:
         """
@@ -617,8 +559,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
     def get_protocol_override(self, patient: Patient) -> ProtocolOverride | None:
         """Get active protocol override (adjustment) for this patient and protocol."""
-        protocol_key = self.protocol_key()
-        return ProtocolOverride.objects.get_active_adjustment(patient, protocol_key)
+        return ProtocolOverride.objects.get_active_adjustment(patient, self.protocol_key())
 
     def in_numerator(self, patient: Patient) -> bool:
         """
@@ -670,7 +611,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 # Get the most recent mammography billing item
                 last_billing = mammography_billing.first()
                 # Get the datetime from the note (exists() guarantees first() returns non-None)
-                if last_billing.note is not None and last_billing.note.datetime_of_service:
+                if (
+                    last_billing is not None
+                    and last_billing.note is not None
+                    and last_billing.note.datetime_of_service
+                ):
                     self._on_date = arrow.get(last_billing.note.datetime_of_service)
                     return True
 
@@ -688,15 +633,13 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if imaging_reports.exists():
             last_report = imaging_reports.first()
             # exists() guarantees first() returns non-None
-            if last_report.original_date is not None:
+            if last_report is not None and last_report.original_date is not None:
                 self._on_date = arrow.get(last_report.original_date)
                 return True
 
         return False
 
-    def compute_results(
-        self, patient: Patient, is_snoozed: bool = False, snooze_date: str | None = None
-    ) -> list[Effect]:
+    def compute_results(self, patient: Patient) -> list[Effect]:
         """
         Compute the results for the protocol and return effects.
 
@@ -705,8 +648,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Args:
             patient: The patient to compute results for
-            is_snoozed: Whether the protocol is currently snoozed
-            snooze_date: ISO date string (YYYY-MM-DD) when snooze expires
 
         Returns:
             list[Effect]: Protocol cards to display in Canvas UI
@@ -728,8 +669,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                     title="Breast Cancer Screening",
                     narrative=narrative,
                     status=ProtocolCard.Status.NOT_APPLICABLE,
-                    snoozed=is_snoozed,
-                    snooze_date=snooze_date,
                     due_in=first_due,
                     can_be_snoozed=True,
                 )
@@ -756,8 +695,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 title="Breast Cancer Screening",
                 narrative=narrative,
                 status=ProtocolCard.Status.SATISFIED,
-                snoozed=is_snoozed,
-                snooze_date=snooze_date,
                 due_in=due_in_days,
                 can_be_snoozed=True,
             )
@@ -777,8 +714,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             title="Breast Cancer Screening",
             narrative=narrative,
             status=ProtocolCard.Status.DUE,
-            snoozed=is_snoozed,
-            snooze_date=snooze_date,
             due_in=-1,  # Already overdue
             recommendations=[recommendation],
             can_be_snoozed=True,
@@ -795,6 +730,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
     def _calculate_due_in_days(self, override: ProtocolOverride | None) -> int:
         """Calculate days until next screening is due."""
+        if self._on_date is None:
+            return -1  # Fallback: indicate overdue if somehow called without a date
         if override:
             # Use custom cycle from override
             return (self._on_date.shift(days=override.cycle_in_days) - self.now).days
@@ -809,6 +746,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         self, patient: Patient, due_in_days: int, stratum_text: str
     ) -> str:
         """Build narrative for satisfied protocol status."""
+        if self._on_date is None:
+            return f"{patient.first_name} is due for breast cancer screening.{stratum_text}"
         months_ago = (self.now - self._on_date).days // 30
         if months_ago == 0:
             time_phrase = "today"

@@ -224,11 +224,11 @@ class TestInitialPopulation:
         assert protocol.in_initial_population(patient) is False
 
     @pytest.mark.django_db
-    def test_female_without_qualifying_visit_included_for_health_maintenance(self) -> None:
-        """Test female patient is included without qualifying visit for health maintenance.
+    def test_female_without_qualifying_visit_excluded(self) -> None:
+        """Test female patient without qualifying visit is excluded.
 
-        The visit requirement only applies to HEDIS reporting. For health maintenance
-        display (protocol cards), patients are included regardless of visit status.
+        Per CMS125v14 spec, the initial population requires a qualifying encounter
+        during the measurement period.
         """
         timeframe_end = arrow.get("2024-12-31")
         protocol = create_protocol_instance(
@@ -238,8 +238,8 @@ class TestInitialPopulation:
         birth_date = timeframe_end.shift(years=-60).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        # No visit created - still included for health maintenance
-        assert protocol.in_initial_population(patient) is True
+        # No visit created - excluded per CMS125v14 spec
+        assert protocol.in_initial_population(patient) is False
 
 
 class TestQualifyingVisit:
@@ -1933,6 +1933,10 @@ class TestSatisfiedNarrativeTimePhrases:
         birth_date = timeframe_end.shift(years=-50).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
+        # Add qualifying visit for initial population
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
         # Mammogram on the same day as timeframe_end (today)
         today_date = timeframe_end
         create_imaging_report_with_coding(
@@ -1970,6 +1974,10 @@ class TestSatisfiedNarrativeTimePhrases:
         birth_date = timeframe_end.shift(years=-50).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
+        # Add qualifying visit for initial population
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
         # Mammogram 35 days ago (1 month ago)
         one_month_ago = timeframe_end.shift(days=-35)
         create_imaging_report_with_coding(
@@ -1988,47 +1996,6 @@ class TestSatisfiedNarrativeTimePhrases:
 
         assert data["status"] == "satisfied"
         assert "1 month ago" in data["narrative"]
-
-
-class TestSnoozeWithoutSnoozedDays:
-    """Test snooze functionality when snoozed_days is not set."""
-
-    @pytest.mark.django_db
-    def test_snooze_without_snoozed_days_uses_snooze_date(self) -> None:
-        """Test that snooze without snoozed_days falls back to snooze_date."""
-        timeframe_end = arrow.get("2024-12-31")
-        protocol = create_protocol_instance(
-            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
-        )
-
-        birth_date = timeframe_end.shift(years=-50).date()
-        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
-
-        # Create snooze override without snoozed_days
-        snooze_date = timeframe_end.shift(days=30).date()
-        ProtocolOverride.objects.create(
-            patient=patient,
-            protocol_key=protocol.protocol_key(),
-            reference_date=timeframe_end.datetime,
-            cycle_in_days=365,
-            cycle_quantity=1,
-            cycle_unit="years",
-            is_snooze=True,
-            is_adjustment=False,
-            snooze_date=snooze_date,
-            snoozed_days=0,  # No snoozed_days (0 means not set)
-            snooze_comment="",
-            narrative="",
-            deleted=False,
-            status=ProtocolOverrideStatus.ACTIVE,
-        )
-
-        is_snoozed, result_snooze_date = protocol._check_snooze(
-            str(patient.id), protocol.protocol_key()
-        )
-
-        assert is_snoozed is True
-        assert result_snooze_date == snooze_date.isoformat()
 
 
 class TestProtocolOverrideNumeratorLogic:
