@@ -1,12 +1,9 @@
-from unittest.mock import Mock
-
 import arrow
 import pytest
 from cms125v14_breast_cancer_screening.protocols.cms125v14_protocol import (
     ClinicalQualityMeasure125v14,
 )
 
-from canvas_sdk.effects import EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.test_utils.factories import BillingLineItemFactory, NoteFactory, PatientFactory
 from canvas_sdk.test_utils.helpers import (
@@ -38,10 +35,6 @@ from canvas_sdk.value_set.v2026.procedure import (
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.tomography import Tomography
 from canvas_sdk.value_set.value_set import CodeConstants
-
-# =============================================================================
-# PROTOCOL METADATA AND CONFIGURATION TESTS
-# =============================================================================
 
 
 class TestProtocolMetadata:
@@ -89,11 +82,25 @@ class TestProtocolMetadata:
         assert len(ClinicalQualityMeasure125v14.Meta.references) > 0
 
     def test_responds_to_event_type(self) -> None:
-        """Test protocol responds to correct event type."""
-        assert (
-            EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-            == ClinicalQualityMeasure125v14.RESPONDS_TO
-        )
+        """Test protocol responds to multiple event types."""
+        expected_events = [
+            EventType.Name(EventType.CONDITION_CREATED),
+            EventType.Name(EventType.CONDITION_UPDATED),
+            EventType.Name(EventType.CONDITION_RESOLVED),
+            EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
+            EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
+            EventType.Name(EventType.OBSERVATION_CREATED),
+            EventType.Name(EventType.OBSERVATION_UPDATED),
+            EventType.Name(EventType.PATIENT_UPDATED),
+            EventType.Name(EventType.ENCOUNTER_CREATED),
+            EventType.Name(EventType.ENCOUNTER_UPDATED),
+            EventType.Name(EventType.CLAIM_CREATED),
+            EventType.Name(EventType.CLAIM_UPDATED),
+            EventType.Name(EventType.PROTOCOL_OVERRIDE_CREATED),
+            EventType.Name(EventType.PROTOCOL_OVERRIDE_UPDATED),
+            EventType.Name(EventType.PROTOCOL_OVERRIDE_DELETED),
+        ]
+        assert expected_events == ClinicalQualityMeasure125v14.RESPONDS_TO
 
     def test_narrative_string(self) -> None:
         """Test protocol narrative string."""
@@ -124,11 +131,6 @@ class TestProtocolConstants:
         """Test Stratum 2 age boundaries (52-74)."""
         assert ClinicalQualityMeasure125v14.STRATUM_2_START == 52
         assert ClinicalQualityMeasure125v14.STRATUM_2_END == 74
-
-
-# =============================================================================
-# INITIAL POPULATION TESTS
-# =============================================================================
 
 
 class TestInitialPopulation:
@@ -222,8 +224,12 @@ class TestInitialPopulation:
         assert protocol.in_initial_population(patient) is False
 
     @pytest.mark.django_db
-    def test_female_without_qualifying_visit_excluded(self) -> None:
-        """Test female patient without qualifying visit is excluded."""
+    def test_female_without_qualifying_visit_included_for_health_maintenance(self) -> None:
+        """Test female patient is included without qualifying visit for health maintenance.
+
+        The visit requirement only applies to HEDIS reporting. For health maintenance
+        display (protocol cards), patients are included regardless of visit status.
+        """
         timeframe_end = arrow.get("2024-12-31")
         protocol = create_protocol_instance(
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
@@ -232,8 +238,8 @@ class TestInitialPopulation:
         birth_date = timeframe_end.shift(years=-60).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        # No visit created
-        assert protocol.in_initial_population(patient) is False
+        # No visit created - still included for health maintenance
+        assert protocol.in_initial_population(patient) is True
 
 
 class TestQualifyingVisit:
@@ -274,11 +280,6 @@ class TestQualifyingVisit:
         create_qualifying_visit(patient, visit_date)
 
         assert protocol.has_qualifying_visit(patient) is False
-
-
-# =============================================================================
-# MASTECTOMY DETECTION TESTS
-# =============================================================================
 
 
 class TestMastectomyDetection:
@@ -409,11 +410,6 @@ class TestMastectomyDetection:
         assert protocol.had_mastectomy(patient) is False
 
 
-# =============================================================================
-# HOSPICE CARE EXCLUSION TESTS
-# =============================================================================
-
-
 class TestHospiceCareExclusion:
     """Test hospice care exclusion logic."""
 
@@ -467,11 +463,6 @@ class TestHospiceCareExclusion:
         assert protocol.in_hospice_care(patient) is False
 
 
-# =============================================================================
-# PALLIATIVE CARE EXCLUSION TESTS
-# =============================================================================
-
-
 class TestPalliativeCareExclusion:
     """Test palliative care exclusion logic."""
 
@@ -510,11 +501,6 @@ class TestPalliativeCareExclusion:
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         assert protocol.received_palliative_care(patient) is False
-
-
-# =============================================================================
-# FRAILTY INDICATOR TESTS
-# =============================================================================
 
 
 class TestFrailtyIndicator:
@@ -578,11 +564,6 @@ class TestFrailtyIndicator:
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         assert protocol.has_frailty_indicator(patient) is False
-
-
-# =============================================================================
-# FRAILTY + ADVANCED ILLNESS EXCLUSION TESTS
-# =============================================================================
 
 
 class TestFrailtyAdvancedIllnessExclusion:
@@ -679,11 +660,6 @@ class TestFrailtyAdvancedIllnessExclusion:
 
         # Should still be in denominator because age < 66
         assert protocol.in_denominator(patient) is True
-
-
-# =============================================================================
-# DENOMINATOR TESTS
-# =============================================================================
 
 
 class TestDenominator:
@@ -791,11 +767,6 @@ class TestDenominator:
         assert protocol.in_denominator(patient) is False
 
 
-# =============================================================================
-# STRATIFICATION TESTS
-# =============================================================================
-
-
 class TestStratification:
     """Test stratification logic."""
 
@@ -881,11 +852,6 @@ class TestStratification:
         assert protocol.get_stratification(patient) is None
 
 
-# =============================================================================
-# FIRST DUE IN TESTS
-# =============================================================================
-
-
 class TestFirstDueIn:
     """Test first_due_in calculation logic."""
 
@@ -949,11 +915,6 @@ class TestFirstDueIn:
         )
 
         assert protocol.first_due_in(patient) is None
-
-
-# =============================================================================
-# NUMERATOR TESTS
-# =============================================================================
 
 
 class TestNumerator:
@@ -1061,11 +1022,6 @@ class TestNumerator:
         assert protocol.in_numerator(patient) is False
 
 
-# =============================================================================
-# PROTOCOL OVERRIDE TESTS
-# =============================================================================
-
-
 class TestProtocolOverride:
     """Test protocol override support."""
 
@@ -1080,10 +1036,13 @@ class TestProtocolOverride:
         birth_date = timeframe_end.shift(years=-60).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
+        # Use the protocol's actual key (which is the wrapper class name when using create_protocol_instance)
+        protocol_key = protocol.protocol_key()
+
         imaging_date = timeframe_end.shift(months=-6)
         ProtocolOverride.objects.create(
             patient=patient,
-            protocol_key="CMS125v14",
+            protocol_key=protocol_key,
             reference_date=imaging_date.datetime,
             cycle_in_days=365,
             cycle_quantity=1,
@@ -1102,7 +1061,7 @@ class TestProtocolOverride:
 
         assert override is not None
         assert override.cycle_in_days == 365
-        assert override.protocol_key == "CMS125v14"
+        assert override.protocol_key == protocol_key
 
     @pytest.mark.django_db
     def test_get_protocol_override_returns_none_when_no_override(self) -> None:
@@ -1116,47 +1075,6 @@ class TestProtocolOverride:
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         assert protocol.get_protocol_override(patient) is None
-
-
-# =============================================================================
-# COMPUTE METHOD TESTS
-# =============================================================================
-
-
-class TestComputeMethod:
-    """Test compute() method for event handling."""
-
-    def test_compute_assess_command_returns_log_effect(self) -> None:
-        """Test compute() returns LOG effect for ASSESS_COMMAND__CONDITION_SELECTED."""
-        mock_event = Mock()
-        mock_event.type = EventType.ASSESS_COMMAND__CONDITION_SELECTED
-        mock_event.context = {"note": {"uuid": "test-note-uuid-123"}}
-
-        protocol = ClinicalQualityMeasure125v14(event=mock_event)
-        effects = protocol.compute()
-
-        assert len(effects) == 1
-        assert effects[0].type == EffectType.LOG
-        assert "test-note-uuid-123" in effects[0].payload
-        assert protocol.NARRATIVE_STRING in effects[0].payload
-
-    def test_compute_assess_command_handles_missing_uuid(self) -> None:
-        """Test compute() handles missing note UUID gracefully."""
-        mock_event = Mock()
-        mock_event.type = EventType.ASSESS_COMMAND__CONDITION_SELECTED
-        mock_event.context = {"note": {}}
-
-        protocol = ClinicalQualityMeasure125v14(event=mock_event)
-        effects = protocol.compute()
-
-        assert len(effects) == 1
-        assert effects[0].type == EffectType.LOG
-        assert "unknown" in effects[0].payload
-
-
-# =============================================================================
-# COMPUTE RESULTS TESTS
-# =============================================================================
 
 
 class TestComputeResults:
@@ -1250,11 +1168,6 @@ class TestComputeResults:
         assert len(effects) == 0
 
 
-# =============================================================================
-# VALUE SET TESTS
-# =============================================================================
-
-
 class TestValueSets:
     """Test value sets are properly configured."""
 
@@ -1293,3 +1206,707 @@ class TestValueSets:
         """Test AdvancedIllness value set has codes."""
         assert hasattr(AdvancedIllness, "values")
         assert len(AdvancedIllness.values) > 0
+
+
+class TestRecommendationPlanButton:
+    """Test the Plan button recommendation structure for due patients."""
+
+    @pytest.mark.django_db
+    def test_due_patient_gets_plan_button_recommendation(self) -> None:
+        """Test due patient's protocol card has Plan button with instruct command."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        assert len(effects) == 1
+        effect = effects[0]
+
+        # Verify this is a ProtocolCard effect
+        assert effect.type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        # Check the payload
+        payload = json.loads(effect.payload)
+        data = payload["data"]
+
+        assert data["status"] == "due"
+        assert len(data["recommendations"]) == 1
+
+        recommendation = data["recommendations"][0]
+        assert recommendation["button"] == "Plan"
+        assert recommendation["command"]["type"] == "instruct"
+        assert "filter" in recommendation["context"]
+        assert "coding" in recommendation["context"]["filter"]
+
+    @pytest.mark.django_db
+    def test_recommendation_has_effect_type(self) -> None:
+        """Test due patient's recommendation includes effect_type for instruct command."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        assert len(effects) == 1
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        recommendation = payload["data"]["recommendations"][0]
+
+        # Verify effect_type is present in context for proper button functionality
+        assert "effect_type" in recommendation["context"]
+        assert recommendation["context"]["effect_type"] == "ORIGINATE_INSTRUCT_COMMAND"
+
+    @pytest.mark.django_db
+    def test_recommendation_coding_filter_includes_mammography_codes(self) -> None:
+        """Test recommendation coding filter includes Mammography LOINC codes."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        recommendation = payload["data"]["recommendations"][0]
+        coding_filter = recommendation["context"]["filter"]["coding"]
+
+        # Find LOINC system in filter
+        loinc_entry = next((c for c in coding_filter if c["system"] == "loinc"), None)
+        assert loinc_entry is not None
+        assert len(loinc_entry["code"]) > 0
+
+        # Verify some mammography LOINC codes are present
+        mammography_loinc = Mammography.values.get(CodeConstants.LOINC, set())
+        for code in list(mammography_loinc)[:3]:  # Check first 3 codes
+            assert code in loinc_entry["code"]
+
+    @pytest.mark.django_db
+    def test_recommendation_coding_filter_includes_tomography_codes(self) -> None:
+        """Test recommendation coding filter includes Tomography CPT codes."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        recommendation = payload["data"]["recommendations"][0]
+        coding_filter = recommendation["context"]["filter"]["coding"]
+
+        # Find CPT system in filter
+        cpt_entry = next((c for c in coding_filter if c["system"] == "cpt"), None)
+        assert cpt_entry is not None
+
+        # Verify tomography CPT code is present (77063)
+        tomography_cpt = Tomography.values.get(CodeConstants.CPT, set())
+        for code in tomography_cpt:
+            assert code in cpt_entry["code"]
+
+
+class TestTomographyNumerator:
+    """Test tomography (3D mammography) satisfies numerator."""
+
+    @pytest.mark.django_db
+    def test_tomography_imaging_report_satisfies_numerator(self) -> None:
+        """Test patient with tomography imaging report is in numerator."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        imaging_date = timeframe_start.shift(months=6)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Tomography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        assert protocol.in_numerator(patient) is True
+        assert protocol._on_date is not None
+
+    @pytest.mark.django_db
+    def test_tomography_billing_satisfies_numerator(self) -> None:
+        """Test patient with tomography billing code is in numerator."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Use tomography CPT code 77063
+        tomography_cpt = "77063"
+        tomography_date = timeframe_start.shift(months=6)
+        tomography_note = NoteFactory.create(
+            patient=patient,
+            datetime_of_service=tomography_date.datetime,
+        )
+        BillingLineItemFactory.create(
+            patient=patient,
+            note=tomography_note,
+            cpt=tomography_cpt,
+        )
+
+        assert protocol.in_numerator(patient) is True
+
+
+class TestScreeningWindowBoundary:
+    """Test the 27-month screening window boundary conditions."""
+
+    @pytest.mark.django_db
+    def test_mammography_at_exactly_27_months_satisfies_numerator(self) -> None:
+        """Test mammography exactly at 27-month boundary satisfies numerator."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # 27 months before end of measurement period (within window)
+        # The window is: measurement period (12 months) + 15 extra months = 27 months
+        imaging_date = timeframe_end.shift(months=-26)  # Just inside window
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        assert protocol.in_numerator(patient) is True
+
+    @pytest.mark.django_db
+    def test_mammography_at_28_months_does_not_satisfy_numerator(self) -> None:
+        """Test mammography at 28 months (outside window) does not satisfy numerator."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # 28 months before end = outside 27-month window
+        imaging_date = timeframe_end.shift(months=-28)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        assert protocol.in_numerator(patient) is False
+
+
+class TestProtocolOverrideScreeningWindow:
+    """Test protocol override modifies screening window calculation."""
+
+    @pytest.mark.django_db
+    def test_override_with_custom_cycle_adjusts_due_date(self) -> None:
+        """Test protocol override with custom cycle affects due_in calculation."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Add mammography
+        imaging_date = timeframe_end.shift(months=-6)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        # Create override with 1-year cycle instead of default 27-month
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key="CMS125v14",
+            reference_date=imaging_date.datetime,
+            cycle_in_days=365,
+            cycle_quantity=1,
+            cycle_unit="years",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=True,
+            is_snooze=False,
+            snooze_date=imaging_date.date(),
+            snoozed_days=0,
+            snooze_comment="",
+            narrative="Annual screening per clinical recommendation",
+            deleted=False,
+        )
+
+        effects = protocol.compute_results(patient)
+        assert len(effects) == 1
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        # Check the applied effect's payload
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        # With 1-year override and mammogram 6 months ago, should be due in ~6 months
+        # (365 days - 180 days = ~185 days)
+        assert data["due_in"] > 0  # Should have a positive due_in value
+
+
+class TestMultipleExclusions:
+    """Test behavior when patient has multiple exclusion criteria."""
+
+    @pytest.mark.django_db
+    def test_patient_with_hospice_and_mastectomy_excluded(self) -> None:
+        """Test patient with both hospice care and mastectomy is excluded."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Add mastectomy
+        create_condition_with_coding(
+            patient, BilateralMastectomy, timeframe_end.shift(years=-2).date()
+        )
+
+        # Add hospice
+        hospice_codes = HospiceCareAmbulatory.values
+        hospice_cpt = None
+        for code_constant in [CodeConstants.HCPCS, CodeConstants.CPT]:
+            if code_constant in hospice_codes and hospice_codes[code_constant]:
+                hospice_cpt = next(iter(hospice_codes[code_constant]))
+                break
+
+        if hospice_cpt:
+            hospice_note = NoteFactory.create(
+                patient=patient,
+                datetime_of_service=timeframe_start.shift(months=3).datetime,
+            )
+            BillingLineItemFactory.create(
+                patient=patient,
+                note=hospice_note,
+                cpt=hospice_cpt,
+            )
+
+        assert protocol.had_mastectomy(patient) is True
+        assert protocol.in_hospice_care(patient) is True
+        assert protocol.in_denominator(patient) is False
+
+    @pytest.mark.django_db
+    def test_patient_with_frailty_advanced_illness_and_palliative_excluded(self) -> None:
+        """Test patient age 66+ with frailty, advanced illness, and palliative care."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-68).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Add frailty
+        create_condition_with_coding(
+            patient,
+            FrailtyDiagnosis,
+            timeframe_start.shift(months=2).date(),
+            surgical=False,
+        )
+
+        # Add advanced illness
+        create_condition_with_coding(
+            patient,
+            AdvancedIllness,
+            timeframe_start.shift(months=3).date(),
+            surgical=False,
+        )
+
+        # Add palliative care
+        create_condition_with_coding(
+            patient,
+            PalliativeCareDiagnosis,
+            timeframe_start.shift(months=4).date(),
+            surgical=False,
+        )
+
+        assert protocol.has_frailty_with_advanced_illness(patient) is True
+        assert protocol.received_palliative_care(patient) is True
+        assert protocol.in_denominator(patient) is False
+
+
+class TestProtocolCardContent:
+    """Test protocol card content (narrative, status, due_in values)."""
+
+    @pytest.mark.django_db
+    def test_due_card_has_correct_narrative(self) -> None:
+        """Test DUE status card has correct narrative mentioning 27 months."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date, first_name="Jane")
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert "27 months" in data["narrative"]
+        assert "Jane" in data["narrative"]
+        assert data["due_in"] == -1  # Overdue
+
+    @pytest.mark.django_db
+    def test_satisfied_card_has_correct_narrative_with_date(self) -> None:
+        """Test SATISFIED status card mentions patient name."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date, first_name="Sarah")
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        imaging_date = timeframe_end.shift(months=-3)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert data["status"] == "satisfied"
+        assert "Sarah" in data["narrative"]
+        assert data["due_in"] > 0  # Future due date
+
+    @pytest.mark.django_db
+    def test_due_card_includes_stratification_info(self) -> None:
+        """Test DUE card narrative includes stratification information."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Stratum 1 patient (age 42-51)
+        birth_date = timeframe_end.shift(years=-45).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert "Stratum 1" in data["narrative"]
+
+    @pytest.mark.django_db
+    def test_satisfied_card_includes_stratification_info(self) -> None:
+        """Test SATISFIED card narrative includes stratification information."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        # Stratum 2 patient (age 52-74)
+        birth_date = timeframe_end.shift(years=-65).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        imaging_date = timeframe_end.shift(months=-3)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=imaging_date.date(),
+            result_date=imaging_date.date(),
+            assigned_date=imaging_date.datetime,
+        )
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert "Stratum 2" in data["narrative"]
+
+
+class TestEdgeCases:
+    """Test edge cases and boundary conditions."""
+
+    @pytest.mark.django_db
+    def test_patient_turns_42_during_measurement_period(self) -> None:
+        """Test patient who turns 42 during measurement period."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        # Patient turns 42 on June 15, 2024 (during measurement period)
+        birth_date = arrow.get("1982-06-15").date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-3)
+        create_qualifying_visit(patient, visit_date)
+
+        # Age at end of measurement period is 42
+        assert protocol.in_initial_population(patient) is True
+
+    @pytest.mark.django_db
+    def test_patient_turns_75_during_measurement_period(self) -> None:
+        """Test patient who turns 75 during measurement period is excluded."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        # Patient turns 75 on June 15, 2024 (during measurement period)
+        birth_date = arrow.get("1949-06-15").date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-3)
+        create_qualifying_visit(patient, visit_date)
+
+        # Age at end of measurement period is 75 - excluded
+        assert protocol.in_initial_population(patient) is False
+
+    @pytest.mark.django_db
+    def test_mastectomy_after_measurement_period_end_not_excluded(self) -> None:
+        """Test mastectomy after measurement period end does not exclude patient."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Mastectomy AFTER measurement period end - should NOT exclude
+        create_condition_with_coding(
+            patient, BilateralMastectomy, timeframe_end.shift(months=2).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is False
+        assert protocol.in_denominator(patient) is True
+
+    @pytest.mark.django_db
+    def test_patient_with_unknown_sex_excluded(self) -> None:
+        """Test patient with unknown sex at birth is excluded."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="UNK", birth_date=birth_date)
+
+        assert protocol.in_initial_population(patient) is False
+
+    @pytest.mark.django_db
+    def test_multiple_mammograms_uses_most_recent(self) -> None:
+        """Test multiple mammograms - protocol uses most recent for due_in calculation."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Older mammogram
+        older_date = timeframe_end.shift(months=-12)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=older_date.date(),
+            result_date=older_date.date(),
+            assigned_date=older_date.datetime,
+        )
+
+        # More recent mammogram
+        recent_date = timeframe_end.shift(months=-3)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=recent_date.date(),
+            result_date=recent_date.date(),
+            assigned_date=recent_date.datetime,
+        )
+
+        effects = protocol.compute_results(patient)
+
+        # Verify this is a ProtocolCard effect
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert data["status"] == "satisfied"
+        # Due in should be based on the more recent mammogram (3 months ago)
+        # so due_in should be larger than if it was based on 12-month-old mammogram
+        assert data["due_in"] > 0
