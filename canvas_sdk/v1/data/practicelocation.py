@@ -159,6 +159,7 @@ class PracticeLocationContactPoint(IdentifiableModel):
 __exports__ = (
     "PracticeLocationPOS",
     "PracticeLocation",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "PracticeLocationAddress",
 )
