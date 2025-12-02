@@ -1,6 +1,5 @@
 from ..value_set import ValueSet
 
-
 class EstimatedGestationalAgeAtDelivery(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to describe concepts of assessment for estimated gestational age at delivery.
@@ -24,10 +23,9 @@ class EstimatedGestationalAgeAtDelivery(ValueSet):
         "49051-6",  # Gestational age in weeks
     }
 
-
 class NonInvasiveOxygenTherapy(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for oxygen therapies not associated with invasive mechanical ventilation.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for oxygen therapies not associated with invasive mechanical ventilation
 
     **Data Element Scope:** This value set may use a model element related to Assessment
 
@@ -98,7 +96,6 @@ class NonInvasiveOxygenTherapy(ValueSet):
         "722742002",  # Breathing room air (finding)
     }
 
-
 class EmergencyDepartmentEvaluation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of an assessment performed in the emergency department.
@@ -132,7 +129,6 @@ class EmergencyDepartmentEvaluation(ValueSet):
         "83818-5",  # Attending Emergency department Note
     }
 
-
 class TobaccoUseScreening(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments to screen for tobacco use.
@@ -156,7 +152,6 @@ class TobaccoUseScreening(ValueSet):
         "72166-2",  # Tobacco smoking status
     }
 
-
 class FallsScreening(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments using a falls screening tool.
@@ -179,7 +174,6 @@ class FallsScreening(ValueSet):
         "59454-9",  # History of falling; immediate or within 3 months [Morse Fall Scale]
         "73830-2",  # Fall risk assessment
     }
-
 
 class StandardizedToolsScoreForAssessmentOfCognition(ValueSet):
     """
@@ -208,7 +202,6 @@ class StandardizedToolsScoreForAssessmentOfCognition(ValueSet):
         "72233-0",  # Total score [Mini-Cog]
     }
 
-
 class StandardizedPainAssessmentTool(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for assessments using pain-focused tools or instruments to quantify pain intensity.
@@ -233,7 +226,6 @@ class StandardizedPainAssessmentTool(ValueSet):
         "77565-0",  # Pain interference score [BPI Short Form]
     }
 
-
 class Phq9AndPhq9mTools(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for the assessments of PHQ 9 and PHQ 9M resulting in a completed depression assessment scores for adults and adolescents.
@@ -254,7 +246,6 @@ class Phq9AndPhq9mTools(ValueSet):
         "44261-6",  # Patient Health Questionnaire 9 item (PHQ-9) total score [Reported]
         "89204-2",  # Patient Health Questionnaire-9: Modified for Teens total score [Reported.PHQ.Teen]
     }
-
 
 class AbnormalPresentation(ValueSet):
     """
@@ -390,7 +381,6 @@ class AbnormalPresentation(ValueSet):
         "8014007",  # Brow presentation of fetus (disorder)
     }
 
-
 class HistoryOfAtrialAblation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a situation of a personal history of an atrial ablation.
@@ -412,7 +402,6 @@ class HistoryOfAtrialAblation(ValueSet):
         "429508000",  # History of ablation of atrioventricular node (situation)
         "429756009",  # History of radiofrequency ablation operation on left atrium for arrhythmia (situation)
     }
-
 
 class MalnutritionRiskScreening(ValueSet):
     """
@@ -437,7 +426,6 @@ class MalnutritionRiskScreening(ValueSet):
         "98972-3",  # Final screening NRS_2002
     }
 
-
 class NutritionAssessment(ValueSet):
     """
     **Clinical Focus:** This set of values indicates that a nutrition assessment was completed by a health professional.
@@ -461,7 +449,6 @@ class NutritionAssessment(ValueSet):
         "75303-8",  # Nutrition assessment Narrative
         "75304-6",  # Nutrition status observation panel
     }
-
 
 __exports__ = (
     "EstimatedGestationalAgeAtDelivery",
