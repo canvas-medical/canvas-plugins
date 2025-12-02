@@ -7,10 +7,18 @@
     "protocols": [
       {
         "class": "cms125v14_breast_cancer_screening.protocols.cms125v14_protocol:ClinicalQualityMeasure125v14",
-        "description": "Breast Cancer Screening protocol - monitors mammography screening compliance for women aged 42-74",
+        "description": "Breast Cancer Screening protocol - CMS125v14 Clinical Quality Measure",
         "data_access": {
-          "event": "ASSESS_COMMAND__CONDITION_SELECTED",
-          "read": ["patients", "conditions", "billing_line_items", "imaging_reports", "medications", "coverages", "protocol_overrides"],
+          "read": [
+            "patients",
+            "conditions",
+            "billing_line_items",
+            "imaging_reports",
+            "medications",
+            "coverages",
+            "protocol_overrides",
+            "encounters"
+          ],
           "write": []
         },
         "meta": {
@@ -22,11 +30,11 @@
           "types": ["CQM"],
           "authors": ["National Committee for Quality Assurance"],
           "references": [
-            "American Cancer Society. 2010. Cancer Facts & Figures 2010. Atlanta: American Cancer Society.",
-            "National Cancer Institute. 2010. \"Breast Cancer Screening.\" http://www.cancer.gov/cancertopics/pdq/screening/breast/healthprofessional",
-            "National Business Group on Health. 2011. Pathways to Managing Cancer in the Workplace. Washington: National Business Group on Health.",
-            "U.S. Preventive Services Task Force (USPSTF). 2009. 1) \"Screening for breast cancer: U.S. Preventive Services Task Force recommendation statement.\" 2) \"December 2009 addendum.\" Ann Intern Med 151(10):716-726.",
-            "BreastCancer.org. 2012. U.S. Breast Cancer Statistics. http://www.breastcancer.org/symptoms/understand_bc/statistics.jsp"
+            "American Cancer Society. (2017). Breast Cancer Facts & Figures 2017-2018. Retrieved February 8, 2019, from https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/breast-cancer-facts-and-figures/breast-cancer-facts-and-figures-2017-2018.pdf",
+            "American College of Radiology (ACR). (2017). ACR Appropriateness Criteria: Breast Cancer Screening. Retrieved from https://acsearch.acr.org/docs/70910/Narrative/",
+            "National Comprehensive Cancer Network (NCCN). (2021). Breast Cancer Screening and Diagnosis. Retrieved from https://www.nccn.org/professionals/physician_gls/pdf/breast-screening.pdf",
+            "Noone, A.M., Howlader, N., Krapcho, M., Miller, D., Brest, A., Yu, M., Ruhl, J., Tatalovich, Z., Mariotto, A., Lewis, D.R., Chen, H.S., Feuer, E.J., Cronin, K.A. (eds). (2018). SEER Cancer Statistics Review, 1975-2015. National Cancer Institute. Bethesda, MD. Retrieved February 8, 2019, from https://seer.cancer.gov/csr/1975_2015/",
+            "U.S. Preventive Services Task Force (2024). Screening for Breast Cancer: U.S. Preventive Services Task Force Recommendation Statement. JAMA, 2024;331(22):1918-1930. doi:10.1001/jama.2024.5534."
           ]
         }
       }

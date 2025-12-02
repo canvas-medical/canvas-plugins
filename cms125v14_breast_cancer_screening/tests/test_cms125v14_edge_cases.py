@@ -1,15 +1,3 @@
-"""
-Edge case and boundary condition tests for CMS125v14 Breast Cancer Screening Protocol.
-
-This test suite focuses on:
-- Age boundary conditions
-- Timeframe edge cases
-- Multiple exclusion combinations
-- Nursing home detection
-- Dementia medication detection
-- Protocol override edge cases
-"""
-
 import arrow
 import pytest
 from cms125v14_breast_cancer_screening.protocols.cms125v14_protocol import (
@@ -51,10 +39,6 @@ from canvas_sdk.value_set.v2026.procedure import (
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.value_set import CodeConstants
-
-# =============================================================================
-# AGE BOUNDARY EDGE CASES
-# =============================================================================
 
 
 class TestAgeBoundaryEdgeCases:
@@ -177,11 +161,6 @@ class TestAgeBoundaryEdgeCases:
 
         # Should still be in denominator (age < 66)
         assert protocol.in_denominator(patient) is True
-
-
-# =============================================================================
-# NURSING HOME DETECTION TESTS
-# =============================================================================
 
 
 class TestNursingHomeDetection:
@@ -307,11 +286,6 @@ class TestNursingHomeDetection:
         assert protocol.in_nursing_home(patient) is False
 
 
-# =============================================================================
-# DEMENTIA MEDICATIONS TESTS
-# =============================================================================
-
-
 class TestDementiaMedications:
     """Test dementia medication detection for frailty+advanced illness exclusion."""
 
@@ -411,11 +385,6 @@ class TestDementiaMedications:
             assert protocol.has_advanced_illness_or_dementia_meds(patient) is True
 
 
-# =============================================================================
-# FRAILTY ENCOUNTER AND SYMPTOM TESTS
-# =============================================================================
-
-
 class TestFrailtyEncounterAndSymptom:
     """Test frailty detection via encounters and symptoms."""
 
@@ -476,11 +445,6 @@ class TestFrailtyEncounterAndSymptom:
             assert protocol.has_frailty_indicator(patient) is True
 
 
-# =============================================================================
-# PALLIATIVE CARE INTERVENTION TESTS
-# =============================================================================
-
-
 class TestPalliativeCareIntervention:
     """Test palliative care detection via intervention codes."""
 
@@ -523,11 +487,6 @@ class TestPalliativeCareIntervention:
 
             assert protocol.received_palliative_care(patient) is True
             assert protocol.in_denominator(patient) is False
-
-
-# =============================================================================
-# MULTIPLE EXCLUSION COMBINATIONS
-# =============================================================================
 
 
 class TestMultipleExclusionCombinations:
@@ -613,11 +572,6 @@ class TestMultipleExclusionCombinations:
             assert protocol.in_denominator(patient) is False
 
 
-# =============================================================================
-# PROTOCOL OVERRIDE EDGE CASES
-# =============================================================================
-
-
 class TestProtocolOverrideEdgeCases:
     """Test protocol override edge cases."""
 
@@ -632,10 +586,13 @@ class TestProtocolOverrideEdgeCases:
         birth_date = timeframe_end.shift(years=-60).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
+        # Use the protocol's actual key
+        protocol_key = protocol.protocol_key()
+
         imaging_date = timeframe_end.shift(months=-6)
         ProtocolOverride.objects.create(
             patient=patient,
-            protocol_key="CMS125v14",
+            protocol_key=protocol_key,
             reference_date=imaging_date.datetime,
             cycle_in_days=365,
             cycle_quantity=1,
@@ -663,10 +620,13 @@ class TestProtocolOverrideEdgeCases:
         birth_date = timeframe_end.shift(years=-60).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
+        # Use the protocol's actual key
+        protocol_key = protocol.protocol_key()
+
         imaging_date = timeframe_end.shift(months=-6)
         ProtocolOverride.objects.create(
             patient=patient,
-            protocol_key="CMS125v14",
+            protocol_key=protocol_key,
             reference_date=imaging_date.datetime,
             cycle_in_days=365,
             cycle_quantity=1,
@@ -713,11 +673,6 @@ class TestProtocolOverrideEdgeCases:
         )
 
         assert protocol.get_protocol_override(patient) is None
-
-
-# =============================================================================
-# TIMEFRAME EDGE CASES
-# =============================================================================
 
 
 class TestTimeframeEdgeCases:
@@ -787,11 +742,6 @@ class TestTimeframeEdgeCases:
         assert protocol.in_numerator(patient) is True
 
 
-# =============================================================================
-# FIRST DUE IN EDGE CASES
-# =============================================================================
-
-
 class TestFirstDueInEdgeCases:
     """Test first_due_in calculation edge cases."""
 
@@ -829,3 +779,304 @@ class TestFirstDueInEdgeCases:
         assert days_until > 0
         # Should be approximately 12 years (4380 days)
         assert days_until > 4000
+
+
+class TestSnoozeHandling:
+    """Test snooze functionality for protocol cards.
+
+    The plugin returns the normal protocol card while Canvas manages the snoozed
+    visual state based on ProtocolCurrent.snoozed. These tests verify that the
+    plugin returns cards regardless of snooze state.
+    """
+
+    @pytest.mark.django_db
+    def test_plugin_returns_card_regardless_of_active_snooze(self) -> None:
+        """Test that the plugin returns normal card even when snooze exists."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create a qualifying visit
+        create_qualifying_visit(patient, timeframe_end.shift(months=-6))
+
+        # Create an active snooze (7 days from today)
+        snooze_date = timeframe_end.date()
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=timeframe_end.datetime,
+            cycle_in_days=0,
+            cycle_quantity=0,
+            cycle_unit="days",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=False,
+            is_snooze=True,
+            snooze_date=snooze_date,
+            snoozed_days=7,
+            snooze_comment="Patient request",
+            narrative="",
+            deleted=False,
+        )
+
+        protocol._patient_id = str(patient.id)
+
+        # Plugin returns normal card - Canvas handles snoozed display
+        effects = protocol.compute_results(patient)
+        assert len(effects) == 1
+
+
+class TestHelperMethods:
+    """Test helper methods directly."""
+
+    @pytest.mark.django_db
+    def test_combine_value_set_codes_with_multiple_sets(self) -> None:
+        """Test _combine_value_set_codes combines codes from multiple value sets."""
+        # Mammography and FrailtyEncounter should have codes
+        result = ClinicalQualityMeasure125v14._combine_value_set_codes(
+            Mammography, FrailtyEncounter
+        )
+
+        # Should have codes from both sets
+        mammography_codes = Mammography.get_codes()
+        frailty_codes = FrailtyEncounter.get_codes()
+
+        assert result == mammography_codes | frailty_codes
+        assert len(result) > 0
+
+    @pytest.mark.django_db
+    def test_combine_value_set_codes_with_single_set(self) -> None:
+        """Test _combine_value_set_codes works with single value set."""
+        result = ClinicalQualityMeasure125v14._combine_value_set_codes(Mammography)
+        assert result == Mammography.get_codes()
+
+    @pytest.mark.django_db
+    def test_build_coding_filter_returns_system_and_codes(self) -> None:
+        """Test _build_coding_filter returns properly structured filter."""
+        result = ClinicalQualityMeasure125v14._build_coding_filter(Mammography)
+
+        assert isinstance(result, list)
+        assert len(result) > 0
+        for item in result:
+            assert "system" in item
+            assert "code" in item
+            assert isinstance(item["code"], list)
+
+    @pytest.mark.django_db
+    def test_get_stratum_text_stratum_1(self) -> None:
+        """Test _get_stratum_text returns correct text for stratum 1."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        assert protocol._get_stratum_text(1) == " (Stratum 1: Ages 42-51)"
+
+    @pytest.mark.django_db
+    def test_get_stratum_text_stratum_2(self) -> None:
+        """Test _get_stratum_text returns correct text for stratum 2."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        assert protocol._get_stratum_text(2) == " (Stratum 2: Ages 52-74)"
+
+    @pytest.mark.django_db
+    def test_get_stratum_text_none(self) -> None:
+        """Test _get_stratum_text returns empty string for None."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        assert protocol._get_stratum_text(None) == ""
+
+    @pytest.mark.django_db
+    def test_calculate_due_in_days_with_override(self) -> None:
+        """Test _calculate_due_in_days uses override cycle when provided."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Set _on_date to simulate a recent mammogram
+        protocol._on_date = timeframe_end.shift(months=-6)
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create an override with 365-day cycle
+        override = ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=protocol._on_date.datetime,
+            cycle_in_days=365,
+            cycle_quantity=1,
+            cycle_unit="years",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=True,
+            is_snooze=False,
+            snooze_date=timeframe_end.date(),  # Required field
+            snoozed_days=0,
+            snooze_comment="",
+            narrative="",
+            deleted=False,
+        )
+
+        due_in = protocol._calculate_due_in_days(override)
+        # 365 days from 6 months ago = ~182 days from now
+        expected = (protocol._on_date.shift(days=365) - protocol.now).days
+        assert due_in == expected
+
+    @pytest.mark.django_db
+    def test_calculate_due_in_days_without_override(self) -> None:
+        """Test _calculate_due_in_days uses standard calculation without override."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Set _on_date to simulate a recent mammogram
+        protocol._on_date = timeframe_end.shift(months=-6)
+
+        due_in = protocol._calculate_due_in_days(None)
+        # Standard calculation: _on_date + timeframe.duration + EXTRA_SCREENING_MONTHS - now
+        expected = (
+            protocol._on_date.shift(
+                days=protocol.timeframe.duration, months=protocol.EXTRA_SCREENING_MONTHS
+            )
+            - protocol.now
+        ).days
+        assert due_in == expected
+
+
+class TestCheckSnoozeLogic:
+    """Test _check_snooze method directly."""
+
+    @pytest.mark.django_db
+    def test_check_snooze_returns_false_when_no_snooze(self) -> None:
+        """Test _check_snooze returns (False, None) when no snooze exists."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        is_snoozed, snooze_date = protocol._check_snooze(str(patient.id), protocol.protocol_key())
+
+        assert is_snoozed is False
+        assert snooze_date is None
+
+    @pytest.mark.django_db
+    def test_check_snooze_ignores_deleted_snooze(self) -> None:
+        """Test _check_snooze ignores deleted snooze records."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create a deleted snooze
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=timeframe_end.datetime,
+            cycle_in_days=0,
+            cycle_quantity=0,
+            cycle_unit="days",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=False,
+            is_snooze=True,
+            snooze_date=timeframe_end.shift(days=7).date(),
+            snoozed_days=7,
+            snooze_comment="",
+            narrative="",
+            deleted=True,  # Deleted!
+        )
+
+        is_snoozed, snooze_date = protocol._check_snooze(str(patient.id), protocol.protocol_key())
+
+        assert is_snoozed is False
+        assert snooze_date is None
+
+    @pytest.mark.django_db
+    def test_check_snooze_ignores_expired_snooze(self) -> None:
+        """Test _check_snooze ignores expired snooze (snooze_date < today)."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create an expired snooze (snooze_date in the past)
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=timeframe_end.shift(days=-30).datetime,
+            cycle_in_days=0,
+            cycle_quantity=0,
+            cycle_unit="days",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=False,
+            is_snooze=True,
+            snooze_date=timeframe_end.shift(days=-7).date(),  # Past date
+            snoozed_days=7,
+            snooze_comment="",
+            narrative="",
+            deleted=False,
+        )
+
+        is_snoozed, snooze_date = protocol._check_snooze(str(patient.id), protocol.protocol_key())
+
+        assert is_snoozed is False
+        assert snooze_date is None
+
+    @pytest.mark.django_db
+    def test_check_snooze_detects_active_snooze_with_expiry(self) -> None:
+        """Test _check_snooze detects active snooze and calculates expiry date."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create an active snooze
+        snooze_start = timeframe_end.date()
+        snoozed_days = 14
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=timeframe_end.datetime,
+            cycle_in_days=0,
+            cycle_quantity=0,
+            cycle_unit="days",
+            status=ProtocolOverrideStatus.ACTIVE,
+            is_adjustment=False,
+            is_snooze=True,
+            snooze_date=snooze_start,
+            snoozed_days=snoozed_days,
+            snooze_comment="",
+            narrative="",
+            deleted=False,
+        )
+
+        is_snoozed, snooze_date = protocol._check_snooze(str(patient.id), protocol.protocol_key())
+
+        assert is_snoozed is True
+        # Expiry should be snooze_start + snoozed_days
+        import datetime
+
+        expected_expiry = (snooze_start + datetime.timedelta(days=snoozed_days)).isoformat()
+        assert snooze_date == expected_expiry
