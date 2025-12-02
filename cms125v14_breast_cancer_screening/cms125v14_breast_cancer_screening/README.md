@@ -1,148 +1,140 @@
 # CMS125v14 Breast Cancer Screening Plugin
 
-This plugin implements the CMS125v14 Breast Cancer Screening Clinical Quality Measure for Canvas Medical using the `canvas_sdk`.
+A Canvas Medical plugin implementing the CMS125v14 Breast Cancer Screening Clinical Quality Measure (CQM).
 
-## Overview
+## What This Plugin Does
 
-**Description:** Percentage of women 42-74 years of age who had a mammogram to screen for breast cancer.
+- Displays protocol cards in the patient chart for women aged 42-74 who need breast cancer screening
+- Tracks mammography completion within the 27-month screening window
+- Automatically excludes patients with bilateral mastectomy, hospice care, palliative care, or other qualifying exclusions
+- Provides a "Plan" button to order mammography when screening is due
+- Supports protocol overrides for custom screening intervals
 
-**Measure Identifier:** CMS125v14 (implementing CMS125v14 logic)
+## Why Use This Plugin
 
-**Author:** National Committee for Quality Assurance
+- **Quality reporting** - Accurately tracks CMS125v14 measure for HEDIS/quality reporting
+- **Clinical decision support** - Surfaces screening reminders directly in the patient chart
+- **Reduces care gaps** - Ensures eligible patients don't miss recommended screenings
+- **Handles complexity** - Implements all CMS exclusion criteria (mastectomy, hospice, frailty, etc.)
 
-## Clinical Rationale
+## Example Scenario
 
-Breast cancer is one of the most common types of cancers, accounting for a quarter of all new cancer diagnoses for women in the U.S. The U.S. Preventive Services Task Force (USPSTF) recommends biennial screening mammography for women aged 50-74 years.
+**Without this plugin:** A 55-year-old female patient comes in for an annual wellness visit. The provider must manually check when her last mammogram was and remember the 27-month screening window.
 
-According to the National Cancer Institute's Surveillance Epidemiology and End Results program, the chance of a woman being diagnosed with breast cancer increases with age. By age 60, it is one in 25.
+**With this plugin:** The protocol card automatically shows:
+- "Sarah had a mammography 14 months ago on 10/15/23. Next screening due in 395 days." (if satisfied)
+- "No mammography found in the last 27 months. Sarah is due for breast cancer screening." with a "Plan" button (if due)
+
+## Measure Overview
+
+| Property | Value |
+|----------|-------|
+| **Measure ID** | CMS125v14 |
+| **Version** | v14.0.0 |
+| **Author** | National Committee for Quality Assurance |
+| **Population** | Women 42-74 years of age |
+| **Screening Window** | 27 months |
+
+## Protocol Card Statuses
+
+| Status | Condition |
+|--------|-----------|
+| `SATISFIED` | Mammogram found within 27-month window |
+| `DUE` | No mammogram found, screening needed |
+| `NOT_APPLICABLE` | Patient excluded or not yet eligible |
 
 ## Measure Logic
 
 ### Initial Population
-Women aged 42-74 years with a visit during the measurement period.
+Women aged 42-74 years at end of measurement period.
 
-### Denominator
-Equals the initial population.
+### Denominator Exclusions
+Patients are excluded if any of the following apply:
 
-**Exclusions:**
-1. Women who had a bilateral mastectomy
-2. Women with a history of bilateral mastectomy
-3. Women with evidence of both right and left unilateral mastectomy
-4. Patients in hospice care during the measurement year
-5. Patients who received palliative care during the measurement period (all ages)
-6. Patients age ≥66 with frailty AND (advanced illness OR dementia medications) during measurement period or prior year
-7. Patients age ≥66 living long-term in nursing home
+1. **Bilateral mastectomy** - History of bilateral mastectomy, or both left and right unilateral mastectomies
+2. **Hospice care** - Received hospice care during measurement period
+3. **Palliative care** - Received palliative care during measurement period
+4. **Frailty + Advanced illness** (age ≥66 only) - Has frailty indicator AND advanced illness or dementia medications
+5. **Nursing home resident** (age ≥66 only) - Living long-term in nursing facility
 
 ### Numerator
-Women with one or more mammograms between October 1 of two years prior to the measurement period and the end of the measurement period (27-month total screening window).
+Women with one or more mammograms (standard or 3D tomosynthesis) in the 27-month screening window.
 
 ### Stratification
-- **Stratum 1:** Ages 42-51 at end of measurement period
-- **Stratum 2:** Ages 52-74 at end of measurement period
+- **Stratum 1:** Ages 42-51
+- **Stratum 2:** Ages 52-74
 
-## Implementation Details
+## Setup
 
-### Value Sets Used
+No configuration required. Install and the plugin will automatically display protocol cards for eligible patients.
 
-All value sets are sourced from CMS125v14 specifications and added to `canvas_sdk/value_set/v2026/`:
+```bash
+canvas install cms125v14_breast_cancer_screening
+```
 
-**Diagnostic Studies:**
-- Mammography (LOINC codes for mammography screening)
+## Configuration
 
-**Procedures:**
-- BilateralMastectomy
-- UnilateralMastectomyLeft
-- UnilateralMastectomyRight
+### Protocol Overrides
 
-**Conditions:**
-- HistoryOfBilateralMastectomy
-- StatusPostLeftMastectomy
-- StatusPostRightMastectomy
+For patients with specific risk factors requiring different screening intervals:
+- Set a custom `reference_date` and `cycle_in_days` via `ProtocolOverride`
+- Overrides the standard 27-month window for that patient
 
-**Encounters:**
-- OfficeVisit
-- AnnualWellnessVisit
-- HomeHealthcareServices
+### Nursing Home Detection
+
+The nursing home exclusion checks:
+1. Coverage type = `LTC` (Long Term Care)
+2. Plan name keywords: "long term care", "nursing home", "skilled nursing"
+
+This may need customization based on how your Canvas instance tracks nursing home residence.
+
+## Technical Details
+
+### Triggered Events
+
+This protocol responds to:
+- `CONDITION_CREATED` / `CONDITION_UPDATED` / `CONDITION_RESOLVED`
+- `MEDICATION_LIST_ITEM_CREATED` / `MEDICATION_LIST_ITEM_UPDATED`
+- `OBSERVATION_CREATED` / `OBSERVATION_UPDATED`
+- `PATIENT_UPDATED`
+- `ENCOUNTER_CREATED` / `ENCOUNTER_UPDATED`
+- `CLAIM_CREATED` / `CLAIM_UPDATED`
+- `PROTOCOL_OVERRIDE_CREATED` / `PROTOCOL_OVERRIDE_UPDATED` / `PROTOCOL_OVERRIDE_DELETED`
+
+### Data Access
+
+| Type | Resources |
+|------|-----------|
+| **Read** | patients, conditions, billing_line_items, imaging_reports, medications, coverages, protocol_overrides, encounters |
+| **Write** | None |
+
+### Value Sets (v2026)
+
+**Screening:**
+- Mammography, Tomography
+
+**Exclusions:**
+- BilateralMastectomy, UnilateralMastectomyLeft/Right
+- HistoryOfBilateralMastectomy, StatusPostLeftMastectomy, StatusPostRightMastectomy
+- HospiceCareAmbulatory, HospiceEncounter
+- PalliativeCareDiagnosis, PalliativeCareEncounter, PalliativeCareIntervention
+- FrailtyDiagnosis, FrailtySymptom, FrailtyEncounter
+- AdvancedIllness, DementiaMedications
+
+**Qualifying Visits:**
+- OfficeVisit, AnnualWellnessVisit, HomeHealthcareServices
 - PreventiveCareServicesEstablishedOfficeVisit18AndUp
 - PreventiveCareServicesInitialOfficeVisit18AndUp
 
-### Key Protocol Methods
-
-- `in_initial_population()`: Checks if patient is female, aged 42-74, with qualifying visit
-- `in_denominator()`: Applies exclusion criteria (mastectomy, hospice, palliative care, frailty+advanced illness for age ≥66, nursing home for age ≥66)
-- `in_numerator()`: Checks for mammogram within 27-month window (October 1, two years prior to end of MP)
-- `had_mastectomy()`: Detects bilateral mastectomy or equivalent
-- `has_frailty_with_advanced_illness()`: Checks frailty + advanced illness/dementia for age ≥66
-- `received_palliative_care()`: Checks for palliative care (all ages)
-- `in_nursing_home()`: Checks if patient is in long-term nursing home (age ≥66)
-- `get_stratification()`: Returns stratification group (1 for ages 42-51, 2 for ages 52-74)
-- `first_due_in()`: Calculates when screening first becomes due (at age 42)
-- `compute_results()`: Returns protocol status and recommendations with stratification info
-
-## Installation
-
-```bash
-cd /path/to/canvas-plugins
-canvas install cms125v14-breast-cancer-screening/cms125v14_breast_cancer_screening
-```
-
 ## Testing
-
-Run the test suite:
 
 ```bash
 cd cms125v14_breast_cancer_screening
-pytest tests/test_cms125v14_protocol.py -v
+uv run pytest -m "not integtest" -v
 ```
-
-All 12 tests pass successfully, covering:
-- Metadata validation
-- Initial population inclusion/exclusion criteria
-- Age range boundaries (51-74)
-- Sex-based exclusion
-- Mastectomy detection
-- First due date calculation
-- Denominator and numerator logic
-- Results computation
-
-## Known Limitations & Notes
-
-The current implementation fully complies with CMS125v14 specifications with the following notes:
-
-1. **✅ Age Range**: Correctly implements 42-74 age range per CMS125v14 flow
-2. **✅ Visit Validation**: Checks for qualifying visits using billing line items
-3. **✅ All Exclusions Implemented**:
-   - Bilateral mastectomy (all variants)
-   - Hospice care
-   - Palliative care (all ages)
-   - Frailty + Advanced Illness (age ≥66)
-   - Nursing home (age ≥66) - *Note: May need customization based on Canvas instance data*
-4. **✅ Numerator Window**: October 1, two years prior to end of measurement period
-5. **✅ Stratification**: Stratum 1 (42-51) and Stratum 2 (52-74)
-6. **✅ Tomosynthesis**: 3D mammography codes included via custom value set
-7. **✅ Protocol Overrides**: Supports custom screening cycles
-
-### Nursing Home Detection
-The `in_nursing_home()` method checks Coverage records for long-term care indicators. This may need customization based on how your Canvas instance tracks patient residence in long-term care facilities. Alternative approaches include checking patient addresses or encounter patterns.
-
-## Migration from canvas_workflow_kit
-
-This plugin was migrated from the original `canvas_workflow_kit` implementation with the following key changes:
-
-- All imports updated to use `canvas_sdk`
-- Direct QuerySet operations instead of helper methods like `age_at_between`, `has_visit_within`
-- Value sets migrated from v2018 to v2026 with updated codes from CMS125v14
-- Protocol inherits from `canvas_sdk.protocols.ClinicalQualityMeasure`
-- Tests use `canvas_sdk.test_utils.factories` instead of mock JSON data
-- Pytest-based test suite instead of unittest
 
 ## References
 
 - [CMS125v14 Measure Specification](https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html)
-- American Cancer Society. 2010. Cancer Facts & Figures 2010
-- U.S. Preventive Services Task Force (USPSTF). 2009. Screening for breast cancer recommendation statement
-- National Cancer Institute. 2010. Breast Cancer Screening
-
-## Support
-
-For issues or questions about this plugin, refer to the Canvas SDK documentation or contact your Canvas Medical representative.
+- [U.S. Preventive Services Task Force - Breast Cancer Screening (2024)](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/breast-cancer-screening)
+- [Canvas Medical Documentation](https://docs.canvasmedical.com)

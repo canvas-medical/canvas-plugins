@@ -1,12 +1,14 @@
 import arrow
 
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.commands import InstructCommand
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.protocols.timeframe import Timeframe
 from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.encounter import Encounter
 from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.patient import Patient
@@ -42,41 +44,38 @@ from canvas_sdk.value_set.v2026.procedure import (
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.tomography import Tomography
+from logger import log
 
 
 class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     """
     Breast Cancer Screening.
 
-    Description: Percentage of women 42-74 years of age who had a mammogram to screen for breast
-    cancer
+    Description: Percentage of women 40-74 years of age who had a mammogram to screen
+    for breast cancer in the 27 months prior to the end of the Measurement Period
 
     Definition: None
 
-    Rationale: Breast cancer is one of the most common types of cancers, accounting for a quarter
-    of all new cancer diagnoses for women in the U.S. (BreastCancer.Org, 2011). It ranks as the
-    second leading cause of cancer-related mortality in women, accounting for nearly 40,000
-    estimated deaths in 2013 (American Cancer Society, 2011).
+    Rationale: Breast cancer is one of the most common types of cancers, accounting for 15 percent
+    of all new cancer diagnoses in the U.S. (Noone et al., 2018). In 2015, over 3 million women
+    were estimated to be living with breast cancer in the U.S. and it is estimated that 12 percent
+    of women will be diagnosed with breast cancer at some point during their lifetime (Noone et al., 2018).
 
-    According to the National Cancer Institute's Surveillance Epidemiology and End Results program,
-    the chance of a woman being diagnosed with breast cancer in a given year increases with age. By
-    age 30, it is one in 2,212. By age 40, the chances increase to one in 235, by age 50, it
-    becomes one in 54, and, by age 60, it is one in 25. From 2004 to 2008, the median age at the
-    time of breast cancer diagnosis was 61 years among adult women (Tangka et al, 2010).
+    While there are other factors that affect a woman's risk of developing breast cancer,
+    advancing age is a primary risk factor. Breast cancer is most frequently diagnosed among
+    women ages 55-64; the median age at diagnosis is 62 years (Noone et al., 2018).
 
-    In the U.S., costs associated with a diagnosis of breast cancer range from $451 to $2,520,
-    factoring in continued testing, multiple office visits, and varying procedures. The total costs
-    related to breast cancer add up to nearly $7 billion per year in the U.S., including $2 billion
-    spent on late-stage treatment (Lavigne et al, 2008; Boykoff et al, 2009).
+    The chance of a woman being diagnosed with breast cancer in a given year increases with age.
+    By age 40, the chances are 1 in 68; by age 50 it becomes 1 in 43; by age 60, it is 1 in 29 (American Cancer Society, 2017).
 
-    Guidance: Patient self-report for procedures as well as diagnostic studies should be recorded
-    in 'Procedure, Performed' template or 'Diagnostic Study, Performed' template in QRDA-1. Patient
-    self-report is not allowed for laboratory tests.
+    Guidance: This measure evaluates primary screening. Do not count biopsies,
+    breast ultrasounds, or MRIs because they are not appropriate methods for primary breast cancer screening.
+    Please note the measure may include screenings performed outside the age range of patients
+    referenced in the initial population. Screenings that occur prior to the measurement period are valid to meet measure criteria.
 
-    This measure evaluates primary screening. Do not count biopsies, breast ultrasounds, or MRIs,
-    because they are not appropriate methods for primary breast cancer screening. Tomosynthesis
-    (3D mammography) IS allowed as of CMS125v14 and is included in the screening codes.
+    This eCQM is a patient-based measure.
 
+    This version of the eCQM uses QDM version 5.6. Please refer to the eCQI resource center (https://ecqi.healthit.gov/qdm) for more information on the QDM.
     More information: https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html
     """
 
@@ -96,14 +95,30 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         types = ["CQM"]
         authors = ["National Committee for Quality Assurance"]
         references = [
-            "American Cancer Society. 2010. Cancer Facts & Figures 2010. Atlanta: American Cancer Society.",
-            'National Cancer Institute. 2010. "Breast Cancer Screening." http://www.cancer.gov/cancertopics/pdq/screening/breast/healthprofessional',
-            "National Business Group on Health. 2011. Pathways to Managing Cancer in the Workplace. Washington: National Business Group on Health.",
-            'U.S. Preventive Services Task Force (USPSTF). 2009. 1) "Screening for breast cancer: U.S. Preventive Services Task Force recommendation statement." 2) "December 2009 addendum." Ann Intern Med 151(10):716-726.',
-            "BreastCancer.org. 2012. U.S. Breast Cancer Statistics. http://www.breastcancer.org/symptoms/understand_bc/statistics.jsp",
+            "American Cancer Society. (2017). Breast Cancer Facts & Figures 2017-2018. Retrieved February 8, 2019, from https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/breast-cancer-facts-and-figures/breast-cancer-facts-and-figures-2017-2018.pdf",
+            "American College of Radiology (ACR). (2017). ACR Appropriateness Criteria: Breast Cancer Screening. Retrieved from https://acsearch.acr.org/docs/70910/Narrative/",
+            "National Comprehensive Cancer Network (NCCN). (2021). Breast Cancer Screening and Diagnosis. Retrieved from https://www.nccn.org/professionals/physician_gls/pdf/breast-screening.pdf",
+            "Noone, A.M., Howlader, N., Krapcho, M., Miller, D., Brest, A., Yu, M., Ruhl, J., Tatalovich, Z., Mariotto, A., Lewis, D.R., Chen, H.S., Feuer, E.J., Cronin, K.A. (eds). (2018). SEER Cancer Statistics Review, 1975-2015. National Cancer Institute. Bethesda, MD. Retrieved February 8, 2019, from https://seer.cancer.gov/csr/1975_2015/",
+            "U.S. Preventive Services Task Force (2024). Screening for Breast Cancer: U.S. Preventive Services Task Force Recommendation Statement. JAMA, 2024;331(22):1918-1930. doi:10.1001/jama.2024.5534.",
         ]
 
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
+    RESPONDS_TO = [
+        EventType.Name(EventType.CONDITION_CREATED),
+        EventType.Name(EventType.CONDITION_UPDATED),
+        EventType.Name(EventType.CONDITION_RESOLVED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
+        EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
+        EventType.Name(EventType.OBSERVATION_CREATED),
+        EventType.Name(EventType.OBSERVATION_UPDATED),
+        EventType.Name(EventType.PATIENT_UPDATED),
+        EventType.Name(EventType.ENCOUNTER_CREATED),
+        EventType.Name(EventType.ENCOUNTER_UPDATED),
+        EventType.Name(EventType.CLAIM_CREATED),
+        EventType.Name(EventType.CLAIM_UPDATED),
+        EventType.Name(EventType.PROTOCOL_OVERRIDE_CREATED),
+        EventType.Name(EventType.PROTOCOL_OVERRIDE_UPDATED),
+        EventType.Name(EventType.PROTOCOL_OVERRIDE_DELETED),
+    ]
     NARRATIVE_STRING = "Breast Cancer Screening CMS125v14"
 
     _on_date = None
@@ -117,36 +132,200 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     STRATUM_2_START = 52
     STRATUM_2_END = 74
 
+    # Keywords for nursing home detection in coverage plan names
+    NURSING_HOME_KEYWORDS = (
+        "long term care",
+        "long-term care",
+        "nursing home",
+        "nursing facility",
+        "skilled nursing",
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Helper methods for query patterns
+    # ─────────────────────────────────────────────────────────────────────────────
+
+    def _get_billing_within_timeframe(self, patient: Patient) -> "QuerySet[BillingLineItem]":
+        """Get billing line items within the measurement period."""
+        return BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
+
+    def _has_billing_with_codes(self, patient: Patient, *value_sets) -> bool:
+        """Check if patient has billing codes from any of the provided value sets.
+
+        Args:
+            patient: The patient to check
+            *value_sets: Value set classes to check codes against
+
+        Returns:
+            True if any billing code matches any value set
+        """
+        billing = self._get_billing_within_timeframe(patient)
+        all_codes = self._combine_value_set_codes(*value_sets)
+        return bool(all_codes and billing.filter(cpt__in=all_codes).exists())
+
+    def _get_conditions_up_to_end(self, patient: Patient) -> "QuerySet[Condition]":
+        """Get conditions with onset_date up to end of timeframe."""
+        return Condition.objects.filter(
+            patient=patient,
+            onset_date__lte=self.timeframe.end.date(),
+        )
+
+    def _get_conditions_within_timeframe(self, patient: Patient) -> "QuerySet[Condition]":
+        """Get conditions with onset_date within the measurement period."""
+        return Condition.objects.filter(
+            patient=patient,
+            onset_date__gte=self.timeframe.start.date(),
+            onset_date__lte=self.timeframe.end.date(),
+        )
+
+    @staticmethod
+    def _combine_value_set_codes(*value_sets) -> set[str]:
+        """Combine codes from multiple value sets into a single set.
+
+        Args:
+            *value_sets: Value set classes with get_codes() method
+
+        Returns:
+            Combined set of all codes from all value sets
+        """
+        all_codes: set[str] = set()
+        for vs in value_sets:
+            all_codes.update(vs.get_codes())
+        return all_codes
+
+    @staticmethod
+    def _build_coding_filter(*value_sets) -> list[dict[str, str | list[str]]]:
+        """Build InstructCommand coding filter from value sets.
+
+        Args:
+            *value_sets: Value set classes with values dict
+
+        Returns:
+            List of coding filter dicts for InstructCommand
+        """
+        combined_codes: dict[str, set[str]] = {}
+        for vs in value_sets:
+            for system, codes in vs.values.items():
+                if codes:
+                    system_lower = system.lower()
+                    if system_lower not in combined_codes:
+                        combined_codes[system_lower] = set()
+                    combined_codes[system_lower].update(codes)
+        return [{"system": system, "code": list(codes)} for system, codes in combined_codes.items()]
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Event handling
+    # ─────────────────────────────────────────────────────────────────────────────
+
+    def patient_id_from_target(self) -> str:
+        """
+        Override to support additional event types beyond the base class.
+
+        Adds support for: OBSERVATION, ENCOUNTER, CLAIM, and PROTOCOL_OVERRIDE events.
+        """
+        # Return cached value if already set
+        if self._patient_id:
+            return self._patient_id
+
+        # Events that have patient_id in context - use directly (no DB query needed)
+        events_with_patient_in_context = (
+            EventType.OBSERVATION_CREATED,
+            EventType.OBSERVATION_UPDATED,
+            EventType.CLAIM_CREATED,
+            EventType.CLAIM_UPDATED,
+            EventType.PROTOCOL_OVERRIDE_CREATED,
+            EventType.PROTOCOL_OVERRIDE_UPDATED,
+            EventType.PROTOCOL_OVERRIDE_DELETED,
+        )
+
+        if self.event.type in events_with_patient_in_context:
+            self._patient_id = self.event.context["patient"]["id"]
+            return self._patient_id
+
+        # Events that require DB query (context is empty for encounters)
+        if self.event.type in (EventType.ENCOUNTER_CREATED, EventType.ENCOUNTER_UPDATED):
+            # Encounter doesn't have a direct patient field - access via note relationship
+            # Encounter -> note -> patient
+            patient_id = (
+                Encounter.objects.select_related("note__patient")
+                .values_list("note__patient__id", flat=True)
+                .get(id=self.event.target.id)
+            )
+            self._patient_id = str(patient_id)
+            return self._patient_id
+
+        # Fall back to base class implementation (which also sets self._patient_id)
+        return super().patient_id_from_target()
+
     def compute(self) -> list[Effect]:
-        """Compute the protocol result and return effects."""
-        import json
+        """Compute the protocol result and return effects.
 
-        # For ASSESS_COMMAND__CONDITION_SELECTED events, return a log effect
-        if self.event.type == EventType.ASSESS_COMMAND__CONDITION_SELECTED:
-            note_uuid = self.event.context.get("note", {}).get("uuid", "unknown")
-            return [
-                Effect(
-                    type=EffectType.LOG,
-                    payload=json.dumps(
-                        {"message": f"{self.NARRATIVE_STRING} triggered", "note_uuid": note_uuid}
-                    ),
-                )
-            ]
+        Checks for active snooze overrides and passes the snoozed state
+        to the protocol card to preserve snooze behavior set by Canvas.
+        """
+        # Get patient from event target
+        try:
+            patient_id = self.patient_id_from_target()
+        except Exception as e:
+            log.error(f"CMS125v14: Failed to get patient_id from target: {e}")
+            return []
 
-        # For other event types, compute full protocol results
-        # Get patient
-        patient_id = self.patient_id_from_target()
-        patient = Patient.objects.get(id=patient_id)
+        # Check for active snooze
+        protocol_key = self.protocol_key()
+        is_snoozed, snooze_date = self._check_snooze(patient_id, protocol_key)
 
-        # Compute and return protocol cards
-        return self.compute_results(patient)
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            log.error(f"CMS125v14: Patient not found with id: {patient_id}")
+            return []
+
+        # snooze_date is already an ISO string from _check_snooze
+        return self.compute_results(patient, is_snoozed=is_snoozed, snooze_date=snooze_date)
+
+    def _check_snooze(self, patient_id: str, protocol_key: str) -> tuple[bool, str | None]:
+        """Check if this protocol is currently snoozed for the patient.
+
+        Returns (True, snooze_date) if snoozed, (False, None) otherwise.
+        snooze_date is an ISO date string (YYYY-MM-DD) or None if not snoozed.
+
+        Note: ProtocolOverride stores just the class name (e.g., 'ClinicalQualityMeasure125v14'),
+        NOT the combined key with plugin name that ProtocolCurrent uses.
+        """
+        import datetime
+
+        from django.db.models import Q
+
+        today = self.now.date()
+
+        # Check for snooze override that is:
+        # - For this protocol (using plain class name, not combined key)
+        # - is_snooze=True
+        # - Not deleted
+        # - snooze_date >= today (not expired)
+        snooze = (
+            ProtocolOverride.objects.filter(
+                patient__id=patient_id,
+                protocol_key=protocol_key,
+                is_snooze=True,
+                deleted=False,
+            )
+            .filter(Q(snooze_date__gte=today))
+            .first()
+        )
+
+        if snooze:
+            # Calculate actual snooze expiry: snooze_date + snoozed_days
+            if snooze.snooze_date and snooze.snoozed_days:
+                expiry_date = snooze.snooze_date + datetime.timedelta(days=snooze.snoozed_days)
+                return True, expiry_date.isoformat()
+            return True, snooze.snooze_date.isoformat() if snooze.snooze_date else None
+
+        return False, None
 
     def had_mastectomy(self, patient: Patient) -> bool:
         """Check if patient had a bilateral mastectomy or equivalent."""
-        # Base query for conditions up to end of timeframe
-        conditions = Condition.objects.filter(
-            patient=patient, onset_date__lte=self.timeframe.end.date()
-        )
+        conditions = self._get_conditions_up_to_end(patient)
 
         # Check for bilateral mastectomy
         bilateral = conditions.find(BilateralMastectomy)
@@ -188,7 +367,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             # Calculate patient's 42nd birthday
             birth_date_arrow = arrow.get(patient.birth_date)
             birthday_42 = birth_date_arrow.shift(years=self.AGE_RANGE_START)
-            return (birthday_42 - self.timeframe.end).days
+            days_until = (birthday_42 - self.timeframe.end).days
+            return days_until
         return None
 
     def has_qualifying_visit(self, patient: Patient) -> bool:
@@ -201,29 +381,22 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         - Annual Wellness Visit
         - Home Healthcare Services
         """
-        # Get all billing line items within timeframe using SDK's .within() method
-        qualifying_visits = BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
-
-        # Combine all value sets using native get_codes() method
-        value_sets = [
+        return self._has_billing_with_codes(
+            patient,
             OfficeVisit,
             AnnualWellnessVisit,
             PreventiveCareServicesInitialOfficeVisit18AndUp,
             PreventiveCareServicesEstablishedOfficeVisit18AndUp,
             HomeHealthcareServices,
-        ]
-
-        all_codes: set[str] = set()
-        for vs in value_sets:
-            all_codes.update(vs.get_codes())
-
-        return bool(all_codes and qualifying_visits.filter(cpt__in=all_codes).exists())
+        )
 
     def in_initial_population(self, patient: Patient) -> bool:
         """
         Initial population: Women 42-74 years of age with a visit during the measurement period.
 
-        For canvas_sdk, we check billing line items for qualifying visit codes.
+        Note: The visit requirement only applies to CONTEXT_REPORT (HEDIS reporting).
+        For health maintenance display (protocol cards), we show the card regardless of
+        visit status - matching the behavior of the original canvas_workflow_kit implementation.
         """
         patient_age = patient.age_at(self.timeframe.end)
 
@@ -231,11 +404,10 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if not (self.AGE_RANGE_START <= patient_age <= self.AGE_RANGE_END):
             return False
 
-        if patient.sex_at_birth != "F":
-            return False
-
-        # Check for qualifying visits
-        return self.has_qualifying_visit(patient)
+        # For health maintenance (protocol card display), don't require a qualifying visit.
+        # The visit requirement is only for HEDIS reporting (CONTEXT_REPORT).
+        # Since we're always in health maintenance context for protocol cards, return True.
+        return patient.sex_at_birth == "F"
 
     def in_hospice_care(self, patient: Patient) -> bool:
         """
@@ -245,16 +417,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         1. Billing line items with hospice codes (HospiceCareAmbulatory)
         2. Encounters with hospice codes (HospiceEncounter)
         """
-        # Check billing line items for hospice codes using SDK's .within() method
-        hospice_billing = BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
-
-        hospice_care_codes = HospiceCareAmbulatory.get_codes()
-        hospice_encounter_codes = HospiceEncounter.get_codes()
-        all_hospice_codes = hospice_care_codes | hospice_encounter_codes
-
-        return bool(
-            all_hospice_codes and hospice_billing.filter(cpt__in=all_hospice_codes).exists()
-        )
+        return self._has_billing_with_codes(patient, HospiceCareAmbulatory, HospiceEncounter)
 
     def received_palliative_care(self, patient: Patient) -> bool:
         """
@@ -266,24 +429,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         3. Intervention codes for palliative care
         """
         # Check conditions for palliative care diagnosis
-        palliative_conditions = Condition.objects.filter(
-            patient=patient,
-            onset_date__lte=self.timeframe.end.date(),
-        )
-
-        if palliative_conditions.find(PalliativeCareDiagnosis).exists():
+        if self._get_conditions_up_to_end(patient).find(PalliativeCareDiagnosis).exists():
             return True
 
-        # Check billing line items for palliative care using SDK's .within() method
-        palliative_billing = BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
-
-        palliative_encounter_codes = PalliativeCareEncounter.get_codes()
-        palliative_intervention_codes = PalliativeCareIntervention.get_codes()
-        all_palliative_codes = palliative_encounter_codes | palliative_intervention_codes
-
-        return bool(
-            all_palliative_codes
-            and palliative_billing.filter(cpt__in=all_palliative_codes).exists()
+        # Check billing line items for palliative care
+        return self._has_billing_with_codes(
+            patient, PalliativeCareEncounter, PalliativeCareIntervention
         )
 
     def has_frailty_indicator(self, patient: Patient) -> bool:
@@ -298,12 +449,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Returns True if any frailty indicator is found.
         """
-        # Check for frailty diagnosis or symptom
-        frailty_conditions = Condition.objects.filter(
-            patient=patient,
-            onset_date__gte=self.timeframe.start.date(),
-            onset_date__lte=self.timeframe.end.date(),
-        )
+        # Check for frailty diagnosis or symptom (must be within measurement period)
+        frailty_conditions = self._get_conditions_within_timeframe(patient)
 
         if frailty_conditions.find(FrailtyDiagnosis).exists():
             return True
@@ -311,14 +458,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if frailty_conditions.find(FrailtySymptom).exists():
             return True
 
-        # Check for frailty encounter using SDK's .within() method
-        frailty_billing = BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
-
-        frailty_encounter_codes = FrailtyEncounter.get_codes()
-        return bool(
-            frailty_encounter_codes
-            and frailty_billing.filter(cpt__in=frailty_encounter_codes).exists()
-        )
+        # Check for frailty encounter billing codes
+        return self._has_billing_with_codes(patient, FrailtyEncounter)
 
     def has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
         """
@@ -394,9 +535,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         )
 
         # Check if any coverage indicates long-term care
-        # PayerType code "26" = "Medicaid - Long Term Care"
-        # PayerType code "94" = "Long-term Care Insurance"
-        # PayerType codes with "32123" = "Contract Nursing Home/Community Nursing Home"
         for coverage in coverages:
             # Check coverage_type for Long Term Care
             if coverage.coverage_type == TransactorCoverageType.LTC:
@@ -405,21 +543,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             # Check plan name for keywords as fallback
             if coverage.plan:
                 plan_name_lower = str(coverage.plan).lower()
-                if any(
-                    keyword in plan_name_lower
-                    for keyword in [
-                        "long term care",
-                        "long-term care",
-                        "nursing home",
-                        "nursing facility",
-                        "skilled nursing",
-                    ]
-                ):
+                if any(keyword in plan_name_lower for keyword in self.NURSING_HOME_KEYWORDS):
                     return True
-
-        # Alternative: Check patient addresses for institutional facility indicators
-        # This would need access to patient.addresses and checking for facility types
-        # Not implementing this check as Canvas Patient model may not have this data easily accessible
 
         return False
 
@@ -491,8 +616,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return True
 
     def get_protocol_override(self, patient: Patient) -> ProtocolOverride | None:
-        """Get active protocol override for this patient and protocol."""
-        return ProtocolOverride.objects.get_active_adjustment(patient, "CMS125v14")
+        """Get active protocol override (adjustment) for this patient and protocol."""
+        protocol_key = self.protocol_key()
+        return ProtocolOverride.objects.get_active_adjustment(patient, protocol_key)
 
     def in_numerator(self, patient: Patient) -> bool:
         """
@@ -520,7 +646,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 period_start = self.timeframe.start.shift(months=-1 * self.EXTRA_SCREENING_MONTHS)
         else:
             # Standard 27-month window: October 1 of two years prior to end of measurement period
-            # (measurement period start - 15 months = October 1 of two years prior)
             period_start = self.timeframe.start.shift(months=-1 * self.EXTRA_SCREENING_MONTHS)
 
         period_end = self.timeframe.end
@@ -533,10 +658,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             extended_timeframe
         )
 
-        # Get all mammography codes from both value sets using native get_codes()
-        mammography_codes = Mammography.get_codes()
-        tomography_codes = Tomography.get_codes()
-        all_screening_codes = mammography_codes | tomography_codes
+        # Get all mammography codes from both value sets
+        all_screening_codes = self._combine_value_set_codes(Mammography, Tomography)
 
         if all_screening_codes:
             mammography_billing = mammography_billing.filter(cpt__in=all_screening_codes).order_by(
@@ -546,17 +669,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             if mammography_billing.exists():
                 # Get the most recent mammography billing item
                 last_billing = mammography_billing.first()
-                # Get the datetime from the note
-                if (
-                    last_billing is not None
-                    and last_billing.note is not None
-                    and last_billing.note.datetime_of_service
-                ):
+                # Get the datetime from the note (exists() guarantees first() returns non-None)
+                if last_billing.note is not None and last_billing.note.datetime_of_service:
                     self._on_date = arrow.get(last_billing.note.datetime_of_service)
                     return True
 
         # Also check imaging reports (for mammographies documented outside billing)
-        # Use ImagingReport.find() to filter by mammography/tomography codes
         imaging_reports = (
             ImagingReport.objects.filter(patient=patient)
             .find(Mammography | Tomography)  # type: ignore[arg-type]
@@ -569,22 +687,32 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         if imaging_reports.exists():
             last_report = imaging_reports.first()
-            if last_report is not None and last_report.original_date is not None:
+            # exists() guarantees first() returns non-None
+            if last_report.original_date is not None:
                 self._on_date = arrow.get(last_report.original_date)
                 return True
 
         return False
 
-    def compute_results(self, patient: Patient) -> list[Effect]:
+    def compute_results(
+        self, patient: Patient, is_snoozed: bool = False, snooze_date: str | None = None
+    ) -> list[Effect]:
         """
         Compute the results for the protocol and return effects.
 
         Clinical recommendation: The U.S. Preventive Services Task Force (USPSTF) recommends
         biennial screening mammography for women aged 50-74 years (B recommendation).
 
+        Args:
+            patient: The patient to compute results for
+            is_snoozed: Whether the protocol is currently snoozed
+            snooze_date: ISO date string (YYYY-MM-DD) when snooze expires
+
         Returns:
             list[Effect]: Protocol cards to display in Canvas UI
         """
+        protocol_key = self.protocol_key()
+
         if not self.in_denominator(patient):
             # Not applicable - check if young patient
             first_due = self.first_due_in(patient)
@@ -596,88 +724,120 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 )
                 card = ProtocolCard(
                     patient_id=patient.id,
-                    key="CMS125v14",
+                    key=protocol_key,
                     title="Breast Cancer Screening",
                     narrative=narrative,
                     status=ProtocolCard.Status.NOT_APPLICABLE,
+                    snoozed=is_snoozed,
+                    snooze_date=snooze_date,
                     due_in=first_due,
+                    can_be_snoozed=True,
                 )
                 return [card.apply()]
 
             # Otherwise excluded (mastectomy, hospice, etc) - no card
             return []
 
-        # Patient is in denominator
-        # Check for protocol override for due date calculation
+        # Patient is in denominator - check for protocol override for due date calculation
         override = self.get_protocol_override(patient)
 
         # Get stratification for reporting
         stratum = self.get_stratification(patient)
-        stratum_text = ""
-        if stratum == 1:
-            stratum_text = " (Stratum 1: Ages 42-51)"
-        elif stratum == 2:
-            stratum_text = " (Stratum 2: Ages 52-74)"
+        stratum_text = self._get_stratum_text(stratum)
 
         if self.in_numerator(patient) and self._on_date:
             # Screening satisfied - calculate next due date
-            if override:
-                # Use custom cycle from override
-                cycle_days = override.cycle_in_days
-                due_in_days = (self._on_date.shift(days=cycle_days) - self.now).days
-            else:
-                # Standard calculation: 27 months (12 + 15)
-                extra_months = self.EXTRA_SCREENING_MONTHS
-                due_in_days = (
-                    self._on_date.shift(days=self.timeframe.duration, months=extra_months)
-                    - self.now
-                ).days
-
-            months_ago = (self.now - self._on_date).days // 30
-            if months_ago == 0:
-                time_phrase = "today"
-            elif months_ago == 1:
-                time_phrase = "1 month ago"
-            else:
-                time_phrase = f"{months_ago} months ago"
-
-            narrative = (
-                f"{patient.first_name} had a mammography {time_phrase} on "
-                f"{self._on_date.format('M/D/YY')}. "
-                f"Next screening due in {due_in_days} days.{stratum_text}"
-            )
+            due_in_days = self._calculate_due_in_days(override)
+            narrative = self._build_satisfied_narrative(patient, due_in_days, stratum_text)
 
             card = ProtocolCard(
                 patient_id=patient.id,
-                key="CMS125v14",
+                key=protocol_key,
                 title="Breast Cancer Screening",
                 narrative=narrative,
                 status=ProtocolCard.Status.SATISFIED,
+                snoozed=is_snoozed,
+                snooze_date=snooze_date,
                 due_in=due_in_days,
+                can_be_snoozed=True,
             )
-
             return [card.apply()]
 
+        # Screening due - add recommendations
+        narrative = (
+            f"No mammography found in the last 27 months. "
+            f"{patient.first_name} is due for breast cancer screening.{stratum_text}"
+        )
+
+        recommendation = self._build_screening_recommendation()
+
+        card = ProtocolCard(
+            patient_id=patient.id,
+            key=protocol_key,
+            title="Breast Cancer Screening",
+            narrative=narrative,
+            status=ProtocolCard.Status.DUE,
+            snoozed=is_snoozed,
+            snooze_date=snooze_date,
+            due_in=-1,  # Already overdue
+            recommendations=[recommendation],
+            can_be_snoozed=True,
+        )
+        return [card.apply()]
+
+    def _get_stratum_text(self, stratum: int | None) -> str:
+        """Get stratum text for narrative display."""
+        if stratum == 1:
+            return " (Stratum 1: Ages 42-51)"
+        elif stratum == 2:
+            return " (Stratum 2: Ages 52-74)"
+        return ""
+
+    def _calculate_due_in_days(self, override: ProtocolOverride | None) -> int:
+        """Calculate days until next screening is due."""
+        if override:
+            # Use custom cycle from override
+            return (self._on_date.shift(days=override.cycle_in_days) - self.now).days
+
+        # Standard calculation: 27 months (12 + 15)
+        return (
+            self._on_date.shift(days=self.timeframe.duration, months=self.EXTRA_SCREENING_MONTHS)
+            - self.now
+        ).days
+
+    def _build_satisfied_narrative(
+        self, patient: Patient, due_in_days: int, stratum_text: str
+    ) -> str:
+        """Build narrative for satisfied protocol status."""
+        months_ago = (self.now - self._on_date).days // 30
+        if months_ago == 0:
+            time_phrase = "today"
+        elif months_ago == 1:
+            time_phrase = "1 month ago"
         else:
-            # Screening due - add recommendations
-            narrative = (
-                f"No mammography found in the last 27 months. "
-                f"{patient.first_name} is due for breast cancer screening.{stratum_text}"
-            )
+            time_phrase = f"{months_ago} months ago"
 
-            card = ProtocolCard(
-                patient_id=patient.id,
-                key="CMS125v14",
-                title="Breast Cancer Screening",
-                narrative=narrative,
-                status=ProtocolCard.Status.DUE,
-                due_in=-1,  # Already overdue
-                recommendations=[
-                    Recommendation(
-                        title="Discuss breast cancer screening and order mammography",
-                        button="Order",
-                    )
-                ],
-            )
+        return (
+            f"{patient.first_name} had a mammography {time_phrase} on "
+            f"{self._on_date.format('M/D/YY')}. "
+            f"Next screening due in {due_in_days} days.{stratum_text}"
+        )
 
-            return [card.apply()]
+    def _build_screening_recommendation(self) -> Recommendation:
+        """Build the screening recommendation with coding filter."""
+        coding_filter = self._build_coding_filter(Mammography, Tomography)
+
+        instruct_command = InstructCommand()
+        recommendation = instruct_command.recommend(
+            title="Discuss breast cancer screening and order imaging as appropriate",
+            button="Plan",
+        )
+
+        # Override context with our coding filter while preserving effect_type
+        recommendation.context = {
+            "filter": {"coding": coding_filter},
+            "effect_type": recommendation.context.get("effect_type")
+            if recommendation.context
+            else None,
+        }
+        return recommendation
