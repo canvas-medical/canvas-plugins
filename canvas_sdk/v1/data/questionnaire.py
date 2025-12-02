@@ -61,8 +61,27 @@ class Question(TimestampedModel, IdentifiableModel):
     show_prologue = models.BooleanField()
     code_system = models.CharField(max_length=255)
     code = models.CharField(max_length=100)
-    enabled_behavior = models.CharField(max_length=10, null=True, blank=True)
-    enabled_conditions = models.JSONField(null=True, blank=True)
+    enable_behavior = models.CharField(max_length=10, null=True, blank=True)
+
+
+class QuestionEnablementCondition(TimestampedModel):
+    """QuestionEnablementCondition."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_questionenablementcondition_001"
+
+    status = models.CharField(max_length=2)
+    question = models.ForeignKey(
+        Question, on_delete=models.DO_NOTHING, related_name="enablement_conditions", null=True
+    )
+    dependent_on = models.ForeignKey(
+        Question, on_delete=models.DO_NOTHING, related_name="dependent_questions", null=True
+    )
+    operator = models.CharField(max_length=10, null=True, blank=True)
+    answer_value = models.CharField(max_length=1000, null=True, blank=True)
+    answer_option = models.ForeignKey(
+        ResponseOption, on_delete=models.DO_NOTHING, related_name="enablement_conditions", null=True
+    )
 
 
 class QuestionnaireValueSetLookupQuerySet(ValueSetLookupByNameQuerySet):
@@ -189,6 +208,7 @@ __exports__ = (
     "ResponseOptionSet",
     "ResponseOption",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "InterviewQuerySet",
