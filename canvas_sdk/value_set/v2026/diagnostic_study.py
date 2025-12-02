@@ -1,9 +1,8 @@
 from ..value_set import ValueSet
 
-
 class ImagingRelatedToVte(ValueSet):
     """
-    **Clinical Focus:** Imaging used to identify VTE.
+    **Clinical Focus:** Imaging used to identify VTE
 
     **Data Element Scope:** Imaging used to identify VTE
 
@@ -29,7 +28,6 @@ class ImagingRelatedToVte(ValueSet):
         "93970",  # Duplex scan of extremity veins including responses to compression and other maneuvers; complete bilateral study
         "93971",  # Duplex scan of extremity veins including responses to compression and other maneuvers; unilateral or limited study
     }
-
 
 class Mammography(ValueSet):
     """
@@ -142,7 +140,6 @@ class Mammography(ValueSet):
         "91522-3",  # DBT Breast - bilateral screen for implant
     }
 
-
 class BoneScan(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent bone scan diagnostic imaging.
@@ -203,7 +200,6 @@ class BoneScan(ValueSet):
         "81552-2",  # PET+CT Whole body Bone W 18F-NaF IV
     }
 
-
 class CtColonography(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for computed tomographic (CT) colonography.
@@ -228,7 +224,6 @@ class CtColonography(ValueSet):
         "79101-2",  # CT Colon and Rectum for screening W air contrast PR
         "82688-3",  # CT Colon and Rectum WO and W contrast IV and W air contrast PR
     }
-
 
 class EjectionFraction(ValueSet):
     """
@@ -299,7 +294,6 @@ class EjectionFraction(ValueSet):
         "93646-8",  # Left ventricular Ejection fraction by US.2D+Calculated by biplane area-length method
     }
 
-
 class MacularExam(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnostic study of a macular exam of the eye.
@@ -324,7 +318,6 @@ class MacularExam(ValueSet):
         "79821-5",  # Physical findings of Left macula by Ophthalmoscopy
     }
 
-
 class CupToDiscRatio(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnostic studies specific to obtaining cup to disc ratio by ophthalmoscopy.
@@ -346,7 +339,6 @@ class CupToDiscRatio(ValueSet):
         "71485-7",  # Right optic nerve Cup-disc ratio by Ophthalmoscopy
     }
 
-
 class OpticDiscExamForStructuralAbnormalities(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of diagnostic studies specific to obtaining cup to disc ratio by ophthalmoscopy.
@@ -367,7 +359,6 @@ class OpticDiscExamForStructuralAbnormalities(ValueSet):
         "71486-5",  # Left eye Optic disc or retinal nerve fiber layer structural abnormalities by Ophthalmoscopy
         "71487-3",  # Right eye Optic disc or retinal nerve fiber layer structural abnormalities by Ophthalmoscopy
     }
-
 
 class DiagnosticStudiesDuringPregnancy(ValueSet):
     """
@@ -991,7 +982,6 @@ class DiagnosticStudiesDuringPregnancy(ValueSet):
         "80416-1",  # Head circumference/Abdominal circumference US+Estimated from Campbell 1977
         "98032-6",  # Fetal body weight/Heaviest fetus body weight US+Calculated
     }
-
 
 class XrayStudy(ValueSet):
     """
@@ -5196,7 +5186,6 @@ class XrayStudy(ValueSet):
         "98366-8",  # XR Thoracic spine Single view W flexion
     }
 
-
 class DexaBoneDensityForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a diagnostic study measuring bone density by x-ray studies.
@@ -5238,7 +5227,6 @@ class DexaBoneDensityForUrologyCare(ValueSet):
         "80952-5",  # DXA Radius and Ulna - left [Mass/Area] Bone density
         "85394-5",  # DXA Lumbar spine [Z-score] Bone density
     }
-
 
 __exports__ = (
     "ImagingRelatedToVte",

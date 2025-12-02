@@ -1,6 +1,5 @@
 from ..value_set import ValueSet
 
-
 class BloodTransfusion(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group procedures of blood transfusions.
@@ -72,7 +71,6 @@ class BloodTransfusion(ValueSet):
         "71493000",  # Transfusion of packed red blood cells (procedure)
     }
 
-
 class ConversionOfCardiacRhythm(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent a grouping of procedures of conversion of cardiac rhythm.
@@ -97,7 +95,6 @@ class ConversionOfCardiacRhythm(ValueSet):
     SNOMEDCT = {
         "250041003",  # Conversion of cardiac rhythm to sinus rhythm (procedure)
     }
-
 
 class DeliveryProcedures(ValueSet):
     """
@@ -244,7 +241,6 @@ class DeliveryProcedures(ValueSet):
         "90438006",  # Delivery by Malstrom's extraction (procedure)
     }
 
-
 class Hysterectomy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent a grouping of procedures of a hysterectomy.
@@ -353,7 +349,6 @@ class Hysterectomy(ValueSet):
         "860602007",  # Postpartum excision of uterus (procedure)
         "86477000",  # Total hysterectomy with removal of both tubes and ovaries (procedure)
     }
-
 
 class SevereMaternalMorbidityProcedures(ValueSet):
     """
@@ -477,7 +472,6 @@ class SevereMaternalMorbidityProcedures(ValueSet):
         "86477000",  # Total hysterectomy with removal of both tubes and ovaries (procedure)
     }
 
-
 class Tracheostomy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent a grouping of procedures for tracheostomy.
@@ -503,7 +497,6 @@ class Tracheostomy(ValueSet):
     SNOMEDCT = {
         "43988005",  # Temporary tracheostomy (procedure)
     }
-
 
 class Ventilation(ValueSet):
     """
@@ -533,7 +526,6 @@ class Ventilation(ValueSet):
         "47545007",  # Continuous positive airway pressure ventilation treatment (regime/therapy)
     }
 
-
 class ApplicationOfGraduatedCompressionStockings(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts of the procedure for the application of graduated compression stockings (GCS) for venous thromboembolism (VTE) prophylaxis.
@@ -553,7 +545,6 @@ class ApplicationOfGraduatedCompressionStockings(ValueSet):
     SNOMEDCT = {
         "229511001",  # Application of graduated compression garment (procedure)
     }
-
 
 class ApplicationOfIntermittentPneumaticCompressionDevices(ValueSet):
     """
@@ -575,7 +566,6 @@ class ApplicationOfIntermittentPneumaticCompressionDevices(ValueSet):
         "443448006",  # Application of intermittent pneumatic compression device (procedure)
     }
 
-
 class ApplicationOfVenousFootPumps(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to identify concepts of the procedure for the application of venous foot pump for venous thromboembolism (VTE) prophylaxis.
@@ -596,7 +586,6 @@ class ApplicationOfVenousFootPumps(ValueSet):
         "424831005",  # Application of foot pump (procedure)
         "442410008",  # Application of venous foot pump (procedure)
     }
-
 
 class GeneralSurgery(ValueSet):
     """
@@ -4228,7 +4217,6 @@ class GeneralSurgery(ValueSet):
         "9905009",  # Loop colostomy (procedure)
     }
 
-
 class GeneralOrNeuraxialAnesthesia(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of a procedure for surgery where a general and/or neuraxial anesthesia is used.
@@ -4300,7 +4288,6 @@ class GeneralOrNeuraxialAnesthesia(ValueSet):
         "74527005",  # Injection of anesthetic substance, therapeutic, subdural, differential (procedure)
         "82776005",  # Injection of anesthetic substance, therapeutic, subdural, continuous (procedure)
     }
-
 
 class GynecologicalSurgery(ValueSet):
     """
@@ -4508,7 +4495,6 @@ class GynecologicalSurgery(ValueSet):
         "89325008",  # Cauterization of ovary (procedure)
     }
 
-
 class HipFractureSurgery(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for procedures of hip fracture surgery.
@@ -4569,7 +4555,6 @@ class HipFractureSurgery(ValueSet):
         "83381006",  # Arthroplasty of hip with bone graft (procedure)
         "87618002",  # Acetabuloplasty with resection of femoral head (procedure)
     }
-
 
 class HipReplacementSurgery(ValueSet):
     """
@@ -4784,7 +4769,6 @@ class HipReplacementSurgery(ValueSet):
         "770606008",  # Total replacement of left hip joint (procedure)
         "7989006",  # Removal of prosthesis of joint of hip (procedure)
     }
-
 
 class IntracranialNeurosurgery(ValueSet):
     """
@@ -5109,7 +5093,6 @@ class IntracranialNeurosurgery(ValueSet):
         "9888007",  # Excision of intracranial lesion (procedure)
     }
 
-
 class KneeReplacementSurgery(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for the procedure of a total knee replacement.
@@ -5260,7 +5243,6 @@ class KneeReplacementSurgery(ValueSet):
         "88056004",  # Arthroplasty of knee with constrained prosthesis (procedure)
         "90827004",  # Arthroplasty of knee, condyle and plateau, medial compartment (procedure)
     }
-
 
 class UrologicalSurgery(ValueSet):
     """
@@ -5841,7 +5823,6 @@ class UrologicalSurgery(ValueSet):
         "91531008",  # One stage subtotal suprapubic prostatectomy (procedure)
     }
 
-
 class ChildInfluenzaVaccineAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for an influenza vaccination for use in children 2 and younger.
@@ -5875,7 +5856,6 @@ class ChildInfluenzaVaccineAdministered(ValueSet):
     SNOMEDCT = {
         "86198006",  # Administration of vaccine product containing only Influenza virus antigen (procedure)
     }
-
 
 class DtapVaccineAdministered(ValueSet):
     """
@@ -5939,7 +5919,6 @@ class DtapVaccineAdministered(ValueSet):
         "868277008",  # Administration of first dose of vaccine product containing only Bordetella pertussis and Clostridium tetani and Corynebacterium diphtheriae and Human poliovirus antigens (procedure)
     }
 
-
 class HepatitisAVaccineAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a Hepatitis A vaccination.
@@ -5980,7 +5959,6 @@ class HepatitisAVaccineAdministered(ValueSet):
         "871753009",  # Administration of third dose of pediatric vaccine product containing only Hepatitis A virus antigen (procedure)
         "871754003",  # Administration of booster dose of pediatric vaccine product containing only Hepatitis A virus antigen (procedure)
     }
-
 
 class HepatitisBVaccineAdministered(ValueSet):
     """
@@ -6031,7 +6009,6 @@ class HepatitisBVaccineAdministered(ValueSet):
         "786846001",  # Administration of vaccine product containing only Haemophilus influenzae type b and Hepatitis B virus antigens (procedure)
     }
 
-
 class HibVaccine3DoseScheduleAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a 3-dose haemophilus influenzae type b (Hib) vaccination.
@@ -6061,7 +6038,6 @@ class HibVaccine3DoseScheduleAdministered(ValueSet):
         "170345000",  # Administration of third dose of vaccine product containing only Haemophilus influenzae type b antigen (procedure)
         "170346004",  # Administration of booster dose of vaccine product containing only Haemophilus influenzae type b antigen (procedure)
     }
-
 
 class HibVaccine4DoseScheduleAdministered(ValueSet):
     """
@@ -6095,7 +6071,6 @@ class HibVaccine4DoseScheduleAdministered(ValueSet):
         "415507003",  # Administration of second dose of vaccine product containing only five component acellular Bordetella pertussis, Clostridium tetani, Corynebacterium diphtheriae, Haemophilus influenzae type b and inactivated whole Human poliovirus antigens (procedure)
         "415712004",  # Administration of third dose of vaccine product containing only five component acellular Bordetella pertussis, Clostridium tetani, Corynebacterium diphtheriae, Haemophilus influenzae type b and inactivated whole Human poliovirus antigens (procedure)
     }
-
 
 class InactivatedPolioVaccineIpvAdministered(ValueSet):
     """
@@ -6157,7 +6132,6 @@ class InactivatedPolioVaccineIpvAdministered(ValueSet):
         "870670004",  # Preschool administration of vaccine product containing only Clostridium tetani and Corynebacterium diphtheriae and Human poliovirus antigens (procedure)
     }
 
-
 class InfluenzaVirusLaivVaccineAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent administration of live attenuated influenza vaccine.
@@ -6178,7 +6152,6 @@ class InfluenzaVirusLaivVaccineAdministered(ValueSet):
         "90660",  # Influenza virus vaccine, trivalent, live (LAIV3), for intranasal use
         "90672",  # Influenza virus vaccine, quadrivalent, live (LAIV4), for intranasal use
     }
-
 
 class MeaslesMumpsAndRubellaMmrVaccineAdministered(ValueSet):
     """
@@ -6213,7 +6186,6 @@ class MeaslesMumpsAndRubellaMmrVaccineAdministered(ValueSet):
         "871909005",  # Administration of first dose of vaccine product containing only Human alphaherpesvirus 3 and Measles morbillivirus and Mumps orthorubulavirus and Rubella virus antigens (procedure)
     }
 
-
 class PneumococcalConjugateVaccineAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a pneumococcal conjugate vaccination.
@@ -6246,7 +6218,6 @@ class PneumococcalConjugateVaccineAdministered(ValueSet):
         "871833000",  # Subcutaneous injection of pneumococcal vaccine (procedure)
     }
 
-
 class RotavirusVaccine2DoseScheduleAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a 2-dose rotavirus vaccination.
@@ -6271,7 +6242,6 @@ class RotavirusVaccine2DoseScheduleAdministered(ValueSet):
         "434741000124104",  # Rotavirus vaccination, 2 dose schedule (procedure)
     }
 
-
 class RotavirusVaccine3DoseScheduleAdministered(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a 3-dose rotavirus vaccination.
@@ -6295,7 +6265,6 @@ class RotavirusVaccine3DoseScheduleAdministered(ValueSet):
     SNOMEDCT = {
         "434731000124109",  # Rotavirus vaccination, 3 dose schedule (procedure)
     }
-
 
 class VaricellaZosterVaccineVzvAdministered(ValueSet):
     """
@@ -6330,10 +6299,9 @@ class VaricellaZosterVaccineVzvAdministered(ValueSet):
         "871909005",  # Administration of first dose of vaccine product containing only Human alphaherpesvirus 3 and Measles morbillivirus and Mumps orthorubulavirus and Rubella virus antigens (procedure)
     }
 
-
 class AnesthesiaRequiringMonitoredCare(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for anesthesia requiring monitored anesthesia care (MAC).
+    **Clinical Focus:** The purpose of this value set is to represent concepts for anesthesia requiring monitored anesthesia care (MAC)
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -6421,10 +6389,9 @@ class AnesthesiaRequiringMonitoredCare(ValueSet):
         "88815003",  # Peripheral block anesthesia (procedure)
     }
 
-
 class GeneralAndNeuraxialAnesthesia(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for general and/or neuraxial anesthesia to represent the occurrence of a procedure or surgery taking place.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for general and/or neuraxial anesthesia to represent the occurrence of a procedure or surgery taking place
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -6487,10 +6454,9 @@ class GeneralAndNeuraxialAnesthesia(ValueSet):
         "82776005",  # Injection of anesthetic substance, therapeutic, subdural, continuous (procedure)
     }
 
-
 class HeadNeckAndThoracicSurgeriesWithHighRiskAirwayCompromise(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for selected head, neck, and thoracic surgical procedures involving significant risk of airway compromise or requiring airway protection.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for selected head, neck, and thoracic surgical procedures involving significant risk of airway compromise or requiring airway protection
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -8545,10 +8511,9 @@ class HeadNeckAndThoracicSurgeriesWithHighRiskAirwayCompromise(ValueSet):
         "9811006",  # Tongue destructive procedure (procedure)
     }
 
-
 class Intubation(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for intubation.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for intubation
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -8585,7 +8550,6 @@ class Intubation(ValueSet):
         "418613003",  # Tracheal intubation through a laryngeal mask airway (procedure)
         "429161001",  # Insertion of endotracheal tube using laryngoscope (procedure)
     }
-
 
 class MajorSurgicalProcedure(ValueSet):
     """
@@ -20148,10 +20112,9 @@ class MajorSurgicalProcedure(ValueSet):
         "9993006",  # Incision of diaphragm (procedure)
     }
 
-
 class MechanicalVentilation(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for respiratory mechanical ventilation.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for respiratory mechanical ventilation
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -20176,10 +20139,9 @@ class MechanicalVentilation(ValueSet):
         "243141005",  # Mechanically assisted spontaneous ventilation (regime/therapy)
     }
 
-
 class NonInvasiveOxygenTherapyByNasalCannulaOrMask(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for noninvasive oxygen therapy and oxygen administered by nasal cannula or mask.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for noninvasive oxygen therapy and oxygen administered by nasal cannula or mask
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -20208,10 +20170,9 @@ class NonInvasiveOxygenTherapyByNasalCannulaOrMask(ValueSet):
         "870533002",  # Heated and humidified high flow oxygen therapy (procedure)
     }
 
-
 class TracheostomyProcedures(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for tracheostomy procedures.
+    **Clinical Focus:** The purpose of this value set is to represent concepts for tracheostomy procedures
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -20249,7 +20210,6 @@ class TracheostomyProcedures(ValueSet):
         "55622001",  # Tracheostomy, emergency procedure by transtracheal approach (procedure)
         "7240008",  # Total laryngectomy with partial pharyngectomy and synchronous tracheostomy (procedure)
     }
-
 
 class HysterectomyWithNoResidualCervix(ValueSet):
     """
@@ -20359,7 +20319,6 @@ class HysterectomyWithNoResidualCervix(ValueSet):
         "88144003",  # Removal of ectopic interstitial uterine pregnancy requiring total hysterectomy (procedure)
     }
 
-
 class BilateralMastectomy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for bilateral mastectomy.
@@ -20398,7 +20357,6 @@ class BilateralMastectomy(ValueSet):
         "870629001",  # Excision of bilateral breasts for female to male transsexual (procedure)
     }
 
-
 class UnilateralMastectomyLeft(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for unilateral mastectomy of the left breast.
@@ -20430,7 +20388,6 @@ class UnilateralMastectomyLeft(ValueSet):
         "836437004",  # Simple mastectomy of left breast using robotic assistance (procedure)
     }
 
-
 class UnilateralMastectomyRight(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for unilateral mastectomy of the right breast.
@@ -20461,7 +20418,6 @@ class UnilateralMastectomyRight(ValueSet):
         "741019007",  # Subcutaneous mastectomy of right breast with prosthetic implant (procedure)
         "836435007",  # Simple mastectomy of right breast using robotic assistance (procedure)
     }
-
 
 class ProstateCancerTreatment(ValueSet):
     """
@@ -20574,7 +20530,6 @@ class ProstateCancerTreatment(ValueSet):
         "90470006",  # Prostatectomy (procedure)
     }
 
-
 class SalvageTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of procedures for salvage therapy.
@@ -20602,7 +20557,6 @@ class SalvageTherapy(ValueSet):
         "236209003",  # Salvage cystoprostatourethrectomy (procedure)
         "236211007",  # Salvage cystoprostatectomy (procedure)
     }
-
 
 class Colonoscopy(ValueSet):
     """
@@ -20692,7 +20646,6 @@ class Colonoscopy(ValueSet):
         "8180007",  # Fiberoptic colonoscopy through colostomy (procedure)
     }
 
-
 class FlexibleSigmoidoscopy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a flexible sigmoidoscopy.
@@ -20736,7 +20689,6 @@ class FlexibleSigmoidoscopy(ValueSet):
         "396226005",  # Flexible fiberoptic sigmoidoscopy with biopsy (procedure)
         "44441009",  # Flexible fiberoptic sigmoidoscopy (procedure)
     }
-
 
 class TotalColectomy(ValueSet):
     """
@@ -20794,7 +20746,6 @@ class TotalColectomy(ValueSet):
         "80294005",  # Total abdominal colectomy with rectal mucosectomy and ileoanal anastomosis (procedure)
         "858579005",  # Excision of entire colon, entire rectum and entire anal canal (procedure)
     }
-
 
 class CataractSurgery(ValueSet):
     """
@@ -20886,7 +20837,6 @@ class CataractSurgery(ValueSet):
         "9137006",  # Discission of membranous cataract, secondary (procedure)
     }
 
-
 class HeartTransplant(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of procedures for heart transplant.
@@ -20915,7 +20865,6 @@ class HeartTransplant(ValueSet):
         "450816007",  # Revision of transplantation of heart (procedure)
         "47058000",  # Heart transplant with recipient cardiectomy (procedure)
     }
-
 
 class LeftVentricularAssistDevicePlacement(ValueSet):
     """
@@ -20946,7 +20895,6 @@ class LeftVentricularAssistDevicePlacement(ValueSet):
         "232968001",  # Implantation of cardiac biventricular assist device (procedure)
         "700151002",  # Temporary implantation of left cardiac ventricular assist device (procedure)
     }
-
 
 class SubstanceUseDisorderLongActingMedicationAdministration(ValueSet):
     """
@@ -20985,7 +20933,6 @@ class SubstanceUseDisorderLongActingMedicationAdministration(ValueSet):
         "S0109",  # Methadone, oral, 5 mg
     }
 
-
 class SubstanceUseDisorderShortActingMedicationAdministration(ValueSet):
     """
     **Clinical Focus:** The purpose of this Grouping Value Set is to represent concepts for short acting substance use disorder medication assisted treatment, usually administered as part of an opioid treatment program.
@@ -21017,7 +20964,6 @@ class SubstanceUseDisorderShortActingMedicationAdministration(ValueSet):
         "1254709001",  # Referral to substance use disorder treatment program (procedure)
         "310653000",  # Drug addiction therapy using methadone (regime/therapy)
     }
-
 
 class CardiacPacer(ValueSet):
     """
@@ -21104,7 +21050,6 @@ class CardiacPacer(ValueSet):
         "77453006",  # Revision of permanent cardiac pacemaker device (procedure)
         "8072003",  # Replacement of cardiac pacemaker with single chamber pacemaker not specified as rate responsive (procedure)
     }
-
 
 class CardiacSurgery(ValueSet):
     """
@@ -21280,10 +21225,9 @@ class CardiacSurgery(ValueSet):
         "90487008",  # Aortocoronary bypass of two coronary arteries (procedure)
     }
 
-
 class ProceduresUsedToIndicateSexualActivity(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent procedures indicating history of sexual activity.
+    **Clinical Focus:** The purpose of this value set is to represent procedures indicating history of sexual activity
 
     **Data Element Scope:** This value set may use a model element related to Procedure.
 
@@ -21681,7 +21625,6 @@ class ProceduresUsedToIndicateSexualActivity(ValueSet):
         "9724000",  # Repair of current obstetric laceration of uterus (procedure)
     }
 
-
 class ChemotherapyAdministration(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for the procedure of chemotherapy administration.
@@ -21788,7 +21731,6 @@ class ChemotherapyAdministration(ValueSet):
         "897713009",  # Antineoplastic chemoimmunotherapy (regime/therapy)
     }
 
-
 class DialysisServices(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for dialysis services.
@@ -21867,7 +21809,6 @@ class DialysisServices(ValueSet):
         "714749008",  # Continuous renal replacement therapy (procedure)
     }
 
-
 class KidneyTransplant(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a kidney transplant.
@@ -21919,7 +21860,6 @@ class KidneyTransplant(ValueSet):
         "782655004",  # Laparoscopic transplant of kidney using robotic assistance (procedure)
     }
 
-
 class CesareanBirth(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to group concepts of procedures for cesarean section.
@@ -21967,7 +21907,6 @@ class CesareanBirth(ValueSet):
         "84195007",  # Classical cesarean section (procedure)
         "89053004",  # Vaginal cesarean section (procedure)
     }
-
 
 class CabgSurgeries(ValueSet):
     """
@@ -22332,10 +22271,9 @@ class CabgSurgeries(ValueSet):
         "90487008",  # Aortocoronary bypass of two coronary arteries (procedure)
     }
 
-
 class CabgOrPciProcedure(ValueSet):
     """
-    **Clinical Focus:** CABG and PCI procedures.
+    **Clinical Focus:** CABG and PCI procedures
 
     **Data Element Scope:** CABG and PCI procedures
 
@@ -22392,7 +22330,6 @@ class CabgOrPciProcedure(ValueSet):
         "S2208",  # Minimally invasive direct coronary artery bypass surgery involving mini-thoracotomy or mini-sternotomy surgery, performed under direct vision; using single arterial and venous graft(s), single venous graft
         "S2209",  # Minimally invasive direct coronary artery bypass surgery involving mini-thoracotomy or mini-sternotomy surgery, performed under direct vision; using two arterial grafts and single venous graft
     }
-
 
 class CarotidIntervention(ValueSet):
     """
@@ -23309,7 +23246,6 @@ class CarotidIntervention(ValueSet):
         "9339002",  # Perfusion of carotid artery (procedure)
     }
 
-
 class Pci(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent procedures used to define percutaneous coronary intervention (PCI).
@@ -23510,7 +23446,6 @@ class Pci(ValueSet):
         "85053006",  # Percutaneous transluminal coronary angioplasty, multiple vessels (procedure)
     }
 
-
 class PartialArthroplastyOfHip(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for partial arthroplasty of the hip.
@@ -23598,7 +23533,6 @@ class PartialArthroplastyOfHip(ValueSet):
         "713686009",  # Partial hip replacement with bipolar prosthesis (procedure)
     }
 
-
 class PrimaryThaProcedure(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts of primary total hip arthroplasty (THA).
@@ -23680,7 +23614,6 @@ class PrimaryThaProcedure(ValueSet):
         "57589001",  # Arthroplasty, acetabular and proximal femoral prosthetic replacement, with allograft (procedure)
         "770606008",  # Total replacement of left hip joint (procedure)
     }
-
 
 class RemovalRevisionAndSupplementProceduresOfTheLowerBodyAndSpine(ValueSet):
     """
@@ -24306,7 +24239,6 @@ class RemovalRevisionAndSupplementProceduresOfTheLowerBodyAndSpine(ValueSet):
         "86782006",  # Removal of internal fixation device of vertebra (procedure)
     }
 
-
 class CystectomyForUrologyCare(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for procedures of cystectomy.
@@ -24352,7 +24284,6 @@ class CystectomyForUrologyCare(ValueSet):
         "90648000",  # Partial cystectomy with reimplantation of ureter into urinary bladder (procedure)
     }
 
-
 class AtrialAblation(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for procedures for atrial ablation.
@@ -24397,7 +24328,6 @@ class AtrialAblation(ValueSet):
         "870252007",  # Ventricular tachycardia ablation (procedure)
     }
 
-
 class IntravenousOrIntraarterialThrombolyticTpaTherapy(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for procedures of intravenous or intra-arterial thrombolytic (t-PA) therapy.
@@ -24430,7 +24360,6 @@ class IntravenousOrIntraarterialThrombolyticTpaTherapy(ValueSet):
         "69245005",  # Intra-arterial infusion of thrombolytic agent (procedure)
     }
 
-
 class FluorideVarnishApplicationForChildren(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for fluoride varnish applications.
@@ -24459,10 +24388,9 @@ class FluorideVarnishApplicationForChildren(ValueSet):
         "70468009",  # Topical application of fluoride including prophylaxis, child (procedure)
     }
 
-
 class HighRiskProceduresForAki(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to represent concepts for procedures that puts patients at risk for developing acute kidney injury (AKI).
+    **Clinical Focus:** The purpose of this value set is to represent concepts for procedures that puts patients at risk for developing acute kidney injury (AKI)
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -24545,10 +24473,9 @@ class HighRiskProceduresForAki(ValueSet):
         "88930008",  # Total nephrectomy in recipient (procedure)
     }
 
-
 class HospitalBasedDialysisServices(ValueSet):
     """
-    **Clinical Focus:** The purpose of this value set is to identify concepts that represent hospital based dialysis procedures indicative of acute dialysis.
+    **Clinical Focus:** The purpose of this value set is to identify concepts that represent hospital based dialysis procedures indicative of acute dialysis
 
     **Data Element Scope:** This value set may use a model element related to Procedure
 
@@ -24610,7 +24537,6 @@ class HospitalBasedDialysisServices(ValueSet):
         "895382009",  # Prolonged intermittent renal replacement therapy (procedure)
     }
 
-
 class EndotrachealIntubation(ValueSet):
     """
     **Clinical Focus:** This value set contains concepts that represent procedures used to define endotracheal intubation.
@@ -24663,7 +24589,6 @@ class EndotrachealIntubation(ValueSet):
         "418613003",  # Tracheal intubation through a laryngeal mask airway (procedure)
         "429161001",  # Insertion of endotracheal tube using laryngoscope (procedure)
     }
-
 
 class IntracranialOrIntraspinalSurgery(ValueSet):
     """
@@ -27508,7 +27433,6 @@ class IntracranialOrIntraspinalSurgery(ValueSet):
         "9888007",  # Excision of intracranial lesion (procedure)
     }
 
-
 class MechanicalCirculatoryAssistDevice(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for mechanical circulatory assist devices.
@@ -27608,7 +27532,6 @@ class MechanicalCirculatoryAssistDevice(ValueSet):
         "700151002",  # Temporary implantation of left cardiac ventricular assist device (procedure)
         "87701006",  # Intraaortic balloon pump weaning (procedure)
     }
-
 
 class PercutaneousCoronaryIntervention(ValueSet):
     """
@@ -27864,7 +27787,6 @@ class PercutaneousCoronaryIntervention(ValueSet):
         "85053006",  # Percutaneous transluminal coronary angioplasty, multiple vessels (procedure)
         "91338001",  # Infusion of intra-arterial thrombolytic agent with percutaneous transluminal coronary angioplasty, single vessel (procedure)
     }
-
 
 __exports__ = (
     "BloodTransfusion",
