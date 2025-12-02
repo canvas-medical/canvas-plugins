@@ -20,9 +20,9 @@ class RetinalOrDilatedEyeExam(ValueSet):
     EXPANSION_VERSION = "eCQM Update 2025-05-08"
 
     SNOMEDCT = {
-        "18188000",  # Ophthalmoscopy under general anesthesia (procedure)
-        "20067007",  # Ocular fundus photography (procedure)
-        "21593001",  # Ophthalmodynamography (procedure)
+        "18188000",   # Ophthalmoscopy under general anesthesia (procedure)
+        "20067007",   # Ocular fundus photography (procedure)
+        "21593001",   # Ophthalmodynamography (procedure)
         "252779009",  # Single bright white flash electroretinography (procedure)
         "252780007",  # Dark adapted single bright flash electroretinography (procedure)
         "252781006",  # Pre-dark-adapted single bright flash electroretinography (procedure)
@@ -35,12 +35,12 @@ class RetinalOrDilatedEyeExam(ValueSet):
         "252846004",  # Scanning laser ophthalmoscopy (procedure)
         "274795007",  # Examination of optic disc (procedure)
         "274798009",  # Examination of retina (procedure)
-        "3047001",  # Kowa fundus photography (procedure)
+        "3047001",    # Kowa fundus photography (procedure)
         "308110009",  # Direct fundoscopy following mydriatic (procedure)
-        "30842004",  # Ophthalmoscopy with medical evaluation, extended, with fundus photography (procedure)
+        "30842004",   # Ophthalmoscopy with medical evaluation, extended, with fundus photography (procedure)
         "314971001",  # Camera fundoscopy (procedure)
         "314972008",  # Indirect fundoscopy following mydriatic (procedure)
-        "36844005",  # Ophthalmoscopy with medical evaluation, extended, with ophthalmodynamometry (procedure)
+        "36844005",   # Ophthalmoscopy with medical evaluation, extended, with ophthalmodynamometry (procedure)
         "391999003",  # Confocal scanning laser ophthalmoscopy (procedure)
         "392005004",  # Scanning laser polarimetry (procedure)
         "410441007",  # Ophthalmoscopy with medical evaluation, extended, with fluorescein angiography (procedure)
@@ -54,14 +54,13 @@ class RetinalOrDilatedEyeExam(ValueSet):
         "420213007",  # Multifocal electroretinography (procedure)
         "425816006",  # Ultrasonic evaluation of retina (procedure)
         "427478009",  # Evaluation of retina (procedure)
-        "53524009",  # Ophthalmoscopy (procedure)
-        "56072006",  # Ophthalmoscopy with medical evaluation, extended, for retinal detachment mapping (procedure)
-        "56204000",  # Ophthalmodynamometry (procedure)
-        "6615001",  # Electroretinography (procedure)
+        "53524009",   # Ophthalmoscopy (procedure)
+        "56072006",   # Ophthalmoscopy with medical evaluation, extended, for retinal detachment mapping (procedure)
+        "56204000",   # Ophthalmodynamometry (procedure)
+        "6615001",    # Electroretinography (procedure)
         "700070005",  # Optical coherence tomography of retina (procedure)
         "722161008",  # Diabetic retinal eye exam (procedure)
     }
-
 
 class BestCorrectedVisualAcuityExamUsingSnellenChart(ValueSet):
     """
@@ -83,7 +82,6 @@ class BestCorrectedVisualAcuityExamUsingSnellenChart(ValueSet):
         "79880-1",  # Visual acuity best corrected Right eye by Snellen eye chart
         "79881-9",  # Visual acuity best corrected Left eye by Snellen eye chart
     }
-
 
 class HeartRate(ValueSet):
     """
@@ -109,7 +107,6 @@ class HeartRate(ValueSet):
         "8867-4",  # Heart rate
     }
 
-
 class BmiPercentile(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a physical exam where a body mass index (BMI) percentile is calculated.
@@ -131,7 +128,6 @@ class BmiPercentile(ValueSet):
         "59575-1",  # Body mass index (BMI) [Percentile] Per age
         "59576-9",  # Body mass index (BMI) [Percentile] Per age and sex
     }
-
 
 class Height(ValueSet):
     """
@@ -156,7 +152,6 @@ class Height(ValueSet):
         "8307-1",  # Body height --preoperative
         "8308-9",  # Body height --standing
     }
-
 
 class Weight(ValueSet):
     """
@@ -184,7 +179,6 @@ class Weight(ValueSet):
         "8350-1",  # Body weight Measured --with clothes
         "8351-9",  # Body weight Measured --without clothes
     }
-
 
 class BodyTemperature(ValueSet):
     """
@@ -226,7 +220,6 @@ class BodyTemperature(ValueSet):
         "98663-8",  # Body temperature - Foot surface
     }
 
-
 class BodyWeight(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a physical exam with an observation or measurement of body weight.
@@ -258,7 +251,6 @@ class BodyWeight(ValueSet):
         "8351-9",  # Body weight Measured --without clothes
     }
 
-
 class OxygenSaturationByPulseOximetry(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a physical exam with an observation or measurement of oxygen saturation.
@@ -286,7 +278,6 @@ class OxygenSaturationByPulseOximetry(ValueSet):
         "89277-8",  # Oxygen saturation in Arterial blood by Pulse oximetry --during anesthesia
     }
 
-
 class RespiratoryRate(ValueSet):
     """
     **Clinical Focus:** The purpose of this value set is to represent concepts for a physical exam with an observation or measurement of respiratory rate.
@@ -310,7 +301,6 @@ class RespiratoryRate(ValueSet):
         "76528-9",  # Breath rate spontaneous
         "9279-1",  # Respiratory rate
     }
-
 
 class SystolicBloodPressure(ValueSet):
     """
@@ -336,7 +326,6 @@ class SystolicBloodPressure(ValueSet):
         "8480-6",  # Systolic blood pressure
         "89268-7",  # Systolic blood pressure--lying in L-lateral position
     }
-
 
 __exports__ = (
     "RetinalOrDilatedEyeExam",

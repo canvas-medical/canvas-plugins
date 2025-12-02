@@ -4,6 +4,7 @@ exclude: |
   (?x)(
     CHANGELOG.md|
     canvas_sdk/value_set/v2022/|
+    canvas_sdk/value_set/v2026/|
     canvas_cli/templates/
   )
 repos:
