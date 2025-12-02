@@ -1910,3 +1910,223 @@ class TestEdgeCases:
         # Due in should be based on the more recent mammogram (3 months ago)
         # so due_in should be larger than if it was based on 12-month-old mammogram
         assert data["due_in"] > 0
+
+
+class TestSatisfiedNarrativeTimePhrases:
+    """Test _build_satisfied_narrative time phrase variations."""
+
+    @pytest.mark.django_db
+    def test_mammogram_today_shows_today_phrase(self) -> None:
+        """Test narrative shows 'today' for mammogram performed today."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = timeframe_end.shift(years=-1)
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Mammogram on the same day as timeframe_end (today)
+        today_date = timeframe_end
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=today_date.date(),
+            result_date=today_date.date(),
+            assigned_date=today_date.datetime,
+        )
+
+        effects = protocol.compute_results(patient)
+
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert data["status"] == "satisfied"
+        assert "today" in data["narrative"]
+
+    @pytest.mark.django_db
+    def test_mammogram_one_month_ago_shows_singular_phrase(self) -> None:
+        """Test narrative shows '1 month ago' for mammogram performed 30-59 days ago."""
+        import json
+
+        from canvas_sdk.effects import EffectType
+
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = timeframe_end.shift(years=-1)
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Mammogram 35 days ago (1 month ago)
+        one_month_ago = timeframe_end.shift(days=-35)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=one_month_ago.date(),
+            result_date=one_month_ago.date(),
+            assigned_date=one_month_ago.datetime,
+        )
+
+        effects = protocol.compute_results(patient)
+
+        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
+        payload = json.loads(effects[0].payload)
+        data = payload["data"]
+
+        assert data["status"] == "satisfied"
+        assert "1 month ago" in data["narrative"]
+
+
+class TestSnoozeWithoutSnoozedDays:
+    """Test snooze functionality when snoozed_days is not set."""
+
+    @pytest.mark.django_db
+    def test_snooze_without_snoozed_days_uses_snooze_date(self) -> None:
+        """Test that snooze without snoozed_days falls back to snooze_date."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create snooze override without snoozed_days
+        snooze_date = timeframe_end.shift(days=30).date()
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=timeframe_end.datetime,
+            cycle_in_days=365,
+            cycle_quantity=1,
+            cycle_unit="years",
+            is_snooze=True,
+            is_adjustment=False,
+            snooze_date=snooze_date,
+            snoozed_days=0,  # No snoozed_days (0 means not set)
+            snooze_comment="",
+            narrative="",
+            deleted=False,
+            status=ProtocolOverrideStatus.ACTIVE,
+        )
+
+        is_snoozed, result_snooze_date = protocol._check_snooze(
+            str(patient.id), protocol.protocol_key()
+        )
+
+        assert is_snoozed is True
+        assert result_snooze_date == snooze_date.isoformat()
+
+
+class TestProtocolOverrideNumeratorLogic:
+    """Test in_numerator override logic for custom screening cycles."""
+
+    @pytest.mark.django_db
+    def test_override_within_cycle_uses_measurement_period_only(self) -> None:
+        """Test that override within cycle limits search to measurement period."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = timeframe_end.shift(years=-1)
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create override with reference_date and cycle_in_days
+        # Reference date is within the cycle (365 days cycle, 6 months ago reference)
+        reference_date = timeframe_end.shift(months=-6)
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=reference_date.datetime,
+            cycle_in_days=365,
+            cycle_quantity=1,
+            cycle_unit="years",
+            is_snooze=False,
+            is_adjustment=True,
+            snooze_date=reference_date.date(),
+            snoozed_days=0,
+            snooze_comment="",
+            narrative="Custom cycle",
+            deleted=False,
+            status=ProtocolOverrideStatus.ACTIVE,
+        )
+
+        # Create mammogram OUTSIDE measurement period but within 27-month window
+        # This should NOT count when override is active within cycle
+        outside_mp_date = timeframe_start.shift(months=-6)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=outside_mp_date.date(),
+            result_date=outside_mp_date.date(),
+            assigned_date=outside_mp_date.datetime,
+        )
+
+        # Patient should NOT be in numerator because mammogram is outside measurement period
+        # and override restricts to measurement period only when within cycle
+        assert protocol.in_numerator(patient) is False
+
+    @pytest.mark.django_db
+    def test_override_outside_cycle_uses_standard_27_month_window(self) -> None:
+        """Test that override outside cycle falls back to standard 27-month window."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = timeframe_end.shift(years=-1)
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create override with reference_date and cycle_in_days
+        # Reference date is OUTSIDE the cycle (30 day cycle, 2 years ago reference)
+        reference_date = timeframe_end.shift(years=-2)
+        ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=reference_date.datetime,
+            cycle_in_days=30,  # Short cycle that has long expired
+            cycle_quantity=1,
+            cycle_unit="months",
+            is_snooze=False,
+            is_adjustment=True,
+            snooze_date=reference_date.date(),
+            snoozed_days=0,
+            snooze_comment="",
+            narrative="Custom cycle",
+            deleted=False,
+            status=ProtocolOverrideStatus.ACTIVE,
+        )
+
+        # Create mammogram within 27-month window but outside measurement period
+        within_27_month_date = timeframe_start.shift(months=-6)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=within_27_month_date.date(),
+            result_date=within_27_month_date.date(),
+            assigned_date=within_27_month_date.datetime,
+        )
+
+        # Patient should be in numerator because override is outside cycle
+        # and standard 27-month window applies
+        assert protocol.in_numerator(patient) is True
