@@ -2,7 +2,7 @@
 // OAuth Configuration
 const OAUTH_CONFIG = {
   clientId: window.fullscriptClientId, // Replace with your actual client ID
-  redirectUri: window.location.origin + '/application/auth/patient/ZnVsbHNjcmlwdC5hcHBsaWNhdGlvbnMubXlfYXBwbGljYXRpb246TXlBcHBsaWNhdGlvbg', // Redirect back to main app
+  redirectUri: window.location.origin + '/application/auth/patient/' + window.applicationId, // Redirect back to main app
   authUrl: 'https://us-snd.fullscript.io/oauth/authorize'
 }
 
@@ -81,7 +81,7 @@ async function getOrCreatePatient (accessToken) {
     const errorData = await patientResponse.json()
     console.warn(errorData.error || 'Failed to get or create patient')
 
-    showError('This patient is missing required information.\nPlease add an email address in Canvas, then reopen the Fullscript application to continue.')
+    showError('This patient is missing required information.\nPlease check if the email address and phone number are valid, then reopen the Fullscript application to continue.')
 
     return { id: null }
   }

@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 
@@ -7,11 +8,13 @@ from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.commands import MedicationStatementCommand
 from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.note.note import Note as NoteEffect
 from canvas_sdk.effects.patient import CreatePatientExternalIdentifier
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from canvas_sdk.v1.data import Note, Patient, Staff
 from canvas_sdk.v1.data.common import ContactPointSystem
+from canvas_sdk.v1.data.note import NoteType
 from canvas_sdk.v1.data.patient import SexAtBirth
 from logger import log
 
@@ -353,9 +356,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
     @api.post("/treatment-plan-created")
     def treatment_plan_created(self) -> list[Response]:
         """Handle treatment plan created event from Fullscript embed."""
-        user_id = Staff.objects.values_list("id", flat=True).get(
-            id=self.request.headers["canvas-logged-in-user-id"]
-        )
+        user = Staff.objects.get(id=self.request.headers["canvas-logged-in-user-id"])
         cache = get_cache()
 
         try:
@@ -379,7 +380,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 ]
 
             # Get cached access token for API requests
-            cached_token = cache.get(user_id)
+            cached_token = cache.get(user.id)
 
             log.info(f"!! Cached token: {cached_token}")
 
@@ -406,6 +407,8 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     )
                 ]
 
+            new_note = None
+
             if note_id:
                 note_id = Note.objects.filter(dbid=note_id).values_list("id", flat=True).first()
                 log.info(f"!! Note retrieved or created successfully: {note_id}")
@@ -413,16 +416,25 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 note_id = patient.notes.last().id if patient.notes else None
                 log.info(f"!! Note retrieved or created successfully from patient: {note_id}")
 
-            # TODO: should we create a new note if none exists?
-
             if not note_id:
-                log.error(f"!! Missing note_id: {note_id}")
-                return [
-                    JSONResponse(
-                        {"error": "Missing note"},
-                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                note_id = uuid.uuid4()
+                office_note_type_id = (
+                    NoteType.objects.filter(
+                        system=CodeSystems.SNOMED,
+                        code="308335008",  # Office visit
                     )
-                ]
+                    .values_list("id", flat=True)
+                    .first()
+                )
+
+                new_note = NoteEffect(
+                    instance_id=note_id,
+                    note_type_id=office_note_type_id,
+                    patient_id=patient.id,
+                    provider_id=user.id,
+                    practice_location_id=user.primary_practice_location.id,
+                    datetime_of_service=datetime.now(),
+                )
 
             for item in recommendations:
                 variant_id = item.get("variantId")
@@ -481,7 +493,7 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     sig += f"\nRefill: {'Yes' if refill else 'No'}"
 
                 coding = Coding(
-                    system=CodeSystems.UNSTRUCTURED, code=product_id, display=product_display_name
+                    system=CodeSystems.FULLSCRIPT, code=product_id, display=product_display_name
                 )
                 medication_command = MedicationStatementCommand(
                     fdb_code=coding,
@@ -493,13 +505,18 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
 
                 log.info(f"!! Successfully processed variant {variant_id}")
 
-            return [
+            effects = [
                 *medications_list,
                 JSONResponse(
                     {"status": "ok"},
                     status_code=HTTPStatus.OK,
                 ),
             ]
+
+            if new_note:
+                effects.insert(0, new_note.create())
+
+            return effects
 
         except requests.RequestException as e:
             log.error(f"!! Error fetching product variant details: {str(e)}")

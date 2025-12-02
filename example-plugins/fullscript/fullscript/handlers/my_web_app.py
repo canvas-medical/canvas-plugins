@@ -24,6 +24,7 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
             "patientKey": self.request.query_params.get("patient", ""),
             "noteId": self.request.query_params.get("noteId", ""),
             "fullscriptClientId": self.secrets["FULLSCRIPT_CLIENT_ID"],
+            "applicationId": self.secrets["FULLSCRIPT_APPLICATION_ID"],
         }
 
         log.info(f"context: {context}")

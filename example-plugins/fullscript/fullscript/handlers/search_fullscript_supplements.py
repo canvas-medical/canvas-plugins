@@ -81,7 +81,7 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
                             {
                                 "code": code,
                                 "display": name,
-                                "system": CodeSystems.FDB,  # TODO: Using FDB as a placeholder
+                                "system": CodeSystems.FULLSCRIPT,
                             }
                         ],
                         "clinical_quantities": [
@@ -89,6 +89,8 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
                                 "erx_quantity": units,
                                 "representative_ndc": "",
                                 "clinical_quantity_description": quantity_description,
+                                "erx_ncpdp_script_quantity_qualifier_code": "",
+                                "erx_ncpdp_script_quantity_qualifier_description": quantity_description,
                             }
                         ],
                     },
