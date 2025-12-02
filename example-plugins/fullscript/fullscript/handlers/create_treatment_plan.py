@@ -59,8 +59,6 @@ def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: 
             "units_to_purchase": command.data.get("quantity_to_dispense", ""),
             "refill": command.data.get("refills", ""),
             "dosage": {
-                # "amount": "string",
-                # "frequency": "string",
                 "duration": command.data.get("days_supply", ""),
                 "additional_info": command.data.get("sig", ""),
                 "format": command.data.get("type_to_dispense", {}).get("text", ""),
