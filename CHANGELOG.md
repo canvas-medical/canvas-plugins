@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.80.1 (2025-12-03)
+
+### Bug Fixes
+
+- Use git source for defusedxml to work around issue with uv pre-release handling
+  ([#1318](https://github.com/canvas-medical/canvas-plugins/pull/1318),
+  [`5c3b850`](https://github.com/canvas-medical/canvas-plugins/commit/5c3b85076f4bcdcff4f1a3c52e3b88f4152dc9ec))
+
+
 ## v0.80.0 (2025-12-03)
 
 ### Features
