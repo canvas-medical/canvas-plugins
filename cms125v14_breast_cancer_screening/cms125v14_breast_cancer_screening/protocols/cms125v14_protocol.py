@@ -8,6 +8,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.protocols.timeframe import Timeframe
 from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
 from canvas_sdk.v1.data.encounter import Encounter
 from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.medication import Medication
@@ -467,9 +468,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         This exclusion only applies to patients age ≥66.
         """
-        # Check coverage for long-term care facility indicators
-        from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
-
         # Get all coverages up to end of measurement period
         coverages = Coverage.objects.filter(
             patient=patient,

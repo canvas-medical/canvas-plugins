@@ -69,8 +69,15 @@ Women with one or more mammograms (standard or 3D tomosynthesis) in the 27-month
 No configuration required. Install and the plugin will automatically display protocol cards for eligible patients.
 
 ```bash
-canvas install cms125v14_breast_cancer_screening
+canvas install cms125v14_breast_cancer_screening/cms125v14_breast_cancer_screening/
 ```
+
+## Teardown
+
+```bash
+canvas disable cms125v14_breast_cancer_screening && canvas uninstall cms125v14_breast_cancer_screening
+```
+
 
 ## Configuration
 
@@ -129,8 +136,7 @@ This protocol responds to:
 ## Testing
 
 ```bash
-cd cms125v14_breast_cancer_screening
-uv run pytest -m "not integtest" -v
+uv run pytest -m "not integtest" -v cms125v14_breast_cancer_screening/tests
 ```
 
 ## References
