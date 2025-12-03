@@ -5,7 +5,7 @@ from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.handlers.action_button import ActionButton
-from canvas_sdk.v1.data import Command, NoteStateChangeEvent
+from canvas_sdk.v1.data import Command, Note, NoteStateChangeEvent
 
 # Import the helper methods from the API
 from fullscript.api.fullscript_api import FullscriptAPI
@@ -130,9 +130,15 @@ class CreateTreatmentPlanButton(ActionButton):
         log.info(self.context)
         log.info(self.target)
 
+        note_id = (
+            Note.objects.filter(dbid=self.context.get("note_id"))
+            .values_list("id", flat=True)
+            .first()
+        )
+
         result = handle_treatment_plan(
             patient_id=self.target,
-            note_id=self.context.get("note_id"),
+            note_id=note_id,
             user_id=self.context.get("user", {}).get("id"),
             secrets=self.secrets,
         )
