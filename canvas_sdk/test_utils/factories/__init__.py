@@ -7,6 +7,19 @@ from .claim import (
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .facility import FacilityFactory
+from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .lab import (
+    LabOrderFactory,
+    LabOrderReasonConditionFactory,
+    LabOrderReasonFactory,
+    LabPartnerFactory,
+    LabPartnerTestFactory,
+    LabReportFactory,
+    LabReviewFactory,
+    LabTestFactory,
+    LabValueCodingFactory,
+    LabValueFactory,
+)
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
@@ -21,6 +34,7 @@ from .practicelocation import (
     PracticeLocationSettingFactory,
 )
 from .protocol_current import ProtocolCurrentFactory
+from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -47,6 +61,19 @@ __all__ = (
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "FacilityFactory",
+    "ImagingOrderFactory",
+    "ImagingReportFactory",
+    "ImagingReviewFactory",
+    "LabOrderFactory",
+    "LabOrderReasonConditionFactory",
+    "LabOrderReasonFactory",
+    "LabPartnerFactory",
+    "LabPartnerTestFactory",
+    "LabReportFactory",
+    "LabReviewFactory",
+    "LabTestFactory",
+    "LabValueCodingFactory",
+    "LabValueFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
@@ -60,6 +87,9 @@ __all__ = (
     "PracticeLocationAddressFactory",
     "PracticeLocationSettingFactory",
     "ProtocolCurrentFactory",
+    "ReferralFactory",
+    "ReferralReportFactory",
+    "ReferralReviewFactory",
     "StaffFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
