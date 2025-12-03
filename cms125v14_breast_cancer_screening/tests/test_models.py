@@ -1,3 +1,4 @@
+import pytest
 from cms125v14_breast_cancer_screening.protocols.cms125v14_protocol import (
     ClinicalQualityMeasure125v14,
 )
@@ -15,12 +16,14 @@ def test_protocol_event_configuration() -> None:
     assert EventType.Name(EventType.CONDITION_CREATED) in ClinicalQualityMeasure125v14.RESPONDS_TO
 
 
+@pytest.mark.django_db
 def test_factory_example() -> None:
     """Test that a patient can be created using the PatientFactory."""
     patient = PatientFactory.create()
     assert patient.id is not None
 
 
+@pytest.mark.django_db
 def test_model_example() -> None:
     """Test that a Discount instance can be created."""
     Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)

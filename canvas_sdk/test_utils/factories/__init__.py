@@ -12,6 +12,7 @@ from .claim import (
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .condition import ConditionCodingFactory, ConditionFactory
 from .coverage import CoverageFactory
+from .encounter import EncounterFactory
 from .facility import FacilityFactory
 from .imaging import (
     ImagingOrderFactory,
@@ -88,6 +89,7 @@ __all__ = (
     "ConditionFactory",
     "CoverageFactory",
     "EventFactory",
+    "EncounterFactory",
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportCodingFactory",
