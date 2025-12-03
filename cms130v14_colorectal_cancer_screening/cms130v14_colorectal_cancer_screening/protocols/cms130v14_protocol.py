@@ -26,6 +26,7 @@ from canvas_sdk.value_set.v2026.condition import (
     MalignantNeoplasmOfColon,
     PalliativeCareDiagnosis,
 )
+from canvas_sdk.value_set.v2026.device import FrailtyDevice
 from canvas_sdk.value_set.v2026.diagnostic_study import CtColonography
 from canvas_sdk.value_set.v2026.encounter import (
     AnnualWellnessVisit,
@@ -50,11 +51,8 @@ from canvas_sdk.value_set.v2026.procedure import (
     FlexibleSigmoidoscopy,
     TotalColectomy,
 )
-from canvas_sdk.value_set.v2026.device import FrailtyDevice
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
-
 from logger import log
-
 
 # Constants
 AGE_RANGE_START = 46
@@ -99,19 +97,19 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
     class Meta:
         title = "Colorectal Cancer Screening"
-        description = (
-            "Percentage of adults 46-75 years of age who had appropriate screening for colorectal cancer."
-        )
+        description = "Percentage of adults 46-75 years of age who had appropriate screening for colorectal cancer."
         version = "2026-01-01v14"
         default_display_interval_in_days = 365 * 9
-        information = "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130-v14.0.000-QDM.html"
+        information = (
+            "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS130-v14.0.000-QDM.html"
+        )
         identifiers = ["CMS130v14"]
         types = ["CQM"]
         authors = ["National Committee for Quality Assurance"]
         references = [
-            'Howlader N, Noone AM, Krapcho M, Miller D, Brest A, Yu M, Ruhl J, Tatalovich Z, Mariotto A, Lewis DR, Chen HS, Feuer EJ, Cronin KA (2020). SEER Cancer Statistics Review, 195-2017. Retrieved September 22, 2020, https://seer.cancer.gov/csr/1975_2017/',
-            'SEER. (n.d.). Cancer of the Colon and Rectum. https://seer.cancer.gov/statfacts/html/colorect.html',
-            'US Preventive Services Task Force, Davidson, K. W., Barry, M. J., Mangione, C. M., Cabana, M., Caughey, A. B., Davis, E. M., Donahue, K. E., Doubeni, C. A., Krist, A. H., Kubik, M., Li, L., Ogedegbe, G., Owens, D. K., Pbert, L., Silverstein, M., Stevermer, J., Tseng, C. W., & Wong, J. B. (2021). Screening for Colorectal Cancer: US Preventive Services Task Force Recommendation Statement. JAMA, 325(19), 1965–1977. https://doi.org/10.1001/jama.2021.6238',
+            "Howlader N, Noone AM, Krapcho M, Miller D, Brest A, Yu M, Ruhl J, Tatalovich Z, Mariotto A, Lewis DR, Chen HS, Feuer EJ, Cronin KA (2020). SEER Cancer Statistics Review, 195-2017. Retrieved September 22, 2020, https://seer.cancer.gov/csr/1975_2017/",
+            "SEER. (n.d.). Cancer of the Colon and Rectum. https://seer.cancer.gov/statfacts/html/colorect.html",
+            "US Preventive Services Task Force, Davidson, K. W., Barry, M. J., Mangione, C. M., Cabana, M., Caughey, A. B., Davis, E. M., Donahue, K. E., Doubeni, C. A., Krist, A. H., Kubik, M., Li, L., Ogedegbe, G., Owens, D. K., Pbert, L., Silverstein, M., Stevermer, J., Tseng, C. W., & Wong, J. B. (2021). Screening for Colorectal Cancer: US Preventive Services Task Force Recommendation Statement. JAMA, 325(19), 1965–1977. https://doi.org/10.1001/jama.2021.6238",
         ]
 
     RESPONDS_TO = [
@@ -120,8 +118,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         EventType.Name(EventType.CONDITION_RESOLVED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_CREATED),
         EventType.Name(EventType.MEDICATION_LIST_ITEM_UPDATED),
-            EventType.Name(EventType.PATIENT_CREATED),
-            EventType.Name(EventType.PATIENT_UPDATED),
+        EventType.Name(EventType.PATIENT_CREATED),
+        EventType.Name(EventType.PATIENT_UPDATED),
         EventType.Name(EventType.OBSERVATION_CREATED),
         EventType.Name(EventType.OBSERVATION_UPDATED),
         EventType.Name(EventType.CLAIM_CREATED),
@@ -137,7 +135,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _get_patient_from_event(self) -> Patient | None:
         """
         Get patient from event based on event type.
-        
+
         Returns:
             Patient object if found, None otherwise
         """
@@ -152,7 +150,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             ]:
                 condition = Condition.objects.filter(id=target_id).select_related("patient").first()
                 if condition and condition.patient:
-                    log.debug(f"CMS130v14: Got patient from condition {target_id} for event {self.event.name}")
+                    log.debug(
+                        f"CMS130v14: Got patient from condition {target_id} for event {self.event.name}"
+                    )
                     return condition.patient
                 log.warning(f"CMS130v14: Could not find patient for condition {target_id}")
                 return None
@@ -166,12 +166,18 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                     patient_id = self.patient_id_from_target()
                     patient = Patient.objects.filter(id=patient_id).first()
                     if patient:
-                        log.debug(f"CMS130v14: Got patient from event target for {self.event.name}: {patient_id}")
+                        log.debug(
+                            f"CMS130v14: Got patient from event target for {self.event.name}: {patient_id}"
+                        )
                         return patient
-                    log.warning(f"CMS130v14: Patient {patient_id} not found for event {self.event.name}")
+                    log.warning(
+                        f"CMS130v14: Patient {patient_id} not found for event {self.event.name}"
+                    )
                     return None
                 except (ValueError, AttributeError) as e:
-                    log.warning(f"CMS130v14: Could not get patient ID from event target for {self.event.name}: {str(e)}")
+                    log.warning(
+                        f"CMS130v14: Could not get patient ID from event target for {self.event.name}: {str(e)}"
+                    )
                     return None
 
             # For other events (MEDICATION_*, OBSERVATION_*, CLAIM_*), get patient ID from context
@@ -179,9 +185,13 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             if patient_id:
                 patient = Patient.objects.filter(id=patient_id).first()
                 if patient:
-                    log.debug(f"CMS130v14: Got patient from context for {self.event.name}: {patient_id}")
+                    log.debug(
+                        f"CMS130v14: Got patient from context for {self.event.name}: {patient_id}"
+                    )
                     return patient
-                log.warning(f"CMS130v14: Patient {patient_id} from context not found for event {self.event.name}")
+                log.warning(
+                    f"CMS130v14: Patient {patient_id} from context not found for event {self.event.name}"
+                )
                 return None
 
             # Fallback: try patient_id_from_target for supported event types
@@ -189,7 +199,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 patient_id = self.patient_id_from_target()
                 patient = Patient.objects.filter(id=patient_id).first()
                 if patient:
-                    log.debug(f"CMS130v14: Got patient from event target (fallback) for {self.event.name}: {patient_id}")
+                    log.debug(
+                        f"CMS130v14: Got patient from event target (fallback) for {self.event.name}: {patient_id}"
+                    )
                     return patient
             except (ValueError, AttributeError):
                 pass
@@ -206,10 +218,14 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         try:
             patient = self._get_patient_from_event()
             if not patient:
-                log.warning(f"CMS130v14: Could not get patient from event {self.event.name}, skipping")
+                log.warning(
+                    f"CMS130v14: Could not get patient from event {self.event.name}, skipping"
+                )
                 return []
 
-            log.info(f"CMS130v14: Processing patient {patient.id} ({patient.first_name} {patient.last_name}) for event {self.event.name}")
+            log.info(
+                f"CMS130v14: Processing patient {patient.id} ({patient.first_name} {patient.last_name}) for event {self.event.name}"
+            )
 
             # Reset reason tracking
             self._not_applicable_reason = None
@@ -241,16 +257,18 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         """Check if patient is in initial population (age 46-75 with eligible encounter)."""
         age_check = self._check_age_46_to_75(patient)
         encounter_check = self._has_eligible_encounter_in_period(patient)
-        log.info(f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}")
+        log.info(
+            f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}"
+        )
         return age_check and encounter_check
 
     def _in_denominator(self, patient: Patient) -> bool:
         """
         Check if patient is in denominator (initial population minus exclusions).
-        
+
         Note: This method assumes the patient is already in the initial population
         (checked in compute() before calling this method).
-        
+
         Per CMS130v14 Denominator Exclusions:
         - Exclude patients who are in hospice care for any part of the measurement period
         - Exclude patients with a diagnosis or past history of total colectomy or colorectal cancer
@@ -259,7 +277,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         - Exclude patients receiving palliative care for any part of the measurement period
         """
         log.debug(f"CMS130v14: Checking denominator exclusions for patient {patient.id}")
-        
+
         if self._has_colon_exclusion(patient):
             log.info(f"CMS130v14: Patient {patient.id} excluded due to colon exclusion")
             return False
@@ -273,23 +291,35 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         # Check age once for age 66+ exclusions
         age = self._calculate_age(patient)
         if age is not None and age >= 66:
-            log.info(f"CMS130v14: Patient {patient.id} is age {age} (66+), checking frailty and nursing home exclusions")
+            log.info(
+                f"CMS130v14: Patient {patient.id} is age {age} (66+), checking frailty and nursing home exclusions"
+            )
             # Exclude patients 66+ with frailty AND (advanced illness OR dementia meds)
             has_frailty = self._has_frailty_indicators(patient)
             has_advanced_illness_or_dementia = self._has_advanced_illness_or_dementia_meds(patient)
-            log.debug(f"CMS130v14: Patient {patient.id} age 66+: frailty={has_frailty}, advanced_illness_or_dementia={has_advanced_illness_or_dementia}")
+            log.debug(
+                f"CMS130v14: Patient {patient.id} age 66+: frailty={has_frailty}, advanced_illness_or_dementia={has_advanced_illness_or_dementia}"
+            )
             if has_frailty and has_advanced_illness_or_dementia:
-                log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ with frailty and advanced illness/dementia meds")
+                log.info(
+                    f"CMS130v14: Patient {patient.id} excluded: age 66+ with frailty and advanced illness/dementia meds"
+                )
                 self._not_applicable_reason = f"{patient.first_name} is age 66 or older with frailty and advanced illness or dementia medications and is excluded from colorectal cancer screening."
                 return False
 
             # Exclude patients 66+ living long term in nursing home
             if self._is_living_in_nursing_home(patient):
-                log.info(f"CMS130v14: Patient {patient.id} excluded: age 66+ living in nursing home")
+                log.info(
+                    f"CMS130v14: Patient {patient.id} excluded: age 66+ living in nursing home"
+                )
                 return False
-            log.debug(f"CMS130v14: Patient {patient.id} age 66+ passed frailty and nursing home exclusion checks")
+            log.debug(
+                f"CMS130v14: Patient {patient.id} age 66+ passed frailty and nursing home exclusion checks"
+            )
         else:
-            log.debug(f"CMS130v14: Patient {patient.id} is age {age} (<66), skipping age 66+ exclusion checks")
+            log.debug(
+                f"CMS130v14: Patient {patient.id} is age {age} (<66), skipping age 66+ exclusion checks"
+            )
 
         if self._has_palliative_care_in_period(patient):
             log.info(f"CMS130v14: Patient {patient.id} excluded due to palliative care")
@@ -302,29 +332,37 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _in_numerator(self, patient: Patient) -> bool:
         """
         Check if patient has had appropriate screening.
-        
+
         Checks screening types in priority order and sets _last_exam when found, returning immediately.
         Priority order: FOBT > FIT-DNA > Flexible Sigmoidoscopy > CT Colonography > Colonoscopy
         """
         self._last_exam = None
 
         if exam := self._check_fobt(patient):
-            log.info(f"CMS130v14: Found FOBT screening for patient {patient.id} on {exam.get('date')}")
+            log.info(
+                f"CMS130v14: Found FOBT screening for patient {patient.id} on {exam.get('date')}"
+            )
             self._last_exam = exam
             return True
 
         if exam := self._check_fit_dna(patient):
-            log.info(f"CMS130v14: Found FIT-DNA screening for patient {patient.id} on {exam.get('date')}")
+            log.info(
+                f"CMS130v14: Found FIT-DNA screening for patient {patient.id} on {exam.get('date')}"
+            )
             self._last_exam = exam
             return True
 
         if exam := self._check_flexible_sigmoidoscopy(patient):
-            log.info(f"CMS130v14: Found Flexible Sigmoidoscopy for patient {patient.id} on {exam.get('date')}")
+            log.info(
+                f"CMS130v14: Found Flexible Sigmoidoscopy for patient {patient.id} on {exam.get('date')}"
+            )
             self._last_exam = exam
             return True
 
         if exam := self._check_ct_colonography(patient):
-            log.info(f"CMS130v14: Found CT Colonography for patient {patient.id} on {exam.get('date')}")
+            log.info(
+                f"CMS130v14: Found CT Colonography for patient {patient.id} on {exam.get('date')}"
+            )
             self._last_exam = exam
             return True
 
@@ -339,16 +377,24 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _check_fobt(self, patient: Patient) -> dict | None:
         """Check for FOBT within 1 year."""
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["FOBT"])
-        log.debug(f"CMS130v14: Checking FOBT for patient {patient.id}: period_start={period_start.date()}, period_end={self.timeframe.end.date()}")
-        report = self._find_lab_report(patient, FecalOccultBloodTestFobt, period_start, self.timeframe.end)
+        log.debug(
+            f"CMS130v14: Checking FOBT for patient {patient.id}: period_start={period_start.date()}, period_end={self.timeframe.end.date()}"
+        )
+        report = self._find_lab_report(
+            patient, FecalOccultBloodTestFobt, period_start, self.timeframe.end
+        )
         if report:
-            log.debug(f"CMS130v14: Found FOBT lab report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found FOBT lab report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "FOBT",
                 "days": SCREENING_INTERVALS_DAYS["FOBT"],
             }
-        log.debug(f"CMS130v14: No FOBT found for patient {patient.id} within 1 year lookback period")
+        log.debug(
+            f"CMS130v14: No FOBT found for patient {patient.id} within 1 year lookback period"
+        )
         return None
 
     def _check_fit_dna(self, patient: Patient) -> dict | None:
@@ -356,7 +402,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["FIT-DNA"])
         report = self._find_lab_report(patient, SdnaFitTest, period_start, self.timeframe.end)
         if report:
-            log.debug(f"CMS130v14: Found FIT-DNA lab report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found FIT-DNA lab report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "FIT-DNA",
@@ -366,20 +414,30 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
     def _check_flexible_sigmoidoscopy(self, patient: Patient) -> dict | None:
         """Check for Flexible Sigmoidoscopy within 4 years (imaging or referral)."""
-        period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["Flexible sigmoidoscopy"])
+        period_start = self.timeframe.end.shift(
+            years=-SCREENING_LOOKBACK_YEARS["Flexible sigmoidoscopy"]
+        )
 
-        report = self._find_imaging_report(patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end)
+        report = self._find_imaging_report(
+            patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end
+        )
         if report:
-            log.debug(f"CMS130v14: Found Flexible Sigmoidoscopy imaging report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found Flexible Sigmoidoscopy imaging report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "Flexible sigmoidoscopy",
                 "days": SCREENING_INTERVALS_DAYS["Flexible sigmoidoscopy"],
             }
 
-        report = self._find_referral_report(patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end)
+        report = self._find_referral_report(
+            patient, FlexibleSigmoidoscopy, period_start, self.timeframe.end
+        )
         if report:
-            log.debug(f"CMS130v14: Found Flexible Sigmoidoscopy referral report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found Flexible Sigmoidoscopy referral report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "Flexible sigmoidoscopy",
@@ -391,18 +449,26 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         """Check for CT Colonography within 4 years (imaging or referral)."""
         period_start = self.timeframe.end.shift(years=-SCREENING_LOOKBACK_YEARS["CT Colonography"])
 
-        report = self._find_imaging_report(patient, CtColonography, period_start, self.timeframe.end)
+        report = self._find_imaging_report(
+            patient, CtColonography, period_start, self.timeframe.end
+        )
         if report:
-            log.debug(f"CMS130v14: Found CT Colonography imaging report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found CT Colonography imaging report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "CT Colonography",
                 "days": SCREENING_INTERVALS_DAYS["CT Colonography"],
             }
 
-        report = self._find_referral_report(patient, CtColonography, period_start, self.timeframe.end)
+        report = self._find_referral_report(
+            patient, CtColonography, period_start, self.timeframe.end
+        )
         if report:
-            log.debug(f"CMS130v14: Found CT Colonography referral report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found CT Colonography referral report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "CT Colonography",
@@ -416,7 +482,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_imaging_report(patient, Colonoscopy, period_start, self.timeframe.end)
         if report:
-            log.debug(f"CMS130v14: Found Colonoscopy imaging report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found Colonoscopy imaging report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "Colonoscopy",
@@ -425,7 +493,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         report = self._find_referral_report(patient, Colonoscopy, period_start, self.timeframe.end)
         if report:
-            log.debug(f"CMS130v14: Found Colonoscopy referral report for patient {patient.id} dated {report.original_date}")
+            log.debug(
+                f"CMS130v14: Found Colonoscopy referral report for patient {patient.id} dated {report.original_date}"
+            )
             return {
                 "date": report.original_date,
                 "what": "Colonoscopy",
@@ -440,6 +510,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 return None
 
             import arrow
+
             birth_date = arrow.get(patient.birth_date)
             age_years = (self.timeframe.end - birth_date).days // 365
             return age_years
@@ -456,20 +527,27 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 return False
 
             import arrow
+
             birth_date = arrow.get(patient.birth_date)
             age_years = (self.timeframe.end - birth_date).days // 365
             log.debug(f"CMS130v14: Patient {patient.id} age calculated as {age_years} years")
 
             if age_years < AGE_RANGE_START:
                 self._not_applicable_reason = f"{patient.first_name} is under {AGE_RANGE_START} years of age and does not meet the criteria for colorectal cancer screening."
-                log.info(f"CMS130v14: Patient {patient.id} age {age_years} is below minimum {AGE_RANGE_START}")
+                log.info(
+                    f"CMS130v14: Patient {patient.id} age {age_years} is below minimum {AGE_RANGE_START}"
+                )
                 return False
             elif age_years > AGE_RANGE_END:
                 self._not_applicable_reason = f"{patient.first_name} is over {AGE_RANGE_END} years of age and does not meet the criteria for colorectal cancer screening."
-                log.info(f"CMS130v14: Patient {patient.id} age {age_years} is above maximum {AGE_RANGE_END}")
+                log.info(
+                    f"CMS130v14: Patient {patient.id} age {age_years} is above maximum {AGE_RANGE_END}"
+                )
                 return False
 
-            log.debug(f"CMS130v14: Patient {patient.id} age {age_years} is within range {AGE_RANGE_START}-{AGE_RANGE_END}")
+            log.debug(
+                f"CMS130v14: Patient {patient.id} age {age_years} is within range {AGE_RANGE_START}-{AGE_RANGE_END}"
+            )
             return True
         except Exception as e:
             log.error(f"CMS130v14: Error computing age: {str(e)}")
@@ -502,17 +580,25 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 if not note.note_type_version:
                     continue
 
-                if self._coding_in_value_set_for_note_type(note.note_type_version, visit_value_sets):
+                if self._coding_in_value_set_for_note_type(
+                    note.note_type_version, visit_value_sets
+                ):
                     eligible_count += 1
-                    log.debug(f"CMS130v14: Found eligible encounter for patient {patient.id}: {note.note_type_version.code}")
+                    log.debug(
+                        f"CMS130v14: Found eligible encounter for patient {patient.id}: {note.note_type_version.code}"
+                    )
 
             if eligible_count > 0:
-                log.debug(f"CMS130v14: Patient {patient.id} has {eligible_count} eligible encounter(s)")
+                log.debug(
+                    f"CMS130v14: Patient {patient.id} has {eligible_count} eligible encounter(s)"
+                )
                 return True
 
             # Optimistic rule: allow processing even without matched encounter
             # Don't set reason here as this is expected behavior
-            log.debug(f"CMS130v14: Patient {patient.id} has no eligible encounters, using optimistic rule")
+            log.debug(
+                f"CMS130v14: Patient {patient.id} has no eligible encounters, using optimistic rule"
+            )
             return True
         except Exception as e:
             log.error(f"CMS130v14: Error checking eligible encounters: {str(e)}")
@@ -521,14 +607,14 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _has_colon_exclusion(self, patient: Patient) -> bool:
         """
         Check if patient has colon exclusions (total colectomy or malignant neoplasm of colon).
-        
+
         Per CMS130v14 Denominator Exclusions:
         - Diagnosis of colorectal cancer that starts on or before the end of the measurement period
         - OR a past history of total colectomy that ends on or before the end of the measurement period
         """
         try:
             end_date = self.timeframe.end.date()
-            
+
             # Check for total colectomy: past history that ends on or before the end of measurement period
             # Per spec: "a past history of total colectomy that ends on or before the end of the measurement period"
             # This means resolution_date <= end_date (for resolved/past history)
@@ -548,7 +634,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 )
                 .exists()
             )
-            
+
             if has_total_colectomy:
                 self._not_applicable_reason = f"{patient.first_name} has a history of total colectomy and is excluded from colorectal cancer screening."
                 return True
@@ -560,12 +646,10 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 .committed()
                 .find(MalignantNeoplasmOfColon)
                 .filter(entered_in_error_id__isnull=True)
-                .filter(
-                    Q(onset_date__isnull=True) | Q(onset_date__lte=end_date)
-                )
+                .filter(Q(onset_date__isnull=True) | Q(onset_date__lte=end_date))
                 .exists()
             )
-            
+
             if has_colorectal_cancer:
                 self._not_applicable_reason = f"{patient.first_name} has a history of malignant neoplasm of colon and is excluded from colorectal cancer screening."
                 return True
@@ -779,14 +863,14 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _has_frailty_indicators(self, patient: Patient) -> bool:
         """
         Check if patient has frailty indicators during measurement period.
-        
+
         Per CMS130v14 CQL "Has Criteria Indicating Frailty", checks for:
         - Device orders for frailty devices
         - Assessment observations with frailty device results
         - Frailty diagnoses overlapping measurement period
         - Frailty encounters overlapping measurement period
         - Frailty symptoms overlapping measurement period
-        
+
         Note: This method is only called for patients age 66+.
         """
         try:
@@ -931,7 +1015,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _has_frailty_encounters(self, patient: Patient) -> bool:
         """
         Check for frailty encounters during measurement period.
-        
+
         Per CMS130v14: Encounter, Performed: "Frailty Encounter" - relevantPeriod overlaps day of "Measurement Period".
         """
         try:
@@ -1019,7 +1103,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
         """
         Check if patient has advanced illness or dementia medications.
-        
+
         Per CMS130v14 CQL:
         - Advanced illness diagnosis that starts during the measurement period or the year prior
         - OR taking dementia medications during the measurement period or the year prior.
@@ -1048,6 +1132,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
             # Convert dates to datetime for efficient comparison (avoids __date lookups that prevent index usage)
             import arrow
+
             start_datetime = arrow.get(start_date).datetime
             end_datetime = (
                 arrow.get(end_date)
@@ -1082,18 +1167,18 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _is_living_in_nursing_home(self, patient: Patient) -> bool:
         """
         Check if patient is living long term in a nursing home.
-        
+
         Per CMS130v14: Assessment, Performed: "Housing status" result ~ "Lives in nursing home (finding)"
         Checks for housing status observation (LOINC 71802-3) with result "Lives in nursing home" (SNOMED 160734000)
         any time on or before the end of the measurement period.
-        
+
         Note: This method is only called for patients age 66+.
         """
         try:
             # Per CMS130v14: Check for housing status assessment with result "Lives in nursing home"
             # The assessment must be on or before the end of the measurement period
             # Per spec: "ends on or before day of end of 'Measurement Period'"
-            # TODO: double check this
+            # Filter checks effective_datetime <= measurement period end, which matches the spec requirement
             has_housing_status = (
                 Observation.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .filter(
@@ -1122,7 +1207,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _has_palliative_care_in_period(self, patient: Patient) -> bool:
         """
         Check if the patient received palliative care during the measurement period.
-        
+
         Per CMS130v14 CQL, checks for:
         - Palliative Care Assessment (LOINC 71007-9) - Note: May not be captured in standard Canvas data
         - Palliative Care Diagnosis (ICD-10, SNOMED)
@@ -1247,8 +1332,14 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         try:
             import arrow
 
-            period_start_date = period_start.date() if hasattr(period_start, "date") else arrow.get(period_start).date()
-            period_end_date = period_end.date() if hasattr(period_end, "date") else arrow.get(period_end).date()
+            period_start_date = (
+                period_start.date()
+                if hasattr(period_start, "date")
+                else arrow.get(period_start).date()
+            )
+            period_end_date = (
+                period_end.date() if hasattr(period_end, "date") else arrow.get(period_end).date()
+            )
 
             reports = (
                 ImagingReport.objects.for_patient(patient.id)
@@ -1276,8 +1367,14 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         try:
             import arrow
 
-            period_start_date = period_start.date() if hasattr(period_start, "date") else arrow.get(period_start).date()
-            period_end_date = period_end.date() if hasattr(period_end, "date") else arrow.get(period_end).date()
+            period_start_date = (
+                period_start.date()
+                if hasattr(period_start, "date")
+                else arrow.get(period_start).date()
+            )
+            period_end_date = (
+                period_end.date() if hasattr(period_end, "date") else arrow.get(period_end).date()
+            )
 
             reports = (
                 ReferralReport.objects.for_patient(patient.id)
@@ -1301,13 +1398,18 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _create_not_applicable_card(self, patient: Patient):
         """Create a NOT_APPLICABLE protocol card with appropriate narrative."""
         patient_id_str = str(patient.id) if patient.id else None
-        
+
         # Use stored reason if available, otherwise use default
-        base_narrative = self._not_applicable_reason or f"{patient.first_name} is not eligible for colorectal cancer screening."
-        narrative = f"DEBUGGING: {base_narrative}"
-        
-        log.info(f"CMS130v14: Creating NOT_APPLICABLE card for patient {patient.id}: {base_narrative}")
-        
+        base_narrative = (
+            self._not_applicable_reason
+            or f"{patient.first_name} is not eligible for colorectal cancer screening."
+        )
+        narrative = base_narrative
+
+        log.info(
+            f"CMS130v14: Creating NOT_APPLICABLE card for patient {patient.id}: {base_narrative}"
+        )
+
         card = ProtocolCard(
             patient_id=patient_id_str,
             key="CMS130v14",
@@ -1353,7 +1455,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             exam_date = arrow.get(last_exam["date"])
             date_with_relative = self._format_date_with_relative_time(exam_date)
             base_narrative = f"{patient.first_name} had a {last_exam.get('what', 'screening')} {date_with_relative}."
-            narrative = f"DEBUGGING: {base_narrative}"
+            narrative = base_narrative
 
             if last_exam.get("days"):
                 next_due_date = exam_date.shift(days=last_exam["days"])
@@ -1362,8 +1464,10 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             else:
                 due_in = -1
         else:
-            base_narrative = f"{patient.first_name} has had appropriate colorectal cancer screening."
-            narrative = f"DEBUGGING: {base_narrative}"
+            base_narrative = (
+                f"{patient.first_name} has had appropriate colorectal cancer screening."
+            )
+            narrative = base_narrative
             due_in = -1
 
         card = ProtocolCard(
@@ -1388,7 +1492,11 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             screening_checks = [
                 ("Colonoscopy", Colonoscopy, SCREENING_LOOKBACK_YEARS["Colonoscopy"]),
                 ("CT Colonography", CtColonography, SCREENING_LOOKBACK_YEARS["CT Colonography"]),
-                ("Flexible sigmoidoscopy", FlexibleSigmoidoscopy, SCREENING_LOOKBACK_YEARS["Flexible sigmoidoscopy"]),
+                (
+                    "Flexible sigmoidoscopy",
+                    FlexibleSigmoidoscopy,
+                    SCREENING_LOOKBACK_YEARS["Flexible sigmoidoscopy"],
+                ),
                 ("FIT-DNA", SdnaFitTest, SCREENING_LOOKBACK_YEARS["FIT-DNA"]),
                 ("FOBT", FecalOccultBloodTestFobt, SCREENING_LOOKBACK_YEARS["FOBT"]),
             ]
@@ -1397,7 +1505,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 period_start = self.timeframe.end.shift(years=-years_back)
 
                 if value_set_class in (FecalOccultBloodTestFobt, SdnaFitTest):
-                    report = self._find_lab_report(patient, value_set_class, period_start, self.timeframe.end)
+                    report = self._find_lab_report(
+                        patient, value_set_class, period_start, self.timeframe.end
+                    )
                     if report and report.original_date:
                         date_arrow = arrow.get(report.original_date)
                         if most_recent_date is None or date_arrow > most_recent_date:
@@ -1405,7 +1515,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                             most_recent = {"what": screening_name, "date": date_arrow}
                 else:
                     for find_method in [self._find_imaging_report, self._find_referral_report]:
-                        report = find_method(patient, value_set_class, period_start, self.timeframe.end)
+                        report = find_method(
+                            patient, value_set_class, period_start, self.timeframe.end
+                        )
                         if report and report.original_date:
                             date_arrow = arrow.get(report.original_date)
                             if most_recent_date is None or date_arrow > most_recent_date:
@@ -1468,7 +1580,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             self._screening_interval_context(),
         ]
         base_narrative = "\n".join(narrative_parts)
-        narrative = f"DEBUGGING: {base_narrative}"
+        narrative = base_narrative
 
         card = ProtocolCard(
             patient_id=patient_id_str,
@@ -1501,9 +1613,15 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
     def _add_fobt_recommendation(self, card: ProtocolCard):
         """Add FOBT recommendation (Rank 1)."""
-        fobt_codes = list(FecalOccultBloodTestFobt.LOINC)[:1] if hasattr(FecalOccultBloodTestFobt, "LOINC") else []
+        fobt_codes = (
+            list(FecalOccultBloodTestFobt.LOINC)[:1]
+            if hasattr(FecalOccultBloodTestFobt, "LOINC")
+            else []
+        )
         if fobt_codes:
-            command = LabOrderCommand(tests_order_codes=fobt_codes, diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
+            command = LabOrderCommand(
+                tests_order_codes=fobt_codes, diagnosis_codes=[SCREENING_DIAGNOSIS_CODE]
+            )
             recommendation = command.recommend(title="Order a FOBT", button="Order")
             self._add_recommendation_context(recommendation)
             card.recommendations.append(recommendation)
@@ -1512,7 +1630,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         """Add FIT-DNA recommendation (Rank 2)."""
         fit_dna_codes = list(SdnaFitTest.LOINC)[:1] if hasattr(SdnaFitTest, "LOINC") else []
         if fit_dna_codes:
-            command = LabOrderCommand(tests_order_codes=fit_dna_codes, diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
+            command = LabOrderCommand(
+                tests_order_codes=fit_dna_codes, diagnosis_codes=[SCREENING_DIAGNOSIS_CODE]
+            )
             recommendation = command.recommend(title="Order a FIT-DNA", button="Order")
             self._add_recommendation_context(recommendation)
             card.recommendations.append(recommendation)
@@ -1537,19 +1657,31 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
     def _add_ct_colonography_recommendation(self, card: ProtocolCard):
         """Add CT Colonography recommendation (Rank 4)."""
         # Try CPT codes first (preferred for ImagingOrderCommand)
-        ct_cpt_codes = list(CtColonography.CPT)[:1] if hasattr(CtColonography, "CPT") and CtColonography.CPT else []
+        ct_cpt_codes = (
+            list(CtColonography.CPT)[:1]
+            if hasattr(CtColonography, "CPT") and CtColonography.CPT
+            else []
+        )
         if ct_cpt_codes:
-            command = ImagingOrderCommand(image_code=ct_cpt_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
+            command = ImagingOrderCommand(
+                image_code=ct_cpt_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE]
+            )
             recommendation = command.recommend(title="Order a CT Colonography", button="Order")
             self._add_recommendation_context(recommendation, specialties=["Radiology"])
             card.recommendations.append(recommendation)
         else:
             # Try LOINC codes if CPT codes are not available
             # CT Colonography value set typically has LOINC codes
-            ct_loinc_codes = list(CtColonography.LOINC)[:1] if hasattr(CtColonography, "LOINC") and CtColonography.LOINC else []
+            ct_loinc_codes = (
+                list(CtColonography.LOINC)[:1]
+                if hasattr(CtColonography, "LOINC") and CtColonography.LOINC
+                else []
+            )
             if ct_loinc_codes:
                 # Use LOINC code with ImagingOrderCommand
-                command = ImagingOrderCommand(image_code=ct_loinc_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE])
+                command = ImagingOrderCommand(
+                    image_code=ct_loinc_codes[0], diagnosis_codes=[SCREENING_DIAGNOSIS_CODE]
+                )
                 recommendation = command.recommend(title="Order a CT Colonography", button="Order")
                 self._add_recommendation_context(recommendation, specialties=["Radiology"])
                 card.recommendations.append(recommendation)
@@ -1629,4 +1761,3 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
 # Alias for backward compatibility
 Protocol = CMS130v14ColorectalCancerScreening
-

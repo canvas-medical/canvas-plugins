@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from typing import Iterable, Tuple
+from collections.abc import Iterable
 
 import arrow
 import pytest
@@ -32,7 +32,6 @@ from canvas_sdk.v1.data.note import NoteTypeCategories, PracticeLocationPOS
 from canvas_sdk.value_set.v2026.condition import (
     AdvancedIllness,
     FrailtyDiagnosis,
-    HospiceDiagnosis,
     MalignantNeoplasmOfColon,
     PalliativeCareDiagnosis,
 )
@@ -48,8 +47,8 @@ from cms130v14_colorectal_cancer_screening.cms130v14_colorectal_cancer_screening
     CMS130v14ColorectalCancerScreening,
 )
 
-
 # ---------- Helpers ----------
+
 
 def first_or_skip(codes: Iterable[str], reason: str) -> str:
     """Return first code or skip when value set is empty (env-dependent)."""
@@ -77,7 +76,9 @@ def create_patient_at_age(now, years: int):
     return PatientFactory.create(birth_date=now.shift(years=-years).date())
 
 
-def create_lab_report_with_loinc(patient, when_dt, code: str, name: str = "") -> Tuple[LabReport, LabValue]:
+def create_lab_report_with_loinc(
+    patient, when_dt, code: str, name: str = ""
+) -> tuple[LabReport, LabValue]:
     """Create a lab report with LOINC coding."""
     report = LabReport.objects.create(
         patient=patient,
@@ -100,11 +101,15 @@ def create_lab_report_with_loinc(patient, when_dt, code: str, name: str = "") ->
         comment="",
         observation_status="final",
     )
-    LabValueCoding.objects.create(value=value, code=code, system="http://loinc.org", name=name or code)
+    LabValueCoding.objects.create(
+        value=value, code=code, system="http://loinc.org", name=name or code
+    )
     return report, value
 
 
-def create_imaging_report_with_cpt(patient, when_date, when_assigned_dt, code: str, display: str, junked=False):
+def create_imaging_report_with_cpt(
+    patient, when_date, when_assigned_dt, code: str, display: str, junked=False
+):
     """Create an imaging report with CPT coding."""
     report = ImagingReport.objects.create(
         patient=patient,
@@ -115,12 +120,15 @@ def create_imaging_report_with_cpt(patient, when_date, when_assigned_dt, code: s
         requires_signature=False,
         name=display,
     )
-    ImagingReportCoding.objects.create(report=report, code=code, system="http://www.ama-assn.org/go/cpt",
-                                       display=display)
+    ImagingReportCoding.objects.create(
+        report=report, code=code, system="http://www.ama-assn.org/go/cpt", display=display
+    )
     return report
 
 
-def create_imaging_report_with_loinc(patient, when_date, when_assigned_dt, code: str, display: str, junked=False):
+def create_imaging_report_with_loinc(
+    patient, when_date, when_assigned_dt, code: str, display: str, junked=False
+):
     """Create an imaging report with LOINC coding (for CT Colonography)."""
     report = ImagingReport.objects.create(
         patient=patient,
@@ -131,12 +139,15 @@ def create_imaging_report_with_loinc(patient, when_date, when_assigned_dt, code:
         requires_signature=False,
         name=display,
     )
-    ImagingReportCoding.objects.create(report=report, code=code, system="http://loinc.org", display=display)
+    ImagingReportCoding.objects.create(
+        report=report, code=code, system="http://loinc.org", display=display
+    )
     return report
 
 
-def create_referral_report_with_cpt(patient, when_date, code: str, display: str, specialty="Gastroenterology",
-                                    junked=False):
+def create_referral_report_with_cpt(
+    patient, when_date, code: str, display: str, specialty="Gastroenterology", junked=False
+):
     """Create a referral report with CPT coding."""
     report = ReferralReport.objects.create(
         patient=patient,
@@ -145,13 +156,15 @@ def create_referral_report_with_cpt(patient, when_date, code: str, display: str,
         requires_signature=False,
         specialty=specialty,
     )
-    ReferralReportCoding.objects.create(report=report, code=code, system="http://www.ama-assn.org/go/cpt",
-                                        display=display)
+    ReferralReportCoding.objects.create(
+        report=report, code=code, system="http://www.ama-assn.org/go/cpt", display=display
+    )
     return report
 
 
-def create_referral_report_with_loinc(patient, when_date, code: str, display: str, specialty="Gastroenterology",
-                                      junked=False):
+def create_referral_report_with_loinc(
+    patient, when_date, code: str, display: str, specialty="Gastroenterology", junked=False
+):
     """Create a referral report with LOINC coding (for CT Colonography)."""
     report = ReferralReport.objects.create(
         patient=patient,
@@ -160,16 +173,27 @@ def create_referral_report_with_loinc(patient, when_date, code: str, display: st
         requires_signature=False,
         specialty=specialty,
     )
-    ReferralReportCoding.objects.create(report=report, code=code, system="http://loinc.org", display=display)
+    ReferralReportCoding.objects.create(
+        report=report, code=code, system="http://loinc.org", display=display
+    )
     return report
 
 
-def create_condition_with_coding(patient, onset_date, code: str, system: str, display: str, clinical_status="active",
-                                 resolution_date=None):
+def create_condition_with_coding(
+    patient,
+    onset_date,
+    code: str,
+    system: str,
+    display: str,
+    clinical_status="active",
+    resolution_date=None,
+):
     """Create a condition with coding."""
     user = CanvasUserFactory()
     if resolution_date is None:
-        resolution_date = arrow.utcnow().shift(years=100).date() if clinical_status == "active" else onset_date
+        resolution_date = (
+            arrow.utcnow().shift(years=100).date() if clinical_status == "active" else onset_date
+        )
     condition = Condition.objects.create(
         patient=patient,
         onset_date=onset_date,
@@ -205,13 +229,17 @@ def create_ct_colonography_report(patient, now, years_ago, report_type="imaging"
     if cpt_codes:
         code = cpt_codes[0]
         if report_type == "imaging":
-            return create_imaging_report_with_cpt(patient, when_date, when_dt, code, "CT Colonography")
+            return create_imaging_report_with_cpt(
+                patient, when_date, when_dt, code, "CT Colonography"
+            )
         else:
             return create_referral_report_with_cpt(patient, when_date, code, "CT Colonography")
     elif loinc_codes:
         code = loinc_codes[0]
         if report_type == "imaging":
-            return create_imaging_report_with_loinc(patient, when_date, when_dt, code, "CT Colonography")
+            return create_imaging_report_with_loinc(
+                patient, when_date, when_dt, code, "CT Colonography"
+            )
         else:
             return create_referral_report_with_loinc(patient, when_date, code, "CT Colonography")
     else:
@@ -226,7 +254,9 @@ def create_eligible_note_for_patient(patient, now, eligible_note_fixture):
     return note
 
 
-def create_medication_with_coding(patient, start_date, code: str, system: str, display: str, end_date=None):
+def create_medication_with_coding(
+    patient, start_date, code: str, system: str, display: str, end_date=None
+):
     """Create a medication with coding."""
     user = CanvasUserFactory()
     # If end_date is None, set it to a far future date to satisfy NOT NULL constraint
@@ -240,12 +270,20 @@ def create_medication_with_coding(patient, start_date, code: str, system: str, d
         committer=user,
         erx_quantity=0.0,  # Required field
     )
-    MedicationCoding.objects.create(medication=medication, code=code, system=system, display=display)
+    MedicationCoding.objects.create(
+        medication=medication, code=code, system=system, display=display
+    )
     return medication
 
 
-def create_observation_with_coding(patient, effective_datetime, codings_code: str, codings_system: str,
-                                   value_codings_code: str = None, value_codings_system: str = None):
+def create_observation_with_coding(
+    patient,
+    effective_datetime,
+    codings_code: str,
+    codings_system: str,
+    value_codings_code: str = None,
+    value_codings_system: str = None,
+):
     """Create an observation with coding."""
     note = NoteFactory.create(patient=patient, datetime_of_service=effective_datetime)
     observation = Observation.objects.create(
@@ -277,6 +315,7 @@ def create_observation_with_coding(patient, effective_datetime, codings_code: st
 
 # ---------- Fixtures ----------
 
+
 @pytest.fixture
 def now():
     """Fixed timestamp for consistent test dates."""
@@ -286,7 +325,9 @@ def now():
 @pytest.fixture
 def protocol_instance(now):
     """Create a protocol instance for testing."""
-    event_request = EventRequest(type=EventType.CRON, context='{"patient": {"id": "test-patient-id"}}')
+    event_request = EventRequest(
+        type=EventType.CRON, context='{"patient": {"id": "test-patient-id"}}'
+    )
     event = Event(event_request=event_request)
     protocol = CMS130v14ColorectalCancerScreening(event=event, secrets={}, environment={})
     protocol.now = now
@@ -338,7 +379,9 @@ def patient_age_70(now):
 @pytest.fixture
 def eligible_note(now, patient_age_62):
     """Encounter within period with NoteType coded as Office Visit (SNOMED 308335008)."""
-    note = NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
+    note = NoteFactory.create(
+        patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime
+    )
 
     note_type = NoteType.objects.create(
         code="308335008",
@@ -372,6 +415,7 @@ def eligible_note(now, patient_age_62):
 
 # ---------- Tests ----------
 
+
 @pytest.mark.django_db
 class TestComputeGuards:
     """Test guard clauses in compute method."""
@@ -383,7 +427,9 @@ class TestComputeGuards:
 
     def test_returns_empty_when_patient_not_found(self, protocol_instance):
         """Test that compute returns empty list when patient doesn't exist."""
-        protocol_instance.event.context = {"patient": {"id": "00000000-0000-0000-0000-000000000000"}}
+        protocol_instance.event.context = {
+            "patient": {"id": "00000000-0000-0000-0000-000000000000"}
+        }
         assert protocol_instance.compute() == []
 
 
@@ -391,7 +437,9 @@ class TestComputeGuards:
 class TestDueNoScreening:
     """Scenario 1: Patient DUE (No Screening)."""
 
-    def test_due_when_in_population_and_no_prior_screening(self, protocol_instance, patient_age_62, eligible_note):
+    def test_due_when_in_population_and_no_prior_screening(
+        self, protocol_instance, patient_age_62, eligible_note
+    ):
         """Test that patient without screening gets DUE card with recommendations."""
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -410,22 +458,39 @@ class TestNumeratorByLabs:
         "test_type,months_ago,value_set_class,expected_keyword",
         [
             ("FOBT", 3, FecalOccultBloodTestFobt, "fobt"),
-            ("FIT-DNA", 18, SdnaFitTest, "fit"),  # 18 months = 1.5 years, within 2-year window (v14)
+            (
+                "FIT-DNA",
+                18,
+                SdnaFitTest,
+                "fit",
+            ),  # 18 months = 1.5 years, within 2-year window (v14)
         ],
         ids=["fobt_within_1_year", "fitdna_within_2_years"],
     )
     def test_lab_screening_within_window_satisfies(
-            self, now, protocol_instance, patient_age_62, eligible_note, test_type, months_ago, value_set_class,
-            expected_keyword
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        test_type,
+        months_ago,
+        value_set_class,
+        expected_keyword,
     ):
         """Test that lab screenings within their lookback windows satisfy the protocol."""
         code = first_or_skip(value_set_class.LOINC, f"{test_type} LOINC set is empty")
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago).datetime, code, test_type)
+        create_lab_report_with_loinc(
+            patient_age_62, now.shift(months=-months_ago).datetime, code, test_type
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
-        assert expected_keyword in card["narrative"].lower() or "screening" in card["narrative"].lower()
+        assert (
+            expected_keyword in card["narrative"].lower()
+            or "screening" in card["narrative"].lower()
+        )
 
 
 @pytest.mark.django_db
@@ -436,13 +501,29 @@ class TestNumeratorByProcedures:
         "procedure_type,years_ago,value_set_class,code_attr,expected_keyword,report_type",
         [
             ("Colonoscopy", 5, Colonoscopy, "CPT", "colonoscopy", "imaging"),
-            ("Flexible Sigmoidoscopy", 2, FlexibleSigmoidoscopy, "CPT", "sigmoidoscopy", "referral"),
+            (
+                "Flexible Sigmoidoscopy",
+                2,
+                FlexibleSigmoidoscopy,
+                "CPT",
+                "sigmoidoscopy",
+                "referral",
+            ),
         ],
         ids=["colonoscopy_within_9_years", "flexible_sigmoidoscopy_within_4_years"],
     )
     def test_procedure_within_lookback_satisfies(
-            self, now, protocol_instance, patient_age_62, eligible_note, procedure_type, years_ago, value_set_class,
-            code_attr, expected_keyword, report_type
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        years_ago,
+        value_set_class,
+        code_attr,
+        expected_keyword,
+        report_type,
     ):
         """Test that procedures within their lookback windows satisfy the protocol."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
@@ -452,12 +533,19 @@ class TestNumeratorByProcedures:
 
         if report_type == "imaging":
             create_imaging_report_with_cpt(
-                patient_age_62, when_date=now.shift(years=-years_ago).date(),
-                when_assigned_dt=now.shift(years=-years_ago).datetime, code=code, display=procedure_type
+                patient_age_62,
+                when_date=now.shift(years=-years_ago).date(),
+                when_assigned_dt=now.shift(years=-years_ago).datetime,
+                code=code,
+                display=procedure_type,
             )
         else:
-            create_referral_report_with_cpt(patient_age_62, when_date=now.shift(years=-years_ago).date(), code=code,
-                                            display=procedure_type)
+            create_referral_report_with_cpt(
+                patient_age_62,
+                when_date=now.shift(years=-years_ago).date(),
+                code=code,
+                display=procedure_type,
+            )
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -465,7 +553,9 @@ class TestNumeratorByProcedures:
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         assert expected_keyword in card["narrative"].lower()
 
-    def test_ct_colonography_within_4_years_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+    def test_ct_colonography_within_4_years_satisfies(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 6: CT Colonography (handles both CPT and LOINC codes) - v14: 4 years lookback."""
         create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="imaging")
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -497,8 +587,9 @@ class TestExclusionsNotApplicable:
 
         assert card["status"] == ProtocolCard.Status.DUE.value
 
-    def test_hospice_place_of_service_within_period_is_not_applicable(self, now, protocol_instance, patient_age_62,
-                                                                      eligible_note):
+    def test_hospice_place_of_service_within_period_is_not_applicable(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 10: Hospice exclusion via discharge to hospice observation."""
         # Create a note first (required for observation)
         note = NoteFactory.create(
@@ -532,12 +623,26 @@ class TestExclusionsNotApplicable:
         "condition_name,value_set_class,code_attr_options,display",
         [
             ("Total Colectomy", TotalColectomy, ["SNOMEDCT", "CPT"], "Total Colectomy"),
-            ("Colon Cancer", MalignantNeoplasmOfColon, ["SNOMEDCT", "ICD10CM"], "Malignant Neoplasm of Colon"),
+            (
+                "Colon Cancer",
+                MalignantNeoplasmOfColon,
+                ["SNOMEDCT", "ICD10CM"],
+                "Malignant Neoplasm of Colon",
+            ),
         ],
         ids=["total_colectomy", "colon_cancer"],
     )
-    def test_condition_exclusions(self, now, protocol_instance, patient_age_62, eligible_note, condition_name,
-                                  value_set_class, code_attr_options, display):
+    def test_condition_exclusions(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        condition_name,
+        value_set_class,
+        code_attr_options,
+        display,
+    ):
         """Scenarios 11-12: Condition exclusions (Total Colectomy, Colon Cancer) - v14: date constraints."""
         # Try each code attribute option until we find one with codes
         codes = None
@@ -596,11 +701,21 @@ class TestDueWhenScreeningsStale:
         ],
         ids=["fobt_too_old", "fitdna_too_old"],
     )
-    def test_lab_screenings_outside_window_yield_due(self, now, protocol_instance, patient_age_62, eligible_note,
-                                                     months_ago, value_set_class, test_name):
+    def test_lab_screenings_outside_window_yield_due(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        months_ago,
+        value_set_class,
+        test_name,
+    ):
         """Test that lab screenings outside their lookback windows yield DUE."""
         code = first_or_skip(value_set_class.LOINC, f"{test_name} LOINC empty")
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago).datetime, code, test_name)
+        create_lab_report_with_loinc(
+            patient_age_62, now.shift(months=-months_ago).datetime, code, test_name
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -610,19 +725,37 @@ class TestDueWhenScreeningsStale:
         "years_ago,value_set_class,code_attr,display,report_type",
         [
             (10, Colonoscopy, "CPT", "Colonoscopy", "imaging"),  # v14: 9 years, so 10 is too old
-            (5, FlexibleSigmoidoscopy, "CPT", "Flexible Sigmoidoscopy", "referral"),  # v14: 4 years, so 5 is too old
+            (
+                5,
+                FlexibleSigmoidoscopy,
+                "CPT",
+                "Flexible Sigmoidoscopy",
+                "referral",
+            ),  # v14: 4 years, so 5 is too old
         ],
         ids=["colonoscopy_too_old", "flex_sig_too_old"],
     )
     def test_procedure_screenings_outside_window_yield_due(
-            self, now, protocol_instance, patient_age_62, eligible_note, years_ago, value_set_class, code_attr, display,
-            report_type
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        years_ago,
+        value_set_class,
+        code_attr,
+        display,
+        report_type,
     ):
         """Test that procedure screenings outside their lookback windows yield DUE."""
-        code = first_or_skip(getattr(value_set_class, code_attr, []), f"{display} {code_attr} empty")
+        code = first_or_skip(
+            getattr(value_set_class, code_attr, []), f"{display} {code_attr} empty"
+        )
 
         if report_type == "referral":
-            create_referral_report_with_cpt(patient_age_62, now.shift(years=-years_ago).date(), code, display)
+            create_referral_report_with_cpt(
+                patient_age_62, now.shift(years=-years_ago).date(), code, display
+            )
         else:
             create_imaging_report_with_cpt(
                 patient_age_62,
@@ -637,7 +770,9 @@ class TestDueWhenScreeningsStale:
 
         assert card["status"] == ProtocolCard.Status.DUE.value
 
-    def test_ct_colonography_too_old_yields_due(self, now, protocol_instance, patient_age_62, eligible_note):
+    def test_ct_colonography_too_old_yields_due(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Test that CT Colonography outside 4-year window (v14) yields DUE."""
         create_ct_colonography_report(patient_age_62, now, years_ago=5, report_type="imaging")
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -658,8 +793,18 @@ class TestImagingReports:
         ],
         ids=["flexible_sigmoidoscopy", "colonoscopy"],
     )
-    def test_imaging_report_satisfies(self, now, protocol_instance, patient_age_62, eligible_note, procedure_type,
-                                      years_ago, value_set_class, code_attr, expected_keyword):
+    def test_imaging_report_satisfies(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        years_ago,
+        value_set_class,
+        code_attr,
+        expected_keyword,
+    ):
         """Scenarios 15, 17: Imaging Reports for procedures."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
         if not codes:
@@ -667,8 +812,11 @@ class TestImagingReports:
         code = codes[0]
 
         create_imaging_report_with_cpt(
-            patient_age_62, when_date=now.shift(years=-years_ago).date(),
-            when_assigned_dt=now.shift(years=-years_ago).datetime, code=code, display=procedure_type
+            patient_age_62,
+            when_date=now.shift(years=-years_ago).date(),
+            when_assigned_dt=now.shift(years=-years_ago).datetime,
+            code=code,
+            display=procedure_type,
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -676,7 +824,9 @@ class TestImagingReports:
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         assert expected_keyword in card["narrative"].lower()
 
-    def test_ct_colonography_imaging_report_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+    def test_ct_colonography_imaging_report_satisfies(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 16: CT Colonography Imaging Report (handles both CPT and LOINC)."""
         create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="imaging")
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -698,23 +848,39 @@ class TestReferralReports:
         ],
         ids=["flexible_sigmoidoscopy", "colonoscopy"],
     )
-    def test_referral_report_satisfies(self, now, protocol_instance, patient_age_62, eligible_note, procedure_type,
-                                       years_ago, value_set_class, code_attr, expected_keyword):
+    def test_referral_report_satisfies(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        years_ago,
+        value_set_class,
+        code_attr,
+        expected_keyword,
+    ):
         """Scenarios 18, 20: Referral Reports for procedures."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
         if not codes:
             pytest.skip(f"{procedure_type} {code_attr} codes missing")
         code = codes[0]
 
-        create_referral_report_with_cpt(patient_age_62, when_date=now.shift(years=-years_ago).date(), code=code,
-                                        display=procedure_type)
+        create_referral_report_with_cpt(
+            patient_age_62,
+            when_date=now.shift(years=-years_ago).date(),
+            code=code,
+            display=procedure_type,
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         assert expected_keyword in card["narrative"].lower()
 
-    def test_ct_colonography_referral_report_satisfies(self, now, protocol_instance, patient_age_62, eligible_note):
+    def test_ct_colonography_referral_report_satisfies(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 19: CT Colonography Referral Report (handles both CPT and LOINC)."""
         create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="referral")
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -737,8 +903,17 @@ class TestPriorityImagingBeforeReferral:
         ids=["flexible_sigmoidoscopy", "colonoscopy"],
     )
     def test_imaging_report_priority_over_referral(
-            self, now, protocol_instance, patient_age_62, eligible_note, procedure_type, imaging_years_ago,
-            referral_years_ago, value_set_class, code_attr, expected_keyword
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        imaging_years_ago,
+        referral_years_ago,
+        value_set_class,
+        code_attr,
+        expected_keyword,
     ):
         """Scenarios 21, 24: Imaging Report takes priority over Referral Report."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
@@ -755,9 +930,12 @@ class TestPriorityImagingBeforeReferral:
             display=procedure_type,
         )
         # Create Referral Report (newer date)
-        referral = create_referral_report_with_cpt(patient_age_62,
-                                                   when_date=now.shift(years=-referral_years_ago).date(), code=code,
-                                                   display=procedure_type)
+        create_referral_report_with_cpt(
+            patient_age_62,
+            when_date=now.shift(years=-referral_years_ago).date(),
+            code=code,
+            display=procedure_type,
+        )
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -766,29 +944,40 @@ class TestPriorityImagingBeforeReferral:
         # Should use Imaging Report (checked first), even though Referral is more recent
         # Verify the narrative contains the imaging report's date (2-digit year format) to confirm priority
         year_2digit = str(imaging.original_date.year)[-2:]
-        assert year_2digit in card[
-            "narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        assert year_2digit in card["narrative"], (
+            f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        )
         assert expected_keyword in card["narrative"].lower()
 
-    def test_referral_report_fallback_when_no_imaging_flexible_sigmoidoscopy(self, now, protocol_instance,
-                                                                             patient_age_62, eligible_note):
+    def test_referral_report_fallback_when_no_imaging_flexible_sigmoidoscopy(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 22: Referral Report used when Imaging Report doesn't exist."""
-        cpt = first_or_skip(getattr(FlexibleSigmoidoscopy, "CPT", []), "Flexible Sigmoidoscopy CPT set is empty")
-        create_referral_report_with_cpt(patient_age_62, when_date=now.shift(years=-2).date(), code=cpt,
-                                        display="Flexible Sigmoidoscopy")
+        cpt = first_or_skip(
+            getattr(FlexibleSigmoidoscopy, "CPT", []), "Flexible Sigmoidoscopy CPT set is empty"
+        )
+        create_referral_report_with_cpt(
+            patient_age_62,
+            when_date=now.shift(years=-2).date(),
+            code=cpt,
+            display="Flexible Sigmoidoscopy",
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         assert "sigmoidoscopy" in card["narrative"].lower()
 
-    def test_imaging_report_priority_over_referral_ct_colonography(self, now, protocol_instance, patient_age_62,
-                                                                   eligible_note):
+    def test_imaging_report_priority_over_referral_ct_colonography(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 23: Imaging Report takes priority over Referral Report (CT Colonography)."""
         # Create imaging report (older)
-        imaging = create_ct_colonography_report(patient_age_62, now, years_ago=3, report_type="imaging")
+        imaging = create_ct_colonography_report(
+            patient_age_62, now, years_ago=3, report_type="imaging"
+        )
         # Create referral report (newer)
-        referral = create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="referral")
+        create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="referral")
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -796,8 +985,9 @@ class TestPriorityImagingBeforeReferral:
         assert card["status"] == ProtocolCard.Status.SATISFIED.value
         # Should use Imaging Report (checked first) - verify by checking the date (2-digit year) in narrative
         year_2digit = str(imaging.original_date.year)[-2:]
-        assert year_2digit in card[
-            "narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        assert year_2digit in card["narrative"], (
+            f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        )
         assert "colonography" in card["narrative"].lower()
 
 
@@ -808,13 +998,29 @@ class TestEdgeCases:
     @pytest.mark.parametrize(
         "procedure_type,years_ago,value_set_class,code_attr,report_type",
         [
-            ("Flexible Sigmoidoscopy", 5, FlexibleSigmoidoscopy, "CPT", "imaging"),  # v14: 4 years, so 5 is too old
+            (
+                "Flexible Sigmoidoscopy",
+                5,
+                FlexibleSigmoidoscopy,
+                "CPT",
+                "imaging",
+            ),  # v14: 4 years, so 5 is too old
             ("Colonoscopy", 10, Colonoscopy, "CPT", "referral"),  # v14: 9 years, so 10 is too old
         ],
         ids=["imaging_too_old_sigmoidoscopy", "referral_too_old_colonoscopy"],
     )
-    def test_reports_too_old_yield_due(self, now, protocol_instance, patient_age_62, eligible_note, procedure_type,
-                                       years_ago, value_set_class, code_attr, report_type):
+    def test_reports_too_old_yield_due(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        years_ago,
+        value_set_class,
+        code_attr,
+        report_type,
+    ):
         """Scenarios 25-26: Reports outside lookback period → DUE."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
         if not codes:
@@ -823,12 +1029,19 @@ class TestEdgeCases:
 
         if report_type == "imaging":
             create_imaging_report_with_cpt(
-                patient_age_62, when_date=now.shift(years=-years_ago).date(),
-                when_assigned_dt=now.shift(years=-years_ago).datetime, code=code, display=procedure_type
+                patient_age_62,
+                when_date=now.shift(years=-years_ago).date(),
+                when_assigned_dt=now.shift(years=-years_ago).datetime,
+                code=code,
+                display=procedure_type,
             )
         else:
-            create_referral_report_with_cpt(patient_age_62, when_date=now.shift(years=-years_ago).date(), code=code,
-                                            display=procedure_type)
+            create_referral_report_with_cpt(
+                patient_age_62,
+                when_date=now.shift(years=-years_ago).date(),
+                code=code,
+                display=procedure_type,
+            )
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -843,8 +1056,17 @@ class TestEdgeCases:
         ],
         ids=["junked_imaging_colonoscopy", "junked_referral_sigmoidoscopy"],
     )
-    def test_junked_reports_ignored(self, now, protocol_instance, patient_age_62, eligible_note, procedure_type,
-                                    value_set_class, code_attr, report_type):
+    def test_junked_reports_ignored(
+        self,
+        now,
+        protocol_instance,
+        patient_age_62,
+        eligible_note,
+        procedure_type,
+        value_set_class,
+        code_attr,
+        report_type,
+    ):
         """Scenario 27: Junked reports are ignored."""
         codes = list(getattr(value_set_class, code_attr, []) or [])
         if not codes:
@@ -853,22 +1075,35 @@ class TestEdgeCases:
 
         if report_type == "imaging":
             create_imaging_report_with_cpt(
-                patient_age_62, when_date=now.shift(years=-5).date(), when_assigned_dt=now.shift(years=-5).datetime,
-                code=code, display=procedure_type, junked=True
+                patient_age_62,
+                when_date=now.shift(years=-5).date(),
+                when_assigned_dt=now.shift(years=-5).datetime,
+                code=code,
+                display=procedure_type,
+                junked=True,
             )
         else:
-            create_referral_report_with_cpt(patient_age_62, when_date=now.shift(years=-2).date(), code=code,
-                                            display=procedure_type, junked=True)
+            create_referral_report_with_cpt(
+                patient_age_62,
+                when_date=now.shift(years=-2).date(),
+                code=code,
+                display=procedure_type,
+                junked=True,
+            )
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
         assert card["status"] == ProtocolCard.Status.DUE.value
 
-    def test_ct_colonography_value_set_checked(self, now, protocol_instance, patient_age_62, eligible_note):
+    def test_ct_colonography_value_set_checked(
+        self, now, protocol_instance, patient_age_62, eligible_note
+    ):
         """Scenario 28: CtColonography value set checked."""
         # Create report using one of the value sets (helper handles both CPT and LOINC)
-        report = create_ct_colonography_report(patient_age_62, now, years_ago=2, report_type="imaging")
+        report = create_ct_colonography_report(
+            patient_age_62, now, years_ago=2, report_type="imaging"
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -877,8 +1112,9 @@ class TestEdgeCases:
         assert "colonography" in card["narrative"].lower()
         # Verify the report's date (2-digit year format) appears in the narrative to confirm it was used
         year_2digit = str(report.original_date.year)[-2:]
-        assert year_2digit in card[
-            "narrative"], f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        assert year_2digit in card["narrative"], (
+            f"Expected 2-digit year {year_2digit} in narrative: {card['narrative']}"
+        )
 
 
 @pytest.mark.django_db
@@ -891,9 +1127,13 @@ class TestPriorityBasedScreening:
         fitdna_code = first_or_skip(SdnaFitTest.LOINC, "FIT-DNA LOINC empty")
 
         # FOBT older (6 months ago)
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-6).datetime, fobt_code, "FOBT")
+        create_lab_report_with_loinc(
+            patient_age_62, now.shift(months=-6).datetime, fobt_code, "FOBT"
+        )
         # FIT-DNA newer (2 months ago)
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-2).datetime, fitdna_code, "FIT-DNA")
+        create_lab_report_with_loinc(
+            patient_age_62, now.shift(months=-2).datetime, fitdna_code, "FIT-DNA"
+        )
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -917,7 +1157,10 @@ class TestAgeBoundariesInPopulation:
 
         # Verify patient is in population (not excluded)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
     def test_45y_364d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
         """Test that patient 45y 364d (one day before 46) is in population due to floor calculation."""
@@ -928,9 +1171,14 @@ class TestAgeBoundariesInPopulation:
 
         # Verify patient is in population (not excluded due to age)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
-    def test_75y_plus_1d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
+    def test_75y_plus_1d_is_in_population_with_floor_calc(
+        self, now, protocol_instance, eligible_note
+    ):
         """Test that patient 75y + 1d (one day after 75) is in population due to floor calculation."""
         patient = PatientFactory.create(birth_date=now.shift(years=-75, days=-1).date())
         create_eligible_note_for_patient(patient, now, eligible_note)
@@ -939,7 +1187,10 @@ class TestAgeBoundariesInPopulation:
 
         # Verify patient is in population (not excluded due to age)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
 
 @pytest.mark.django_db
@@ -1038,9 +1289,7 @@ class TestV14NewExclusions:
 
         assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
-    def test_palliative_care_excluded(
-        self, now, protocol_instance, patient_age_62, eligible_note
-    ):
+    def test_palliative_care_excluded(self, now, protocol_instance, patient_age_62, eligible_note):
         """Test that patient receiving palliative care is excluded."""
         palliative_codes = list(getattr(PalliativeCareDiagnosis, "SNOMEDCT", []) or [])
         if not palliative_codes:
@@ -1060,9 +1309,7 @@ class TestV14NewExclusions:
 
         assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
-    def test_age_65_with_frailty_not_excluded(
-        self, now, protocol_instance, eligible_note
-    ):
+    def test_age_65_with_frailty_not_excluded(self, now, protocol_instance, eligible_note):
         """Test that patient age 65 with frailty is NOT excluded (age must be 66+)."""
         patient = create_patient_at_age(now, 65)
         frailty_codes = list(getattr(FrailtyDiagnosis, "SNOMEDCT", []) or [])
@@ -1083,7 +1330,10 @@ class TestV14NewExclusions:
 
         # Should not be excluded (age < 66)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
     def test_age_66_with_frailty_only_not_excluded(
         self, now, protocol_instance, patient_age_66, eligible_note
@@ -1107,16 +1357,17 @@ class TestV14NewExclusions:
 
         # Should not be excluded (frailty alone is not enough)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
 
 @pytest.mark.django_db
 class TestV14NewEncounterTypes:
     """Tests for v14 new encounter types (Virtual Encounter, Telephone Visits)."""
 
-    def test_virtual_encounter_qualifies(
-        self, now, protocol_instance, patient_age_62
-    ):
+    def test_virtual_encounter_qualifies(self, now, protocol_instance, patient_age_62):
         """Test that Virtual Encounter qualifies for initial population."""
         # Create Virtual Encounter note type
         virtual_note_type = NoteType.objects.create(
@@ -1145,7 +1396,9 @@ class TestV14NewEncounterTypes:
             online_duration=0,
         )
 
-        note = NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
+        note = NoteFactory.create(
+            patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime
+        )
         note.note_type_version = virtual_note_type
         note.save()
 
@@ -1154,11 +1407,12 @@ class TestV14NewEncounterTypes:
 
         # Should be in population (not excluded)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
-    def test_telephone_visit_qualifies(
-        self, now, protocol_instance, patient_age_62
-    ):
+    def test_telephone_visit_qualifies(self, now, protocol_instance, patient_age_62):
         """Test that Telephone Visit qualifies for initial population."""
         # Create Telephone Visit note type
         telephone_note_type = NoteType.objects.create(
@@ -1187,7 +1441,9 @@ class TestV14NewEncounterTypes:
             online_duration=0,
         )
 
-        note = NoteFactory.create(patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime)
+        note = NoteFactory.create(
+            patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime
+        )
         note.note_type_version = telephone_note_type
         note.save()
 
@@ -1196,7 +1452,10 @@ class TestV14NewEncounterTypes:
 
         # Should be in population (not excluded)
         assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (ProtocolCard.Status.DUE.value, ProtocolCard.Status.SATISFIED.value)
+        assert card["status"] in (
+            ProtocolCard.Status.DUE.value,
+            ProtocolCard.Status.SATISFIED.value,
+        )
 
 
 @pytest.mark.django_db
@@ -1211,10 +1470,14 @@ class TestV14UpdatedLookbackPeriods:
         ],
         ids=["fit_dna_within_2_years", "fit_dna_outside_2_years"],
     )
-    def test_fit_dna_lookback_period(self, now, protocol_instance, patient_age_62, eligible_note, months_ago, expected_status):
+    def test_fit_dna_lookback_period(
+        self, now, protocol_instance, patient_age_62, eligible_note, months_ago, expected_status
+    ):
         """Test FIT-DNA lookback period (v14: 2 years)."""
         code = first_or_skip(SdnaFitTest.LOINC, "FIT-DNA LOINC empty")
-        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago).datetime, code, "FIT-DNA")
+        create_lab_report_with_loinc(
+            patient_age_62, now.shift(months=-months_ago).datetime, code, "FIT-DNA"
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -1236,7 +1499,10 @@ class TestV14UpdatedLookbackPeriods:
         if not codes:
             pytest.skip("FlexibleSigmoidoscopy CPT codes missing")
         create_referral_report_with_cpt(
-            patient_age_62, when_date=now.shift(years=-years_ago).date(), code=codes[0], display="Flexible Sigmoidoscopy"
+            patient_age_62,
+            when_date=now.shift(years=-years_ago).date(),
+            code=codes[0],
+            display="Flexible Sigmoidoscopy",
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -1255,7 +1521,9 @@ class TestV14UpdatedLookbackPeriods:
         self, now, protocol_instance, patient_age_62, eligible_note, years_ago, expected_status
     ):
         """Test CT Colonography lookback period (v14: 4 years)."""
-        create_ct_colonography_report(patient_age_62, now, years_ago=years_ago, report_type="imaging")
+        create_ct_colonography_report(
+            patient_age_62, now, years_ago=years_ago, report_type="imaging"
+        )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -1297,10 +1565,17 @@ class TestV14EdgeCases:
         self, now, protocol_instance, patient_age_62, eligible_note
     ):
         """Test that colorectal cancer with onset on or before end of measurement period is excluded."""
-        codes = list(getattr(MalignantNeoplasmOfColon, "SNOMEDCT", []) or list(getattr(MalignantNeoplasmOfColon, "ICD10CM", [])))
+        codes = list(
+            getattr(MalignantNeoplasmOfColon, "SNOMEDCT", [])
+            or list(getattr(MalignantNeoplasmOfColon, "ICD10CM", []))
+        )
         if not codes:
             pytest.skip("MalignantNeoplasmOfColon codes missing")
-        system = "http://snomed.info/sct" if getattr(MalignantNeoplasmOfColon, "SNOMEDCT", []) else "http://hl7.org/fhir/sid/icd-10"
+        system = (
+            "http://snomed.info/sct"
+            if getattr(MalignantNeoplasmOfColon, "SNOMEDCT", [])
+            else "http://hl7.org/fhir/sid/icd-10"
+        )
 
         # Onset date before measurement period end
         create_condition_with_coding(
@@ -1322,10 +1597,16 @@ class TestV14EdgeCases:
         self, now, protocol_instance, patient_age_62, eligible_note
     ):
         """Test that total colectomy resolved on or before end of measurement period is excluded."""
-        codes = list(getattr(TotalColectomy, "SNOMEDCT", []) or list(getattr(TotalColectomy, "CPT", [])))
+        codes = list(
+            getattr(TotalColectomy, "SNOMEDCT", []) or list(getattr(TotalColectomy, "CPT", []))
+        )
         if not codes:
             pytest.skip("TotalColectomy codes missing")
-        system = "http://snomed.info/sct" if getattr(TotalColectomy, "SNOMEDCT", []) else "http://www.ama-assn.org/go/cpt"
+        system = (
+            "http://snomed.info/sct"
+            if getattr(TotalColectomy, "SNOMEDCT", [])
+            else "http://www.ama-assn.org/go/cpt"
+        )
 
         # Resolved before measurement period end
         create_condition_with_coding(
