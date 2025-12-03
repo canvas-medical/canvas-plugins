@@ -210,7 +210,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                     combined_codes[system_lower].update(codes)
         return [{"system": system, "code": list(codes)} for system, codes in combined_codes.items()]
 
-
     def patient_id_from_target(self) -> str:
         """
         Override to support additional event types beyond the base class.
