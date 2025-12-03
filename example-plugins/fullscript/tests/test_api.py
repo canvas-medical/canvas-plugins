@@ -311,7 +311,7 @@ def test_create_session_grant_failure() -> None:
 
     # Mock requests.post with failure
     mock_response = Mock()
-    mock_response.status_code = 401
+    mock_response.status_code = 400
     mock_response.text = "Unauthorized"
 
     with patch("fullscript.api.fullscript_api.requests.post", return_value=mock_response):
@@ -343,13 +343,48 @@ def test_get_patient_with_existing_fullscript_id() -> None:
     # Mock Patient
     mock_patient = Mock()
     mock_patient.id = "patient-123"
+    mock_patient.first_name = "John"
+    mock_patient.last_name = "Doe"
+    mock_patient.sex_at_birth = "male"
+    mock_patient.birth_date = None
+
+    # Mock telecom
+    mock_telecom = Mock()
+    mock_email = Mock()
+    mock_email.value = "john.doe@example.com"
+    mock_phone = Mock()
+    mock_phone.value = "5551234567"
+
+    # Setup telecom filter to return appropriate values for email and phone
+    def telecom_filter_side_effect(system: Mock) -> Mock:
+        """Side effect function for telecom.filter()."""
+        mock_filter_result = Mock()
+        if system.value == "email":
+            mock_filter_result.first.return_value = mock_email
+        elif system.value == "phone":
+            mock_filter_result.first.return_value = mock_phone
+        else:
+            mock_filter_result.first.return_value = None
+        return mock_filter_result
+
+    mock_telecom.filter.side_effect = telecom_filter_side_effect
+    mock_patient.telecom = mock_telecom
+
     mock_external_identifiers = Mock()
     mock_external_identifiers.filter.return_value.values_list.return_value.last.return_value = (
         "fullscript-patient-456"
     )
     mock_patient.external_identifiers = mock_external_identifiers
 
-    with patch("fullscript.api.fullscript_api.Patient") as mock_patient_class:
+    # Mock requests.put for patient update
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"patient": {"id": "fullscript-patient-456"}}
+
+    with (
+        patch("fullscript.api.fullscript_api.Patient") as mock_patient_class,
+        patch("fullscript.api.fullscript_api.requests.put", return_value=mock_response),
+    ):
         mock_patient_class.objects.get.return_value = mock_patient
 
         result = api.get_or_create_patient()
@@ -379,20 +414,36 @@ def test_create_patient_without_fullscript_id() -> None:
     mock_patient.id = "patient-123"
     mock_patient.first_name = "John"
     mock_patient.last_name = "Doe"
+    mock_patient.sex_at_birth = "male"
+    mock_patient.birth_date = None
 
-    # Mock telecom for email
+    # Mock telecom for email and phone
     mock_telecom = Mock()
     mock_email = Mock()
     mock_email.value = "john.doe@example.com"
-    mock_telecom.filter.return_value.first.return_value = mock_email
-    mock_telecom.filter.return_value.exists.return_value = True
+    mock_phone = Mock()
+    mock_phone.value = "5551234567"
+
+    # Setup telecom filter to return appropriate values for email and phone
+    def telecom_filter_side_effect(system: Mock) -> Mock:
+        """Side effect function for telecom.filter()."""
+        mock_filter_result = Mock()
+        if system.value == "email":
+            mock_filter_result.first.return_value = mock_email
+        elif system.value == "phone":
+            mock_filter_result.first.return_value = mock_phone
+        else:
+            mock_filter_result.first.return_value = None
+        return mock_filter_result
+
+    mock_telecom.filter.side_effect = telecom_filter_side_effect
     mock_patient.telecom = mock_telecom
 
     mock_external_identifiers = Mock()
     mock_external_identifiers.filter.return_value.values_list.return_value.last.return_value = None
     mock_patient.external_identifiers = mock_external_identifiers
 
-    # Mock Fullscript API response
+    # Mock Fullscript API response (expects status code 201 for creation)
     mock_response = Mock()
     mock_response.status_code = 201
     mock_response.json.return_value = {"patient": {"id": "fullscript-patient-789"}}
@@ -414,7 +465,7 @@ def test_create_patient_without_fullscript_id() -> None:
     # Verify response contains new patient ID and effect
     assert len(result) == 2
     response = result[1]  # Second item is the Response
-    assert response.status_code == HTTPStatus.OK
+    assert response.status_code == 201
 
     data = json.loads(response.content.decode())
     assert data["id"] == "fullscript-patient-789"
