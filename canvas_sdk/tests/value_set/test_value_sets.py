@@ -70,3 +70,24 @@ def test_value_set_class_pipe_operator_with_two_combined_value_sets() -> None:
 
     assert combined_value_set.values["ICD10CM"] == all_classes_icd_10_codes
     assert combined_value_set.values["SNOMEDCT"] == all_classes_snomed_codes
+
+
+def test_value_set_class_ror_operator() -> None:
+    """Test that the __ror__ operator works correctly on ValueSystems metaclass.
+
+    The __ror__ operator is called when the left operand doesn't have __or__
+    or its __or__ returns NotImplemented. We test it by directly calling __ror__.
+    """
+    # Directly invoke __ror__ on the metaclass to verify it delegates to __or__
+    combined_value_set = DisordersOfTheImmuneSystem.__ror__(EncephalopathyDueToChildhoodVaccination)
+
+    both_classes_icd_10_codes = DisordersOfTheImmuneSystem.ICD10CM.union(
+        EncephalopathyDueToChildhoodVaccination.ICD10CM
+    )
+    both_classes_snomed_codes = DisordersOfTheImmuneSystem.SNOMEDCT.union(
+        EncephalopathyDueToChildhoodVaccination.SNOMEDCT
+    )
+
+    assert isinstance(combined_value_set, CombinedValueSet)
+    assert both_classes_icd_10_codes == combined_value_set.values["ICD10CM"]
+    assert both_classes_snomed_codes == combined_value_set.values["SNOMEDCT"]

@@ -952,3 +952,244 @@ class TestHelperMethods:
             - protocol.now
         ).days
         assert due_in == expected
+
+    @pytest.mark.django_db
+    def test_calculate_due_in_days_with_no_on_date(self) -> None:
+        """Test _calculate_due_in_days returns -1 when _on_date is None."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Ensure _on_date is None
+        protocol._on_date = None
+
+        due_in = protocol._calculate_due_in_days(None)
+        assert due_in == -1
+
+    @pytest.mark.django_db
+    def test_build_satisfied_narrative_with_no_on_date(self) -> None:
+        """Test _build_satisfied_narrative returns fallback when _on_date is None."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date, first_name="Jane")
+
+        # Ensure _on_date is None
+        protocol._on_date = None
+
+        narrative = protocol._build_satisfied_narrative(patient, -1, " (Stratum 2: Ages 52-74)")
+        assert narrative == "Jane is due for breast cancer screening. (Stratum 2: Ages 52-74)"
+
+
+class TestPatientIdFromTarget:
+    """Test patient_id_from_target method for various event types."""
+
+    @pytest.mark.django_db
+    def test_patient_id_from_target_cached_value(self) -> None:
+        """Test patient_id_from_target returns cached value when already set."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Pre-set the cached patient_id
+        expected_id = "cached-patient-id-123"
+        protocol._patient_id = expected_id
+
+        result = protocol.patient_id_from_target()
+        assert result == expected_id
+
+    @pytest.mark.django_db
+    def test_patient_id_from_target_encounter_event(self) -> None:
+        """Test patient_id_from_target handles ENCOUNTER_CREATED events via DB query."""
+        from unittest.mock import Mock
+
+        from canvas_sdk.events import EventType
+        from canvas_sdk.test_utils.factories import EncounterFactory
+
+        timeframe_end = arrow.get("2024-12-31")
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create a note for the patient first
+        note = NoteFactory.create(patient=patient)
+
+        # Create an encounter linked to the note
+        encounter = EncounterFactory.create(note=note)
+
+        # Create protocol with mock event for ENCOUNTER_CREATED
+        mock_event = Mock()
+        mock_event.type = EventType.ENCOUNTER_CREATED
+        mock_event.target = Mock()
+        mock_event.target.id = encounter.id
+
+        protocol = ClinicalQualityMeasure125v14(event=mock_event)
+        protocol.now = timeframe_end
+
+        result = protocol.patient_id_from_target()
+        assert result == str(patient.id)
+
+    @pytest.mark.django_db
+    def test_patient_id_from_target_fallback_to_super(self) -> None:
+        """Test patient_id_from_target falls back to super for other event types."""
+        from unittest.mock import Mock
+
+        from canvas_sdk.events import EventType
+        from canvas_sdk.test_utils.factories import ConditionFactory
+
+        timeframe_end = arrow.get("2024-12-31")
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create a condition to trigger CONDITION_CREATED event
+        condition = ConditionFactory.create(patient=patient)
+
+        # Create protocol with mock event for CONDITION_CREATED
+        # The base class uses .get(id=self.event.target) so target should be the id directly
+        mock_event = Mock()
+        mock_event.type = EventType.CONDITION_CREATED
+        mock_event.target = condition.id  # Use ID directly, not a mock with .id attribute
+
+        protocol = ClinicalQualityMeasure125v14(event=mock_event)
+        protocol.now = timeframe_end
+
+        result = protocol.patient_id_from_target()
+        assert result == str(patient.id)
+
+
+class TestComputeErrorHandling:
+    """Test compute() method error handling."""
+
+    @pytest.mark.django_db
+    def test_compute_returns_empty_on_patient_not_found(self) -> None:
+        """Test compute returns empty list when Patient.DoesNotExist is raised."""
+        from unittest.mock import Mock
+
+        from canvas_sdk.events import EventType
+
+        timeframe_end = arrow.get("2024-12-31")
+
+        # Create protocol with mock event
+        mock_event = Mock()
+        mock_event.type = EventType.OBSERVATION_CREATED
+        mock_event.context = {"patient": {"id": "nonexistent-patient-id"}}
+
+        protocol = ClinicalQualityMeasure125v14(event=mock_event)
+        protocol.now = timeframe_end
+
+        # The patient doesn't exist, so compute should return empty list
+        result = protocol.compute()
+        assert result == []
+
+    @pytest.mark.django_db
+    def test_compute_returns_empty_on_exception(self) -> None:
+        """Test compute returns empty list when patient_id_from_target raises exception."""
+        from unittest.mock import Mock
+
+        from canvas_sdk.events import EventType
+
+        timeframe_end = arrow.get("2024-12-31")
+
+        # Create protocol with mock event
+        mock_event = Mock()
+        mock_event.type = EventType.ENCOUNTER_CREATED
+        mock_event.target = Mock()
+        mock_event.target.id = "nonexistent-encounter-id"
+
+        protocol = ClinicalQualityMeasure125v14(event=mock_event)
+        protocol.now = timeframe_end
+
+        # The encounter doesn't exist, so patient_id_from_target will raise
+        result = protocol.compute()
+        assert result == []
+
+
+class TestGetStratificationEdgeCases:
+    """Test get_stratification edge cases."""
+
+    @pytest.mark.django_db
+    def test_get_stratification_returns_none_when_not_in_denominator(self) -> None:
+        """Test get_stratification returns None when patient not in denominator."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Create male patient (not in initial population)
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="M", birth_date=birth_date)
+
+        result = protocol.get_stratification(patient)
+        assert result is None
+
+    @pytest.mark.django_db
+    def test_get_stratification_returns_none_for_age_outside_strata(self) -> None:
+        """Test get_stratification returns None when patient age falls outside strata ranges.
+
+        This tests the defensive else branch. We modify stratum boundaries to create a gap.
+        """
+        from unittest.mock import patch
+
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        # Create patient aged 55 in denominator
+        birth_date = timeframe_end.shift(years=-55).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Mock in_denominator to return True but set strata boundaries to exclude age 55
+        # This simulates a hypothetical scenario where strata don't cover all denominator ages
+        with (
+            patch.object(protocol, "STRATUM_1_END", 50),
+            patch.object(protocol, "STRATUM_2_START", 60),
+        ):
+            result = protocol.get_stratification(patient)
+            assert result is None
+
+
+class TestComputeHappyPath:
+    """Test compute() method happy path."""
+
+    @pytest.mark.django_db
+    def test_compute_returns_effects_for_valid_patient(self) -> None:
+        """Test compute returns effects when patient exists and is valid."""
+        from unittest.mock import Mock, PropertyMock, patch
+
+        from canvas_sdk.events import EventType
+        from canvas_sdk.protocols.timeframe import Timeframe
+
+        timeframe_end = arrow.get("2024-12-31")
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create qualifying visit
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Create protocol with mock event for OBSERVATION_CREATED
+        mock_event = Mock()
+        mock_event.type = EventType.OBSERVATION_CREATED
+        mock_event.context = {"patient": {"id": str(patient.id)}}
+
+        protocol = ClinicalQualityMeasure125v14(event=mock_event)
+        protocol.now = timeframe_end
+
+        # Create custom timeframe
+        custom_timeframe = Timeframe(start=timeframe_end.shift(years=-1), end=timeframe_end)
+
+        # Mock the timeframe property to return our custom timeframe
+        with patch.object(
+            ClinicalQualityMeasure125v14, "timeframe", new_callable=PropertyMock
+        ) as mock_timeframe:
+            mock_timeframe.return_value = custom_timeframe
+            result = protocol.compute()
+            assert len(result) == 1  # Should return a protocol card
