@@ -5,7 +5,6 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
     BaseQuerySet,
     ForPatientQuerySetMixin,
     IdentifiableModel,
@@ -90,7 +89,6 @@ class ReferralReportQuerySet(
         from canvas_sdk.value_set.v2022.procedure import Colonoscopy
         colonoscopy_reports = ReferralReport.objects.find(Colonoscopy)
         """
-        from canvas_sdk.value_set.value_set import ValueSet
         from django.db.models import Q
 
         q_filter = Q()
@@ -150,7 +148,11 @@ class ReferralReportCoding(Coding):
         db_table = "canvas_sdk_data_api_referralreportcoding_001"
 
     report = models.ForeignKey(
-        ReferralReport, on_delete=models.DO_NOTHING, related_name="codings", null=True, db_column="report_id"
+        ReferralReport,
+        on_delete=models.DO_NOTHING,
+        related_name="codings",
+        null=True,
+        db_column="report_id",
     )
     value = models.CharField(max_length=1000)
 
