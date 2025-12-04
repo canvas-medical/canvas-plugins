@@ -138,7 +138,7 @@ requires-dist = [
     { name = "cookiecutter" },
     { name = "cron-converter", specifier = ">=1.2.1,<2" },
     { name = "cryptography", specifier = ">=45.0.5" },
-    { name = "defusedxml", specifier = "==0.7.1" },
+    { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "deprecation", specifier = ">=2.1.0,<3" },
     { name = "django", specifier = ">=5.1.1,<6" },
     { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.1.1,<6" },
