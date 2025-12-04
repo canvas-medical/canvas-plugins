@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.80.2 (2025-12-04)
+
+### Bug Fixes
+
+- Use the latest stable release of defusedxml
+  ([#1321](https://github.com/canvas-medical/canvas-plugins/pull/1321),
+  [`1ea811d`](https://github.com/canvas-medical/canvas-plugins/commit/1ea811d1180ec934dd13cf547af2a5620bc49f0b))
+
+
 ## v0.80.1 (2025-12-03)
 
 ### Bug Fixes
