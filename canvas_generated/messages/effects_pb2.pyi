@@ -243,6 +243,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ADD_BILLING_LINE_ITEM: _ClassVar[EffectType]
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
+    POST_CLAIM_PAYMENT: _ClassVar[EffectType]
+    POST_CLAIMS_REMIT: _ClassVar[EffectType]
     MOVE_CLAIM_TO_QUEUE: _ClassVar[EffectType]
     ADD_CLAIM_LABEL: _ClassVar[EffectType]
     REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
@@ -302,9 +304,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: _ClassVar[EffectType]
     GENERATE_FULL_CHART_PDF: _ClassVar[EffectType]
+    BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
     CALENDAR__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
-    BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
+    CALENDAR__EVENT__UPDATE: _ClassVar[EffectType]
+    CALENDAR__EVENT__DELETE: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -541,6 +545,8 @@ REMOVE_APPOINTMENT_LABEL: EffectType
 ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
+POST_CLAIM_PAYMENT: EffectType
+POST_CLAIMS_REMIT: EffectType
 MOVE_CLAIM_TO_QUEUE: EffectType
 ADD_CLAIM_LABEL: EffectType
 REMOVE_CLAIM_LABEL: EffectType
@@ -600,9 +606,11 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: EffectType
 GENERATE_FULL_CHART_PDF: EffectType
+BATCH_ORIGINATE_COMMANDS: EffectType
 CALENDAR__CREATE: EffectType
 CALENDAR__EVENT__CREATE: EffectType
-BATCH_ORIGINATE_COMMANDS: EffectType
+CALENDAR__EVENT__UPDATE: EffectType
+CALENDAR__EVENT__DELETE: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
