@@ -1,0 +1,30 @@
+name: Hospice & Frailty
+form_type: QUES
+code_system: INTERNAL
+code: QQ_004
+can_originate_in_charting: true
+questions:
+  - content: "Hospice"
+    code_system: INTERNAL
+    code: R-020
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: "Discharge to home for Hospice"
+        code: "428361000124107"
+        value: "1"
+      - name: "Discharge to Health Care Facility For Hospice Care"
+        code: "428371000124100"
+        value: "1"
+      - name: "Hospice Ambulatory Care"
+        code: "385765002"
+        value: "1"
+  - content: "Frailty"
+    code_system: INTERNAL
+    code: R-021
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: "Frailty Device"
+        code: "105501005"
+        value: "1"
