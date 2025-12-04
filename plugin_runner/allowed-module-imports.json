@@ -717,6 +717,7 @@
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
@@ -870,6 +871,7 @@
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
@@ -1008,16 +1010,9 @@
     "ResponseOption",
     "ResponseOptionSet"
   ],
-  "canvas_sdk.v1.data.reason_for_visit": [
-    "ReasonForVisitSettingCoding"
-  ],
-  "canvas_sdk.v1.data.referral": [
-    "Referral",
-    "ReferralReport"
-  ],
-  "canvas_sdk.v1.data.service_provider": [
-    "ServiceProvider"
-  ],
+  "canvas_sdk.v1.data.reason_for_visit": ["ReasonForVisitSettingCoding"],
+  "canvas_sdk.v1.data.referral": ["Referral", "ReferralReport", "ReferralReportCoding"],
+  "canvas_sdk.v1.data.service_provider": ["ServiceProvider"],
   "canvas_sdk.v1.data.staff": [
     "Staff",
     "StaffAddress",
