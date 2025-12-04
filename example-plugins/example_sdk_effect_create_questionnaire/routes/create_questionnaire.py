@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import cast
 
 from jsonschema import ValidationError
 
@@ -21,7 +21,7 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
 
     PATH = "/create-questionnaire"
 
-    def authenticate(self, credentials: APIKeyCredentials) -> bool:  # type: ignore[override]
+    def authenticate(self, credentials: APIKeyCredentials) -> bool:
         """Simple API key authentication."""
         return credentials.key == self.secrets["api-key"]
 
@@ -56,45 +56,31 @@ class CreateQuestionnaireAPI(SimpleAPIRoute):
         }
         """
         try:
-            questionnaire_data: dict[str, Any] = cast(dict[str, Any], self.request.json())
+            questionnaire_data = cast(QuestionnaireConfig, self.request.json())
 
-            # Construct QuestionnaireConfig
-            questionnaire_config: QuestionnaireConfig = {
-                "name": questionnaire_data["name"],
-                "form_type": questionnaire_data["form_type"],
-                "code_system": questionnaire_data["code_system"],
-                "code": str(questionnaire_data["code"]),  # Convert to string
-                "can_originate_in_charting": questionnaire_data["can_originate_in_charting"],
-                "questions": questionnaire_data["questions"],
-            }
-
-            # Add optional fields if present
-            if "prologue" in questionnaire_data:
-                questionnaire_config["prologue"] = questionnaire_data["prologue"]
-            if "display_results_in_social_history_section" in questionnaire_data:
-                questionnaire_config["display_results_in_social_history_section"] = questionnaire_data["display_results_in_social_history_section"]
-
-            effect = CreateQuestionnaire(questionnaire_config=questionnaire_config)
+            effect = CreateQuestionnaire(questionnaire_config=questionnaire_data)
 
             return [
                 effect.apply(),
-                JSONResponse({
-                    "message": "Questionnaire created successfully",
-                    "questionnaire_name": questionnaire_data.get("name")
-                })
+                JSONResponse(
+                    {
+                        "message": "Questionnaire created successfully",
+                        "questionnaire_name": questionnaire_data.get("name"),
+                    }
+                ),
             ]
 
         except ValidationError as e:
-            return [JSONResponse(
-                {
-                    "error": "Invalid questionnaire configuration",
-                    "details": str(e)
-                },
-                status_code=400
-            )]
+            return [
+                JSONResponse(
+                    {"error": "Invalid questionnaire configuration", "details": str(e)},
+                    status_code=400,
+                )
+            ]
 
         except Exception as e:
-            return [JSONResponse(
-                {"error": f"Failed to create questionnaire: {str(e)}"},
-                status_code=500
-            )]
+            return [
+                JSONResponse(
+                    {"error": f"Failed to create questionnaire: {str(e)}"}, status_code=500
+                )
+            ]
