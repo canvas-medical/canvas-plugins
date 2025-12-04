@@ -109,6 +109,7 @@ from .questionnaire import (
     InterviewQuestionnaireMap,
     InterviewQuestionResponse,
     Question,
+    QuestionEnablementCondition,
     Questionnaire,
     QuestionnaireQuestionMap,
     ResponseOption,
