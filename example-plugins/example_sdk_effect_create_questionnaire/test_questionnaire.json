@@ -1,0 +1,63 @@
+{
+  "name": "Test questionnaire 2",
+  "form_type": "QUES",
+  "code_system": "INTERNAL",
+  "code": "123",
+  "can_originate_in_charting": true,
+  "prologue": "Prologue of the test questionnaire",
+  "display_results_in_social_history_section": true,
+  "questions": [
+    {
+      "content": "This is a single select question",
+      "code_system": "INTERNAL",
+      "code": "QUESTIONNAIRE_Q1",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "SING",
+      "display_result_in_social_history_section": true,
+      "responses": [
+        {
+          "name": "Single select Option 1",
+          "code": "QUESTIONNAIRE_Q1_A1"
+        },
+        {
+          "name": "Single select Option 2",
+          "code": "QUESTIONNAIRE_Q1_A2"
+        }
+      ]
+    },
+    {
+      "content": "This is a text question",
+      "code_system": "INTERNAL",
+      "code": "QUESTIONNAIRE_Q2",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "TXT",
+      "responses": [
+        {
+          "name": "Option 1",
+          "code": "QUESTIONNAIRE_Q2_A1"
+        }
+      ]
+    },
+    {
+      "content": "This is a multiselect question",
+      "code_system": "INTERNAL",
+      "code": "QUESTIONNAIRE_Q3",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "MULT",
+      "responses": [
+        {
+          "name": "Multiselect Option 1",
+          "code": "QUESTIONNAIRE_Q3_A1"
+        },
+        {
+          "name": "Multiselect Option 2",
+          "code": "QUESTIONNAIRE_Q3_A2"
+        },
+        {
+          "name": "Multiselect Option 3",
+          "code": "QUESTIONNAIRE_Q3_A3"
+        }
+      ]
+    }
+  ]
+}

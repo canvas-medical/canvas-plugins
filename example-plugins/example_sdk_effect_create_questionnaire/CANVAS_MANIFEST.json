@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "example_sdk_effect_create_questionnaire",
+    "description": "Example plugin demonstrating CREATE_QUESTIONNAIRE effect using SimpleAPI",
+    "components": {
+        "protocols": [
+            {
+                "class": "example_sdk_effect_create_questionnaire.routes.create_questionnaire:CreateQuestionnaireAPI",
+                "description": "Creates a questionnaire from JSON input"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["api-key"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
