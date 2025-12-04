@@ -41,6 +41,10 @@ from canvas_sdk.commands.commands.task import TaskCommand
 from canvas_sdk.commands.commands.update_diagnosis import UpdateDiagnosisCommand
 from canvas_sdk.commands.commands.update_goal import UpdateGoalCommand
 from canvas_sdk.commands.commands.vitals import VitalsCommand
+from canvas_sdk.commands.validation import (
+    CommandValidationErrorEffect,
+    ValidationError,
+)
 
 __all__ = __exports__ = (
     "AdjustPrescriptionCommand",
@@ -48,6 +52,7 @@ __all__ = __exports__ = (
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "CommandValidationErrorEffect",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -79,5 +84,6 @@ __all__ = __exports__ = (
     "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
+    "ValidationError",
     "VitalsCommand",
 )
