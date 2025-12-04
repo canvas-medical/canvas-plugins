@@ -2,10 +2,11 @@ import functools
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, NotRequired, TypedDict
+from typing import Any, NotRequired
 
 import yaml
 from jsonschema import Draft7Validator, validators
+from typing_extensions import TypedDict
 
 from canvas_sdk.utils.plugins import plugin_context
 
@@ -163,11 +164,9 @@ def to_yaml(questionnaire_config: QuestionnaireConfig) -> str:
     Convert a QuestionnaireConfig to YAML string.
     """
     return yaml.dump(
-        questionnaire_config,
-        default_flow_style=False,
-        sort_keys=False,
-        allow_unicode=True
+        questionnaire_config, default_flow_style=False, sort_keys=False, allow_unicode=True
     )
+
 
 __exports__ = (
     "Draft7Validator",

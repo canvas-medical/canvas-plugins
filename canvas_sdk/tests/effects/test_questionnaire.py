@@ -2,12 +2,11 @@ import json
 
 import pytest
 import yaml
-
 from jsonschema import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.questionnaire import CreateQuestionnaire
-from canvas_sdk.questionnaires.utils import validate_yaml
+from canvas_sdk.questionnaires.utils import QuestionnaireConfig, validate_yaml
 
 
 @pytest.fixture
@@ -38,20 +37,22 @@ questions:
 
 
 @pytest.fixture
-def valid_questionnaire_config(valid_questionnaire_yaml: str):
+def valid_questionnaire_config(valid_questionnaire_yaml: str) -> QuestionnaireConfig:
     """Fixture providing validated QuestionnaireConfig."""
     return validate_yaml(valid_questionnaire_yaml)
 
 
 @pytest.fixture
-def create_questionnaire_effect(valid_questionnaire_config) -> CreateQuestionnaire:
+def create_questionnaire_effect(
+    valid_questionnaire_config: QuestionnaireConfig,
+) -> CreateQuestionnaire:
     """Fixture that provides a CreateQuestionnaire instance."""
     return CreateQuestionnaire(questionnaire_config=valid_questionnaire_config)
 
 
 def test_create_questionnaire_success(
     create_questionnaire_effect: CreateQuestionnaire,
-    valid_questionnaire_config
+    valid_questionnaire_config: QuestionnaireConfig,
 ) -> None:
     """Test successful questionnaire creation with validated config."""
     effect = create_questionnaire_effect.apply()
@@ -124,10 +125,10 @@ def test_programmatic_construction_with_validate_yaml() -> None:
                 "display_result_in_social_history_section": False,
                 "responses": [
                     {"name": "Yes", "code": "A1", "code_description": "", "value": ""},
-                    {"name": "No", "code": "A2", "code_description": "", "value": ""}
-                ]
+                    {"name": "No", "code": "A2", "code_description": "", "value": ""},
+                ],
             }
-        ]
+        ],
     }
 
     yaml_string = yaml_lib.dump(config_dict)
