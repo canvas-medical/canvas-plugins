@@ -1,3 +1,4 @@
+from .billing import BillingLineItemFactory
 from .claim import (
     ClaimCommentFactory,
     ClaimFactory,
@@ -6,8 +7,15 @@ from .claim import (
     ClaimQueueFactory,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
+from .condition import ConditionCodingFactory, ConditionFactory
+from .encounter import EncounterFactory
 from .facility import FacilityFactory
-from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .imaging import (
+    ImagingOrderFactory,
+    ImagingReportCodingFactory,
+    ImagingReportFactory,
+    ImagingReviewFactory,
+)
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
@@ -53,6 +61,7 @@ from .task import (
 from .user import CanvasUserFactory
 
 __all__ = (
+    "BillingLineItemFactory",
     "CanvasUserFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
@@ -60,6 +69,9 @@ __all__ = (
     "ClaimLabelFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
+    "ConditionCodingFactory",
+    "ConditionFactory",
+    "EncounterFactory",
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
@@ -74,6 +86,7 @@ __all__ = (
     "LabTestFactory",
     "LabValueCodingFactory",
     "LabValueFactory",
+    "ImagingReportCodingFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
