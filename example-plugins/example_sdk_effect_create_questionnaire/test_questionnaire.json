@@ -2,7 +2,7 @@
   "name": "Test questionnaire 2",
   "form_type": "QUES",
   "code_system": "INTERNAL",
-  "code": 123,
+  "code": "123",
   "can_originate_in_charting": true,
   "prologue": "Prologue of the test questionnaire",
   "display_results_in_social_history_section": true,
