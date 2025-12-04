@@ -23,6 +23,7 @@ from canvas_sdk.value_set.v2026.condition import (
     PalliativeCareDiagnosis,
     StatusPostLeftMastectomy,
     StatusPostRightMastectomy,
+    UnilateralMastectomyUnspecifiedLaterality,
 )
 from canvas_sdk.value_set.v2026.diagnostic_study import Mammography
 from canvas_sdk.value_set.v2026.encounter import OfficeVisit
@@ -392,6 +393,104 @@ class TestMastectomyDetection:
 
         create_condition_with_coding(
             patient, UnilateralMastectomyLeft, timeframe_end.shift(years=-3).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is False
+
+    @pytest.mark.django_db
+    def test_status_post_left_and_right_detected(self) -> None:
+        """Test status post left + status post right mastectomy detected as bilateral equivalent."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        create_condition_with_coding(
+            patient, StatusPostLeftMastectomy, timeframe_end.shift(years=-3).date()
+        )
+        create_condition_with_coding(
+            patient, StatusPostRightMastectomy, timeframe_end.shift(years=-2).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is True
+
+    @pytest.mark.django_db
+    def test_unspecified_laterality_plus_left_unilateral_detected(self) -> None:
+        """Test unspecified laterality + left unilateral mastectomy detected as bilateral."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        create_condition_with_coding(
+            patient, UnilateralMastectomyUnspecifiedLaterality, timeframe_end.shift(years=-3).date()
+        )
+        create_condition_with_coding(
+            patient, UnilateralMastectomyLeft, timeframe_end.shift(years=-2).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is True
+
+    @pytest.mark.django_db
+    def test_unspecified_laterality_plus_status_post_right_detected(self) -> None:
+        """Test unspecified laterality + status post right mastectomy detected as bilateral."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        create_condition_with_coding(
+            patient, UnilateralMastectomyUnspecifiedLaterality, timeframe_end.shift(years=-3).date()
+        )
+        create_condition_with_coding(
+            patient, StatusPostRightMastectomy, timeframe_end.shift(years=-2).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is True
+
+    @pytest.mark.django_db
+    def test_two_unspecified_laterality_diagnoses_detected(self) -> None:
+        """Test two unspecified laterality mastectomy diagnoses detected as bilateral."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create two separate unspecified laterality diagnoses
+        create_condition_with_coding(
+            patient, UnilateralMastectomyUnspecifiedLaterality, timeframe_end.shift(years=-3).date()
+        )
+        create_condition_with_coding(
+            patient, UnilateralMastectomyUnspecifiedLaterality, timeframe_end.shift(years=-2).date()
+        )
+
+        assert protocol.had_mastectomy(patient) is True
+
+    @pytest.mark.django_db
+    def test_single_unspecified_laterality_not_detected(self) -> None:
+        """Test single unspecified laterality mastectomy alone is NOT detected as bilateral."""
+        timeframe_end = arrow.get("2024-12-31")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
+        )
+
+        birth_date = timeframe_end.shift(years=-60).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        create_condition_with_coding(
+            patient, UnilateralMastectomyUnspecifiedLaterality, timeframe_end.shift(years=-3).date()
         )
 
         assert protocol.had_mastectomy(patient) is False

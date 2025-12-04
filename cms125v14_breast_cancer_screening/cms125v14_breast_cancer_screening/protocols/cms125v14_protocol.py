@@ -21,6 +21,7 @@ from canvas_sdk.value_set.v2026.condition import (
     PalliativeCareDiagnosis,
     StatusPostLeftMastectomy,
     StatusPostRightMastectomy,
+    UnilateralMastectomyUnspecifiedLaterality,
 )
 from canvas_sdk.value_set.v2026.diagnostic_study import Mammography
 from canvas_sdk.value_set.v2026.encounter import (
@@ -267,10 +268,21 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return self.compute_results(patient)
 
     def had_mastectomy(self, patient: Patient) -> bool:
-        """Check if patient had a bilateral mastectomy or equivalent."""
+        """Check if patient had a bilateral mastectomy or equivalent.
+
+        Per CMS125v14 CQL, checks for:
+        1. Bilateral mastectomy (procedure or history diagnosis)
+        2. Two unilateral mastectomies (left + right procedures)
+        3. Unilateral mastectomy procedure + status post diagnosis on the other side
+        4. Two unilateral mastectomy diagnoses with unspecified laterality
+           (Note: CQL checks anatomicalLocationSite for left/right, but Canvas
+           Condition model doesn't have this field, so we check for two separate
+           unspecified laterality diagnoses as a proxy for bilateral)
+        5. Status post left + status post right mastectomy diagnoses
+        """
         conditions = self._get_conditions_up_to_end(patient)
 
-        # Check for bilateral mastectomy
+        # Check for bilateral mastectomy (procedure or diagnosis)
         bilateral = conditions.find(BilateralMastectomy)
         if not bilateral.exists():
             bilateral = conditions.find(HistoryOfBilateralMastectomy)
@@ -278,14 +290,14 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if bilateral.exists():
             return True
 
-        # Check for two unilateral mastectomies (left + right)
+        # Check for two unilateral mastectomies (left + right procedures)
         left_unilateral = conditions.find(UnilateralMastectomyLeft)
         right_unilateral = conditions.find(UnilateralMastectomyRight)
 
         if left_unilateral.exists() and right_unilateral.exists():
             return True
 
-        # Check for unilateral mastectomy + status post on the other side
+        # Check for unilateral mastectomy procedure + status post diagnosis on the other side
         if left_unilateral.exists():
             status_post_right = conditions.find(StatusPostRightMastectomy)
             if status_post_right.exists():
@@ -294,6 +306,38 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if right_unilateral.exists():
             status_post_left = conditions.find(StatusPostLeftMastectomy)
             if status_post_left.exists():
+                return True
+
+        # Check for status post left + status post right mastectomy diagnoses
+        # Per CQL: "Right Mastectomy Diagnosis" includes StatusPostRightMastectomy
+        # and "Left Mastectomy Diagnosis" includes StatusPostLeftMastectomy
+        status_post_left = conditions.find(StatusPostLeftMastectomy)
+        status_post_right = conditions.find(StatusPostRightMastectomy)
+        if status_post_left.exists() and status_post_right.exists():
+            return True
+
+        # Check for unspecified laterality mastectomy combined with any sided mastectomy
+        # Per CQL, UnilateralMastectomyUnspecifiedLaterality with anatomicalLocationSite
+        # matching left/right qualifies. Since Canvas doesn't have anatomicalLocationSite,
+        # we check if unspecified laterality + any other mastectomy indicator exists.
+        unspecified = conditions.find(UnilateralMastectomyUnspecifiedLaterality)
+        if unspecified.exists():
+            # If patient has unspecified + any left-side indicator = bilateral equivalent
+            if (
+                left_unilateral.exists()
+                or status_post_left.exists()
+                or conditions.find(StatusPostLeftMastectomy).exists()
+            ):
+                return True
+            # If patient has unspecified + any right-side indicator = bilateral equivalent
+            if (
+                right_unilateral.exists()
+                or status_post_right.exists()
+                or conditions.find(StatusPostRightMastectomy).exists()
+            ):
+                return True
+            # If patient has TWO unspecified laterality diagnoses, assume bilateral
+            if unspecified.count() >= 2:
                 return True
 
         return False
@@ -365,16 +409,19 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         Check if patient received palliative care during the measurement period.
 
-        Checks:
-        1. Diagnosis codes for palliative care
-        2. Encounter codes for palliative care
-        3. Intervention codes for palliative care
+        Per CMS125v14 CQL (PalliativeCareQDM library):
+        - Palliative care diagnosis with prevalencePeriod overlapping measurement period
+        - Palliative care encounter during measurement period
+        - Palliative care intervention during measurement period
+
+        Note: Using conditions within timeframe (not "up to end") to match CQL's
+        requirement that palliative care must be during the measurement period.
         """
-        # Check conditions for palliative care diagnosis
-        if self._get_conditions_up_to_end(patient).find(PalliativeCareDiagnosis).exists():
+        # Check conditions for palliative care diagnosis within measurement period
+        if self._get_conditions_within_timeframe(patient).find(PalliativeCareDiagnosis).exists():
             return True
 
-        # Check billing line items for palliative care
+        # Check billing line items for palliative care encounters/interventions
         return self._has_billing_with_codes(
             patient, PalliativeCareEncounter, PalliativeCareIntervention
         )
