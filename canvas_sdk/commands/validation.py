@@ -15,24 +15,23 @@ class ValidationError:
         message: The validation error message to display
     """
 
-    message: str | None = Field(default=None, description="The validation error message to display")
+    message: str
 
-    def __init__(self, message: str) -> None:
+    def __post_init__(self) -> None:
         """
-        Initialize a validation error.
-
-        Args:
-            message: The error message to display
+        Validate and normalize the error message after initialization.
 
         Raises:
             ValueError: If message is empty
         """
-        if not message or not message.strip():
+        if not self.message or not self.message.strip():
             raise ValueError("Error message cannot be empty")
+
+        self.message = self.message.strip()
 
     def to_dict(self) -> dict[str, str]:
         """Convert the validation error to a dictionary."""
-        return {"message": self.message.strip() if self.message else ""}
+        return {"message": self.message}
 
     def __repr__(self) -> str:
         return f"ValidationError(message={self.message!r})"
@@ -69,7 +68,7 @@ class CommandValidationErrorEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.COMMAND_VALIDATION_ERRORS
 
-    errors: list[ValidationError] = []
+    errors: list[ValidationError] = Field(default_factory=list)
 
     def add_error(self, message: str) -> Self:
         """
