@@ -28,6 +28,9 @@ from canvas_sdk.commands.commands.refer import ReferCommand
 from canvas_sdk.commands.commands.refill import RefillCommand
 from canvas_sdk.commands.commands.remove_allergy import RemoveAllergyCommand
 from canvas_sdk.commands.commands.resolve_condition import ResolveConditionCommand
+from canvas_sdk.commands.commands.review.imaging import ImagingReviewCommand
+from canvas_sdk.commands.commands.review.lab import LabReviewCommand
+from canvas_sdk.commands.commands.review.referral import ReferralReviewCommand
 from canvas_sdk.commands.commands.review_of_systems import ReviewOfSystemsCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.structured_assessment import StructuredAssessmentCommand
@@ -48,8 +51,10 @@ __all__ = __exports__ = (
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "ImagingOrderCommand",
+    "ImagingReviewCommand",
     "InstructCommand",
     "LabOrderCommand",
+    "LabReviewCommand",
     "MedicalHistoryCommand",
     "MedicationStatementCommand",
     "PastSurgicalHistoryCommand",
@@ -60,6 +65,7 @@ __all__ = __exports__ = (
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "ReferCommand",
+    "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
     "ResolveConditionCommand",
