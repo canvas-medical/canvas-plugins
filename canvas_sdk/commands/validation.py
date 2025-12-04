@@ -1,0 +1,116 @@
+from dataclasses import dataclass
+from typing import Any, Self
+
+from pydantic import Field
+
+from canvas_sdk.effects import EffectType, _BaseEffect
+
+
+@dataclass
+class ValidationError:
+    """
+    Represents a validation error for a command.
+
+    Attributes:
+        message: The validation error message to display
+    """
+
+    message: str | None = Field(default=None, description="The validation error message to display")
+
+    def __init__(self, message: str) -> None:
+        """
+        Initialize a validation error.
+
+        Args:
+            message: The error message to display
+
+        Raises:
+            ValueError: If message is empty
+        """
+        if not message or not message.strip():
+            raise ValueError("Error message cannot be empty")
+
+    def to_dict(self) -> dict[str, str]:
+        """Convert the validation error to a dictionary."""
+        return {"message": self.message.strip() if self.message else ""}
+
+    def __repr__(self) -> str:
+        return f"ValidationError(message={self.message!r})"
+
+
+class CommandValidationErrorEffect(_BaseEffect):
+    """
+    Effect to represent command validation errors.
+
+    This effect allows plugins to return validation errors for commands,
+    which will be displayed to users in the Canvas UI.
+
+    Example:
+        # Add validation errors
+        effect = CommandValidationErrorEffect()
+        effect.add_error("Narrative is required")
+        effect.add_error("Dosage must be a positive number")
+        return [effect.apply()]
+
+        # Or initialize with errors
+        errors = [
+            ValidationError("Narrative is required"),
+            ValidationError("This command cannot be submitted yet")
+        ]
+        effect = CommandValidationErrorEffect(errors=errors)
+        return [effect.apply()]
+
+        # Method chaining
+        effect = CommandValidationErrorEffect()
+        effect.add_error("Error 1").add_error("Error 2")
+        return [effect.apply()]
+    """
+
+    class Meta:
+        effect_type = EffectType.COMMAND_VALIDATION_ERRORS
+
+    errors: list[ValidationError] = []
+
+    def add_error(self, message: str) -> Self:
+        """
+        Add a validation error to the effect.
+
+        This method allows incremental building of validation errors
+        and supports method chaining.
+
+        Args:
+            message: The error message to display
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: If message is empty
+
+        Example:
+            effect = CommandValidationErrorEffect()
+            effect.add_error("Narrative is required")
+            effect.add_error("Dosage must be positive")
+
+            # Method chaining
+            effect.add_error("Error 1").add_error("Error 2")
+        """
+        error = ValidationError(message=message)
+        self.errors.append(error)
+        return self
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """
+        Convert validation errors to the expected format.
+
+        Returns:
+        Dict with 'errors' key containing list of error dicts
+        """
+        return {"errors": [error.to_dict() for error in self.errors]}
+
+
+__exports__ = (
+    "CommandValidationErrorEffect",
+    "ValidationError",
+)

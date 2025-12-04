@@ -76,6 +76,7 @@
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "CommandValidationErrorEffect",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -107,6 +108,7 @@
     "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
+    "ValidationError",
     "VitalsCommand"
   ],
   "canvas_sdk.commands.base": [
@@ -256,6 +258,10 @@
     "CodeSystems",
     "Coding",
     "ServiceProvider"
+  ],
+  "canvas_sdk.commands.validation": [
+    "CommandValidationErrorEffect",
+    "ValidationError"
   ],
   "canvas_sdk.effects": [
     "Effect",
