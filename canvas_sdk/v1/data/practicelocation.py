@@ -1,7 +1,15 @@
 from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
-from canvas_sdk.v1.data.common import AddressState, AddressType, AddressUse, TaxIDType
+from canvas_sdk.v1.data.common import (
+    AddressState,
+    AddressType,
+    AddressUse,
+    ContactPointState,
+    ContactPointSystem,
+    ContactPointUse,
+    TaxIDType,
+)
 
 
 class PracticeLocationPOS(models.TextChoices):
@@ -127,9 +135,31 @@ class PracticeLocationSetting(Model):
         return self.name
 
 
+class PracticeLocationContactPoint(IdentifiableModel):
+    """PracticeLocationContactPoint."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_practicelocationcontactpoint_001"
+
+    practice_location = models.ForeignKey(
+        "v1.PracticeLocation", on_delete=models.PROTECT, related_name="telecom"
+    )
+    system = models.CharField(choices=ContactPointSystem.choices, max_length=20, db_index=True)
+    value = models.CharField(max_length=100, db_index=True)
+    use = models.CharField(
+        choices=ContactPointUse.choices, max_length=20, default=ContactPointUse.HOME
+    )
+    use_notes = models.CharField(max_length=255, blank=True, default="")
+    rank = models.IntegerField(default=1)
+    state = models.CharField(
+        choices=ContactPointState.choices, max_length=20, default=ContactPointState.ACTIVE
+    )
+
+
 __exports__ = (
     "PracticeLocationPOS",
     "PracticeLocation",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "PracticeLocationAddress",
 )

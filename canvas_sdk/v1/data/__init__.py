@@ -77,7 +77,7 @@ from .observation import (
     ObservationComponentCoding,
     ObservationValueCoding,
 )
-from .organization import Organization
+from .organization import Organization, OrganizationAddress, OrganizationContactPoint
 from .patient import (
     Patient,
     PatientAddress,
@@ -101,7 +101,12 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
-from .practicelocation import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
+from .practicelocation import (
+    PracticeLocation,
+    PracticeLocationAddress,
+    PracticeLocationContactPoint,
+    PracticeLocationSetting,
+)
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -213,6 +218,8 @@ __all__ = __exports__ = (
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientContactPoint",
@@ -228,6 +235,7 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
