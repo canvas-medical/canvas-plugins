@@ -370,6 +370,20 @@
   "canvas_sdk.effects.patient_profile_configuration": [
     "PatientProfileConfiguration"
   ],
+  "canvas_sdk.effects.payment": [
+    "ClaimAllocation",
+    "LineItemTransaction",
+    "PaymentMethod",
+    "PostClaimPayment"
+  ],
+  "canvas_sdk.effects.payment.base": [
+    "ClaimAllocation",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
+  "canvas_sdk.effects.payment.post_claim_payment": [
+    "PostClaimPayment"
+  ],
   "canvas_sdk.effects.payment_processor": [
     "AddPaymentMethodResponse",
     "CardTransaction",
@@ -615,6 +629,7 @@
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimSubmission",
     "Command",
     "CompoundMedication",
     "Condition",
@@ -766,6 +781,7 @@
     "ClaimQueue",
     "ClaimQueueColumns",
     "ClaimQueues",
+    "ClaimSubmission",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"

@@ -19,6 +19,7 @@ from .claim import (
     ClaimPatient,
     ClaimProvider,
     ClaimQueue,
+    ClaimSubmission,
     InstallmentPlan,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCode
@@ -149,6 +150,7 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimSubmission",
     "Command",
     "CompoundMedication",
     "Condition",
