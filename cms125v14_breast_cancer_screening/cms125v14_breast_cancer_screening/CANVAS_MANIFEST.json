@@ -42,14 +42,22 @@
     "commands": [],
     "content": [],
     "effects": [],
-    "views": []
+    "views": [],
+    "questionnaires": [
+      {
+        "template": "questionnaires/hospice_and_frailty.yml"
+      },
+      {
+        "template": "questionnaires/hospice_and_palliative.yml"
+      }
+    ]
   },
   "secrets": [],
   "tags": ["CQM", "screening", "breast-cancer", "quality-measure"],
   "references": [
     "https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html"
   ],
-  "license": "MIT",
+  "license": "",
   "diagram": false,
   "readme": "./README.md"
 }
