@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.81.0 (2025-12-04)
+
+### Features
+
+- Add calendar and events data modules and effects
+  ([#1272](https://github.com/canvas-medical/canvas-plugins/pull/1272),
+  [`d4f6882`](https://github.com/canvas-medical/canvas-plugins/commit/d4f6882f59276cf6cacadfef569c0881d74f1ea4))
+
+- Post claim coverage payment effect
+  ([#1210](https://github.com/canvas-medical/canvas-plugins/pull/1210),
+  [`1772be6`](https://github.com/canvas-medical/canvas-plugins/commit/1772be69dbe66c151bfa30c0bc952362ba96c318))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
 ## v0.80.2 (2025-12-04)
 
 ### Bug Fixes
