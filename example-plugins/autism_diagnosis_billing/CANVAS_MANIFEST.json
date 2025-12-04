@@ -1,0 +1,35 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "1.0.0",
+    "name": "autism_diagnosis_billing",
+    "description": "Automatically creates billing line items for newly committed autism screening diagnosis conditions (ICD-10 Z13.41) with CPT code AUTISM_DX",
+    "components": {
+        "protocols": [
+            {
+                "class": "autism_diagnosis_billing.handlers.add_billing_line_item_handler:AddBillingLineItemToAutismDiagnoses",
+                "description": "Monitors diagnosis commands and automatically creates billing line items when autism screening conditions (ICD-10 Z13.41) are committed, linking them to the latest assessment with CPT code AUTISM_DX",
+                "data_access": {
+                    "event": "DIAGNOSE_COMMAND__POST_COMMIT",
+                    "read": [
+                        "commands",
+                        "conditions", 
+                        "codings",
+                        "assessments",
+                        "notes"
+                    ],
+                    "write": [
+                        "billing_line_items"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": ["billing", "autism", "diagnosis", "automation", "icd-10"],
+    "secrets": [],
+    "license": "NONE",
+    "readme": "./README.md"
+}
