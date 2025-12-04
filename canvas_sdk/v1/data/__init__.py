@@ -227,6 +227,7 @@ __all__ = __exports__ = (
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
+    "QuestionEnablementCondition",
     "Questionnaire",
     "QuestionnaireQuestionMap",
     "ReasonForVisitSettingCoding",
