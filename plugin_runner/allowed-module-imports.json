@@ -241,17 +241,19 @@
     "UpdateBillingLineItem"
   ],
   "canvas_sdk.effects.calendar": [
+    "Calendar",
     "CalendarType",
-    "CreateCalendar",
-    "CreateEvent",
+    "DaysOfWeek",
+    "Event",
     "EventRecurrence"
   ],
-  "canvas_sdk.effects.calendar.create_calendar": [
-    "CalendarType",
-    "CreateCalendar"
+  "canvas_sdk.effects.calendar.calendar": [
+    "Calendar",
+    "CalendarType"
   ],
-  "canvas_sdk.effects.calendar.create_event": [
-    "CreateEvent",
+  "canvas_sdk.effects.calendar.event": [
+    "DaysOfWeek",
+    "Event",
     "EventRecurrence"
   ],
   "canvas_sdk.effects.claim_label": [
@@ -616,6 +618,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -643,6 +646,7 @@
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -761,6 +765,10 @@
   "canvas_sdk.v1.data.business_line": [
     "BusinessLine",
     "BusinessLineState"
+  ],
+  "canvas_sdk.v1.data.calendar": [
+    "Calendar",
+    "Event"
   ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",

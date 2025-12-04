@@ -1,3 +1,4 @@
+from .calendar import CalendarFactory, EventFactory
 from .claim import (
     ClaimCommentFactory,
     ClaimCoverageFactory,
@@ -56,6 +57,7 @@ from .task import (
 from .user import CanvasUserFactory
 
 __all__ = (
+    "CalendarFactory",
     "CanvasUserFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
@@ -66,6 +68,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
+    "EventFactory",
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
