@@ -1,0 +1,90 @@
+import json
+from http import HTTPStatus
+
+from requests import exceptions
+
+from canvas_sdk.clients.llms.libraries.llm_base import LlmBase
+from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
+from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
+from canvas_sdk.utils.http import Http
+
+
+class LlmGoogle(LlmBase):
+    """Google Gemini LLM API client.
+
+    Implements the LlmBase interface for Google's Generative Language API.
+    """
+
+    def to_dict(self) -> dict:
+        """Convert prompts and add the necessary information to Google API request format.
+
+        Returns:
+            Dictionary formatted for Google API with contents array.
+        """
+        contents: list[dict] = []
+        roles = {
+            self.ROLE_SYSTEM: "user",
+            self.ROLE_USER: "user",
+            self.ROLE_MODEL: "model",
+        }
+        for prompt in self.prompts:
+            role = roles[prompt.role]
+            part = {"text": "\n".join(prompt.text)}
+            # contiguous parts for the same role are merged
+            if contents and contents[-1]["role"] == role:
+                contents[-1]["parts"].append(part)
+            else:
+                contents.append({"role": role, "parts": [part]})
+
+        return self.settings.to_dict() | {
+            "contents": contents,
+        }
+
+    def request(self) -> LlmResponse:
+        """Make a request to the Google Gemini API.
+
+        Returns:
+            Response containing status code, generated text, and token usage.
+        """
+        url = (
+            "https://generativelanguage.googleapis.com/"
+            "v1beta/"
+            f"{self.settings.model}:generateContent?key={self.settings.api_key}"
+        )
+        headers = {"Content-Type": "application/json"}
+        data = json.dumps(self.to_dict())
+
+        tokens = LlmTokens(prompt=0, generated=0)
+        try:
+            request = Http(url).post("", headers=headers, data=data)
+            code = request.status_code
+            response = request.text
+            if code == HTTPStatus.OK.value:
+                content = json.loads(request.text)
+                response = (
+                    content.get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                )
+                usage = content.get("usageMetadata", {})
+                tokens = LlmTokens(
+                    prompt=usage.get("promptTokenCount") or 0,
+                    generated=(usage.get("candidatesTokenCount") or 0)
+                    + (usage.get("thoughtsTokenCount") or 0),
+                )
+        except exceptions.RequestException as e:
+            code = HTTPStatus.BAD_REQUEST
+            response = f"Request failed: {e}"
+            if hasattr(e, "response") and e.response is not None:
+                code = e.response.status_code
+                response = e.response.text
+
+        return LlmResponse(
+            code=HTTPStatus(code),
+            response=response,
+            tokens=tokens,
+        )
+
+
+__exports__ = ("LlmGoogle",)
