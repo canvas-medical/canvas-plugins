@@ -53,10 +53,11 @@ class TestAgeBoundaryEdgeCases:
         )
 
         # Patient will be 42 tomorrow
+        age = 41
         birth_date = timeframe_end.shift(years=-42, days=1).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
     @pytest.mark.django_db
     def test_age_74_years_included(self) -> None:
@@ -67,13 +68,14 @@ class TestAgeBoundaryEdgeCases:
         )
 
         # Patient exactly 74
-        birth_date = timeframe_end.shift(years=-74).date()
+        age = 74
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.in_initial_population(patient) is True
+        assert protocol.in_initial_population(patient, age) is True
 
     @pytest.mark.django_db
     def test_stratum_boundary_age_51_in_stratum_1(self) -> None:
@@ -83,13 +85,14 @@ class TestAgeBoundaryEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-51).date()
+        age = 51
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 1
+        assert protocol.get_stratification(patient, age) == 1
 
     @pytest.mark.django_db
     def test_stratum_boundary_age_52_in_stratum_2(self) -> None:
@@ -99,13 +102,14 @@ class TestAgeBoundaryEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-52).date()
+        age = 52
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 2
+        assert protocol.get_stratification(patient, age) == 2
 
     @pytest.mark.django_db
     def test_age_66_frailty_exclusion_applies(self) -> None:
@@ -118,7 +122,8 @@ class TestAgeBoundaryEdgeCases:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-66).date()
+        age = 66
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -132,7 +137,7 @@ class TestAgeBoundaryEdgeCases:
             patient, AdvancedIllness, timeframe_start.shift(months=4).date(), surgical=False
         )
 
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_age_65_frailty_exclusion_does_not_apply(self) -> None:
@@ -145,7 +150,8 @@ class TestAgeBoundaryEdgeCases:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-65).date()
+        age = 65
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -160,7 +166,7 @@ class TestAgeBoundaryEdgeCases:
         )
 
         # Should still be in denominator (age < 66)
-        assert protocol.in_denominator(patient) is True
+        assert protocol.in_denominator(patient, age) is True
 
 
 class TestNursingHomeDetection:
@@ -174,7 +180,8 @@ class TestNursingHomeDetection:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -191,7 +198,7 @@ class TestNursingHomeDetection:
         )
 
         assert protocol.in_nursing_home(patient) is True
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_nursing_home_plan_name_keyword_excludes(self) -> None:
@@ -201,7 +208,8 @@ class TestNursingHomeDetection:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -227,7 +235,8 @@ class TestNursingHomeDetection:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -252,7 +261,8 @@ class TestNursingHomeDetection:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-65).date()
+        age = 65
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -270,7 +280,7 @@ class TestNursingHomeDetection:
 
         # in_nursing_home returns True but in_denominator should still be True (age < 66)
         assert protocol.in_nursing_home(patient) is True
-        assert protocol.in_denominator(patient) is True
+        assert protocol.in_denominator(patient, age) is True
 
     @pytest.mark.django_db
     def test_no_nursing_home_coverage(self) -> None:
@@ -280,7 +290,8 @@ class TestNursingHomeDetection:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         assert protocol.in_nursing_home(patient) is False
@@ -300,7 +311,8 @@ class TestDementiaMedications:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -335,7 +347,7 @@ class TestDementiaMedications:
 
             assert protocol.has_advanced_illness_or_dementia_meds(patient) is True
             assert protocol.has_frailty_with_advanced_illness(patient) is True
-            assert protocol.in_denominator(patient) is False
+            assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_dementia_meds_in_prior_year_counts(self) -> None:
@@ -348,7 +360,8 @@ class TestDementiaMedications:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -399,7 +412,8 @@ class TestFrailtyEncounterAndSymptom:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         create_condition_with_coding(
@@ -419,7 +433,8 @@ class TestFrailtyEncounterAndSymptom:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-67).date()
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Get frailty encounter code
@@ -459,7 +474,8 @@ class TestPalliativeCareIntervention:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -486,7 +502,7 @@ class TestPalliativeCareIntervention:
             )
 
             assert protocol.received_palliative_care(patient) is True
-            assert protocol.in_denominator(patient) is False
+            assert protocol.in_denominator(patient, age) is False
 
 
 class TestMultipleExclusionCombinations:
@@ -503,7 +519,8 @@ class TestMultipleExclusionCombinations:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -520,7 +537,7 @@ class TestMultipleExclusionCombinations:
         )
 
         assert protocol.had_mastectomy(patient) is True
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_hospice_excludes_regardless_of_mammogram(self) -> None:
@@ -533,7 +550,8 @@ class TestMultipleExclusionCombinations:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -569,7 +587,7 @@ class TestMultipleExclusionCombinations:
             )
 
             assert protocol.in_hospice_care(patient) is True
-            assert protocol.in_denominator(patient) is False
+            assert protocol.in_denominator(patient, age) is False
 
 
 class TestProtocolOverrideEdgeCases:
@@ -583,7 +601,8 @@ class TestProtocolOverrideEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Use the protocol's actual key
@@ -617,7 +636,8 @@ class TestProtocolOverrideEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Use the protocol's actual key
@@ -651,7 +671,8 @@ class TestProtocolOverrideEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         imaging_date = timeframe_end.shift(months=-6)
@@ -686,7 +707,8 @@ class TestTimeframeEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Mastectomy on exact end date
@@ -702,7 +724,8 @@ class TestTimeframeEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Mastectomy after end date (shouldn't happen but edge case)
@@ -726,7 +749,8 @@ class TestTimeframeEdgeCases:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # 15 months before timeframe start (exactly at boundary)
@@ -753,10 +777,11 @@ class TestFirstDueInEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-41).date()
+        age = 41
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        days_until = protocol.first_due_in(patient)
+        days_until = protocol.first_due_in(patient, age)
 
         assert days_until is not None
         # Should be approximately 365 days (1 year)
@@ -770,10 +795,11 @@ class TestFirstDueInEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-30).date()
+        age = 30
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        days_until = protocol.first_due_in(patient)
+        days_until = protocol.first_due_in(patient, age)
 
         assert days_until is not None
         assert days_until > 0
@@ -797,7 +823,8 @@ class TestSnoozeHandling:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create a qualifying visit
@@ -906,7 +933,8 @@ class TestHelperMethods:
         # Set _on_date to simulate a recent mammogram
         protocol._on_date = timeframe_end.shift(months=-6)
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create an override with 365-day cycle
@@ -975,7 +1003,8 @@ class TestHelperMethods:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date, first_name="Jane")
 
         # Ensure _on_date is None
@@ -1012,7 +1041,8 @@ class TestPatientIdFromTarget:
         from canvas_sdk.test_utils.factories import EncounterFactory
 
         timeframe_end = arrow.get("2024-12-31")
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create a note for the patient first
@@ -1042,7 +1072,8 @@ class TestPatientIdFromTarget:
         from canvas_sdk.test_utils.factories import ConditionFactory
 
         timeframe_end = arrow.get("2024-12-31")
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create a condition to trigger CONDITION_CREATED event
@@ -1120,10 +1151,11 @@ class TestGetStratificationEdgeCases:
         )
 
         # Create male patient (not in initial population)
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="M", birth_date=birth_date)
 
-        result = protocol.get_stratification(patient)
+        result = protocol.get_stratification(patient, age)
         assert result is None
 
     @pytest.mark.django_db
@@ -1140,7 +1172,8 @@ class TestGetStratificationEdgeCases:
         )
 
         # Create patient aged 55 in denominator
-        birth_date = timeframe_end.shift(years=-55).date()
+        age = 55
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -1152,7 +1185,7 @@ class TestGetStratificationEdgeCases:
             patch.object(protocol, "STRATUM_1_END", 50),
             patch.object(protocol, "STRATUM_2_START", 60),
         ):
-            result = protocol.get_stratification(patient)
+            result = protocol.get_stratification(patient, age)
             assert result is None
 
 
@@ -1168,7 +1201,8 @@ class TestComputeHappyPath:
         from canvas_sdk.protocols.timeframe import Timeframe
 
         timeframe_end = arrow.get("2024-12-31")
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create qualifying visit
