@@ -2,16 +2,20 @@ import json
 from uuid import uuid4
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.calendar import CalendarType, CreateCalendar
+from canvas_sdk.effects.calendar import Calendar as CalendarEffect
+from canvas_sdk.effects.calendar import CalendarType
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
 from canvas_sdk.v1.data import Calendar
 
 
 class CalendarAPI(StaffSessionAuthMixin, SimpleAPIRoute):
+    """API endpoint to create or retrieve calendars."""
+
     PATH = "/calendar"
 
     def post(self) -> list[Response | Effect]:
+        """Create or retrieve a calendar."""
         calendar_type = CalendarType.Clinic
 
         body = self.request.json()
@@ -44,13 +48,14 @@ class CalendarAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             calendar_id = str(uuid4())
             description = body.get("description")
 
-            create_calendar = CreateCalendar(
+            create_calendar = CalendarEffect(
                 id=calendar_id,
                 provider=provider,
                 type=calendar_type,
                 location=location if location else None,
                 description=description,
-            )
+            ).create()
+
             response_data = json.dumps({"calendarId": calendar_id}).encode("utf-8")
 
             return [create_calendar.apply(), Response(status_code=201, content=response_data)]
