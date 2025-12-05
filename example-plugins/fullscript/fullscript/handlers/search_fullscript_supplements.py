@@ -66,21 +66,27 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
         for product in fullscript_products:
             product_id = product.get("primary_variant", {}).get("id", "")
             name = product.get("name", "")
+            brand_name = product.get("brand", {}).get("name", "")
             code = f"fullscript-{product_id}"
             quantity_description = product.get("primary_variant", {}).get("unit_of_measure", "")
-            units = product.get("primary_variant", {}).get("units", "")
+            units = product.get("primary_variant", {}).get("units", 0)
+
+            product_name = f"{brand_name} - {name}"
+
+            if units != 0:
+                product_name = f"{product_name} - {units} {quantity_description}"
 
             post_processed_results.insert(
                 0,
                 {
-                    "text": name,
+                    "text": product_name,
                     "annotations": ["Supp 🌱"],
                     "value": code,
                     "extra": {
                         "coding": [
                             {
                                 "code": code,
-                                "display": name,
+                                "display": product_name,
                                 "system": CodeSystems.FULLSCRIPT,
                             }
                         ],
