@@ -17,7 +17,8 @@
             "medications",
             "coverages",
             "protocol_overrides",
-            "encounters"
+            "encounters",
+            "interviews"
           ],
           "write": []
         },
