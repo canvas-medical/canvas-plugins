@@ -145,13 +145,14 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-42).date()
+        age = 42
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.in_initial_population(patient) is True
+        assert protocol.in_initial_population(patient, age) is True
 
     @pytest.mark.django_db
     def test_female_age_74_with_visit_included(self) -> None:
@@ -161,13 +162,14 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-74).date()
+        age = 74
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.in_initial_population(patient) is True
+        assert protocol.in_initial_population(patient, age) is True
 
     @pytest.mark.django_db
     def test_female_age_60_with_visit_included(self) -> None:
@@ -177,13 +179,14 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.in_initial_population(patient) is True
+        assert protocol.in_initial_population(patient, age) is True
 
     @pytest.mark.django_db
     def test_female_age_41_excluded(self) -> None:
@@ -193,10 +196,11 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-41).date()
+        age = 41
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
     @pytest.mark.django_db
     def test_female_age_75_excluded(self) -> None:
@@ -206,10 +210,11 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-75).date()
+        age = 75
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
     @pytest.mark.django_db
     def test_male_patient_excluded(self) -> None:
@@ -219,10 +224,11 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="M", birth_date=birth_date)
 
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
     @pytest.mark.django_db
     def test_female_without_qualifying_visit_excluded(self) -> None:
@@ -236,11 +242,12 @@ class TestInitialPopulation:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # No visit created - excluded per CMS125v14 spec
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
 
 class TestQualifyingVisit:
@@ -736,7 +743,8 @@ class TestFrailtyAdvancedIllnessExclusion:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-65).date()
+        age = 65
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         # Create qualifying visit
@@ -758,7 +766,7 @@ class TestFrailtyAdvancedIllnessExclusion:
         )
 
         # Should still be in denominator because age < 66
-        assert protocol.in_denominator(patient) is True
+        assert protocol.in_denominator(patient, age) is True
 
 
 class TestDenominator:
@@ -772,13 +780,14 @@ class TestDenominator:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.in_denominator(patient) is True
+        assert protocol.in_denominator(patient, age) is True
 
     @pytest.mark.django_db
     def test_denominator_excludes_bilateral_mastectomy(self) -> None:
@@ -788,7 +797,8 @@ class TestDenominator:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -798,8 +808,8 @@ class TestDenominator:
             patient, BilateralMastectomy, timeframe_end.shift(years=-2).date()
         )
 
-        assert protocol.in_initial_population(patient) is True
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_initial_population(patient, age) is True
+        assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_denominator_excludes_hospice_care(self) -> None:
@@ -812,7 +822,8 @@ class TestDenominator:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -837,7 +848,7 @@ class TestDenominator:
                 cpt=hospice_cpt,
             )
 
-            assert protocol.in_denominator(patient) is False
+            assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_denominator_excludes_palliative_care(self) -> None:
@@ -850,7 +861,8 @@ class TestDenominator:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -863,7 +875,7 @@ class TestDenominator:
             surgical=False,
         )
 
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
 
 class TestStratification:
@@ -877,13 +889,14 @@ class TestStratification:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-42).date()
+        age = 42
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 1
+        assert protocol.get_stratification(patient, age) == 1
 
     @pytest.mark.django_db
     def test_stratum_1_age_51(self) -> None:
@@ -893,13 +906,14 @@ class TestStratification:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-51).date()
+        age = 51
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 1
+        assert protocol.get_stratification(patient, age) == 1
 
     @pytest.mark.django_db
     def test_stratum_2_age_52(self) -> None:
@@ -909,13 +923,14 @@ class TestStratification:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-52).date()
+        age = 52
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 2
+        assert protocol.get_stratification(patient, age) == 2
 
     @pytest.mark.django_db
     def test_stratum_2_age_74(self) -> None:
@@ -925,13 +940,14 @@ class TestStratification:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-74).date()
+        age = 74
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
         create_qualifying_visit(patient, visit_date)
 
-        assert protocol.get_stratification(patient) == 2
+        assert protocol.get_stratification(patient, age) == 2
 
     @pytest.mark.django_db
     def test_stratification_none_for_excluded_patient(self) -> None:
@@ -941,14 +957,15 @@ class TestStratification:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         create_condition_with_coding(
             patient, BilateralMastectomy, timeframe_end.shift(years=-2).date()
         )
 
-        assert protocol.get_stratification(patient) is None
+        assert protocol.get_stratification(patient, age) is None
 
 
 class TestFirstDueIn:
@@ -962,10 +979,11 @@ class TestFirstDueIn:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-40).date()
+        age = 40
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        days_until = protocol.first_due_in(patient)
+        days_until = protocol.first_due_in(patient, age)
 
         assert days_until is not None
         assert days_until > 0
@@ -980,10 +998,11 @@ class TestFirstDueIn:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-42).date()
+        age = 42
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
-        assert protocol.first_due_in(patient) is None
+        assert protocol.first_due_in(patient, age) is None
 
     @pytest.mark.django_db
     def test_first_due_in_returns_none_for_male(self) -> None:
@@ -993,10 +1012,11 @@ class TestFirstDueIn:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-40).date()
+        age = 40
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="M", birth_date=birth_date)
 
-        assert protocol.first_due_in(patient) is None
+        assert protocol.first_due_in(patient, age) is None
 
     @pytest.mark.django_db
     def test_first_due_in_returns_none_with_mastectomy(self) -> None:
@@ -1006,14 +1026,15 @@ class TestFirstDueIn:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-40).date()
+        age = 40
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         create_condition_with_coding(
             patient, BilateralMastectomy, timeframe_end.shift(years=-2).date()
         )
 
-        assert protocol.first_due_in(patient) is None
+        assert protocol.first_due_in(patient, age) is None
 
 
 class TestNumerator:
@@ -1650,7 +1671,8 @@ class TestMultipleExclusions:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -1682,7 +1704,7 @@ class TestMultipleExclusions:
 
         assert protocol.had_mastectomy(patient) is True
         assert protocol.in_hospice_care(patient) is True
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
     @pytest.mark.django_db
     def test_patient_with_frailty_advanced_illness_and_palliative_excluded(self) -> None:
@@ -1695,7 +1717,8 @@ class TestMultipleExclusions:
             timeframe_end=timeframe_end,
         )
 
-        birth_date = timeframe_end.shift(years=-68).date()
+        age = 68
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -1727,7 +1750,7 @@ class TestMultipleExclusions:
 
         assert protocol.has_frailty_with_advanced_illness(patient) is True
         assert protocol.received_palliative_care(patient) is True
-        assert protocol.in_denominator(patient) is False
+        assert protocol.in_denominator(patient, age) is False
 
 
 class TestProtocolCardContent:
@@ -1891,6 +1914,7 @@ class TestEdgeCases:
         )
 
         # Patient turns 42 on June 15, 2024 (during measurement period)
+        age_at_end = 42
         birth_date = arrow.get("1982-06-15").date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
@@ -1898,7 +1922,7 @@ class TestEdgeCases:
         create_qualifying_visit(patient, visit_date)
 
         # Age at end of measurement period is 42
-        assert protocol.in_initial_population(patient) is True
+        assert protocol.in_initial_population(patient, age_at_end) is True
 
     @pytest.mark.django_db
     def test_patient_turns_75_during_measurement_period(self) -> None:
@@ -1912,6 +1936,7 @@ class TestEdgeCases:
         )
 
         # Patient turns 75 on June 15, 2024 (during measurement period)
+        age_at_end = 75
         birth_date = arrow.get("1949-06-15").date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
@@ -1919,7 +1944,7 @@ class TestEdgeCases:
         create_qualifying_visit(patient, visit_date)
 
         # Age at end of measurement period is 75 - excluded
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age_at_end) is False
 
     @pytest.mark.django_db
     def test_mastectomy_after_measurement_period_end_not_excluded(self) -> None:
@@ -1929,7 +1954,8 @@ class TestEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
 
         visit_date = timeframe_end.shift(months=-6)
@@ -1941,7 +1967,7 @@ class TestEdgeCases:
         )
 
         assert protocol.had_mastectomy(patient) is False
-        assert protocol.in_denominator(patient) is True
+        assert protocol.in_denominator(patient, age) is True
 
     @pytest.mark.django_db
     def test_patient_with_unknown_sex_excluded(self) -> None:
@@ -1951,10 +1977,11 @@ class TestEdgeCases:
             ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
         )
 
-        birth_date = timeframe_end.shift(years=-60).date()
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
         patient = PatientFactory.create(sex_at_birth="UNK", birth_date=birth_date)
 
-        assert protocol.in_initial_population(patient) is False
+        assert protocol.in_initial_population(patient, age) is False
 
     @pytest.mark.django_db
     def test_multiple_mammograms_uses_most_recent(self) -> None:
