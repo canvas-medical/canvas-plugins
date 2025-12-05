@@ -345,7 +345,7 @@ function renderFormModal() {
                   💾 Save Event
                 </button>
             `}
-            
+
           </div>
         </div>
       </div>
@@ -606,7 +606,7 @@ function renderEventCard(event) {
             </div>
 
             <div class="detail-item">
-              🕐 
+              🕐
               <div class="detail-item-times">
                 <span>${new Date(event.startTime).toLocaleString('en-US')}</span>
                 <span>${new Date(event.endTime).toLocaleString('en-US')}</span>

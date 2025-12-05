@@ -1,18 +1,22 @@
 import arrow
+
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.calendar import (
+    DaysOfWeek,
     Event,
     EventRecurrence,
-    DaysOfWeek,
 )
 from canvas_sdk.effects.simple_api import Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
-from canvas_sdk.effects import Effect
 
 
 class CalendarEventsAPI(StaffSessionAuthMixin, SimpleAPIRoute):
+    """API endpoint to create, update, or delete calendar events."""
+
     PATH = "/events"
 
     def post(self) -> list[Response | Effect]:
+        """Create a new calendar event."""
         body = self.request.json()
 
         calender_id = body.get("calendar")
@@ -50,6 +54,7 @@ class CalendarEventsAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         return [create_calendar_event, Response(status_code=201)]
 
     def patch(self) -> list[Response | Effect]:
+        """Update an existing calendar event."""
         body = self.request.json()
 
         event_id = body.get("eventId")
@@ -87,6 +92,7 @@ class CalendarEventsAPI(StaffSessionAuthMixin, SimpleAPIRoute):
         return [update_calendar_event, Response(status_code=200)]
 
     def delete(self) -> list[Response | Effect]:
+        """Delete an existing calendar event."""
         body = self.request.json()
 
         event_id = body.get("eventId")
