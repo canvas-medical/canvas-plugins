@@ -413,15 +413,11 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 note_id = Note.objects.filter(dbid=note_id).values_list("id", flat=True).first()
                 log.info(f"!! Note retrieved or created successfully: {note_id}")
             else:
-                note_id = patient.notes.last().id if patient.notes else None
-                log.info(f"!! Note retrieved or created successfully from patient: {note_id}")
-
-            if not note_id:
                 note_id = uuid.uuid4()
                 office_note_type_id = (
                     NoteType.objects.filter(
                         system=CodeSystems.SNOMED,
-                        code="308335008",  # Office visit
+                        code="107728002",  # Chart Review
                     )
                     .values_list("id", flat=True)
                     .first()
