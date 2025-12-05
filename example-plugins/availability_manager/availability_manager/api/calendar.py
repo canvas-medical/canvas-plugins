@@ -27,7 +27,7 @@ class CalendarAPI(StaffSessionAuthMixin, SimpleAPIRoute):
 
         if type == "Clinic":
             calendar_type = CalendarType.Clinic
-        elif type == "Administrative":
+        elif type == "Admin":
             calendar_type = CalendarType.Administrative
 
         calendar_id = (
@@ -48,7 +48,7 @@ class CalendarAPI(StaffSessionAuthMixin, SimpleAPIRoute):
             calendar_id = str(uuid4())
             description = body.get("description")
 
-            create_calendar = CalendarEffect(
+            calendar = CalendarEffect(
                 id=calendar_id,
                 provider=provider,
                 type=calendar_type,
@@ -58,4 +58,4 @@ class CalendarAPI(StaffSessionAuthMixin, SimpleAPIRoute):
 
             response_data = json.dumps({"calendarId": calendar_id}).encode("utf-8")
 
-            return [create_calendar.apply(), Response(status_code=201, content=response_data)]
+            return [calendar, Response(status_code=201, content=response_data)]

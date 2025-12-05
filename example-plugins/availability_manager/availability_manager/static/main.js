@@ -27,8 +27,8 @@ let state = {
     location: null,
     calendarType: null,
     allowedNoteTypes: [],
-    startTime: new Date().toISOString().slice(0, 16),
-    endTime: new Date().toISOString().slice(0, 16),
+    startTime: '',
+    endTime: '',
     daysOfWeek: [],
     recurrence: {
       type: '',
@@ -46,6 +46,39 @@ function getLocationName(locationId) {
 
 function getProviderById(id) {
   return state.providers.find(p => p.id === id);
+}
+
+// Convert Date to datetime-local format in local timezone
+function toLocalDateTimeString(date = new Date()) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Convert datetime-local string to UTC ISO format for backend storage
+function toUTCISOString(localDateTimeString) {
+  if (!localDateTimeString) return '';
+  // Create Date object from local datetime string (browser interprets as local time)
+  const localDate = new Date(localDateTimeString);
+  // Convert to ISO string (UTC format)
+  return localDate.toISOString();
+}
+
+// Format date for display with timezone
+function formatDateTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
 }
 
 // State management
@@ -97,13 +130,14 @@ function deleteEvent(eventId) {
     .then(response => {
         if (!response.ok) throw new Error('Failed to delete event');
 
-        // TODO: Improve state management after deletion
         state.events = state.events.filter(event => event.id !== eventId);
+
+        render();
     }).catch(error => {
       alert('Error deleting event: ' + error.message);
     });
 
-    render();
+
   }
 }
 
@@ -118,12 +152,12 @@ function updateEvent() {
     const eventData = {
         eventId: event.id,
         title: event.title,
-        startTime: event.startTime,
-        endTime: event.endTime,
+        startTime: toUTCISOString(event.startTime),
+        endTime: toUTCISOString(event.endTime),
         recurrenceFrequency: event.recurrence.type,
         recurrenceInterval: event.recurrence.interval,
         recurrenceDays: event.daysOfWeek,
-        recurrenceEndsAt: event.recurrence.endDate,
+        recurrenceEndsAt: toUTCISOString(event.recurrence.endDate),
         allowedNoteTypes: event.allowedNoteTypes
     }
 
@@ -158,8 +192,8 @@ function updateEvent() {
 }
 
 function saveEvent() {
-    if (state.currentEvent.provider === null || state.currentEvent.title === '') {
-        alert('Please fill in all required fields, select at least one provider');
+    if (state.currentEvent.provider === null || state.currentEvent.title === '' || state.currentEvent.startTime === '' || state.currentEvent.endTime === '') {
+        alert('Please fill in all required fields, select at least one provider, a title, and set start and end times.');
         return;
     }
 
@@ -196,12 +230,12 @@ function saveEvent() {
                 const eventData = {
                     calendar: calendarId,
                     title: event.title,
-                    startTime: event.startTime,
-                    endTime: event.endTime,
+                    startTime: toUTCISOString(event.startTime),
+                    endTime: toUTCISOString(event.endTime),
                     recurrenceFrequency: event.recurrence.type,
                     recurrenceInterval: event.recurrence.interval,
                     recurrenceDays: event.daysOfWeek,
-                    recurrenceEndsAt: event.recurrence.endDate,
+                    recurrenceEndsAt: toUTCISOString(event.recurrence.endDate),
                     allowedNoteTypes: event.allowedNoteTypes
                 }
 
@@ -214,11 +248,24 @@ function saveEvent() {
                 })
                     .then(response => {
                         if (!response.ok) throw new Error('Failed to create event');
-                    }).catch(error => {
-                    alert('Error saving event: ' + error.message);
-                });
 
-                resetForm();
+                        state.events.push({
+                            ...event,
+                            provider: event.provider,
+                            location: event.location || '',
+                            calendarType: event.calendarType,
+                            allowedNoteTypes: event.allowedNoteTypes,
+                            daysOfWeek: event.daysOfWeek,
+                            recurrence: event.recurrence
+                        });
+                        render();
+
+                        resetForm();
+
+                    })
+                    .catch(error => {
+                        alert('Error saving event: ' + error.message);
+                    });
             }
         })
         .catch(error => {
@@ -236,8 +283,8 @@ function resetForm() {
     location: null,
     calendarType: null,
     allowedNoteTypes: [],
-    startTime: new Date().toISOString().slice(0, 16),
-    endTime: new Date().toISOString().slice(0, 16),
+    startTime: toLocalDateTimeString(),
+    endTime: toLocalDateTimeString(),
     daysOfWeek: [],
     recurrence: {
       type: '',
@@ -252,6 +299,16 @@ function resetForm() {
 
 function editEvent(event) {
   state.currentEvent = JSON.parse(JSON.stringify(event));
+  // Convert times to local datetime format for datetime-local inputs
+  if (state.currentEvent.startTime) {
+    state.currentEvent.startTime = toLocalDateTimeString(new Date(state.currentEvent.startTime));
+  }
+  if (state.currentEvent.endTime) {
+    state.currentEvent.endTime = toLocalDateTimeString(new Date(state.currentEvent.endTime));
+  }
+  if (state.currentEvent.recurrence && state.currentEvent.recurrence.endDate) {
+    state.currentEvent.recurrence.endDate = toLocalDateTimeString(new Date(state.currentEvent.recurrence.endDate));
+  }
   state.editingEvent = event
   state.showForm = true;
   render();
@@ -608,13 +665,13 @@ function renderEventCard(event) {
             <div class="detail-item">
               🕐
               <div class="detail-item-times">
-                <span>${new Date(event.startTime).toLocaleString('en-US')}</span>
-                <span>${new Date(event.endTime).toLocaleString('en-US')}</span>
+                <span>${formatDateTime(event.startTime)}</span>
+                <span>${formatDateTime(event.endTime)}</span>
               </div>
             </div>
 
             <div class="detail-item">
-              ${event.recurrence.endDate && `📅 <span>${new Date(event.recurrence.endDate).toLocaleString('en-US')}</span>`}
+              ${event.recurrence.endDate && `📅 <span>${formatDateTime(event.recurrence.endDate)}</span>`}
             </div>
           </div>
 
