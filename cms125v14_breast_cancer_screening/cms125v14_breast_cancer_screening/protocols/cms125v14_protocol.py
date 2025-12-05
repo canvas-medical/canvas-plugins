@@ -342,13 +342,16 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         return False
 
-    def first_due_in(self, patient: Patient) -> int | None:
-        """Calculate days until screening first due (when patient turns 42)."""
-        patient_age = patient.age_at(self.timeframe.end)
+    def first_due_in(self, patient: Patient, age: int) -> int | None:
+        """Calculate days until screening first due (when patient turns 42).
 
+        Args:
+            patient: The patient to check
+            age: Patient's age at end of measurement period
+        """
         if (
             patient.sex_at_birth == "F"
-            and patient_age < self.AGE_RANGE_START
+            and age < self.AGE_RANGE_START
             and not self.had_mastectomy(patient)
         ):
             # Calculate patient's 42nd birthday
@@ -377,16 +380,18 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             HomeHealthcareServices,
         )
 
-    def in_initial_population(self, patient: Patient) -> bool:
+    def in_initial_population(self, patient: Patient, age: int) -> bool:
         """
         Initial population: Women 42-74 years of age with a visit during the measurement period.
 
         Per CMS125v14 spec, the initial population requires a qualifying encounter.
-        """
-        patient_age = patient.age_at(self.timeframe.end)
 
+        Args:
+            patient: The patient to check
+            age: Patient's age at end of measurement period
+        """
         # Check age and sex
-        if not (self.AGE_RANGE_START <= patient_age <= self.AGE_RANGE_END):
+        if not (self.AGE_RANGE_START <= age <= self.AGE_RANGE_END):
             return False
 
         if patient.sex_at_birth != "F":
@@ -534,7 +539,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         return False
 
-    def get_stratification(self, patient: Patient) -> int | None:
+    def get_stratification(self, patient: Patient, age: int) -> int | None:
         """
         Determine which stratification group the patient belongs to.
 
@@ -542,24 +547,26 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         - Stratum 1: Ages 42-51 at end of measurement period
         - Stratum 2: Ages 52-74 at end of measurement period
 
+        Args:
+            patient: The patient to check
+            age: Patient's age at end of measurement period
+
         Returns:
             1 for Stratum 1 (ages 42-51)
             2 for Stratum 2 (ages 52-74)
             None if patient not in denominator or outside age ranges
         """
-        if not self.in_denominator(patient):
+        if not self.in_denominator(patient, age):
             return None
 
-        patient_age = patient.age_at(self.timeframe.end)
-
-        if self.STRATUM_1_START <= patient_age <= self.STRATUM_1_END:
+        if self.STRATUM_1_START <= age <= self.STRATUM_1_END:
             return 1
-        elif self.STRATUM_2_START <= patient_age <= self.STRATUM_2_END:
+        elif self.STRATUM_2_START <= age <= self.STRATUM_2_END:
             return 2
         else:
             return None
 
-    def in_denominator(self, patient: Patient) -> bool:
+    def in_denominator(self, patient: Patient, age: int) -> bool:
         """
         Denominator: Equals Initial Population.
 
@@ -571,9 +578,13 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         4. Patients age ≥66 with frailty + advanced illness (see has_frailty_with_advanced_illness).
         5. Patients age ≥66 living long-term in nursing home (see in_nursing_home).
 
+        Args:
+            patient: The patient to check
+            age: Patient's age at end of measurement period
+
         Exceptions: None
         """
-        if not self.in_initial_population(patient):
+        if not self.in_initial_population(patient, age):
             return False
 
         # Check hospice exclusion
@@ -589,8 +600,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             return False
 
         # Check age-based exclusions (age ≥66 only)
-        patient_age = patient.age_at(self.timeframe.end)
-        if patient_age >= 66:
+        if age >= 66:
             # Check frailty + advanced illness/dementia exclusion
             if self.has_frailty_with_advanced_illness(patient):
                 return False
@@ -698,9 +708,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         protocol_key = self.protocol_key()
 
-        if not self.in_denominator(patient):
+        # Calculate age once to avoid repeated calculations
+        age = int(patient.age_at(self.timeframe.end))
+
+        if not self.in_denominator(patient, age):
             # Not applicable - check if young patient
-            first_due = self.first_due_in(patient)
+            first_due = self.first_due_in(patient, age)
             if first_due and first_due > 0:
                 # Young patient - show when they'll be eligible
                 narrative = (
@@ -725,7 +738,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         override = self.get_protocol_override(patient)
 
         # Get stratification for reporting
-        stratum = self.get_stratification(patient)
+        stratum = self.get_stratification(patient, age)
         stratum_text = self._get_stratum_text(stratum)
 
         if self.in_numerator(patient) and self._on_date:
