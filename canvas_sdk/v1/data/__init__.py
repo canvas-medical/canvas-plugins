@@ -9,6 +9,7 @@ from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
+from .calendar import Calendar, Event
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
 from .claim import (
@@ -19,6 +20,7 @@ from .claim import (
     ClaimPatient,
     ClaimProvider,
     ClaimQueue,
+    ClaimSubmission,
     InstallmentPlan,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCode
@@ -118,7 +120,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .referral import Referral, ReferralReport
+from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
@@ -141,6 +143,7 @@ __all__ = __exports__ = (
     "BillingLineItemModifier",
     "BusinessLine",
     "BulkPatientPosting",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -154,6 +157,7 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimSubmission",
     "Command",
     "CompoundMedication",
     "Condition",
@@ -167,6 +171,7 @@ __all__ = __exports__ = (
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -240,6 +245,7 @@ __all__ = __exports__ = (
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",

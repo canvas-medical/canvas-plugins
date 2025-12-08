@@ -27,7 +27,7 @@ dependencies = [
   "cookiecutter",
   "cron-converter>=1.2.1,<2",
   "cryptography>=45.0.5",
-  "defusedxml==0.8.0rc2",
+  "defusedxml>=0.7.1",
   "deprecation>=2.1.0,<3",
   "django-stubs[compatible-mypy]>=5.1.1,<6",
   "django-timezone-utils>=0.15.0,<0.16",
@@ -60,7 +60,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-version = "0.79.0"
+version = "0.81.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas"]

@@ -1,6 +1,53 @@
 # CHANGELOG
 
 
+## v0.81.0 (2025-12-04)
+
+### Features
+
+- Add calendar and events data modules and effects
+  ([#1272](https://github.com/canvas-medical/canvas-plugins/pull/1272),
+  [`d4f6882`](https://github.com/canvas-medical/canvas-plugins/commit/d4f6882f59276cf6cacadfef569c0881d74f1ea4))
+
+- Post claim coverage payment effect
+  ([#1210](https://github.com/canvas-medical/canvas-plugins/pull/1210),
+  [`1772be6`](https://github.com/canvas-medical/canvas-plugins/commit/1772be69dbe66c151bfa30c0bc952362ba96c318))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.80.2 (2025-12-04)
+
+### Bug Fixes
+
+- Use the latest stable release of defusedxml
+  ([#1321](https://github.com/canvas-medical/canvas-plugins/pull/1321),
+  [`1ea811d`](https://github.com/canvas-medical/canvas-plugins/commit/1ea811d1180ec934dd13cf547af2a5620bc49f0b))
+
+
+## v0.80.1 (2025-12-03)
+
+### Bug Fixes
+
+- Use git source for defusedxml to work around issue with uv pre-release handling
+  ([#1318](https://github.com/canvas-medical/canvas-plugins/pull/1318),
+  [`5c3b850`](https://github.com/canvas-medical/canvas-plugins/commit/5c3b85076f4bcdcff4f1a3c52e3b88f4152dc9ec))
+
+
+## v0.80.0 (2025-12-03)
+
+### Features
+
+- Add all value sets for 2026 ([#1282](https://github.com/canvas-medical/canvas-plugins/pull/1282),
+  [`6ba63e2`](https://github.com/canvas-medical/canvas-plugins/commit/6ba63e2dbddf20eba12c0f604e2feaa2f57ef7f4))
+
+- Add lab, imaging and referral review commands
+  ([#1276](https://github.com/canvas-medical/canvas-plugins/pull/1276),
+  [`0f8824e`](https://github.com/canvas-medical/canvas-plugins/commit/0f8824e1c8eb9403b3a0bb8c25ef1e9dd6a2bbd3))
+
+
 ## v0.79.0 (2025-11-25)
 
 ### Features
