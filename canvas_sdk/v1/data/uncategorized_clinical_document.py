@@ -40,7 +40,10 @@ class UncategorizedClinicalDocumentReview(AuditedModel, IdentifiableModel):
     message_to_patient = models.CharField(max_length=2048)
     status = models.CharField(max_length=50)
     patient = models.ForeignKey(
-        "v1.Patient", on_delete=models.DO_NOTHING, related_name="referral_reviews", null=True
+        "v1.Patient",
+        on_delete=models.DO_NOTHING,
+        related_name="uncategorized_clinical_document_reviews",
+        null=True,
     )
     patient_communication_method = models.CharField(max_length=30)
 

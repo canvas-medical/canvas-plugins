@@ -59,6 +59,10 @@ from .task import (
     TaskMetadataFactory,
     TaskTaskLabelFactory,
 )
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocumentFactory,
+    UncategorizedClinicalDocumentReviewFactory,
+)
 from .user import CanvasUserFactory
 
 __all__ = (
@@ -118,4 +122,6 @@ __all__ = (
     "TaskLabelFactory",
     "TaskMetadataFactory",
     "TaskTaskLabelFactory",
+    "UncategorizedClinicalDocumentFactory",
+    "UncategorizedClinicalDocumentReviewFactory",
 )
