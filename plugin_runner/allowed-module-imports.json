@@ -271,6 +271,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.custom_command": [
+    "CustomCommand"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],

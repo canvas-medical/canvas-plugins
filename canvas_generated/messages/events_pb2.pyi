@@ -942,6 +942,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PLUGIN_CUSTOM_COMMAND__PRE_SEARCH: _ClassVar[EventType]
     PLUGIN_CUSTOM_COMMAND__POST_SEARCH: _ClassVar[EventType]
     PLUGIN_CUSTOM_COMMAND__POST_COMMIT: _ClassVar[EventType]
+    PLUGIN_CUSTOM_COMMAND__GET_PRINT_URL: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -1875,6 +1876,7 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE: EventType
 PLUGIN_CUSTOM_COMMAND__PRE_SEARCH: EventType
 PLUGIN_CUSTOM_COMMAND__POST_SEARCH: EventType
 PLUGIN_CUSTOM_COMMAND__POST_COMMIT: EventType
+PLUGIN_CUSTOM_COMMAND__GET_PRINT_URL: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type", "actor", "source")

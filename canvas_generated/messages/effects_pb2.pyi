@@ -304,6 +304,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CALENDAR__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
     BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
+    CUSTOM_COMMAND__ORIGINATE: _ClassVar[EffectType]
+    CUSTOM_COMMAND__PRINT_URL: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -601,6 +603,8 @@ GENERATE_FULL_CHART_PDF: EffectType
 CALENDAR__CREATE: EffectType
 CALENDAR__EVENT__CREATE: EffectType
 BATCH_ORIGINATE_COMMANDS: EffectType
+CUSTOM_COMMAND__ORIGINATE: EffectType
+CUSTOM_COMMAND__PRINT_URL: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
