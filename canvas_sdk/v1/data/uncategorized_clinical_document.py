@@ -69,12 +69,12 @@ class UncategorizedClinicalDocument(TimestampedModel, IdentifiableModel):
 
     name = models.CharField(max_length=255)
     review_mode = models.CharField(max_length=2)
-    junked = models.BooleanField()
-    requires_signature = models.BooleanField()
+    junked = models.BooleanField(default=False)
+    requires_signature = models.BooleanField(default=False)
     assigned_date = models.DateTimeField(null=True)
     team_assigned_date = models.DateTimeField(null=True)
     original_date = models.DateField(null=True)
-    comment = models.TextField()
+    comment = models.TextField(default="", blank=True)
     priority = models.BooleanField(default=False)
 
 

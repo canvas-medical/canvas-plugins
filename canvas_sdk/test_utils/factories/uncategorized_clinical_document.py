@@ -39,14 +39,10 @@ class UncategorizedClinicalDocumentFactory(
 
     name = factory.Faker("sentence", nb_words=3)
     review_mode = factory.Faker("random_element", elements=["IN", "OT"])
-    junked = False
     requires_signature = factory.Faker("boolean")
     assigned_date = factory.LazyFunction(lambda: timezone.now())
-    team_assigned_date = None
-    team = None
     original_date = FuzzyDate(
         start_date=datetime.date.today() - datetime.timedelta(days=365),
         end_date=datetime.date.today(),
     )
     comment = factory.Faker("paragraph")
-    priority = False
