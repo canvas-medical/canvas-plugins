@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.82.0 (2025-12-09)
+
+### Features
+
+- Data models for OrganizationAddress, OrganizationContactPoint, PracticeLocationContactPoint
+  ([#1316](https://github.com/canvas-medical/canvas-plugins/pull/1316),
+  [`690935f`](https://github.com/canvas-medical/canvas-plugins/commit/690935f15fa09f8de09994d63e3ed2b2c85a3eec))
+
+
 ## v0.81.0 (2025-12-04)
 
 ### Features

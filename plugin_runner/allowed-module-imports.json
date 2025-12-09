@@ -756,6 +756,8 @@
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientConsent",
@@ -771,6 +773,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -1007,7 +1010,9 @@
     "ObservationValueCoding"
   ],
   "canvas_sdk.v1.data.organization": [
-    "Organization"
+    "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint"
   ],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",
@@ -1044,6 +1049,7 @@
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
