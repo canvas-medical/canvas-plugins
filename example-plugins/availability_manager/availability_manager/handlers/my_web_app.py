@@ -76,15 +76,22 @@ class MyWebApp(StaffSessionAuthMixin, SimpleAPI):
                         )
                     ),
                     "provider": next(
-                        provider.id
-                        for provider in providers
-                        if provider.full_name == event.calendar.title.split(":", 1)[0]
+                        (
+                            provider.id
+                            for provider in providers
+                            if provider.full_name == event.calendar.title.split(":", 1)[0]
+                        ),
+                        "",
                     ),
                     "allowedNoteTypes": [
                         str(note_type.id) for note_type in event.allowed_note_types.all()
                     ],
                     "calendar": event.calendar.title,
-                    "calendarType": event.calendar.title.split(":", 2)[1].strip(),
+                    "calendarType": (
+                        event.calendar.title.split(":", 2)[1].strip()
+                        if event.calendar.title and ":" in event.calendar.title
+                        else ""
+                    ),
                     "startTime": event.starts_at.strftime("%Y-%m-%dT%H:%M"),
                     "endTime": event.ends_at.strftime("%Y-%m-%dT%H:%M"),
                     "daysOfWeek": (
