@@ -1,8 +1,17 @@
 import json
+from typing import cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseModelManager,
+    BaseQuerySet,
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    IdentifiableModel,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.task import Task
 
@@ -55,6 +64,32 @@ class Referral(AuditedModel, IdentifiableModel):
         return f"Referral {self.id}"
 
 
+class ReferralReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+    """A queryset for referral reviews."""
+
+    pass
+
+
+ReferralReviewManager = BaseModelManager.from_queryset(ReferralReviewQuerySet)
+
+
+class ReferralReview(AuditedModel, IdentifiableModel):
+    """ReferralReview."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralreview_001"
+
+    objects = cast(ReferralReviewQuerySet, ReferralReviewManager())
+
+    internal_comment = models.TextField()
+    message_to_patient = models.CharField(max_length=2048)
+    status = models.CharField(max_length=50)
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="referral_reviews", null=True
+    )
+    patient_communication_method = models.CharField(max_length=30)
+
+
 class ReferralReport(TimestampedModel, IdentifiableModel):
     """ReferralReport."""
 
@@ -81,6 +116,9 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
         Referral, on_delete=models.DO_NOTHING, related_name="reports", null=True
     )
     specialty = models.CharField(max_length=250)
+    review = models.ForeignKey(
+        "ReferralReview", related_name="reports", null=True, blank=True, on_delete=models.SET_NULL
+    )
     original_date = models.DateField(null=True)
     comment = models.TextField()
     priority = models.BooleanField(default=False)
