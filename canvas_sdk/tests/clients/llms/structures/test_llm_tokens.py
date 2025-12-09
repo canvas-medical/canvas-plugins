@@ -1,3 +1,5 @@
+import pytest
+
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 
 
@@ -9,20 +11,22 @@ def test_add() -> None:
     assert tested.generated == 87
 
 
-def test___eq__() -> None:
+@pytest.mark.parametrize(
+    ("other", "expected"),
+    [
+        pytest.param(LlmTokens(178, 37), True, id="identical"),
+        pytest.param(LlmTokens(177, 37), False, id="prompt-different"),
+        pytest.param(LlmTokens(178, 38), False, id="generated-different"),
+    ],
+)
+def test___eq__(other: LlmTokens, expected: bool) -> None:
     """Test equality comparison between LlmTokens instances."""
     tested = LlmTokens(178, 37)
-    tests = [
-        (LlmTokens(178, 37), True),
-        (LlmTokens(177, 37), False),
-        (LlmTokens(178, 38), False),
-    ]
-    for other, expected in tests:
-        if expected:
-            assert tested == other
-        else:
-            assert tested != other
-        assert tested is not other
+    if expected:
+        assert tested == other
+    else:
+        assert tested != other
+    assert tested is not other
 
 
 def test_to_dict() -> None:

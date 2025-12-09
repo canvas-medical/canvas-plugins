@@ -82,9 +82,9 @@ class LlmOpenai(LlmBase):
         except exceptions.RequestException as e:
             code = HTTPStatus.BAD_REQUEST
             response = f"Request failed: {e}"
-            if hasattr(e, "response") and e.response is not None:
-                code = e.response.status_code
-                response = e.response.text
+            if message := getattr(e, "response", None):
+                code = message.status_code
+                response = message.text
 
         return LlmResponse(
             code=HTTPStatus(code),

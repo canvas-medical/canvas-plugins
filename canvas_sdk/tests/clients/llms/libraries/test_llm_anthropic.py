@@ -1,7 +1,10 @@
 from http import HTTPStatus
 from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from typing import Any
+from unittest.mock import call
 
+import pytest
+from pytest_mock import MockerFixture
 from requests import exceptions
 
 from canvas_sdk.clients.llms.libraries.llm_anthropic import LlmAnthropic
@@ -60,25 +63,10 @@ def test_to_dict() -> None:
     assert result == expected
 
 
-@patch("canvas_sdk.clients.llms.libraries.llm_anthropic.Http")
-def test_request(http: MagicMock) -> None:
-    """Test successful API request to Anthropic."""
-
-    def reset_mocks() -> None:
-        http.reset_mock()
-
-    settings = LlmSettings(api_key="test_key", model="test_model")
-    tested = LlmAnthropic(settings)
-    tested.add_prompt(LlmTurn(role="user", text=["test"]))
-
-    # exceptions
-    exception_no_response = exceptions.RequestException("Connection error")
-    exception_with_response = exceptions.RequestException("Server error")
-    exception_with_response.response = SimpleNamespace(status_code=404, text="not found")  # type: ignore[assignment]
-
-    tests = [
-        # success
-        (
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        pytest.param(
             SimpleNamespace(
                 status_code=200,
                 text="{"
@@ -91,9 +79,9 @@ def test_request(http: MagicMock) -> None:
                 response="response text",
                 tokens=LlmTokens(prompt=10, generated=20),
             ),
+            id="all_good",
         ),
-        # error
-        (
+        pytest.param(
             SimpleNamespace(
                 status_code=403,
                 text="forbidden",
@@ -103,49 +91,59 @@ def test_request(http: MagicMock) -> None:
                 response="forbidden",
                 tokens=LlmTokens(prompt=0, generated=0),
             ),
+            id="error",
         ),
-        # exception -- no response
-        (
-            exception_no_response,
+        pytest.param(
+            exceptions.RequestException("Connection error"),
             LlmResponse(
                 code=HTTPStatus.BAD_REQUEST,
                 response="Request failed: Connection error",
                 tokens=LlmTokens(prompt=0, generated=0),
             ),
+            id="exception--no-response",
         ),
-        # exception -- with response
-        (
-            exception_with_response,
+        pytest.param(
+            exceptions.RequestException(
+                "Server error",
+                response=SimpleNamespace(status_code=404, text="not found"),  # type: ignore[arg-type]
+            ),
             LlmResponse(
                 code=HTTPStatus.NOT_FOUND,
                 response="not found",
                 tokens=LlmTokens(prompt=0, generated=0),
             ),
+            id="exception--with-response",
+        ),
+    ],
+)
+def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) -> None:
+    """Test successful API request to Anthropic."""
+    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_anthropic.Http")
+    http.return_value.post.side_effect = [response]
+
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmAnthropic(settings)
+    tested.add_prompt(LlmTurn(role="user", text=["test"]))
+
+    result = tested.request()
+    assert result == expected
+
+    calls = [
+        call("https://api.anthropic.com/v1/messages"),
+        call().post(
+            "",
+            headers={
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01",
+                "x-api-key": "test_key",
+            },
+            data="{"
+            '"model": "test_model", '
+            '"messages": [{'
+            '"role": "user", '
+            '"content": [{"type": "text", "text": "test"}]'
+            "}]"
+            "}",
         ),
     ]
-    for response, expected in tests:
-        http.return_value.post.side_effect = [response]
-
-        result = tested.request()
-        assert result == expected
-
-        calls = [
-            call("https://api.anthropic.com/v1/messages"),
-            call().post(
-                "",
-                headers={
-                    "Content-Type": "application/json",
-                    "anthropic-version": "2023-06-01",
-                    "x-api-key": "test_key",
-                },
-                data="{"
-                '"model": "test_model", '
-                '"messages": [{'
-                '"role": "user", '
-                '"content": [{"type": "text", "text": "test"}]'
-                "}]"
-                "}",
-            ),
-        ]
-        assert http.mock_calls == calls
-        reset_mocks()
+    assert http.mock_calls == calls
