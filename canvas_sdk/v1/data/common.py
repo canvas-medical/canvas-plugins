@@ -141,6 +141,16 @@ class AddressUse(models.TextChoices):
     OLD = "old", "Old"
 
 
+class AddressUseWithBilling(models.TextChoices):
+    """AddressUse, which also includes Billing."""
+
+    HOME = "home", "Home"
+    WORK = "work", "Work"
+    TEMP = "temp", "Temp"
+    OLD = "old", "Old"
+    BILLING = "billing", "Billing"
+
+
 class AddressType(models.TextChoices):
     """AddressType."""
 
