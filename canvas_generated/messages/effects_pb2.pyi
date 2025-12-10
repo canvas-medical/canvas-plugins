@@ -258,6 +258,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
+    NOTE_VALIDATION_ERROR: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
@@ -559,6 +560,7 @@ SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
+NOTE_VALIDATION_ERROR: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType

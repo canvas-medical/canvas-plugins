@@ -293,6 +293,7 @@
     "Appointment",
     "AppointmentIdentifier",
     "Note",
+    "NoteValidationError",
     "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
@@ -312,6 +313,9 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
+  ],
+  "canvas_sdk.effects.note.note_validation_error": [
+    "NoteValidationError"
   ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"
