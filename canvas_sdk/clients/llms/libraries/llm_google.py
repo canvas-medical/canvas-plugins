@@ -40,23 +40,26 @@ class LlmGoogle(LlmBase):
             "contents": contents,
         }
 
+    @classmethod
+    def _http(cls) -> Http:
+        return Http("https://generativelanguage.googleapis.com")
+
     def request(self) -> LlmResponse:
         """Make a request to the Google Gemini API.
 
         Returns:
             Response containing status code, generated text, and token usage.
         """
-        url = (
-            "https://generativelanguage.googleapis.com/"
-            "v1beta/"
-            f"{self.settings.model}:generateContent?key={self.settings.api_key}"
-        )
         headers = {"Content-Type": "application/json"}
         data = json.dumps(self.to_dict())
 
         tokens = LlmTokens(prompt=0, generated=0)
         try:
-            request = Http(url).post("", headers=headers, data=data)
+            request = self.http.post(
+                f"/v1beta/{self.settings.model}:generateContent?key={self.settings.api_key}",
+                headers=headers,
+                data=data,
+            )
             code = request.status_code
             response = request.text
             if code == HTTPStatus.OK.value:

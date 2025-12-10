@@ -7,6 +7,7 @@ from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 from canvas_sdk.clients.llms.structures.llm_turn import LlmTurn
 from canvas_sdk.clients.llms.structures.settings.llm_settings import LlmSettings
+from canvas_sdk.utils.http import Http
 
 
 class LlmBase(ABC):
@@ -34,6 +35,7 @@ class LlmBase(ABC):
         """
         self.settings = settings
         self.prompts: list[LlmTurn] = []
+        self.http = self._http()
 
     def reset_prompts(self) -> None:
         """Clear all stored prompts."""
@@ -95,6 +97,12 @@ class LlmBase(ABC):
         Raises:
             NotImplementedError: This method must be implemented by subclasses.
         """
+        ...
+
+    @classmethod
+    @abstractmethod
+    def _http(cls) -> Http:
+        """Create the Http instance for the LLM subclass."""
         ...
 
     def attempt_requests(self, attempts: int) -> list[LlmResponse]:

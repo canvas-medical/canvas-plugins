@@ -50,13 +50,16 @@ class LlmOpenai(LlmBase):
             "input": messages,
         }
 
+    @classmethod
+    def _http(cls) -> Http:
+        return Http("https://us.api.openai.com")
+
     def request(self) -> LlmResponse:
         """Make a request to the OpenAI API.
 
         Returns:
             Response containing status code, generated text, and token usage.
         """
-        url = "https://us.api.openai.com/v1/responses"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.settings.api_key}",
@@ -65,7 +68,7 @@ class LlmOpenai(LlmBase):
 
         tokens = LlmTokens(prompt=0, generated=0)
         try:
-            request = Http(url).post("", headers=headers, data=data)
+            request = self.http.post("/v1/responses", headers=headers, data=data)
             code = request.status_code
             response = request.text
             if code == HTTPStatus.OK.value:
