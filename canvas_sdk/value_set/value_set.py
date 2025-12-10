@@ -96,10 +96,7 @@ class CombinedValueSet(CodeConstantsURLMappingMixin):
         Returns:
             A set of all codes found in the CombinedValueSet across all code systems.
         """
-        all_codes: set[str] = set[str]()
-        for codes in self.values.values():
-            all_codes.update(codes)
-        return all_codes
+        return set().union(*self.values.values())
 
 
 class ValueSystems(type):
@@ -145,10 +142,7 @@ class ValueSet(CodeConstantsURLMappingMixin, metaclass=ValueSystems):
             >>> "E11.9" in codes
             True
         """
-        all_codes: set[str] = set()
-        for codes in cls.values.values():
-            all_codes.update(codes)
-        return all_codes
+        return set().union(*cls.values.values())
 
 
 __exports__ = (

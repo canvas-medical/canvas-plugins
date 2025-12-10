@@ -1,4 +1,5 @@
 import arrow
+from django.db.models import Q
 
 from canvas_sdk.commands import InstructCommand
 from canvas_sdk.effects import Effect
@@ -14,10 +15,12 @@ from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.medication import Medication
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride
+from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.value_set.v2026.condition import (
     AdvancedIllness,
     FrailtyDiagnosis,
     HistoryOfBilateralMastectomy,
+    HospiceDiagnosis,
     PalliativeCareDiagnosis,
     StatusPostLeftMastectomy,
     StatusPostRightMastectomy,
@@ -33,6 +36,8 @@ from canvas_sdk.value_set.v2026.encounter import (
     PalliativeCareEncounter,
     PreventiveCareServicesEstablishedOfficeVisit18AndUp,
     PreventiveCareServicesInitialOfficeVisit18AndUp,
+    TelephoneVisits,
+    VirtualEncounter,
 )
 from canvas_sdk.value_set.v2026.intervention import (
     HospiceCareAmbulatory,
@@ -46,14 +51,31 @@ from canvas_sdk.value_set.v2026.procedure import (
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.tomography import Tomography
+from canvas_sdk.value_set.value_set import ValueSet
 from logger import log
+
+
+class MammographySNOMED(ValueSet):
+    """SNOMED CT codes for mammography procedure.
+
+    The standard Mammography value set only contains LOINC/CPT codes.
+    This provides SNOMED codes for use with InstructCommand which requires SNOMED.
+
+    Reference: https://vsac.nlm.nih.gov/context/cs/codesystem/SNOMEDCT/version/2019-03/code/241055006/info
+    """
+
+    VALUE_SET_NAME = "Mammography (SNOMED)"
+    SNOMEDCT = {
+        "241055006",  # Mammography (procedure)
+        "71651007",  # Mammography of breast (procedure)
+    }
 
 
 class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     """
     Breast Cancer Screening.
 
-    Description: Percentage of women 40-74 years of age who had a mammogram to screen
+    Description: Percentage of women 42-74 years of age who had a mammogram to screen
     for breast cancer in the 27 months prior to the end of the Measurement Period
 
     Definition: None
@@ -143,11 +165,73 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         "skilled nursing",
     )
 
-    def _get_billing_within_timeframe(self, patient: Patient):  # type: ignore[no-untyped-def]
-        """Get billing line items within the measurement period."""
-        return BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
+    # SNOMED codes from questionnaires for exclusion detection
+    # From hospice_and_frailty.yml (QQ_004):
+    # Per HospiceQDM-7.0.000.cql lines 15-17
+    QUESTIONNAIRE_HOSPICE_CODES = frozenset(
+        {
+            "428361000124107",  # Discharge to home for hospice care
+            "428371000124100",  # Discharge to healthcare facility for hospice care
+            "373066001",  # Yes (qualifier value) - response to Hospice care [MDS] assessment
+        }
+    )
 
-    def _has_billing_with_codes(self, patient: Patient, *value_sets) -> bool:  # type: ignore[no-untyped-def]
+    # Frailty device codes from hospice_and_frailty.yml (QQ_004)
+    # Per AdvancedIllnessandFrailtyQDM-10.0.000.cql - "Medical equipment used" (LOINC 98181-1)
+    # with result in FrailtyDevice value set (OID: 2.16.840.1.113883.3.464.1003.118.12.1300)
+    QUESTIONNAIRE_FRAILTY_DEVICE_CODES = frozenset(
+        {
+            "58938008",  # Wheelchair
+            "266731002",  # Walking frame
+            "87405001",  # Walking stick/cane
+            "360008003",  # Commode
+            "23366006",  # Motorized wheelchair
+            "336608004",  # Oxygen cylinder
+            "702172008",  # Home CPAP unit
+            "66435007",  # Hospital bed
+        }
+    )
+
+    # From hospice_and_palliative.yml (QQ_006):
+    # Per PalliativeCareQDM-5.0.000.cql line 13 - FACIT-Pal assessment (LOINC 71007-9)
+    QUESTIONNAIRE_PALLIATIVE_CODE = "305284002"  # Receiving palliative care
+
+    # Nursing home housing status from hospice_and_frailty.yml
+    # Per AdvancedIllnessandFrailtyQDM-10.0.000.cql lines 35-42
+    # Assessment "Housing status" (LOINC 71802-3) with result "Lives in nursing home"
+    QUESTIONNAIRE_NURSING_HOME_CODE = "160734000"  # Lives in nursing home (finding)
+
+    def _has_questionnaire_response_with_codes(
+        self, patient: Patient, snomed_codes: frozenset[str] | set[str]
+    ) -> bool:
+        """Check if patient has questionnaire responses with any of the given SNOMED codes.
+
+        Queries committed interviews for the patient within the measurement period
+        and checks if any response option matches the provided codes.
+
+        Args:
+            patient: The patient to check
+            snomed_codes: Set of SNOMED codes to look for in questionnaire responses
+
+        Returns:
+            True if any response matches the provided codes
+        """
+        # Get committed interviews for the patient
+        interviews = Interview.objects.for_patient(str(patient.id)).committed()
+
+        if not interviews.exists():
+            return False
+
+        # Query responses that match the target codes
+        # InterviewQuestionResponse.response_option.code contains the SNOMED code
+        matching_responses = InterviewQuestionResponse.objects.filter(
+            interview__in=interviews,
+            response_option__code__in=snomed_codes,
+        )
+
+        return matching_responses.exists()
+
+    def _has_billing_with_codes(self, patient: Patient, *value_sets: ValueSet) -> bool:
         """Check if patient has billing codes from any of the provided value sets.
 
         Args:
@@ -157,27 +241,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         Returns:
             True if any billing code matches any value set
         """
-        billing = self._get_billing_within_timeframe(patient)
+        billing = BillingLineItem.objects.filter(patient=patient).within(self.timeframe)
         all_codes = self._combine_value_set_codes(*value_sets)
         return bool(all_codes and billing.filter(cpt__in=all_codes).exists())
 
-    def _get_conditions_up_to_end(self, patient: Patient):  # type: ignore[no-untyped-def]
-        """Get conditions with onset_date up to end of timeframe."""
-        return Condition.objects.filter(
-            patient=patient,
-            onset_date__lte=self.timeframe.end.date(),
-        )
-
-    def _get_conditions_within_timeframe(self, patient: Patient):  # type: ignore[no-untyped-def]
-        """Get conditions with onset_date within the measurement period."""
-        return Condition.objects.filter(
-            patient=patient,
-            onset_date__gte=self.timeframe.start.date(),
-            onset_date__lte=self.timeframe.end.date(),
-        )
-
     @staticmethod
-    def _combine_value_set_codes(*value_sets) -> set[str]:  # type: ignore[no-untyped-def]
+    def _combine_value_set_codes(*value_sets: ValueSet) -> set[str]:
         """Combine codes from multiple value sets into a single set.
 
         Args:
@@ -186,30 +255,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         Returns:
             Combined set of all codes from all value sets
         """
-        all_codes: set[str] = set()
-        for vs in value_sets:
-            all_codes.update(vs.get_codes())
-        return all_codes
-
-    @staticmethod
-    def _build_coding_filter(*value_sets) -> list[dict[str, str | list[str]]]:  # type: ignore[no-untyped-def]
-        """Build InstructCommand coding filter from value sets.
-
-        Args:
-            *value_sets: Value set classes with values dict
-
-        Returns:
-            List of coding filter dicts for InstructCommand
-        """
-        combined_codes: dict[str, set[str]] = {}
-        for vs in value_sets:
-            for system, codes in vs.values.items():
-                if codes:
-                    system_lower = system.lower()
-                    if system_lower not in combined_codes:
-                        combined_codes[system_lower] = set()
-                    combined_codes[system_lower].update(codes)
-        return [{"system": system, "code": list(codes)} for system, codes in combined_codes.items()]
+        return set().union(*(vs.get_codes() for vs in value_sets))
 
     def patient_id_from_target(self) -> str:
         """
@@ -233,7 +279,13 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         )
 
         if self.event.type in events_with_patient_in_context:
-            self._patient_id = self.event.context["patient"]["id"]
+            patient_ctx = self.event.context.get("patient", {})
+            patient_id = patient_ctx.get("id")
+            if not patient_id:
+                raise ValueError(
+                    f"Patient ID not found in event context for event type {self.event.type}"
+                )
+            self._patient_id = patient_id
             return self._patient_id
 
         # Events that require DB query (context is empty for encounters)
@@ -280,7 +332,10 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
            unspecified laterality diagnoses as a proxy for bilateral)
         5. Status post left + status post right mastectomy diagnoses
         """
-        conditions = self._get_conditions_up_to_end(patient)
+        conditions = Condition.objects.filter(
+            patient=patient,
+            onset_date__lte=self.timeframe.end.date(),
+        )
 
         # Check for bilateral mastectomy (procedure or diagnosis)
         bilateral = conditions.find(BilateralMastectomy)
@@ -370,6 +425,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         - Preventive Care Services (Established/Initial, 18+)
         - Annual Wellness Visit
         - Home Healthcare Services
+        - Virtual Encounter
+        - Telephone Visits
         """
         return self._has_billing_with_codes(
             patient,
@@ -378,6 +435,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             PreventiveCareServicesInitialOfficeVisit18AndUp,
             PreventiveCareServicesEstablishedOfficeVisit18AndUp,
             HomeHealthcareServices,
+            VirtualEncounter,
+            TelephoneVisits,
         )
 
     def in_initial_population(self, patient: Patient, age: int) -> bool:
@@ -404,11 +463,38 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         Check if patient was in hospice care during the measurement period.
 
-        Checks both:
-        1. Billing line items with hospice codes (HospiceCareAmbulatory)
-        2. Encounters with hospice codes (HospiceEncounter)
+        Checks:
+        1. Billing line items with hospice codes (HospiceCareAmbulatory, HospiceEncounter)
+        2. Conditions with HospiceDiagnosis codes
+        3. Questionnaire responses indicating hospice care (from hospice_and_frailty.yml
+           and hospice_and_palliative.yml questionnaires)
         """
-        return self._has_billing_with_codes(patient, HospiceCareAmbulatory, HospiceEncounter)
+        # Check billing codes
+        if self._has_billing_with_codes(patient, HospiceCareAmbulatory, HospiceEncounter):
+            return True
+
+        # Check for hospice diagnosis conditions using prevalencePeriod overlap logic
+        # Per HospiceQDM-7.0.000.cql: prevalencePeriod overlaps day of "Measurement Period"
+        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
+        hospice_conditions = (
+            Condition.objects.filter(
+                patient=patient,
+                onset_date__lte=self.timeframe.end.date(),
+            )
+            .filter(
+                Q(resolution_date__isnull=True)
+                | Q(resolution_date__gte=self.timeframe.start.date())
+            )
+            .find(HospiceDiagnosis)
+        )
+
+        if hospice_conditions.exists():
+            return True
+
+        # Check questionnaire responses for hospice indicators
+        return self._has_questionnaire_response_with_codes(
+            patient, self.QUESTIONNAIRE_HOSPICE_CODES
+        )
 
     def received_palliative_care(self, patient: Patient) -> bool:
         """
@@ -418,17 +504,37 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         - Palliative care diagnosis with prevalencePeriod overlapping measurement period
         - Palliative care encounter during measurement period
         - Palliative care intervention during measurement period
+        - Questionnaire responses indicating palliative care (from hospice_and_palliative.yml)
 
         Note: Using conditions within timeframe (not "up to end") to match CQL's
         requirement that palliative care must be during the measurement period.
         """
-        # Check conditions for palliative care diagnosis within measurement period
-        if self._get_conditions_within_timeframe(patient).find(PalliativeCareDiagnosis).exists():
+        # Check conditions for palliative care diagnosis using prevalencePeriod overlap logic
+        # Per PalliativeCareQDM-5.0.000.cql line 24: prevalencePeriod overlaps day of "Measurement Period"
+        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
+        if (
+            Condition.objects.filter(
+                patient=patient,
+                onset_date__lte=self.timeframe.end.date(),
+            )
+            .filter(
+                Q(resolution_date__isnull=True)
+                | Q(resolution_date__gte=self.timeframe.start.date())
+            )
+            .find(PalliativeCareDiagnosis)
+            .exists()
+        ):
             return True
 
         # Check billing line items for palliative care encounters/interventions
-        return self._has_billing_with_codes(
+        if self._has_billing_with_codes(
             patient, PalliativeCareEncounter, PalliativeCareIntervention
+        ):
+            return True
+
+        # Check questionnaire responses for palliative care indicator
+        return self._has_questionnaire_response_with_codes(
+            patient, frozenset({self.QUESTIONNAIRE_PALLIATIVE_CODE})
         )
 
     def has_frailty_indicator(self, patient: Patient) -> bool:
@@ -439,12 +545,19 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         1. Frailty diagnosis (conditions)
         2. Frailty symptom (conditions)
         3. Frailty encounter (billing)
-        4. Frailty device (would need device data - not typically available in Canvas)
+        4. Frailty device (via questionnaire response from hospice_and_frailty.yml)
 
         Returns True if any frailty indicator is found.
         """
-        # Check for frailty diagnosis or symptom (must be within measurement period)
-        frailty_conditions = self._get_conditions_within_timeframe(patient)
+        # Check for frailty diagnosis or symptom using prevalencePeriod overlap logic
+        # Per AdvancedIllnessandFrailtyQDM: prevalencePeriod overlaps day of "Measurement Period"
+        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
+        frailty_conditions = Condition.objects.filter(
+            patient=patient,
+            onset_date__lte=self.timeframe.end.date(),
+        ).filter(
+            Q(resolution_date__isnull=True) | Q(resolution_date__gte=self.timeframe.start.date())
+        )
 
         if frailty_conditions.find(FrailtyDiagnosis).exists():
             return True
@@ -453,7 +566,14 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             return True
 
         # Check for frailty encounter billing codes
-        return self._has_billing_with_codes(patient, FrailtyEncounter)
+        if self._has_billing_with_codes(patient, FrailtyEncounter):
+            return True
+
+        # Check questionnaire responses for frailty device indicator
+        # Per spec: "Medical equipment used" (LOINC 98181-1) with result in FrailtyDevice value set
+        return self._has_questionnaire_response_with_codes(
+            patient, self.QUESTIONNAIRE_FRAILTY_DEVICE_CODES
+        )
 
     def has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
         """
@@ -462,26 +582,26 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Returns True if either condition is met.
         """
-        # Check for advanced illness diagnosis (MP or prior year)
+        # Check for advanced illness diagnosis using overlap logic (MP or prior year)
         # Prior year = 1 year before measurement period start
         prior_year_start = self.timeframe.start.shift(years=-1)
 
+        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= lookback_start)
         advanced_illness_conditions = Condition.objects.filter(
             patient=patient,
-            onset_date__gte=prior_year_start.date(),
             onset_date__lte=self.timeframe.end.date(),
-        )
+        ).filter(Q(resolution_date__isnull=True) | Q(resolution_date__gte=prior_year_start.date()))
 
         if advanced_illness_conditions.find(AdvancedIllness).exists():
             return True
 
-        # Check for dementia medications (MP or prior year)
+        # Check for dementia medications using overlap logic (MP or prior year)
+        # A medication overlaps if: start_date <= end AND (end_date IS NULL OR end_date >= lookback_start)
         # Use .datetime for timezone-aware datetime comparison on DateTimeField
         dementia_meds = Medication.objects.filter(
             patient=patient,
-            start_date__gte=prior_year_start.datetime,
             start_date__lte=self.timeframe.end.datetime,
-        )
+        ).filter(Q(end_date__isnull=True) | Q(end_date__gte=prior_year_start.datetime))
 
         return dementia_meds.find(DementiaMedications).exists()
 
@@ -512,10 +632,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         This is typically determined by:
         1. Coverage/insurance type indicating long-term care facility
         2. Patient address indicating institutional care facility
-        3. Frequent SNF/nursing facility encounters
+        3. Questionnaire response indicating nursing home residence
+        4. Frequent SNF/nursing facility encounters
 
         Note: Canvas may track this differently depending on implementation.
-        This method checks Coverage records for long-term care payer types.
+        This method checks Coverage records for long-term care payer types
+        and questionnaire responses for housing status.
 
         This exclusion only applies to patients age ≥66.
         """
@@ -537,7 +659,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 if any(keyword in plan_name_lower for keyword in self.NURSING_HOME_KEYWORDS):
                     return True
 
-        return False
+        # Check questionnaire responses for nursing home housing status
+        # Per AdvancedIllnessandFrailtyQDM: "Housing status" (LOINC 71802-3) with result "Lives in nursing home"
+        return self._has_questionnaire_response_with_codes(
+            patient, frozenset({self.QUESTIONNAIRE_NURSING_HOME_CODE})
+        )
 
     def get_stratification(self, patient: Patient, age: int) -> int | None:
         """
@@ -615,15 +741,20 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """Get active protocol override (adjustment) for this patient and protocol."""
         return ProtocolOverride.objects.get_active_adjustment(patient, self.protocol_key())
 
-    def in_numerator(self, patient: Patient) -> bool:
+    def in_numerator(self, patient: Patient, override: ProtocolOverride | None = None) -> bool:
         """
         Numerator: Women with one or more mammograms between October 1 of two years prior
         to the measurement period and the end of the measurement period (27-month window).
 
+        Args:
+            patient: The patient to check
+            override: Protocol override, if already fetched. If None, will be fetched.
+
         Exclusions: Not Applicable
         """
-        # Check for protocol override
-        override = self.get_protocol_override(patient)
+        # Use provided override or fetch if not provided
+        if override is None:
+            override = self.get_protocol_override(patient)
 
         if override:
             # Use custom period from override
@@ -734,14 +865,14 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             # Otherwise excluded (mastectomy, hospice, etc) - no card
             return []
 
-        # Patient is in denominator - check for protocol override for due date calculation
+        # Patient is in denominator - fetch protocol override once for use in numerator and due date calculation
         override = self.get_protocol_override(patient)
 
         # Get stratification for reporting
         stratum = self.get_stratification(patient, age)
         stratum_text = self._get_stratum_text(stratum)
 
-        if self.in_numerator(patient) and self._on_date:
+        if self.in_numerator(patient, override) and self._on_date:
             # Screening satisfied - calculate next due date
             due_in_days = self._calculate_due_in_days(override)
             narrative = self._build_satisfied_narrative(patient, due_in_days, stratum_text)
@@ -820,20 +951,16 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         )
 
     def _build_screening_recommendation(self) -> Recommendation:
-        """Build the screening recommendation with coding filter."""
-        coding_filter = self._build_coding_filter(Mammography, Tomography)
+        """Build the screening recommendation for mammography.
 
-        instruct_command = InstructCommand()
-        recommendation = instruct_command.recommend(
-            title="Discuss breast cancer screening and order imaging as appropriate",
+        Note: InstructCommand.coding only accepts SNOMED or UNSTRUCTURED code systems,
+        but mammography codes are in LOINC/CPT. Therefore, we use a descriptive title
+        and comment to guide clinicians rather than a coding filter.
+        """
+        instruct_command = InstructCommand(
+            comment="Order screening mammography per CMS125v14 breast cancer screening measure"
+        )
+        return instruct_command.recommend(
+            title="Discuss breast cancer screening and order mammography",
             button="Plan",
         )
-
-        # Override context with our coding filter while preserving effect_type
-        recommendation.context = {
-            "filter": {"coding": coding_filter},
-            "effect_type": recommendation.context.get("effect_type")
-            if recommendation.context
-            else None,
-        }
-        return recommendation

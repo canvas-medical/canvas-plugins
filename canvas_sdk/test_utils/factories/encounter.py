@@ -66,4 +66,3 @@ class EncounterFactory(factory.django.DjangoModelFactory[Encounter]):
     medium = EncounterMedium.OFFICE
     state = EncounterState.STARTED
     start_time = factory.LazyFunction(timezone.now)
-    end_time = None

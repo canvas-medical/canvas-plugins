@@ -881,18 +881,6 @@ class TestHelperMethods:
         assert result == Mammography.get_codes()
 
     @pytest.mark.django_db
-    def test_build_coding_filter_returns_system_and_codes(self) -> None:
-        """Test _build_coding_filter returns properly structured filter."""
-        result = ClinicalQualityMeasure125v14._build_coding_filter(Mammography)
-
-        assert isinstance(result, list)
-        assert len(result) > 0
-        for item in result:
-            assert "system" in item
-            assert "code" in item
-            assert isinstance(item["code"], list)
-
-    @pytest.mark.django_db
     def test_get_stratum_text_stratum_1(self) -> None:
         """Test _get_stratum_text returns correct text for stratum 1."""
         timeframe_end = arrow.get("2024-12-31")

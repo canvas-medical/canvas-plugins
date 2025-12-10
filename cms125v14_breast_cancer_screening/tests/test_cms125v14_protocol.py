@@ -1367,8 +1367,6 @@ class TestRecommendationPlanButton:
         recommendation = data["recommendations"][0]
         assert recommendation["button"] == "Plan"
         assert recommendation["command"]["type"] == "instruct"
-        assert "filter" in recommendation["context"]
-        assert "coding" in recommendation["context"]["filter"]
 
     @pytest.mark.django_db
     def test_recommendation_has_effect_type(self) -> None:
@@ -1399,79 +1397,6 @@ class TestRecommendationPlanButton:
         # Verify effect_type is present in context for proper button functionality
         assert "effect_type" in recommendation["context"]
         assert recommendation["context"]["effect_type"] == "ORIGINATE_INSTRUCT_COMMAND"
-
-    @pytest.mark.django_db
-    def test_recommendation_coding_filter_includes_mammography_codes(self) -> None:
-        """Test recommendation coding filter includes Mammography LOINC codes."""
-        import json
-
-        from canvas_sdk.effects import EffectType
-
-        timeframe_end = arrow.get("2024-12-31")
-        protocol = create_protocol_instance(
-            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
-        )
-
-        birth_date = timeframe_end.shift(years=-60).date()
-        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
-
-        visit_date = timeframe_end.shift(months=-6)
-        create_qualifying_visit(patient, visit_date)
-
-        effects = protocol.compute_results(patient)
-
-        # Verify this is a ProtocolCard effect
-        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
-
-        payload = json.loads(effects[0].payload)
-        recommendation = payload["data"]["recommendations"][0]
-        coding_filter = recommendation["context"]["filter"]["coding"]
-
-        # Find LOINC system in filter
-        loinc_entry = next((c for c in coding_filter if c["system"] == "loinc"), None)
-        assert loinc_entry is not None
-        assert len(loinc_entry["code"]) > 0
-
-        # Verify some mammography LOINC codes are present
-        mammography_loinc = Mammography.values.get(CodeConstants.LOINC, set())
-        for code in list(mammography_loinc)[:3]:  # Check first 3 codes
-            assert code in loinc_entry["code"]
-
-    @pytest.mark.django_db
-    def test_recommendation_coding_filter_includes_tomography_codes(self) -> None:
-        """Test recommendation coding filter includes Tomography CPT codes."""
-        import json
-
-        from canvas_sdk.effects import EffectType
-
-        timeframe_end = arrow.get("2024-12-31")
-        protocol = create_protocol_instance(
-            ClinicalQualityMeasure125v14, timeframe_end=timeframe_end
-        )
-
-        birth_date = timeframe_end.shift(years=-60).date()
-        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
-
-        visit_date = timeframe_end.shift(months=-6)
-        create_qualifying_visit(patient, visit_date)
-
-        effects = protocol.compute_results(patient)
-
-        # Verify this is a ProtocolCard effect
-        assert effects[0].type == EffectType.ADD_OR_UPDATE_PROTOCOL_CARD
-
-        payload = json.loads(effects[0].payload)
-        recommendation = payload["data"]["recommendations"][0]
-        coding_filter = recommendation["context"]["filter"]["coding"]
-
-        # Find CPT system in filter
-        cpt_entry = next((c for c in coding_filter if c["system"] == "cpt"), None)
-        assert cpt_entry is not None
-
-        # Verify tomography CPT code is present (77063)
-        tomography_cpt = Tomography.values.get(CodeConstants.CPT, set())
-        for code in tomography_cpt:
-            assert code in cpt_entry["code"]
 
 
 class TestTomographyNumerator:
@@ -2223,3 +2148,55 @@ class TestProtocolOverrideNumeratorLogic:
         # Patient should be in numerator because override is outside cycle
         # and standard 27-month window applies
         assert protocol.in_numerator(patient) is True
+
+    @pytest.mark.django_db
+    def test_in_numerator_uses_passed_override_parameter(self) -> None:
+        """Test that in_numerator uses override when passed explicitly."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = timeframe_end.shift(years=-1)
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        birth_date = timeframe_end.shift(years=-50).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # Create override with reference_date within cycle
+        reference_date = timeframe_end.shift(months=-6)
+        override = ProtocolOverride.objects.create(
+            patient=patient,
+            protocol_key=protocol.protocol_key(),
+            reference_date=reference_date.datetime,
+            cycle_in_days=365,
+            cycle_quantity=1,
+            cycle_unit="years",
+            is_snooze=False,
+            is_adjustment=True,
+            snooze_date=reference_date.date(),
+            snoozed_days=0,
+            snooze_comment="",
+            narrative="Custom cycle",
+            deleted=False,
+            status=ProtocolOverrideStatus.ACTIVE,
+        )
+
+        # Create mammogram OUTSIDE measurement period but within 27-month window
+        outside_mp_date = timeframe_start.shift(months=-6)
+        create_imaging_report_with_coding(
+            patient=patient,
+            value_set_class=Mammography,
+            original_date=outside_mp_date.date(),
+            result_date=outside_mp_date.date(),
+            assigned_date=outside_mp_date.datetime,
+        )
+
+        # When passing override explicitly, should use it (not fetch from DB)
+        assert protocol.in_numerator(patient, override) is False
+
+        # When passing None explicitly, should fetch from DB and get same result
+        assert protocol.in_numerator(patient, None) is False
+
+        # When not passing override at all (default), should also fetch from DB
+        assert protocol.in_numerator(patient) is False
