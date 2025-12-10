@@ -84,6 +84,7 @@
     "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
+    "HtmlCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
     "InstructCommand",
@@ -154,6 +155,9 @@
   ],
   "canvas_sdk.commands.commands.history_present_illness": [
     "HistoryOfPresentIllnessCommand"
+  ],
+  "canvas_sdk.commands.commands.html_command": [
+    "HtmlCommand"
   ],
   "canvas_sdk.commands.commands.imaging_order": [
     "ImagingOrderCommand"
@@ -258,6 +262,7 @@
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
+    "CommandChartSection",
     "ServiceProvider"
   ],
   "canvas_sdk.commands.validation": [
