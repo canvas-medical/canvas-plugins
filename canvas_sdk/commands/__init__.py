@@ -11,6 +11,7 @@ from canvas_sdk.commands.commands.goal import GoalCommand
 from canvas_sdk.commands.commands.history_present_illness import (
     HistoryOfPresentIllnessCommand,
 )
+from canvas_sdk.commands.commands.html_command import HtmlCommand
 from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
 from canvas_sdk.commands.commands.instruct import InstructCommand
 from canvas_sdk.commands.commands.lab_order import LabOrderCommand
@@ -53,6 +54,7 @@ __all__ = __exports__ = (
     "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
+    "HtmlCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
     "InstructCommand",
