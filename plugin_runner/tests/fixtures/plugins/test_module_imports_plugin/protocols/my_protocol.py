@@ -3,8 +3,6 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from test_module_imports_plugin.other_module.base import import_me
 
-from test_module_imports_plugin.other_module.base import import_me
-
 
 class Protocol(BaseProtocol):
     """

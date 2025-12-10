@@ -3,8 +3,6 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from test_caching_api.wrapper import WrappedCache, wrapped_get_cache
 
-from test_caching_api.wrapper import WrappedCache, wrapped_get_cache
-
 
 class Protocol(BaseProtocol):
     """
