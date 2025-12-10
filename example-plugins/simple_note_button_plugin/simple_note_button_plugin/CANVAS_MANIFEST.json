@@ -1,0 +1,27 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "simple_note_button_plugin",
+    "description": "A simple plugin that adds a hello world button to note headers",
+    "components": {
+        "commands": [],
+        "protocols": [
+            {
+                "class": "simple_note_button_plugin.handlers.hello_world_button:HelloWorldButton",
+                "description": "A button that shows hello world message",
+                "data_access": {
+                    "event": "SHOW_NOTE_HEADER_BUTTON",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": [],
+    "license": "NONE",
+    "readme": "./README.md"
+}

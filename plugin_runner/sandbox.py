@@ -139,6 +139,7 @@ STANDARD_LIBRARY_MODULES = {
     "json": {
         "dumps",
         "loads",
+        "JSONDecodeError",
     },
     "operator": {
         "and_",
@@ -194,6 +195,9 @@ STANDARD_LIBRARY_MODULES = {
     "uuid": {
         "uuid4",
         "UUID",
+    },
+    "defusedxml.ElementTree": {
+        "fromstring",
     },
     "zoneinfo": {
         "ZoneInfo",

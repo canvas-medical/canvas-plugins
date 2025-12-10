@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Patient Portal Plugin for Canvas"
+license = "MIT"
+name = "patient_portal_plugin"
+readme = "patient_portal_plugin/README.md"
+requires-python = ">=3.11"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

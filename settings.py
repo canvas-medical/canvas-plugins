@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib import parse
 
 from django.core.exceptions import ImproperlyConfigured
@@ -22,6 +22,7 @@ IS_TESTING = env_to_bool("IS_TESTING", "pytest" in sys.argv[0] or sys.argv[0] ==
 IS_SCRIPT = env_to_bool("IS_SCRIPT", "plugin_runner.py" not in sys.argv[0])
 PLUGIN_POOL_DEBUG = env_to_bool("PLUGIN_POOL_DEBUG")
 CUSTOMER_IDENTIFIER = os.getenv("CUSTOMER_IDENTIFIER", "local")
+HOSTNAME = os.getenv("HOSTNAME", "")
 APP_NAME = os.getenv("APP_NAME")
 
 if PLUGIN_POOL_DEBUG:
@@ -194,3 +195,11 @@ else:
             "TIMEOUT": CANVAS_SDK_CACHE_TIMEOUT_SECONDS,
         }
     }
+
+LOGSTASH_HOST = os.getenv("PLUGINS_LOGSTASH_URL")
+LOGSTASH_PORT = (
+    int(cast(str, os.getenv("PLUGINS_LOGSTASH_PORT")))
+    if os.getenv("PLUGINS_LOGSTASH_PORT")
+    else None
+)
+LOGSTASH_PROTOCOL = os.getenv("PLUGINS_LOGSTASH_PROTOCOL", "logger.logstash.HttpTransport")

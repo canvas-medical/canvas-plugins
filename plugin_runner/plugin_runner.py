@@ -6,7 +6,6 @@ import pickle
 import pkgutil
 import sys
 import threading
-import traceback
 from collections import defaultdict
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -232,7 +231,7 @@ class PluginRunner(PluginRunnerServicer):
                         p for p in relevant_plugins if p.startswith(f"{plugin_name}:")
                     ]
                 except Exception as ex:
-                    log.error(
+                    log.exception(
                         f"Failed to decode identifier for event {event_name} with context {event.context}"
                     )
                     sentry_sdk.capture_exception(ex)
@@ -295,12 +294,7 @@ class PluginRunner(PluginRunnerServicer):
                         log.info(f"{plugin_name}.compute() completed.")
 
                 except Exception as e:
-                    log.error(f"Encountered exception in plugin {plugin_name}:")
-
-                    for error_line_with_newlines in traceback.format_exception(e):
-                        for error_line in error_line_with_newlines.split("\n"):
-                            log.error(error_line)
-
+                    log.exception(f"Encountered exception in plugin {plugin_name}")
                     sentry_sdk.capture_exception(e)
                     continue
 
@@ -458,7 +452,7 @@ def synchronize_plugins(run_once: bool = False) -> None:
             if plugin_name:
                 message += f' for plugin "{plugin_name}"'
 
-            log.error(f"synchronize_plugins: {message}: {e}")
+            log.exception(f"synchronize_plugins: {message}")
             sentry_sdk.capture_exception(e)
 
         if run_once:
@@ -475,7 +469,7 @@ def synchronize_plugins_and_report_errors() -> None:
         try:
             synchronize_plugins()
         except Exception as e:
-            log.error(f"synchronize_plugins: error: {e}")
+            log.exception("synchronize_plugins: error")
             sentry_sdk.capture_exception(e)
 
         # don't crush redis if we're retrying in a tight loop
@@ -576,7 +570,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     try:
         manifest_json: PluginManifest = json.loads(manifest_json_str)
     except Exception as e:
-        log.error(f'Unable to load plugin "{name}": {e}')
+        log.exception(f'Unable to load plugin "{name}"')
         sentry_sdk.capture_exception(e)
 
         return False
@@ -588,7 +582,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         try:
             secrets_json = json.load(secrets_file.open())
         except Exception as e:
-            log.error(f'Unable to load secrets for plugin "{name}": {str(e)}')
+            log.exception(f'Unable to load secrets for plugin "{name}"')
             sentry_sdk.capture_exception(e)
 
     # TODO add existing schema validation from Michela here
@@ -597,7 +591,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             "components"
         ].get("applications", [])
     except Exception as e:
-        log.error(f'Unable to load plugin "{name}": {str(e)}')
+        log.exception(f'Unable to load plugin "{name}"')
         sentry_sdk.capture_exception(e)
 
         return False
@@ -611,7 +605,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             handler_module, handler_class = handler["class"].split(":")
             name_and_class = f"{name}:{handler_module}:{handler_class}"
         except ValueError as e:
-            log.error(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
+            log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
             sentry_sdk.capture_exception(e)
 
             any_failed = True
@@ -641,13 +635,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                     "secrets": secrets_json,
                 }
         except Exception as e:
-            log.error(f'Error importing module "{name_and_class}": {e}')
-
-            for error_line in traceback.format_exception(e):
-                log.error(error_line)
-
+            log.exception(f"Error importing module '{name_and_class}'")
             sentry_sdk.capture_exception(e)
-
             any_failed = True
 
     return not any_failed

@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "This protocol responds to the NOTE_STATE_CHANGE_EVENT_CREATED event.\n\n    It inserts a ProtocolCard containing a recommended Prescribe command. When the user triggers\n    this command, the supervising provider field will be automatically populated.\n\n    This plugin is primarily used to test and validate that the supervising provider is correctly\n    set during command initialization from a protocol."
+license = "MIT"
+name = "supervising_provider_prescribe_protocol"
+readme = "supervising_provider_prescribe_protocol/README.md"
+requires-python = ">=3.11"
+version = "0.0.1a"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "Add annotations to the supervising provider dropdown in Prescribe, Refill, and Adjust Prescription Commands"
+license = "MIT"
+name = "supervising_provider_plugin"
+readme = "supervising_provider_plugin/README.md"
+requires-python = ">=3.11"
+version = "0.0.1a"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
