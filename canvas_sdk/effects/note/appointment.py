@@ -201,7 +201,7 @@ class Appointment(AppointmentABC):
             try:
                 category, is_scheduleable = (
                     NoteType.objects.values_list("category", "is_scheduleable")
-                    .filter(deprecated_at__isnull=True)
+                    .filter(is_active=True)
                     .get(id=self.appointment_note_type_id)
                 )
                 if category != NoteTypeCategories.ENCOUNTER:
