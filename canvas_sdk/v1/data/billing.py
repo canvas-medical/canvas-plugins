@@ -54,13 +54,15 @@ class BillingLineItem(TimestampedModel, IdentifiableModel):
         related_name="billing_line_items",
         null=True,
     )
-    cpt = models.CharField(max_length=10)
-    charge = models.DecimalField(decimal_places=2, max_digits=8)
-    description = models.CharField(max_length=255)
-    units = models.IntegerField()
-    command_type = models.CharField(max_length=50)
-    command_id = models.IntegerField()
-    status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
+    cpt = models.CharField(max_length=10, default="99213")
+    charge = models.DecimalField(decimal_places=2, max_digits=8, default=0.00)
+    description = models.CharField(max_length=255, blank=True, default="")
+    units = models.IntegerField(default=1)
+    command_type = models.CharField(max_length=50, blank=True, default="")
+    command_id = models.IntegerField(null=True)
+    status = models.CharField(
+        choices=BillingLineItemStatus.choices, max_length=20, default=BillingLineItemStatus.ACTIVE
+    )
 
 
 class BillingLineItemModifier(Coding):

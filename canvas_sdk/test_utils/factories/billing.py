@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import factory
 
-from canvas_sdk.v1.data.billing import BillingLineItem, BillingLineItemStatus
+from canvas_sdk.v1.data.billing import BillingLineItem
 
 
 class BillingLineItemFactory(factory.django.DjangoModelFactory[BillingLineItem]):
@@ -17,10 +17,5 @@ class BillingLineItemFactory(factory.django.DjangoModelFactory[BillingLineItem])
     note = factory.SubFactory(
         "canvas_sdk.test_utils.factories.NoteFactory", patient=factory.SelfAttribute("..patient")
     )
-    cpt = "99213"  # Default office visit code
     charge = Decimal("100.00")
     description = "Office Visit"
-    units = 1
-    command_type = "encounter"
-    command_id = 1
-    status = BillingLineItemStatus.ACTIVE
