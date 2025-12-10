@@ -97,6 +97,8 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
         rows = cursor.fetchall()
         plugins = _extract_rows_to_dict(rows)
 
+    conn.close()
+
     return plugins
 
 
@@ -154,6 +156,32 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         yield download_path
 
 
+def run_plugin_migrations(plugin_name: str) -> None:
+    """Run database migrations for the given plugin."""
+    log.info(f"Running migrations for plugin '{plugin_name}'")
+
+    with open_database_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                "select count(*) as count from pg_catalog.pg_namespace where nspname = %s",
+                (plugin_name,),
+            )
+            rows = cursor.fetchall()
+            if rows[0]["count"] == 0:
+                # Execute SQL file for plugin schema initialization
+                sql_file_path = Path(__file__).parent / "init_plugin_schema.sql"
+                with open(sql_file_path) as f:
+                    sql_content = f.read()
+                    # Replace placeholder with actual plugin name
+                    sql_content = sql_content.replace("{plugin_name}", plugin_name)
+                    conn.cursor().execute(sql_content)
+
+                conn.commit()
+
+    # Generate migrations from the plugin's models
+    # Apply migrations to the database
+
+
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
@@ -169,6 +197,10 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
+
+        # if ENABLE_MIGRATIONS:
+        run_plugin_migrations(plugin_name=plugin_name)
+
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
 
