@@ -32,7 +32,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_appointment.filter.return_value.exists.return_value = True
 
         # Note type default behavior
-        mock_note_type.values_list.return_value.get.return_value = (
+        mock_note_type.values_list.return_value.filter.return_value.get.return_value = (
             NoteTypeCategories.ENCOUNTER,
             True,  # category, is_scheduleable
         )
@@ -204,7 +204,7 @@ def test_appointment_invalid_note_type_category(
 ) -> None:
     """Test appointment with non-ENCOUNTER note type."""
     mock_note_type = mock_db_queries["note_type"]
-    mock_note_type.values_list.return_value.get.return_value = (
+    mock_note_type.values_list.return_value.filter.return_value.get.return_value = (
         NoteTypeCategories.SCHEDULE_EVENT,
         True,
     )
@@ -223,7 +223,7 @@ def test_appointment_note_type_not_scheduleable(
 ) -> None:
     """Test appointment with non-scheduleable note type."""
     mock_note_type = mock_db_queries["note_type"]
-    mock_note_type.values_list.return_value.get.return_value = (
+    mock_note_type.values_list.return_value.filter.return_value.get.return_value = (
         NoteTypeCategories.ENCOUNTER,
         False,  # Not scheduleable
     )
@@ -242,7 +242,9 @@ def test_appointment_note_type_does_not_exist(
 ) -> None:
     """Test when note type doesn't exist."""
     mock_note_type = mock_db_queries["note_type"]
-    mock_note_type.values_list.return_value.get.side_effect = NoteType.DoesNotExist
+    mock_note_type.values_list.return_value.filter.return_value.get.side_effect = (
+        NoteType.DoesNotExist
+    )
 
     appointment = Appointment(**valid_appointment_data)
 
