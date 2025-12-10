@@ -199,9 +199,11 @@ class Appointment(AppointmentABC):
 
         if self.appointment_note_type_id:
             try:
-                category, is_scheduleable = NoteType.objects.values_list(
-                    "category", "is_scheduleable"
-                ).get(id=self.appointment_note_type_id)
+                category, is_scheduleable = (
+                    NoteType.objects.values_list("category", "is_scheduleable")
+                    .filter(deprecated_at__isnull=True)
+                    .get(id=self.appointment_note_type_id)
+                )
                 if category != NoteTypeCategories.ENCOUNTER:
                     errors.append(
                         self._create_error_detail(
