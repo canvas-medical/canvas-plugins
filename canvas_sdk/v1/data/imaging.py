@@ -1,8 +1,7 @@
 import json
-from typing import TYPE_CHECKING, Self, cast
+from typing import cast
 
 from django.db import models
-from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
@@ -21,9 +20,6 @@ from canvas_sdk.v1.data.common import (
     ReviewStatus,
 )
 from canvas_sdk.v1.data.task import Task
-
-if TYPE_CHECKING:
-    from canvas_sdk.value_set.value_set import ValueSet
 
 
 class ImagingOrder(AuditedModel, IdentifiableModel):
@@ -102,31 +98,9 @@ class ImagingReportQuerySet(
     BaseQuerySet,
     ForPatientQuerySetMixin,
     ImagingReportTimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
 ):
     """QuerySet for ImagingReport with value set filtering via codings."""
-
-    def find(self, value_set: type["ValueSet"]) -> Self:
-        """
-        Filter imaging reports to those matching codes in the ValueSet via codings.
-
-        This method filters imaging reports based on their associated codings,
-        matching against the code systems and codes defined in the ValueSet.
-
-        Example:
-            from canvas_sdk.v1.data.imaging import ImagingReport
-            from canvas_sdk.value_set.v2022.procedure import Mammography
-
-            mammography_reports = ImagingReport.objects.find(Mammography)
-
-            # Can be chained with other filters
-            recent_mammograms = ImagingReport.objects.filter(
-                patient=patient
-            ).find(Mammography).within(timeframe)
-        """
-        q_filter = Q()
-        for system, codes in ValueSetLookupQuerySetMixin.codings(value_set):
-            q_filter |= Q(codings__system=system, codings__code__in=codes)
-        return self.filter(q_filter).distinct()
 
 
 # ImagingReport uses TimestampedModel (not AuditedModel), so it doesn't have a 'deleted' field.
@@ -177,10 +151,9 @@ class ImagingReportCoding(Coding):
 
     report = models.ForeignKey(
         ImagingReport,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="codings",
         null=True,
-        db_column="report_id",
     )
 
 

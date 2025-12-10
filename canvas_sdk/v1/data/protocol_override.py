@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Self, cast
+from typing import TYPE_CHECKING, cast
 
 from django.db import models
 
@@ -33,53 +33,20 @@ class Status(models.TextChoices):
 class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
     """ProtocolOverrideQuerySet."""
 
-    def active_adjustments(self, protocol_key: str) -> Self:
-        """
-        Filter to active adjustments for a specific protocol.
-
-        This returns protocol overrides that are:
-        - Not deleted
-        - Status is ACTIVE
-        - is_adjustment is True
-        - Matching the given protocol_key
-
-        Results are ordered by most recently modified first.
-
-        Args:
-            protocol_key: The protocol identifier (e.g., 'CMS125v14').
-
-        Returns:
-            Filtered QuerySet of active adjustments.
-
-        Example:
-            >>> from canvas_sdk.v1.data.protocol_override import ProtocolOverride
-            >>> overrides = ProtocolOverride.objects.filter(
-            ...     patient=patient
-            ... ).active_adjustments("CMS125v14")
-            >>> latest = overrides.first()
-        """
-        return self.filter(
-            protocol_key=protocol_key,
-            deleted=False,
-            status=Status.ACTIVE,
-            is_adjustment=True,
-        ).order_by("-modified")
-
     def get_active_adjustment(
         self, patient: "Patient", protocol_key: str
     ) -> "ProtocolOverride | None":
         """
-        Get the most recent active adjustment for a patient and protocol.
+        Get the active adjustment for a patient and protocol.
 
-        This is a convenience method that combines filtering for a patient,
-        active adjustments for a protocol, and returns the first (most recent) one.
+        A protocol can have at most one active adjustment per patient.
 
         Args:
             patient: The patient to check.
             protocol_key: The protocol identifier (e.g., 'CMS125v14').
 
         Returns:
-            The most recent active ProtocolOverride adjustment, or None if not found.
+            The active ProtocolOverride adjustment, or None if not found.
 
         Example:
             >>> from canvas_sdk.v1.data.protocol_override import ProtocolOverride
@@ -90,7 +57,13 @@ class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin
             >>> if override:
             ...     print(f"Custom cycle: {override.cycle_in_days} days")
         """
-        return self.filter(patient=patient).active_adjustments(protocol_key).first()
+        return self.filter(
+            patient=patient,
+            protocol_key=protocol_key,
+            deleted=False,
+            status=Status.ACTIVE,
+            is_adjustment=True,
+        ).first()
 
 
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
