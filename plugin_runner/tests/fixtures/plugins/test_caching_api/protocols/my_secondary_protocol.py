@@ -4,6 +4,7 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 
+
 class Protocol(BaseProtocol):
     """
     You should put a helpful description of this protocol's behavior here.
