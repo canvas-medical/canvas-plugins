@@ -273,6 +273,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.event_validation_error": [
+    "EventValidationError"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
@@ -293,7 +296,6 @@
     "Appointment",
     "AppointmentIdentifier",
     "Note",
-    "NoteValidationError",
     "RemoveAppointmentLabel",
     "ScheduleEvent"
   ],
@@ -313,9 +315,6 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
-  ],
-  "canvas_sdk.effects.note.note_validation_error": [
-    "NoteValidationError"
   ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"

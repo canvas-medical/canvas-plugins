@@ -258,7 +258,6 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_USER: _ClassVar[EffectType]
     CREATE_NOTE: _ClassVar[EffectType]
     UPDATE_NOTE: _ClassVar[EffectType]
-    NOTE_VALIDATION_ERROR: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
@@ -297,6 +296,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
+    EVENT_VALIDATION_ERROR: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__METADATA: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__FORM: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__CREDIT_CARD_TRANSACTION: _ClassVar[EffectType]
@@ -560,7 +560,6 @@ SIMPLE_API_WEBSOCKET_BROADCAST: EffectType
 UPDATE_USER: EffectType
 CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
-NOTE_VALIDATION_ERROR: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
@@ -599,6 +598,7 @@ UPSERT_APPOINTMENT_METADATA: EffectType
 APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 REDIRECT_CONTEXT: EffectType
+EVENT_VALIDATION_ERROR: EffectType
 REVENUE__PAYMENT_PROCESSOR__METADATA: EffectType
 REVENUE__PAYMENT_PROCESSOR__FORM: EffectType
 REVENUE__PAYMENT_PROCESSOR__CREDIT_CARD_TRANSACTION: EffectType
