@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "canvas_fhir_client",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "protocols": [
+            {
+                "class": "canvas_fhir_client.handlers.handler:Handler",
+                "description": "Triggers a FHIR request when the button is clicked"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["CANVAS_FHIR_CLIENT_ID", "CANVAS_FHIR_CLIENT_SECRET"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
