@@ -8,6 +8,7 @@ from django.db import models
 from canvas_generated.messages.events_pb2 import Event as EventRequest
 from canvas_generated.messages.events_pb2 import EventType
 from canvas_sdk.events.base import Actor, Event, TargetType
+from canvas_sdk.test_utils.factories import CanvasUserFactory
 
 if TYPE_CHECKING:
     from canvas_sdk.v1.data import CanvasUser
@@ -16,8 +17,6 @@ if TYPE_CHECKING:
 @pytest.fixture
 def user(db: None) -> "CanvasUser":
     """Fixture for a CanvasUser instance."""
-    from canvas_sdk.test_utils.factories import CanvasUserFactory
-
     return CanvasUserFactory.create()
 
 
