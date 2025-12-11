@@ -872,6 +872,7 @@
     "AppointmentLabel",
     "AppointmentMetadata",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BannerAlertIntent",
     "BannerAlertStatus",
@@ -1148,6 +1149,7 @@
     "TransactorType"
   ],
   "canvas_sdk.v1.data.custom_attribute": [
+    "AttributeHub",
     "CustomAttribute",
     "CustomAttributeMixin"
   ],

@@ -14,9 +14,18 @@ create table if not exists {plugin_name}.custom_attribute (
     unique (content_type_id, object_id, name)
 );
 
-grant usage on {plugin_name}.custom_attribute_id_seq to canvas_sdk_read_only;
+grant usage on {plugin_name}.custom_attribute_dbid_seq to canvas_sdk_read_only;
 grant select on {plugin_name}.custom_attribute to canvas_sdk_read_only;
 grant insert, update, delete on {plugin_name}.custom_attribute to canvas_sdk_read_only;
+
+create table if not exists {plugin_name}.attribute_hub (
+    dbid serial primary key,
+    type varchar(255) not null
+);
+
+grant usage on {plugin_name}.attribute_hub_dbid_seq to canvas_sdk_read_only;
+grant select on {plugin_name}.attribute_hub to canvas_sdk_read_only;
+grant insert, update, delete on {plugin_name}.attribute_hub to canvas_sdk_read_only;
 
 
 create table {plugin_name}.django_content_type
@@ -31,11 +40,12 @@ insert into {plugin_name}.django_content_type (app_label, model) values
 ('v1', 'allergyintolerance'),
 ('v1', 'appointment'),
 ('v1', 'assessment'),
+('v1', 'attributehub'),
 ('v1', 'banneralert'),
 ('v1', 'billinglineitem'),
 ('v1', 'businessline'),
 ('v1', 'calendar'),
-('v1', 'canvasuser')
+('v1', 'canvasuser'),
 ('v1', 'careteammembership'),
 ('v1', 'careteamrole'),
 ('v1', 'chargedescriptionmaster'),
