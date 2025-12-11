@@ -10,7 +10,7 @@ from canvas_sdk.clients.llms.structures.settings.llm_settings import LlmSettings
 from canvas_sdk.utils.http import Http
 
 
-class LlmBase(ABC):
+class LlmApi(ABC):
     """Base class for LLM (Large Language Model) API clients.
 
     Provides common functionality for managing conversation prompts and making requests
@@ -35,7 +35,7 @@ class LlmBase(ABC):
         """
         self.settings = settings
         self.prompts: list[LlmTurn] = []
-        self.http = self._http()
+        self.http = Http(self._api_base_url())
 
     def reset_prompts(self) -> None:
         """Clear all stored prompts."""
@@ -66,7 +66,7 @@ class LlmBase(ABC):
             text: List of text strings for the system prompt.
         """
         prompt = LlmTurn(role=self.ROLE_SYSTEM, text=text)
-        if self.prompts and self.prompts[0].role == LlmBase.ROLE_SYSTEM:
+        if self.prompts and self.prompts[0].role == LlmApi.ROLE_SYSTEM:
             self.prompts[0] = prompt
         else:
             self.prompts.insert(0, prompt)
@@ -101,8 +101,8 @@ class LlmBase(ABC):
 
     @classmethod
     @abstractmethod
-    def _http(cls) -> Http:
-        """Create the Http instance for the LLM subclass."""
+    def _api_base_url(cls) -> str:
+        """Provide the API base url to the LlmApi subclass."""
         ...
 
     def attempt_requests(self, attempts: int) -> list[LlmResponse]:
@@ -140,4 +140,4 @@ class LlmBase(ABC):
         return result
 
 
-__exports__ = ("LlmBase",)
+__exports__ = ("LlmApi",)

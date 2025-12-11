@@ -5,13 +5,12 @@ from http import HTTPStatus
 
 from requests import exceptions
 
-from canvas_sdk.clients.llms.libraries.llm_base import LlmBase
+from canvas_sdk.clients.llms.libraries.llm_api import LlmApi
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
-from canvas_sdk.utils.http import Http
 
 
-class LlmOpenai(LlmBase):
+class LlmOpenai(LlmApi):
     """OpenAI LLM API client.
 
     Implements the LlmBase interface for OpenAI's API.
@@ -51,8 +50,8 @@ class LlmOpenai(LlmBase):
         }
 
     @classmethod
-    def _http(cls) -> Http:
-        return Http("https://us.api.openai.com")
+    def _api_base_url(cls) -> str:
+        return "https://us.api.openai.com"
 
     def request(self) -> LlmResponse:
         """Make a request to the OpenAI API.

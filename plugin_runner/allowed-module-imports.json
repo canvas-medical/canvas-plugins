@@ -12,20 +12,20 @@
     "LlmOpenai",
     "LlmResponse",
     "LlmSettings",
-    "LlmSettingsGpt5",
     "LlmTokens",
     "LlmTurn"
   ],
   "canvas_sdk.clients.llms.libraries": [
     "LlmAnthropic",
+    "LlmApi",
     "LlmGoogle",
     "LlmOpenai"
   ],
   "canvas_sdk.clients.llms.libraries.llm_anthropic": [
     "LlmAnthropic"
   ],
-  "canvas_sdk.clients.llms.libraries.llm_base": [
-    "LlmBase"
+  "canvas_sdk.clients.llms.libraries.llm_api": [
+    "LlmApi"
   ],
   "canvas_sdk.clients.llms.libraries.llm_google": [
     "LlmGoogle"

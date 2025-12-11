@@ -3,13 +3,12 @@ from http import HTTPStatus
 
 from requests import exceptions
 
-from canvas_sdk.clients.llms.libraries.llm_base import LlmBase
+from canvas_sdk.clients.llms.libraries.llm_api import LlmApi
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
-from canvas_sdk.utils.http import Http
 
 
-class LlmGoogle(LlmBase):
+class LlmGoogle(LlmApi):
     """Google Gemini LLM API client.
 
     Implements the LlmBase interface for Google's Generative Language API.
@@ -41,8 +40,8 @@ class LlmGoogle(LlmBase):
         }
 
     @classmethod
-    def _http(cls) -> Http:
-        return Http("https://generativelanguage.googleapis.com")
+    def _api_base_url(cls) -> str:
+        return "https://generativelanguage.googleapis.com"
 
     def request(self) -> LlmResponse:
         """Make a request to the Google Gemini API.
