@@ -611,6 +611,7 @@
     "AppointmentLabel",
     "AppointmentMetadata",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -846,6 +847,7 @@
     "TransactorType"
   ],
   "canvas_sdk.v1.data.custom_attribute": [
+    "AttributeHub",
     "CustomAttribute",
     "CustomAttributeMixin"
   ],
