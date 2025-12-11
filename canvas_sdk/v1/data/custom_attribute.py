@@ -1,4 +1,5 @@
 import datetime
+import decimal
 from typing import Any
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -34,7 +35,7 @@ class CustomAttribute(Model):
     text_value = models.TextField(null=True, blank=True)
     timestamp_value = models.DateTimeField(null=True, blank=True)
     int_value = models.IntegerField(null=True, blank=True)
-    float_value = models.FloatField(null=True, blank=True)
+    decimal_value = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
     bool_value = models.BooleanField(null=True, blank=True)
     json_value = models.JSONField(null=True, blank=True)
 
@@ -50,8 +51,8 @@ class CustomAttribute(Model):
             return self.timestamp_value
         elif self.int_value is not None:
             return self.int_value
-        elif self.float_value is not None:
-            return self.float_value
+        elif self.decimal_value is not None:
+            return self.decimal_value
         elif self.bool_value is not None:
             return self.bool_value
         elif self.json_value is not None:
@@ -65,7 +66,7 @@ class CustomAttribute(Model):
         self.text_value = None
         self.timestamp_value = None
         self.int_value = None
-        self.float_value = None
+        self.decimal_value = None
         self.bool_value = None
         self.json_value = None
 
@@ -77,8 +78,8 @@ class CustomAttribute(Model):
             self.text_value = val
         elif isinstance(val, int):
             self.int_value = val
-        elif isinstance(val, float):
-            self.float_value = val
+        elif isinstance(val, (float, decimal.Decimal)):
+            self.decimal_value = val
         elif isinstance(val, datetime.datetime):
             self.timestamp_value = val
         elif val is None:
