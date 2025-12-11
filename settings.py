@@ -91,7 +91,7 @@ PLUGIN_RUNNER_DATABASE_POOL_MAX = int(
 
 if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
-        "ENGINE": "canvas_sdk.db.backends.postgresql",
+        "ENGINE": "django.db.backends.postgresql",
         "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
         "OPTIONS": {
             "pool": {

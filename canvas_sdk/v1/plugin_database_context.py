@@ -31,16 +31,30 @@ def plugin_database_context(plugin_name: str):
     Thread-safe context manager for plugin operations.
 
     All Django ORM operations within this context will use the plugin's schema.
+    Sets search_path per-operation rather than per-connection.
     """
     old_plugin = get_current_plugin()
     set_current_plugin(plugin_name)
+
+    # Set search_path on the current connection for this context
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SET search_path = %s, public", [plugin_name])
+
     try:
         yield
     finally:
+        # Restore previous search_path if there was one
         if old_plugin:
             set_current_plugin(old_plugin)
+            with connection.cursor() as cursor:
+                cursor.execute("SET search_path = %s, public", [old_plugin])
         else:
             clear_current_plugin()
+            # Reset to default search_path
+            with connection.cursor() as cursor:
+                cursor.execute("SET search_path = public")
 
 
 __exports__ = (
