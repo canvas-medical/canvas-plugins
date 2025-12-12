@@ -10,7 +10,11 @@ from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.note import AppointmentIdentifier
-from canvas_sdk.effects.note.appointment import Appointment
+from canvas_sdk.effects.note.appointment import (
+    AddAppointmentLabel,
+    Appointment,
+    RemoveAppointmentLabel,
+)
 from canvas_sdk.v1.data.appointment import AppointmentProgressStatus
 from canvas_sdk.v1.data.note import NoteType, NoteTypeCategories
 
@@ -470,8 +474,6 @@ def test_add_appointment_label_values_property(
     valid_appointment_label_data: dict[str, Any],
 ) -> None:
     """Test that the values property returns the correct appointment_id and labels mapping."""
-    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
-
     effect = AddAppointmentLabel(**valid_appointment_label_data)
     expected_values = {
         "appointment_id": valid_appointment_label_data["appointment_id"],
@@ -484,8 +486,6 @@ def test_remove_appointment_label_values_property(
     valid_appointment_label_data: dict[str, Any],
 ) -> None:
     """Test that the values property returns the correct appointment_id and labels mapping."""
-    from canvas_sdk.effects.note.appointment import RemoveAppointmentLabel
-
     effect = RemoveAppointmentLabel(**valid_appointment_label_data)
     expected_values = {
         "appointment_id": valid_appointment_label_data["appointment_id"],
@@ -499,8 +499,6 @@ def test_add_appointment_label_valid_appointment(
     mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned if the appointment exists and label limit is not exceeded."""
-    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
-
     # Mock appointment exists with 1 existing label
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
@@ -521,8 +519,6 @@ def test_add_appointment_label_nonexistent_appointment(
     mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that an error is returned if the appointment doesn't exist (annotate returns None)."""
-    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
-
     # Mock appointment doesn't exist - first() returns None
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
@@ -551,8 +547,6 @@ def test_add_appointment_label_limit_exceeded(
     mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that an error is returned if adding labels would exceed the 3-label limit."""
-    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
-
     # Mock appointment exists with 2 existing labels
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
@@ -581,8 +575,6 @@ def test_add_appointment_label_valid_with_existing_labels(
     mock_appointment: MagicMock, valid_appointment_label_data: dict[str, Any]
 ) -> None:
     """Test that no errors are returned when adding labels within the limit."""
-    from canvas_sdk.effects.note.appointment import AddAppointmentLabel
-
     # Mock appointment exists with 1 existing label
     mock_filter = MagicMock()
     mock_annotate = MagicMock()
@@ -602,8 +594,6 @@ def test_remove_appointment_label_valid_appointment(
     valid_appointment_label_data: dict[str, Any],
 ) -> None:
     """Test that no errors are returned for remove operation (no validation needed)."""
-    from canvas_sdk.effects.note.appointment import RemoveAppointmentLabel
-
     effect = RemoveAppointmentLabel(**valid_appointment_label_data)
     errors = effect._get_error_details(method=None)
     assert errors == []
