@@ -126,6 +126,10 @@ from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPh
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocument,
+    UncategorizedClinicalDocumentReview,
+)
 from .user import CanvasUser
 
 __all__ = __exports__ = (
@@ -266,4 +270,6 @@ __all__ = __exports__ = (
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
+    "UncategorizedClinicalDocumentReview",
+    "UncategorizedClinicalDocument",
 )

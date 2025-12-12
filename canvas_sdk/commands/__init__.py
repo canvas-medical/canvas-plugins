@@ -31,6 +31,9 @@ from canvas_sdk.commands.commands.resolve_condition import ResolveConditionComma
 from canvas_sdk.commands.commands.review.imaging import ImagingReviewCommand
 from canvas_sdk.commands.commands.review.lab import LabReviewCommand
 from canvas_sdk.commands.commands.review.referral import ReferralReviewCommand
+from canvas_sdk.commands.commands.review.uncategorized_document import (
+    UncategorizedDocumentReviewCommand,
+)
 from canvas_sdk.commands.commands.review_of_systems import ReviewOfSystemsCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.structured_assessment import StructuredAssessmentCommand
@@ -73,6 +76,7 @@ __all__ = __exports__ = (
     "StopMedicationCommand",
     "StructuredAssessmentCommand",
     "TaskCommand",
+    "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand",
