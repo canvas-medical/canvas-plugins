@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.83.0 (2025-12-12)
+
+### Bug Fixes
+
+- Appointment validator checking for deprecated note types
+  ([#1335](https://github.com/canvas-medical/canvas-plugins/pull/1335),
+  [`b938020`](https://github.com/canvas-medical/canvas-plugins/commit/b93802005ade918f9e8c69582d4e7592fdf1f048))
+
+### Features
+
+- Uncategorized clinical documents review command
+  ([#1314](https://github.com/canvas-medical/canvas-plugins/pull/1314),
+  [`4e2393d`](https://github.com/canvas-medical/canvas-plugins/commit/4e2393d1af395d271b311f344175b85c58a57abf))
+
+
 ## v0.82.0 (2025-12-09)
 
 ### Features
