@@ -7,6 +7,7 @@ from typing import Any
 
 CANVAS_TOP_LEVEL_MODULES = (
     "canvas_sdk.caching",
+    "canvas_sdk.clients.aws",
     "canvas_sdk.commands",
     "canvas_sdk.effects",
     "canvas_sdk.events",
@@ -48,7 +49,7 @@ def main() -> None:
     """
     Generate a JSON file of the allowed canvas_sdk imports.
     """
-    print("Generating allowed canavs_sdk imports...")
+    print("Generating allowed canvas_sdk imports...")
 
     CANVAS_SUBMODULE_NAMES = [
         found_module
