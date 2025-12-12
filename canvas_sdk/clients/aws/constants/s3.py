@@ -15,3 +15,6 @@ class S3:
     SAFE_CHARACTERS: str = "-._~"
     REQUEST_TYPE: str = "aws4_request"
     UNSIGNED_PAYLOAD: str = "UNSIGNED-PAYLOAD"
+
+
+__exports__ = ()
