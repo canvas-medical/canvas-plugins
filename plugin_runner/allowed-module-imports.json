@@ -615,6 +615,7 @@
     "AppointmentLabel",
     "AppointmentMetadata",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -644,6 +645,8 @@
     "Coverage",
     "CoveragePosting",
     "CurrentNoteStateEvent",
+    "CustomAttribute",
+    "CustomAttributeMixin",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -851,6 +854,11 @@
     "TransactorCoverageType",
     "TransactorPhone",
     "TransactorType"
+  ],
+  "canvas_sdk.v1.data.custom_attribute": [
+    "AttributeHub",
+    "CustomAttribute",
+    "CustomAttributeMixin"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
@@ -1063,6 +1071,12 @@
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"
+  ],
+  "canvas_sdk.v1.plugin_database_context": [
+    "clear_current_plugin",
+    "get_current_plugin",
+    "plugin_context",
+    "set_current_plugin"
   ],
   "canvas_sdk.value_set.custom": [
     "Antiarrhythmics",

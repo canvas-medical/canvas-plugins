@@ -29,6 +29,7 @@ from .command import Command
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
+from .custom_attribute import AttributeHub, CustomAttribute, CustomAttributeMixin
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
@@ -140,6 +141,7 @@ __all__ = __exports__ = (
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -167,6 +169,8 @@ __all__ = __exports__ = (
     "Condition",
     "ConditionCoding",
     "Coverage",
+    "CustomAttribute",
+    "CustomAttributeMixin",
     "CoveragePosting",
     "CurrentNoteStateEvent",
     "DetectedIssue",

@@ -50,6 +50,7 @@ CANVAS_SDK_CACHE_TIMEOUT_SECONDS = int(os.getenv("CANVAS_SDK_CACHE_TIMEOUT", FOU
 METRICS_ENABLED = env_to_bool("PLUGINS_METRICS_ENABLED", not IS_SCRIPT)
 
 INSTALLED_APPS = [
+    "django.contrib.contenttypes",
     "canvas_sdk.v1",
 ]
 
