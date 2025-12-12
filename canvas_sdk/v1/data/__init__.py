@@ -42,6 +42,7 @@ from .immunization import (
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .instruction import Instruction, InstructionCoding
 from .invoice import Invoice
 from .lab import (
     LabOrder,
@@ -186,6 +187,8 @@ __all__ = __exports__ = (
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
