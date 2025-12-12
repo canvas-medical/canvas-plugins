@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "CMS131v14 - Diabetes: Eye Exam. Percentage of patients 18-75 years of age with diabetes who had a retinal or dilated eye exam by an eye care professional during the measurement period or a negative retinal exam (no evidence of retinopathy) in the 12 months prior to the measurement period."
+license = "MIT"
+name = "cms131v14_diabetes_eye_exam"
+readme = "cms131v14_diabetes_eye_exam/README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
