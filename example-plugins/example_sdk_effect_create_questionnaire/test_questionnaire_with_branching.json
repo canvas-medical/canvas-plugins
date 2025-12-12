@@ -1,0 +1,224 @@
+{
+  "name": "Patient Health Screening with Branching",
+  "form_type": "QUES",
+  "code_system": "LOINC",
+  "code": "75626-2",
+  "can_originate_in_charting": true,
+  "prologue": "This questionnaire will help us understand your current health status. Some questions will appear based on your previous answers.",
+  "display_results_in_social_history_section": true,
+  "questions": [
+    {
+      "content": "Do you currently smoke cigarettes?",
+      "code_system": "LOINC",
+      "code": "72166-2",
+      "code_description": "Tobacco smoking status",
+      "responses_code_system": "SNOMED",
+      "responses_type": "SING",
+      "display_result_in_social_history_section": true,
+      "responses": [
+        {
+          "name": "Yes",
+          "code": "373066001",
+          "code_description": "Yes (qualifier value)",
+          "value": "1"
+        },
+        {
+          "name": "No",
+          "code": "373067005",
+          "code_description": "No (qualifier value)",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "content": "How many cigarettes do you smoke per day?",
+      "code_system": "LOINC",
+      "code": "68520-2",
+      "code_description": "Number of cigarettes smoked per day",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "SING",
+      "enabled_behavior": "all",
+      "enabled_conditions": [
+        {
+          "question_code": "72166-2",
+          "operator": "=",
+          "value_code": "373066001",
+          "value_string": null
+        }
+      ],
+      "responses": [
+        {
+          "name": "Less than 10",
+          "code": "SMOKE_LIGHT",
+          "code_description": "Light smoker",
+          "value": "1"
+        },
+        {
+          "name": "10-20",
+          "code": "SMOKE_MODERATE",
+          "code_description": "Moderate smoker",
+          "value": "2"
+        },
+        {
+          "name": "More than 20",
+          "code": "SMOKE_HEAVY",
+          "code_description": "Heavy smoker",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "content": "Would you like information about smoking cessation programs?",
+      "code_system": "INTERNAL",
+      "code": "CESSATION_INFO",
+      "code_description": "Interest in smoking cessation",
+      "responses_code_system": "SNOMED",
+      "responses_type": "SING",
+      "enabled_behavior": "all",
+      "enabled_conditions": [
+        {
+          "question_code": "72166-2",
+          "operator": "=",
+          "value_code": "373066001",
+          "value_string": null
+        }
+      ],
+      "responses": [
+        {
+          "name": "Yes, please",
+          "code": "373066001",
+          "code_description": "Yes (qualifier value)",
+          "value": "1"
+        },
+        {
+          "name": "No, thank you",
+          "code": "373067005",
+          "code_description": "No (qualifier value)",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "content": "Do you consume alcohol?",
+      "code_system": "LOINC",
+      "code": "74013-4",
+      "code_description": "Alcoholic drinks per day",
+      "responses_code_system": "SNOMED",
+      "responses_type": "SING",
+      "display_result_in_social_history_section": true,
+      "responses": [
+        {
+          "name": "Never",
+          "code": "228274009",
+          "code_description": "Never drank alcohol",
+          "value": "0"
+        },
+        {
+          "name": "Occasionally",
+          "code": "228276006",
+          "code_description": "Occasional drinker",
+          "value": "1"
+        },
+        {
+          "name": "Regularly",
+          "code": "228273003",
+          "code_description": "Regular drinker",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "content": "How many alcoholic drinks do you have per week?",
+      "code_system": "LOINC",
+      "code": "11287-0",
+      "code_description": "Alcohol intake per week",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "SING",
+      "enabled_behavior": "any",
+      "enabled_conditions": [
+        {
+          "question_code": "74013-4",
+          "operator": "=",
+          "value_code": "228276006",
+          "value_string": null
+        },
+        {
+          "question_code": "74013-4",
+          "operator": "=",
+          "value_code": "228273003",
+          "value_string": null
+        }
+      ],
+      "responses": [
+        {
+          "name": "1-3 drinks",
+          "code": "ALCOHOL_LOW",
+          "code_description": "Low alcohol consumption",
+          "value": "1"
+        },
+        {
+          "name": "4-7 drinks",
+          "code": "ALCOHOL_MODERATE",
+          "code_description": "Moderate alcohol consumption",
+          "value": "2"
+        },
+        {
+          "name": "8-14 drinks",
+          "code": "ALCOHOL_HIGH",
+          "code_description": "High alcohol consumption",
+          "value": "3"
+        },
+        {
+          "name": "More than 14 drinks",
+          "code": "ALCOHOL_VERY_HIGH",
+          "code_description": "Very high alcohol consumption",
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "content": "Do you exercise regularly?",
+      "code_system": "LOINC",
+      "code": "89574-8",
+      "code_description": "Physical activity level",
+      "responses_code_system": "SNOMED",
+      "responses_type": "SING",
+      "responses": [
+        {
+          "name": "Yes, 3+ times per week",
+          "code": "256235009",
+          "code_description": "Exercises regularly",
+          "value": "2"
+        },
+        {
+          "name": "Sometimes, 1-2 times per week",
+          "code": "256236005",
+          "code_description": "Exercises occasionally",
+          "value": "1"
+        },
+        {
+          "name": "No",
+          "code": "256237001",
+          "code_description": "Does not exercise",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "content": "Any additional health concerns you'd like to discuss?",
+      "code_system": "INTERNAL",
+      "code": "FREE_TEXT_CONCERNS",
+      "code_description": "Additional health concerns",
+      "responses_code_system": "INTERNAL",
+      "responses_type": "TXT",
+      "responses": [
+        {
+          "name": "TXT",
+          "code": "FREE_TEXT_CONCERNS_RESPONSE",
+          "code_description": "Free text response for health concerns",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

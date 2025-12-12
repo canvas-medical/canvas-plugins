@@ -84,9 +84,9 @@
                             "additionalProperties": false,
                             "properties": {
                                 "name": { "type": "string", "description": "For SING/MULT, this is the text that will be displayed for each response. For TXT, use 'TXT'." },
-                                "code": { "type": "string", "description": "The assigned code for the response. No response codes should be reused within the same question." },
-                                "code_description": { "type": "string", "description": "A description of the assigned code." },
-                                "value": { "type": "string", "description": "For SING/MULT, leave blank if no scoring is desired. If scoring is desired, insert the numerical value assigned." }
+                                "code": { "type": "string", "description": "The assigned code for the response. No response codes should be reused within the same question.", "default": "" },
+                                "code_description": { "type": "string", "description": "A description of the assigned code.", "default": "" },
+                                "value": { "type": "string", "description": "For SING/MULT, leave blank if no scoring is desired. If scoring is desired, insert the numerical value assigned.", "default": "" }
                             },
                             "required": ["name", "code"]
                         }

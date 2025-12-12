@@ -2,10 +2,11 @@ import functools
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, NotRequired
 
 import yaml
 from jsonschema import Draft7Validator, validators
+from typing_extensions import TypedDict
 
 from canvas_sdk.utils.plugins import plugin_context
 
@@ -15,8 +16,17 @@ class Response(TypedDict):
 
     name: str
     code: str
-    code_description: str
-    value: str
+    value: NotRequired[str]
+    code_description: NotRequired[str]
+
+
+class EnabledCondition(TypedDict):
+    """An enablement condition for branching logic in a Question."""
+
+    question_code: str
+    operator: str
+    value_code: NotRequired[str | None]
+    value_string: NotRequired[str | None]
 
 
 class Question(TypedDict):
@@ -24,12 +34,14 @@ class Question(TypedDict):
 
     code_system: str
     code: str
-    code_description: str
     content: str
     responses_code_system: str
     responses_type: str
-    display_result_in_social_history_section: bool
     responses: list[Response]
+    code_description: NotRequired[str]
+    display_result_in_social_history_section: NotRequired[bool]
+    enabled_behavior: NotRequired[str]
+    enabled_conditions: NotRequired[list[EnabledCondition]]
 
 
 class QuestionnaireConfig(TypedDict):
@@ -40,14 +52,15 @@ class QuestionnaireConfig(TypedDict):
     code_system: str
     code: str
     can_originate_in_charting: bool
-    prologue: str
-    display_results_in_social_history_section: bool
     questions: list[Question]
+    prologue: NotRequired[str]
+    display_results_in_social_history_section: NotRequired[bool]
 
 
 def extend_with_defaults(validator_class: type[Draft7Validator]) -> type[Draft7Validator]:
     """Extend a Draft7Validator with default values for properties."""
     validate_properties = validator_class.VALIDATORS["properties"]
+    validate_items = validator_class.VALIDATORS["items"]
 
     def set_defaults(
         validator: Draft7Validator,
@@ -66,13 +79,41 @@ def extend_with_defaults(validator_class: type[Draft7Validator]) -> type[Draft7V
             schema,
         )
 
+    def set_items_defaults(
+        validator: Draft7Validator,
+        items: dict[str, Any] | list[dict[str, Any]],
+        instance: list[Any],
+        schema: dict[str, Any],
+    ) -> Generator[Any, None, None]:
+        # Apply defaults to items in arrays
+        if isinstance(items, dict) and "properties" in items:
+            for item in instance:
+                if isinstance(item, dict):
+                    for property, subschema in items["properties"].items():
+                        if "default" in subschema:
+                            item.setdefault(property, subschema["default"])
+
+        yield from validate_items(
+            validator,
+            items,
+            instance,
+            schema,
+        )
+
     return validators.extend(
         validator_class,
-        {"properties": set_defaults},
+        {"properties": set_defaults, "items": set_items_defaults},
     )
 
 
 ExtendedDraft7Validator = extend_with_defaults(Draft7Validator)
+
+
+def validate_yaml(yaml_content: str) -> QuestionnaireConfig:
+    """Validate a YAML string against the Questionnaire schema."""
+    questionnaire_config = yaml.load(yaml_content, Loader=yaml.SafeLoader)
+    ExtendedDraft7Validator(json_schema()).validate(questionnaire_config)
+    return questionnaire_config
 
 
 @plugin_context
@@ -93,7 +134,10 @@ def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | N
         PermissionError: If the resolved path is outside the plugin's directory.
         ValidationError: If the questionnaire file does not conform to the JSON schema.
     """
-    plugin_dir = kwargs["plugin_dir"]
+    plugin_dir = kwargs.get("plugin_dir")
+    if not plugin_dir:
+        raise ValueError("plugin_dir is required when loading from file")
+
     questionnaire_config_path = Path(plugin_dir / questionnaire_name.lstrip("/")).resolve()
 
     if not questionnaire_config_path.is_relative_to(plugin_dir):
@@ -101,10 +145,8 @@ def from_yaml(questionnaire_name: str, **kwargs: Any) -> QuestionnaireConfig | N
     elif not questionnaire_config_path.exists():
         raise FileNotFoundError(f"Questionnaire {questionnaire_name} not found.")
 
-    questionnaire_config = yaml.load(questionnaire_config_path.read_text(), Loader=yaml.SafeLoader)
-    ExtendedDraft7Validator(json_schema()).validate(questionnaire_config)
-
-    return questionnaire_config
+    yaml_content = questionnaire_config_path.read_text()
+    return validate_yaml(yaml_content)
 
 
 @functools.cache
@@ -117,9 +159,23 @@ def json_schema() -> dict[str, Any]:
     return schema
 
 
+def to_yaml(questionnaire_config: QuestionnaireConfig) -> str:
+    """
+    Convert a QuestionnaireConfig to YAML string.
+    """
+    return yaml.dump(
+        questionnaire_config, default_flow_style=False, sort_keys=False, allow_unicode=True
+    )
+
+
 __exports__ = (
     "Draft7Validator",
+    "EnabledCondition",
     "ExtendedDraft7Validator",
-    "from_yaml",
+    "Question",
     "QuestionnaireConfig",
+    "Response",
+    "from_yaml",
+    "to_yaml",
+    "validate_yaml",
 )

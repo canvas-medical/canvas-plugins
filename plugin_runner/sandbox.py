@@ -268,6 +268,12 @@ THIRD_PARTY_MODULES = {
         "RequestException",
         "Response",
     },
+    "yaml": {
+        "dump",
+        "load",
+        "safe_load",
+        "SafeLoader",
+    },
 }
 
 
