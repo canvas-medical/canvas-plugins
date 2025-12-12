@@ -43,6 +43,27 @@
     "ResultSplitter",
     "Split"
   ],
+  "canvas_sdk.clients.aws": [
+    "Credentials",
+    "S3",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.libraries": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.libraries.s3": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.structures": [
+    "Credentials",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.structures.credentials": [
+    "Credentials"
+  ],
+  "canvas_sdk.clients.aws.structures.s3_item": [
+    "S3Item"
+  ],
   "canvas_sdk.clients.llms": [
     "LlmAnthropic",
     "LlmGoogle",
