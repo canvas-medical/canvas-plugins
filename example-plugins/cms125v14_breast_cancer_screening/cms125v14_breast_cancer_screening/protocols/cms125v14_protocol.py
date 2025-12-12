@@ -55,22 +55,6 @@ from canvas_sdk.value_set.value_set import ValueSet
 from logger import log
 
 
-class MammographySNOMED(ValueSet):
-    """SNOMED CT codes for mammography procedure.
-
-    The standard Mammography value set only contains LOINC/CPT codes.
-    This provides SNOMED codes for use with InstructCommand which requires SNOMED.
-
-    Reference: https://vsac.nlm.nih.gov/context/cs/codesystem/SNOMEDCT/version/2019-03/code/241055006/info
-    """
-
-    VALUE_SET_NAME = "Mammography (SNOMED)"
-    SNOMEDCT = {
-        "241055006",  # Mammography (procedure)
-        "71651007",  # Mammography of breast (procedure)
-    }
-
-
 class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     """
     Breast Cancer Screening.
@@ -165,9 +149,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         "skilled nursing",
     )
 
-    # SNOMED codes from questionnaires for exclusion detection
-    # From hospice_and_frailty.yml (QQ_004):
-    # Per HospiceQDM-7.0.000.cql lines 15-17
     QUESTIONNAIRE_HOSPICE_CODES = frozenset(
         {
             "428361000124107",  # Discharge to home for hospice care
@@ -176,9 +157,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         }
     )
 
-    # Frailty device codes from hospice_and_frailty.yml (QQ_004)
-    # Per AdvancedIllnessandFrailtyQDM-10.0.000.cql - "Medical equipment used" (LOINC 98181-1)
-    # with result in FrailtyDevice value set (OID: 2.16.840.1.113883.3.464.1003.118.12.1300)
     QUESTIONNAIRE_FRAILTY_DEVICE_CODES = frozenset(
         {
             "58938008",  # Wheelchair
@@ -192,13 +170,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         }
     )
 
-    # From hospice_and_palliative.yml (QQ_006):
-    # Per PalliativeCareQDM-5.0.000.cql line 13 - FACIT-Pal assessment (LOINC 71007-9)
     QUESTIONNAIRE_PALLIATIVE_CODE = "305284002"  # Receiving palliative care
 
-    # Nursing home housing status from hospice_and_frailty.yml
-    # Per AdvancedIllnessandFrailtyQDM-10.0.000.cql lines 35-42
-    # Assessment "Housing status" (LOINC 71802-3) with result "Lives in nursing home"
     QUESTIONNAIRE_NURSING_HOME_CODE = "160734000"  # Lives in nursing home (finding)
 
     def _has_questionnaire_response_with_codes(
@@ -216,14 +189,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         Returns:
             True if any response matches the provided codes
         """
-        # Get committed interviews for the patient
         interviews = Interview.objects.for_patient(str(patient.id)).committed()
 
         if not interviews.exists():
             return False
 
-        # Query responses that match the target codes
-        # InterviewQuestionResponse.response_option.code contains the SNOMED code
         matching_responses = InterviewQuestionResponse.objects.filter(
             interview__in=interviews,
             response_option__code__in=snomed_codes,
@@ -231,7 +201,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         return matching_responses.exists()
 
-    def _has_billing_with_codes(self, patient: Patient, *value_sets: ValueSet) -> bool:
+    def _has_billing_with_codes(self, patient: Patient, *value_sets: type[ValueSet]) -> bool:
         """Check if patient has billing codes from any of the provided value sets.
 
         Args:
@@ -246,7 +216,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return bool(all_codes and billing.filter(cpt__in=all_codes).exists())
 
     @staticmethod
-    def _combine_value_set_codes(*value_sets: ValueSet) -> set[str]:
+    def _combine_value_set_codes(*value_sets: type[ValueSet]) -> set[str]:
         """Combine codes from multiple value sets into a single set.
 
         Args:
@@ -263,11 +233,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Adds support for: OBSERVATION, ENCOUNTER, CLAIM, and PROTOCOL_OVERRIDE events.
         """
-        # Return cached value if already set
-        if self._patient_id:
+        if self._patient_id is not None:
             return self._patient_id
 
-        # Events that have patient_id in context - use directly (no DB query needed)
         events_with_patient_in_context = (
             EventType.OBSERVATION_CREATED,
             EventType.OBSERVATION_UPDATED,
@@ -285,10 +253,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             self._patient_id = patient_id
             return self._patient_id
 
-        # Events that require DB query (context is empty for encounters)
         if self.event.type in (EventType.ENCOUNTER_CREATED, EventType.ENCOUNTER_UPDATED):
-            # Encounter doesn't have a direct patient field - access via note relationship
-            # Encounter -> note -> patient
             patient_id = (
                 Encounter.objects.select_related("note__patient")
                 .values_list("note__patient__id", flat=True)
@@ -297,7 +262,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             self._patient_id = str(patient_id)
             return self._patient_id
 
-        # Fall back to base class implementation (which also sets self._patient_id)
+        # fallback
         return super().patient_id_from_target()
 
     def compute(self) -> list[Effect]:
@@ -319,7 +284,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     def had_mastectomy(self, patient: Patient) -> bool:
         """Check if patient had a bilateral mastectomy or equivalent.
 
-        Per CMS125v14 CQL, checks for:
+        Checks for:
         1. Bilateral mastectomy (procedure or history diagnosis)
         2. Two unilateral mastectomies (left + right procedures)
         3. Unilateral mastectomy procedure + status post diagnosis on the other side
@@ -334,7 +299,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             onset_date__lte=self.timeframe.end.date(),
         )
 
-        # Check for bilateral mastectomy (procedure or diagnosis)
         bilateral = conditions.find(BilateralMastectomy)
         if not bilateral.exists():
             bilateral = conditions.find(HistoryOfBilateralMastectomy)
@@ -342,14 +306,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if bilateral.exists():
             return True
 
-        # Check for two unilateral mastectomies (left + right procedures)
         left_unilateral = conditions.find(UnilateralMastectomyLeft)
         right_unilateral = conditions.find(UnilateralMastectomyRight)
 
         if left_unilateral.exists() and right_unilateral.exists():
             return True
 
-        # Check for unilateral mastectomy procedure + status post diagnosis on the other side
         if left_unilateral.exists():
             status_post_right = conditions.find(StatusPostRightMastectomy)
             if status_post_right.exists():
@@ -360,35 +322,25 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             if status_post_left.exists():
                 return True
 
-        # Check for status post left + status post right mastectomy diagnoses
-        # Per CQL: "Right Mastectomy Diagnosis" includes StatusPostRightMastectomy
-        # and "Left Mastectomy Diagnosis" includes StatusPostLeftMastectomy
         status_post_left = conditions.find(StatusPostLeftMastectomy)
         status_post_right = conditions.find(StatusPostRightMastectomy)
         if status_post_left.exists() and status_post_right.exists():
             return True
 
-        # Check for unspecified laterality mastectomy combined with any sided mastectomy
-        # Per CQL, UnilateralMastectomyUnspecifiedLaterality with anatomicalLocationSite
-        # matching left/right qualifies. Since Canvas doesn't have anatomicalLocationSite,
-        # we check if unspecified laterality + any other mastectomy indicator exists.
         unspecified = conditions.find(UnilateralMastectomyUnspecifiedLaterality)
         if unspecified.exists():
-            # If patient has unspecified + any left-side indicator = bilateral equivalent
             if (
                 left_unilateral.exists()
                 or status_post_left.exists()
                 or conditions.find(StatusPostLeftMastectomy).exists()
             ):
                 return True
-            # If patient has unspecified + any right-side indicator = bilateral equivalent
             if (
                 right_unilateral.exists()
                 or status_post_right.exists()
                 or conditions.find(StatusPostRightMastectomy).exists()
             ):
                 return True
-            # If patient has TWO unspecified laterality diagnoses, assume bilateral
             if unspecified.count() >= 2:
                 return True
 
@@ -406,7 +358,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             and age < self.AGE_RANGE_START
             and not self.had_mastectomy(patient)
         ):
-            # Calculate patient's 42nd birthday
             birth_date_arrow = arrow.get(patient.birth_date)
             birthday_42 = birth_date_arrow.shift(years=self.AGE_RANGE_START)
             days_until = (birthday_42 - self.timeframe.end).days
@@ -446,14 +397,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             patient: The patient to check
             age: Patient's age at end of measurement period
         """
-        # Check age and sex
         if not (self.AGE_RANGE_START <= age <= self.AGE_RANGE_END):
             return False
 
         if patient.sex_at_birth != "F":
             return False
 
-        # Check for qualifying visit per CMS125v14 spec
         return self.has_qualifying_visit(patient)
 
     def in_hospice_care(self, patient: Patient) -> bool:
@@ -466,13 +415,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         3. Questionnaire responses indicating hospice care (from hospice_and_frailty.yml
            and hospice_and_palliative.yml questionnaires)
         """
-        # Check billing codes
         if self._has_billing_with_codes(patient, HospiceCareAmbulatory, HospiceEncounter):
             return True
 
-        # Check for hospice diagnosis conditions using prevalencePeriod overlap logic
-        # Per HospiceQDM-7.0.000.cql: prevalencePeriod overlaps day of "Measurement Period"
-        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
         hospice_conditions = (
             Condition.objects.filter(
                 patient=patient,
@@ -488,7 +433,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if hospice_conditions.exists():
             return True
 
-        # Check questionnaire responses for hospice indicators
         return self._has_questionnaire_response_with_codes(
             patient, self.QUESTIONNAIRE_HOSPICE_CODES
         )
@@ -506,9 +450,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         Note: Using conditions within timeframe (not "up to end") to match CQL's
         requirement that palliative care must be during the measurement period.
         """
-        # Check conditions for palliative care diagnosis using prevalencePeriod overlap logic
-        # Per PalliativeCareQDM-5.0.000.cql line 24: prevalencePeriod overlaps day of "Measurement Period"
-        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
         if (
             Condition.objects.filter(
                 patient=patient,
@@ -523,13 +464,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         ):
             return True
 
-        # Check billing line items for palliative care encounters/interventions
         if self._has_billing_with_codes(
             patient, PalliativeCareEncounter, PalliativeCareIntervention
         ):
             return True
 
-        # Check questionnaire responses for palliative care indicator
         return self._has_questionnaire_response_with_codes(
             patient, frozenset({self.QUESTIONNAIRE_PALLIATIVE_CODE})
         )
@@ -546,9 +485,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Returns True if any frailty indicator is found.
         """
-        # Check for frailty diagnosis or symptom using prevalencePeriod overlap logic
-        # Per AdvancedIllnessandFrailtyQDM: prevalencePeriod overlaps day of "Measurement Period"
-        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= start)
         frailty_conditions = Condition.objects.filter(
             patient=patient,
             onset_date__lte=self.timeframe.end.date(),
@@ -562,12 +498,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if frailty_conditions.find(FrailtySymptom).exists():
             return True
 
-        # Check for frailty encounter billing codes
         if self._has_billing_with_codes(patient, FrailtyEncounter):
             return True
 
-        # Check questionnaire responses for frailty device indicator
-        # Per spec: "Medical equipment used" (LOINC 98181-1) with result in FrailtyDevice value set
         return self._has_questionnaire_response_with_codes(
             patient, self.QUESTIONNAIRE_FRAILTY_DEVICE_CODES
         )
@@ -579,11 +512,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Returns True if either condition is met.
         """
-        # Check for advanced illness diagnosis using overlap logic (MP or prior year)
-        # Prior year = 1 year before measurement period start
         prior_year_start = self.timeframe.start.shift(years=-1)
 
-        # A condition overlaps if: onset_date <= end AND (resolution_date IS NULL OR resolution_date >= lookback_start)
         advanced_illness_conditions = Condition.objects.filter(
             patient=patient,
             onset_date__lte=self.timeframe.end.date(),
@@ -592,9 +522,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if advanced_illness_conditions.find(AdvancedIllness).exists():
             return True
 
-        # Check for dementia medications using overlap logic (MP or prior year)
-        # A medication overlaps if: start_date <= end AND (end_date IS NULL OR end_date >= lookback_start)
-        # Use .datetime for timezone-aware datetime comparison on DateTimeField
         dementia_meds = Medication.objects.filter(
             patient=patient,
             start_date__lte=self.timeframe.end.datetime,
@@ -614,11 +541,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         This exclusion only applies to patients age ≥66.
         """
-        # Check frailty indicator
         if not self.has_frailty_indicator(patient):
             return False
 
-        # Check advanced illness or dementia medications
         return self.has_advanced_illness_or_dementia_meds(patient)
 
     def in_nursing_home(self, patient: Patient) -> bool:
@@ -638,26 +563,20 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         This exclusion only applies to patients age ≥66.
         """
-        # Get all coverages up to end of measurement period
         coverages = Coverage.objects.filter(
             patient=patient,
             coverage_start_date__lte=self.timeframe.end.date(),
         )
 
-        # Check if any coverage indicates long-term care
         for coverage in coverages:
-            # Check coverage_type for Long Term Care
             if coverage.coverage_type == TransactorCoverageType.LTC:
                 return True
 
-            # Check plan name for keywords as fallback
             if coverage.plan:
                 plan_name_lower = str(coverage.plan).lower()
                 if any(keyword in plan_name_lower for keyword in self.NURSING_HOME_KEYWORDS):
                     return True
 
-        # Check questionnaire responses for nursing home housing status
-        # Per AdvancedIllnessandFrailtyQDM: "Housing status" (LOINC 71802-3) with result "Lives in nursing home"
         return self._has_questionnaire_response_with_codes(
             patient, frozenset({self.QUESTIONNAIRE_NURSING_HOME_CODE})
         )
@@ -710,25 +629,19 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if not self.in_initial_population(patient, age):
             return False
 
-        # Check hospice exclusion
         if self.in_hospice_care(patient):
             return False
 
-        # Check palliative care exclusion (all ages)
         if self.received_palliative_care(patient):
             return False
 
-        # Check mastectomy exclusion
         if self.had_mastectomy(patient):
             return False
 
-        # Check age-based exclusions (age ≥66 only)
         if age >= 66:
-            # Check frailty + advanced illness/dementia exclusion
             if self.has_frailty_with_advanced_illness(patient):
                 return False
 
-            # Check nursing home exclusion
             if self.in_nursing_home(patient):
                 return False
 
@@ -749,39 +662,30 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         Exclusions: Not Applicable
         """
-        # Use provided override or fetch if not provided
         if override is None:
             override = self.get_protocol_override(patient)
 
         if override:
-            # Use custom period from override
             reference_date = arrow.get(override.reference_date)
             cycle_days = override.cycle_in_days
 
-            # Check if we're within the cycle
             days_since_reference = (self.now - reference_date).days
 
             if days_since_reference <= cycle_days:
-                # Within cycle, use measurement period only
                 period_start = self.timeframe.start
             else:
-                # Outside cycle, fall back to standard logic
                 period_start = self.timeframe.start.shift(months=-1 * self.EXTRA_SCREENING_MONTHS)
         else:
-            # Standard 27-month window: October 1 of two years prior to end of measurement period
             period_start = self.timeframe.start.shift(months=-1 * self.EXTRA_SCREENING_MONTHS)
 
         period_end = self.timeframe.end
 
-        # Create extended timeframe for the 27-month window
         extended_timeframe = Timeframe(start=period_start, end=period_end)
 
-        # Query for mammography billing line items using SDK's .within() method
         mammography_billing = BillingLineItem.objects.filter(patient=patient).within(
             extended_timeframe
         )
 
-        # Get all mammography codes from both value sets
         all_screening_codes = self._combine_value_set_codes(Mammography, Tomography)
 
         if all_screening_codes:
@@ -790,9 +694,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             )
 
             if mammography_billing.exists():
-                # Get the most recent mammography billing item
                 last_billing = mammography_billing.first()
-                # Get the datetime from the note (exists() guarantees first() returns non-None)
                 if (
                     last_billing is not None
                     and last_billing.note is not None
@@ -801,10 +703,9 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                     self._on_date = arrow.get(last_billing.note.datetime_of_service)
                     return True
 
-        # Also check imaging reports (for mammographies documented outside billing)
         imaging_reports = (
             ImagingReport.objects.filter(patient=patient)
-            .find(Mammography | Tomography)  # type: ignore[arg-type]
+            .find(Mammography | Tomography)
             .filter(
                 original_date__gte=period_start.date(),
                 original_date__lte=period_end.date(),
@@ -814,7 +715,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         if imaging_reports.exists():
             last_report = imaging_reports.first()
-            # exists() guarantees first() returns non-None
             if last_report is not None and last_report.original_date is not None:
                 self._on_date = arrow.get(last_report.original_date)
                 return True
@@ -836,14 +736,11 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         """
         protocol_key = self.protocol_key()
 
-        # Calculate age once to avoid repeated calculations
         age = int(patient.age_at(self.timeframe.end))
 
         if not self.in_denominator(patient, age):
-            # Not applicable - check if young patient
             first_due = self.first_due_in(patient, age)
             if first_due and first_due > 0:
-                # Young patient - show when they'll be eligible
                 narrative = (
                     f"{patient.first_name} will be eligible for breast cancer screening "
                     f"in {first_due} days."
@@ -859,18 +756,14 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 )
                 return [card.apply()]
 
-            # Otherwise excluded (mastectomy, hospice, etc) - no card
             return []
 
-        # Patient is in denominator - fetch protocol override once for use in numerator and due date calculation
         override = self.get_protocol_override(patient)
 
-        # Get stratification for reporting
         stratum = self.get_stratification(patient, age)
         stratum_text = self._get_stratum_text(stratum)
 
         if self.in_numerator(patient, override) and self._on_date:
-            # Screening satisfied - calculate next due date
             due_in_days = self._calculate_due_in_days(override)
             narrative = self._build_satisfied_narrative(patient, due_in_days, stratum_text)
 
@@ -885,7 +778,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             )
             return [card.apply()]
 
-        # Screening due - add recommendations
         narrative = (
             f"No mammography found in the last 27 months. "
             f"{patient.first_name} is due for breast cancer screening.{stratum_text}"
@@ -918,10 +810,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if self._on_date is None:
             return -1  # Fallback: indicate overdue if somehow called without a date
         if override:
-            # Use custom cycle from override
             return (self._on_date.shift(days=override.cycle_in_days) - self.now).days
 
-        # Standard calculation: 27 months (12 + 15)
         return (
             self._on_date.shift(days=self.timeframe.duration, months=self.EXTRA_SCREENING_MONTHS)
             - self.now

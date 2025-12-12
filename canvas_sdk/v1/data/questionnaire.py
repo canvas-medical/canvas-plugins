@@ -113,16 +113,13 @@ class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQ
     pass
 
 
-InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
-
-
 class Interview(TimestampedModel, IdentifiableModel):
     """Interview."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_interview_001"
 
-    objects = cast(InterviewQuerySet, InterviewManager())
+    objects = models.Manager.from_queryset(InterviewQuerySet)()
 
     deleted = models.BooleanField()
     committer = models.ForeignKey(
