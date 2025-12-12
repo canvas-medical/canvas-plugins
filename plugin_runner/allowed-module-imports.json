@@ -273,6 +273,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.event_validation_error": [
+    "EventValidationError"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
