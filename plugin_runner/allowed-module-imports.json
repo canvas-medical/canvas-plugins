@@ -48,6 +48,9 @@
     "S3",
     "S3Item"
   ],
+  "canvas_sdk.clients.aws.constants": [
+    "S3"
+  ],
   "canvas_sdk.clients.aws.libraries": [
     "S3"
   ],
