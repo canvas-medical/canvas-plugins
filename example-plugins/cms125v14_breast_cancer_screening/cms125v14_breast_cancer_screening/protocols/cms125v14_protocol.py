@@ -273,9 +273,6 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             EventType.OBSERVATION_UPDATED,
             EventType.CLAIM_CREATED,
             EventType.CLAIM_UPDATED,
-            EventType.PROTOCOL_OVERRIDE_CREATED,
-            EventType.PROTOCOL_OVERRIDE_UPDATED,
-            EventType.PROTOCOL_OVERRIDE_DELETED,
         )
 
         if self.event.type in events_with_patient_in_context:
