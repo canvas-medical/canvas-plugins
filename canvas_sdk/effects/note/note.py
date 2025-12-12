@@ -25,6 +25,8 @@ ACTION_STATE_MATRIX = {
     "unlock": NoteStates.UNLOCKED,
     "sign": NoteStates.SIGNED,
     "push_charges": NoteStates.PUSHED,
+    "check_in": NoteStates.CONVERTED,
+    "no_show": NoteStates.NOSHOW,
 }
 
 
@@ -78,6 +80,22 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
+    def check_in(self) -> Effect:
+        """Mark the note as checked-in."""
+        self._validate_before_effect("check_in")
+        return Effect(
+            type=EffectType.CHECK_IN_NOTE,
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
+        )
+
+    def no_show(self) -> Effect:
+        """Mark the note as no-show."""
+        self._validate_before_effect("no_show")
+        return Effect(
+            type=EffectType.NO_SHOW_NOTE,
+            payload=json.dumps({"data": {"note": str(self.instance_id)}}),
+        )
+
     def _validate_state_transition(
         self, note: NoteModel, next_state: NoteStates
     ) -> tuple[bool, InitErrorDetails | None]:
@@ -89,17 +107,19 @@ class Note(NoteOrAppointmentABC):
                 "value", "Unsupported state transitions", next_state
             )
 
-        # if next_state not in TRANSITION_STATE_MATRIX.get(cast(NoteStates, current_state), []):
-        #     return False, self._create_error_detail(
-        #         "value",
-        #         f"Invalid state transition from {current_state} to {next_state}.",
-        #         next_state,
-        #     )
-
         is_sig_required = note.note_type_version.is_sig_required
         if next_state == NoteStates.SIGNED and not is_sig_required:
             return False, self._create_error_detail(
                 "value", "Cannot sign a note that does not require a signature.", next_state
+            )
+
+        if (
+            next_state == NoteStates.CONVERTED or next_state == NoteStates.NOSHOW
+        ) and note.note_type_version.category != NoteTypeCategories.APPOINTMENT:
+            return False, self._create_error_detail(
+                "value",
+                "Only appointments can be checked in or marked as no-show.",
+                next_state,
             )
 
         return True, None
