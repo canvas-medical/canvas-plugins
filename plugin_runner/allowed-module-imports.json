@@ -655,6 +655,7 @@
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
@@ -879,6 +880,7 @@
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportCoding",
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
@@ -2291,6 +2293,9 @@
   ],
   "canvas_sdk.value_set.v2026.symptom": [
     "FrailtySymptom"
+  ],
+  "canvas_sdk.value_set.v2026.tomography": [
+    "Tomography"
   ],
   "canvas_sdk.value_set.value_set": [
     "CodeConstants",

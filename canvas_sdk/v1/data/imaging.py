@@ -1,8 +1,18 @@
 import json
+from typing import cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    BaseQuerySet,
+    ForPatientQuerySetMixin,
+    IdentifiableModel,
+    TimeframeLookupQuerySetMixin,
+    TimestampedModel,
+    ValueSetLookupQuerySetMixin,
+)
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
@@ -75,6 +85,29 @@ class ImagingReview(AuditedModel, IdentifiableModel):
     )
 
 
+class ImagingReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
+    """A mixin that adds queryset functionality to filter ImagingReports using timeframes."""
+
+    @property
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on for timeframe queries."""
+        return "original_date"
+
+
+class ImagingReportQuerySet(
+    BaseQuerySet,
+    ForPatientQuerySetMixin,
+    ImagingReportTimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
+):
+    """QuerySet for ImagingReport with value set filtering via codings."""
+
+
+# ImagingReport uses TimestampedModel (not AuditedModel), so it doesn't have a 'deleted' field.
+# Use base Manager instead of BaseModelManager which filters by deleted=False.
+ImagingReportManager = models.Manager.from_queryset(ImagingReportQuerySet)
+
+
 class ImagingReport(TimestampedModel, IdentifiableModel):
     """Model to read ImagingReport data."""
 
@@ -85,6 +118,8 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreport_001"
+
+    objects = cast(ImagingReportQuerySet, ImagingReportManager())
 
     review_mode = models.CharField(choices=DocumentReviewMode.choices, max_length=2)
     junked = models.BooleanField()
@@ -108,8 +143,23 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
+class ImagingReportCoding(Coding):
+    """Coding for an ImagingReport (LOINC, CPT, SNOMED codes for imaging procedures)."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_imagingreportcoding_001"
+
+    report = models.ForeignKey(
+        ImagingReport,
+        on_delete=models.CASCADE,
+        related_name="codings",
+        null=True,
+    )
+
+
 __exports__ = (
     "ImagingOrder",
     "ImagingReview",
     "ImagingReport",
+    "ImagingReportCoding",
 )
