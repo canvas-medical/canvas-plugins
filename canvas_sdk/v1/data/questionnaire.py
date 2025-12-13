@@ -107,7 +107,7 @@ class QuestionnaireQuestionMap(TimestampedModel):
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING, null=True)
 
 
-class InterviewQuerySet(BaseQuerySet, ForPatientQuerySetMixin, CommittableQuerySetMixin):
+class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
     """InterviewQuerySet."""
 
     pass
