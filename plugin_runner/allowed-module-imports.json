@@ -12,6 +12,9 @@
   "canvas_sdk.clients.canvas_fhir": [
     "CanvasFhir"
   ],
+  "canvas_sdk.clients.canvas_fhir.client": [
+    "CanvasFhir"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",

@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,13 +15,15 @@ MOCK_CREDENTIALS = {
 
 
 @pytest.fixture
-def mock_get_cache():
+def mock_get_cache() -> Generator[MagicMock, None, None]:
+    """Mock the get_cache method of the CanvasFhir instance."""
     with patch("canvas_sdk.clients.canvas_fhir.client.get_cache") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_post():
+def mock_post() -> Generator[MagicMock, None, None]:
+    """Mock the post method of the Http instance."""
     with patch("canvas_sdk.utils.http.Http.post") as mock:
         yield mock
 
@@ -33,7 +36,9 @@ def test__api_base_url(mock_get_cache: MagicMock) -> None:
     assert result == expected
 
 
-def test__get_credentials_without_cached_credentials(mock_get_cache: MagicMock, mock_post: MagicMock) -> None:
+def test__get_credentials_without_cached_credentials(
+    mock_get_cache: MagicMock, mock_post: MagicMock
+) -> None:
     """Test the _get_credentials method of the CanvasFhir instance without cached credentials."""
     mock_get_cache.return_value.get.return_value = None
     mock_post.return_value = MagicMock(status_code=200, json=lambda: MOCK_CREDENTIALS)
@@ -44,7 +49,9 @@ def test__get_credentials_without_cached_credentials(mock_get_cache: MagicMock, 
     assert result == expected
 
 
-def test__get_credentials_with_cached_credentials(mock_get_cache: MagicMock, mock_post: MagicMock) -> None:
+def test__get_credentials_with_cached_credentials(
+    mock_get_cache: MagicMock, mock_post: MagicMock
+) -> None:
     """Test the _get_credentials method of the CanvasFhir instance with cached credentials."""
     mock_get_cache.return_value.get.return_value = MOCK_CREDENTIALS
 
