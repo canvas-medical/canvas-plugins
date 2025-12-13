@@ -1,7 +1,7 @@
 from canvas_sdk.effects import Effect
 from canvas_sdk.handlers.action_button import ActionButton
 
-from canvas_fhir_client.client.client import CanvasFHIRClient
+from canvas_sdk.clients import CanvasFhir
 
 from logger import log
 
@@ -22,7 +22,7 @@ class Handler(ActionButton):
 
         log.info(f"--------------------------------")
 
-        client = CanvasFHIRClient(client_id, client_secret, customer_identifier)
+        client = CanvasFhir(client_id, client_secret, customer_identifier)
 
         search_response = client.search("AllergyIntolerance", {"patient": f"Patient/{patient_id}"})
 

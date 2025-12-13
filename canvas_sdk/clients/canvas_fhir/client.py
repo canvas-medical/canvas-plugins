@@ -1,3 +1,4 @@
+from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.utils.http import Http
 
 from urllib.parse import urlencode
@@ -14,7 +15,7 @@ class Credentials(TypedDict):
     token_type: str
 
 
-class CanvasFHIRClient:
+class CanvasFhir:
     """Client for interacting with the Canvas FHIR API."""
 
     def __init__(self, client_id: str, client_secret: str, customer_identifier: str):
@@ -90,6 +91,14 @@ class CanvasFHIRClient:
     def _get_credentials(self) -> Credentials:
         """Retrieves the credentials from the Canvas API."""
 
+        cache = get_cache()
+        key = f"canvas_fhir_credentials_{self._customer_identifier}"
+
+        cached_credentials = cache.get(key)
+
+        if cached_credentials:
+            return Credentials(cached_credentials)
+
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
         }
@@ -112,4 +121,8 @@ class CanvasFHIRClient:
 
         response_json = response.json()
 
+        cache.set(key, response_json, timeout_seconds=response_json["expires_in"] - 60)
+
         return Credentials(response_json)
+
+__exports__ = ("CanvasFhir",)
