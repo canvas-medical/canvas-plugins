@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 from urllib.parse import urlencode
 
 from canvas_sdk.caching.plugins import get_cache
@@ -90,7 +90,7 @@ class CanvasFhir:
         cached_credentials = cache.get(key)
 
         if cached_credentials:
-            return Credentials(cached_credentials)
+            return cast(Credentials, cached_credentials)
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -116,7 +116,7 @@ class CanvasFhir:
 
         cache.set(key, response_json, timeout_seconds=response_json["expires_in"] - 60)
 
-        return Credentials(response_json)
+        return cast(Credentials, response_json)
 
 
 __exports__ = ("CanvasFhir",)
