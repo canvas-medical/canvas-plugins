@@ -11,6 +11,7 @@ CANVAS_TOP_LEVEL_MODULES = (
     "canvas_sdk.effects",
     "canvas_sdk.events",
     "canvas_sdk.handlers",
+    "canvas_sdk.clients",
     "canvas_sdk.protocols",
     "canvas_sdk.questionnaires",
     "canvas_sdk.templates",
