@@ -14,7 +14,7 @@ from canvas_sdk.v1.data.base import (
 
 
 class UncategorizedClinicalDocumentReviewQuerySet(
-    BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin
+    CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet
 ):
     """A queryset for uncategorized clinical document reviews."""
 

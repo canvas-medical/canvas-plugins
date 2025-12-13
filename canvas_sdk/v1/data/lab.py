@@ -16,7 +16,7 @@ from canvas_sdk.v1.data.base import (
 from canvas_sdk.v1.data.staff import Staff
 
 
-class LabReportQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+class LabReportQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reports."""
 
     pass
@@ -61,7 +61,7 @@ class LabReport(AuditedModel, IdentifiableModel):
     custom_document_name = models.CharField(max_length=500)
 
 
-class LabReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
 
     pass
@@ -96,7 +96,7 @@ class LabValueTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
         return "report__original_date"
 
 
-class LabValueQuerySet(ValueSetLookupQuerySet, LabValueTimeframeLookupQuerySetMixin):
+class LabValueQuerySet(LabValueTimeframeLookupQuerySetMixin, ValueSetLookupQuerySet):
     """LabValueQuerySet."""
 
     pass

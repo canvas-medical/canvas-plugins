@@ -32,7 +32,9 @@ class ImmunizationReasonsNotGiven(models.TextChoices):
 
 
 class ImmunizationQuerySet(
-    ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin
+    CommittableQuerySetMixin,
+    ForPatientQuerySetMixin,
+    ValueSetLookupQuerySet,
 ):
     """ImmunizationQuerySet."""
 
@@ -90,7 +92,7 @@ class ImmunizationCoding(Coding):
 
 
 class ImmunizationStatementQuerySet(
-    ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin
+    CommittableQuerySetMixin, ForPatientQuerySetMixin, ValueSetLookupQuerySet
 ):
     """ImmunizationStatementQuerySet."""
 

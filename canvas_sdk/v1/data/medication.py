@@ -20,7 +20,7 @@ class Status(TextChoices):
     INACTIVE = "inactive", "inactive"
 
 
-class MedicationQuerySet(ValueSetLookupQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+class MedicationQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, ValueSetLookupQuerySet):
     """MedicationQuerySet."""
 
     def active(self) -> Self:
