@@ -6,6 +6,43 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.extend_ai.constants": [
+    "BaseProcessor",
+    "ParserChunking",
+    "ParserTarget",
+    "ProcessorType",
+    "RunStatus",
+    "SplitMethod",
+    "VersionName"
+  ],
+  "canvas_sdk.clients.extend_ai.libraries": [
+    "Client"
+  ],
+  "canvas_sdk.clients.extend_ai.structures": [
+    "Classification",
+    "ProcessorMeta",
+    "ProcessorRun",
+    "ProcessorVersion",
+    "RequestFailed",
+    "StoredFile"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.config": [
+    "AdvancedOptionsClassification",
+    "AdvancedOptionsExtraction",
+    "AdvancedOptionsSplitter",
+    "ConfigClassification",
+    "ConfigExtraction",
+    "ConfigSplitter",
+    "Parser",
+    "PartRange"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.processor_result": [
+    "Insight",
+    "ResultClassification",
+    "ResultExtraction",
+    "ResultSplitter",
+    "Split"
+  ],
   "canvas_sdk.clients.llms": [
     "LlmAnthropic",
     "LlmGoogle",

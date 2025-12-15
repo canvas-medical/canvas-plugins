@@ -180,6 +180,19 @@ class Http:
         )
 
     @measured(track_plugins_usage=True)
+    def delete(
+        self, url: str, headers: Mapping[str, str | bytes | None] | None = None
+    ) -> requests.Response:
+        """Sends a DELETE request."""
+        if headers is None:
+            headers = {}
+        return self._session.delete(
+            self.join_url(url),
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+        )
+
+    @measured(track_plugins_usage=True)
     def batch_requests(
         self,
         batch_requests: Iterable[BatchableRequest],
