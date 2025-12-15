@@ -2,9 +2,10 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, TypedDict, Union, get_args, get_origin
+from typing import Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
+from typing_extensions import TypedDict
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
