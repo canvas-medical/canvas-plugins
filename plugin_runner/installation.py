@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 from collections.abc import Generator
@@ -12,6 +13,7 @@ from urllib import parse
 import psycopg
 import requests
 import sentry_sdk
+from django.db.models import Index
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -22,6 +24,7 @@ from plugin_runner.exceptions import (
     PluginInstallationError,
     PluginUninstallationError,
 )
+from plugin_runner.sandbox import Sandbox
 from settings import (
     AWS_ACCESS_KEY_ID,
     AWS_REGION,
@@ -156,30 +159,153 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         yield download_path
 
 
-def run_plugin_migrations(plugin_name: str) -> None:
+def create_plugin_schema(plugin_name: str) -> None:
     """Run database migrations for the given plugin."""
     log.info(f"Running migrations for plugin '{plugin_name}'")
 
-    with open_database_connection() as conn:
-        with conn.cursor(row_factory=dict_row) as cursor:
-            cursor.execute(
-                "select count(*) as count from pg_catalog.pg_namespace where nspname = %s",
-                (plugin_name,),
-            )
-            rows = cursor.fetchall()
-            if rows[0]["count"] == 0:
-                # Execute SQL file for plugin schema initialization
-                sql_file_path = Path(__file__).parent / "init_plugin_schema.sql"
-                with open(sql_file_path) as f:
-                    sql_content = f.read()
-                    # Replace placeholder with actual plugin name
-                    sql_content = sql_content.replace("{plugin_name}", plugin_name)
-                    conn.cursor().execute(sql_content)
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            "select count(*) as count from pg_catalog.pg_namespace where nspname = %s",
+            (plugin_name,),
+        )
+        rows = cursor.fetchall()
+        if rows[0]["count"] == 0:
+            # Execute SQL file for plugin schema initialization
+            sql_file_path = Path(__file__).parent / "init_plugin_schema.sql"
+            with open(sql_file_path) as f:
+                sql_content = f.read()
+                # Replace placeholder with actual plugin name
+                sql_content = sql_content.replace("{plugin_name}", plugin_name)
+                conn.cursor().execute(sql_content)
 
-                conn.commit()
+            conn.commit()
 
-    # Generate migrations from the plugin's models
-    # Apply migrations to the database
+
+def generate_create_table_sql(plugin_name: str, model_class) -> str:
+    """Generate CREATE TABLE SQL from Django model metadata."""
+    print("MODEL CLASS META:", model_class)
+    table_name = f"{plugin_name}.{model_class._meta.db_table}"
+
+    # Build field definitions
+    field_definitions = []
+
+    for field in model_class._meta.local_fields:
+        field_sql = generate_field_sql(field)
+        field_definitions.append(f"    {field.column} {field_sql}")
+
+    # Build index definitions
+    index_statements = []
+    for index in model_class._meta.indexes:
+        index_sql = generate_index_sql(plugin_name, model_class._meta.db_table, index)
+        index_statements.append(index_sql)
+
+    # Construct CREATE TABLE statement
+    fields_sql = ",\n".join(field_definitions)
+    create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n{fields_sql}\n);"
+
+    # Add index statements
+    if index_statements:
+        create_table += "\n\n" + "\n".join(index_statements)
+
+    return create_table
+
+
+def generate_field_sql(field) -> str:
+    """Convert Django field to PostgreSQL column definition."""
+    from django.db.models import (
+        BigAutoField,
+        BooleanField,
+        CharField,
+        DateTimeField,
+        DecimalField,
+        ForeignKey,
+        IntegerField,
+        JSONField,
+        TextField,
+    )
+
+    if isinstance(field, BigAutoField):
+        return "SERIAL PRIMARY KEY"
+    elif isinstance(field, CharField):
+        max_length = getattr(field, "max_length", 255)
+        null_clause = "" if field.null else " NOT NULL"
+        return f"VARCHAR({max_length}){null_clause}"
+    elif isinstance(field, TextField):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"TEXT{null_clause}"
+    elif isinstance(field, IntegerField):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"INTEGER{null_clause}"
+    elif isinstance(field, DateTimeField):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"TIMESTAMP WITH TIME ZONE{null_clause}"
+    elif isinstance(field, BooleanField):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"BOOLEAN{null_clause}"
+    elif isinstance(field, ForeignKey):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"INTEGER{null_clause}"
+    elif isinstance(field, DecimalField):
+        max_digits = getattr(field, "max_digits", 10)
+        decimal_places = getattr(field, "decimal_places", 2)
+        null_clause = "" if field.null else " NOT NULL"
+        return f"NUMERIC({max_digits},{decimal_places}){null_clause}"
+    elif isinstance(field, JSONField):
+        null_clause = "" if field.null else " NOT NULL"
+        return f"JSONB{null_clause}"
+    else:
+        # Fallback for unknown field types
+        return "TEXT"
+
+
+def generate_index_sql(plugin_name: str, table_name: str, index: Index) -> str:
+    """Generate CREATE INDEX SQL from Django Index object."""
+    index_name = f"{plugin_name}_{index.name}"
+    table_full_name = f"{plugin_name}.{table_name}"
+    field_list = ", ".join(index.fields)
+
+    return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
+
+
+def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
+    """Generate Django migrations for plugin models."""
+    log.info(f"Generating migrations for plugin '{plugin_name}'")
+    try:
+        # Add plugin directory to Python path
+        if str(plugin_path) not in sys.path:
+            sys.path.insert(0, str(plugin_path))
+
+        # Dynamically load plugin models
+        models_path = plugin_path / "models"
+        if models_path.exists():
+            # Load all model files in the plugin
+            for model_file in models_path.glob("*.py"):
+                if model_file.name == "__init__.py":
+                    continue
+                module_name = f"{plugin_name}.models.{model_file.stem}"
+                print(f"Loading module {module_name} from {model_file}")
+                s = Sandbox(model_file, namespace=module_name)
+                cls = s.execute()
+                print(cls.keys())
+
+                # Generate CREATE TABLE SQL for each model
+                for model_name, model_class in cls.items():
+                    if model_name == "Model":
+                        continue  # skip the base class
+                    if hasattr(model_class, "_meta"):
+                        create_sql = generate_create_table_sql(plugin_name, model_class)
+                        print(f"Generated SQL for {model_name}:")
+                        print(create_sql)
+
+                        # Execute the CREATE TABLE statement
+                        from django.db import connection
+
+                        with connection.cursor() as cursor:
+                            cursor.execute(create_sql)
+
+    except Exception as e:
+        log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
+        raise e
 
 
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
@@ -199,7 +325,10 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
 
         # if ENABLE_MIGRATIONS:
-        run_plugin_migrations(plugin_name=plugin_name)
+        create_plugin_schema(plugin_name=plugin_name)
+
+        # Generate and apply migrations for plugin models
+        generate_plugin_migrations(plugin_name, plugin_installation_path)
 
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')

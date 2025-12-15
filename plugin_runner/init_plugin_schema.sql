@@ -109,12 +109,14 @@ insert into {plugin_name}.django_content_type (app_label, model) values
       for content_type_record in
           select id, app_label, model from {plugin_name}.django_content_type
       loop
+          execute('set search_path to {plugin_name};');
           partition_name := '{plugin_name}.custom_attribute_' ||  content_type_record.app_label || '_' || content_type_record.model;
           execute format(
               'create table if not exists %I partition of {plugin_name}.custom_attribute for values in (%L)',
               partition_name,
               content_type_record.id
           );
+          execute('set search_path to public;');
       end loop;
   end
 $$;
