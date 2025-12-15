@@ -111,6 +111,7 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.base": [
+    "CommandConfiguration",
     "_BaseCommand",
     "_ReviewableCommandMixin",
     "_SendableCommandMixin"
@@ -338,6 +339,9 @@
   ],
   "canvas_sdk.effects.claim_queue": [
     "MoveClaimToQueue"
+  ],
+  "canvas_sdk.effects.commands_configuration": [
+    "CommandsConfiguration"
   ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
