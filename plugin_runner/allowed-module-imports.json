@@ -863,6 +863,9 @@
     "pharmacy_http",
     "science_http"
   ],
+  "canvas_sdk.v1.data.base": [
+    "Model"
+  ],
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
