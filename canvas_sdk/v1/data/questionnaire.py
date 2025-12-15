@@ -1,11 +1,9 @@
 from collections.abc import Container
-from typing import cast
 
 from django.db import models
 from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
-    BaseModelManager,
     BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
