@@ -8,6 +8,7 @@ from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.protocols.timeframe import Timeframe
+from canvas_sdk.v1.data.base import ValueSetType
 from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
@@ -52,7 +53,6 @@ from canvas_sdk.value_set.v2026.procedure import (
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.tomography import Tomography
-from canvas_sdk.value_set.value_set import ValueSet
 from logger import log
 
 
@@ -87,6 +87,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
     This version of the eCQM uses QDM version 5.6. Please refer to the eCQI resource center (https://ecqi.healthit.gov/qdm) for more information on the QDM.
     More information: https://ecqi.healthit.gov/sites/default/files/ecqm/measures/CMS125-v14.0.000-QDM.html
     """
+
+    _patient_id: str | None  # needed for type inference in patient_id_from_target override
 
     class Meta:
         """Meta class for CMS125v14."""
@@ -199,7 +201,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
             value_codings__code__in=snomed_codes,
         ).exists()
 
-    def _has_billing_with_codes(self, patient: Patient, *value_sets: ValueSet) -> bool:
+    def _has_billing_with_codes(self, patient: Patient, *value_sets: ValueSetType) -> bool:
         """Check if patient has billing codes from any of the provided value sets.
 
         Args:
@@ -214,7 +216,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return bool(all_codes and billing.filter(cpt__in=all_codes).exists())
 
     @staticmethod
-    def _combine_value_set_codes(*value_sets: ValueSet) -> set[str]:
+    def _combine_value_set_codes(*value_sets: ValueSetType) -> set[str]:
         """Combine codes from multiple value sets into a single set.
 
         Args:
