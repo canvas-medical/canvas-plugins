@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import arrow
 
+from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.protocols.clinical_quality_measure import ClinicalQualityMeasure
 from canvas_sdk.protocols.timeframe import Timeframe
 from canvas_sdk.test_utils.factories import (
@@ -15,11 +16,14 @@ from canvas_sdk.test_utils.factories import (
     ImagingReportCodingFactory,
     ImagingReportFactory,
     NoteFactory,
+    ObservationFactory,
+    ObservationValueCodingFactory,
 )
 from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.note import Note
+from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.value_set.value_set import CodeConstants, ValueSet
 
@@ -344,9 +348,54 @@ def create_imaging_report_with_coding(
     return report
 
 
+def create_observation_with_value_coding(
+    patient: Patient,
+    snomed_code: str,
+    effective_datetime: arrow.Arrow | None = None,
+    display: str = "Test observation value",
+    **kwargs: Any,
+) -> Observation:
+    """
+    Create an Observation with proper ObservationValueCoding using a SNOMED code.
+
+    Args:
+        patient: The patient for this observation.
+        snomed_code: The SNOMED code for the observation value.
+        effective_datetime: When the observation was made. Defaults to now.
+        display: Display text for the coding. Defaults to "Test observation value".
+        **kwargs: Additional fields to pass to ObservationFactory.
+
+    Returns:
+        Observation instance with associated ObservationValueCoding.
+    """
+    if effective_datetime is None:
+        effective_datetime = arrow.now()
+
+    if hasattr(effective_datetime, "datetime"):
+        effective_dt = effective_datetime.datetime
+    else:
+        effective_dt = effective_datetime
+
+    observation = ObservationFactory.create(
+        patient=patient,
+        effective_datetime=effective_dt,
+        **kwargs,
+    )
+
+    ObservationValueCodingFactory.create(
+        observation=observation,
+        system=CodeSystems.SNOMED,
+        code=snomed_code,
+        display=display,
+    )
+
+    return observation
+
+
 __exports__ = (
     "create_condition_with_coding",
     "create_encounter_with_billing",
     "create_imaging_report_with_coding",
+    "create_observation_with_value_coding",
     "create_protocol_instance",
 )

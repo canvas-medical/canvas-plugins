@@ -13,6 +13,7 @@ from canvas_sdk.test_utils.factories import (
 from canvas_sdk.test_utils.helpers import (
     create_condition_with_coding,
     create_imaging_report_with_coding,
+    create_observation_with_value_coding,
     create_protocol_instance,
 )
 from canvas_sdk.test_utils.helpers import (
@@ -1215,3 +1216,262 @@ class TestComputeHappyPath:
             mock_timeframe.return_value = custom_timeframe
             result = protocol.compute()
             assert len(result) == 1  # Should return a protocol card
+
+
+class TestObservationBasedDetection:
+    """Test observation-based detection for hospice, palliative care, frailty, and nursing home."""
+
+    @pytest.mark.django_db
+    def test_hospice_care_observation_excludes_patient(self) -> None:
+        """Test observation with hospice care SNOMED code excludes patient."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # "428361000124107" = Discharge to home for hospice care
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="428361000124107",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Discharge to home for hospice care",
+        )
+
+        assert protocol.in_hospice_care(patient) is True
+        assert protocol.in_denominator(patient, age) is False
+
+    @pytest.mark.django_db
+    def test_hospice_care_observation_healthcare_facility_excludes(self) -> None:
+        """Test observation with healthcare facility hospice code excludes patient."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # "428371000124100" = Discharge to healthcare facility for hospice care
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="428371000124100",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Discharge to healthcare facility for hospice care",
+        )
+
+        assert protocol.in_hospice_care(patient) is True
+
+    @pytest.mark.django_db
+    def test_palliative_care_observation_excludes_patient(self) -> None:
+        """Test observation with palliative care SNOMED code excludes patient."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # "305284002" = Receiving palliative care
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="305284002",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Receiving palliative care",
+        )
+
+        assert protocol.received_palliative_care(patient) is True
+        assert protocol.in_denominator(patient, age) is False
+
+    @pytest.mark.django_db
+    def test_frailty_device_observation_detected(self) -> None:
+        """Test observation with frailty device SNOMED code is detected."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # "58938008" = Wheelchair
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="58938008",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Wheelchair",
+        )
+
+        assert protocol.has_frailty_indicator(patient) is True
+
+    @pytest.mark.django_db
+    def test_frailty_device_walking_frame_detected(self) -> None:
+        """Test observation with walking frame SNOMED code is detected."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        # "266731002" = Walking frame
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="266731002",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Walking frame",
+        )
+
+        assert protocol.has_frailty_indicator(patient) is True
+
+    @pytest.mark.django_db
+    def test_frailty_with_advanced_illness_via_observation_excludes(self) -> None:
+        """Test frailty device observation + advanced illness excludes patient age 66+."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="58938008",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Wheelchair",
+        )
+
+        create_condition_with_coding(
+            patient, AdvancedIllness, timeframe_start.shift(months=4).date(), surgical=False
+        )
+
+        assert protocol.has_frailty_indicator(patient) is True
+        assert protocol.has_frailty_with_advanced_illness(patient) is True
+        assert protocol.in_denominator(patient, age) is False
+
+    @pytest.mark.django_db
+    def test_nursing_home_observation_excludes_patient(self) -> None:
+        """Test observation with nursing home SNOMED code excludes patient age 66+."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 67
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # "160734000" = Lives in nursing home (finding)
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="160734000",
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Lives in nursing home",
+        )
+
+        assert protocol.in_nursing_home(patient) is True
+        assert protocol.in_denominator(patient, age) is False
+
+    @pytest.mark.django_db
+    def test_no_observation_does_not_trigger_exclusion(self) -> None:
+        """Test patient without relevant observations is not excluded."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # No observations created
+        assert protocol.in_hospice_care(patient) is False
+        assert protocol.received_palliative_care(patient) is False
+        assert protocol.has_frailty_indicator(patient) is False
+        assert protocol.in_nursing_home(patient) is False
+        assert protocol.in_denominator(patient, age) is True
+
+    @pytest.mark.django_db
+    def test_observation_with_unrelated_code_does_not_trigger_exclusion(self) -> None:
+        """Test observation with unrelated SNOMED code does not trigger exclusion."""
+        timeframe_end = arrow.get("2024-12-31")
+        timeframe_start = arrow.get("2024-01-01")
+        protocol = create_protocol_instance(
+            ClinicalQualityMeasure125v14,
+            timeframe_start=timeframe_start,
+            timeframe_end=timeframe_end,
+        )
+
+        age = 60
+        birth_date = timeframe_end.shift(years=-age).date()
+        patient = PatientFactory.create(sex_at_birth="F", birth_date=birth_date)
+
+        visit_date = timeframe_end.shift(months=-6)
+        create_qualifying_visit(patient, visit_date)
+
+        # Create observation with unrelated SNOMED code
+        create_observation_with_value_coding(
+            patient=patient,
+            snomed_code="12345678",  # Not a hospice/palliative/frailty/nursing home code
+            effective_datetime=timeframe_start.shift(months=3),
+            display="Unrelated observation",
+        )
+
+        assert protocol.in_hospice_care(patient) is False
+        assert protocol.received_palliative_care(patient) is False
+        assert protocol.has_frailty_indicator(patient) is False
+        assert protocol.in_nursing_home(patient) is False
+        assert protocol.in_denominator(patient, age) is True

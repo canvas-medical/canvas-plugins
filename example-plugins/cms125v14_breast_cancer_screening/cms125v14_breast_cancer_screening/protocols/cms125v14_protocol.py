@@ -2,6 +2,7 @@ import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import InstructCommand
+from canvas_sdk.commands.constants import CodeSystems, Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 from canvas_sdk.events import EventType
@@ -13,9 +14,9 @@ from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
 from canvas_sdk.v1.data.encounter import Encounter
 from canvas_sdk.v1.data.imaging import ImagingReport
 from canvas_sdk.v1.data.medication import Medication
+from canvas_sdk.v1.data.observation import Observation
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.protocol_override import ProtocolOverride
-from canvas_sdk.v1.data.questionnaire import Interview, InterviewQuestionResponse
 from canvas_sdk.value_set.v2026.condition import (
     AdvancedIllness,
     FrailtyDiagnosis,
@@ -149,7 +150,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         "skilled nursing",
     )
 
-    QUESTIONNAIRE_HOSPICE_CODES = frozenset(
+    # SNOMED codes for observation-based exclusion checks (source-agnostic)
+    HOSPICE_CARE_SNOMED_CODES = frozenset(
         {
             "428361000124107",  # Discharge to home for hospice care
             "428371000124100",  # Discharge to healthcare facility for hospice care
@@ -157,7 +159,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         }
     )
 
-    QUESTIONNAIRE_FRAILTY_DEVICE_CODES = frozenset(
+    FRAILTY_DEVICE_SNOMED_CODES = frozenset(
         {
             "58938008",  # Wheelchair
             "266731002",  # Walking frame
@@ -170,38 +172,34 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         }
     )
 
-    QUESTIONNAIRE_PALLIATIVE_CODE = "305284002"  # Receiving palliative care
+    PALLIATIVE_CARE_SNOMED_CODE = "305284002"  # Receiving palliative care
 
-    QUESTIONNAIRE_NURSING_HOME_CODE = "160734000"  # Lives in nursing home (finding)
+    NURSING_HOME_SNOMED_CODE = "160734000"  # Lives in nursing home (finding)
 
-    def _has_questionnaire_response_with_codes(
+    MAMMOGRAPHY_PROCEDURE_SNOMED_CODE = "71651007"
+
+    def _has_observation_with_value_codes(
         self, patient: Patient, snomed_codes: frozenset[str] | set[str]
     ) -> bool:
-        """Check if patient has questionnaire responses with any of the given SNOMED codes.
+        """Check if patient has observations with value codings matching any of the given SNOMED codes.
 
-        Queries committed interviews for the patient within the measurement period
-        and checks if any response option matches the provided codes.
+        Queries observations for the patient and checks if any value coding
+        matches the provided SNOMED codes. This is source-agnostic - it captures
+        observations created from questionnaires, plugins, or any other source.
 
         Args:
             patient: The patient to check
-            snomed_codes: Set of SNOMED codes to look for in questionnaire responses
+            snomed_codes: Set of SNOMED codes to look for in observation value codings
 
         Returns:
-            True if any response matches the provided codes
+            True if any observation value coding matches the provided codes
         """
-        interviews = Interview.objects.for_patient(str(patient.id)).committed()
+        return Observation.objects.filter(
+            patient=patient,
+            value_codings__code__in=snomed_codes,
+        ).exists()
 
-        if not interviews.exists():
-            return False
-
-        matching_responses = InterviewQuestionResponse.objects.filter(
-            interview__in=interviews,
-            response_option__code__in=snomed_codes,
-        )
-
-        return matching_responses.exists()
-
-    def _has_billing_with_codes(self, patient: Patient, *value_sets: type[ValueSet]) -> bool:
+    def _has_billing_with_codes(self, patient: Patient, *value_sets: ValueSet) -> bool:
         """Check if patient has billing codes from any of the provided value sets.
 
         Args:
@@ -216,7 +214,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return bool(all_codes and billing.filter(cpt__in=all_codes).exists())
 
     @staticmethod
-    def _combine_value_set_codes(*value_sets: type[ValueSet]) -> set[str]:
+    def _combine_value_set_codes(*value_sets: ValueSet) -> set[str]:
         """Combine codes from multiple value sets into a single set.
 
         Args:
@@ -412,8 +410,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         Checks:
         1. Billing line items with hospice codes (HospiceCareAmbulatory, HospiceEncounter)
         2. Conditions with HospiceDiagnosis codes
-        3. Questionnaire responses indicating hospice care (from hospice_and_frailty.yml
-           and hospice_and_palliative.yml questionnaires)
+        3. Observations with SNOMED codes indicating hospice care (source-agnostic:
+           captures data from questionnaires, plugins, or any other source)
         """
         if self._has_billing_with_codes(patient, HospiceCareAmbulatory, HospiceEncounter):
             return True
@@ -433,8 +431,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if hospice_conditions.exists():
             return True
 
-        return self._has_questionnaire_response_with_codes(
-            patient, self.QUESTIONNAIRE_HOSPICE_CODES
+        return self._has_observation_with_value_codes(
+            patient, self.HOSPICE_CARE_SNOMED_CODES
         )
 
     def received_palliative_care(self, patient: Patient) -> bool:
@@ -445,7 +443,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         - Palliative care diagnosis with prevalencePeriod overlapping measurement period
         - Palliative care encounter during measurement period
         - Palliative care intervention during measurement period
-        - Questionnaire responses indicating palliative care (from hospice_and_palliative.yml)
+        - Observations with SNOMED codes indicating palliative care (source-agnostic)
 
         Note: Using conditions within timeframe (not "up to end") to match CQL's
         requirement that palliative care must be during the measurement period.
@@ -469,8 +467,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         ):
             return True
 
-        return self._has_questionnaire_response_with_codes(
-            patient, frozenset({self.QUESTIONNAIRE_PALLIATIVE_CODE})
+        return self._has_observation_with_value_codes(
+            patient, frozenset({self.PALLIATIVE_CARE_SNOMED_CODE})
         )
 
     def has_frailty_indicator(self, patient: Patient) -> bool:
@@ -481,7 +479,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         1. Frailty diagnosis (conditions)
         2. Frailty symptom (conditions)
         3. Frailty encounter (billing)
-        4. Frailty device (via questionnaire response from hospice_and_frailty.yml)
+        4. Frailty device (via observations with SNOMED codes, source-agnostic)
 
         Returns True if any frailty indicator is found.
         """
@@ -501,8 +499,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if self._has_billing_with_codes(patient, FrailtyEncounter):
             return True
 
-        return self._has_questionnaire_response_with_codes(
-            patient, self.QUESTIONNAIRE_FRAILTY_DEVICE_CODES
+        return self._has_observation_with_value_codes(
+            patient, self.FRAILTY_DEVICE_SNOMED_CODES
         )
 
     def has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
@@ -554,12 +552,12 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         This is typically determined by:
         1. Coverage/insurance type indicating long-term care facility
         2. Patient address indicating institutional care facility
-        3. Questionnaire response indicating nursing home residence
+        3. Observations with SNOMED codes indicating nursing home residence (source-agnostic)
         4. Frequent SNF/nursing facility encounters
 
         Note: Canvas may track this differently depending on implementation.
         This method checks Coverage records for long-term care payer types
-        and questionnaire responses for housing status.
+        and observations for housing status.
 
         This exclusion only applies to patients age ≥66.
         """
@@ -577,8 +575,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
                 if any(keyword in plan_name_lower for keyword in self.NURSING_HOME_KEYWORDS):
                     return True
 
-        return self._has_questionnaire_response_with_codes(
-            patient, frozenset({self.QUESTIONNAIRE_NURSING_HOME_CODE})
+        return self._has_observation_with_value_codes(
+            patient, frozenset({self.NURSING_HOME_SNOMED_CODE})
         )
 
     def get_stratification(self, patient: Patient, age: int) -> int | None:
@@ -845,6 +843,10 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         and comment to guide clinicians rather than a coding filter.
         """
         instruct_command = InstructCommand(
+            coding=Coding(
+                system=CodeSystems.SNOMED,
+                code=self.MAMMOGRAPHY_PROCEDURE_SNOMED_CODE
+            ),
             comment="Order screening mammography per CMS125v14 breast cancer screening measure"
         )
         return instruct_command.recommend(
