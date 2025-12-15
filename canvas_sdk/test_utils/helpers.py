@@ -371,14 +371,9 @@ def create_observation_with_value_coding(
     if effective_datetime is None:
         effective_datetime = arrow.now()
 
-    if hasattr(effective_datetime, "datetime"):
-        effective_dt = effective_datetime.datetime
-    else:
-        effective_dt = effective_datetime
-
     observation = ObservationFactory.create(
         patient=patient,
-        effective_datetime=effective_dt,
+        effective_datetime=effective_datetime.datetime,
         **kwargs,
     )
 
