@@ -108,6 +108,18 @@ def test_http_patch(mock_patch: MagicMock) -> None:
     )
 
 
+@patch("requests.Session.delete")
+def test_http_delete(mock_delete: MagicMock) -> None:
+    """Test that the Http.delete method calls requests.delete with the correct arguments."""
+    http = Http()
+    http.delete("https://www.canvasmedical.com/", headers={"Authorization": "Bearer as;ldkfjdkj"})
+    mock_delete.assert_called_once_with(
+        "https://www.canvasmedical.com/",
+        headers={"Authorization": "Bearer as;ldkfjdkj"},
+        timeout=30,
+    )
+
+
 @patch("requests.Session.get")
 def test_search_pharmacies_default_search_term(mock_get: MagicMock) -> None:
     """
