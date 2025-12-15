@@ -226,11 +226,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         return set().union(*(vs.get_codes() for vs in value_sets))
 
     def patient_id_from_target(self) -> str:
-        """
-        Override to support additional event types beyond the base class.
-
-        Adds support for: OBSERVATION, ENCOUNTER, CLAIM, and PROTOCOL_OVERRIDE events.
-        """
+        """Override to support OBSERVATION, ENCOUNTER, and CLAIM events."""
         if self._patient_id is not None:
             return self._patient_id
 
@@ -243,24 +239,21 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
 
         if self.event.type in events_with_patient_in_context:
             patient_ctx = self.event.context.get("patient", {})
-            patient_id = patient_ctx.get("id")
-            if not patient_id:
+            self._patient_id = patient_ctx.get("id")
+            if not self._patient_id:
                 raise ValueError(
                     f"Patient ID not found in event context for event type {self.event.type}"
                 )
-            self._patient_id = patient_id
             return self._patient_id
 
         if self.event.type in (EventType.ENCOUNTER_CREATED, EventType.ENCOUNTER_UPDATED):
-            patient_id = (
-                Encounter.objects.select_related("note__patient")
-                .values_list("note__patient__id", flat=True)
-                .get(id=self.event.target.id)
+            self._patient_id = str(
+                Encounter.objects.values_list("note__patient__id", flat=True).get(
+                    id=self.event.target.id
+                )
             )
-            self._patient_id = str(patient_id)
             return self._patient_id
 
-        # fallback
         return super().patient_id_from_target()
 
     def compute(self) -> list[Effect]:
@@ -431,9 +424,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if hospice_conditions.exists():
             return True
 
-        return self._has_observation_with_value_codes(
-            patient, self.HOSPICE_CARE_SNOMED_CODES
-        )
+        return self._has_observation_with_value_codes(patient, self.HOSPICE_CARE_SNOMED_CODES)
 
     def received_palliative_care(self, patient: Patient) -> bool:
         """
@@ -499,9 +490,7 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         if self._has_billing_with_codes(patient, FrailtyEncounter):
             return True
 
-        return self._has_observation_with_value_codes(
-            patient, self.FRAILTY_DEVICE_SNOMED_CODES
-        )
+        return self._has_observation_with_value_codes(patient, self.FRAILTY_DEVICE_SNOMED_CODES)
 
     def has_advanced_illness_or_dementia_meds(self, patient: Patient) -> bool:
         """
@@ -843,11 +832,8 @@ class ClinicalQualityMeasure125v14(ClinicalQualityMeasure):
         and comment to guide clinicians rather than a coding filter.
         """
         instruct_command = InstructCommand(
-            coding=Coding(
-                system=CodeSystems.SNOMED,
-                code=self.MAMMOGRAPHY_PROCEDURE_SNOMED_CODE
-            ),
-            comment="Order screening mammography per CMS125v14 breast cancer screening measure"
+            coding=Coding(system=CodeSystems.SNOMED, code=self.MAMMOGRAPHY_PROCEDURE_SNOMED_CODE),
+            comment="Order screening mammography per CMS125v14 breast cancer screening measure",
         )
         return instruct_command.recommend(
             title="Discuss breast cancer screening and order mammography",

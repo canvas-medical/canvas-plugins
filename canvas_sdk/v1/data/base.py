@@ -115,7 +115,7 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
 
     @staticmethod
     @abstractmethod
-    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: "ValueSetType") -> tuple[tuple[str, set[str]]]:
         """A protocol method for defining codings."""
         raise NotImplementedError
 
@@ -198,7 +198,7 @@ class ValueSetLookupByNameQuerySetMixin(ValueSetLookupQuerySetMixin):
     """
 
     @staticmethod
-    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: "ValueSetType") -> tuple[tuple[str, set[str]]]:
         """
         Provide a sequence of tuples where each tuple is a code system name and a set of codes.
         """
