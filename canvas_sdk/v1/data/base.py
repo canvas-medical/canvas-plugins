@@ -1,18 +1,17 @@
 import uuid
 from abc import abstractmethod
 from collections.abc import Container
-from typing import TYPE_CHECKING, Any, Protocol, Self, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models
 from django.db.models import Q
 from django.db.models.base import ModelBase
 
+from canvas_sdk.value_set.value_set import ValueSetType
+
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
-    from canvas_sdk.value_set.value_set import CombinedValueSet, ValueSet
-
-ValueSetType: TypeAlias = "type[ValueSet] | CombinedValueSet"
 
 IS_SQLITE = connection.vendor == "sqlite"
 
