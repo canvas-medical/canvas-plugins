@@ -213,8 +213,12 @@ THIRD_PARTY_MODULES = {
     "django.db.models": {
         "Avg",
         "BigIntegerField",
-        "Case",
         "CharField",
+        "DateTimeField",
+        "DO_NOTHING",
+        "ForeignKey",
+        "Index",
+        "Case",
         "Count",
         "Exists",
         "F",
@@ -222,6 +226,7 @@ THIRD_PARTY_MODULES = {
         "Max",
         "Min",
         "Model",  # remove when hyperscribe no longer needs it
+        "TextField",
         "OuterRef",
         "Prefetch",
         "Q",
