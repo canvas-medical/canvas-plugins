@@ -128,6 +128,14 @@ def uncategorizedDocumentReview() -> dict[str, Any]:
     }
 
 
+def htmlCommand() -> dict[str, Any]:
+    """HtmlCommand for testing."""
+    return {
+        "content": "<h1>Hello world</h1>",
+        "print_content": "<p>Hello world</p>",
+    }
+
+
 @pytest.fixture(scope="module", autouse=True)
 def patch_condition() -> Generator[None, None, None]:
     """Patch the Condition model to return a mock queryset."""
