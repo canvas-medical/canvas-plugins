@@ -8,7 +8,6 @@ from canvas_sdk.effects.protocol_card import ProtocolCard, Recommendation
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.protocols.timeframe import Timeframe
-from canvas_sdk.v1.data.base import ValueSetType
 from canvas_sdk.v1.data.billing import BillingLineItem
 from canvas_sdk.v1.data.condition import Condition
 from canvas_sdk.v1.data.coverage import Coverage, TransactorCoverageType
@@ -53,6 +52,7 @@ from canvas_sdk.value_set.v2026.procedure import (
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from canvas_sdk.value_set.v2026.tomography import Tomography
+from canvas_sdk.value_set.value_set import ValueSetType
 from logger import log
 
 

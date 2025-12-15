@@ -1,7 +1,9 @@
 from collections import defaultdict
-from typing import Union, cast
+from typing import TypeAlias, Union, cast
 
 from django.utils.functional import classproperty
+
+ValueSetType: TypeAlias = "type[ValueSet] | CombinedValueSet"
 
 
 class CodeConstants:

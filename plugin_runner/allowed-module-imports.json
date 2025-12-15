@@ -2302,6 +2302,7 @@
     "CodeConstantsURLMappingMixin",
     "CombinedValueSet",
     "ValueSet",
+    "ValueSetType",
     "ValueSystems"
   ],
   "logger": [
