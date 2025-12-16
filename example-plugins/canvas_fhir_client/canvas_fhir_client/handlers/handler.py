@@ -15,12 +15,11 @@ class Handler(ActionButton):
         """Handle the button click."""
         client_id = self.secrets["CANVAS_FHIR_CLIENT_ID"]
         client_secret = self.secrets["CANVAS_FHIR_CLIENT_SECRET"]
-        customer_identifier = self.environment["CUSTOMER_IDENTIFIER"]
         patient_id = self.event.target.id
 
         log.info("--------------------------------")
 
-        client = CanvasFhir(client_id, client_secret, customer_identifier)
+        client = CanvasFhir(client_id, client_secret)
 
         search_response = client.search("AllergyIntolerance", {"patient": f"Patient/{patient_id}"})
 
