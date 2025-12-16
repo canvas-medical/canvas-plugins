@@ -1,12 +1,12 @@
 """CMS130v14 Colorectal Cancer Screening protocol implementation."""
 
-import arrow
 from typing import Any
 
+import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import ImagingOrderCommand, LabOrderCommand, ReferCommand
-from canvas_sdk.commands.constants import ServiceProvider
+from canvas_sdk.commands.constants import CodeSystems, ServiceProvider
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
@@ -53,7 +53,6 @@ from canvas_sdk.value_set.v2026.procedure import (
     TotalColectomy,
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
-from canvas_sdk.commands.constants import CodeSystems
 from logger import log
 
 # Constants
@@ -237,7 +236,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 return [self._create_due_card(patient)]
 
         except Exception as e:
-            log.exception(f"CMS130v14: Error in protocol compute for event {self.event.name}: {str(e)}")
+            log.exception(
+                f"CMS130v14: Error in protocol compute for event {self.event.name}: {str(e)}"
+            )
             return []
 
     def _in_initial_population(self, patient: Patient) -> bool:
@@ -247,11 +248,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         log.debug(
             f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}"
         )
-        if not age_check:
-            return False
         # Note: encounter_check uses optimistic rule, so it will always return True
-        # even if no eligible encounters are found
-        return True
+        # even if no eligible encounters are found. We only need to check age.
+        return age_check
 
     def _in_denominator(self, patient: Patient) -> bool:
         """
@@ -599,8 +598,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 f"CMS130v14: Patient {patient.id} has no eligible encounters within measurement period, using optimistic rule"
             )
             return True
-        except Exception as e:
-            log.exception(f"CMS130v14: Error checking eligible encounters")
+        except Exception:
+            log.exception("CMS130v14: Error checking eligible encounters")
             return False
 
     def _has_colon_exclusion(self, patient: Patient) -> bool:
@@ -647,8 +646,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 return True
 
             return False
-        except Exception as e:
-            log.exception(f"CMS130v14: Error checking colon exclusions")
+        except Exception:
+            log.exception("CMS130v14: Error checking colon exclusions")
             return False
 
     def _build_period_overlap_query(self, start_date: Any, end_date: Any) -> Q:
@@ -872,7 +871,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 return True
 
             if self._has_frailty_device_observations(patient):
-                log.debug(f"CMS130v14: Patient {patient.id} age 66+ has frailty device observations")
+                log.debug(
+                    f"CMS130v14: Patient {patient.id} age 66+ has frailty device observations"
+                )
                 return True
 
             if self._has_frailty_diagnoses(patient):
@@ -1047,7 +1048,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 ).exists()
 
                 if has_claim:
-                    log.debug(f"CMS130v14: Found frailty encounter (claim) for patient {patient.id}")
+                    log.debug(
+                        f"CMS130v14: Found frailty encounter (claim) for patient {patient.id}"
+                    )
                     return True
 
             return False
@@ -1106,7 +1109,8 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 Condition.objects.for_patient(patient.id)  # type: ignore[attr-defined]
                 .find(AdvancedIllness)
                 .filter(
-                    Q(onset_date__isnull=True) | Q(onset_date__lte=end_date, onset_date__gte=start_date)
+                    Q(onset_date__isnull=True)
+                    | Q(onset_date__lte=end_date, onset_date__gte=start_date)
                 )
                 .filter(entered_in_error_id__isnull=True)
                 .exists()
@@ -1247,7 +1251,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
                 ).exists()
 
                 if has_palliative_encounter:
-                    log.debug(f"CMS130v14: Found palliative care encounter for patient {patient.id}")
+                    log.debug(
+                        f"CMS130v14: Found palliative care encounter for patient {patient.id}"
+                    )
                     self._not_applicable_reason = f"{patient.first_name} is receiving palliative care and is excluded from colorectal cancer screening."
                     return True
 
@@ -1383,9 +1389,7 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             or f"{patient.first_name} is not eligible for colorectal cancer screening."
         )
 
-        log.info(
-            f"CMS130v14: Creating NOT_APPLICABLE card for patient {patient.id}: {narrative}"
-        )
+        log.info(f"CMS130v14: Creating NOT_APPLICABLE card for patient {patient.id}: {narrative}")
 
         card = ProtocolCard(
             patient_id=patient_id_str,
@@ -1567,7 +1571,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
 
         return card.apply()
 
-    def _add_recommendation_context(self, recommendation, specialties: list[str] | None = None) -> None:
+    def _add_recommendation_context(
+        self, recommendation, specialties: list[str] | None = None
+    ) -> None:
         """Add context to a recommendation with conditions and optional specialties."""
         context = SCREENING_CONTEXT.copy()
         if specialties:
@@ -1695,7 +1701,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             return "SNOMEDCT"
         return normalized
 
-    def _coding_in_value_set_for_note_type(self, note_type: NoteType, value_set_classes: list) -> bool:
+    def _coding_in_value_set_for_note_type(
+        self, note_type: NoteType, value_set_classes: list
+    ) -> bool:
         """Check if a NoteType coding belongs to any of the provided value sets."""
         try:
             normalized_system = self._normalize_system(note_type.system)
