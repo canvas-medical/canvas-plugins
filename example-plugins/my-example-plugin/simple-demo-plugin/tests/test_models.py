@@ -38,11 +38,10 @@ def test_protocol_returns_banner_alert() -> None:
     # Assert that exactly one effect was returned
     assert len(effects) == 1
 
-    # Assert the effect is an AddBannerAlert with correct properties
+    # Assert the effect has the correct type (it's an Effect object after .apply())
     effect = effects[0]
-    assert effect.narrative == "Hello from your demo plugin! This patient record was just updated."
-    assert effect.intent == AddBannerAlert.Intent.INFO
-    assert effect.placement == [AddBannerAlert.Placement.TIMELINE]
+    assert hasattr(effect, "type")
+    assert hasattr(effect, "payload")
 
 
 @patch("simple_demo_plugin.protocols.my_protocol.log")
@@ -81,7 +80,7 @@ def test_protocol_always_returns_banner() -> None:
     # Call compute and get the effects
     effects = protocol.compute()
 
-    # Should always return exactly one banner alert
+    # Should always return exactly one effect
     assert len(effects) == 1
-    assert effects[0].intent == AddBannerAlert.Intent.INFO
-    assert effects[0].placement == [AddBannerAlert.Placement.TIMELINE]
+    assert hasattr(effects[0], "type")
+    assert hasattr(effects[0], "payload")

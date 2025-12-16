@@ -1,5 +1,6 @@
-"""Simple demo protocol that displays a banner when a patient chart is opened."""
+"""Simple demo protocol that displays a banner when a patient record is updated."""
 
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
@@ -18,7 +19,7 @@ class Protocol(BaseProtocol):
     # Listen for patient update events
     RESPONDS_TO = EventType.Name(EventType.PATIENT_UPDATED)
 
-    def compute(self) -> list[AddBannerAlert]:
+    def compute(self) -> list[Effect]:
         """Display a welcome banner when a patient record is updated.
 
         Returns:
@@ -27,11 +28,14 @@ class Protocol(BaseProtocol):
         # Log for debugging (visible in Canvas CLI logs)
         log.info(f"Patient updated event triggered for patient ID: {self.event.target.id}")
 
-        # Return a banner alert effect to display in the UI
-        return [
-            AddBannerAlert(
-                narrative="Hello from your demo plugin! This patient record was just updated.",
-                intent=AddBannerAlert.Intent.INFO,
-                placement=[AddBannerAlert.Placement.TIMELINE],
-            )
-        ]
+        # Create the banner alert with the patient ID
+        banner = AddBannerAlert(
+            patient_id=self.event.target.id,
+            key="demo-plugin-update-banner",
+            narrative="Hello from your demo plugin! This patient record was just updated.",
+            intent=AddBannerAlert.Intent.INFO,
+            placement=[AddBannerAlert.Placement.TIMELINE],
+        )
+
+        # Return the banner effect by calling .apply()
+        return [banner.apply()]
