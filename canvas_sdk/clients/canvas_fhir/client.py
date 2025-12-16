@@ -4,6 +4,8 @@ from urllib.parse import urlencode
 from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.utils.http import Http
 
+from settings import CUSTOMER_IDENTIFIER
+
 
 class Credentials(TypedDict):
     """Credentials for the Canvas FHIR API."""
@@ -18,14 +20,13 @@ class Credentials(TypedDict):
 class CanvasFhir:
     """Client for interacting with the Canvas FHIR API."""
 
-    def __init__(self, client_id: str, client_secret: str, customer_identifier: str):
+    def __init__(self, client_id: str, client_secret: str):
         """Initializes the Canvas FHIR client."""
         self._client_id = client_id
         self._client_secret = client_secret
-        self._customer_identifier = customer_identifier
 
         self._credentials = self._get_credentials()
-        self._base_url = f"https://fumage-{self._customer_identifier}.canvasmedical.com"
+        self._base_url = f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
 
     def create(self, resource_type: str, data: dict) -> dict:
         """Creates a resource via the FHIR API."""
@@ -85,7 +86,7 @@ class CanvasFhir:
     def _get_credentials(self) -> Credentials:
         """Retrieves the credentials from the Canvas API."""
         cache = get_cache()
-        key = f"canvas_fhir_credentials_{self._customer_identifier}"
+        key = f"canvas_fhir_credentials_{self._client_id}"
 
         cached_credentials = cache.get(key)
 
@@ -105,7 +106,7 @@ class CanvasFhir:
         )
 
         response = Http().post(
-            f"https://{self._customer_identifier}.canvasmedical.com/auth/token/",
+            f"https://{CUSTOMER_IDENTIFIER}.canvasmedical.com/auth/token/",
             headers=headers,
             data=data,
         )

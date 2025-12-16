@@ -30,9 +30,9 @@ def mock_post() -> Generator[MagicMock, None, None]:
 
 def test__api_base_url(mock_get_cache: MagicMock) -> None:
     """Test the defined URL of the CanvasFhir instance."""
-    tested = CanvasFhir(client_id="test", client_secret="test", customer_identifier="test")
+    tested = CanvasFhir(client_id="test", client_secret="test")
     result = tested._base_url
-    expected = "https://fumage-test.canvasmedical.com"
+    expected = "https://fumage-local.canvasmedical.com"
     assert result == expected
 
 
@@ -43,7 +43,7 @@ def test__get_credentials_without_cached_credentials(
     mock_get_cache.return_value.get.return_value = None
     mock_post.return_value = MagicMock(status_code=200, json=lambda: MOCK_CREDENTIALS)
 
-    tested = CanvasFhir(client_id="test", client_secret="test", customer_identifier="test")
+    tested = CanvasFhir(client_id="test", client_secret="test")
     result = tested._get_credentials()
     expected = MOCK_CREDENTIALS
     assert result == expected
@@ -55,7 +55,7 @@ def test__get_credentials_with_cached_credentials(
     """Test the _get_credentials method of the CanvasFhir instance with cached credentials."""
     mock_get_cache.return_value.get.return_value = MOCK_CREDENTIALS
 
-    tested = CanvasFhir(client_id="test", client_secret="test", customer_identifier="test")
+    tested = CanvasFhir(client_id="test", client_secret="test")
     result = tested._get_credentials()
     expected = MOCK_CREDENTIALS
 
