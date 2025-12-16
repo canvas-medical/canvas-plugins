@@ -8,9 +8,10 @@ from django.db import connection, models
 from django.db.models import Q
 from django.db.models.base import ModelBase
 
+from canvas_sdk.value_set.value_set import ValueSetType
+
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
-    from canvas_sdk.value_set.value_set import ValueSet
 
 IS_SQLITE = connection.vendor == "sqlite"
 
@@ -113,7 +114,7 @@ class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
 
     @staticmethod
     @abstractmethod
-    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: "ValueSetType") -> tuple[tuple[str, set[str]]]:
         """A protocol method for defining codings."""
         raise NotImplementedError
 
@@ -143,7 +144,7 @@ class ForPatientQuerySetMixin(QuerySetProtocol):
 class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
     """A QuerySet mixin that can filter objects based on a ValueSet."""
 
-    def find(self, value_set: type["ValueSet"]) -> Self:
+    def find(self, value_set: "ValueSetType") -> Self:
         """
         Filters conditions, medications, etc. to those found in the inherited ValueSet class that is passed.
 
@@ -156,6 +157,10 @@ class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
         This method can also be chained like so:
 
         Condition.objects.find(MorbidObesity).find(AnaphylacticReactionToCommonBakersYeast)
+
+        You can also combine value sets using the `|` operator:
+
+        Condition.objects.find(MorbidObesity | AnaphylacticReactionToCommonBakersYeast)
         """
         q_filter = Q()
         for system, codes in self.codings(value_set):
@@ -163,7 +168,7 @@ class ValueSetLookupQuerySetMixin(ValueSetLookupQuerySetProtocol):
         return self.filter(q_filter).distinct()
 
     @staticmethod
-    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: "ValueSetType") -> tuple[tuple[str, set[str]]]:
         """Provide a sequence of tuples where each tuple is a code system URL and a set of codes."""
         values_dict = cast(dict, value_set.values)
         return cast(
@@ -192,7 +197,7 @@ class ValueSetLookupByNameQuerySetMixin(ValueSetLookupQuerySetMixin):
     """
 
     @staticmethod
-    def codings(value_set: type["ValueSet"]) -> tuple[tuple[str, set[str]]]:
+    def codings(value_set: "ValueSetType") -> tuple[tuple[str, set[str]]]:
         """
         Provide a sequence of tuples where each tuple is a code system name and a set of codes.
         """

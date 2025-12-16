@@ -9,6 +9,7 @@ from .assessment import Assessment
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
+from .calendar import Calendar, Event
 from .care_team import CareTeamMembership, CareTeamRole
 from .charge_description_master import ChargeDescriptionMaster
 from .claim import (
@@ -19,6 +20,7 @@ from .claim import (
     ClaimPatient,
     ClaimProvider,
     ClaimQueue,
+    ClaimSubmission,
     InstallmentPlan,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCode
@@ -33,12 +35,7 @@ from .discount import Discount
 from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
-from .imaging import (
-    ImagingOrder,
-    ImagingReport,
-    ImagingReportCoding,
-    ImagingReview,
-)
+from .imaging import ImagingOrder, ImagingReport, ImagingReportCoding, ImagingReview
 from .immunization import (
     Immunization,
     ImmunizationCoding,
@@ -80,7 +77,7 @@ from .observation import (
     ObservationComponentCoding,
     ObservationValueCoding,
 )
-from .organization import Organization
+from .organization import Organization, OrganizationAddress, OrganizationContactPoint
 from .patient import (
     Patient,
     PatientAddress,
@@ -104,7 +101,12 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
-from .practicelocation import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
+from .practicelocation import (
+    PracticeLocation,
+    PracticeLocationAddress,
+    PracticeLocationContactPoint,
+    PracticeLocationSetting,
+)
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -124,6 +126,10 @@ from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPh
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocument,
+    UncategorizedClinicalDocumentReview,
+)
 from .user import CanvasUser
 
 __all__ = __exports__ = (
@@ -141,6 +147,7 @@ __all__ = __exports__ = (
     "BillingLineItemModifier",
     "BusinessLine",
     "BulkPatientPosting",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -154,6 +161,7 @@ __all__ = __exports__ = (
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimSubmission",
     "Command",
     "CompoundMedication",
     "Condition",
@@ -167,6 +175,7 @@ __all__ = __exports__ = (
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -214,6 +223,8 @@ __all__ = __exports__ = (
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientContactPoint",
@@ -229,6 +240,7 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -260,4 +272,6 @@ __all__ = __exports__ = (
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
+    "UncategorizedClinicalDocumentReview",
+    "UncategorizedClinicalDocument",
 )
