@@ -179,26 +179,6 @@ class PluginManifest(TypedDict):
     readme: str
 
 
-# Thread-local storage for plugin context
-_plugin_context = threading.local()
-
-
-def set_current_plugin(plugin_name: str) -> None:
-    """Set the current plugin name for this thread."""
-    _plugin_context.plugin_name = plugin_name
-
-
-def get_current_plugin() -> str | None:
-    """Get the current plugin name for this thread."""
-    return getattr(_plugin_context, "plugin_name", None)
-
-
-def clear_current_plugin() -> None:
-    """Clear the current plugin name for this thread."""
-    if hasattr(_plugin_context, "plugin_name"):
-        delattr(_plugin_context, "plugin_name")
-
-
 class PluginRunner(PluginRunnerServicer):
     """This process runs provided plugins that register interest in incoming events."""
 
