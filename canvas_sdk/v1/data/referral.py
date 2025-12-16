@@ -102,10 +102,10 @@ class ReferralReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
 
 
 class ReferralReportQuerySet(
-    BaseQuerySet,
     ForPatientQuerySetMixin,
     ReferralReportTimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySetMixin,
+    BaseQuerySet,
 ):
     """QuerySet for ReferralReport with value set filtering via codings."""
 
