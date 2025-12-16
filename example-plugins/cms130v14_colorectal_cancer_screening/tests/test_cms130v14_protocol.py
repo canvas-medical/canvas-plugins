@@ -43,7 +43,7 @@ from canvas_sdk.value_set.v2026.procedure import (
     FlexibleSigmoidoscopy,
     TotalColectomy,
 )
-from cms130v14_colorectal_cancer_screening.cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol import (
+from cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol import (
     CMS130v14ColorectalCancerScreening,
 )
 
