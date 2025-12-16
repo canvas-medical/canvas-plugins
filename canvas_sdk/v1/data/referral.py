@@ -1,5 +1,5 @@
 import json
-from typing import Self, cast
+from typing import cast
 
 from django.db import models
 
@@ -93,11 +93,11 @@ class ReferralReview(AuditedModel, IdentifiableModel):
 
 
 class ReferralReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
-    """A class that adds queryset functionality to filter using timeframes."""
+    """A mixin that adds queryset functionality to filter ReferralReports using timeframes."""
 
     @property
     def timeframe_filter_field(self) -> str:
-        """Returns the field that should be filtered on."""
+        """Returns the field that should be filtered on for timeframe queries."""
         return "original_date"
 
 
@@ -105,35 +105,14 @@ class ReferralReportQuerySet(
     BaseQuerySet,
     ForPatientQuerySetMixin,
     ReferralReportTimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
 ):
-    """QuerySet for ReferralReport with value set matching via codings."""
-
-    def find(self, value_set: type["ValueSet"]) -> Self:  # type: ignore[name-defined]
-        """
-        Filters referral reports to those found in the ValueSet via codings.
-
-        For example:
-        from canvas_sdk.v1.data.referral import ReferralReport
-        from canvas_sdk.value_set.v2022.procedure import Colonoscopy
-        colonoscopy_reports = ReferralReport.objects.find(Colonoscopy)
-        """
-        from django.db.models import Q
-
-        q_filter = Q()
-        for system, codes in ValueSetLookupQuerySetMixin.codings(value_set):
-            q_filter |= Q(codings__system=system, codings__code__in=codes)
-        return self.filter(q_filter).distinct()
+    """QuerySet for ReferralReport with value set filtering via codings."""
 
 
-class BaseReferralReportManager(models.Manager):
-    """Base manager for ReferralReport that doesn't filter by deleted field."""
-
-    def get_queryset(self):
-        """Return queryset without filtering by deleted (ReferralReport uses junked instead)."""
-        return ReferralReportQuerySet(self.model, using=self._db)
-
-
-ReferralReportManager = BaseReferralReportManager.from_queryset(ReferralReportQuerySet)
+# ReferralReport uses TimestampedModel (not AuditedModel), so it doesn't have a 'deleted' field.
+# Use base Manager instead of BaseModelManager which filters by deleted=False.
+ReferralReportManager = models.Manager.from_queryset(ReferralReportQuerySet)
 
 
 class ReferralReport(TimestampedModel, IdentifiableModel):
@@ -180,10 +159,9 @@ class ReferralReportCoding(Coding):
 
     report = models.ForeignKey(
         ReferralReport,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="codings",
         null=True,
-        db_column="report_id",
     )
     value = models.CharField(max_length=1000)
 

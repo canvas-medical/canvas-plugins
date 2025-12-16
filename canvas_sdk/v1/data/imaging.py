@@ -1,17 +1,15 @@
 import json
-from typing import Self, cast
+from typing import cast
 
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseModelManager,
     BaseQuerySet,
     ForPatientQuerySetMixin,
     IdentifiableModel,
     TimeframeLookupQuerySetMixin,
     TimestampedModel,
-    ValueSetLookupQuerySet,
     ValueSetLookupQuerySetMixin,
 )
 from canvas_sdk.v1.data.coding import Coding
@@ -88,11 +86,11 @@ class ImagingReview(AuditedModel, IdentifiableModel):
 
 
 class ImagingReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
-    """A class that adds queryset functionality to filter using timeframes."""
+    """A mixin that adds queryset functionality to filter ImagingReports using timeframes."""
 
     @property
     def timeframe_filter_field(self) -> str:
-        """Returns the field that should be filtered on."""
+        """Returns the field that should be filtered on for timeframe queries."""
         return "original_date"
 
 
@@ -100,36 +98,14 @@ class ImagingReportQuerySet(
     BaseQuerySet,
     ForPatientQuerySetMixin,
     ImagingReportTimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
 ):
-    """QuerySet for ImagingReport with value set matching via codings."""
-
-    def find(self, value_set: type["ValueSet"]) -> Self:  # type: ignore[name-defined]
-        """
-        Filters imaging reports to those found in the ValueSet via codings.
-
-        For example:
-        from canvas_sdk.v1.data.imaging import ImagingReport
-        from canvas_sdk.value_set.v2022.procedure import Colonoscopy
-        colonoscopy_reports = ImagingReport.objects.find(Colonoscopy)
-        """
-        from canvas_sdk.value_set.value_set import ValueSet
-        from django.db.models import Q
-
-        q_filter = Q()
-        for system, codes in ValueSetLookupQuerySetMixin.codings(value_set):
-            q_filter |= Q(codings__system=system, codings__code__in=codes)
-        return self.filter(q_filter).distinct()
+    """QuerySet for ImagingReport with value set filtering via codings."""
 
 
-class BaseImagingReportManager(models.Manager):
-    """Base manager for ImagingReport that doesn't filter by deleted field."""
-    
-    def get_queryset(self):
-        """Return queryset without filtering by deleted (ImagingReport uses junked instead)."""
-        return ImagingReportQuerySet(self.model, using=self._db)
-
-
-ImagingReportManager = BaseImagingReportManager.from_queryset(ImagingReportQuerySet)
+# ImagingReport uses TimestampedModel (not AuditedModel), so it doesn't have a 'deleted' field.
+# Use base Manager instead of BaseModelManager which filters by deleted=False.
+ImagingReportManager = models.Manager.from_queryset(ImagingReportQuerySet)
 
 
 class ImagingReport(TimestampedModel, IdentifiableModel):
@@ -168,15 +144,17 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
 
 
 class ImagingReportCoding(Coding):
-    """A class representing an imaging report coding."""
+    """Coding for an ImagingReport (LOINC, CPT, SNOMED codes for imaging procedures)."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_imagingreportcoding_001"
 
     report = models.ForeignKey(
-        ImagingReport, on_delete=models.DO_NOTHING, related_name="codings", null=True, db_column="report_id"
+        ImagingReport,
+        on_delete=models.CASCADE,
+        related_name="codings",
+        null=True,
     )
-    value = models.TextField(blank=True, default="")
 
 
 __exports__ = (

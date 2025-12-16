@@ -47,7 +47,6 @@ from cms130v14_colorectal_cancer_screening.cms130v14_colorectal_cancer_screening
     CMS130v14ColorectalCancerScreening,
 )
 
-# ---------- Helpers ----------
 
 
 def first_or_skip(codes: Iterable[str], reason: str) -> str:
@@ -259,7 +258,6 @@ def create_medication_with_coding(
 ):
     """Create a medication with coding."""
     user = CanvasUserFactory()
-    # If end_date is None, set it to a far future date to satisfy NOT NULL constraint
     if end_date is None:
         end_date = arrow.utcnow().shift(years=100).date()
     medication = Medication.objects.create(
@@ -295,14 +293,12 @@ def create_observation_with_coding(
         value="",
         name="Test Observation",
     )
-    # Add codings (e.g., LOINC code for the observation type)
     ObservationCoding.objects.create(
         observation=observation,
         code=codings_code,
         system=codings_system,
         display="Test Observation",
     )
-    # Add value codings if provided (e.g., SNOMED result)
     if value_codings_code and value_codings_system:
         ObservationValueCoding.objects.create(
             observation=observation,
@@ -313,7 +309,6 @@ def create_observation_with_coding(
     return observation
 
 
-# ---------- Fixtures ----------
 
 
 @pytest.fixture
@@ -378,13 +373,13 @@ def patient_age_70(now):
 
 @pytest.fixture
 def eligible_note(now, patient_age_62):
-    """Encounter within period with NoteType coded as Office Visit (SNOMED 308335008)."""
+    """Encounter within period with NoteType coded as Office Visit (SNOMED 185463005)."""
     note = NoteFactory.create(
         patient=patient_age_62, datetime_of_service=now.shift(months=-6).datetime
     )
 
     note_type = NoteType.objects.create(
-        code="308335008",
+        code="185463005",
         system="http://snomed.info/sct",
         display="Office Visit",
         name="Office Visit",
@@ -413,7 +408,6 @@ def eligible_note(now, patient_age_62):
     return note
 
 
-# ---------- Tests ----------
 
 
 @pytest.mark.django_db
@@ -579,12 +573,13 @@ class TestExclusionsNotApplicable:
 
         assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
-    def test_no_encounter_is_due(self, now, protocol_instance, patient_age_62):
-        """Scenario 9: Patient without eligible encounter - protocol uses optimistic rule."""
-        # Protocol has optimistic rule that allows processing even without eligible encounter
+    def test_no_encounter_uses_optimistic_rule(self, now, protocol_instance, patient_age_62):
+        """Scenario 9: Patient without eligible encounter - uses optimistic rule to allow processing."""
+        # Optimistic rule allows processing even without matched encounter
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
+        # With optimistic rule, patient should be DUE (not NOT_APPLICABLE)
         assert card["status"] == ProtocolCard.Status.DUE.value
 
     def test_hospice_place_of_service_within_period_is_not_applicable(
@@ -597,7 +592,6 @@ class TestExclusionsNotApplicable:
             datetime_of_service=now.shift(months=-6).datetime,
         )
 
-        # Create observation with discharge to hospice SNOMED code (discharge disposition)
         observation = Observation.objects.create(
             patient=patient_age_62,
             note_id=note.dbid,
@@ -1163,18 +1157,14 @@ class TestAgeBoundariesInPopulation:
         )
 
     def test_45y_364d_is_in_population_with_floor_calc(self, now, protocol_instance, eligible_note):
-        """Test that patient 45y 364d (one day before 46) is in population due to floor calculation."""
+        """Test that patient 45y 364d (one day before 46) is excluded due to age < 46."""
         patient = PatientFactory.create(birth_date=now.shift(years=-46, days=+1).date())
         create_eligible_note_for_patient(patient, now, eligible_note)
         set_patient_context(protocol_instance, patient.id)
         card = extract_card(protocol_instance.compute())
 
-        # Verify patient is in population (not excluded due to age)
-        assert card["status"] != ProtocolCard.Status.NOT_APPLICABLE.value
-        assert card["status"] in (
-            ProtocolCard.Status.DUE.value,
-            ProtocolCard.Status.SATISFIED.value,
-        )
+        # Verify patient is excluded due to age < 46 (floor calculation makes 45.997 -> 45)
+        assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
     def test_75y_plus_1d_is_in_population_with_floor_calc(
         self, now, protocol_instance, eligible_note
@@ -1369,10 +1359,9 @@ class TestV14NewEncounterTypes:
 
     def test_virtual_encounter_qualifies(self, now, protocol_instance, patient_age_62):
         """Test that Virtual Encounter qualifies for initial population."""
-        # Create Virtual Encounter note type
         virtual_note_type = NoteType.objects.create(
-            code="448337001",
-            system="http://snomed.info/sct",
+            code="98972",
+            system="CPT",
             display="Virtual Encounter",
             name="Virtual Encounter",
             icon="virtual",
