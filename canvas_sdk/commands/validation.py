@@ -70,7 +70,7 @@ class CommandValidationErrorEffect(_BaseEffect):
 
     errors: list[ValidationError] = Field(default_factory=list)
 
-    def add_error(self, message: str) -> Self:
+    def add_error(self, message: str | ValidationError) -> Self:
         """
         Add a validation error to the effect.
 
@@ -78,7 +78,7 @@ class CommandValidationErrorEffect(_BaseEffect):
         and supports method chaining.
 
         Args:
-            message: The error message to display
+            message: The error message to display, or a ValidationError object
 
         Returns:
             Self for method chaining
@@ -91,11 +91,18 @@ class CommandValidationErrorEffect(_BaseEffect):
             effect.add_error("Narrative is required")
             effect.add_error("Dosage must be positive")
 
+            # Using ValidationError objects
+            error = ValidationError("Already validated error")
+            effect.add_error(error)
+
             # Method chaining
             effect.add_error("Error 1").add_error("Error 2")
         """
-        error = ValidationError(message=message)
-        self.errors.append(error)
+        if isinstance(message, ValidationError):
+            self.errors.append(message)
+        else:
+            error = ValidationError(message=message)
+            self.errors.append(error)
         return self
 
     @property
