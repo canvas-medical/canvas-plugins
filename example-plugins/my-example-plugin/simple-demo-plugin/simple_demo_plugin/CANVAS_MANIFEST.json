@@ -2,12 +2,12 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "simple_demo_plugin",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "A minimal demo plugin that displays a banner when a patient record is updated",
     "components": {
         "protocols": [
             {
                 "class": "simple_demo_plugin.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz..."
+                "description": "Displays a welcome banner when a patient record is updated"
             }
         ],
         "commands": [],

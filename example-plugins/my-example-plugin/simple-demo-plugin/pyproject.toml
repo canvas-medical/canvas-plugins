@@ -17,5 +17,10 @@ dev = [
     "pytest-mock>=3.12.0",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "*_tests.py"]
+norecursedirs = [".git", ".venv", "venv", "build", "dist"]
+
 [tool.coverage.run]
 omit = ["tests/*"]

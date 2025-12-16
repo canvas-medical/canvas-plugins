@@ -1,30 +1,33 @@
-# To run the tests, use the command `pytest` in the terminal or uv run pytest.
-# Each test is wrapped inside a transaction that is rolled back at the end of the test.
-# If you want to modify which files are used for testing, check the [tool.pytest.ini_options] section in pyproject.toml.
-# For more information on testing Canvas plugins, see: https://docs.canvasmedical.com/sdk/testing-utils/
+"""Tests for the simple demo plugin protocol.
 
-from unittest.mock import Mock
+To run tests: uv run pytest
+To run with coverage: uv run pytest --cov=simple_demo_plugin --cov-report=term-missing
 
-import pytest
-from canvas_sdk.effects import EffectType
+Each test is wrapped inside a transaction that is rolled back at the end of the test.
+For more information on testing Canvas plugins, see: https://docs.canvasmedical.com/sdk/testing-utils/
+"""
+
+from unittest.mock import Mock, patch
+
+from canvas_sdk.effects.banner_alert import AddBannerAlert
 from canvas_sdk.events import EventType
-from canvas_sdk.test_utils.factories import PatientFactory
-from canvas_sdk.v1.data.discount import Discount
 
 from simple_demo_plugin.protocols.my_protocol import Protocol
 
 
-# Test the protocol's compute method with mocked event data
-def test_protocol_responds_to_assess_command() -> None:
-    """Test that the protocol responds correctly to ASSESS_COMMAND__CONDITION_SELECTED events."""
-    # Create a mock event with the expected structure
+def test_protocol_event_configuration() -> None:
+    """Test that the protocol is configured to respond to PATIENT_UPDATED events."""
+    assert EventType.Name(EventType.PATIENT_UPDATED) == Protocol.RESPONDS_TO
+
+
+def test_protocol_returns_banner_alert() -> None:
+    """Test that the protocol returns an AddBannerAlert effect when a patient is updated."""
+    # Create a mock event
     mock_event = Mock()
-    mock_event.type = EventType.ASSESS_COMMAND__CONDITION_SELECTED
-    mock_event.context = {
-        "note": {
-            "uuid": "test-note-uuid-123",
-        }
-    }
+    mock_event.type = EventType.PATIENT_UPDATED
+    mock_event.target = Mock()
+    mock_event.target.id = "test-patient-123"
+    mock_event.context = {}
 
     # Instantiate the protocol with the mock event
     protocol = Protocol(event=mock_event)
@@ -32,32 +35,53 @@ def test_protocol_responds_to_assess_command() -> None:
     # Call compute and get the effects
     effects = protocol.compute()
 
-    # Assert that effects were returned
+    # Assert that exactly one effect was returned
     assert len(effects) == 1
 
-    # Assert the effect has the correct type
-    assert effects[0].type == EffectType.LOG
-
-    # Assert the effect contains expected data
-    assert "test-note-uuid-123" in effects[0].payload
-    assert protocol.NARRATIVE_STRING in effects[0].payload
-
-
-# Test that the protocol class has the correct event type configured
-def test_protocol_event_configuration() -> None:
-    """Test that the protocol is configured to respond to the correct event type."""
-    assert EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED) == Protocol.RESPONDS_TO
+    # Assert the effect is an AddBannerAlert with correct properties
+    effect = effects[0]
+    assert effect.narrative == "Hello from your demo plugin! This patient record was just updated."
+    assert effect.intent == AddBannerAlert.Intent.INFO
+    assert effect.placement == [AddBannerAlert.Placement.TIMELINE]
 
 
-# Example: You can use a factory to create a patient instance for testing purposes.
-def test_factory_example() -> None:
-    """Test that a patient can be created using the PatientFactory."""
-    patient = PatientFactory.create()
-    assert patient.id is not None
+@patch("simple_demo_plugin.protocols.my_protocol.log")
+def test_protocol_logs_event_info(mock_log: Mock) -> None:
+    """Test that the protocol logs event information."""
+    # Create a mock event
+    mock_event = Mock()
+    mock_event.type = EventType.PATIENT_UPDATED
+    mock_event.target = Mock()
+    mock_event.target.id = "test-patient-456"
+    mock_event.context = {}
+
+    # Instantiate the protocol and call compute
+    protocol = Protocol(event=mock_event)
+    protocol.compute()
+
+    # Assert that log.info was called with patient ID
+    mock_log.info.assert_called_once()
+    call_args = mock_log.info.call_args[0][0]
+    assert "test-patient-456" in call_args
+    assert "Patient updated" in call_args
 
 
-# Example: If a factory is not available, you can create an instance manually with the data model directly.
-def test_model_example() -> None:
-    """Test that a Discount instance can be created."""
-    Discount.objects.create(name="10%", adjustment_group="30", adjustment_code="CO", discount=0.10)
-    assert Discount.objects.first().pk is not None
+def test_protocol_always_returns_banner() -> None:
+    """Test that the protocol always returns a banner alert."""
+    # Create a minimal mock event
+    mock_event = Mock()
+    mock_event.type = EventType.PATIENT_UPDATED
+    mock_event.target = Mock()
+    mock_event.target.id = "123"
+    mock_event.context = {}
+
+    # Instantiate the protocol with the mock event
+    protocol = Protocol(event=mock_event)
+
+    # Call compute and get the effects
+    effects = protocol.compute()
+
+    # Should always return exactly one banner alert
+    assert len(effects) == 1
+    assert effects[0].intent == AddBannerAlert.Intent.INFO
+    assert effects[0].placement == [AddBannerAlert.Placement.TIMELINE]
