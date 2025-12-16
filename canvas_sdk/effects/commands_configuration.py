@@ -8,7 +8,7 @@ class CommandsConfiguration(_BaseEffect):
     """An Effect that will configure the commands available.
 
     The commands list should contain dictionaries returned by calling the
-    configure() method on command instances (e.g., HtmlCommand().configure()).
+    configure() method on command instances (e.g., CustomCommand().configure()).
     """
 
     class Meta:
