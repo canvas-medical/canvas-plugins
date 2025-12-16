@@ -121,6 +121,59 @@ def test_command_validation_error_effect_add_error_strips_whitespace() -> None:
     assert effect.errors[0].message == "Test error"
 
 
+def test_command_validation_error_effect_add_error_accepts_validation_error_object() -> None:
+    """Test that add_error() accepts a ValidationError object."""
+    effect = CommandValidationErrorEffect()
+    error = ValidationError(message="Test error")
+    effect.add_error(error)
+    assert len(effect.errors) == 1
+    assert effect.errors[0].message == "Test error"
+    assert effect.errors[0] is error
+
+
+def test_command_validation_error_effect_add_error_with_multiple_validation_error_objects() -> None:
+    """Test that add_error() can be called multiple times with ValidationError objects."""
+    effect = CommandValidationErrorEffect()
+    error1 = ValidationError(message="Error 1")
+    error2 = ValidationError(message="Error 2")
+    effect.add_error(error1)
+    effect.add_error(error2)
+    assert len(effect.errors) == 2
+    assert effect.errors[0] is error1
+    assert effect.errors[1] is error2
+
+
+def test_command_validation_error_effect_add_error_with_mixed_types() -> None:
+    """Test that add_error() can accept both string and ValidationError objects."""
+    effect = CommandValidationErrorEffect()
+    error = ValidationError(message="Error 1")
+    effect.add_error(error)
+    effect.add_error("Error 2")
+    assert len(effect.errors) == 2
+    assert effect.errors[0].message == "Error 1"
+    assert effect.errors[1].message == "Error 2"
+
+
+def test_command_validation_error_effect_add_error_with_validation_error_returns_self() -> None:
+    """Test that add_error() with ValidationError returns self for method chaining."""
+    effect = CommandValidationErrorEffect()
+    error = ValidationError(message="Test error")
+    result = effect.add_error(error)
+    assert result is effect
+
+
+def test_command_validation_error_effect_add_error_with_validation_error_method_chaining() -> None:
+    """Test that add_error() with ValidationError objects supports method chaining."""
+    effect = CommandValidationErrorEffect()
+    error1 = ValidationError(message="Error 1")
+    error2 = ValidationError(message="Error 2")
+    effect.add_error(error1).add_error("Error 3").add_error(error2)
+    assert len(effect.errors) == 3
+    assert effect.errors[0] is error1
+    assert effect.errors[1].message == "Error 3"
+    assert effect.errors[2] is error2
+
+
 def test_command_validation_error_effect_values_property_returns_correct_format() -> None:
     """Test that values property returns the correct format."""
     effect = CommandValidationErrorEffect()
