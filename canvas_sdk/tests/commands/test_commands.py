@@ -119,6 +119,15 @@ def referralReview() -> dict[str, Any]:
     }
 
 
+def uncategorizedDocumentReview() -> dict[str, Any]:
+    """Uncategorized Document Review Command for testing."""
+    return {
+        "message_to_patient": "uncategorized document reviewed",
+        "communication_method": ReportReviewCommunicationMethod.ALREADY_REVIEWED_WITH_PATIENT,
+        "comment": "Test uncategorized clinical document review",
+    }
+
+
 @pytest.fixture(scope="module", autouse=True)
 def patch_condition() -> Generator[None, None, None]:
     """Patch the Condition model to return a mock queryset."""
