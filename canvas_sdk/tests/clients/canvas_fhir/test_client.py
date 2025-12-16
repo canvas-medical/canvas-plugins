@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from canvas_sdk.clients import CanvasFhir
+from settings import CUSTOMER_IDENTIFIER
 
 MOCK_CREDENTIALS = {
     "access_token": "test_token",
@@ -32,7 +33,7 @@ def test__api_base_url(mock_get_cache: MagicMock) -> None:
     """Test the defined URL of the CanvasFhir instance."""
     tested = CanvasFhir(client_id="test", client_secret="test")
     result = tested._base_url
-    expected = "https://fumage-local.canvasmedical.com"
+    expected = f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
     assert result == expected
 
 
