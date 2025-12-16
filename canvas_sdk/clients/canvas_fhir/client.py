@@ -3,7 +3,6 @@ from urllib.parse import urlencode
 
 from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.utils.http import Http
-
 from settings import CUSTOMER_IDENTIFIER
 
 
