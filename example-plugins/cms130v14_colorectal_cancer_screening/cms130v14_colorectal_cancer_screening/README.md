@@ -208,7 +208,7 @@ This plugin requires no configuration - it works automatically once installed.
 
 **Patient**: 68-year-old with colonoscopy 3 years ago
 
-**Plugin Action**: 
+**Plugin Action**:
 - Detects colonoscopy within 9-year lookback period
 - Creates "SATISFIED" protocol card
 - Shows date of last colonoscopy and next due date (6 years from now)
@@ -219,7 +219,7 @@ This plugin requires no configuration - it works automatically once installed.
 
 **Patient**: 70-year-old in nursing facility
 
-**Plugin Action**: 
+**Plugin Action**:
 - Detects housing status observation indicating nursing home residence
 - Automatically excludes patient from measure due to age 66+ and nursing home residence
 
@@ -229,7 +229,7 @@ This plugin requires no configuration - it works automatically once installed.
 
 **Patient**: 60-year-old receiving hospice care
 
-**Plugin Action**: 
+**Plugin Action**:
 - Detects hospice diagnosis or encounter during measurement period
 - Automatically excludes patient from measure
 
@@ -239,7 +239,7 @@ This plugin requires no configuration - it works automatically once installed.
 
 **Patient**: 70-year-old with frailty device and advanced illness diagnosis
 
-**Plugin Action**: 
+**Plugin Action**:
 - Detects age 66+ with frailty indicators
 - Detects advanced illness diagnosis
 - Automatically excludes patient from measure
