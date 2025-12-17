@@ -54,4 +54,3 @@ SCREENING_CONTEXT = {
         ]
     ]
 }
-

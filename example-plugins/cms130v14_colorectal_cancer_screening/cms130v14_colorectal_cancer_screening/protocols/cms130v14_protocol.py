@@ -6,7 +6,7 @@ import arrow
 from django.db.models import Q
 
 from canvas_sdk.commands import ImagingOrderCommand, LabOrderCommand, ReferCommand
-from canvas_sdk.commands.constants import CodeSystems, ServiceProvider
+from canvas_sdk.commands.constants import ServiceProvider
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import ClinicalQualityMeasure
@@ -53,8 +53,6 @@ from canvas_sdk.value_set.v2026.procedure import (
     TotalColectomy,
 )
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
-from logger import log
-
 from cms130v14_colorectal_cancer_screening.constants import (
     AGE_RANGE_END,
     AGE_RANGE_START,
@@ -70,6 +68,7 @@ from cms130v14_colorectal_cancer_screening.constants import (
     SCREENING_LOOKBACK_YEARS,
     SNOMED_SYSTEM_IDENTIFIERS,
 )
+from logger import log
 
 
 class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
@@ -227,11 +226,9 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         log.debug(
             f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}"
         )
-        if not age_check:
-            return False
         # Note: encounter_check uses optimistic rule, so it will always return True
         # even if no eligible encounters are found
-        return True
+        return age_check
 
     def _in_denominator(self, patient: Patient) -> bool:
         """
