@@ -507,7 +507,7 @@ def create_lab_report_with_loinc(
     """
     # Convert original_date to date/datetime as needed
     from datetime import datetime as dt_datetime
-    
+
     if original_date is None:
         original_date = arrow.now()
         original_date_obj = original_date.date()
