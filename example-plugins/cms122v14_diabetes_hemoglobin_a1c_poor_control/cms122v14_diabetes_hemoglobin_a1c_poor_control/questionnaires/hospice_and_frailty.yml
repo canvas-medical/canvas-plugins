@@ -1,0 +1,124 @@
+name: Hospice & Frailty
+form_type: QUES
+code_system: INTERNAL
+code: QQ_CMS122_001
+can_originate_in_charting: true
+questions:
+  - content: 'Hospice'
+    code_system: INTERNAL
+    code: R-HOSPICE-001
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: 'Discharge to home for Hospice Care'
+        code: '428361000124107'
+        value: '1'
+      - name: 'Discharge to Healthcare Facility for Hospice Care'
+        code: '428371000124100'
+        value: '1'
+      - name: 'Yes (qualifier value)'
+        code: '373066001'
+        value: '1'
+
+  - content: 'Hospice Care Assessment (MDS)'
+    code_system: LOINC
+    code: '45755-6'
+    responses_code_system: SNOMED
+    responses_type: SING
+    responses:
+      - name: 'Yes'
+        code: '373066001'
+        value: '1'
+      - name: 'No'
+        code: '373067005'
+        value: '0'
+
+  - content: 'Housing Status'
+    code_system: LOINC
+    code: '71802-3'
+    responses_code_system: SNOMED
+    responses_type: SING
+    responses:
+      - name: 'Lives in nursing home'
+        code: '160734000'
+        value: '1'
+
+  - content: 'Medical Equipment Used'
+    code_system: LOINC
+    code: '98181-1'
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: 'Frailty Device'
+        code: '105501005'
+        value: '1'
+      - name: 'Walking aid'
+        code: '23366006'
+        value: '1'
+      - name: 'Wheelchair'
+        code: '58938008'
+        value: '1'
+
+  - content: 'Frailty Indicators'
+    code_system: INTERNAL
+    code: R-FRAILTY-001
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: 'Frailty (finding)'
+        code: '248279007'
+        value: '1'
+      - name: 'Asthenia (weakness)'
+        code: '13791008'
+        value: '1'
+      - name: 'Muscle weakness'
+        code: '26544005'
+        value: '1'
+      - name: 'Fatigue'
+        code: '84229001'
+        value: '1'
+
+  - content: 'Palliative Care Assessment (FACIT-Pal)'
+    code_system: LOINC
+    code: '71007-9'
+    responses_code_system: SNOMED
+    responses_type: SING
+    responses:
+      - name: 'Completed'
+        code: '385658003'
+        value: '1'
+      - name: 'Not completed'
+        code: '385660001'
+        value: '0'
+
+  - content: 'Palliative Care'
+    code_system: INTERNAL
+    code: R-PALLIATIVE-001
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: 'Palliative care (regime/therapy)'
+        code: '103735009'
+        value: '1'
+      - name: 'Patient receiving palliative care'
+        code: '395082007'
+        value: '1'
+
+  - content: 'Advanced Illness'
+    code_system: INTERNAL
+    code: R-ADVILL-001
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: 'End stage renal disease'
+        code: '46177005'
+        value: '1'
+      - name: 'Heart failure'
+        code: '84114007'
+        value: '1'
+      - name: 'Dementia'
+        code: '52448006'
+        value: '1'
+      - name: 'Chronic obstructive lung disease'
+        code: '13645005'
+        value: '1'
