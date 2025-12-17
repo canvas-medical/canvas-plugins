@@ -102,10 +102,10 @@ class ReferralReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
 
 
 class ReferralReportQuerySet(
+    BaseQuerySet,
     ForPatientQuerySetMixin,
     ReferralReportTimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySetMixin,
-    BaseQuerySet,
 ):
     """QuerySet for ReferralReport with value set filtering via codings."""
 
@@ -166,4 +166,4 @@ class ReferralReportCoding(Coding):
     value = models.CharField(max_length=1000)
 
 
-__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding")
+__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding", "ReferralReview")

@@ -248,9 +248,11 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
         log.debug(
             f"CMS130v14: Initial population check for patient {patient.id}: age={age_check}, encounter={encounter_check}"
         )
+        if not age_check:
+            return False
         # Note: encounter_check uses optimistic rule, so it will always return True
-        # even if no eligible encounters are found. We only need to check age.
-        return age_check
+        # even if no eligible encounters are found
+        return True
 
     def _in_denominator(self, patient: Patient) -> bool:
         """
@@ -1329,13 +1331,13 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             reports = (
-                ImagingReport.objects.for_patient(patient.id)
+                ImagingReport.objects.filter(patient=patient)
+                .find(value_set_class)
                 .filter(
                     original_date__gte=period_start_date,
                     original_date__lte=period_end_date,
                     junked=False,
                 )
-                .find(value_set_class)
                 .order_by("-original_date")
             )
 
@@ -1362,13 +1364,13 @@ class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
             )
 
             reports = (
-                ReferralReport.objects.for_patient(patient.id)
+                ReferralReport.objects.filter(patient=patient)
+                .find(value_set_class)
                 .filter(
                     original_date__gte=period_start_date,
                     original_date__lte=period_end_date,
                     junked=False,
                 )
-                .find(value_set_class)
                 .order_by("-original_date")
             )
 

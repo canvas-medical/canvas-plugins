@@ -11,22 +11,21 @@ from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.test_utils.factories import CanvasUserFactory, NoteFactory, PatientFactory
+from canvas_sdk.test_utils.helpers import (
+    create_lab_report_with_loinc,
+    create_medication_with_coding,
+    create_observation_with_coding,
+    create_referral_report_with_cpt,
+    create_referral_report_with_loinc,
+)
 from canvas_sdk.v1.data import (
     Condition,
     ConditionCoding,
     ImagingReport,
     ImagingReportCoding,
-    LabReport,
-    LabValue,
-    LabValueCoding,
-    Medication,
-    MedicationCoding,
     NoteType,
     Observation,
-    ObservationCoding,
     ObservationValueCoding,
-    ReferralReport,
-    ReferralReportCoding,
 )
 from canvas_sdk.v1.data.note import NoteTypeCategories, PracticeLocationPOS
 from canvas_sdk.value_set.v2026.condition import (
@@ -75,35 +74,6 @@ def create_patient_at_age(now, years: int):
     return PatientFactory.create(birth_date=now.shift(years=-years).date())
 
 
-def create_lab_report_with_loinc(
-    patient, when_dt, code: str, name: str = ""
-) -> tuple[LabReport, LabValue]:
-    """Create a lab report with LOINC coding."""
-    report = LabReport.objects.create(
-        patient=patient,
-        original_date=when_dt,
-        assigned_date=when_dt,
-        date_performed=when_dt,
-        junked=False,
-        requires_signature=False,
-        for_test_only=False,
-        version=1,
-    )
-    value = LabValue.objects.create(
-        report=report,
-        value="Negative",
-        units="",
-        abnormal_flag="",
-        reference_range="",
-        low_threshold="",
-        high_threshold="",
-        comment="",
-        observation_status="final",
-    )
-    LabValueCoding.objects.create(
-        value=value, code=code, system="http://loinc.org", name=name or code
-    )
-    return report, value
 
 
 def create_imaging_report_with_cpt(
@@ -144,38 +114,6 @@ def create_imaging_report_with_loinc(
     return report
 
 
-def create_referral_report_with_cpt(
-    patient, when_date, code: str, display: str, specialty="Gastroenterology", junked=False
-):
-    """Create a referral report with CPT coding."""
-    report = ReferralReport.objects.create(
-        patient=patient,
-        original_date=when_date,
-        junked=junked,
-        requires_signature=False,
-        specialty=specialty,
-    )
-    ReferralReportCoding.objects.create(
-        report=report, code=code, system="http://www.ama-assn.org/go/cpt", display=display
-    )
-    return report
-
-
-def create_referral_report_with_loinc(
-    patient, when_date, code: str, display: str, specialty="Gastroenterology", junked=False
-):
-    """Create a referral report with LOINC coding (for CT Colonography)."""
-    report = ReferralReport.objects.create(
-        patient=patient,
-        original_date=when_date,
-        junked=junked,
-        requires_signature=False,
-        specialty=specialty,
-    )
-    ReferralReportCoding.objects.create(
-        report=report, code=code, system="http://loinc.org", display=display
-    )
-    return report
 
 
 def create_condition_with_coding(
@@ -232,7 +170,7 @@ def create_ct_colonography_report(patient, now, years_ago, report_type="imaging"
                 patient, when_date, when_dt, code, "CT Colonography"
             )
         else:
-            return create_referral_report_with_cpt(patient, when_date, code, "CT Colonography")
+            return create_referral_report_with_cpt(patient, code, when_date, "CT Colonography")
     elif loinc_codes:
         code = loinc_codes[0]
         if report_type == "imaging":
@@ -240,7 +178,7 @@ def create_ct_colonography_report(patient, now, years_ago, report_type="imaging"
                 patient, when_date, when_dt, code, "CT Colonography"
             )
         else:
-            return create_referral_report_with_loinc(patient, when_date, code, "CT Colonography")
+            return create_referral_report_with_loinc(patient, code, when_date, "CT Colonography")
     else:
         pytest.skip("CT Colonography codes missing")
 
@@ -253,60 +191,6 @@ def create_eligible_note_for_patient(patient, now, eligible_note_fixture):
     return note
 
 
-def create_medication_with_coding(
-    patient, start_date, code: str, system: str, display: str, end_date=None
-):
-    """Create a medication with coding."""
-    user = CanvasUserFactory()
-    if end_date is None:
-        end_date = arrow.utcnow().shift(years=100).date()
-    medication = Medication.objects.create(
-        patient=patient,
-        start_date=start_date,
-        end_date=end_date,
-        deleted=False,
-        committer=user,
-        erx_quantity=0.0,  # Required field
-    )
-    MedicationCoding.objects.create(
-        medication=medication, code=code, system=system, display=display
-    )
-    return medication
-
-
-def create_observation_with_coding(
-    patient,
-    effective_datetime,
-    codings_code: str,
-    codings_system: str,
-    value_codings_code: str = None,
-    value_codings_system: str = None,
-):
-    """Create an observation with coding."""
-    note = NoteFactory.create(patient=patient, datetime_of_service=effective_datetime)
-    observation = Observation.objects.create(
-        patient=patient,
-        note_id=note.dbid,
-        effective_datetime=effective_datetime,
-        category="vital-signs",
-        units="",
-        value="",
-        name="Test Observation",
-    )
-    ObservationCoding.objects.create(
-        observation=observation,
-        code=codings_code,
-        system=codings_system,
-        display="Test Observation",
-    )
-    if value_codings_code and value_codings_system:
-        ObservationValueCoding.objects.create(
-            observation=observation,
-            code=value_codings_code,
-            system=value_codings_system,
-            display="Test Result",
-        )
-    return observation
 
 
 
@@ -475,7 +359,7 @@ class TestNumeratorByLabs:
         """Test that lab screenings within their lookback windows satisfy the protocol."""
         code = first_or_skip(value_set_class.LOINC, f"{test_type} LOINC set is empty")
         create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-months_ago).datetime, code, test_type
+            patient_age_62, now.shift(months=-months_ago), code, test_type
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -536,9 +420,9 @@ class TestNumeratorByProcedures:
         else:
             create_referral_report_with_cpt(
                 patient_age_62,
-                when_date=now.shift(years=-years_ago).date(),
-                code=code,
-                display=procedure_type,
+                code,
+                now.shift(years=-years_ago).date(),
+                procedure_type,
             )
 
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -708,7 +592,7 @@ class TestDueWhenScreeningsStale:
         """Test that lab screenings outside their lookback windows yield DUE."""
         code = first_or_skip(value_set_class.LOINC, f"{test_name} LOINC empty")
         create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-months_ago).datetime, code, test_name
+            patient_age_62, now.shift(months=-months_ago), code, test_name
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -748,7 +632,7 @@ class TestDueWhenScreeningsStale:
 
         if report_type == "referral":
             create_referral_report_with_cpt(
-                patient_age_62, now.shift(years=-years_ago).date(), code, display
+                patient_age_62, code, now.shift(years=-years_ago).date(), display
             )
         else:
             create_imaging_report_with_cpt(
@@ -862,9 +746,9 @@ class TestReferralReports:
 
         create_referral_report_with_cpt(
             patient_age_62,
-            when_date=now.shift(years=-years_ago).date(),
-            code=code,
-            display=procedure_type,
+            code,
+            now.shift(years=-years_ago).date(),
+            procedure_type,
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -926,9 +810,9 @@ class TestPriorityImagingBeforeReferral:
         # Create Referral Report (newer date)
         create_referral_report_with_cpt(
             patient_age_62,
-            when_date=now.shift(years=-referral_years_ago).date(),
-            code=code,
-            display=procedure_type,
+            code,
+            now.shift(years=-referral_years_ago).date(),
+            procedure_type,
         )
 
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -952,9 +836,9 @@ class TestPriorityImagingBeforeReferral:
         )
         create_referral_report_with_cpt(
             patient_age_62,
-            when_date=now.shift(years=-2).date(),
-            code=cpt,
-            display="Flexible Sigmoidoscopy",
+            cpt,
+            now.shift(years=-2).date(),
+            "Flexible Sigmoidoscopy",
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
@@ -1032,9 +916,9 @@ class TestEdgeCases:
         else:
             create_referral_report_with_cpt(
                 patient_age_62,
-                when_date=now.shift(years=-years_ago).date(),
-                code=code,
-                display=procedure_type,
+                code,
+                now.shift(years=-years_ago).date(),
+                procedure_type,
             )
 
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -1079,9 +963,9 @@ class TestEdgeCases:
         else:
             create_referral_report_with_cpt(
                 patient_age_62,
-                when_date=now.shift(years=-2).date(),
-                code=code,
-                display=procedure_type,
+                code,
+                now.shift(years=-2).date(),
+                procedure_type,
                 junked=True,
             )
 
@@ -1122,11 +1006,11 @@ class TestPriorityBasedScreening:
 
         # FOBT older (6 months ago)
         create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-6).datetime, fobt_code, "FOBT"
+            patient_age_62, now.shift(months=-6), fobt_code, "FOBT"
         )
         # FIT-DNA newer (2 months ago)
         create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-2).datetime, fitdna_code, "FIT-DNA"
+            patient_age_62, now.shift(months=-2), fitdna_code, "FIT-DNA"
         )
 
         set_patient_context(protocol_instance, patient_age_62.id)
@@ -1246,9 +1130,9 @@ class TestV14NewExclusions:
             pytest.skip("DementiaMedications codes missing")
         create_medication_with_coding(
             patient_age_70,
-            start_date=now.shift(months=-3).date(),
-            code=dementia_med_codes[0],
-            system="http://www.nlm.nih.gov/research/umls/rxnorm",
+            dementia_med_codes[0],
+            "http://www.nlm.nih.gov/research/umls/rxnorm",
+            now.shift(months=-3).date(),
             display="Dementia Medication",
         )
 
@@ -1266,9 +1150,9 @@ class TestV14NewExclusions:
         # LOINC 71802-3 (Housing status) with value SNOMED 160734000 (Lives in nursing home)
         create_observation_with_coding(
             patient_age_70,
-            effective_datetime=now.shift(months=-6).datetime,
-            codings_code="71802-3",  # Housing status LOINC
-            codings_system="http://loinc.org",
+            "71802-3",  # Housing status LOINC
+            "http://loinc.org",
+            now.shift(months=-6),
             value_codings_code="160734000",  # Lives in nursing home SNOMED
             value_codings_system="http://snomed.info/sct",
         )
@@ -1489,9 +1373,9 @@ class TestV14UpdatedLookbackPeriods:
             pytest.skip("FlexibleSigmoidoscopy CPT codes missing")
         create_referral_report_with_cpt(
             patient_age_62,
-            when_date=now.shift(years=-years_ago).date(),
-            code=codes[0],
-            display="Flexible Sigmoidoscopy",
+            codes[0],
+            now.shift(years=-years_ago).date(),
+            "Flexible Sigmoidoscopy",
         )
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())

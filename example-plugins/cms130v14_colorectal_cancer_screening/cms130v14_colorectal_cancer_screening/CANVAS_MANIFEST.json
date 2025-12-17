@@ -8,6 +8,21 @@
             {
                 "class": "cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol:CMS130v14ColorectalCancerScreening",
                 "description": "Colorectal Cancer Screening - CMS130v14",
+                "data_access": {
+                    "read": [
+                        "patients",
+                        "conditions",
+                        "imaging_reports",
+                        "referral_reports",
+                        "lab_reports",
+                        "medications",
+                        "observations",
+                        "encounters",
+                        "billing_line_items",
+                        "protocol_overrides"
+                    ],
+                    "write": []
+                },
                 "meta": {
                     "title": "Colorectal Cancer Screening",
                     "description": "Percentage of adults 46-75 years of age who had appropriate screening for colorectal cancer.",
