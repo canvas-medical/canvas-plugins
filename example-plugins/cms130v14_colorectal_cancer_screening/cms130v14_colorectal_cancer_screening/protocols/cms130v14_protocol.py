@@ -55,42 +55,21 @@ from canvas_sdk.value_set.v2026.procedure import (
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
 from logger import log
 
-# Constants
-AGE_RANGE_START = 46
-AGE_RANGE_END = 75
-SCREENING_INTERVALS_DAYS = {
-    "FOBT": 365,
-    "FIT-DNA": 730,  # 2 years
-    "Flexible sigmoidoscopy": 1460,  # 4 years
-    "CT Colonography": 1460,  # 4 years
-    "Colonoscopy": 3285,  # 9 years
-}
-SCREENING_LOOKBACK_YEARS = {
-    "FOBT": 1,
-    "FIT-DNA": 2,
-    "Flexible sigmoidoscopy": 4,
-    "CT Colonography": 4,
-    "Colonoscopy": 9,
-}
-DISCHARGE_TO_HOME_HOSPICE_SNOMED = "428361000124107"
-DISCHARGE_TO_FACILITY_HOSPICE_SNOMED = "428371000124100"
-LOINC_SYSTEM_IDENTIFIERS = ["LOINC", CodeSystems.LOINC]
-SNOMED_SYSTEM_IDENTIFIERS = ["SNOMED", "SNOMEDCT", "http://snomed.info/sct"]
-HOUSING_STATUS_LOINC = "71802-3"
-LIVES_IN_NURSING_HOME_SNOMED = "160734000"
-PALLIATIVE_CARE_ASSESSMENT_LOINC = "71007-9"
-SCREENING_DIAGNOSIS_CODE = "Z1211"
-SCREENING_CONTEXT = {
-    "conditions": [
-        [
-            {
-                "code": SCREENING_DIAGNOSIS_CODE,
-                "system": "ICD-10",
-                "display": "Encounter for screening for malignant neoplasm of colon",
-            }
-        ]
-    ]
-}
+from cms130v14_colorectal_cancer_screening.constants import (
+    AGE_RANGE_END,
+    AGE_RANGE_START,
+    DISCHARGE_TO_FACILITY_HOSPICE_SNOMED,
+    DISCHARGE_TO_HOME_HOSPICE_SNOMED,
+    HOUSING_STATUS_LOINC,
+    LIVES_IN_NURSING_HOME_SNOMED,
+    LOINC_SYSTEM_IDENTIFIERS,
+    PALLIATIVE_CARE_ASSESSMENT_LOINC,
+    SCREENING_CONTEXT,
+    SCREENING_DIAGNOSIS_CODE,
+    SCREENING_INTERVALS_DAYS,
+    SCREENING_LOOKBACK_YEARS,
+    SNOMED_SYSTEM_IDENTIFIERS,
+)
 
 
 class CMS130v14ColorectalCancerScreening(ClinicalQualityMeasure):
