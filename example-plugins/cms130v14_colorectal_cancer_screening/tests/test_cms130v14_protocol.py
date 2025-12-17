@@ -6,6 +6,9 @@ from collections.abc import Iterable
 
 import arrow
 import pytest
+from cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol import (
+    CMS130v14ColorectalCancerScreening,
+)
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.protocol_card.protocol_card import ProtocolCard
@@ -42,10 +45,6 @@ from canvas_sdk.value_set.v2026.procedure import (
     FlexibleSigmoidoscopy,
     TotalColectomy,
 )
-from cms130v14_colorectal_cancer_screening.protocols.cms130v14_protocol import (
-    CMS130v14ColorectalCancerScreening,
-)
-
 
 
 def first_or_skip(codes: Iterable[str], reason: str) -> str:
@@ -72,8 +71,6 @@ def set_patient_context(protocol: CMS130v14ColorectalCancerScreening, patient_id
 def create_patient_at_age(now, years: int):
     """Create a patient at the specified age."""
     return PatientFactory.create(birth_date=now.shift(years=-years).date())
-
-
 
 
 def create_imaging_report_with_cpt(
@@ -112,8 +109,6 @@ def create_imaging_report_with_loinc(
         report=report, code=code, system="http://loinc.org", display=display
     )
     return report
-
-
 
 
 def create_condition_with_coding(
@@ -189,10 +184,6 @@ def create_eligible_note_for_patient(patient, now, eligible_note_fixture):
     note.note_type_version = eligible_note_fixture.note_type_version
     note.save()
     return note
-
-
-
-
 
 
 @pytest.fixture
@@ -292,8 +283,6 @@ def eligible_note(now, patient_age_62):
     return note
 
 
-
-
 @pytest.mark.django_db
 class TestComputeGuards:
     """Test guard clauses in compute method."""
@@ -358,9 +347,7 @@ class TestNumeratorByLabs:
     ):
         """Test that lab screenings within their lookback windows satisfy the protocol."""
         code = first_or_skip(value_set_class.LOINC, f"{test_type} LOINC set is empty")
-        create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-months_ago), code, test_type
-        )
+        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago), code, test_type)
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -591,9 +578,7 @@ class TestDueWhenScreeningsStale:
     ):
         """Test that lab screenings outside their lookback windows yield DUE."""
         code = first_or_skip(value_set_class.LOINC, f"{test_name} LOINC empty")
-        create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-months_ago), code, test_name
-        )
+        create_lab_report_with_loinc(patient_age_62, now.shift(months=-months_ago), code, test_name)
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
 
@@ -1005,13 +990,9 @@ class TestPriorityBasedScreening:
         fitdna_code = first_or_skip(SdnaFitTest.LOINC, "FIT-DNA LOINC empty")
 
         # FOBT older (6 months ago)
-        create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-6), fobt_code, "FOBT"
-        )
+        create_lab_report_with_loinc(patient_age_62, now.shift(months=-6), fobt_code, "FOBT")
         # FIT-DNA newer (2 months ago)
-        create_lab_report_with_loinc(
-            patient_age_62, now.shift(months=-2), fitdna_code, "FIT-DNA"
-        )
+        create_lab_report_with_loinc(patient_age_62, now.shift(months=-2), fitdna_code, "FIT-DNA")
 
         set_patient_context(protocol_instance, patient_age_62.id)
         card = extract_card(protocol_instance.compute())
