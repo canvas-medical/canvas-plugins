@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "CMS122v14 Diabetes: Glycemic Status Assessment Greater Than 9% - Clinical Quality Measure (2026)"
+license = "MIT"
+name = "cms122v14_diabetes_hemoglobin_a1c_poor_control"
+readme = "cms122v14_diabetes_hemoglobin_a1c_poor_control/README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
