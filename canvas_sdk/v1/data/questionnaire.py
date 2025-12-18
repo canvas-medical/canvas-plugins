@@ -1,11 +1,9 @@
 from collections.abc import Container
-from typing import cast
 
 from django.db import models
 from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
-    BaseModelManager,
     BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
@@ -113,16 +111,13 @@ class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQ
     pass
 
 
-InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
-
-
 class Interview(TimestampedModel, IdentifiableModel):
     """Interview."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_interview_001"
 
-    objects = cast(InterviewQuerySet, InterviewManager())
+    objects = models.Manager.from_queryset(InterviewQuerySet)()
 
     deleted = models.BooleanField()
     committer = models.ForeignKey(
