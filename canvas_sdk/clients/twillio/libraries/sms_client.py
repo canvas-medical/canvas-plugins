@@ -214,18 +214,12 @@ class SmsClient:
             DateOperation.ON_AND_AFTER: "DateSentAfter",
             DateOperation.ON_AND_BEFORE: "DateSentBefore",
         }[date_operation]
-
-        return urlencode(
-            {
-                k: v
-                for k, v in [
-                    (date_field, date_sent),
-                    ("To", number_to),
-                    ("From", number_from),
-                ]
-                if v
-            }
-        )
+        params = [
+            (date_field, date_sent),
+            ("To", number_to),
+            ("From", number_from),
+        ]
+        return urlencode({k: v for k, v in params if v})
 
     def retrieve_media_list(self, message_id: str) -> Iterator[Media]:
         """Retrieve all media items attached to a message.
