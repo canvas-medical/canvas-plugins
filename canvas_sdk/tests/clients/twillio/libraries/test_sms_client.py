@@ -732,7 +732,34 @@ def test_retrieve_sms__raises_request_failed() -> None:
     assert mock_response.json.mock_calls == exp_calls
 
 
-def test_retrieve_all_sms() -> None:
+@pytest.mark.parametrize(
+    ("number_to", "number_from", "date_sent", "date_operation", "exp_url"),
+    [
+        pytest.param(
+            "",
+            "",
+            "",
+            DateOperation.ON_EXACTLY,
+            "Messages.json",
+            id="all_empty",
+        ),
+        pytest.param(
+            "+11234567890",
+            "+11234567891",
+            "2025-12-15",
+            DateOperation.ON_EXACTLY,
+            "Messages.json?DateSent=2025-12-15&To=%2B11234567890&From=%2B11234567891",
+            id="all_fields",
+        ),
+    ],
+)
+def test_retrieve_all_sms(
+    number_to: str,
+    number_from: str,
+    date_sent: str,
+    date_operation: DateOperation,
+    exp_url: str,
+) -> None:
     """Test SmsClient.retrieve_all_sms retrieves filtered messages."""
     settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
     client = SmsClient(settings)
@@ -761,23 +788,17 @@ def test_retrieve_all_sms() -> None:
     with patch.object(client, "_valid_content_list", mock_valid_content_list):
         messages = list(
             client.retrieve_all_sms(
-                number_to="+11234567891",
-                number_from="+11234567890",
-                date_sent="2025-12-15",
-                date_operation=DateOperation.ON_EXACTLY,
+                number_to=number_to,
+                number_from=number_from,
+                date_sent=date_sent,
+                date_operation=date_operation,
             )
         )
 
     expected = [message1]
     assert messages == expected
 
-    exp_calls = [
-        call(
-            "Messages.json?DateSent=2025-12-15&To=%2B11234567891&From=%2B11234567890",
-            "messages",
-            Message,
-        )
-    ]
+    exp_calls = [call(exp_url, "messages", Message)]
     assert mock_valid_content_list.mock_calls == exp_calls
 
 
