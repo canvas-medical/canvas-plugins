@@ -380,8 +380,9 @@ def extract_card(effects) -> dict:
 
 
 def set_patient_context(protocol, patient_id):
-    """Set patient context in protocol event."""
+    """Set patient context and target ID in protocol event."""
     protocol.event.context = {"patient": {"id": str(patient_id)}}
+    protocol.event.target.id = str(patient_id)
 
 
 @pytest.fixture
