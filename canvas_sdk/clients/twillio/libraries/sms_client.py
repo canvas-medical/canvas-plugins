@@ -4,6 +4,7 @@ from http import HTTPStatus
 from typing import TypeVar
 from urllib.parse import urlencode
 
+from canvas_sdk.clients.twillio.constants import HttpMethod
 from canvas_sdk.clients.twillio.constants.date_operation import DateOperation
 from canvas_sdk.clients.twillio.structures import Phone
 from canvas_sdk.clients.twillio.structures.media import Media
@@ -98,6 +99,31 @@ class SmsClient:
         if request.status_code != HTTPStatus.OK:
             raise RequestFailed(request.status_code, request.content.decode())
         return Phone.from_dict(request.json())
+
+    def set_inbound_webhook(self, phone_sid: str, webhook_url: str, method: HttpMethod) -> bool:
+        """Set the webhook URL for Twilio inbound messages.
+
+        Args:
+            phone_sid: The Twilio SID of the phone number.
+            webhook_url: The URL used by Twillio to send the inbound messages.
+            method: The HTTP method used by Twillio (GET or POST).
+
+        Returns:
+            True if the inbound webhook is correctly set.
+
+        Raises:
+            RequestFailed: If the API request fails.
+        """
+        url = f"IncomingPhoneNumbers/{phone_sid}.json"
+        data = {
+            "SmsUrl": webhook_url,
+            "SmsMethod": method.value,
+        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded"} | self._auth_header()
+        request = self.http.post(url, data=data, headers=headers)
+        if request.status_code != HTTPStatus.OK:
+            raise RequestFailed(request.status_code, request.content.decode())
+        return True
 
     def send_sms_mms(self, sms_mms: SmsMms) -> Message:
         """Send an SMS or MMS message via Twilio.
