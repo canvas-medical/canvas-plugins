@@ -830,3 +830,53 @@ def test_retrieve_raw_media__raises_request_failed() -> None:
         )
     ]
     assert mock_get.mock_calls == exp_calls
+
+
+def test_delete_sms() -> None:
+    """Test SmsClient.delete_sms deletes message successfully."""
+    settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
+    client = SmsClient(settings)
+
+    mock_response = MagicMock()
+    mock_response.status_code = HTTPStatus.NO_CONTENT
+
+    mock_delete = MagicMock(side_effect=[mock_response])
+    with patch.object(client.http, "delete", mock_delete):
+        result = client.delete_sms("SM123")
+
+    assert result is True
+
+    exp_calls = [
+        call(
+            "Messages/SM123.json",
+            headers={
+                "Authorization": "Basic dGVzdF9rZXk6dGVzdF9zZWNyZXQ=",
+            },
+        )
+    ]
+    assert mock_delete.mock_calls == exp_calls
+
+
+def test_delete_sms__raises_request_failed() -> None:
+    """Test SmsClient.delete_sms raises RequestFailed on HTTP error."""
+    settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
+    client = SmsClient(settings)
+
+    mock_response = MagicMock()
+    mock_response.status_code = HTTPStatus.NOT_FOUND
+    mock_response.content = b"Message not found"
+
+    mock_delete = MagicMock(side_effect=[mock_response])
+    with patch.object(client.http, "delete", mock_delete), pytest.raises(RequestFailed) as exc_info:
+        client.delete_sms("SM999")
+
+    assert exc_info.value.status_code == HTTPStatus.NOT_FOUND
+    assert exc_info.value.message == "Message not found"
+
+    exp_calls = [
+        call(
+            "Messages/SM999.json",
+            headers={"Authorization": "Basic dGVzdF9rZXk6dGVzdF9zZWNyZXQ="},
+        )
+    ]
+    assert mock_delete.mock_calls == exp_calls

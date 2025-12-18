@@ -1,6 +1,8 @@
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from canvas_sdk.utils import Http
 from canvas_sdk.utils.http import ontologies_http, pharmacy_http
 
@@ -39,16 +41,32 @@ def test_http_get_json(mock_get: MagicMock) -> None:
     assert response.json() == {"abc": 123}
 
 
+@pytest.mark.parametrize(
+    ("headers", "exp_headers"),
+    [
+        pytest.param(
+            {"Authorization": "Bearer as;ldkfjdkj"},
+            {"Authorization": "Bearer as;ldkfjdkj"},
+            id="with_headers",
+        ),
+        pytest.param(
+            None,
+            {},
+            id="without_headers",
+        ),
+    ],
+)
 @patch("requests.Session.get")
-def test_http_get(mock_get: MagicMock) -> None:
+def test_http_get(mock_get: MagicMock, headers: dict | None, exp_headers: dict) -> None:
     """Test that the Http.get method calls requests.get with the correct arguments."""
     http = Http()
-    http.get("https://www.canvasmedical.com/", headers={"Authorization": "Bearer as;ldkfjdkj"})
-    mock_get.assert_called_once_with(
-        "https://www.canvasmedical.com/",
-        headers={"Authorization": "Bearer as;ldkfjdkj"},
-        timeout=30,
-    )
+    url = "https://www.canvasmedical.com/"
+    http.get(url, headers=headers)
+    mock_get.assert_called_once_with(url, headers=exp_headers, timeout=30)
+    if headers is None:
+        mock_get.reset_mock()
+        http.get(url)
+        mock_get.assert_called_once_with(url, headers=exp_headers, timeout=30)
 
 
 @patch("requests.Session.post")
@@ -106,6 +124,34 @@ def test_http_patch(mock_patch: MagicMock) -> None:
         headers={"Content-type": "application/json"},
         timeout=30,
     )
+
+
+@pytest.mark.parametrize(
+    ("headers", "exp_headers"),
+    [
+        pytest.param(
+            {"Authorization": "Bearer as;ldkfjdkj"},
+            {"Authorization": "Bearer as;ldkfjdkj"},
+            id="with_headers",
+        ),
+        pytest.param(
+            None,
+            {},
+            id="without_headers",
+        ),
+    ],
+)
+@patch("requests.Session.delete")
+def test_http_delete(mock_delete: MagicMock, headers: dict | None, exp_headers: dict) -> None:
+    """Test that the Http.delete method calls requests.delete with the correct arguments."""
+    http = Http()
+    url = "https://www.canvasmedical.com/"
+    http.delete(url, headers=headers)
+    mock_delete.assert_called_once_with(url, headers=exp_headers, timeout=30)
+    if headers is None:
+        mock_delete.reset_mock()
+        http.delete(url)
+        mock_delete.assert_called_once_with(url, headers=exp_headers, timeout=30)
 
 
 @patch("requests.Session.get")
