@@ -1,25 +1,26 @@
+import pytest
+
 from canvas_sdk.clients.extend_ai.structures.request_failed import RequestFailed
-from canvas_sdk.tests.conftest import is_namedtuple
 
 
 def test_class() -> None:
-    """Test that RequestFailed is a NamedTuple with the expected field types."""
+    """Test RequestFailed is a RuntimeError subclass."""
     tested = RequestFailed
-    fields = {
-        "status_code": int,
-        "message": str,
-    }
-    assert is_namedtuple(tested, fields)
+    assert issubclass(tested, RuntimeError)
 
 
-def test_to_dict() -> None:
-    """Test RequestFailed.to_dict correctly serializes error information."""
-    tested = RequestFailed(
-        status_code=403,
-        message="theMessage",
-    )
-    expected = {
-        "statusCode": 403,
-        "message": "theMessage",
-    }
-    assert tested.to_dict() == expected
+@pytest.mark.parametrize(
+    ("status_code", "message"),
+    [
+        pytest.param(400, "Bad Request", id="bad_request"),
+        pytest.param(401, "Unauthorized", id="unauthorized"),
+        pytest.param(404, "Not Found", id="not_found"),
+        pytest.param(500, "Internal Server Error", id="server_error"),
+    ],
+)
+def test_init(status_code: int, message: str) -> None:
+    """Test RequestFailed.__init__ sets status_code and message attributes."""
+    result = RequestFailed(status_code, message)
+    assert result.status_code == status_code
+    assert result.message == message
+    assert str(result) == message
