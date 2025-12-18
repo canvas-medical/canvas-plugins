@@ -11,6 +11,7 @@ from .claim import (
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
+from .encounter import EncounterFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
 from .lab import (
@@ -32,6 +33,18 @@ from .medication_history import (
     MedicationHistoryResponseFactory,
 )
 from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .organization import (
+    OrganizationAddressFactory,
+    OrganizationContactPointFactory,
+    OrganizationFactory,
+)
+from .observation import (
+    ObservationCodingFactory,
+    ObservationComponentCodingFactory,
+    ObservationComponentFactory,
+    ObservationFactory,
+    ObservationValueCodingFactory,
+)
 from .organization import (
     OrganizationAddressFactory,
     OrganizationContactPointFactory,
@@ -70,16 +83,17 @@ from .user import CanvasUserFactory
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
-    "ClaimFactory",
     "ClaimCommentFactory",
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
+    "ClaimFactory",
     "ClaimLabelFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
     "EventFactory",
+    "EncounterFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
     "FacilityFactory",
@@ -100,17 +114,22 @@ __all__ = (
     "LetterFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
+    "MedicationHistoryMedicationFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
     "NoteTypeFactory",
     "OrganizationAddressFactory",
     "OrganizationContactPointFactory",
+    "ObservationCodingFactory",
+    "ObservationComponentCodingFactory",
+    "ObservationComponentFactory",
+    "ObservationFactory",
+    "ObservationValueCodingFactory",
     "OrganizationFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
-    "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
@@ -118,12 +137,12 @@ __all__ = (
     "ReferralFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "StaffAddressFactory",
+    "StaffContactPointFactory",
     "StaffFactory",
+    "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
-    "StaffLicenseFactory",
-    "StaffContactPointFactory",
-    "StaffAddressFactory",
     "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
