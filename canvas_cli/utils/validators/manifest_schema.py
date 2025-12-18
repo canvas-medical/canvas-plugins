@@ -11,7 +11,7 @@ manifest_schema = {
         "components": {
             "type": "object",
             "properties": {
-                "commands": {"$ref": "#/$defs/component"},
+                "commands": {"$ref": "#/$defs/commands"},
                 "protocols": {"$ref": "#/$defs/component"},
                 "content": {"$ref": "#/$defs/component"},
                 "effects": {"$ref": "#/$defs/component"},
@@ -150,6 +150,31 @@ manifest_schema = {
                     "template": {"type": "string"},
                 },
                 "required": ["template"],
+                "additionalProperties": False,
+            },
+        },
+        "commands": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "label": {"type": "string"},
+                    "schema_key": {"type": "string"},
+                    "section": {
+                        "type": "string",
+                        "enum": [
+                            "subjective",
+                            "objective",
+                            "assessment",
+                            "plan",
+                            "procedures",
+                            "history",
+                            "internal",
+                        ],
+                    },
+                },
+                "required": ["name", "schema_key"],
                 "additionalProperties": False,
             },
         },

@@ -1,9 +1,6 @@
-from typing import Any
-
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.commands.base import CommandConfiguration, _BaseCommand
-from canvas_sdk.commands.constants import CommandChartSection
+from canvas_sdk.commands.base import _BaseCommand
 
 
 class CustomCommand(_BaseCommand):
@@ -12,6 +9,7 @@ class CustomCommand(_BaseCommand):
     class Meta:
         key = "customCommand"
 
+    schema_key: str | None = None
     content: str | None = None
     print_content: str | None = None
 
@@ -19,22 +17,24 @@ class CustomCommand(_BaseCommand):
         """Get error details for the custom command."""
         errors = super()._get_error_details(method)
 
-        if method == "originate" and not self.content:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Content must be provided for a custom command.",
-                    self.content,
+        if method == "originate":
+            if not self.content:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Content must be provided for a custom command.",
+                        self.content,
+                    )
                 )
-            )
-
+            if not self.schema_key:
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "Schema key must be provided for a custom command.",
+                        self.schema_key,
+                    )
+                )
         return errors
-
-    def configure(
-        self, label: str, section: CommandChartSection, **kwargs: Any
-    ) -> CommandConfiguration:
-        """Configure the custom command label and section."""
-        return {"key": self.Meta.key, "label": label, "section": section.value}
 
 
 __exports__ = ("CustomCommand",)
