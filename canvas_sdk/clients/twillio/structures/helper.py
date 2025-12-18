@@ -75,7 +75,7 @@ class Helper:
         """
         return {
             key: values[0] if len(values) == 1 else values
-            for key, values in parse_qs(raw_body).items()
+            for key, values in parse_qs(raw_body, keep_blank_values=True).items()
         }
 
 
