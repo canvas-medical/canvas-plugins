@@ -373,6 +373,102 @@ def test_account_phone_number__raises_request_failed() -> None:
     assert mock_response.json.mock_calls == exp_calls
 
 
+def test_set_inbound_webhook() -> None:
+    """Test SmsClient.set_inbound_webhook configures webhook successfully."""
+    settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
+    client = SmsClient(settings)
+
+    mock_response = MagicMock()
+    mock_response.status_code = HTTPStatus.OK
+
+    mock_post = MagicMock(side_effect=[mock_response])
+    with patch.object(client.http, "post", mock_post):
+        result = client.set_inbound_webhook(
+            "PN456",
+            "https://example.com/webhook",
+            HttpMethod.POST,
+        )
+
+    assert result is True
+
+    exp_calls = [
+        call(
+            "IncomingPhoneNumbers/PN456.json",
+            data={
+                "SmsUrl": "https://example.com/webhook",
+                "SmsMethod": "POST",
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic dGVzdF9rZXk6dGVzdF9zZWNyZXQ=",
+            },
+        )
+    ]
+    assert mock_post.mock_calls == exp_calls
+
+
+def test_set_inbound_webhook__with_get_method() -> None:
+    """Test SmsClient.set_inbound_webhook configures webhook with GET method."""
+    settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
+    client = SmsClient(settings)
+
+    mock_response = MagicMock()
+    mock_response.status_code = HTTPStatus.OK
+
+    mock_post = MagicMock(side_effect=[mock_response])
+    with patch.object(client.http, "post", mock_post):
+        result = client.set_inbound_webhook("PN789", "https://example.com/sms", HttpMethod.GET)
+
+    assert result is True
+
+    exp_calls = [
+        call(
+            "IncomingPhoneNumbers/PN789.json",
+            data={
+                "SmsUrl": "https://example.com/sms",
+                "SmsMethod": "GET",
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic dGVzdF9rZXk6dGVzdF9zZWNyZXQ=",
+            },
+        )
+    ]
+    assert mock_post.mock_calls == exp_calls
+
+
+def test_set_inbound_webhook__raises_request_failed() -> None:
+    """Test SmsClient.set_inbound_webhook raises RequestFailed on HTTP error."""
+    settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
+    client = SmsClient(settings)
+
+    mock_response = MagicMock()
+    mock_response.status_code = HTTPStatus.NOT_FOUND
+    mock_response.content = b"Phone number not found"
+
+    mock_post = MagicMock(side_effect=[mock_response])
+    with patch.object(client.http, "post", mock_post), pytest.raises(RequestFailed) as exc_info:
+        client.set_inbound_webhook("PN999", "https://example.com/webhook", HttpMethod.POST)
+
+    assert exc_info.value.status_code == HTTPStatus.NOT_FOUND
+    assert exc_info.value.message == "Phone number not found"
+
+    exp_calls = [
+        call(
+            "IncomingPhoneNumbers/PN999.json",
+            data={
+                "SmsUrl": "https://example.com/webhook",
+                "SmsMethod": "POST",
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic dGVzdF9rZXk6dGVzdF9zZWNyZXQ=",
+            },
+        )
+    ]
+    assert mock_post.mock_calls == exp_calls
+
+
 def test_send_sms_mms() -> None:
     """Test SmsClient.send_sms_mms sends message and returns created Message."""
     settings = Settings(account_sid="AC123", key="test_key", secret="test_secret")
