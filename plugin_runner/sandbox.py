@@ -679,6 +679,7 @@ class Sandbox:
                 "property": builtins.property,
                 "reversed": builtins.reversed,
                 "staticmethod": builtins.staticmethod,
+                "sum": builtins.sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
             },
