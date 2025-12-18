@@ -8,6 +8,8 @@ from django.db import connection, models
 from django.db.models import Q
 from django.db.models.base import ModelBase
 
+from canvas_sdk.value_set.value_set import ValueSetType
+
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.value_set.value_set import ValueSetType
