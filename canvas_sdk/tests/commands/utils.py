@@ -20,7 +20,12 @@ from canvas_sdk.tests.shared import MaskedValue, trigger_plugin_event
 TEST_PLUGINS_DIR = Path(__file__).parent
 
 # SOME COMMANDS MIGHT NOT BE IN PRODUCTION, SO WE NEED TO SKIP INTEGTEST FOR THEM
-COMMANDS_TO_SKIP: list[str] = []
+COMMANDS_TO_SKIP = [
+    "LabReviewCommand",
+    "ReferralReviewCommand",
+    "ImagingReviewCommand",
+    "UncategorizedDocumentReviewCommand",
+]
 
 
 COMMANDS: list[type[_BaseCommand]] = [
