@@ -1,7 +1,4 @@
-from typing import NamedTuple
-
-
-class RequestFailed(NamedTuple):
+class RequestFailed(RuntimeError):
     """Represents a failed API request.
 
     Attributes:
@@ -9,19 +6,16 @@ class RequestFailed(NamedTuple):
         message: The error message describing the failure.
     """
 
-    status_code: int
-    message: str
+    def __init__(self, status_code: int, message: str):
+        """Initialize a RequestFailed exception.
 
-    def to_dict(self) -> dict:
-        """Convert this RequestFailed to a dictionary.
-
-        Returns:
-            Dictionary representation of the error.
+        Args:
+            status_code: The HTTP status code of the failed request.
+            message: The error message describing the failure.
         """
-        return {
-            "statusCode": self.status_code,
-            "message": self.message,
-        }
+        super().__init__(message)
+        self.status_code = status_code
+        self.message = message
 
 
 __exports__ = ()
