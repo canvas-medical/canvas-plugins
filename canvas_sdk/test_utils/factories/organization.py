@@ -1,6 +1,7 @@
 import factory
 
-from canvas_sdk.v1.data import Organization
+from canvas_sdk.v1.data import Organization, OrganizationAddress, OrganizationContactPoint
+from canvas_sdk.v1.data.common import ContactPointSystem, ContactPointUse
 
 
 class OrganizationFactory(factory.django.DjangoModelFactory[Organization]):
@@ -18,3 +19,32 @@ class OrganizationFactory(factory.django.DjangoModelFactory[Organization]):
         "rgb(156, 175, 191) 90%, rgb(147, 166, 189) 100%)"
     )
     tax_id = "123456"
+
+
+class OrganizationAddressFactory(factory.django.DjangoModelFactory[OrganizationAddress]):
+    """Factory for creating OrganizationAddress."""
+
+    class Meta:
+        model = OrganizationAddress
+
+    organization = factory.SubFactory(OrganizationFactory)
+    line1 = "456 Organization Ave"
+    line2 = "#2"
+    city = "San Francisco"
+    district = "Sunset"
+    state_code = "CA"
+    postal_code = "94112"
+    country = "USA"
+
+
+class OrganizationContactPointFactory(factory.django.DjangoModelFactory[OrganizationContactPoint]):
+    """Factory for creating OrganizationContactPoint."""
+
+    class Meta:
+        model = OrganizationContactPoint
+
+    organization = factory.SubFactory(OrganizationFactory)
+    system = ContactPointSystem.PHONE
+    value = "8003701416"
+    use = ContactPointUse.WORK
+    rank = 1

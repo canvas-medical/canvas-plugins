@@ -4,6 +4,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.application import Application
+from canvas_sdk.handlers.utils import normalize_effects
 
 
 class ExampleApplication(Application):
@@ -177,15 +178,11 @@ def test_compute_with_list_effects(
 
 def test_normalize_effects_none() -> None:
     """normalize_effects should return an empty list when given None."""
-    from canvas_sdk.handlers.utils import normalize_effects
-
     assert normalize_effects(None) == []
 
 
 def test_normalize_effects_single_effect() -> None:
     """normalize_effects should wrap a single Effect into a list."""
-    from canvas_sdk.handlers.utils import normalize_effects
-
     eff = LaunchModalEffect(url="https://example.com").apply()
     res = normalize_effects(eff)
     assert isinstance(res, list)
@@ -195,8 +192,6 @@ def test_normalize_effects_single_effect() -> None:
 
 def test_normalize_effects_list_with_invalids() -> None:
     """normalize_effects should filter out non-Effect items from a list."""
-    from canvas_sdk.handlers.utils import normalize_effects
-
     eff = LaunchModalEffect(url="https://example.com").apply()
     mixed = [{"not": "an effect"}, eff, 123]
     res = normalize_effects(mixed)  # type: ignore[arg-type]

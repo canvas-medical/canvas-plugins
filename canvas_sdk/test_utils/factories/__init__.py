@@ -1,13 +1,30 @@
+from .calendar import CalendarFactory, EventFactory
 from .claim import (
     ClaimCommentFactory,
+    ClaimCoverageFactory,
     ClaimFactory,
     ClaimLabelFactory,
     ClaimProviderFactory,
     ClaimQueueFactory,
+    ClaimSubmissionFactory,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .encounter import EncounterFactory
+from .coverage import CoverageFactory
 from .facility import FacilityFactory
+from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .lab import (
+    LabOrderFactory,
+    LabOrderReasonConditionFactory,
+    LabOrderReasonFactory,
+    LabPartnerFactory,
+    LabPartnerTestFactory,
+    LabReportFactory,
+    LabReviewFactory,
+    LabTestFactory,
+    LabValueCodingFactory,
+    LabValueFactory,
+)
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
@@ -21,14 +38,20 @@ from .observation import (
     ObservationFactory,
     ObservationValueCodingFactory,
 )
-from .organization import OrganizationFactory
+from .organization import (
+    OrganizationAddressFactory,
+    OrganizationContactPointFactory,
+    OrganizationFactory,
+)
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
+    PracticeLocationContactPointFactory,
     PracticeLocationFactory,
     PracticeLocationSettingFactory,
 )
 from .protocol_current import ProtocolCurrentFactory
+from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -44,21 +67,43 @@ from .task import (
     TaskMetadataFactory,
     TaskTaskLabelFactory,
 )
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocumentFactory,
+    UncategorizedClinicalDocumentReviewFactory,
+)
 from .user import CanvasUserFactory
 
 __all__ = (
     # Sorted alphabetically for easier maintenance
+    "CalendarFactory",
     "CanvasUserFactory",
     "ClaimCommentFactory",
+    "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimFactory",
     "ClaimLabelFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
+    "ClaimSubmissionFactory",
+    "CoverageFactory",
+    "EventFactory",
     "EncounterFactory",
     "FacilityFactory",
-    "MedicationHistoryMedicationCodingFactory",
+    "ImagingOrderFactory",
+    "ImagingReportFactory",
+    "ImagingReviewFactory",
+    "LabOrderFactory",
+    "LabOrderReasonConditionFactory",
+    "LabOrderReasonFactory",
+    "LabPartnerFactory",
+    "LabPartnerTestFactory",
+    "LabReportFactory",
+    "LabReviewFactory",
+    "LabTestFactory",
+    "LabValueCodingFactory",
+    "LabValueFactory",
     "MedicationHistoryMedicationFactory",
+    "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
@@ -67,16 +112,22 @@ __all__ = (
     "ObservationComponentFactory",
     "ObservationFactory",
     "ObservationValueCodingFactory",
+    "OrganizationAddressFactory",
+    "OrganizationContactPointFactory",
     "OrganizationFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationFactory",
-    "PracticeLocationSettingFactory",
-    "ProtocolCurrentFactory",
     "StaffAddressFactory",
     "StaffContactPointFactory",
+    "PracticeLocationContactPointFactory",
+    "PracticeLocationSettingFactory",
+    "ProtocolCurrentFactory",
+    "ReferralFactory",
+    "ReferralReportFactory",
+    "ReferralReviewFactory",
     "StaffFactory",
     "StaffLicenseFactory",
     "StaffPhotoFactory",
@@ -86,4 +137,6 @@ __all__ = (
     "TaskLabelFactory",
     "TaskMetadataFactory",
     "TaskTaskLabelFactory",
+    "UncategorizedClinicalDocumentFactory",
+    "UncategorizedClinicalDocumentReviewFactory",
 )

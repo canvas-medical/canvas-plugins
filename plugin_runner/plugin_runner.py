@@ -96,10 +96,6 @@ if SENTRY_DSN:
     global_scope.set_tag("source", "plugin-runner")
     global_scope.set_tag("production_customer", "yes" if IS_PRODUCTION_CUSTOMER else "no")
 
-# when we import plugins we'll use the module name directly so we need to add the plugin
-# directory to the path
-sys.path.append(PLUGIN_DIRECTORY)
-
 Plugin = TypedDict(
     "Plugin",
     {
@@ -694,6 +690,11 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
             path_to_append = pathlib.Path(".") / plugin_path.parent
             sys.path.append(path_to_append.as_posix())
     else:
+        # Add plugin directory to path only when actually loading plugins (not at module import time)
+        # to avoid polluting Python's import cache during test collection
+        if PLUGIN_DIRECTORY not in sys.path:
+            sys.path.append(PLUGIN_DIRECTORY)
+
         candidates = os.listdir(PLUGIN_DIRECTORY)
 
         # convert to Paths

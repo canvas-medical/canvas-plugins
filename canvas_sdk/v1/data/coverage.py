@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -10,6 +12,16 @@ from canvas_sdk.v1.data.common import (
     ContactPointSystem,
     ContactPointUse,
 )
+
+
+class CoverageRank(models.IntegerChoices):
+    """CoverageRank."""
+
+    PRIMARY = 1, "Primary"
+    SECONDARY = 2, "Secondary"
+    TERTIARY = 3, "Tertiary"
+    QUATERNARY = 4, "Quaternary"
+    QUINARY = 5, "Quinary"
 
 
 class CoverageStack(models.TextChoices):
@@ -161,34 +173,54 @@ class Coverage(TimestampedModel, IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="subscribed_coverages", null=True
     )
     patient_relationship_to_subscriber = models.CharField(
-        choices=CoverageRelationshipCode.choices, max_length=2
+        choices=CoverageRelationshipCode.choices,
+        max_length=2,
+        default=CoverageRelationshipCode.SELF,
     )
     issuer = models.ForeignKey(
         "v1.Transactor", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )
-    id_number = models.CharField(max_length=100)
-    plan = models.CharField(max_length=255)
-    sub_plan = models.CharField(max_length=255)
-    group = models.CharField(max_length=255)
-    sub_group = models.CharField(max_length=255)
-    employer = models.CharField(max_length=255)
-    coverage_start_date = models.DateField()
-    coverage_end_date = models.DateField()
-    coverage_rank = models.IntegerField()
-    state = models.CharField(choices=CoverageState.choices, max_length=20)
-    plan_type = models.CharField(choices=CoverageType.choices, max_length=20)
-    coverage_type = models.CharField(choices=TransactorCoverageType.choices, max_length=64)
+    id_number = models.CharField(max_length=100, blank=True, default="")
+    plan = models.CharField(max_length=255, blank=True, default="")
+    sub_plan = models.CharField(max_length=255, blank=True, default="")
+    group = models.CharField(max_length=255, default="", blank=True)
+    sub_group = models.CharField(max_length=255, default="", blank=True)
+    employer = models.CharField(max_length=255, default="", blank=True)
+    coverage_start_date = models.DateField(default=date.today)
+    coverage_end_date = models.DateField(null=True)
+    coverage_rank = models.IntegerField(choices=CoverageRank.choices, default=CoverageRank.PRIMARY)
+    state = models.CharField(
+        choices=CoverageState.choices, max_length=20, default=CoverageState.ACTIVE
+    )
+    plan_type = models.CharField(
+        choices=CoverageType.choices, max_length=20, default=CoverageType.COMMERCIAL
+    )
+    coverage_type = models.CharField(
+        choices=TransactorCoverageType.choices, max_length=64, null=True, blank=True
+    )
     issuer_address = models.ForeignKey(
         "v1.TransactorAddress",
         on_delete=models.DO_NOTHING,
         related_name="coverages",
         null=True,
+        blank=True,
     )
     issuer_phone = models.ForeignKey(
-        "v1.TransactorPhone", on_delete=models.DO_NOTHING, related_name="coverages", null=True
+        "v1.TransactorPhone",
+        on_delete=models.DO_NOTHING,
+        related_name="coverages",
+        null=True,
+        blank=True,
     )
-    comments = models.TextField()
-    stack = models.CharField(choices=CoverageStack.choices, max_length=8)
+    comments = models.TextField(default="", blank=True)
+    stack = models.CharField(
+        choices=CoverageStack.choices,
+        default=CoverageStack.IN_USE,
+        max_length=8,
+        db_index=True,
+    )
+    comments = models.TextField(default="", blank=True)
+    subscriber_identifier = models.CharField(max_length=100, blank=True, default="")
 
     def __str__(self) -> str:
         return f"id={self.id}"

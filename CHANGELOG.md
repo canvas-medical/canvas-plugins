@@ -1,6 +1,110 @@
 # CHANGELOG
 
 
+## v0.84.0 (2025-12-18)
+
+### Bug Fixes
+
+- Adapt QuerysetProtocol to be used for typing purposes only
+  ([#1346](https://github.com/canvas-medical/canvas-plugins/pull/1346),
+  [`8fd3eef`](https://github.com/canvas-medical/canvas-plugins/commit/8fd3eef89a8802ad9d61354db35e3250aded66ed))
+
+### Chores
+
+- Plugin directory not found in path at module import time
+  ([#1332](https://github.com/canvas-medical/canvas-plugins/pull/1332),
+  [`4976144`](https://github.com/canvas-medical/canvas-plugins/commit/49761445b8ce235eca929551c6a9960377a47a9c))
+
+### Features
+
+- Add a safe `sum()` implementation
+  ([#1283](https://github.com/canvas-medical/canvas-plugins/pull/1283),
+  [`3596f04`](https://github.com/canvas-medical/canvas-plugins/commit/3596f0463c7087b62b77cd9a356153fad2e4fe19))
+
+- Add Prefetch, some aggregation and expression functions to the allowed imports
+  ([#1340](https://github.com/canvas-medical/canvas-plugins/pull/1340),
+  [`943bcda`](https://github.com/canvas-medical/canvas-plugins/commit/943bcdafd7e467916c1db687b931f5c0db07447f))
+
+- Enable events review commands
+  ([#1352](https://github.com/canvas-medical/canvas-plugins/pull/1352),
+  [`51cf355`](https://github.com/canvas-medical/canvas-plugins/commit/51cf355a4568309a61271d910a636cd0e54e533a))
+
+- **sdk**: Unified interface for basic interaction with main LLM vendors
+  ([#1300](https://github.com/canvas-medical/canvas-plugins/pull/1300),
+  [`f6f2a45`](https://github.com/canvas-medical/canvas-plugins/commit/f6f2a45b0628c14d4c6f25436d469e432d0523e8))
+
+
+## v0.83.0 (2025-12-12)
+
+### Bug Fixes
+
+- Appointment validator checking for deprecated note types
+  ([#1335](https://github.com/canvas-medical/canvas-plugins/pull/1335),
+  [`b938020`](https://github.com/canvas-medical/canvas-plugins/commit/b93802005ade918f9e8c69582d4e7592fdf1f048))
+
+### Features
+
+- Uncategorized clinical documents review command
+  ([#1314](https://github.com/canvas-medical/canvas-plugins/pull/1314),
+  [`4e2393d`](https://github.com/canvas-medical/canvas-plugins/commit/4e2393d1af395d271b311f344175b85c58a57abf))
+
+
+## v0.82.0 (2025-12-09)
+
+### Features
+
+- Data models for OrganizationAddress, OrganizationContactPoint, PracticeLocationContactPoint
+  ([#1316](https://github.com/canvas-medical/canvas-plugins/pull/1316),
+  [`690935f`](https://github.com/canvas-medical/canvas-plugins/commit/690935f15fa09f8de09994d63e3ed2b2c85a3eec))
+
+
+## v0.81.0 (2025-12-04)
+
+### Features
+
+- Add calendar and events data modules and effects
+  ([#1272](https://github.com/canvas-medical/canvas-plugins/pull/1272),
+  [`d4f6882`](https://github.com/canvas-medical/canvas-plugins/commit/d4f6882f59276cf6cacadfef569c0881d74f1ea4))
+
+- Post claim coverage payment effect
+  ([#1210](https://github.com/canvas-medical/canvas-plugins/pull/1210),
+  [`1772be6`](https://github.com/canvas-medical/canvas-plugins/commit/1772be69dbe66c151bfa30c0bc952362ba96c318))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.80.2 (2025-12-04)
+
+### Bug Fixes
+
+- Use the latest stable release of defusedxml
+  ([#1321](https://github.com/canvas-medical/canvas-plugins/pull/1321),
+  [`1ea811d`](https://github.com/canvas-medical/canvas-plugins/commit/1ea811d1180ec934dd13cf547af2a5620bc49f0b))
+
+
+## v0.80.1 (2025-12-03)
+
+### Bug Fixes
+
+- Use git source for defusedxml to work around issue with uv pre-release handling
+  ([#1318](https://github.com/canvas-medical/canvas-plugins/pull/1318),
+  [`5c3b850`](https://github.com/canvas-medical/canvas-plugins/commit/5c3b85076f4bcdcff4f1a3c52e3b88f4152dc9ec))
+
+
+## v0.80.0 (2025-12-03)
+
+### Features
+
+- Add all value sets for 2026 ([#1282](https://github.com/canvas-medical/canvas-plugins/pull/1282),
+  [`6ba63e2`](https://github.com/canvas-medical/canvas-plugins/commit/6ba63e2dbddf20eba12c0f604e2feaa2f57ef7f4))
+
+- Add lab, imaging and referral review commands
+  ([#1276](https://github.com/canvas-medical/canvas-plugins/pull/1276),
+  [`0f8824e`](https://github.com/canvas-medical/canvas-plugins/commit/0f8824e1c8eb9403b3a0bb8c25ef1e9dd6a2bbd3))
+
+
 ## v0.79.0 (2025-11-25)
 
 ### Features

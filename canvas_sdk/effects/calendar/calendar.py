@@ -1,7 +1,9 @@
+import json
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import EffectType, _BaseEffect
 
 
@@ -12,15 +14,13 @@ class CalendarType(StrEnum):
     Administrative = "Admin"
 
 
-class CreateCalendar(_BaseEffect):
+class Calendar(_BaseEffect):
     """Effect to create a Calendar."""
-
-    class Meta:
-        effect_type = EffectType.CALENDAR__CREATE
 
     id: str | UUID | None = None
     provider: str | UUID
     type: CalendarType
+    location: str | UUID | None = None
     description: str | None = None
 
     @property
@@ -30,11 +30,25 @@ class CreateCalendar(_BaseEffect):
             "id": self.id,
             "provider": self.provider,
             "type": self.type,
+            "location": self.location,
             "description": self.description,
         }
 
+    def create(self) -> Effect:
+        """Send a CREATE effect for the calendar."""
+        self._validate_before_effect("create")
+
+        return Effect(
+            type=EffectType.CALENDAR__CREATE,
+            payload=json.dumps(
+                {
+                    "data": self.values,
+                }
+            ),
+        )
+
 
 __exports__ = (
-    "CreateCalendar",
+    "Calendar",
     "CalendarType",
 )

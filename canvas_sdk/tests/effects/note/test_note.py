@@ -410,8 +410,6 @@ def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
     note = Note(instance_id=instance_id)
     effect = note.push_charges()
 
-    from canvas_generated.messages.effects_pb2 import EffectType as _EffectType
-
-    assert effect.type == _EffectType.PUSH_NOTE_CHARGES
+    assert effect.type == EffectType.PUSH_NOTE_CHARGES
     payload = json.loads(effect.payload)
     assert payload["note"] == instance_id

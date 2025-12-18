@@ -30,11 +30,16 @@ class _BaseCommand(TrackableFieldsModel):
 
     def __init__(self, /, **data: Any) -> None:
         """Initialize the command and mark all provided keys as dirty."""
+        if getattr(self.Meta, "abstract", False):
+            raise TypeError(f"Cannot instantiate abstract class {self.__class__.__name__!r}.")
+
         super().__init__(**data)
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that the command has a key and required fields."""
-        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
+        if (not hasattr(cls.Meta, "key") or not cls.Meta.key) and not getattr(
+            cls.Meta, "abstract", False
+        ):
             raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify Meta.key.")
 
         if hasattr(cls.Meta, "commit_required_fields"):

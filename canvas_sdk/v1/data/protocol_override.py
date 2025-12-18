@@ -27,7 +27,7 @@ class Status(models.TextChoices):
     INACTIVE = "inactive", "inactive"
 
 
-class ProtocolOverrideQuerySet(BaseQuerySet, ForPatientQuerySetMixin, CommittableQuerySetMixin):
+class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
     """ProtocolOverrideQuerySet."""
 
     pass

@@ -6,6 +6,69 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.llms": [
+    "LlmAnthropic",
+    "LlmGoogle",
+    "LlmOpenai",
+    "LlmResponse",
+    "LlmSettings",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.libraries": [
+    "LlmAnthropic",
+    "LlmApi",
+    "LlmGoogle",
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_anthropic": [
+    "LlmAnthropic"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_api": [
+    "LlmApi"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_google": [
+    "LlmGoogle"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_openai": [
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.structures": [
+    "LlmResponse",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_response": [
+    "LlmResponse"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_tokens": [
+    "LlmTokens"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_turn": [
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.settings": [
+    "LlmSettings",
+    "LlmSettingsAnthropic",
+    "LlmSettingsGemini",
+    "LlmSettingsGpt4",
+    "LlmSettingsGpt5"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings": [
+    "LlmSettings"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_anthropic": [
+    "LlmSettingsAnthropic"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gemini": [
+    "LlmSettingsGemini"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt4": [
+    "LlmSettingsGpt4"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
+    "LlmSettingsGpt5"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -19,8 +82,10 @@
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
     "ImagingOrderCommand",
+    "ImagingReviewCommand",
     "InstructCommand",
     "LabOrderCommand",
+    "LabReviewCommand",
     "MedicalHistoryCommand",
     "MedicationStatementCommand",
     "PastSurgicalHistoryCommand",
@@ -31,6 +96,7 @@
     "QuestionnaireCommand",
     "ReasonForVisitCommand",
     "ReferCommand",
+    "ReferralReviewCommand",
     "RefillCommand",
     "RemoveAllergyCommand",
     "ResolveConditionCommand",
@@ -38,6 +104,7 @@
     "StopMedicationCommand",
     "StructuredAssessmentCommand",
     "TaskCommand",
+    "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand"
@@ -145,6 +212,22 @@
   "canvas_sdk.commands.commands.resolve_condition": [
     "ResolveConditionCommand"
   ],
+  "canvas_sdk.commands.commands.review": [
+    "ReportReviewCommunicationMethod",
+    "ReviewMode"
+  ],
+  "canvas_sdk.commands.commands.review.imaging": [
+    "ImagingReviewCommand"
+  ],
+  "canvas_sdk.commands.commands.review.lab": [
+    "LabReviewCommand"
+  ],
+  "canvas_sdk.commands.commands.review.referral": [
+    "ReferralReviewCommand"
+  ],
+  "canvas_sdk.commands.commands.review.uncategorized_document": [
+    "UncategorizedDocumentReviewCommand"
+  ],
   "canvas_sdk.commands.commands.review_of_systems": [
     "ReviewOfSystemsCommand"
   ],
@@ -225,17 +308,19 @@
     "UpdateBillingLineItem"
   ],
   "canvas_sdk.effects.calendar": [
+    "Calendar",
     "CalendarType",
-    "CreateCalendar",
-    "CreateEvent",
+    "DaysOfWeek",
+    "Event",
     "EventRecurrence"
   ],
-  "canvas_sdk.effects.calendar.create_calendar": [
-    "CalendarType",
-    "CreateCalendar"
+  "canvas_sdk.effects.calendar.calendar": [
+    "Calendar",
+    "CalendarType"
   ],
-  "canvas_sdk.effects.calendar.create_event": [
-    "CreateEvent",
+  "canvas_sdk.effects.calendar.event": [
+    "DaysOfWeek",
+    "Event",
     "EventRecurrence"
   ],
   "canvas_sdk.effects.claim_label": [
@@ -353,6 +438,20 @@
   ],
   "canvas_sdk.effects.patient_profile_configuration": [
     "PatientProfileConfiguration"
+  ],
+  "canvas_sdk.effects.payment": [
+    "ClaimAllocation",
+    "LineItemTransaction",
+    "PaymentMethod",
+    "PostClaimPayment"
+  ],
+  "canvas_sdk.effects.payment.base": [
+    "ClaimAllocation",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
+  "canvas_sdk.effects.payment.post_claim_payment": [
+    "PostClaimPayment"
   ],
   "canvas_sdk.effects.payment_processor": [
     "AddPaymentMethodResponse",
@@ -586,6 +685,7 @@
     "BillingLineItemModifier",
     "BulkPatientPosting",
     "BusinessLine",
+    "Calendar",
     "CanvasUser",
     "CareTeamMembership",
     "CareTeamRole",
@@ -599,6 +699,7 @@
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
+    "ClaimSubmission",
     "Command",
     "CompoundMedication",
     "Condition",
@@ -612,6 +713,7 @@
     "Discount",
     "EligibilitySummary",
     "Encounter",
+    "Event",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -658,6 +760,8 @@
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientConsent",
@@ -673,6 +777,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -682,6 +787,7 @@
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
@@ -701,7 +807,9 @@
     "TeamContactPoint",
     "Transactor",
     "TransactorAddress",
-    "TransactorPhone"
+    "TransactorPhone",
+    "UncategorizedClinicalDocument",
+    "UncategorizedClinicalDocumentReview"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
@@ -730,6 +838,10 @@
     "BusinessLine",
     "BusinessLineState"
   ],
+  "canvas_sdk.v1.data.calendar": [
+    "Calendar",
+    "Event"
+  ],
   "canvas_sdk.v1.data.care_team": [
     "CareTeamMembership",
     "CareTeamMembershipStatus",
@@ -749,6 +861,7 @@
     "ClaimQueue",
     "ClaimQueueColumns",
     "ClaimQueues",
+    "ClaimSubmission",
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"
@@ -903,7 +1016,9 @@
     "ObservationValueCoding"
   ],
   "canvas_sdk.v1.data.organization": [
-    "Organization"
+    "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint"
   ],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",
@@ -940,6 +1055,7 @@
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
@@ -1003,6 +1119,10 @@
     "Team",
     "TeamContactPoint",
     "TeamResponsibility"
+  ],
+  "canvas_sdk.v1.data.uncategorized_clinical_document": [
+    "UncategorizedClinicalDocument",
+    "UncategorizedClinicalDocumentReview"
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"
