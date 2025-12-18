@@ -153,4 +153,5 @@ __exports__ = (
     "CombinedValueSet",
     "ValueSystems",
     "ValueSet",
+    "ValueSetType",
 )
