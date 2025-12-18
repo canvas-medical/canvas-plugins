@@ -1,0 +1,68 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.2",
+  "name": "cms122v14_diabetes_hemoglobin_a1c_poor_control",
+  "description": "CMS122v14 Diabetes: Glycemic Status Assessment Greater Than 9% - Clinical Quality Measure (2026)",
+  "components": {
+    "protocols": [
+      {
+        "class": "cms122v14_diabetes_hemoglobin_a1c_poor_control.protocols.cms122v14_protocol:CMS122v14DiabetesGlycemicStatusPoorControl",
+        "description": "Percentage of patients 18-75 years of age with diabetes who had a glycemic status assessment (HbA1c or GMI) > 9.0% during the measurement period",
+        "data_access": {
+          "read": [
+            "patients",
+            "conditions",
+            "billing_line_items",
+            "lab_reports",
+            "medications",
+            "coverages",
+            "protocol_overrides",
+            "encounters",
+            "observations",
+            "claim_line_items",
+            "devices"
+          ],
+          "write": []
+        },
+        "meta": {
+          "title": "Diabetes: Glycemic Status Assessment Greater Than 9%",
+          "version": "2026-v14.0.000",
+          "description": "Percentage of patients 18-75 years of age with diabetes who had a glycemic status assessment (HbA1c or GMI) > 9.0% during the measurement period",
+          "information": "https://ecqi.healthit.gov/ecqm/ec/2026/cms0122v14",
+          "identifiers": ["CMS122v14"],
+          "types": ["CQM"],
+          "authors": ["National Committee for Quality Assurance"],
+          "references": [
+            "American Diabetes Association. (2018). Economic Costs of Diabetes in the U.S. in 2017.",
+            "American Diabetes Association. (2022a). Statistics About Diabetes.",
+            "Centers for Disease Control and Prevention. (2022a). What is Diabetes?",
+            "Centers for Disease Control and Prevention. (2022b). Diabetes Report Card 2021.",
+            "ElSayed, N.A., et al. (2022). 6. Glycemic Targets: Standards of Care in Diabetes\u20142023."
+          ]
+        }
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": [],
+    "questionnaires": [
+      {
+        "template": "questionnaires/hospice_and_frailty.yml"
+      }
+    ]
+  },
+  "secrets": [],
+  "tags": {},
+  "references": [
+    "https://ecqi.healthit.gov/ecqm/ec/2026/cms0122v14",
+    "American Diabetes Association. (2023). Standards of Care in Diabetes-2023.",
+    "ElSayed, N.A., et al. (2022). 6. Glycemic Targets: Standards of Care in Diabetes-2023.",
+    "American Diabetes Association. (2018). Economic Costs of Diabetes in the U.S. in 2017.",
+    "Centers for Disease Control and Prevention. (2022). What is Diabetes?",
+    "Centers for Disease Control and Prevention. (2022). Diabetes Report Card 2021."
+  ],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
