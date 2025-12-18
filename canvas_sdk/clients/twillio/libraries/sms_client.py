@@ -235,5 +235,23 @@ class SmsClient:
             raise RequestFailed(request.status_code, request.content.decode())
         return request.content
 
+    def delete_sms(self, message_id: str) -> bool:
+        """Delete a message.
+
+        Args:
+            message_id: The Twilio message SID.
+
+        Returns:
+            True if the message was successfully deleted.
+
+        Raises:
+            RequestFailed: If the API request fails.
+        """
+        url = f"Messages/{message_id}.json"
+        request = self.http.delete(url, headers=self._auth_header())
+        if request.status_code != HTTPStatus.NO_CONTENT:
+            raise RequestFailed(request.status_code, request.content.decode())
+        return True
+
 
 __exports__ = ()
