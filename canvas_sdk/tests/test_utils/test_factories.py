@@ -2,15 +2,14 @@ import importlib
 import inspect
 import pkgutil
 
+import factory
 import pytest
+
+from canvas_sdk.test_utils import factories
 
 
 def get_factory_classes_from_data() -> set[str]:
     """Collect names of all top-level factory classes."""
-    import factory
-
-    from canvas_sdk.test_utils import factories
-
     factory_class_names = set()
 
     for _, module_name, _ in pkgutil.iter_modules(factories.__path__):
@@ -31,8 +30,6 @@ def get_factory_classes_from_data() -> set[str]:
 
 def test_all_factories_are_exported() -> None:
     """Ensure all factories are exported in the factories module's __all__."""
-    from canvas_sdk.test_utils import factories
-
     declared_exports = set(getattr(factories, "__all__", []))
     factory_classes = get_factory_classes_from_data()
 
@@ -43,8 +40,6 @@ def test_all_factories_are_exported() -> None:
 @pytest.mark.django_db
 def test_factory_is_instantiable() -> None:
     """Ensure each factory can be instantiated without errors."""
-    from canvas_sdk.test_utils import factories
-
     factory_classes: list[type] = [
         getattr(factories, factory_name) for factory_name in get_factory_classes_from_data()
     ]
