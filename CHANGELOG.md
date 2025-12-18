@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.84.0 (2025-12-18)
+
+### Bug Fixes
+
+- Adapt QuerysetProtocol to be used for typing purposes only
+  ([#1346](https://github.com/canvas-medical/canvas-plugins/pull/1346),
+  [`8fd3eef`](https://github.com/canvas-medical/canvas-plugins/commit/8fd3eef89a8802ad9d61354db35e3250aded66ed))
+
+### Chores
+
+- Plugin directory not found in path at module import time
+  ([#1332](https://github.com/canvas-medical/canvas-plugins/pull/1332),
+  [`4976144`](https://github.com/canvas-medical/canvas-plugins/commit/49761445b8ce235eca929551c6a9960377a47a9c))
+
+### Features
+
+- Add a safe `sum()` implementation
+  ([#1283](https://github.com/canvas-medical/canvas-plugins/pull/1283),
+  [`3596f04`](https://github.com/canvas-medical/canvas-plugins/commit/3596f0463c7087b62b77cd9a356153fad2e4fe19))
+
+- Add Prefetch, some aggregation and expression functions to the allowed imports
+  ([#1340](https://github.com/canvas-medical/canvas-plugins/pull/1340),
+  [`943bcda`](https://github.com/canvas-medical/canvas-plugins/commit/943bcdafd7e467916c1db687b931f5c0db07447f))
+
+- Enable events review commands
+  ([#1352](https://github.com/canvas-medical/canvas-plugins/pull/1352),
+  [`51cf355`](https://github.com/canvas-medical/canvas-plugins/commit/51cf355a4568309a61271d910a636cd0e54e533a))
+
+- **sdk**: Unified interface for basic interaction with main LLM vendors
+  ([#1300](https://github.com/canvas-medical/canvas-plugins/pull/1300),
+  [`f6f2a45`](https://github.com/canvas-medical/canvas-plugins/commit/f6f2a45b0628c14d4c6f25436d469e432d0523e8))
+
+
 ## v0.83.0 (2025-12-12)
 
 ### Bug Fixes
