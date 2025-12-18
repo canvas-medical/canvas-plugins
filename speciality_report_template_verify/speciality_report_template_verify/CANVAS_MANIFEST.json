@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "speciality_report_template_verify",
+    "description": "Verification plugin for SpecialtyReportTemplate data models. Runs every minute to test data fetching, relationships, QuerySet methods, and model structure.",
+    "components": {
+        "protocols": [
+            {
+                "class": "speciality_report_template_verify.protocols.my_protocol:Protocol",
+                "description": "CRON-based verification protocol that runs every minute to test SpecialtyReportTemplate models"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
