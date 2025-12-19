@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.85.0 (2025-12-19)
+
+### Features
+
+- Add support for note lock, sign, unlock, check_in and no_show effects
+  ([#1292](https://github.com/canvas-medical/canvas-plugins/pull/1292),
+  [`ae59bf4`](https://github.com/canvas-medical/canvas-plugins/commit/ae59bf444687c1898cc704527bed23d008d426dc))
+
+
 ## v0.84.0 (2025-12-18)
 
 ### Bug Fixes
