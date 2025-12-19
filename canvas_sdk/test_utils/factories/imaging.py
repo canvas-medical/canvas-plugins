@@ -1,5 +1,3 @@
-"""Factories for imaging-related models."""
-
 import datetime
 import json
 
