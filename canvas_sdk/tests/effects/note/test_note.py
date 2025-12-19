@@ -10,7 +10,7 @@ from pydantic_core import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.note.note import Note
-from canvas_sdk.v1.data.note import NoteTypeCategories
+from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
 
 
 @pytest.fixture
@@ -356,7 +356,7 @@ def test_push_charges_missing_instance_id(mock_db_queries: dict[str, MagicMock])
 
     errors = exc_info.value.errors()
     msgs = [e["msg"] for e in errors]
-    assert "Field 'instance_id' is required to push charges from a note to a claim." in msgs
+    assert "Field 'instance_id' is required." in msgs
 
 
 def test_push_charges_note_does_not_exist(
@@ -405,6 +405,7 @@ def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
 
     fake_note = MagicMock()
     fake_note.note_type_version = MagicMock(is_billable=True)
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
     mock_db_queries["note"].filter.return_value.first.return_value = fake_note
 
     note = Note(instance_id=instance_id)
@@ -412,4 +413,246 @@ def test_push_charges_success(mock_db_queries: dict[str, MagicMock]) -> None:
 
     assert effect.type == EffectType.PUSH_NOTE_CHARGES
     payload = json.loads(effect.payload)
-    assert payload["note"] == instance_id
+    assert payload["data"]["note"] == instance_id
+
+
+def test_lock_note_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that lock requires an instance_id."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required." in msgs
+
+
+def test_lock_note_does_not_exist(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that lock fails when the note does not exist."""
+    instance_id = str(uuid4())
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_sign_note_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign requires an instance_id."""
+    note = Note()
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Field 'instance_id' is required." in msgs
+
+
+def test_sign_note_does_not_exist(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign fails when the note does not exist."""
+    instance_id = str(uuid4())
+    mock_db_queries["note"].filter.return_value.first.return_value = None
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert f"Note with ID {instance_id} does not exist." in msgs
+
+
+def test_sign_note_no_signature_required(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign fails when the note type does not require a signature."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(is_sig_required=False)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.sign()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Cannot sign a note that does not require a signature." in msgs
+
+
+def test_lock_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note lock."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.lock()
+
+    assert effect.type == EffectType.LOCK_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_unlock_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note unlock."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.unlock()
+
+    assert effect.type == EffectType.UNLOCK_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_sign_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note sign."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER, is_sig_required=True
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.sign()
+
+    assert effect.type == EffectType.SIGN_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+@pytest.mark.parametrize(
+    "category",
+    [NoteTypeCategories.MESSAGE, NoteTypeCategories.LETTER],
+    ids=[
+        "message",
+        "category",
+    ],
+)
+def test_note_state_change_unsupported_note_type(
+    mock_db_queries: dict[str, MagicMock], category: NoteTypeCategories
+) -> None:
+    """Test that state changes are rejected for unsupported note types."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(name=category, category=category)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.lock()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert any(
+        f"Note with note type {fake_note.note_type_version.name} cannot perform action 'lock'." in m
+        for m in msgs
+    )
+
+
+def test_check_in_note_not_appointment(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that check_in raises an error when the note is not an appointment."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.check_in()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Only appointments can be checked in or marked as no-show." in msgs
+
+
+def test_no_show_note_not_appointment(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that no_show raises an error when the note is not an appointment."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.no_show()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Only appointments can be checked in or marked as no-show." in msgs
+
+
+def test_check_in_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful check_in for an appointment."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Appointment", category=NoteTypeCategories.APPOINTMENT
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.check_in()
+
+    assert effect.type == EffectType.CHECK_IN_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_no_show_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful no_show for an appointment."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Appointment", category=NoteTypeCategories.APPOINTMENT
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.no_show()
+
+    assert effect.type == EffectType.NO_SHOW_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
