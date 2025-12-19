@@ -19,7 +19,7 @@ from .imaging import (
     ImagingReportTemplateFieldOptionFactory,
     ImagingReviewFactory,
 )
-from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
+from .integration_task import IntegrationTaskFactory
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,

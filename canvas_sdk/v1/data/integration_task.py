@@ -31,8 +31,12 @@ class IntegrationTaskChannel(models.TextChoices):
     FROM_PATIENT_PORTAL = "from_patient_portal", "From Patient Portal"
 
 
-class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
+class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
     """QuerySet for IntegrationTask with custom filter methods."""
+
+    def for_patient(self, patient_id: str) -> Self:
+        """Filter tasks by patient ID."""
+        return self.filter(patient__id=patient_id)
 
     # Status filters
     def unread(self) -> Self:
