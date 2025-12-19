@@ -489,6 +489,63 @@ def test_sign_note_no_signature_required(mock_db_queries: dict[str, MagicMock]) 
     assert "Cannot sign a note that does not require a signature." in msgs
 
 
+def test_lock_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note lock."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.lock()
+
+    assert effect.type == EffectType.LOCK_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_unlock_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note unlock."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.unlock()
+
+    assert effect.type == EffectType.UNLOCK_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
+def test_sign_success(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note sign."""
+    instance_id = str(uuid4())
+
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER, is_sig_required=True
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.sign()
+
+    assert effect.type == EffectType.SIGN_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note"] == instance_id
+
+
 @pytest.mark.parametrize(
     "category",
     [NoteTypeCategories.MESSAGE, NoteTypeCategories.LETTER],
