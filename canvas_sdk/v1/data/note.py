@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
@@ -106,6 +108,7 @@ class NoteStates(models.TextChoices):
     RECALLED = "RCL", "Recalled"
     UNDELETED = "UND", "Undeleted"
     DISCHARGED = "DSC", "Discharged"
+    SIGNED = "SGN", "Signed"
     # Appointment note
     SCHEDULING = "SCH", "Scheduling"
     BOOKED = "BKD", "Booked"
@@ -128,25 +131,26 @@ class NoteType(TimestampedModel, IdentifiableModel, Coding):
     name = models.CharField(max_length=250)
     icon = models.CharField(max_length=250)
     category = models.CharField(choices=NoteTypeCategories.choices, max_length=50)
-    rank = models.PositiveIntegerField()
-    is_default_appointment_type = models.BooleanField()
-    is_scheduleable = models.BooleanField()
-    is_telehealth = models.BooleanField()
-    is_billable = models.BooleanField()
-    defer_place_of_service_to_practice_location = models.BooleanField()
+    rank = models.PositiveIntegerField(default=1)
+    is_default_appointment_type = models.BooleanField(default=False)
+    is_scheduleable = models.BooleanField(default=True)
+    is_telehealth = models.BooleanField(default=False)
+    is_billable = models.BooleanField(default=True)
+    defer_place_of_service_to_practice_location = models.BooleanField(default=False)
     available_places_of_service = ArrayField(
         models.CharField(choices=PracticeLocationPOS.choices, max_length=5)
     )
     default_place_of_service = models.CharField(choices=PracticeLocationPOS.choices, max_length=5)
-    is_system_managed = models.BooleanField()
-    is_visible = models.BooleanField()
-    is_active = models.BooleanField()
-    unique_identifier = models.UUIDField()
-    deprecated_at = models.DateTimeField()
-    is_patient_required = models.BooleanField()
-    allow_custom_title = models.BooleanField()
-    is_scheduleable_via_patient_portal = models.BooleanField()
-    online_duration = models.IntegerField()
+    is_system_managed = models.BooleanField(default=False, editable=False)
+    is_visible = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    unique_identifier = models.UUIDField(default=uuid.uuid4, editable=False)
+    deprecated_at = models.DateTimeField(null=True, editable=False)
+    is_patient_required = models.BooleanField(default=False)
+    allow_custom_title = models.BooleanField(default=False)
+    is_scheduleable_via_patient_portal = models.BooleanField(default=False)
+    online_duration = models.IntegerField(default=0)
+    is_sig_required = models.BooleanField(default=True)
 
 
 class Note(TimestampedModel, IdentifiableModel):
@@ -163,7 +167,7 @@ class Note(TimestampedModel, IdentifiableModel):
     )
     note_type = models.CharField(choices=NoteTypes.choices, null=True, max_length=50)
     note_type_version = models.ForeignKey(
-        "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes", null=True
+        "v1.NoteType", on_delete=models.DO_NOTHING, related_name="notes"
     )
     title = models.TextField(default="", blank=True)
     body = models.JSONField(default=empty_note_body)
@@ -190,6 +194,7 @@ class NoteStateChangeEvent(TimestampedModel, IdentifiableModel):
     """NoteStateChangeEvent."""
 
     class Meta:
+        ordering = ("created", "id")
         db_table = "canvas_sdk_data_api_notestatechangeevent_001"
 
     note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="state_history")
@@ -209,7 +214,9 @@ class CurrentNoteStateEvent(IdentifiableModel):
         db_table = "canvas_sdk_data_current_note_state_001"
 
     state = models.CharField(choices=NoteStates.choices, max_length=3)
-    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="current_state")
+    note = models.OneToOneField(
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="current_state"
+    )
 
     def editable(self) -> bool:
         """Returns a boolean to indicate if the related note can be edited."""
