@@ -30,7 +30,7 @@ class IntegrationTaskChannel(models.TextChoices):
     FROM_PATIENT_PORTAL = "from_patient_portal", "From Patient Portal"
 
 
-class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
+class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """QuerySet for IntegrationTask with custom filter methods."""
 
     # Status filters
@@ -88,7 +88,7 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
 
     def for_task(self, task_id: int) -> Self:
         """Filter reviews by task ID."""
-        return self.filter(task_id=task_id)
+        return self.filter(task__id=task_id)
 
     def junked(self) -> Self:
         """Filter to junked reviews."""
@@ -102,9 +102,9 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
         """Filter to active (non-junked) reviews."""
         return self.not_junked()
 
-    def by_reviewer(self, reviewer_id: int) -> Self:
+    def by_reviewer(self, reviewer_id: str) -> Self:
         """Filter reviews by reviewer ID."""
-        return self.filter(reviewer_id=reviewer_id)
+        return self.filter(reviewer__id=reviewer_id)
 
     def by_team(self, team_id: int) -> Self:
         """Filter reviews by team reviewer ID."""

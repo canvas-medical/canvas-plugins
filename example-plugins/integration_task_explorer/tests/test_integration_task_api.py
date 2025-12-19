@@ -6,7 +6,7 @@ from integration_task_explorer.routes.integration_task_api import IntegrationTas
 
 from canvas_sdk.effects.simple_api import JSONResponse
 from canvas_sdk.v1.data import IntegrationTask
-from canvas_sdk.v1.data.integration_task import IntegrationTaskStatus, IntegrationTaskChannel
+from canvas_sdk.v1.data.integration_task import IntegrationTaskChannel, IntegrationTaskStatus
 
 
 class DummyRequest:
@@ -49,7 +49,7 @@ class TestIntegrationTaskAPI:
     def test_authenticate_returns_true(self) -> None:
         """Test authentication always succeeds for testing purposes."""
         dummy_context = {"method": "GET", "path": "/integration-tasks/patient123"}
-        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))
 
         mock_credentials = Mock()
         assert api.authenticate(mock_credentials) is True
@@ -89,7 +89,7 @@ class TestIntegrationTaskAPI:
 
         # Create API instance
         dummy_context = {"method": "GET", "path": "/integration-tasks/patient123"}
-        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))
         api.request = request
 
         with patch.object(IntegrationTask, "objects", mock_queryset):
@@ -116,7 +116,7 @@ class TestIntegrationTaskAPI:
         )
 
         dummy_context = {"method": "GET", "path": "/integration-tasks/patient123"}
-        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))
         api.request = request
 
         with patch.object(IntegrationTask, "objects", mock_queryset):
@@ -140,7 +140,7 @@ class TestIntegrationTaskAPI:
         )
 
         dummy_context = {"method": "GET", "path": "/integration-tasks/patient123"}
-        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))  # type: ignore[arg-type]
+        api = IntegrationTaskAPI(event=DummyEvent(context=dummy_context))
         api.request = request
 
         with patch.object(IntegrationTask, "objects", mock_queryset):

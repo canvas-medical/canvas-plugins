@@ -1,16 +1,11 @@
-"""
-Integration Task API Handler
+from http import HTTPStatus
 
-This module provides a Simple API endpoint for querying IntegrationTask and
-IntegrationTaskReview SDK models.
-"""
-
-from logger import log
-
-from canvas_sdk.effects.simple_api import JSONResponse
+from canvas_sdk.effects import Effect
+from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute
 from canvas_sdk.handlers.simple_api.security import Credentials
 from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskReview
+from logger import log
 
 
 class IntegrationTaskAPI(SimpleAPIRoute):
@@ -40,7 +35,7 @@ class IntegrationTaskAPI(SimpleAPIRoute):
         log.info("IntegrationTaskAPI.authenticate() called")
         return True
 
-    def get(self) -> list[JSONResponse]:
+    def get(self) -> list[Response | Effect]:
         """Handle GET requests to list and filter integration tasks."""
         log.info("IntegrationTaskAPI.get() called")
         log.info(f"Request path: {self.request.path}")
@@ -55,7 +50,9 @@ class IntegrationTaskAPI(SimpleAPIRoute):
         status_filter = self.request.query_params.get("status")
         channel_filter = self.request.query_params.get("channel")
         include_reviews = self.request.query_params.get("include_reviews", "true") == "true"
-        log.info(f"Filters - status: {status_filter}, channel: {channel_filter}, include_reviews: {include_reviews}")
+        log.info(
+            f"Filters - status: {status_filter}, channel: {channel_filter}, include_reviews: {include_reviews}"
+        )
 
         # Build queryset using SDK QuerySet methods
         log.info("Querying IntegrationTask...")
@@ -97,7 +94,7 @@ class IntegrationTaskAPI(SimpleAPIRoute):
             log.info("Queryset built with filters")
         except Exception as e:
             log.error(f"Error building queryset: {e}")
-            return [JSONResponse({"error": str(e)}, status_code=500)]
+            return [JSONResponse({"error": str(e)}, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)]
 
         # Build response with task details
         result = []
@@ -141,8 +138,12 @@ class IntegrationTaskAPI(SimpleAPIRoute):
 
             result.append(task_data)
 
-        return [JSONResponse({
-            "patient_id": patient_id,
-            "count": len(result),
-            "tasks": result,
-        })]
+        return [
+            JSONResponse(
+                {
+                    "patient_id": patient_id,
+                    "count": len(result),
+                    "tasks": result,
+                }
+            )
+        ]
