@@ -45,6 +45,7 @@ from .immunization import (
 from .integration_task import (
     IntegrationTask,
     IntegrationTaskChannel,
+    IntegrationTaskReview,
     IntegrationTaskStatus,
 )
 from .invoice import Invoice
@@ -193,6 +194,7 @@ __all__ = __exports__ = (
     "InstallmentPlan",
     "IntegrationTask",
     "IntegrationTaskChannel",
+    "IntegrationTaskReview",
     "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionnaireMap",

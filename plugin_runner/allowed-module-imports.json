@@ -726,6 +726,7 @@
     "InstallmentPlan",
     "IntegrationTask",
     "IntegrationTaskChannel",
+    "IntegrationTaskReview",
     "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionResponse",
@@ -959,6 +960,8 @@
     "IntegrationTask",
     "IntegrationTaskChannel",
     "IntegrationTaskQuerySet",
+    "IntegrationTaskReview",
+    "IntegrationTaskReviewQuerySet",
     "IntegrationTaskStatus"
   ],
   "canvas_sdk.v1.data.invoice": [

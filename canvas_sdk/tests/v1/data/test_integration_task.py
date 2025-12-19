@@ -1,8 +1,12 @@
 import pytest
 
-from canvas_sdk.test_utils.factories.integration_task import IntegrationTaskFactory
+from canvas_sdk.test_utils.factories.integration_task import (
+    IntegrationTaskFactory,
+    IntegrationTaskReviewFactory,
+)
 from canvas_sdk.test_utils.factories.patient import PatientFactory
-from canvas_sdk.v1.data import IntegrationTask
+from canvas_sdk.test_utils.factories.staff import StaffFactory
+from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskReview
 from canvas_sdk.v1.data.integration_task import IntegrationTaskChannel, IntegrationTaskStatus
 
 
@@ -215,3 +219,93 @@ class TestIntegrationTaskProperties:
         """Test that is_junked returns False for non-JUNK statuses."""
         task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD)
         assert task.is_junked is False
+
+
+@pytest.mark.django_db
+class TestIntegrationTaskReviewQuerySet:
+    """Tests for IntegrationTaskReviewQuerySet filter methods."""
+
+    def test_for_task_filters_by_task_id(self) -> None:
+        """Test that for_task() filters reviews by task ID."""
+        task = IntegrationTaskFactory.create()
+        review = IntegrationTaskReviewFactory.create(task=task)
+        IntegrationTaskReviewFactory.create()  # Different task
+
+        result = IntegrationTaskReview.objects.for_task(task.id)
+
+        assert list(result) == [review]
+
+    def test_junked_filters_to_junked_reviews(self) -> None:
+        """Test that junked() filters to reviews with junked=True."""
+        junked_review = IntegrationTaskReviewFactory.create(junked=True)
+        IntegrationTaskReviewFactory.create(junked=False)
+
+        result = IntegrationTaskReview.objects.junked()
+
+        assert list(result) == [junked_review]
+
+    def test_not_junked_filters_to_non_junked_reviews(self) -> None:
+        """Test that not_junked() filters to reviews with junked=False."""
+        active_review = IntegrationTaskReviewFactory.create(junked=False)
+        IntegrationTaskReviewFactory.create(junked=True)
+
+        result = IntegrationTaskReview.objects.not_junked()
+
+        assert list(result) == [active_review]
+
+    def test_active_is_alias_for_not_junked(self) -> None:
+        """Test that active() is an alias for not_junked()."""
+        active_review = IntegrationTaskReviewFactory.create(junked=False)
+        IntegrationTaskReviewFactory.create(junked=True)
+
+        result = IntegrationTaskReview.objects.active()
+
+        assert list(result) == [active_review]
+
+    def test_by_reviewer_filters_by_reviewer_id(self) -> None:
+        """Test that by_reviewer() filters reviews by reviewer ID."""
+        staff = StaffFactory.create()
+        review = IntegrationTaskReviewFactory.create(reviewer=staff)
+        IntegrationTaskReviewFactory.create()  # Different reviewer
+
+        result = IntegrationTaskReview.objects.by_reviewer(staff.id)
+
+        assert list(result) == [review]
+
+    def test_queryset_methods_can_be_chained(self) -> None:
+        """Test that QuerySet methods can be chained together."""
+        task = IntegrationTaskFactory.create()
+        staff = StaffFactory.create()
+        target_review = IntegrationTaskReviewFactory.create(
+            task=task,
+            reviewer=staff,
+            junked=False,
+        )
+        IntegrationTaskReviewFactory.create(
+            task=task,
+            reviewer=staff,
+            junked=True,
+        )
+        IntegrationTaskReviewFactory.create(
+            reviewer=staff,
+            junked=False,
+        )
+
+        result = IntegrationTaskReview.objects.for_task(task.id).by_reviewer(staff.id).active()
+
+        assert list(result) == [target_review]
+
+
+@pytest.mark.django_db
+class TestIntegrationTaskReviewProperties:
+    """Tests for IntegrationTaskReview property helpers."""
+
+    def test_is_active_returns_true_for_non_junked(self) -> None:
+        """Test that is_active returns True for non-junked reviews."""
+        review = IntegrationTaskReviewFactory.create(junked=False)
+        assert review.is_active is True
+
+    def test_is_active_returns_false_for_junked(self) -> None:
+        """Test that is_active returns False for junked reviews."""
+        review = IntegrationTaskReviewFactory.create(junked=True)
+        assert review.is_active is False

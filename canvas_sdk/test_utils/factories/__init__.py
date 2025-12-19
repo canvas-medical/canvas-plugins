@@ -12,7 +12,7 @@ from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .coverage import CoverageFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
-from .integration_task import IntegrationTaskFactory
+from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
@@ -85,6 +85,7 @@ __all__ = (
     "ImagingReportFactory",
     "ImagingReviewFactory",
     "IntegrationTaskFactory",
+    "IntegrationTaskReviewFactory",
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",

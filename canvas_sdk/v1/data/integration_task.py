@@ -33,10 +33,6 @@ class IntegrationTaskChannel(models.TextChoices):
 class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
     """QuerySet for IntegrationTask with custom filter methods."""
 
-    def for_patient(self, patient_id: str) -> Self:
-        """Filter tasks by patient ID."""
-        return self.filter(patient__id=patient_id)
-
     # Status filters
     def unread(self) -> Self:
         """Filter to unread tasks."""
@@ -85,6 +81,37 @@ class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
 
 
 IntegrationTaskManager = models.Manager.from_queryset(IntegrationTaskQuerySet)
+
+
+class IntegrationTaskReviewQuerySet(BaseQuerySet):
+    """QuerySet for IntegrationTaskReview with custom filter methods."""
+
+    def for_task(self, task_id: int) -> Self:
+        """Filter reviews by task ID."""
+        return self.filter(task_id=task_id)
+
+    def junked(self) -> Self:
+        """Filter to junked reviews."""
+        return self.filter(junked=True)
+
+    def not_junked(self) -> Self:
+        """Filter to non-junked reviews."""
+        return self.filter(junked=False)
+
+    def active(self) -> Self:
+        """Filter to active (non-junked) reviews."""
+        return self.not_junked()
+
+    def by_reviewer(self, reviewer_id: int) -> Self:
+        """Filter reviews by reviewer ID."""
+        return self.filter(reviewer_id=reviewer_id)
+
+    def by_team(self, team_id: int) -> Self:
+        """Filter reviews by team reviewer ID."""
+        return self.filter(team_reviewer_id=team_id)
+
+
+IntegrationTaskReviewManager = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)
 
 
 class IntegrationTask(TimestampedModel):
@@ -139,9 +166,52 @@ class IntegrationTask(TimestampedModel):
         return self.status == IntegrationTaskStatus.JUNK
 
 
+class IntegrationTaskReview(TimestampedModel):
+    """IntegrationTaskReview - represents a review assignment for an integration task.
+
+    Reviews track who is responsible for processing a document and its current state.
+    """
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_integrationtaskreview_001"
+        ordering = ("id",)
+
+    objects = cast(IntegrationTaskReviewQuerySet, IntegrationTaskReviewManager())
+
+    id = models.IntegerField(unique=True)
+    task = models.ForeignKey(
+        IntegrationTask,
+        on_delete=models.DO_NOTHING,
+        related_name="reviews",
+    )
+    template_name = models.CharField(max_length=1000, null=True)
+    document_key = models.CharField(max_length=250, null=True, blank=True)
+    reviewer = models.ForeignKey(
+        "v1.Staff",
+        on_delete=models.DO_NOTHING,
+        related_name="integration_task_reviews",
+        null=True,
+    )
+    team_reviewer = models.ForeignKey(
+        "v1.Team",
+        on_delete=models.DO_NOTHING,
+        related_name="integration_task_team_reviews",
+        null=True,
+        blank=True,
+    )
+    junked = models.BooleanField(default=False)
+
+    @property
+    def is_active(self) -> bool:
+        """Check if this review is active (not junked)."""
+        return not self.junked
+
+
 __exports__ = (
     "IntegrationTask",
     "IntegrationTaskStatus",
     "IntegrationTaskChannel",
     "IntegrationTaskQuerySet",
+    "IntegrationTaskReview",
+    "IntegrationTaskReviewQuerySet",
 )
