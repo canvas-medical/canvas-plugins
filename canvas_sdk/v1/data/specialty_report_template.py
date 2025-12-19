@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, cast
 
 from django.db import models
 
@@ -29,8 +29,8 @@ class SpecialtyReportTemplateQuerySet(BaseQuerySet):
         return self.filter(specialty_code=specialty_code)
 
 
-class SpecialtyReportTemplateManager(models.Manager):
-    """Manager for SpecialtyReportTemplate.
+class SpecialtyReportTemplateBaseManager(models.Manager):
+    """Base manager for SpecialtyReportTemplate.
 
     Note: This manager doesn't filter by deleted since views don't have a deleted field.
     """
@@ -40,6 +40,10 @@ class SpecialtyReportTemplateManager(models.Manager):
         return SpecialtyReportTemplateQuerySet(self.model, using=self._db)
 
 
+# Create manager with QuerySet methods exposed
+SpecialtyReportTemplateManager = SpecialtyReportTemplateBaseManager.from_queryset(SpecialtyReportTemplateQuerySet)
+
+
 class SpecialtyReportTemplate(Model):
     """Model for specialty report templates used for LLM-powered specialty/referral report parsing."""
 
@@ -47,7 +51,7 @@ class SpecialtyReportTemplate(Model):
         db_table = "canvas_sdk_data_data_integration_specialtyreporttemplate_001"
         managed = False
 
-    objects = SpecialtyReportTemplateManager()
+    objects = cast(SpecialtyReportTemplateQuerySet, SpecialtyReportTemplateManager())
 
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=255)
