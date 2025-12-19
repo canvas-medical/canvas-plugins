@@ -2,14 +2,13 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
-from patient_update_webhook_sync.protocols.patient_sync import PatientSync
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.events import EventType
 
 
 @pytest.fixture
-def mock_event():
+def mock_event() -> Mock:
     """Create a mock PATIENT_UPDATED event."""
     event = Mock()
     event.type = EventType.PATIENT_UPDATED
@@ -21,7 +20,7 @@ def mock_event():
 
 
 @pytest.fixture
-def mock_http_response():
+def mock_http_response() -> Mock:
     """Create a mock successful HTTP response."""
     response = Mock()
     response.status_code = 200
@@ -30,7 +29,7 @@ def mock_http_response():
 
 
 @pytest.fixture
-def mock_http_error_response():
+def mock_http_error_response() -> Mock:
     """Create a mock failed HTTP response."""
     response = Mock()
     response.status_code = 500
@@ -39,7 +38,7 @@ def mock_http_error_response():
 
 
 @pytest.fixture
-def full_secrets():
+def full_secrets() -> dict[str, str]:
     """Return all required secrets."""
     return {
         "PARTNER_WEBHOOK_URL": "https://partner.example.com/webhook",
@@ -49,42 +48,54 @@ def full_secrets():
     }
 
 
-def test_webhook_headers_includes_api_key(mock_event, full_secrets):
+def test_webhook_headers_includes_api_key(mock_event: Mock, full_secrets: dict[str, str]) -> None:
     """Test that webhook headers include the API key."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets=full_secrets)
     headers = protocol.webhook_headers
     assert headers["X-API-Key"] == "partner-api-key-123"
     assert headers["Content-Type"] == "application/json"
 
 
-def test_slack_headers_includes_bearer_token(mock_event, full_secrets):
+def test_slack_headers_includes_bearer_token(
+    mock_event: Mock, full_secrets: dict[str, str]
+) -> None:
     """Test that Slack headers include Bearer token."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets=full_secrets)
     headers = protocol.slack_headers
     assert headers["Authorization"] == "Bearer slack-api-key-456"
     assert headers["Content-Type"] == "application/json"
 
 
-def test_compute_returns_empty_when_no_webhook_url(mock_event):
+def test_compute_returns_empty_when_no_webhook_url(mock_event: Mock) -> None:
     """Test that compute returns empty list when webhook URL is not configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets={})
     effects = protocol.compute()
     assert effects == []
 
 
-def test_compute_returns_empty_when_no_webhook_api_key(mock_event):
+def test_compute_returns_empty_when_no_webhook_api_key(mock_event: Mock) -> None:
     """Test that compute returns empty list when webhook API key is not configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     secrets = {"PARTNER_WEBHOOK_URL": "https://partner.example.com/webhook"}
     protocol = PatientSync(event=mock_event, secrets=secrets)
     effects = protocol.compute()
     assert effects == []
 
 
-@patch("patient_update_webhook_sync.protocols.patient_sync.Http")
+@patch("patient_update_webhook_sync.handlers.patient_webhook_sync.Http")
 def test_compute_succeeds_with_200_response(
-    mock_http_class, mock_event, full_secrets, mock_http_response
-):
+    mock_http_class: Mock, mock_event: Mock, full_secrets: dict[str, str], mock_http_response: Mock
+) -> None:
     """Test successful webhook call with 200 status code."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     mock_http = Mock()
     mock_http.post.return_value = mock_http_response
     mock_http_class.return_value = mock_http
@@ -107,9 +118,13 @@ def test_compute_succeeds_with_200_response(
     assert log_data["status_code"] == 200
 
 
-@patch("patient_update_webhook_sync.protocols.patient_sync.Http")
-def test_compute_handles_connection_error_with_slack(mock_http_class, mock_event, full_secrets):
+@patch("patient_update_webhook_sync.handlers.patient_webhook_sync.Http")
+def test_compute_handles_connection_error_with_slack(
+    mock_http_class: Mock, mock_event: Mock, full_secrets: dict[str, str]
+) -> None:
     """Test handling of connection error with Slack notification."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     mock_http = Mock()
     mock_http.post.side_effect = [
         ConnectionError("Connection refused"),  # First call fails
@@ -139,9 +154,13 @@ def test_compute_handles_connection_error_with_slack(mock_http_class, mock_event
     assert "Connection refused" in log_data["error"]
 
 
-@patch("patient_update_webhook_sync.protocols.patient_sync.Http")
-def test_compute_handles_connection_error_without_slack(mock_http_class, mock_event):
+@patch("patient_update_webhook_sync.handlers.patient_webhook_sync.Http")
+def test_compute_handles_connection_error_without_slack(
+    mock_http_class: Mock, mock_event: Mock
+) -> None:
     """Test handling of connection error without Slack configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     secrets = {
         "PARTNER_WEBHOOK_URL": "https://partner.example.com/webhook",
         "PARTNER_API_KEY": "partner-api-key-123",
@@ -164,11 +183,16 @@ def test_compute_handles_connection_error_without_slack(mock_http_class, mock_ev
     assert log_data["patient_id"] == "patient-123"
 
 
-@patch("patient_update_webhook_sync.protocols.patient_sync.Http")
+@patch("patient_update_webhook_sync.handlers.patient_webhook_sync.Http")
 def test_compute_handles_non_200_response_with_slack(
-    mock_http_class, mock_event, full_secrets, mock_http_error_response
-):
+    mock_http_class: Mock,
+    mock_event: Mock,
+    full_secrets: dict[str, str],
+    mock_http_error_response: Mock,
+) -> None:
     """Test handling of non-200 response with Slack notification."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     mock_http = Mock()
     mock_http.post.side_effect = [
         mock_http_error_response,  # Webhook fails with 500
@@ -197,11 +221,13 @@ def test_compute_handles_non_200_response_with_slack(
     assert log_data["error"] == "Internal Server Error"
 
 
-@patch("patient_update_webhook_sync.protocols.patient_sync.Http")
+@patch("patient_update_webhook_sync.handlers.patient_webhook_sync.Http")
 def test_compute_handles_non_200_response_without_slack(
-    mock_http_class, mock_event, mock_http_error_response
-):
+    mock_http_class: Mock, mock_event: Mock, mock_http_error_response: Mock
+) -> None:
     """Test handling of non-200 response without Slack configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     secrets = {
         "PARTNER_WEBHOOK_URL": "https://partner.example.com/webhook",
         "PARTNER_API_KEY": "partner-api-key-123",
@@ -223,8 +249,10 @@ def test_compute_handles_non_200_response_without_slack(
     assert log_data["event"] == "webhook_failure"
 
 
-def test_send_slack_notification_skips_when_no_url(mock_event):
+def test_send_slack_notification_skips_when_no_url(mock_event: Mock) -> None:
     """Test that Slack notification is skipped when URL is not configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     secrets = {"SLACK_API_KEY": "slack-api-key-456"}
     protocol = PatientSync(event=mock_event, secrets=secrets)
 
@@ -235,8 +263,10 @@ def test_send_slack_notification_skips_when_no_url(mock_event):
     mock_http.post.assert_not_called()
 
 
-def test_send_slack_notification_skips_when_no_api_key(mock_event):
+def test_send_slack_notification_skips_when_no_api_key(mock_event: Mock) -> None:
     """Test that Slack notification is skipped when API key is not configured."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     secrets = {"SLACK_ENDPOINT_URL": "https://slack.example.com/webhook"}
     protocol = PatientSync(event=mock_event, secrets=secrets)
 
@@ -247,8 +277,12 @@ def test_send_slack_notification_skips_when_no_api_key(mock_event):
     mock_http.post.assert_not_called()
 
 
-def test_send_slack_notification_includes_status_code(mock_event, full_secrets):
+def test_send_slack_notification_includes_status_code(
+    mock_event: Mock, full_secrets: dict[str, str]
+) -> None:
     """Test that Slack notification includes status code when provided."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets=full_secrets)
 
     mock_http = Mock()
@@ -265,8 +299,12 @@ def test_send_slack_notification_includes_status_code(mock_event, full_secrets):
     assert "Server error" in text_content
 
 
-def test_send_slack_notification_without_status_code(mock_event, full_secrets):
+def test_send_slack_notification_without_status_code(
+    mock_event: Mock, full_secrets: dict[str, str]
+) -> None:
     """Test that Slack notification works without status code."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets=full_secrets)
 
     mock_http = Mock()
@@ -283,8 +321,12 @@ def test_send_slack_notification_without_status_code(mock_event, full_secrets):
     assert "Webhook Status" not in text_content  # Should not include status when not provided
 
 
-def test_send_slack_notification_truncates_long_error(mock_event, full_secrets):
+def test_send_slack_notification_truncates_long_error(
+    mock_event: Mock, full_secrets: dict[str, str]
+) -> None:
     """Test that Slack notification truncates error messages longer than 500 chars."""
+    from patient_update_webhook_sync.handlers.patient_webhook_sync import PatientSync
+
     protocol = PatientSync(event=mock_event, secrets=full_secrets)
 
     long_error = "Error: " + "X" * 600  # Create 600+ character error

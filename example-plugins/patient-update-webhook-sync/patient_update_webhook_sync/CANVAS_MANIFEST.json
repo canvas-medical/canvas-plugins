@@ -6,7 +6,7 @@
   "components": {
     "protocols": [
       {
-        "class": "patient_update_webhook_sync.protocols.patient_sync:PatientSync",
+        "class": "patient_update_webhook_sync.handlers.patient_webhook_sync:PatientSync",
         "description": "Posts patient update events to external webhook and logs results with Slack error notifications"
       }
     ],
