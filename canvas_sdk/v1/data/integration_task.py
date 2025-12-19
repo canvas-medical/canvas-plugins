@@ -31,7 +31,7 @@ class IntegrationTaskChannel(models.TextChoices):
     FROM_PATIENT_PORTAL = "from_patient_portal", "From Patient Portal"
 
 
-class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
+class IntegrationTaskQuerySet(ForPatientQuerySetMixin, BaseQuerySet):
     """QuerySet for IntegrationTask with custom filter methods."""
 
     # Status filters
