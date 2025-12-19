@@ -1,0 +1,29 @@
+{
+  "sdk_version": "0.1.4",
+  "plugin_version": "0.0.1",
+  "name": "patient_update_webhook_sync",
+  "description": "Syncs patient updates to an external webhook and sends Slack notifications on failure",
+  "components": {
+    "protocols": [
+      {
+        "class": "patient_update_webhook_sync.protocols.patient_sync:PatientSync",
+        "description": "Posts patient update events to external webhook and logs results with Slack error notifications"
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [
+    "PARTNER_WEBHOOK_URL",
+    "PARTNER_API_KEY",
+    "SLACK_ENDPOINT_URL",
+    "SLACK_API_KEY"
+  ],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
