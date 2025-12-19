@@ -5,8 +5,8 @@ from django.db import models
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
     TimestampedModel,
-    IdentifiableModel
 )
 
 
@@ -33,10 +33,6 @@ class IntegrationTaskChannel(models.TextChoices):
 
 class IntegrationTaskQuerySet(BaseQuerySet, ForPatientQuerySetMixin):
     """QuerySet for IntegrationTask with custom filter methods."""
-
-    def for_patient(self, patient_id: str) -> Self:
-        """Filter tasks by patient ID."""
-        return self.filter(patient__id=patient_id)
 
     # Status filters
     def unread(self) -> Self:
