@@ -146,10 +146,10 @@
     "MessageDirection",
     "MessageStatus"
   ],
-  "canvas_sdk.clients.twillio.libraries": [
+  "canvas_sdk.clients.twilio.libraries": [
     "SmsClient"
   ],
-  "canvas_sdk.clients.twillio.structures": [
+  "canvas_sdk.clients.twilio.structures": [
     "Capabilities",
     "Media",
     "Message",
