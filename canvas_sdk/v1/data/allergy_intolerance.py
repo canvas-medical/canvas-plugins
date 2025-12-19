@@ -14,9 +14,9 @@ from canvas_sdk.v1.data.coding import Coding
 
 
 class AllergyIntoleranceQuerySet(
-    ValueSetLookupQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    ValueSetLookupQuerySet,
 ):
     """AllergyIntoleranceQuerySet."""
 

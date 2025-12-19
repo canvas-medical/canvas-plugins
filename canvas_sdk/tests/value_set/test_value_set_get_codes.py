@@ -1,5 +1,3 @@
-"""Tests for ValueSet.get_codes() method."""
-
 from canvas_sdk.value_set.value_set import CombinedValueSet, ValueSet
 
 

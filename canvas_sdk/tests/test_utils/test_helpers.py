@@ -1,5 +1,3 @@
-"""Tests for test helper functions."""
-
 from typing import Any
 
 import arrow

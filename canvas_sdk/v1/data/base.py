@@ -97,16 +97,27 @@ class BaseQuerySet(models.QuerySet):
     pass
 
 
-class QuerySetProtocol(Protocol):
-    """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
+if TYPE_CHECKING:
+    # For type checking: Define the Protocol with method signatures
+    class QuerySetProtocol(Protocol):
+        """A typing protocol for use in mixins into models.QuerySet-inherited classes."""
 
-    def filter(self, *args: Any, **kwargs: Any) -> Self:
-        """Django's models.QuerySet filter method."""
-        ...
+        def filter(self, *args: Any, **kwargs: Any) -> Self:
+            """Django's models.QuerySet filter method."""
+            ...
 
-    def distinct(self) -> Self:
-        """Django's models.QuerySet distinct method."""
-        ...
+        def distinct(self) -> Self:
+            """Django's models.QuerySet distinct method."""
+            ...
+else:
+    # At runtime: Empty class that doesn't shadow Django's methods
+    class QuerySetProtocol:
+        """A typing protocol for use in mixins into models.QuerySet-inherited classes.
+
+        This Protocol is intentionally empty at runtime to avoid shadowing Django's
+        QuerySet methods in the MRO. The method signatures are only defined when
+        type checking (see TYPE_CHECKING block above).
+        """
 
 
 class ValueSetLookupQuerySetProtocol(QuerySetProtocol):
@@ -242,25 +253,25 @@ class TimeframeLookupQuerySetMixin(TimeframeLookupQuerySetProtocol):
         )
 
 
-class CommittableQuerySet(BaseQuerySet, CommittableQuerySetMixin):
+class CommittableQuerySet(CommittableQuerySetMixin, BaseQuerySet):
     """A queryset for committable objects."""
 
     pass
 
 
-class ValueSetLookupQuerySet(BaseQuerySet, ValueSetLookupQuerySetMixin):
+class ValueSetLookupQuerySet(ValueSetLookupQuerySetMixin, BaseQuerySet):
     """A class that includes methods for looking up value sets."""
 
     pass
 
 
-class ValueSetLookupByNameQuerySet(BaseQuerySet, ValueSetLookupByNameQuerySetMixin):
+class ValueSetLookupByNameQuerySet(ValueSetLookupByNameQuerySetMixin, BaseQuerySet):
     """A class that includes methods for looking up value sets by name."""
 
     pass
 
 
-class ValueSetTimeframeLookupQuerySet(ValueSetLookupQuerySet, TimeframeLookupQuerySetMixin):
+class ValueSetTimeframeLookupQuerySet(TimeframeLookupQuerySetMixin, ValueSetLookupQuerySet):
     """A class that includes methods for looking up value sets and using timeframes."""
 
     pass

@@ -66,7 +66,7 @@ class Referral(AuditedModel, IdentifiableModel):
         return f"Referral {self.id}"
 
 
-class ReferralReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+class ReferralReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for referral reviews."""
 
     pass

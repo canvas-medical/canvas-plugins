@@ -448,6 +448,51 @@ def test_multiple_functions_import() -> None:
     )
 
 
+def test_prefetch_import() -> None:
+    """Test that Prefetch can be imported from django.db.models and django.db.models.query."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Prefetch
+            from django.db.models.query import Prefetch
+            result = "Prefetch import successful"
+        """
+    )
+    scope = sandbox.execute()
+    assert scope["result"] == "Prefetch import successful", (
+        "Prefetch should be importable from django.db.models and django.db.models.query."
+    )
+
+
+def test_aggregations_import() -> None:
+    """Test that aggregation functions can be imported from django.db.models."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Sum, Avg, Min, Max
+            result = "Aggregation functions import successful"
+        """
+    )
+    scope = sandbox.execute()
+    assert scope["result"] == "Aggregation functions import successful", (
+        "Aggregation functions should be importable from django.db.models."
+    )
+
+
+def test_expressions_import() -> None:
+    """Test that expression functions can be imported from django.db.models and django.db.models.expressions."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Exists, OuterRef, Subquery
+            from django.db.models.expressions import Exists, OuterRef, Subquery
+            result = "Expressions import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Expressions import successful", (
+        "Expression functions should be importable from django.db.models and django.db.models.expressions."
+    )
+
+
 def test_typeguard_import_and_usage() -> None:
     """Test that TypeGuard can be imported and used in sandbox."""
     sandbox = _sandbox_from_code(

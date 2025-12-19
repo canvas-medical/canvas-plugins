@@ -1,5 +1,3 @@
-"""Factories for condition-related models."""
-
 import arrow
 import factory
 

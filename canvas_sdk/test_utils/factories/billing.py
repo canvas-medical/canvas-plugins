@@ -1,5 +1,3 @@
-"""Factories for billing-related models."""
-
 from decimal import Decimal
 
 import factory

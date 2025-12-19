@@ -1,5 +1,3 @@
-"""Helper functions for creating test data in Canvas plugin tests."""
-
 from datetime import date
 from typing import Any, TypeVar
 from unittest.mock import Mock

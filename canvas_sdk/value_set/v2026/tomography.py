@@ -1,5 +1,3 @@
-"""Tomosynthesis (3D Mammography) value set for CMS125v14."""
-
 from canvas_sdk.value_set.value_set import ValueSet
 
 
