@@ -718,6 +718,10 @@
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
@@ -946,6 +950,10 @@
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
