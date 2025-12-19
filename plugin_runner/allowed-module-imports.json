@@ -69,17 +69,17 @@
   "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
     "LlmSettingsGpt5"
   ],
-  "canvas_sdk.clients.twillio.constants": [
+  "canvas_sdk.clients.twilio.constants": [
     "Constants",
     "DateOperation",
     "HttpMethod",
     "MessageDirection",
     "MessageStatus"
   ],
-  "canvas_sdk.clients.twillio.libraries": [
+  "canvas_sdk.clients.twilio.libraries": [
     "SmsClient"
   ],
-  "canvas_sdk.clients.twillio.structures": [
+  "canvas_sdk.clients.twilio.structures": [
     "Capabilities",
     "Media",
     "Message",
