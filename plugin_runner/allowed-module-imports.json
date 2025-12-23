@@ -76,6 +76,7 @@
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "CustomCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -133,6 +134,9 @@
   ],
   "canvas_sdk.commands.commands.close_goal": [
     "CloseGoalCommand"
+  ],
+  "canvas_sdk.commands.commands.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.commands.commands.diagnose": [
     "DiagnoseCommand"

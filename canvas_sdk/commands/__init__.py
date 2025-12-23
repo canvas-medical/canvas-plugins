@@ -3,6 +3,7 @@ from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
 from canvas_sdk.commands.commands.chart_section_review import ChartSectionReviewCommand
 from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
+from canvas_sdk.commands.commands.custom_command import CustomCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.exam import PhysicalExamCommand
 from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
@@ -53,6 +54,7 @@ __all__ = __exports__ = (
     "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
+    "CustomCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
     "InstructCommand",
