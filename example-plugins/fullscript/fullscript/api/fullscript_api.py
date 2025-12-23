@@ -489,7 +489,9 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                     sig += f"\nRefill: {'Yes' if refill else 'No'}"
 
                 coding = Coding(
-                    system=CodeSystems.FULLSCRIPT, code=product_id, display=product_display_name
+                    system=CodeSystems.FULLSCRIPT.value,
+                    code=product_id,
+                    display=product_display_name,
                 )
                 medication_command = MedicationStatementCommand(
                     fdb_code=coding,

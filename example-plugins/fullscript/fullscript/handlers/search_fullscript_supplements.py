@@ -69,6 +69,7 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
             brand_name = product.get("brand", {}).get("name", "")
             code = f"fullscript-{product_id}"
             quantity_description = product.get("primary_variant", {}).get("unit_of_measure", "")
+            availability = product.get("primary_variant", {}).get("availability", "")
             units = product.get("primary_variant", {}).get("units", 0)
 
             product_name = f"{brand_name} - {name}"
@@ -76,18 +77,23 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
             if units != 0:
                 product_name = f"{product_name} - {units} {quantity_description}"
 
+            annotations = ["Supp 🌱"]
+
+            if availability.lower() != "in stock":
+                annotations.append("Out of Stock ❌")
+
             post_processed_results.insert(
                 0,
                 {
                     "text": product_name,
-                    "annotations": ["Supp 🌱"],
+                    "annotations": annotations,
                     "value": code,
                     "extra": {
                         "coding": [
                             {
                                 "code": code,
                                 "display": product_name,
-                                "system": CodeSystems.FULLSCRIPT,
+                                "system": CodeSystems.FULLSCRIPT.value,
                             }
                         ],
                         "clinical_quantities": [
@@ -102,6 +108,8 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
                     },
                 },
             )
+
+        log.info(f"!! Products: {post_processed_results[:12]}")
 
         log.info(f"!! Returning {len(post_processed_results)} total results")
 
