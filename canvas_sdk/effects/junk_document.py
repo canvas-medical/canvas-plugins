@@ -15,10 +15,10 @@ class ConfidenceScores(TypedDict, total=False):
     representing the confidence level of each extracted field (e.g., from OCR).
 
     Attributes:
-        document_id: Confidence score for the extracted document ID (0.0-1.0)
+        junk_document: Confidence score for the decision to junk a document (0.0-1.0)
     """
 
-    document_id: Annotated[float, Field(ge=0.0, le=1.0)]
+    junk_document: Annotated[float, Field(ge=0.0, le=1.0)]
 
 
 CONFIDENCE_SCORE_KEYS = frozenset(ConfidenceScores.__annotations__.keys())

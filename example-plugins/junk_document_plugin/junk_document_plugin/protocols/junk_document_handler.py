@@ -1,4 +1,4 @@
-from canvas_sdk.effects.junk_document import JunkDocument
+from canvas_sdk.effects.junk_document import ConfidenceScores, JunkDocument
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 from logger import log
@@ -11,7 +11,7 @@ class JunkDocumentHandler(BaseHandler):
     This is an example plugin that demonstrates how to use the JUNK_DOCUMENT effect.
     """
 
-    RESPONDS_TO = EventType.Name(EventType.DOCUMENT_DELETED)
+    RESPONDS_TO = EventType.Name(EventType.DOCUMENT_RECEIVED)
 
     def compute(self) -> list:
         """
@@ -29,6 +29,9 @@ class JunkDocumentHandler(BaseHandler):
         log.info(f"Marking document {document_id} as junk")
 
         # Create JunkDocument effect with optional confidence score
-        effect = JunkDocument(document_id=document_id, confidence_scores={"document_id": 0.90})
+        effect = JunkDocument(
+            document_id=document_id,
+            confidence_scores=ConfidenceScores(junk_document=0.90),
+        )
 
         return [effect.apply()]
