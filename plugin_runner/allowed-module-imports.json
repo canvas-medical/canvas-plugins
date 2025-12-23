@@ -363,6 +363,10 @@
   "canvas_sdk.effects.group": [
     "Group"
   ],
+  "canvas_sdk.effects.junk_document": [
+    "ConfidenceScores",
+    "JunkDocument"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],
