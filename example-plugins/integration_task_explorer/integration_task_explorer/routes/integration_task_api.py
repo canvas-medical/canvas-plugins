@@ -107,7 +107,9 @@ class IntegrationTaskAPI(SimpleAPIRoute):
                 "channel": task.channel,
                 # Use patient.id (UUID) not patient_id (FK integer)
                 "patient_id": str(task.patient.id) if task.patient else None,
-                "service_provider_id": str(task.service_provider.id) if task.service_provider else None,
+                "service_provider_id": str(task.service_provider.id)
+                if task.service_provider
+                else None,
                 "is_fax": task.is_fax,
                 "is_pending": task.is_pending,
                 "is_processed": task.is_processed,

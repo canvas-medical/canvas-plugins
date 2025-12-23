@@ -104,7 +104,7 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
         """Filter to active (non-junked) reviews."""
         return self.not_junked()
 
-    def by_reviewer(self, reviewer_id: UUID) -> Self:
+    def by_reviewer(self, reviewer_id: str | UUID) -> Self:
         """Filter reviews by reviewer ID."""
         return self.filter(reviewer__id=reviewer_id)
 
