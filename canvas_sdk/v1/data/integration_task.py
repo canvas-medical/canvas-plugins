@@ -1,4 +1,5 @@
 from typing import Self, cast
+from uuid import UUID
 
 from django.db import models
 
@@ -89,7 +90,7 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
 
     def for_task(self, task_id: str) -> Self:
         """Filter reviews by task ID."""
-        return self.filter(task_id=task_id)
+        return self.filter(task__id=task_id)
 
     def junked(self) -> Self:
         """Filter to junked reviews."""
@@ -103,9 +104,9 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
         """Filter to active (non-junked) reviews."""
         return self.not_junked()
 
-    def by_reviewer(self, reviewer_id: str) -> Self:
+    def by_reviewer(self, reviewer_id: UUID) -> Self:
         """Filter reviews by reviewer ID."""
-        return self.filter(reviewer_id=reviewer_id)
+        return self.filter(reviewer__id=reviewer_id)
 
     def by_team(self, team_id: str) -> Self:
         """Filter reviews by team reviewer ID."""
