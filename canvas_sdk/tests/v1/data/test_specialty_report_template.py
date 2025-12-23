@@ -14,11 +14,15 @@ from canvas_sdk.v1.data.specialty_report_template import (
 def test_specialty_report_template_model_structure() -> None:
     """Test that SpecialtyReportTemplate model has correct structure."""
     # Verify model exists and has correct db_table
-    assert SpecialtyReportTemplate._meta.db_table == "canvas_sdk_data_data_integration_specialtyreporttemplate_001"
+    assert (
+        SpecialtyReportTemplate._meta.db_table
+        == "canvas_sdk_data_data_integration_specialtyreporttemplate_001"
+    )
     assert SpecialtyReportTemplate._meta.managed is False
 
     # Verify all required fields exist
     assert hasattr(SpecialtyReportTemplate, "dbid")
+    assert hasattr(SpecialtyReportTemplate, "id")  # UUID field from IdentifiableModel
     assert hasattr(SpecialtyReportTemplate, "name")
     assert hasattr(SpecialtyReportTemplate, "code")
     assert hasattr(SpecialtyReportTemplate, "code_system")
@@ -209,5 +213,22 @@ def test_specialty_specific_fields_accessible() -> None:
     assert isinstance(specialty_code_field, type(SpecialtyReportTemplate._meta.get_field("name")))
 
     specialty_code_system_field = SpecialtyReportTemplate._meta.get_field("specialty_code_system")
-    assert isinstance(specialty_code_system_field, type(SpecialtyReportTemplate._meta.get_field("name")))
+    assert isinstance(
+        specialty_code_system_field, type(SpecialtyReportTemplate._meta.get_field("name"))
+    )
 
+
+@pytest.mark.django_db
+def test_specialty_report_template_id_field() -> None:
+    """Test that SpecialtyReportTemplate has id field (UUID) from IdentifiableModel."""
+    # Verify id field exists and is a UUIDField
+    assert hasattr(SpecialtyReportTemplate, "id")
+    id_field = SpecialtyReportTemplate._meta.get_field("id")
+    from django.db import models
+
+    assert isinstance(id_field, models.UUIDField), "id field should be a UUIDField"
+
+    # Verify dbid field still exists (from base Model)
+    assert hasattr(SpecialtyReportTemplate, "dbid")
+    dbid_field = SpecialtyReportTemplate._meta.get_field("dbid")
+    assert isinstance(dbid_field, models.BigAutoField), "dbid field should be a BigAutoField"

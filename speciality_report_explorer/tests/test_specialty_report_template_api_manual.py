@@ -12,6 +12,7 @@ Requirements:
     - curl command available
     - python3 with json module
     - API running at http://localhost:8000
+    - Test data must be loaded in the database (see TEST_DATA_SETUP.md)
 """
 
 import json
@@ -19,22 +20,23 @@ import subprocess
 import sys
 from typing import Any, Dict, List
 
-
 # Configuration
-BASE_URL = "http://localhost:8000/plugin-io/api/speciality_report_explorer/specialty-report-templates"
-TEST_RESULTS: List[Dict[str, Any]] = []
+BASE_URL = (
+    "http://localhost:8000/plugin-io/api/speciality_report_explorer/specialty-report-templates"
+)
+TEST_RESULTS: list[dict[str, Any]] = []
 
 
-def run_curl(url: str) -> Dict[str, Any]:
+def run_curl(url: str) -> dict[str, Any]:
     """
     Execute a curl command and parse the JSON response.
-    
+
     Args:
         url: The full URL to query
-        
+
     Returns:
         Parsed JSON response as a dictionary
-        
+
     Raises:
         SystemExit: If curl command fails or response is invalid JSON
     """
@@ -58,7 +60,7 @@ def run_curl(url: str) -> Dict[str, Any]:
 def assert_test(name: str, condition: bool, message: str = "") -> None:
     """
     Assert a test condition and record the result.
-    
+
     Args:
         name: Test name/description
         condition: Boolean condition to check
@@ -79,7 +81,7 @@ def assert_test(name: str, condition: bool, message: str = "") -> None:
 def test_1_1_get_all_templates() -> None:
     """
     Test 1.1: Get all templates
-    
+
     Verifies:
     - Endpoint returns valid JSON
     - Response has 'count' and 'templates' fields
@@ -88,7 +90,7 @@ def test_1_1_get_all_templates() -> None:
     """
     print("\n=== Test 1.1: Get all templates ===")
     data = run_curl(BASE_URL)
-    
+
     assert_test(
         "Response has count field",
         "count" in data,
@@ -104,7 +106,7 @@ def test_1_1_get_all_templates() -> None:
         len(data["templates"]) <= 20,
         f"Returned {len(data['templates'])} templates",
     )
-    
+
     if data["templates"]:
         template = data["templates"][0]
         required_fields = [
@@ -130,7 +132,7 @@ def test_1_1_get_all_templates() -> None:
 def test_2_1_get_active_templates() -> None:
     """
     Test 2.1: Get active templates only
-    
+
     Verifies:
     - active=true filter returns only active templates
     - All returned templates have active=True
@@ -138,13 +140,13 @@ def test_2_1_get_active_templates() -> None:
     print("\n=== Test 2.1: Get active templates only ===")
     url = f"{BASE_URL}?active=true"
     data = run_curl(url)
-    
+
     assert_test(
         "Returns templates",
         data["count"] > 0,
         f"Found {data['count']} active templates",
     )
-    
+
     all_active = all(t["active"] for t in data["templates"])
     assert_test(
         "All templates are active",
@@ -156,7 +158,7 @@ def test_2_1_get_active_templates() -> None:
 def test_3_search_filters() -> None:
     """
     Test 3.1-3.4: Search filter tests
-    
+
     Verifies:
     - Search for "cardiology" finds matching templates
     - Search for "cardiac" finds matching templates
@@ -164,48 +166,48 @@ def test_3_search_filters() -> None:
     - Search for non-existent term returns empty results
     """
     print("\n=== Test 3.1-3.4: Search filter tests ===")
-    
+
     # Test 3.1: Search for "cardiology"
     print("\nTest 3.1: Search 'cardiology'")
     url = f"{BASE_URL}?search=cardiology"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Search 'cardiology' finds test templates",
         len([t for t in test_templates if t["code"] == "TEST_CARD001"]) > 0,
         f"Found {len(test_templates)} test templates",
     )
-    
+
     # Test 3.2: Search for "cardiac"
     print("\nTest 3.2: Search 'cardiac'")
     url = f"{BASE_URL}?search=cardiac"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Search 'cardiac' finds TEST_CARD001 and TEST_CARD002",
         len([t for t in test_templates if t["code"] in ["TEST_CARD001", "TEST_CARD002"]]) >= 2,
         f"Found {len(test_templates)} test templates",
     )
-    
+
     # Test 3.3: Search for "heart"
     print("\nTest 3.3: Search 'heart'")
     url = f"{BASE_URL}?search=heart"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Search 'heart' finds test templates",
         len(test_templates) >= 2,
         f"Found {len(test_templates)} test templates",
     )
-    
+
     # Test 3.4: Search for non-existent term
     print("\nTest 3.4: Search non-existent term")
     url = f"{BASE_URL}?search=nonexistentterm12345"
     data = run_curl(url)
-    
+
     assert_test(
         "Search non-existent term returns empty",
         data["count"] == 0,
@@ -216,37 +218,37 @@ def test_3_search_filters() -> None:
 def test_4_custom_builtin_filters() -> None:
     """
     Test 4.1-4.2: Custom/Builtin filter tests
-    
+
     Verifies:
     - custom=true returns only custom templates
     - custom=false returns only builtin templates
     """
     print("\n=== Test 4.1-4.2: Custom/Builtin filter tests ===")
-    
+
     # Test 4.1: Get custom templates
     print("\nTest 4.1: Get custom templates")
     url = f"{BASE_URL}?custom=true"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Custom filter returns TEST_CARD002",
         len([t for t in test_templates if t["code"] == "TEST_CARD002"]) == 1,
         f"Found {len(test_templates)} test templates",
     )
-    
+
     all_custom = all(t["custom"] for t in data["templates"])
     assert_test(
         "All returned templates are custom",
         all_custom,
         f"Checked {len(data['templates'])} templates",
     )
-    
+
     # Test 4.2: Get builtin templates
     print("\nTest 4.2: Get builtin templates")
     url = f"{BASE_URL}?custom=false"
     data = run_curl(url)
-    
+
     all_builtin = all(not t["custom"] for t in data["templates"])
     assert_test(
         "All returned templates are builtin",
@@ -258,50 +260,50 @@ def test_4_custom_builtin_filters() -> None:
 def test_5_specialty_code_filters() -> None:
     """
     Test 5.1-5.3: Specialty code filter tests
-    
+
     Verifies:
     - Filter by Cardiology specialty (207RC0000X) finds all test templates
     - Filter by Dermatology specialty (207ND0100X) finds TEST_DERM001
     - Filter by non-existent specialty returns empty results
     """
     print("\n=== Test 5.1-5.3: Specialty code filter tests ===")
-    
+
     # Test 5.1: Filter by Cardiology
     print("\nTest 5.1: Filter by Cardiology specialty (207RC0000X)")
     url = f"{BASE_URL}?specialty_code=207RC0000X"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Cardiology filter finds all 3 test templates",
         len(test_templates) == 3,
         f"Found {len(test_templates)} test templates: {[t['code'] for t in test_templates]}",
     )
-    
+
     all_cardiology = all(t["specialty_code"] == "207RC0000X" for t in data["templates"])
     assert_test(
         "All templates have Cardiology specialty code",
         all_cardiology,
         f"Checked {len(data['templates'])} templates",
     )
-    
+
     # Test 5.2: Filter by Dermatology
     print("\nTest 5.2: Filter by Dermatology specialty (207ND0100X)")
     url = f"{BASE_URL}?specialty_code=207ND0100X"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Dermatology filter finds TEST_DERM001",
         len([t for t in test_templates if t["code"] == "TEST_DERM001"]) == 1,
         f"Found {len(test_templates)} test templates",
     )
-    
+
     # Test 5.3: Filter by non-existent specialty
     print("\nTest 5.3: Filter by non-existent specialty")
     url = f"{BASE_URL}?specialty_code=999XX9999X"
     data = run_curl(url)
-    
+
     assert_test(
         "Non-existent specialty returns empty",
         data["count"] == 0,
@@ -312,25 +314,25 @@ def test_5_specialty_code_filters() -> None:
 def test_6_include_fields() -> None:
     """
     Test 6.1-6.2: Include fields tests
-    
+
     Verifies:
     - include_fields=true adds fields array to templates
     - TEST_CARD001 has 6 fields with correct structure
     - Field sequences, labels, and types are correct
     """
     print("\n=== Test 6.1-6.2: Include fields tests ===")
-    
+
     # Test 6.1: Get templates with fields
     print("\nTest 6.1: Get templates with fields")
     url = f"{BASE_URL}?specialty_code=207RC0000X&include_fields=true"
     data = run_curl(url)
-    
+
     test_card = [t for t in data["templates"] if t["code"] == "TEST_CARD001"]
     assert_test(
         "TEST_CARD001 found",
         len(test_card) > 0,
     )
-    
+
     if test_card:
         template = test_card[0]
         assert_test(
@@ -348,19 +350,19 @@ def test_6_include_fields() -> None:
             template["field_count"] == 6 and len(template["fields"]) == 6,
             f"Field count: {template['field_count']}, Fields array: {len(template['fields'])}",
         )
-        
+
         # Test 6.2: Verify field structure
         print("\nTest 6.2: Verify field structure for TEST_CARD001")
         fields = template["fields"]
         sequences = [f["sequence"] for f in fields]
         expected_sequences = [1, 2, 3, 4, 5, 6]
-        
+
         assert_test(
             "Field sequences are correct",
             sequences == expected_sequences,
             f"Sequences: {sequences}",
         )
-        
+
         labels = [f["label"] for f in fields]
         expected_labels = [
             "Chief Complaint",
@@ -370,22 +372,22 @@ def test_6_include_fields() -> None:
             "Notes",
             "Select Without Options",
         ]
-        
+
         assert_test(
             "Field labels are correct",
             all(label in labels for label in expected_labels),
             f"Labels: {labels}",
         )
-        
+
         field_types = [f["type"] for f in fields]
         expected_types = ["text", "select", "float", "radio", "text", "select"]
-        
+
         assert_test(
             "Field types are correct",
             field_types == expected_types,
             f"Types: {field_types}",
         )
-        
+
         # Verify required field data
         required_field_keys = [
             "dbid",
@@ -397,7 +399,7 @@ def test_6_include_fields() -> None:
             "type",
             "required",
         ]
-        
+
         for field in fields:
             for key in required_field_keys:
                 assert_test(
@@ -409,7 +411,7 @@ def test_6_include_fields() -> None:
 def test_7_include_options() -> None:
     """
     Test 7.1-7.2: Include options tests
-    
+
     Verifies:
     - include_options=true adds options array to fields
     - Assessment field has 3 options
@@ -417,23 +419,23 @@ def test_7_include_options() -> None:
     - Options have correct structure (dbid, label, key)
     """
     print("\n=== Test 7.1-7.2: Include options tests ===")
-    
+
     # Test 7.1: Get templates with fields and options
     print("\nTest 7.1: Get templates with fields and options")
     url = f"{BASE_URL}?specialty_code=207RC0000X&include_fields=true&include_options=true"
     data = run_curl(url)
-    
+
     test_card = [t for t in data["templates"] if t["code"] == "TEST_CARD001"]
     assert_test(
         "TEST_CARD001 found",
         len(test_card) > 0,
     )
-    
+
     if test_card:
         template = test_card[0]
         assessment = [f for f in template["fields"] if f["label"] == "Assessment"]
         recommendation = [f for f in template["fields"] if f["label"] == "Recommendation"]
-        
+
         assert_test(
             "Assessment field found",
             len(assessment) > 0,
@@ -442,7 +444,7 @@ def test_7_include_options() -> None:
             "Recommendation field found",
             len(recommendation) > 0,
         )
-        
+
         if assessment:
             assert_test(
                 "Assessment has options array",
@@ -458,29 +460,29 @@ def test_7_include_options() -> None:
                 assessment[0]["option_count"] == 3 and len(assessment[0]["options"]) == 3,
                 f"Options: {len(assessment[0]['options'])}",
             )
-        
+
         if recommendation:
             assert_test(
                 "Recommendation has 3 options",
                 recommendation[0]["option_count"] == 3 and len(recommendation[0]["options"]) == 3,
                 f"Options: {len(recommendation[0]['options'])}",
             )
-        
+
         # Test 7.2: Verify option structure
         print("\nTest 7.2: Verify option structure")
         if assessment and assessment[0]["options"]:
             option = assessment[0]["options"][0]
             required_option_keys = ["dbid", "label", "key"]
-            
+
             for key in required_option_keys:
                 assert_test(
                     f"Option has {key}",
                     key in option,
                 )
-            
+
             option_keys = [o["key"] for o in assessment[0]["options"]]
             expected_keys = ["TEST_NORMAL", "TEST_ABNORMAL", "TEST_FOLLOWUP"]
-            
+
             assert_test(
                 "Assessment option keys are correct",
                 all(key in option_keys for key in expected_keys),
@@ -491,7 +493,7 @@ def test_7_include_options() -> None:
 def test_8_combined_filters() -> None:
     """
     Test 8.1-8.7: Combined filter tests
-    
+
     Verifies:
     - Active + Specialty Code filter works
     - Active + Search filter works
@@ -502,12 +504,12 @@ def test_8_combined_filters() -> None:
     - Search + Custom + Fields works
     """
     print("\n=== Test 8.1-8.7: Combined filter tests ===")
-    
+
     # Test 8.1: Active + Specialty Code
     print("\nTest 8.1: Active + Specialty Code")
     url = f"{BASE_URL}?active=true&specialty_code=207RC0000X"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Active + Specialty returns only active test templates",
@@ -518,12 +520,12 @@ def test_8_combined_filters() -> None:
         "All returned templates are active",
         all(t["active"] for t in data["templates"]),
     )
-    
+
     # Test 8.2: Active + Search
     print("\nTest 8.2: Active + Search")
     url = f"{BASE_URL}?active=true&search=cardiology"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Active + Search finds TEST_CARD001",
@@ -533,37 +535,37 @@ def test_8_combined_filters() -> None:
         "All returned templates are active",
         all(t["active"] for t in data["templates"]),
     )
-    
+
     # Test 8.3: Active + Custom
     print("\nTest 8.3: Active + Custom")
     url = f"{BASE_URL}?active=true&custom=true"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Active + Custom returns TEST_CARD002",
         len([t for t in test_templates if t["code"] == "TEST_CARD002"]) == 1,
     )
-    
+
     # Test 8.4: Active + Builtin
     print("\nTest 8.4: Active + Builtin")
     url = f"{BASE_URL}?active=true&custom=false"
     data = run_curl(url)
-    
+
     assert_test(
         "All returned templates are builtin",
         all(not t["custom"] for t in data["templates"]),
         f"Checked {len(data['templates'])} templates",
     )
-    
+
     # Test 8.5: Active + Specialty + Fields
     print("\nTest 8.5: Active + Specialty + Fields")
     url = f"{BASE_URL}?active=true&specialty_code=207RC0000X&include_fields=true"
     data = run_curl(url)
-    
+
     test_card = [t for t in data["templates"] if t["code"] == "TEST_CARD001"]
     test_card2 = [t for t in data["templates"] if t["code"] == "TEST_CARD002"]
-    
+
     assert_test(
         "TEST_CARD001 found with fields",
         len(test_card) > 0 and test_card[0]["field_count"] == 6,
@@ -572,17 +574,19 @@ def test_8_combined_filters() -> None:
         "TEST_CARD002 found with 0 fields",
         len(test_card2) > 0 and test_card2[0]["field_count"] == 0,
     )
-    
+
     # Test 8.6: Active + Specialty + Fields + Options
     print("\nTest 8.6: Active + Specialty + Fields + Options")
-    url = f"{BASE_URL}?active=true&specialty_code=207RC0000X&include_fields=true&include_options=true"
+    url = (
+        f"{BASE_URL}?active=true&specialty_code=207RC0000X&include_fields=true&include_options=true"
+    )
     data = run_curl(url)
-    
+
     test_card = [t for t in data["templates"] if t["code"] == "TEST_CARD001"]
     if test_card:
         assessment = [f for f in test_card[0]["fields"] if f["label"] == "Assessment"]
         recommendation = [f for f in test_card[0]["fields"] if f["label"] == "Recommendation"]
-        
+
         assert_test(
             "Assessment has options",
             len(assessment) > 0 and assessment[0]["option_count"] == 3,
@@ -591,12 +595,12 @@ def test_8_combined_filters() -> None:
             "Recommendation has options",
             len(recommendation) > 0 and recommendation[0]["option_count"] == 3,
         )
-    
+
     # Test 8.7: Search + Custom + Fields
     print("\nTest 8.7: Search + Custom + Fields")
     url = f"{BASE_URL}?search=cardiac&custom=true&include_fields=true"
     data = run_curl(url)
-    
+
     test_templates = [t for t in data["templates"] if t["code"].startswith("TEST_")]
     assert_test(
         "Search + Custom + Fields returns TEST_CARD002",
@@ -607,7 +611,7 @@ def test_8_combined_filters() -> None:
 def test_9_edge_cases() -> None:
     """
     Test 9.1-9.4: Edge cases
-    
+
     Verifies:
     - Empty result set returns valid JSON
     - Template without fields (TEST_EMPTY001) works correctly
@@ -615,12 +619,12 @@ def test_9_edge_cases() -> None:
     - Invalid query parameters are ignored gracefully
     """
     print("\n=== Test 9.1-9.4: Edge cases ===")
-    
+
     # Test 9.1: Empty result set
     print("\nTest 9.1: Empty result set")
     url = f"{BASE_URL}?specialty_code=999XX9999X&active=true"
     data = run_curl(url)
-    
+
     assert_test(
         "Empty result set has valid structure",
         "count" in data and "templates" in data,
@@ -633,12 +637,12 @@ def test_9_edge_cases() -> None:
         "Empty result set templates array is empty",
         len(data["templates"]) == 0,
     )
-    
+
     # Test 9.2: Template without fields
     print("\nTest 9.2: Template without fields (TEST_EMPTY001)")
     url = f"{BASE_URL}?search=empty&include_fields=true"
     data = run_curl(url)
-    
+
     test_empty = [t for t in data["templates"] if t["code"] == "TEST_EMPTY001"]
     if test_empty:
         template = test_empty[0]
@@ -656,12 +660,12 @@ def test_9_edge_cases() -> None:
             False,
             "TEST_EMPTY001 not found in results",
         )
-    
+
     # Test 9.3: Field without options
     print("\nTest 9.3: Field without options (Select Without Options field)")
     url = f"{BASE_URL}?specialty_code=207RC0000X&include_fields=true&include_options=true"
     data = run_curl(url)
-    
+
     test_card = [t for t in data["templates"] if t["code"] == "TEST_CARD001"]
     if test_card:
         select_no_options = [
@@ -677,12 +681,12 @@ def test_9_edge_cases() -> None:
                 "Select Without Options field has 0 options",
                 field["option_count"] == 0 and len(field["options"]) == 0,
             )
-    
+
     # Test 9.4: Invalid query parameters
     print("\nTest 9.4: Invalid query parameters (should be ignored)")
     url = f"{BASE_URL}?unknown_param=value"
     data = run_curl(url)
-    
+
     assert_test(
         "Invalid parameter ignored, valid response returned",
         "count" in data and "templates" in data,
@@ -696,15 +700,15 @@ def test_9_edge_cases() -> None:
 def test_11_performance_limits() -> None:
     """
     Test 11.1: Performance and limits
-    
+
     Verifies:
     - Response is limited to 20 templates
     """
     print("\n=== Test 11.1: Performance and limits ===")
-    
+
     url = BASE_URL
     data = run_curl(url)
-    
+
     assert_test(
         "Response limited to 20 templates",
         len(data["templates"]) <= 20,
@@ -721,15 +725,15 @@ def print_summary() -> None:
     print("\n" + "=" * 60)
     print("TEST EXECUTION SUMMARY")
     print("=" * 60)
-    
+
     total = len(TEST_RESULTS)
     passed = sum(1 for r in TEST_RESULTS if r["status"] == "PASS")
     failed = total - passed
-    
+
     print(f"\nTotal tests: {total}")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
-    
+
     if failed > 0:
         print("\nFailed tests:")
         for result in TEST_RESULTS:
@@ -737,7 +741,7 @@ def print_summary() -> None:
                 print(f"  ✗ {result['name']}")
                 if result["message"]:
                     print(f"    {result['message']}")
-    
+
     print("\n" + "=" * 60)
     if failed == 0:
         print("✓ ALL TESTS PASSED")
@@ -752,7 +756,7 @@ def main() -> None:
     print("SpecialtyReportTemplateAPI Manual Testing")
     print("=" * 60)
     print(f"Base URL: {BASE_URL}\n")
-    
+
     # Execute all test suites
     test_1_1_get_all_templates()
     test_2_1_get_active_templates()
@@ -764,10 +768,10 @@ def main() -> None:
     test_8_combined_filters()
     test_9_edge_cases()
     test_11_performance_limits()
-    
+
     # Print summary
     print_summary()
-    
+
     # Exit with appropriate code
     failed = sum(1 for r in TEST_RESULTS if r["status"] == "FAIL")
     sys.exit(0 if failed == 0 else 1)
@@ -775,4 +779,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

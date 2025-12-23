@@ -2,7 +2,7 @@ from typing import Self, cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import BaseQuerySet, Model
+from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, Model
 
 
 class SpecialtyReportTemplateQuerySet(BaseQuerySet):
@@ -41,10 +41,12 @@ class SpecialtyReportTemplateBaseManager(models.Manager):
 
 
 # Create manager with QuerySet methods exposed
-SpecialtyReportTemplateManager = SpecialtyReportTemplateBaseManager.from_queryset(SpecialtyReportTemplateQuerySet)
+SpecialtyReportTemplateManager = SpecialtyReportTemplateBaseManager.from_queryset(
+    SpecialtyReportTemplateQuerySet
+)
 
 
-class SpecialtyReportTemplate(Model):
+class SpecialtyReportTemplate(IdentifiableModel):
     """Model for specialty report templates used for LLM-powered specialty/referral report parsing."""
 
     class Meta:
@@ -111,4 +113,3 @@ __exports__ = (
     "SpecialtyReportTemplateField",
     "SpecialtyReportTemplateFieldOption",
 )
-
