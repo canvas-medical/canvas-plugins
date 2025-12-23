@@ -118,10 +118,6 @@ class _BaseCommand(TrackableFieldsModel):
             if name not in base_properties
         }
 
-    def configure(self, *args: Any, **kwargs: Any) -> CommandConfiguration:
-        """Configure the command definition with the provided values."""
-        raise NotImplementedError("Command subclasses must implement the configure method.")
-
     def originate(self, line_number: int = -1) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("originate")
