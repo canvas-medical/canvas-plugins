@@ -111,7 +111,6 @@
     "VitalsCommand"
   ],
   "canvas_sdk.commands.base": [
-    "CommandConfiguration",
     "_BaseCommand",
     "_ReviewableCommandMixin",
     "_SendableCommandMixin"
@@ -260,7 +259,6 @@
     "ClinicalQuantity",
     "CodeSystems",
     "Coding",
-    "CommandChartSection",
     "ServiceProvider"
   ],
   "canvas_sdk.effects": [
