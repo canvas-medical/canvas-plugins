@@ -1047,7 +1047,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST: _ClassVar[EventType]
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD: _ClassVar[EventType]
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE: _ClassVar[EventType]
-    GET_COMMANDS_CONFIGURATION: _ClassVar[EventType]
 UNKNOWN: EventType
 ALLERGY_INTOLERANCE_CREATED: EventType
 ALLERGY_INTOLERANCE_UPDATED: EventType
@@ -2086,7 +2085,6 @@ REVENUE__PAYMENT_PROCESSOR__SELECTED: EventType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST: EventType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD: EventType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE: EventType
-GET_COMMANDS_CONFIGURATION: EventType
 
 class Event(_message.Message):
     __slots__ = ("type", "target", "context", "target_type", "actor", "source")

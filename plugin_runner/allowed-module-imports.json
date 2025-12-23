@@ -347,9 +347,6 @@
   "canvas_sdk.effects.claim_queue": [
     "MoveClaimToQueue"
   ],
-  "canvas_sdk.effects.commands_configuration": [
-    "CommandsConfiguration"
-  ],
   "canvas_sdk.effects.compound_medications": [
     "CompoundMedication"
   ],
