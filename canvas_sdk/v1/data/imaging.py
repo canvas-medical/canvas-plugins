@@ -138,7 +138,7 @@ class ImagingReportTemplateQuerySet(BaseQuerySet):
 ImagingReportTemplateManager = models.Manager.from_queryset(ImagingReportTemplateQuerySet)
 
 
-class ImagingReportTemplate(Model):
+class ImagingReportTemplate(IdentifiableModel):
     """Model to read ImagingReportTemplate data for LLM-powered imaging report parsing."""
 
     class Meta:

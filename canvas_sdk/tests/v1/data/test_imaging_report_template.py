@@ -21,6 +21,7 @@ class TestImagingReportTemplateModel:
         field_names = {f.name for f in ImagingReportTemplate._meta.get_fields()}
         expected_fields = {
             "dbid",
+            "id",
             "name",
             "long_name",
             "code",
