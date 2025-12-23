@@ -5,20 +5,11 @@ from types import NoneType, UnionType
 from typing import Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
-from typing_extensions import TypedDict
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import Recommendation
-
-
-class CommandConfiguration(TypedDict, total=False):
-    """Type definition for command configuration returned by configure() method."""
-
-    key: str
-    label: str
-    section: str
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -215,7 +206,6 @@ class _ReviewableCommandMixin:
 
 
 __exports__ = (
-    "CommandConfiguration",
     "_BaseCommand",
     "_SendableCommandMixin",
     "_ReviewableCommandMixin",

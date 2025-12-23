@@ -52,22 +52,9 @@ class ServiceProvider(Model):
     notes: str | None = Field(max_length=512, default=None)
 
 
-class CommandChartSection(StrEnum):
-    """A class representing the sections of a command."""
-
-    SUBJECTIVE = "subjective"
-    OBJECTIVE = "objective"
-    ASSESSMENT = "assessment"
-    PLAN = "plan"
-    PROCEDURES = "procedures"
-    HISTORY = "history"
-    INTERNAL = "internal"
-
-
 __exports__ = (
     "CodeSystems",
     "Coding",
-    "CommandChartSection",
     "ClinicalQuantity",
     "ServiceProvider",
 )
