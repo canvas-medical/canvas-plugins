@@ -775,6 +775,10 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
@@ -1010,6 +1014,14 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.integration_task": [
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskQuerySet",
+    "IntegrationTaskReview",
+    "IntegrationTaskReviewQuerySet",
+    "IntegrationTaskStatus"
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
