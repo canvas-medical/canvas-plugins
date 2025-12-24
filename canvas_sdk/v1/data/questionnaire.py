@@ -113,6 +113,7 @@ class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQ
 
     pass
 
+
 InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
 
 
