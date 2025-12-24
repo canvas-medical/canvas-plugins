@@ -13,7 +13,14 @@ from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFac
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
-from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .imaging import (
+    ImagingOrderFactory,
+    ImagingReportFactory,
+    ImagingReportTemplateFactory,
+    ImagingReportTemplateFieldFactory,
+    ImagingReportTemplateFieldOptionFactory,
+    ImagingReviewFactory,
+)
 from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
 from .lab import (
     LabOrderFactory,
@@ -91,6 +98,9 @@ __all__ = (
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
+    "ImagingReportTemplateFactory",
+    "ImagingReportTemplateFieldFactory",
+    "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
     "IntegrationTaskFactory",
     "IntegrationTaskReviewFactory",
