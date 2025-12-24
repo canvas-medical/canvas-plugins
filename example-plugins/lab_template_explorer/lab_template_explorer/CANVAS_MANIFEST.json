@@ -1,0 +1,26 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "lab_template_explorer",
+    "description": "Example plugin to explore and test LabReportTemplate SDK models via Simple API",
+    "components": {
+        "protocols": [
+            {
+                "class": "lab_template_explorer.protocols.lab_template_api:LabTemplateAPI",
+                "description": "API endpoint to query lab report templates"
+            },
+            {
+                "class": "lab_template_explorer.protocols.lab_template_api:LabTemplateProtocolCard",
+                "description": "Protocol that displays lab template information as a card"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "license": "",
+    "readme": "./README.md"
+}
