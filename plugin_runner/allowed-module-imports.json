@@ -799,6 +799,10 @@
     "LabValueCoding",
     "Language",
     "Letter",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -1014,6 +1018,13 @@
     "ImagingReportTemplateFieldOption",
     "ImagingReportTemplateQuerySet",
     "ImagingReview"
+  ],
+  "canvas_sdk.v1.data.lab_report_template": [
+    "FieldType",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet"
   ],
   "canvas_sdk.v1.data.immunization": [
     "Immunization",
