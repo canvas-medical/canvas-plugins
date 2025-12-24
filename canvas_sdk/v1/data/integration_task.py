@@ -6,6 +6,7 @@ from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     ForPatientQuerySetMixin,
     TimestampedModel,
+    IdentifiableModel
 )
 
 
@@ -86,9 +87,9 @@ IntegrationTaskManager = models.Manager.from_queryset(IntegrationTaskQuerySet)
 class IntegrationTaskReviewQuerySet(BaseQuerySet):
     """QuerySet for IntegrationTaskReview with custom filter methods."""
 
-    def for_task(self, task_id: int) -> Self:
+    def for_task(self, task_id: str) -> Self:
         """Filter reviews by task ID."""
-        return self.filter(task_id=task_id)
+        return self.filter(task__id=task_id)
 
     def junked(self) -> Self:
         """Filter to junked reviews."""
@@ -104,17 +105,17 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
 
     def by_reviewer(self, reviewer_id: str) -> Self:
         """Filter reviews by reviewer ID."""
-        return self.filter(reviewer_id=reviewer_id)
+        return self.filter(reviewer__id=reviewer_id)
 
-    def by_team(self, team_id: int) -> Self:
+    def by_team(self, team_id: str) -> Self:
         """Filter reviews by team reviewer ID."""
-        return self.filter(team_reviewer_id=team_id)
+        return self.filter(team_reviewer__id=team_id)
 
 
 IntegrationTaskReviewManager = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)
 
 
-class IntegrationTask(TimestampedModel):
+class IntegrationTask(TimestampedModel, IdentifiableModel):
     """IntegrationTask - represents incoming documents that need processing.
 
     This includes faxes, document uploads, lab results, and patient portal submissions.
@@ -125,7 +126,6 @@ class IntegrationTask(TimestampedModel):
 
     objects = cast(IntegrationTaskQuerySet, IntegrationTaskManager())
 
-    id = models.IntegerField(unique=True)
     status = models.CharField(max_length=3, choices=IntegrationTaskStatus.choices)
     type = models.CharField(max_length=125)
     title = models.CharField(max_length=256)
@@ -166,7 +166,7 @@ class IntegrationTask(TimestampedModel):
         return self.status == IntegrationTaskStatus.JUNK
 
 
-class IntegrationTaskReview(TimestampedModel):
+class IntegrationTaskReview(TimestampedModel, IdentifiableModel):
     """IntegrationTaskReview - represents a review assignment for an integration task.
 
     Reviews track who is responsible for processing a document and its current state.
@@ -178,7 +178,6 @@ class IntegrationTaskReview(TimestampedModel):
 
     objects = cast(IntegrationTaskReviewQuerySet, IntegrationTaskReviewManager())
 
-    id = models.IntegerField(unique=True)
     task = models.ForeignKey(
         IntegrationTask,
         on_delete=models.DO_NOTHING,

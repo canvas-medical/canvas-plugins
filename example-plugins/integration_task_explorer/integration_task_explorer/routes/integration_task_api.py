@@ -100,7 +100,7 @@ class IntegrationTaskAPI(SimpleAPIRoute):
         result = []
         for task in tasks[:20]:  # Limit to 20 results
             task_data = {
-                "id": task.id,
+                "id": str(task.id),
                 "status": task.status,
                 "type": task.type,
                 "title": task.title,
@@ -119,10 +119,10 @@ class IntegrationTaskAPI(SimpleAPIRoute):
 
             # Include reviews if requested
             if include_reviews:
-                reviews = IntegrationTaskReview.objects.for_task(task.id).active()
+                reviews = IntegrationTaskReview.objects.for_task(str(task.id)).active()
                 task_data["reviews"] = [
                     {
-                        "id": review.id,
+                        "id": str(review.id),
                         "template_name": review.template_name,
                         "document_key": review.document_key,
                         "reviewer_id": review.reviewer_id,
