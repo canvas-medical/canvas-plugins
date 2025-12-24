@@ -1,4 +1,4 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from django.db import models
 
@@ -10,6 +10,9 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
 )
+
+if TYPE_CHECKING:
+    from canvas_sdk.v1.data.patient import Patient
 
 
 class IntervalUnit(models.TextChoices):
@@ -30,7 +33,37 @@ class Status(models.TextChoices):
 class ProtocolOverrideQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQuerySet):
     """ProtocolOverrideQuerySet."""
 
-    pass
+    def get_active_adjustment(
+        self, patient: "Patient", protocol_key: str
+    ) -> "ProtocolOverride | None":
+        """
+        Get the active adjustment for a patient and protocol.
+
+        A protocol can have at most one active adjustment per patient.
+
+        Args:
+            patient: The patient to check.
+            protocol_key: The protocol identifier (e.g., 'CMS125v14').
+
+        Returns:
+            The active ProtocolOverride adjustment, or None if not found.
+
+        Example:
+            >>> from canvas_sdk.v1.data.protocol_override import ProtocolOverride
+            >>> override = ProtocolOverride.objects.get_active_adjustment(
+            ...     patient=patient,
+            ...     protocol_key="CMS125v14"
+            ... )
+            >>> if override:
+            ...     print(f"Custom cycle: {override.cycle_in_days} days")
+        """
+        return self.filter(
+            patient=patient,
+            protocol_key=protocol_key,
+            deleted=False,
+            status=Status.ACTIVE,
+            is_adjustment=True,
+        ).first()
 
 
 ProtocolOverrideManager = BaseModelManager.from_queryset(ProtocolOverrideQuerySet)
