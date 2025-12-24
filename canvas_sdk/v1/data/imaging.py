@@ -95,10 +95,10 @@ class ImagingReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
 
 
 class ImagingReportQuerySet(
-    BaseQuerySet,
     ForPatientQuerySetMixin,
     ImagingReportTimeframeLookupQuerySetMixin,
     ValueSetLookupQuerySetMixin,
+    BaseQuerySet,
 ):
     """QuerySet for ImagingReport with value set filtering via codings."""
 

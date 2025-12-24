@@ -38,7 +38,6 @@ class VitalsVisualizerAPI(StaffSessionAuthMixin, SimpleAPIRoute):
                 .filter(
                     category="vital-signs",
                     effective_datetime__isnull=False,
-                    deleted=False,
                 )
                 .exclude(name="Vital Signs Panel")
                 .exclude(entered_in_error__isnull=False)
