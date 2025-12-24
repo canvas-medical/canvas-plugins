@@ -22,10 +22,9 @@ class ObservationFactory(factory.django.DjangoModelFactory[Observation]):
     category = "survey"
     units = ""
     value = ""
-    note_id = factory.Sequence(lambda n: n + 1)
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     name = "Test Observation"
     effective_datetime = factory.LazyFunction(lambda: arrow.now().datetime)
-    deleted = False
 
 
 class ObservationCodingFactory(factory.django.DjangoModelFactory[ObservationCoding]):
