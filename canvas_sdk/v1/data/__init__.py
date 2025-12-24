@@ -120,7 +120,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .referral import Referral, ReferralReport, ReferralReview
+from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
@@ -250,6 +250,7 @@ __all__ = __exports__ = (
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",

@@ -10,8 +10,11 @@ from canvas_sdk.v1.data.base import (
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
+    TimeframeLookupQuerySetMixin,
     TimestampedModel,
+    ValueSetLookupQuerySetMixin,
 )
+from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.task import Task
 
 
@@ -89,11 +92,36 @@ class ReferralReview(AuditedModel, IdentifiableModel):
     patient_communication_method = models.CharField(max_length=30)
 
 
+class ReferralReportTimeframeLookupQuerySetMixin(TimeframeLookupQuerySetMixin):
+    """A mixin that adds queryset functionality to filter ReferralReports using timeframes."""
+
+    @property
+    def timeframe_filter_field(self) -> str:
+        """Returns the field that should be filtered on for timeframe queries."""
+        return "original_date"
+
+
+class ReferralReportQuerySet(
+    BaseQuerySet,
+    ForPatientQuerySetMixin,
+    ReferralReportTimeframeLookupQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
+):
+    """QuerySet for ReferralReport with value set filtering via codings."""
+
+
+# ReferralReport uses TimestampedModel (not AuditedModel), so it doesn't have a 'deleted' field.
+# Use base Manager instead of BaseModelManager which filters by deleted=False.
+ReferralReportManager = models.Manager.from_queryset(ReferralReportQuerySet)
+
+
 class ReferralReport(TimestampedModel, IdentifiableModel):
     """ReferralReport."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_referralreport_001"
+
+    objects = cast(ReferralReportQuerySet, ReferralReportManager())
 
     originator = models.ForeignKey(
         "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
@@ -123,4 +151,19 @@ class ReferralReport(TimestampedModel, IdentifiableModel):
     priority = models.BooleanField(default=False)
 
 
-__exports__ = ("Referral", "ReferralReport")
+class ReferralReportCoding(Coding):
+    """ReferralReportCoding."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_referralreportcoding_001"
+
+    report = models.ForeignKey(
+        ReferralReport,
+        on_delete=models.CASCADE,
+        related_name="codings",
+        null=True,
+    )
+    value = models.CharField(max_length=1000)
+
+
+__exports__ = ("Referral", "ReferralReport", "ReferralReportCoding", "ReferralReview")

@@ -37,7 +37,7 @@ from .medication_history import (
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
-from .note import NoteFactory, NoteStateChangeEventFactory
+from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
 from .observation import (
     ObservationCodingFactory,
     ObservationComponentCodingFactory,
@@ -117,6 +117,7 @@ __all__ = (
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
+    "NoteTypeFactory",
     "ObservationCodingFactory",
     "ObservationComponentCodingFactory",
     "ObservationComponentFactory",
