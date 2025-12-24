@@ -290,6 +290,12 @@
     "EffectType",
     "_BaseEffect"
   ],
+  "canvas_sdk.effects.categorize_document": [
+    "CategorizeDocument",
+    "ConfidenceScores",
+    "DocumentType",
+    "DocumentTypeConfidenceScores"
+  ],
   "canvas_sdk.effects.batch_originate": [
     "BatchOriginateCommandEffect"
   ],
