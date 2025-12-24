@@ -1,3 +1,5 @@
+import uuid
+
 import factory
 
 from canvas_sdk.v1.data import IntegrationTask, IntegrationTaskReview
@@ -10,7 +12,7 @@ class IntegrationTaskFactory(factory.django.DjangoModelFactory[IntegrationTask])
     class Meta:
         model = IntegrationTask
 
-    id = factory.Sequence(lambda n: n + 1)
+    id = factory.LazyFunction(uuid.uuid4)
     status = IntegrationTaskStatus.UNREAD
     type = factory.Faker("word")
     title = factory.Faker("sentence", nb_words=4)
@@ -25,7 +27,7 @@ class IntegrationTaskReviewFactory(factory.django.DjangoModelFactory[Integration
     class Meta:
         model = IntegrationTaskReview
 
-    id = factory.Sequence(lambda n: n + 1)
+    id = factory.LazyFunction(uuid.uuid4)
     task = factory.SubFactory(IntegrationTaskFactory)
     template_name = factory.Faker("sentence", nb_words=3)
     document_key = factory.Faker("uuid4")
