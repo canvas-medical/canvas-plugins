@@ -3,7 +3,7 @@ from typing import Self
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.v1.data.base import Model
+from canvas_sdk.v1.data.base import IdentifiableModel, Model
 
 
 class FieldType(models.TextChoices):
@@ -53,7 +53,7 @@ class LabReportTemplateQuerySet(models.QuerySet):
         return self.filter(custom=False)
 
 
-class LabReportTemplate(Model):
+class LabReportTemplate(IdentifiableModel):
     """A lab report template for POC labs and custom lab reports."""
 
     class Meta:
