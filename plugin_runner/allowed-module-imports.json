@@ -715,6 +715,7 @@
     "Encounter",
     "Event",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
@@ -742,14 +743,14 @@
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
-    "LabReview",
-    "LabTest",
-    "LabValue",
-    "LabValueCoding",
     "LabReportTemplate",
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
+    "LabReview",
+    "LabTest",
+    "LabValue",
+    "LabValueCoding",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -960,13 +961,6 @@
     "ImagingReportTemplateQuerySet",
     "ImagingReview"
   ],
-  "canvas_sdk.v1.data.lab_report_template": [
-    "FieldType",
-    "LabReportTemplate",
-    "LabReportTemplateField",
-    "LabReportTemplateFieldOption",
-    "LabReportTemplateQuerySet"
-  ],
   "canvas_sdk.v1.data.immunization": [
     "Immunization",
     "ImmunizationCoding",
@@ -1003,6 +997,13 @@
     "LabValue",
     "LabValueCoding",
     "TransmissionType"
+  ],
+  "canvas_sdk.v1.data.lab_report_template": [
+    "FieldType",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
