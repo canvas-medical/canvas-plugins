@@ -69,6 +69,13 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
+from .lab_report_template import (
+    FieldType,
+    LabReportTemplate,
+    LabReportTemplateField,
+    LabReportTemplateFieldOption,
+    LabReportTemplateQuerySet,
+)
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -191,6 +198,7 @@ __all__ = __exports__ = (
     "Encounter",
     "Event",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
@@ -222,6 +230,10 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
