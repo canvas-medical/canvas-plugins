@@ -43,6 +43,12 @@ from .immunization import (
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .integration_task import (
+    IntegrationTask,
+    IntegrationTaskChannel,
+    IntegrationTaskReview,
+    IntegrationTaskStatus,
+)
 from .invoice import Invoice
 from .lab import (
     LabOrder,
@@ -191,6 +197,10 @@ __all__ = __exports__ = (
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
