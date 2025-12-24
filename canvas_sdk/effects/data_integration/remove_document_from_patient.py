@@ -16,13 +16,16 @@ class RemoveDocumentFromPatientEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.REMOVE_DOCUMENT_FROM_PATIENT
 
-    document_id: int
-    confidence_scores: dict[int, float] | None = None
+    document_id: str
+    patient_id: str | None = None
+    confidence_scores: dict[str, float] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The effect's values."""
         result: dict[str, Any] = {"document_id": self.document_id}
+        if self.patient_id is not None:
+            result["patient_id"] = self.patient_id
         if self.confidence_scores is not None:
             result["confidence_scores"] = self.confidence_scores
         return result
@@ -30,7 +33,7 @@ class RemoveDocumentFromPatientEffect(_BaseEffect):
     @property
     def effect_payload(self) -> dict[str, Any]:
         """The payload of the effect."""
-        return {"data": self.values}
+        return self.values
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)

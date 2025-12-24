@@ -7,12 +7,12 @@ from a document in the Data Integration queue.
 Example usage:
     curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
          -H "Content-Type: application/json" \
-         -d '{"document_id": 12345, "patient_id": 67890}'
+         -d '{"document_id": "50272cbb-3051-4bcd-b627-8d5b6c3e1cde", "patient_id": "1c8a7ea5ba6a433daf32524085092c46"}'
 
     # With optional confidence score:
     curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
          -H "Content-Type: application/json" \
-         -d '{"document_id": 12345, "patient_id": 67890, "confidence_score": 0.95}'
+         -d '{"document_id": "50272cbb-3051-4bcd-b627-8d5b6c3e1cde", "patient_id": "1c8a7ea5ba6a433daf32524085092c46", "confidence_score": 0.95}'
 """
 
 from canvas_sdk.effects.data_integration import RemoveDocumentFromPatientEffect
@@ -31,8 +31,8 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
 
     POST /remove-document-from-patient
     Body: {
-        "document_id": int,      # Required: ID of the document
-        "patient_id": int,       # Required: ID of the patient (for logging/audit)
+        "document_id": str,       # Required: ID or UUID of the document
+        "patient_id": str,        # Optional: ID or UUID of the patient (for logging/audit)
         "confidence_score": float # Optional: Confidence score (0.0-1.0)
     }
     """
@@ -81,8 +81,8 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
 
         Returns:
             dict: Dictionary containing:
-                - document_id: int
-                - patient_id: int
+                - document_id: str (ID or UUID)
+                - patient_id: str | None (ID or UUID)
                 - confidence_score: float | None
                 - error: str (only if validation fails)
         """
@@ -98,14 +98,16 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
         if document_id is None:
             return {"error": "document_id is required"}
 
-        if patient_id is None:
-            return {"error": "patient_id is required"}
+        # Accept string (UUID) or integer
+        if not isinstance(document_id, (str, int)):
+            return {"error": "document_id must be a string or integer"}
+        document_id = str(document_id)
 
-        if not isinstance(document_id, int):
-            return {"error": "document_id must be an integer"}
-
-        if not isinstance(patient_id, int):
-            return {"error": "patient_id must be an integer"}
+        # patient_id is optional, but if provided must be string or int
+        if patient_id is not None:
+            if not isinstance(patient_id, (str, int)):
+                return {"error": "patient_id must be a string or integer"}
+            patient_id = str(patient_id)
 
         if confidence_score is not None:
             if not isinstance(confidence_score, (int, float)):
@@ -133,7 +135,7 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
         Returns:
             RemoveDocumentFromPatientEffect: The configured effect
         """
-        document_id = params["document_id"]
+        document_id = str(params["document_id"])
         confidence_score = params.get("confidence_score")
 
         if confidence_score is not None:
