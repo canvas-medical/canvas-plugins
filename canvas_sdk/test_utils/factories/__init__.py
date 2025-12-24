@@ -12,6 +12,7 @@ from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .coverage import CoverageFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
@@ -44,6 +45,7 @@ from .practicelocation import (
 )
 from .protocol_current import ProtocolCurrentFactory
 from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
+from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -82,6 +84,8 @@ __all__ = (
     "ImagingOrderFactory",
     "ImagingReportFactory",
     "ImagingReviewFactory",
+    "IntegrationTaskFactory",
+    "IntegrationTaskReviewFactory",
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",
@@ -112,6 +116,7 @@ __all__ = (
     "ReferralFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
