@@ -86,23 +86,26 @@ class TestImagingReportTemplateQuerySet:
     def test_queryset_has_active_method(self) -> None:
         """Ensure the active() method exists and is callable."""
         assert hasattr(ImagingReportTemplateQuerySet, "active")
-        assert callable(getattr(ImagingReportTemplateQuerySet, "active"))
+        assert callable(ImagingReportTemplateQuerySet.active)
 
     def test_queryset_has_search_method(self) -> None:
         """Ensure the search() method exists and is callable."""
         assert hasattr(ImagingReportTemplateQuerySet, "search")
-        assert callable(getattr(ImagingReportTemplateQuerySet, "search"))
+        assert callable(ImagingReportTemplateQuerySet.search)
 
     def test_queryset_has_custom_method(self) -> None:
         """Ensure the custom() method exists and is callable."""
         assert hasattr(ImagingReportTemplateQuerySet, "custom")
-        assert callable(getattr(ImagingReportTemplateQuerySet, "custom"))
+        assert callable(ImagingReportTemplateQuerySet.custom)
 
     def test_queryset_has_builtin_method(self) -> None:
         """Ensure the builtin() method exists and is callable."""
         assert hasattr(ImagingReportTemplateQuerySet, "builtin")
-        assert callable(getattr(ImagingReportTemplateQuerySet, "builtin"))
+        assert callable(ImagingReportTemplateQuerySet.builtin)
 
     def test_objects_manager_is_queryset_type(self) -> None:
         """Ensure the objects manager returns the correct QuerySet type."""
-        assert ImagingReportTemplate.objects.all().__class__.__name__ == "ImagingReportTemplateQuerySet"
+        assert (
+            ImagingReportTemplate.objects.all().__class__.__name__
+            == "ImagingReportTemplateQuerySet"
+        )

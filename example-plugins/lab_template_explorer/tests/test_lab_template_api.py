@@ -1,7 +1,3 @@
-"""Unit tests for the Lab Template Explorer plugin."""
-
-import pytest
-
 from lab_template_explorer.protocols.lab_template_api import (
     LabTemplateAPI,
     LabTemplateProtocolCard,
@@ -18,7 +14,7 @@ class TestLabTemplateAPI:
     def test_handler_has_get_method(self) -> None:
         """Ensure the handler has a get method."""
         assert hasattr(LabTemplateAPI, "get")
-        assert callable(getattr(LabTemplateAPI, "get"))
+        assert callable(LabTemplateAPI.get)
 
     def test_handler_inherits_from_simple_api_route(self) -> None:
         """Ensure the handler inherits from SimpleAPIRoute."""
@@ -35,12 +31,12 @@ class TestLabTemplateProtocolCard:
         from canvas_sdk.events import EventType
 
         expected = EventType.Name(EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
-        assert LabTemplateProtocolCard.RESPONDS_TO == expected
+        assert expected == LabTemplateProtocolCard.RESPONDS_TO
 
     def test_handler_has_compute_method(self) -> None:
         """Ensure the handler has a compute method."""
         assert hasattr(LabTemplateProtocolCard, "compute")
-        assert callable(getattr(LabTemplateProtocolCard, "compute"))
+        assert callable(LabTemplateProtocolCard.compute)
 
     def test_handler_inherits_from_base_protocol(self) -> None:
         """Ensure the handler inherits from BaseProtocol."""
