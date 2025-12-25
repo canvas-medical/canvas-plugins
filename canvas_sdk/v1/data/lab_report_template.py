@@ -103,7 +103,7 @@ class LabReportTemplateFieldOption(Model):
     """An option for a select/radio field in a lab report template."""
 
     class Meta:
-        db_table = "canvas_sdk_data_data_integration_labreporttemplatefieldoption_001"
+        db_table = "canvas_sdk_data_data_integration_labreporttemplatefieldopt_001"
 
     field = models.ForeignKey(
         LabReportTemplateField,

@@ -71,7 +71,7 @@ class SpecialtyReportTemplateField(Model):
     """Model for field definitions within a specialty report template."""
 
     class Meta:
-        db_table = "canvas_sdk_data_data_integration_specialtyreporttemplatefield_001"
+        db_table = "canvas_sdk_data_data_integration_specialtyrpttmplfield_001"
         managed = False
 
     report_template = models.ForeignKey(
@@ -94,7 +94,7 @@ class SpecialtyReportTemplateFieldOption(Model):
     """Model for options for select/radio/checkbox fields in specialty report templates."""
 
     class Meta:
-        db_table = "canvas_sdk_data_data_integration_specialtyreporttemplatefieldoption_001"
+        db_table = "canvas_sdk_data_data_integration_specialtyrpttmplfieldopt_001"
         managed = False
 
     field = models.ForeignKey(
