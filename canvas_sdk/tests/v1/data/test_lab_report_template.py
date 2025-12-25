@@ -17,14 +17,14 @@ from canvas_sdk.v1.data.lab_report_template import FieldType
 def setup_templates(db: None) -> None:
     """Set up test data for all tests."""
     # Active POC template
-    poc_template = LabReportTemplateFactory(
+    poc_template = LabReportTemplateFactory.create(
         name="Glucose POC",
         active=True,
         poc=True,
         custom=False,
         search_keywords="glucose blood sugar",
     )
-    LabReportTemplateFieldFactory(
+    LabReportTemplateFieldFactory.create(
         report_template=poc_template,
         label="Glucose Level",
         field_type=FieldType.FLOAT,
@@ -32,24 +32,24 @@ def setup_templates(db: None) -> None:
     )
 
     # Active custom template with select field
-    custom_template = LabReportTemplateFactory(
+    custom_template = LabReportTemplateFactory.create(
         name="Custom Lab Panel",
         active=True,
         poc=False,
         custom=True,
         search_keywords="panel custom",
     )
-    select_field = LabReportTemplateFieldFactory(
+    select_field = LabReportTemplateFieldFactory.create(
         report_template=custom_template,
         label="Result",
         field_type=FieldType.SELECT,
         sequence=1,
     )
-    LabReportTemplateFieldOptionFactory(field=select_field, label="Positive", key="pos")
-    LabReportTemplateFieldOptionFactory(field=select_field, label="Negative", key="neg")
+    LabReportTemplateFieldOptionFactory.create(field=select_field, label="Positive", key="pos")
+    LabReportTemplateFieldOptionFactory.create(field=select_field, label="Negative", key="neg")
 
     # Inactive template
-    LabReportTemplateFactory(name="Deprecated Test", active=False)
+    LabReportTemplateFactory.create(name="Deprecated Test", active=False)
 
 
 class TestLabReportTemplateQuerySet:
@@ -67,21 +67,27 @@ class TestLabReportTemplateQuerySet:
         """Test inactive() filters for active=False."""
         result = LabReportTemplate.objects.inactive()
         assert result.count() == 1
-        assert not result.first().active
+        first_template = result.first()
+        assert first_template is not None
+        assert not first_template.active
 
     @pytest.mark.django_db
     def test_search_by_name(self) -> None:
         """Test search() matches template name."""
         result = LabReportTemplate.objects.search("Glucose")
         assert result.count() == 1
-        assert result.first().name == "Glucose POC"
+        first_template = result.first()
+        assert first_template is not None
+        assert first_template.name == "Glucose POC"
 
     @pytest.mark.django_db
     def test_search_by_keywords(self) -> None:
         """Test search() matches search_keywords."""
         result = LabReportTemplate.objects.search("panel")
         assert result.count() == 1
-        assert result.first().name == "Custom Lab Panel"
+        first_template = result.first()
+        assert first_template is not None
+        assert first_template.name == "Custom Lab Panel"
 
     @pytest.mark.django_db
     def test_search_empty_returns_all(self) -> None:
@@ -94,7 +100,9 @@ class TestLabReportTemplateQuerySet:
         """Test point_of_care() filters for poc=True."""
         result = LabReportTemplate.objects.point_of_care()
         assert result.count() == 1
-        assert result.first().poc is True
+        first_template = result.first()
+        assert first_template is not None
+        assert first_template.poc is True
 
     @pytest.mark.django_db
     def test_custom_returns_custom_templates(self) -> None:
@@ -107,14 +115,18 @@ class TestLabReportTemplateQuerySet:
         """Test builtin() filters for custom=False."""
         result = LabReportTemplate.objects.builtin()
         assert result.count() == 1
-        assert result.first().custom is False
+        first_template = result.first()
+        assert first_template is not None
+        assert first_template.custom is False
 
     @pytest.mark.django_db
     def test_method_chaining(self) -> None:
         """Test QuerySet methods can be chained."""
         result = LabReportTemplate.objects.active().point_of_care()
         assert result.count() == 1
-        assert result.first().name == "Glucose POC"
+        first_template = result.first()
+        assert first_template is not None
+        assert first_template.name == "Glucose POC"
 
 
 class TestLabReportTemplatePrefetch:
@@ -123,18 +135,16 @@ class TestLabReportTemplatePrefetch:
     @pytest.mark.django_db
     def test_prefetch_fields(self) -> None:
         """Test prefetch_related('fields') works."""
-        template = LabReportTemplate.objects.prefetch_related("fields").get(
-            name="Custom Lab Panel"
-        )
+        template = LabReportTemplate.objects.prefetch_related("fields").get(name="Custom Lab Panel")
         # Access fields without additional query
         assert template.fields.count() == 1
 
     @pytest.mark.django_db
     def test_prefetch_fields_and_options(self) -> None:
         """Test prefetch_related('fields', 'fields__options') works."""
-        template = LabReportTemplate.objects.prefetch_related(
-            "fields", "fields__options"
-        ).get(name="Custom Lab Panel")
+        template = LabReportTemplate.objects.prefetch_related("fields", "fields__options").get(
+            name="Custom Lab Panel"
+        )
 
         # Access nested options without additional queries
         field = template.fields.first()
