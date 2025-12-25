@@ -341,10 +341,18 @@
     "CompoundMedication"
   ],
   "canvas_sdk.effects.data_integration": [
-    "RemoveDocumentFromPatientEffect"
+    "LinkDocumentConfidenceScores",
+    "LinkDocumentToPatient",
+    "RemoveDocumentConfidenceScores",
+    "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.link_document_to_patient": [
+    "LinkDocumentConfidenceScores",
+    "LinkDocumentToPatient"
   ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
-    "RemoveDocumentFromPatientEffect"
+    "RemoveDocumentConfidenceScores",
+    "RemoveDocumentFromPatient"
   ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
