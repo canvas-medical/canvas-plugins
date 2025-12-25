@@ -1,5 +1,6 @@
 """Tests for integration_task_explorer plugin."""
 
+import uuid
 from unittest.mock import Mock, patch
 
 from integration_task_explorer.routes.integration_task_api import IntegrationTaskAPI
@@ -58,7 +59,7 @@ class TestIntegrationTaskAPI:
         """Test GET endpoint returns list of tasks."""
         # Create mock task
         mock_task = Mock(spec=IntegrationTask)
-        mock_task.id = 1
+        mock_task.id = uuid.uuid4()
         mock_task.status = IntegrationTaskStatus.UNREAD
         mock_task.type = "fax_document"
         mock_task.title = "Test Fax Document"

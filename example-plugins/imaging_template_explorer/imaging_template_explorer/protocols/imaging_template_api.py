@@ -1,13 +1,3 @@
-"""
-Imaging Template Explorer Plugin
-
-This module provides handlers to explore and test ImagingReportTemplate SDK models:
-1. ImagingTemplateAPI - A Simple API endpoint for querying templates
-2. ImagingTemplateProtocolCard - A protocol that displays template info as a card
-"""
-
-from logger import log
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard
 from canvas_sdk.effects.simple_api import JSONResponse
@@ -16,6 +6,7 @@ from canvas_sdk.handlers.simple_api import SimpleAPIRoute
 from canvas_sdk.handlers.simple_api.security import Credentials
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import ImagingReportTemplate
+from logger import log
 
 
 class ImagingTemplateAPI(SimpleAPIRoute):
@@ -61,13 +52,15 @@ class ImagingTemplateAPI(SimpleAPIRoute):
         active_only = self.request.query_params.get("active") == "true"
         custom_only = self.request.query_params.get("custom") == "true"
         builtin_only = self.request.query_params.get("builtin") == "true"
-        log.info(f"Filters - search: {search_query}, active: {active_only}, custom: {custom_only}, builtin: {builtin_only}")
+        log.info(
+            f"Filters - search: {search_query}, active: {active_only}, custom: {custom_only}, builtin: {builtin_only}"
+        )
 
         # Build queryset using SDK QuerySet methods
         log.info("Querying ImagingReportTemplate...")
         try:
             templates = ImagingReportTemplate.objects.all()
-            log.info(f"Initial queryset created")
+            log.info("Initial queryset created")
 
             if active_only:
                 templates = templates.active()
@@ -80,7 +73,7 @@ class ImagingTemplateAPI(SimpleAPIRoute):
 
             # Prefetch related fields and options for efficient querying
             templates = templates.prefetch_related("fields", "fields__options")
-            log.info(f"Queryset built with prefetch")
+            log.info("Queryset built with prefetch")
         except Exception as e:
             log.error(f"Error building queryset: {e}")
             return [JSONResponse({"error": str(e)}, status_code=500)]
@@ -107,8 +100,7 @@ class ImagingTemplateAPI(SimpleAPIRoute):
                         "required": field.required,
                         "sequence": field.sequence,
                         "options": [
-                            {"label": opt.label, "key": opt.key}
-                            for opt in field.options.all()
+                            {"label": opt.label, "key": opt.key} for opt in field.options.all()
                         ],
                     }
                     for field in template.fields.all()
@@ -116,11 +108,15 @@ class ImagingTemplateAPI(SimpleAPIRoute):
             }
             result.append(template_data)
 
-        return [JSONResponse({
-            "patient_id": patient_id,
-            "count": len(result),
-            "templates": result,
-        })]
+        return [
+            JSONResponse(
+                {
+                    "patient_id": patient_id,
+                    "count": len(result),
+                    "templates": result,
+                }
+            )
+        ]
 
 
 class ImagingTemplateProtocolCard(BaseProtocol):
@@ -134,8 +130,7 @@ class ImagingTemplateProtocolCard(BaseProtocol):
     - List of top templates by rank
     """
 
-    RESPONDS_TO = EventType.Name(
-        EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
+    RESPONDS_TO = EventType.Name(EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
 
     def compute(self) -> list[Effect]:
         """Compute the protocol card with template statistics."""
@@ -149,15 +144,14 @@ class ImagingTemplateProtocolCard(BaseProtocol):
 
         # Get sample templates ordered by rank
         sample_templates = list(
-            ImagingReportTemplate.objects.active().prefetch_related(
-                "fields").order_by("rank")[:5])
+            ImagingReportTemplate.objects.active().prefetch_related("fields").order_by("rank")[:5]
+        )
 
         # Build narrative text
         if sample_templates:
-            template_list = "\n".join([
-                f"  - {t.name} ({t.fields.count()} fields)"
-                for t in sample_templates
-            ])
+            template_list = "\n".join(
+                [f"  - {t.name} ({t.fields.count()} fields)" for t in sample_templates]
+            )
         else:
             template_list = "  No templates available"
 

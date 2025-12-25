@@ -1,7 +1,3 @@
-"""Unit tests for the Imaging Template Explorer plugin."""
-
-import pytest
-
 from imaging_template_explorer.protocols.imaging_template_api import (
     ImagingTemplateAPI,
     ImagingTemplateProtocolCard,
@@ -18,7 +14,7 @@ class TestImagingTemplateAPI:
     def test_handler_has_get_method(self) -> None:
         """Ensure the handler has a get method."""
         assert hasattr(ImagingTemplateAPI, "get")
-        assert callable(getattr(ImagingTemplateAPI, "get"))
+        assert callable(ImagingTemplateAPI.get)
 
     def test_handler_inherits_from_simple_api_route(self) -> None:
         """Ensure the handler inherits from SimpleAPIRoute."""
@@ -35,12 +31,12 @@ class TestImagingTemplateProtocolCard:
         from canvas_sdk.events import EventType
 
         expected = EventType.Name(EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
-        assert ImagingTemplateProtocolCard.RESPONDS_TO == expected
+        assert expected == ImagingTemplateProtocolCard.RESPONDS_TO
 
     def test_handler_has_compute_method(self) -> None:
         """Ensure the handler has a compute method."""
         assert hasattr(ImagingTemplateProtocolCard, "compute")
-        assert callable(getattr(ImagingTemplateProtocolCard, "compute"))
+        assert callable(ImagingTemplateProtocolCard.compute)
 
     def test_handler_inherits_from_base_protocol(self) -> None:
         """Ensure the handler inherits from BaseProtocol."""

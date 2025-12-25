@@ -1,13 +1,3 @@
-"""
-Lab Template Explorer Plugin
-
-This module provides handlers to explore and test LabReportTemplate SDK models:
-1. LabTemplateAPI - A Simple API endpoint for querying templates
-2. LabTemplateProtocolCard - A protocol that displays template info as a card
-"""
-
-from logger import log
-
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.protocol_card import ProtocolCard
 from canvas_sdk.effects.simple_api import JSONResponse
@@ -16,6 +6,7 @@ from canvas_sdk.handlers.simple_api import SimpleAPIRoute
 from canvas_sdk.handlers.simple_api.security import Credentials
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import LabReportTemplate
+from logger import log
 
 
 class LabTemplateAPI(SimpleAPIRoute):
@@ -121,8 +112,7 @@ class LabTemplateAPI(SimpleAPIRoute):
                         "required": field.required,
                         "sequence": field.sequence,
                         "options": [
-                            {"label": opt.label, "key": opt.key}
-                            for opt in field.options.all()
+                            {"label": opt.label, "key": opt.key} for opt in field.options.all()
                         ],
                     }
                     for field in template.fields.all()
@@ -130,11 +120,15 @@ class LabTemplateAPI(SimpleAPIRoute):
             }
             result.append(template_data)
 
-        return [JSONResponse({
-            "patient_id": patient_id,
-            "count": len(result),
-            "templates": result,
-        })]
+        return [
+            JSONResponse(
+                {
+                    "patient_id": patient_id,
+                    "count": len(result),
+                    "templates": result,
+                }
+            )
+        ]
 
 
 class LabTemplateProtocolCard(BaseProtocol):
@@ -148,8 +142,7 @@ class LabTemplateProtocolCard(BaseProtocol):
     - List of top templates
     """
 
-    RESPONDS_TO = EventType.Name(
-        EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
+    RESPONDS_TO = EventType.Name(EventType.PATIENT_CHART_SUMMARY__SECTION_CONFIGURATION)
 
     def compute(self) -> list[Effect]:
         """Compute the protocol card with template statistics."""
@@ -164,16 +157,13 @@ class LabTemplateProtocolCard(BaseProtocol):
         builtin = LabReportTemplate.objects.builtin().count()
 
         # Get sample templates
-        sample_templates = list(
-            LabReportTemplate.objects.active().prefetch_related(
-                "fields")[:5])
+        sample_templates = list(LabReportTemplate.objects.active().prefetch_related("fields")[:5])
 
         # Build narrative text
         if sample_templates:
-            template_list = "\n".join([
-                f"  - {t.name} ({t.fields.count()} fields)"
-                for t in sample_templates
-            ])
+            template_list = "\n".join(
+                [f"  - {t.name} ({t.fields.count()} fields)" for t in sample_templates]
+            )
         else:
             template_list = "  No templates available"
 
