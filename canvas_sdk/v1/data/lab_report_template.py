@@ -36,9 +36,7 @@ class LabReportTemplateQuerySet(models.QuerySet):
         """Search templates by name or search_keywords."""
         if not query:
             return self
-        return self.filter(
-            Q(name__icontains=query) | Q(search_keywords__icontains=query)
-        )
+        return self.filter(Q(name__icontains=query) | Q(search_keywords__icontains=query))
 
     def point_of_care(self) -> Self:
         """Return Point of Care (POC) test templates."""
