@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.2",
+    "name": "remove_document_from_patient",
+    "description": "API endpoint for removing/unlinking patients from documents in the Data Integration queue",
+    "components": {
+        "protocols": [
+            {
+                "class": "remove_document_from_patient.handlers.remove_document_api:RemoveDocumentFromPatientAPI",
+                "description": "POST API endpoint to remove patient from document"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
