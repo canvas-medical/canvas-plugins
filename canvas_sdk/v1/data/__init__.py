@@ -143,6 +143,11 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
+from .specialty_report_template import (
+    SpecialtyReportTemplate,
+    SpecialtyReportTemplateField,
+    SpecialtyReportTemplateFieldOption,
+)
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
@@ -287,6 +292,9 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffLicense",

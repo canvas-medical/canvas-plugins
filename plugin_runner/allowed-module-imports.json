@@ -803,6 +803,9 @@
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
@@ -1123,6 +1126,11 @@
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.v1.data.specialty_report_template": [
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption"
   ],
   "canvas_sdk.v1.data.staff": [
     "Staff",
