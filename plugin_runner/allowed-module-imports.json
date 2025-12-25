@@ -341,10 +341,16 @@
     "CompoundMedication"
   ],
   "canvas_sdk.effects.data_integration": [
+    "JunkDocument",
+    "JunkDocumentConfidenceScores",
     "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient",
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.junk_document": [
+    "JunkDocument",
+    "JunkDocumentConfidenceScores"
   ],
   "canvas_sdk.effects.data_integration.link_document_to_patient": [
     "LinkDocumentConfidenceScores",
@@ -362,10 +368,6 @@
   ],
   "canvas_sdk.effects.group": [
     "Group"
-  ],
-  "canvas_sdk.effects.junk_document": [
-    "ConfidenceScores",
-    "JunkDocument"
   ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
