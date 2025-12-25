@@ -1,0 +1,33 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "speciality_report_explorer",
+    "description": "Example plugin to explore and test SpecialtyReportTemplate, SpecialtyReportTemplateField, and SpecialtyReportTemplateFieldOption SDK models",
+    "components": {
+        "protocols": [
+            {
+                "class": "speciality_report_explorer.protocols.specialty_report_template_api:SpecialtyReportTemplateAPI",
+                "description": "API endpoint for querying and filtering SpecialtyReportTemplate records with fields and options",
+                "data_access": {
+                    "event": "",
+                    "read": [
+                        "specialty_report_templates",
+                        "specialty_report_template_fields",
+                        "specialty_report_template_field_options"
+                    ],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "MIT",
+    "diagram": false,
+    "readme": "./README.md"
+}
