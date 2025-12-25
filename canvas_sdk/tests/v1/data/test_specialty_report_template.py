@@ -41,7 +41,7 @@ def test_specialty_report_template_field_model_structure() -> None:
     # Verify model exists and has correct db_table
     assert (
         SpecialtyReportTemplateField._meta.db_table
-        == "canvas_sdk_data_data_integration_specialtyreporttemplatefield_001"
+        == "canvas_sdk_data_data_integration_specialtyrpttmplfield_001"
     )
     assert SpecialtyReportTemplateField._meta.managed is False
 
@@ -63,7 +63,7 @@ def test_specialty_report_template_field_option_model_structure() -> None:
     # Verify model exists and has correct db_table
     assert (
         SpecialtyReportTemplateFieldOption._meta.db_table
-        == "canvas_sdk_data_data_integration_specialtyreporttemplatefieldoption_001"
+        == "canvas_sdk_data_data_integration_specialtyrpttmplfieldopt_001"
     )
     assert SpecialtyReportTemplateFieldOption._meta.managed is False
 
