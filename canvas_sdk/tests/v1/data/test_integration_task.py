@@ -231,7 +231,7 @@ class TestIntegrationTaskReviewQuerySet:
         review = IntegrationTaskReviewFactory.create(task=task)
         IntegrationTaskReviewFactory.create()  # Different task
 
-        result = IntegrationTaskReview.objects.for_task(task.id)
+        result = IntegrationTaskReview.objects.for_task(str(task.id))
 
         assert list(result) == [review]
 
@@ -291,7 +291,7 @@ class TestIntegrationTaskReviewQuerySet:
             junked=False,
         )
 
-        result = IntegrationTaskReview.objects.for_task(task.id).by_reviewer(staff.id).active()
+        result = IntegrationTaskReview.objects.for_task(str(task.id)).by_reviewer(staff.id).active()
 
         assert list(result) == [target_review]
 

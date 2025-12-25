@@ -1,12 +1,13 @@
 from typing import Self, cast
+from uuid import UUID
 
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
     BaseQuerySet,
     ForPatientQuerySetMixin,
+    IdentifiableModel,
     TimestampedModel,
-    IdentifiableModel
 )
 
 
@@ -103,7 +104,7 @@ class IntegrationTaskReviewQuerySet(BaseQuerySet):
         """Filter to active (non-junked) reviews."""
         return self.not_junked()
 
-    def by_reviewer(self, reviewer_id: str) -> Self:
+    def by_reviewer(self, reviewer_id: str | UUID) -> Self:
         """Filter reviews by reviewer ID."""
         return self.filter(reviewer__id=reviewer_id)
 
