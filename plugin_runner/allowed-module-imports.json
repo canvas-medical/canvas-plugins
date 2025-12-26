@@ -341,12 +341,22 @@
     "CompoundMedication"
   ],
   "canvas_sdk.effects.data_integration": [
+    "AssignDocumentReviewer",
+    "AssignDocumentReviewerConfidenceScores",
     "JunkDocument",
     "JunkDocumentConfidenceScores",
     "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient",
+    "Priority",
     "RemoveDocumentConfidenceScores",
-    "RemoveDocumentFromPatient"
+    "RemoveDocumentFromPatient",
+    "ReviewMode"
+  ],
+  "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "AssignDocumentReviewer",
+    "AssignDocumentReviewerConfidenceScores",
+    "Priority",
+    "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.junk_document": [
     "JunkDocument",
