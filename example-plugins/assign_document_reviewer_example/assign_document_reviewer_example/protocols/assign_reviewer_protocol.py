@@ -48,19 +48,30 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
         log.info(f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}")
 
         try:
-            # Assign the staff member as reviewer, and optionally the team
-            effect = AssignDocumentReviewer(
-                document_id=str(document_id),
-                reviewer_id=str(staff.id),
-                team_id=str(team.id) if team else None,
-                priority=Priority.HIGH,
-                review_mode=ReviewMode.REVIEW_REQUIRED,
-                confidence_scores={"document_id": 0.95},
-            )
+            # Prefer staff over team assignment
+            if staff:
+                effect = AssignDocumentReviewer(
+                    document_id=str(document_id),
+                    reviewer_id=str(staff.id),
+                    priority=Priority.HIGH,
+                    review_mode=ReviewMode.REVIEW_REQUIRED,
+                    confidence_scores={"document_id": 0.95},
+                )
+                log.info(f"Assigned staff {staff.id} to document {document_id}")
+            elif team:
+                effect = AssignDocumentReviewer(
+                    document_id=str(document_id),
+                    team_id=str(team.id),
+                    priority=Priority.HIGH,
+                    review_mode=ReviewMode.REVIEW_REQUIRED,
+                    confidence_scores={"document_id": 0.95},
+                )
+                log.info(f"Assigned team {team.id} to document {document_id}")
+            else:
+                log.warning(f"No staff or team available for document {document_id}")
+                return []
 
-            applied_effect = effect.apply()
-            log.info(f"Assigned reviewer {staff.id} to document {document_id}")
-            return [applied_effect]
+            return [effect.apply()]
 
         except ValidationError as e:
             log.error(f"Validation error assigning reviewer to document {document_id}: {e}")
