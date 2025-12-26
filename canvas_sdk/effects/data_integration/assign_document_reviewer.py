@@ -39,7 +39,7 @@ class ReviewMode(StrEnum):
     REVIEW_NOT_REQUIRED = "review_not_required"
 
 
-class ConfidenceScores(TypedDict, total=False):
+class AssignDocumentReviewerConfidenceScores(TypedDict, total=False):
     """Confidence scores for document reviewer assignment.
 
     Used for monitoring and debugging purposes only, not used in assignment logic.
@@ -54,7 +54,7 @@ class ConfidenceScores(TypedDict, total=False):
 
 
 # Valid keys for confidence_scores dictionary (derived from TypedDict for validation)
-CONFIDENCE_SCORE_KEYS = frozenset(ConfidenceScores.__annotations__.keys())
+CONFIDENCE_SCORE_KEYS = frozenset(AssignDocumentReviewerConfidenceScores.__annotations__.keys())
 
 
 class AssignDocumentReviewer(_BaseEffect):
@@ -84,7 +84,7 @@ class AssignDocumentReviewer(_BaseEffect):
         review_mode: Review mode (review_required, already_reviewed, review_not_required).
             Defaults to review_required.
         confidence_scores: Optional confidence scores for document identification.
-            See ConfidenceScores TypedDict for valid keys and value constraints.
+            See AssignDocumentReviewerConfidenceScores TypedDict for valid keys and value constraints.
             Used for monitoring/debugging only, not used in assignment logic.
     """
 
@@ -97,7 +97,7 @@ class AssignDocumentReviewer(_BaseEffect):
     team_id: str | int | None = None
     priority: Priority = Priority.NORMAL
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
-    confidence_scores: ConfidenceScores | None = None
+    confidence_scores: AssignDocumentReviewerConfidenceScores | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -160,4 +160,10 @@ class AssignDocumentReviewer(_BaseEffect):
         return super()._get_error_details(method)
 
 
-__exports__ = ("AssignDocumentReviewer", "ConfidenceScores", "Priority", "ReviewMode")
+__exports__ = (
+    "AssignDocumentReviewer",
+    "AssignDocumentReviewerConfidenceScores",
+    "Priority",
+    "ReviewMode",
+)
+

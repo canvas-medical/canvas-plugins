@@ -10,7 +10,7 @@ assign staff members or teams as reviewers to documents in the Data Integration 
 ## Effect Usage
 
 ```python
-from canvas_sdk.effects.assign_document_reviewer import (
+from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
     Priority,
     ReviewMode,

@@ -3,7 +3,7 @@
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.assign_document_reviewer import (
+from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
     Priority,
     ReviewMode,
