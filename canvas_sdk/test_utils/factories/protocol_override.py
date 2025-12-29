@@ -10,6 +10,7 @@ from canvas_sdk.v1.data.protocol_override import IntervalUnit, ProtocolOverride,
 
 class ProtocolOverrideFactory(factory.django.DjangoModelFactory[ProtocolOverride]):
     """ProtocolOverride testing factory."""
+
     class Meta:
         model = ProtocolOverride
 
