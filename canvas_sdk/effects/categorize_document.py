@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import Annotated, Any
 
 from pydantic import Field, model_validator
@@ -145,6 +146,64 @@ class CategorizeDocument(_BaseEffect):
         """The payload of the effect."""
         return self.values
 
+    def _validate_required_string(
+        self,
+        data: Mapping[str, Any],
+        field: str,
+        errors: list[InitErrorDetails],
+    ) -> None:
+        """Validate that a required string field exists and is non-empty."""
+        prefix = "document_type"
+        if field not in data:
+            errors.append(
+                self._create_error_detail("missing", f"{prefix}.{field} is required", None)
+            )
+        elif not isinstance(data[field], str) or not data[field].strip():
+            errors.append(
+                self._create_error_detail(
+                    "value", f"{prefix}.{field} must be a non-empty string", data.get(field)
+                )
+            )
+
+    def _validate_enum_field(
+        self,
+        data: Mapping[str, Any],
+        field: str,
+        valid_values: frozenset[str],
+        errors: list[InitErrorDetails],
+        *,
+        required: bool = True,
+        nullable: bool = False,
+    ) -> None:
+        """Validate that a field has a value from a set of valid options."""
+        prefix = "document_type"
+        if field not in data:
+            if required:
+                errors.append(
+                    self._create_error_detail("missing", f"{prefix}.{field} is required", None)
+                )
+            return
+
+        value = data[field]
+        if nullable and value is None:
+            return
+
+        null_suffix = " or null" if nullable else ""
+        if not isinstance(value, str):
+            errors.append(
+                self._create_error_detail(
+                    "value", f"{prefix}.{field} must be a string{null_suffix}", value
+                )
+            )
+        elif value not in valid_values:
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"{prefix}.{field} must be one of {sorted(valid_values)}{null_suffix}, got: {value}",
+                    value,
+                )
+            )
+
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate the effect fields and return any error details.
 
@@ -154,101 +213,17 @@ class CategorizeDocument(_BaseEffect):
         """
         errors = super()._get_error_details(method)
 
-        if self.document_type is None:
-            pass
-        elif not isinstance(self.document_type, dict):
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "document_type must be a dict with keys: key, name, report_type, template_type",
-                    self.document_type,
-                )
-            )
-        else:
-            if "key" not in self.document_type:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "document_type.key is required",
-                        None,
-                    )
-                )
-            elif (
-                not isinstance(self.document_type["key"], str)
-                or not self.document_type["key"].strip()
-            ):
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "document_type.key must be a non-empty string",
-                        self.document_type.get("key"),
-                    )
-                )
-
-            if "name" not in self.document_type:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "document_type.name is required",
-                        None,
-                    )
-                )
-            elif (
-                not isinstance(self.document_type["name"], str)
-                or not self.document_type["name"].strip()
-            ):
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "document_type.name must be a non-empty string",
-                        self.document_type.get("name"),
-                    )
-                )
-
-            if "report_type" not in self.document_type:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "document_type.report_type is required",
-                        None,
-                    )
-                )
-            elif self.document_type["report_type"] not in VALID_REPORT_TYPES:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"document_type.report_type must be one of {sorted(VALID_REPORT_TYPES)}, got: {self.document_type['report_type']}",
-                        self.document_type.get("report_type"),
-                    )
-                )
-
-            if "template_type" in self.document_type:
-                template_type = self.document_type["template_type"]
-                if template_type is not None:
-                    if not isinstance(template_type, str):
-                        errors.append(
-                            self._create_error_detail(
-                                "value",
-                                "document_type.template_type must be a string or null",
-                                template_type,
-                            )
-                        )
-                    elif template_type not in VALID_TEMPLATE_TYPES:
-                        errors.append(
-                            self._create_error_detail(
-                                "value",
-                                f"document_type.template_type must be one of {sorted(VALID_TEMPLATE_TYPES)} or null, got: {template_type}",
-                                template_type,
-                            )
-                        )
-
-        if self.confidence_scores is not None and not isinstance(self.confidence_scores, dict):
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "confidence_scores must be a dict if provided",
-                    self.confidence_scores,
-                )
+        if self.document_type is not None:
+            self._validate_required_string(self.document_type, "key", errors)
+            self._validate_required_string(self.document_type, "name", errors)
+            self._validate_enum_field(self.document_type, "report_type", VALID_REPORT_TYPES, errors)
+            self._validate_enum_field(
+                self.document_type,
+                "template_type",
+                VALID_TEMPLATE_TYPES,
+                errors,
+                required=False,
+                nullable=True,
             )
 
         return errors
