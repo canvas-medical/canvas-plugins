@@ -138,18 +138,60 @@ def test_get_active_adjustment_excludes_non_adjustments() -> None:
 
 
 @pytest.mark.django_db
-def test_get_active_adjustment_returns_first_when_multiple_exist() -> None:
-    """Test that get_active_adjustment returns only one result when multiple exist."""
-    patient = PatientFactory.create()
+def test_get_active_adjustment_finds_match_among_mixed_overrides() -> None:
+    """Test that get_active_adjustment finds the correct match when multiple overrides exist.
+
+    This verifies all filters work together correctly when the database contains
+    a mix of overrides with different patients, protocols, statuses, and types.
+    """
+    target_patient = PatientFactory.create()
+    other_patient = PatientFactory.create()
+
+    # Create various overrides that should NOT match
+    # Different patient
     ProtocolOverrideFactory.create(
-        patient=patient,
+        patient=other_patient,
         protocol_key=TESTING_PROTOCOL_KEY_1,
         deleted=False,
         status=Status.ACTIVE,
         is_adjustment=True,
     )
+    # Different protocol
     ProtocolOverrideFactory.create(
-        patient=patient,
+        patient=target_patient,
+        protocol_key=TESTING_PROTOCOL_KEY_2,
+        deleted=False,
+        status=Status.ACTIVE,
+        is_adjustment=True,
+    )
+    # Deleted
+    ProtocolOverrideFactory.create(
+        patient=target_patient,
+        protocol_key=TESTING_PROTOCOL_KEY_1,
+        deleted=True,
+        status=Status.ACTIVE,
+        is_adjustment=True,
+    )
+    # Inactive
+    ProtocolOverrideFactory.create(
+        patient=target_patient,
+        protocol_key=TESTING_PROTOCOL_KEY_1,
+        deleted=False,
+        status=Status.INACTIVE,
+        is_adjustment=True,
+    )
+    # Not an adjustment (exclusion/snooze)
+    ProtocolOverrideFactory.create(
+        patient=target_patient,
+        protocol_key=TESTING_PROTOCOL_KEY_1,
+        deleted=False,
+        status=Status.ACTIVE,
+        is_adjustment=False,
+    )
+
+    # Create the ONE override that should match
+    expected = ProtocolOverrideFactory.create(
+        patient=target_patient,
         protocol_key=TESTING_PROTOCOL_KEY_1,
         deleted=False,
         status=Status.ACTIVE,
@@ -157,8 +199,8 @@ def test_get_active_adjustment_returns_first_when_multiple_exist() -> None:
     )
 
     result = ProtocolOverride.objects.get_active_adjustment(
-        patient=patient, protocol_key=TESTING_PROTOCOL_KEY_1
+        patient=target_patient, protocol_key=TESTING_PROTOCOL_KEY_1
     )
 
     assert result is not None
-    assert isinstance(result, ProtocolOverride)
+    assert result.dbid == expected.dbid
