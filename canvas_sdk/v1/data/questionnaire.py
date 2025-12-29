@@ -132,7 +132,7 @@ class Interview(AuditedModel, IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="interviews", null=True
     )
-    note_id = models.BigIntegerField()
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, null=True)
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(
         Questionnaire,
