@@ -112,7 +112,7 @@ class TestCategorizeDocumentApply:
         self, missing_field: str, valid_document_type: DocumentType
     ) -> None:
         """Test that apply raises ValidationError when required field is missing."""
-        kwargs = {"document_id": "123", "document_type": valid_document_type}
+        kwargs: dict[str, Any] = {"document_id": "123", "document_type": valid_document_type}
         kwargs.pop(missing_field)
         effect = CategorizeDocument(**kwargs)
         with pytest.raises(ValidationError) as exc_info:
@@ -144,7 +144,7 @@ class TestDocumentTypeValidation:
         self, field: str, value: Any, expected_error: str, valid_document_type: DocumentType
     ) -> None:
         """Test validation of required document_type fields."""
-        document_type = valid_document_type.copy()
+        document_type: dict[str, Any] = dict(valid_document_type)
         if value is None:
             document_type.pop(field, None)
         else:
@@ -203,7 +203,7 @@ class TestDocumentTypeValidation:
 
     def test_template_type_must_be_string_or_null(self, valid_document_type: DocumentType) -> None:
         """Test that template_type must be string or null."""
-        document_type = valid_document_type.copy()
+        document_type: dict[str, Any] = dict(valid_document_type)
         document_type["template_type"] = 123
         effect = CategorizeDocument(document_id="123", document_type=document_type)
         with pytest.raises(ValidationError) as exc_info:
@@ -253,7 +253,7 @@ class TestConfidenceScoresValidation:
                 },
             }
         else:
-            invalid_scores: ConfidenceScores = {
+            invalid_scores = {
                 "document_id": 0.9,
                 "document_type": {
                     "key": value,
