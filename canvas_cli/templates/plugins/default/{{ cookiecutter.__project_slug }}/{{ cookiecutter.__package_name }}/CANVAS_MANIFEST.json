@@ -4,10 +4,10 @@
     "name": "{{ cookiecutter.__package_name }}",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "{{ cookiecutter.__package_name }}.protocols.my_protocol:Protocol",
-                "description": "A protocol that does xyz..."
+                "class": "{{ cookiecutter.__package_name }}.handlers.event_handlers:NewOfficeVisitNoteHandler",
+                "description": "A handler that listens for an event and sets an inspirational goal."
             }
         ],
         "commands": [],
