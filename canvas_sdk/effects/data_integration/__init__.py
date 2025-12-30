@@ -1,3 +1,9 @@
+from .assign_document_reviewer import AssignDocumentReviewer as AssignDocumentReviewer
+from .assign_document_reviewer import (
+    AssignDocumentReviewerConfidenceScores as AssignDocumentReviewerConfidenceScores,
+)
+from .assign_document_reviewer import Priority as Priority
+from .assign_document_reviewer import ReviewMode as ReviewMode
 from .junk_document import JunkDocument as JunkDocument
 from .junk_document import JunkDocumentConfidenceScores as JunkDocumentConfidenceScores
 from .link_document_to_patient import (
@@ -10,10 +16,14 @@ from .remove_document_from_patient import (
 from .remove_document_from_patient import RemoveDocumentFromPatient as RemoveDocumentFromPatient
 
 __all__ = __exports__ = (
+    "AssignDocumentReviewer",
+    "AssignDocumentReviewerConfidenceScores",
     "JunkDocument",
     "JunkDocumentConfidenceScores",
     "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient",
+    "Priority",
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
+    "ReviewMode",
 )
