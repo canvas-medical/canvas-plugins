@@ -1,0 +1,32 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.1.0",
+    "name": "data_integration_example",
+    "description": "Example plugin demonstrating all Data Integration effects: LINK_DOCUMENT_TO_PATIENT, JUNK_DOCUMENT, and REMOVE_DOCUMENT_FROM_PATIENT",
+    "components": {
+        "protocols": [
+            {
+                "class": "data_integration_example.protocols.data_integration_handler:DataIntegrationHandler",
+                "description": "Handler that demonstrates all Data Integration effects for document processing",
+                "data_access": {
+                    "event": "DOCUMENT_RECEIVED",
+                    "read": [
+                        "integration_tasks",
+                        "patients"
+                    ],
+                    "write": [
+                        "integration_tasks"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "tags": [],
+    "secrets": [],
+    "license": "NONE",
+    "readme": "./README.md"
+}
