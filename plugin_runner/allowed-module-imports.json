@@ -323,6 +323,12 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.categorize_document": [
+    "CategorizeDocument",
+    "ConfidenceScores",
+    "DocumentType",
+    "DocumentTypeConfidenceScores"
+  ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
     "Label",
