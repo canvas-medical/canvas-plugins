@@ -1,0 +1,68 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "fullscript",
+    "description": "This plugin integrates Canvas with Fullscript, allowing healthcare providers to seamlessly prescribe supplements and manage treatment plans within the Canvas platform.",
+    "url_permissions": [
+        {
+            "url": "https://public-assets.fullscript.com/fullscript.js/3.0.1/fullscript-js.umd.min.js",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS"]
+        },
+        {
+            "url": "https://api-us-snd.fullscript.io/",
+            "permissions": ["ALLOW_SAME_ORIGIN", "SCRIPTS"]
+        }
+
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "fullscript.applications.my_application:MyApplication",
+                "name": "fullscript",
+                "description": "Application that embeds Fullscript within Canvas",
+                "scope": "patient_specific",
+                "icon": "assets/python-logo.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "fullscript.handlers.my_web_app:MyWebApp",
+                "description": "Serves the application frontend files"
+            },
+            {
+                "class": "fullscript.api.fullscript_api:FullscriptAPI",
+                "description": "Handles Fullscript API endpoints"
+            },
+            {
+                "class": "fullscript.handlers.group_supplements:GroupSupplements",
+                "description": "group medications by fullscript code"
+            },
+            {
+                "class": "fullscript.handlers.search_fullscript_supplements:SearchFullscriptSupplementsForPrescribe",
+                "description": "search fullscript supplements protocol for prescribe and return matching supplements"
+            },
+            {
+                "class": "fullscript.handlers.create_treatment_plan:CreateTreatmentPlan",
+                "description": "create treatment plan in fullscript based on canvas prescribe"
+            },
+            {
+                "class": "fullscript.handlers.create_treatment_plan:CreateTreatmentPlanButton",
+                "description": "Add a button to a Note to create a treatment plan"
+            },
+            {
+                "class": "fullscript.handlers.create_treatment_plan:LaunchFullscriptApplicationButton",
+                "description": "Add a button to a Note to launch the Fullscript application"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["FULLSCRIPT_CLIENT_ID", "FULLSCRIPT_CLIENT_SECRET", "FULLSCRIPT_SEARCH_PAGE_SIZE", "FULLSCRIPT_APPLICATION_ID"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
