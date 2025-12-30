@@ -1,3 +1,6 @@
+from dataclasses import fields as dataclass_fields
+from dataclasses import is_dataclass as dataclass_is_dataclass
+
 import pytest
 import requests
 from django.conf import settings
@@ -52,3 +55,21 @@ def note(auth_header: dict) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def is_dataclass(cls: type, fields: dict) -> bool:
+    """Verify a class is a dataclass with expected fields and types.
+
+    Args:
+        cls: Class to verify
+        fields: Dictionary mapping field names to their expected types
+
+    Returns:
+        True if class is a dataclass with matching fields and types, False otherwise
+    """
+    return (
+        dataclass_is_dataclass(cls)
+        and len([field for field in dataclass_fields(cls) if field.name in fields])
+        == len(fields.keys())
+        and all(fields[field.name] == field.type for field in dataclass_fields(cls))
+    )
