@@ -910,6 +910,7 @@
     "CoveragePosting",
     "CurrentNoteStateEvent",
     "CustomAttribute",
+    "CustomAttributeAwareManager",
     "CustomAttributeMixin",
     "DetectedIssue",
     "DetectedIssueEvidence",
@@ -1154,6 +1155,7 @@
   "canvas_sdk.v1.data.custom_attribute": [
     "AttributeHub",
     "CustomAttribute",
+    "CustomAttributeAwareManager",
     "CustomAttributeMixin"
   ],
   "canvas_sdk.v1.data.detected_issue": [
