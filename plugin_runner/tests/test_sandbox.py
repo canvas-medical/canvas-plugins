@@ -736,6 +736,10 @@ def test_aug_assign() -> None:
 
         a /= 2
         assert a == -10
+
+        a_list = [0, 1, 2]
+        a_list += [3]
+        assert a_list == [0, 1, 2, 3]
     """)
 
     sandbox.execute()
