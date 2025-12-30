@@ -77,10 +77,10 @@ class CategorizeDocument(_BaseEffect):
     An Effect that categorizes a document in the Data Integration queue into a specific document type.
 
     When processed by the home-app interpreter, this effect will:
-    - Validate the document exists
-    - Look up the DocumentType by key
-    - Validate the document type exists
-    - Set the IntegrationTask.type field to the document type name
+    - Validate the IntegrationTask exists
+    - Look up the DocumentType by key (falls back to name if key not found)
+    - Validate the DocumentType exists
+    - Create or update an IntegrationTaskReview with template_name and document_key
 
     Attributes:
         document_id: The ID of the IntegrationTask document to categorize (required, non-empty).
