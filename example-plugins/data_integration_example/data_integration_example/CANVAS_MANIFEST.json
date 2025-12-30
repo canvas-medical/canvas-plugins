@@ -2,17 +2,19 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.1.0",
     "name": "data_integration_example",
-    "description": "Example plugin demonstrating all Data Integration effects: LINK_DOCUMENT_TO_PATIENT, JUNK_DOCUMENT, and REMOVE_DOCUMENT_FROM_PATIENT",
+    "description": "Example plugin demonstrating Data Integration effects: LINK_DOCUMENT_TO_PATIENT, ASSIGN_DOCUMENT_REVIEWER, and CATEGORIZE_DOCUMENT",
     "components": {
         "protocols": [
             {
                 "class": "data_integration_example.protocols.data_integration_handler:DataIntegrationHandler",
-                "description": "Handler that demonstrates all Data Integration effects for document processing",
+                "description": "Protocol that demonstrates all Data Integration effects for document processing",
                 "data_access": {
                     "event": "DOCUMENT_RECEIVED",
                     "read": [
                         "integration_tasks",
-                        "patients"
+                        "patients",
+                        "staff",
+                        "teams"
                     ],
                     "write": [
                         "integration_tasks"
