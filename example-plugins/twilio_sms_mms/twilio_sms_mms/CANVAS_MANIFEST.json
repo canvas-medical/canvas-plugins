@@ -1,0 +1,38 @@
+{
+  "sdk_version": "0.85.0",
+  "plugin_version": "0.0.1",
+  "name": "twilio_sms_mms",
+  "description": "use Twillio to send and receive SMS/MMS",
+  "components": {
+    "protocols": [
+      {
+        "class": "twilio_sms_mms.handlers.sms_manip:SmsManip",
+        "description": "SMS/MMS with Twilio"
+      }
+    ],
+    "applications": [
+      {
+        "class": "twilio_sms_mms.handlers.sms_form_app:SmsFormApp",
+        "name": "SMS Twilio",
+        "description": "SMS/MMS with Twilio",
+        "icon": "static/twilio_sms_mms.png",
+        "scope": "patient_specific",
+        "show_in_panel": false
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [
+    "TwilioAccountSID",
+    "TwilioAPIKey",
+    "TwilioAPISecret"
+  ],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
