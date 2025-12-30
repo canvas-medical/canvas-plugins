@@ -1,0 +1,16 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+dependencies = [
+  "canvas-sdk"
+]
+description = "Example plugin demonstrating all Data Integration effects"
+name = "data-integration-example"
+readme = "data_integration_example/README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["data_integration_example"]
