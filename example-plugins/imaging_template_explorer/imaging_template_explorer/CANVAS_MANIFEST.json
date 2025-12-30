@@ -1,0 +1,26 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "imaging_template_explorer",
+    "description": "Example plugin to explore and test ImagingReportTemplate SDK models via Simple API",
+    "components": {
+        "protocols": [
+            {
+                "class": "imaging_template_explorer.protocols.imaging_template_api:ImagingTemplateAPI",
+                "description": "API endpoint to query imaging report templates"
+            },
+            {
+                "class": "imaging_template_explorer.protocols.imaging_template_api:ImagingTemplateProtocolCard",
+                "description": "Protocol that displays imaging template information as a card"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "license": "",
+    "readme": "./README.md"
+}

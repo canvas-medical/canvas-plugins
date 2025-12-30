@@ -18,3 +18,7 @@ dist/
 *.sqlite3
 
 profile-imports-*.txt
+
+
+# mypy
+.mypy_cache

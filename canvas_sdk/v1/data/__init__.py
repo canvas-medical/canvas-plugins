@@ -35,12 +35,26 @@ from .discount import Discount
 from .encounter import Encounter
 from .facility import Facility
 from .goal import Goal
-from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .imaging import (
+    ImagingOrder,
+    ImagingReport,
+    ImagingReportTemplate,
+    ImagingReportTemplateField,
+    ImagingReportTemplateFieldOption,
+    ImagingReportTemplateQuerySet,
+    ImagingReview,
+)
 from .immunization import (
     Immunization,
     ImmunizationCoding,
     ImmunizationStatement,
     ImmunizationStatementCoding,
+)
+from .integration_task import (
+    IntegrationTask,
+    IntegrationTaskChannel,
+    IntegrationTaskReview,
+    IntegrationTaskStatus,
 )
 from .invoice import Invoice
 from .lab import (
@@ -54,6 +68,13 @@ from .lab import (
     LabTest,
     LabValue,
     LabValueCoding,
+)
+from .lab_report_template import (
+    FieldType,
+    LabReportTemplate,
+    LabReportTemplateField,
+    LabReportTemplateFieldOption,
+    LabReportTemplateQuerySet,
 )
 from .line_item_transaction import (
     LineItemTransfer,
@@ -122,6 +143,11 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
+from .specialty_report_template import (
+    SpecialtyReportTemplate,
+    SpecialtyReportTemplateField,
+    SpecialtyReportTemplateFieldOption,
+)
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
@@ -177,15 +203,24 @@ __all__ = __exports__ = (
     "Encounter",
     "Event",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
@@ -200,6 +235,10 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -253,6 +292,9 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffLicense",
