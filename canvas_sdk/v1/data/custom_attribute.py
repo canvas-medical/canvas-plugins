@@ -5,6 +5,7 @@ from typing import Any
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Prefetch
 from django.utils.functional import cached_property
 
 from .base import Model
@@ -89,6 +90,32 @@ class CustomAttribute(Model):
             self.json_value = val
 
 
+class CustomAttributeAwareManager(models.Manager):
+    def get_queryset(self):
+        """Prefetch all custom attributes for the queryset."""
+        return super().get_queryset().prefetch_related("custom_attributes")
+
+    def with_only(self, attribute_names=None):
+        if attribute_names is None:
+            return self.get_queryset()
+
+        """Prefetch only specific custom attributes by name. May be a single string or list of strings"""
+        if isinstance(attribute_names, str):
+            attribute_names = [attribute_names]
+
+        # Clear default prefetch and replace with narrower one
+        return (
+            self.get_queryset()
+            .prefetch_related(None)
+            .prefetch_related(
+                Prefetch(
+                    "custom_attributes",
+                    queryset=CustomAttribute.objects.filter(name__in=attribute_names),
+                )
+            )
+        )
+
+
 # Mixin for models that want custom attributes
 class CustomAttributeMixin(models.Model):
     """
@@ -110,6 +137,7 @@ class CustomAttributeMixin(models.Model):
                 CustomAttribute, content_type_field="content_type", object_id_field="object_id"
             ),
         )
+        setattr(cls, 'objects', CustomAttributeAwareManager())
 
     @cached_property
     def _content_type_id(self) -> int:
@@ -153,13 +181,24 @@ class CustomAttributeMixin(models.Model):
                 f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
             )
 
-        try:
-            attr = CustomAttribute.objects.get(
-                content_type_id=self._content_type_id, object_id=self.pk, name=name
-            )
-            return attr.value
-        except CustomAttribute.DoesNotExist:
+        if (
+            hasattr(self, "_prefetched_objects_cache")
+            and "custom_attributes" in self._prefetched_objects_cache
+        ):
+            # Use prefetched data
+            for attr in self.custom_attributes.all():
+                if attr.name == name:
+                    return attr.value
             return None
+        else:
+            # Fall back to database query
+            try:
+                attr = CustomAttribute.objects.get(
+                    content_type_id=self._content_type_id, object_id=self.pk, name=name
+                )
+                return attr.value
+            except CustomAttribute.DoesNotExist:
+                return None
 
     def set_attribute(self, name: str, value: Any) -> CustomAttribute:
         """Set a custom attribute value."""
@@ -256,4 +295,9 @@ class AttributeHub(Model):
             return False
 
 
-__exports__ = ("CustomAttribute", "CustomAttributeMixin", "AttributeHub")
+__exports__ = (
+    "CustomAttribute",
+    "CustomAttributeAwareManager",
+    "CustomAttributeMixin",
+    "AttributeHub",
+)
