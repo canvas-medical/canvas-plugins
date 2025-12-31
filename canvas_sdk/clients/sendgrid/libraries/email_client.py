@@ -136,8 +136,9 @@ class EmailClient:
                     )
                 }
             ],
-            "attachments": [a.to_dict() for a in email.attachments],
         }
+        if attachments := [a.to_dict() for a in email.attachments]:
+            data["attachments"] = attachments
         return self.prepared_send(data)
 
     def prepared_send(self, data: dict) -> bool:
