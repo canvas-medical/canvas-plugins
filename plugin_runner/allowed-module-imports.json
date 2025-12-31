@@ -508,9 +508,6 @@
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
-  "canvas_sdk.effects.remove_document_from_patient": [
-    "RemoveDocumentFromPatient"
-  ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
