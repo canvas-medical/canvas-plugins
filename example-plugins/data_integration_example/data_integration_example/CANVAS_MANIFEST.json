@@ -2,14 +2,14 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.1.0",
     "name": "data_integration_example",
-    "description": "Example plugin demonstrating Data Integration effects: LINK_DOCUMENT_TO_PATIENT, ASSIGN_DOCUMENT_REVIEWER, and CATEGORIZE_DOCUMENT",
+    "description": "Example plugin demonstrating Data Integration effects and document lifecycle events",
     "components": {
         "protocols": [
             {
                 "class": "data_integration_example.protocols.data_integration_handler:DataIntegrationHandler",
-                "description": "Protocol that demonstrates all Data Integration effects for document processing",
+                "description": "Protocol that demonstrates Data Integration effects on DOCUMENT_RECEIVED and logs all document lifecycle events",
                 "data_access": {
-                    "event": "DOCUMENT_RECEIVED",
+                    "event": "read",
                     "read": [
                         "integration_tasks",
                         "patients",
@@ -18,6 +18,17 @@
                     ],
                     "write": [
                         "integration_tasks"
+                    ]
+                },
+                "meta": {
+                    "RESPONDS_TO": [
+                        "DOCUMENT_RECEIVED",
+                        "DOCUMENT_LINKED_TO_PATIENT",
+                        "DOCUMENT_CATEGORIZED",
+                        "DOCUMENT_REVIEWER_ASSIGNED",
+                        "DOCUMENT_FIELDS_UPDATED",
+                        "DOCUMENT_REVIEWED",
+                        "DOCUMENT_DELETED"
                     ]
                 }
             }
