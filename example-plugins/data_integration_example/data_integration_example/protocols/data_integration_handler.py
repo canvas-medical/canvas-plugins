@@ -68,24 +68,24 @@ class DataIntegrationHandler(BaseProtocol):
 
         log.info(f"[{event_name}] Processing document {document_id}")
 
-        match self.event.type:
-            case EventType.DOCUMENT_RECEIVED:
-                return self._handle_document_received(document_id)
-            case EventType.DOCUMENT_LINKED_TO_PATIENT:
-                return self._handle_document_linked_to_patient(document_id)
-            case EventType.DOCUMENT_CATEGORIZED:
-                return self._handle_document_categorized(document_id)
-            case EventType.DOCUMENT_REVIEWER_ASSIGNED:
-                return self._handle_document_reviewer_assigned(document_id)
-            case EventType.DOCUMENT_FIELDS_UPDATED:
-                return self._handle_document_fields_updated(document_id)
-            case EventType.DOCUMENT_REVIEWED:
-                return self._handle_document_reviewed(document_id)
-            case EventType.DOCUMENT_DELETED:
-                return self._handle_document_deleted(document_id)
-            case _:
-                log.warning(f"Received unexpected event type: {event_name}")
-                return []
+        event_type = self.event.type
+        if event_type == EventType.DOCUMENT_RECEIVED:
+            return self._handle_document_received(document_id)
+        elif event_type == EventType.DOCUMENT_LINKED_TO_PATIENT:
+            return self._handle_document_linked_to_patient(document_id)
+        elif event_type == EventType.DOCUMENT_CATEGORIZED:
+            return self._handle_document_categorized(document_id)
+        elif event_type == EventType.DOCUMENT_REVIEWER_ASSIGNED:
+            return self._handle_document_reviewer_assigned(document_id)
+        elif event_type == EventType.DOCUMENT_FIELDS_UPDATED:
+            return self._handle_document_fields_updated(document_id)
+        elif event_type == EventType.DOCUMENT_REVIEWED:
+            return self._handle_document_reviewed(document_id)
+        elif event_type == EventType.DOCUMENT_DELETED:
+            return self._handle_document_deleted(document_id)
+        else:
+            log.warning(f"Received unexpected event type: {event_name}")
+            return []
 
     def _handle_document_received(self, document_id: str) -> list[Effect]:
         """Handle DOCUMENT_RECEIVED: Apply all Data Integration effects."""
