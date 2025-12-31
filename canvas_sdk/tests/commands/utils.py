@@ -25,6 +25,7 @@ COMMANDS_TO_SKIP = [
     "ReferralReviewCommand",
     "ImagingReviewCommand",
     "UncategorizedDocumentReviewCommand",
+    "CustomCommand",
 ]
 
 
