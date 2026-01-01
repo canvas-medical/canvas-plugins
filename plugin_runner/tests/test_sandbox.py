@@ -765,6 +765,21 @@ def test_safe_getattr() -> None:
     sandbox.execute()
 
 
+def test_stripe_import() -> None:
+    """
+    Test that we can import StripeClient.
+    """
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.clients.third_party import StripeClient
+
+        stripe = StripeClient("")
+
+        assert stripe is not None
+    """)
+
+    sandbox.execute()
+
+
 def test_safe_getattr_fails_when_needed() -> None:
     """
     Test that getattr does not allow access to private attributes from outside the plugin.
