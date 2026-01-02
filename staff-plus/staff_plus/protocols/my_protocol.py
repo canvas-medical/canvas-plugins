@@ -1,0 +1,199 @@
+from hmac import compare_digest
+
+from staff_plus.models.biography import Biography
+from staff_plus.models.proxy import StaffProxy
+from staff_plus.models.specialty import Specialty, StaffSpecialty
+
+from canvas_sdk.effects import Effect
+from canvas_sdk.effects.simple_api import JSONResponse, Response
+from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPI, api
+from canvas_sdk.protocols import BaseProtocol
+
+
+class MyAPI(SimpleAPI):
+    PREFIX = "/profile"
+
+    def authenticate(self, credentials: APIKeyCredentials) -> bool:
+        provided_api_key = credentials.key
+        api_key = self.secrets["my-api-key"]
+
+        return compare_digest(provided_api_key.encode(), api_key.encode())
+
+    @api.post("/<staff_id>")
+    def post_profile(self):
+        staff_id = self.request.path_params["staff_id"]
+        json_body = self.request.json()
+        biography = json_body.get("biography")
+        specialties = json_body.get("specialities")
+        staff = StaffProxy.objects.get(id=staff_id)
+        staff.set_attribute("specialties", specialties)
+        staff.set_attribute("biography", biography)
+        return [
+            JSONResponse(
+                {
+                    "biography": staff.get_attribute("biography"),
+                    "specialties": staff.get_attribute("specialties"),
+                }
+            )
+        ]
+
+    @api.get("/<staff_id>")
+    def get_single_profile(self) -> list[Response | Effect]:
+        staff_id = self.request.path_params["staff_id"]
+        staff = StaffProxy.objects.with_only(attribute_names=["biography", "specialties"]).get(
+            id=staff_id
+        )
+        profile = {
+            "first_name": staff.first_name,
+            "last_name": staff.last_name,
+            "biography": staff.get_attribute("biography"),
+            "specialties": staff.get_attribute("specialties"),
+        }
+
+        return [JSONResponse(profile)]
+
+    @api.get("/search/")
+    def search(self) -> list[Response | Effect]:
+        query_params = self.request.query_params
+        specialties_param = query_params.get("specialties")
+        specialties = specialties_param.split(",")
+        from django.db.models import Q
+
+        # Create OR conditions for each specialty
+        specialty_filters = Q()
+        for specialty in specialties:
+            specialty_filters |= Q(custom_attributes__json_value__contains=specialty.strip())
+
+        matching_staff = (
+            StaffProxy.objects.with_only(attribute_names=["biography", "specialties"])
+            .filter(custom_attributes__name="specialties")
+            .filter(specialty_filters)
+            .all()
+        )
+        info = {}
+        for staff in matching_staff:
+            info[staff.id] = {
+                "first_name": staff.first_name,
+                "last_name": staff.last_name,
+                "biography": staff.get_attribute("biography"),
+                "specialties": staff.get_attribute("specialties"),
+            }
+
+        return [JSONResponse(info)]
+
+    @api.get("/")
+    def get_all_profiles(self) -> list[Response | Effect]:
+        all_staff = StaffProxy.objects.with_only(attribute_names=["biography", "specialties"]).all()
+        info = {}
+        for staff in all_staff:
+            info[staff.id] = {
+                "first_name": staff.first_name,
+                "last_name": staff.last_name,
+                "biography": staff.get_attribute("biography"),
+                "specialties": staff.get_attribute("specialties"),
+            }
+
+        return [JSONResponse(info)]
+
+    @api.post("/v2/<staff_id>")
+    def post_profile_v2(self):
+        staff_id = self.request.path_params["staff_id"]
+        json_body = self.request.json()
+        staff = StaffProxy.objects.get(id=staff_id)
+        specialty_names = json_body.get("specialties")
+
+        specialties = []
+        for name in specialty_names:
+            specialty, created = Specialty.objects.get_or_create(name=name)
+            specialties.append(specialty)
+
+        # Clear existing associations and create new ones
+        StaffSpecialty.objects.filter(staff=staff).delete()
+        staff_specialties = [
+            StaffSpecialty(staff=staff, specialty=specialty) for specialty in specialties
+        ]
+        StaffSpecialty.objects.bulk_create(staff_specialties)
+
+        biography_str = json_body.get("biography")
+        if staff.biography is None:
+            Biography.objects.create(staff=staff, biography=biography_str)
+        else:
+            staff.biography.biography = biography_str
+            staff.biography.save()
+
+        return [
+            JSONResponse(
+                {
+                    "staff_info": json_body,
+                }
+            )
+        ]
+
+    @api.get("/v2/<staff_id>")
+    def get_single_profile_v2(self) -> list[Response | Effect]:
+        staff_id = self.request.path_params["staff_id"]
+        staff = StaffProxy.objects.get(id=staff_id)
+        staff_specialties = StaffSpecialty.objects.filter(staff=staff).prefetch_related("specialty")
+        specialties = [s.specialty.name for s in staff_specialties.all()]
+
+        profile = {
+            "first_name": staff.first_name,
+            "last_name": staff.last_name,
+            "biography": staff.biography.biography,
+            "specialties": specialties,
+        }
+
+        return [JSONResponse(profile)]
+
+    @api.get("/v2/")
+    def get_all_profile_v2(self) -> list[Response | Effect]:
+        all_staff = (
+            StaffProxy.objects.prefetch_related("biography")
+            .prefetch_related("staff_specialties__specialty")
+            .all()
+        )
+
+        info = {}
+        for staff in all_staff:
+            info[staff.id] = {}
+            info[staff.id]["first_name"] = staff.first_name
+            info[staff.id]["last_name"] = staff.last_name
+            info[staff.id]["biography"] = staff.biography.biography
+            info[staff.id]["specialties"] = []
+            for staff_specialty in staff.staff_specialties.all():
+                info[staff.id]["specialties"].append(staff_specialty.specialty.name)
+
+        return [JSONResponse(info)]
+
+    @api.get("/v2/search/")
+    def search_v2(self) -> list[Response | Effect]:
+        query_params = self.request.query_params
+        specialties_param = query_params.get("specialties")
+        specialties = specialties_param.split(",")
+
+        staff_ids = StaffSpecialty.objects.filter(specialty__name__in=specialties).values_list(
+            "staff_id", flat=True
+        )
+
+        matching_staff = (
+            StaffProxy.objects.prefetch_related("biography")
+            .prefetch_related("staff_specialties__specialty")
+            .filter(dbid__in=staff_ids)
+        )
+
+        info = {}
+        for staff in matching_staff:
+            info[staff.id] = {}
+            info[staff.id]["first_name"] = staff.first_name
+            info[staff.id]["last_name"] = staff.last_name
+            info[staff.id]["biography"] = staff.biography.biography
+            info[staff.id]["specialties"] = []
+            for staff_specialty in staff.staff_specialties.all():
+                info[staff.id]["specialties"].append(staff_specialty.specialty.name)
+
+        return [JSONResponse(info)]
+
+
+# Inherit from BaseProtocol to properly get registered for events
+class Protocol(BaseProtocol):
+    """You should put a helpful description of this protocol's behavior here."""
