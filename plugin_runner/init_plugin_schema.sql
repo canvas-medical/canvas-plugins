@@ -44,6 +44,7 @@ create table {plugin_name}.django_content_type
     unique (app_label, model)
 );
 
+revoke all privileges on {plugin_name}.django_content_type from canvas_sdk_read_only;
 grant select on {plugin_name}.django_content_type to canvas_sdk_read_only;
 
 insert into {plugin_name}.django_content_type (app_label, model) values
