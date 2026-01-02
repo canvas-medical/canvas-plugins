@@ -183,7 +183,6 @@ def create_plugin_schema(plugin_name: str) -> None:
 
 def generate_create_table_sql(plugin_name: str, model_class) -> str:
     """Generate CREATE TABLE SQL from Django model metadata."""
-    print("MODEL CLASS META:", model_class)
     table_name = f"{plugin_name}.{model_class._meta.db_table}"
 
     # Build field definitions
@@ -221,38 +220,33 @@ def generate_field_sql(field) -> str:
         ForeignKey,
         IntegerField,
         JSONField,
+        OneToOneField,
         TextField,
     )
 
+    # We do not allow database constraints or default values.
+    # Validations will be performed by the plugin and the plugin runner
+    # This is a decision meant to protect us from customers doing dangerous things like adding a column with a
+    # default value on a large table (table rewrite), or needing to alter a datatype to chnage a constraint
+
     if isinstance(field, BigAutoField):
         return "SERIAL PRIMARY KEY"
-    elif isinstance(field, CharField):
-        max_length = getattr(field, "max_length", 255)
-        null_clause = "" if field.null else " NOT NULL"
-        return f"VARCHAR({max_length}){null_clause}"
-    elif isinstance(field, TextField):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"TEXT{null_clause}"
+    elif isinstance(field, CharField) or isinstance(field, TextField):
+        return "TEXT"
     elif isinstance(field, IntegerField):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"INTEGER{null_clause}"
+        return "INTEGER"
     elif isinstance(field, DateTimeField):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"TIMESTAMP WITH TIME ZONE{null_clause}"
+        return "TIMESTAMP WITH TIME ZONE"
     elif isinstance(field, BooleanField):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"BOOLEAN{null_clause}"
-    elif isinstance(field, ForeignKey):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"INTEGER{null_clause}"
+        return "BOOLEAN"
+    elif isinstance(field, ForeignKey) or isinstance(field, OneToOneField):
+        return "INTEGER"
     elif isinstance(field, DecimalField):
         max_digits = getattr(field, "max_digits", 10)
         decimal_places = getattr(field, "decimal_places", 2)
-        null_clause = "" if field.null else " NOT NULL"
-        return f"NUMERIC({max_digits},{decimal_places}){null_clause}"
+        return f"NUMERIC({max_digits},{decimal_places})"
     elif isinstance(field, JSONField):
-        null_clause = "" if field.null else " NOT NULL"
-        return f"JSONB{null_clause}"
+        return "JSONB"
     else:
         # Fallback for unknown field types
         return "TEXT"
@@ -289,19 +283,20 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
                 print(cls.keys())
 
                 # Generate CREATE TABLE SQL for each model
-                for model_name, model_class in cls.items():
-                    if model_name == "Model":
-                        continue  # skip the base class
-                    if hasattr(model_class, "_meta"):
-                        create_sql = generate_create_table_sql(plugin_name, model_class)
-                        print(f"Generated SQL for {model_name}:")
-                        print(create_sql)
+                for name, value in cls.items():
+                    if hasattr(value, "__module__") and value.__module__.startswith(
+                        f"{plugin_name}.models"
+                    ):
+                        if hasattr(value, "_meta") and not value._meta.proxy:
+                            create_sql = generate_create_table_sql(plugin_name, value)
+                            print(f"Generated SQL for {name}:")
+                            print(create_sql)
 
-                        # Execute the CREATE TABLE statement
-                        from django.db import connection
+                            # Execute the CREATE TABLE statement
+                            from django.db import connection
 
-                        with connection.cursor() as cursor:
-                            cursor.execute(create_sql)
+                            with connection.cursor() as cursor:
+                                cursor.execute(create_sql)
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
