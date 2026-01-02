@@ -137,7 +137,6 @@ class CustomAttributeMixin(models.Model):
                 CustomAttribute, content_type_field="content_type", object_id_field="object_id"
             ),
         )
-        setattr(cls, 'objects', CustomAttributeAwareManager())
 
     @cached_property
     def _content_type_id(self) -> int:
