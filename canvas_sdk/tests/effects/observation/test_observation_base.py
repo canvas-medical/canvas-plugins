@@ -501,3 +501,28 @@ def test_observation_create_with_member_of(
 
     payload_data = json.loads(call_args.kwargs["payload"])
     assert payload_data["data"]["is_member_of_id"] == "parent-obs-123"
+
+
+@patch("canvas_sdk.effects.observation.base.Effect")
+def test_observation_create_with_category_as_list(
+    mock_effect: MagicMock,
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test creating an observation with category as a list of strings."""
+    observation = Observation(
+        patient_id="patient-123",
+        name="Comprehensive Assessment",
+        category=["vital-signs", "exam"],
+        effective_datetime=datetime.datetime(2024, 1, 15, 10, 30, 0),
+    )
+
+    observation.create()
+
+    # Verify Effect was called with correct type and payload
+    mock_effect.assert_called_once()
+    call_args = mock_effect.call_args
+    assert call_args.kwargs["type"] == "CREATE_OBSERVATION"
+
+    # Test the payload data includes the category as a list
+    payload_data = json.loads(call_args.kwargs["payload"])
+    assert payload_data["data"]["category"] == ["vital-signs", "exam"]

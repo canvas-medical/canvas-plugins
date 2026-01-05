@@ -60,7 +60,7 @@ class Observation(TrackableFieldsModel):
     observation_id: str | UUID | None = None  # For updates
     patient_id: str | None = None
     is_member_of_id: str | UUID | None = None  # Reference to parent Observation
-    category: str | None = None
+    category: str | list[str] | None = None
     units: str | None = None
     value: str | None = None
     note_id: int | None = None
