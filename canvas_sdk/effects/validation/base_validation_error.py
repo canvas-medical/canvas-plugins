@@ -39,7 +39,7 @@ class ValidationError:
         return f"ValidationError(message={self.message!r})"
 
 
-class _BaseValidationError(Model):
+class _BaseValidationErrorEffect(Model):
     """
     Abstract effect to abort an event.
     """
