@@ -1,11 +1,11 @@
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.validation.base_validation_error import (
     ValidationError,
-    _BaseValidationError,
+    _BaseValidationErrorEffect,
 )
 
 
-class CommandValidationErrorEffect(_BaseValidationError):
+class CommandValidationErrorEffect(_BaseValidationErrorEffect):
     """
     Effect to represent command validation errors.
 
