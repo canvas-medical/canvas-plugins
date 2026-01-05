@@ -340,9 +340,6 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
-  "canvas_sdk.effects.event_validation_error": [
-    "EventValidationError"
-  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
@@ -520,6 +517,16 @@
   ],
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
+  ],
+  "canvas_sdk.effects.validation": [
+    "EventValidationError",
+    "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.base_validation_error": [
+    "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.event_validation_error": [
+    "EventValidationError"
   ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
