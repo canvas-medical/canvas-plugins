@@ -119,7 +119,7 @@ def test_from_dict(data: dict, expected: SentEmailDetailed) -> None:
             ),
             {
                 "fromEmail": "sender@example.com",
-                "messageDd": "MSG123",
+                "messageId": "MSG123",
                 "subject": "Test Email",
                 "toEmail": "recipient@example.com",
                 "status": "delivered",

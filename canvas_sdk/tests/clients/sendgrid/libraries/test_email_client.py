@@ -224,7 +224,6 @@ def test_valid_content_list__raises_request_failed() -> None:
                         "cc": [{"email": "cc@example.com", "name": "CC"}],
                     }
                 ],
-                "attachments": [],
             },
             id="without_attachments",
         ),
