@@ -33,7 +33,7 @@ class SentEmailDetailed(Structure):
         """Convert sent email detailed to dictionary format."""
         return {
             "fromEmail": self.from_email,
-            "messageDd": self.message_id,
+            "messageId": self.message_id,
             "subject": self.subject,
             "toEmail": self.to_email,
             "status": self.status.value,
