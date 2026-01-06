@@ -61,7 +61,11 @@ class BillingLineItem(TimestampedModel, IdentifiableModel):
     command_type = models.CharField(max_length=50)
     command_id = models.IntegerField()
     status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
-    assessments = models.ManyToManyField("v1.Assessment", related_name="billinglineitem_set")
+    assessments = models.ManyToManyField(
+        "v1.Assessment",
+        related_name="billinglineitem_set",
+        db_table="canvas_sdk_data_api_billinglineitem_assessments_001",
+    )
 
 
 class BillingLineItemModifier(Coding):
