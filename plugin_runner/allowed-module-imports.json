@@ -139,7 +139,7 @@
   "canvas_sdk.clients.third_party": [
     "StripeClient"
   ],
-  "canvas_sdk.clients.twillio.constants": [
+  "canvas_sdk.clients.twilio.constants": [
     "Constants",
     "DateOperation",
     "HttpMethod",
