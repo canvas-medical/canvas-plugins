@@ -388,6 +388,11 @@
     "Observation",
     "ObservationComponentData"
   ],
+  "canvas_sdk.effects.observation.base": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
+  ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"
   ],

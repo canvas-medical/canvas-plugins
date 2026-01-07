@@ -199,8 +199,8 @@ class Observation(TrackableFieldsModel):
         )
 
 
-__all__ = [
+__exports__ = (
     "Observation",
     "CodingData",
     "ObservationComponentData",
-]
+)
