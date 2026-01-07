@@ -69,6 +69,9 @@
   "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
     "LlmSettingsGpt5"
   ],
+  "canvas_sdk.clients.third_party": [
+    "StripeClient"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -379,6 +382,16 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
+  ],
+  "canvas_sdk.effects.observation": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
+  ],
+  "canvas_sdk.effects.observation.base": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
   ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"

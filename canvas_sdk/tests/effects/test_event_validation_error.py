@@ -1,6 +1,9 @@
 import json
 
+import pytest
+
 from canvas_sdk.effects.validation import EventValidationError, ValidationError
+from canvas_sdk.effects.validation.base import _BaseValidationErrorEffect
 
 
 def test_event_validation_error_payload() -> None:
@@ -34,3 +37,36 @@ def test_event_validation_error_repr() -> None:
     effect = EventValidationError(errors=[ValidationError(message="bad")])
     rep = repr(effect)
     assert "bad" in rep
+
+
+def test_validation_error_init_and_repr() -> None:
+    """Test ValidationError initialization, whitespace trimming, and repr. Also checks ValueError for empty messages."""
+    err = ValidationError("foo")
+    assert err.message == "foo"
+    assert "foo" in repr(err)
+
+    err2 = ValidationError("  bar  ")
+    assert err2.message == "bar"
+
+    with pytest.raises(ValueError):
+        ValidationError("")
+    with pytest.raises(ValueError):
+        ValidationError("   ")
+
+
+def test_validation_error_to_dict() -> None:
+    """Test ValidationError.to_dict returns correct dictionary."""
+    err = ValidationError("baz")
+    assert err.to_dict() == {"message": "baz"}
+
+
+def test_base_validation_error_effect_add_error_and_payload() -> None:
+    """Test adding errors to _BaseValidationErrorEffect and correct effect_payload output."""
+    effect = _BaseValidationErrorEffect()
+    effect.add_error("err1").add_error(ValidationError("err2"))
+    payload = effect.effect_payload
+    assert payload == {"errors": [{"message": "err1"}, {"message": "err2"}]}
+
+    # Test empty errors list
+    effect2 = _BaseValidationErrorEffect()
+    assert effect2.effect_payload == {"errors": []}

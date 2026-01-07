@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v0.87.0 (2026-01-07)
+
+### Features
+
+- Implement effect for creating and updating observations
+  ([#1334](https://github.com/canvas-medical/canvas-plugins/pull/1334),
+  [`8108906`](https://github.com/canvas-medical/canvas-plugins/commit/8108906844ec88b20b3e233c789e33fec5b45184))
+
+
+## v0.86.0 (2026-01-06)
+
+### Bug Fixes
+
+- Add `.mypy_cache` to `.gitignore`
+  ([#1390](https://github.com/canvas-medical/canvas-plugins/pull/1390),
+  [`4ad1080`](https://github.com/canvas-medical/canvas-plugins/commit/4ad1080ce1d4a5ba399dcaa272f69cbe83201528))
+
+### Chores
+
+- Add test for list AugAssign ([#1387](https://github.com/canvas-medical/canvas-plugins/pull/1387),
+  [`d3db01b`](https://github.com/canvas-medical/canvas-plugins/commit/d3db01bdb2a006398cd654d97de1a69e72fc3db6))
+
+### Features
+
+- Allow importing StripeClient from canvas_sdk.clients.third_party
+  ([#1398](https://github.com/canvas-medical/canvas-plugins/pull/1398),
+  [`710ef71`](https://github.com/canvas-medical/canvas-plugins/commit/710ef71fc0f3f702ca1067cb47be056fd10a6f39))
+
+
 ## v0.85.0 (2025-12-19)
 
 ### Features
