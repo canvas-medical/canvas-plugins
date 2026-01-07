@@ -45,6 +45,89 @@ class Model(models.Model, metaclass=ModelMetaclass):
     dbid = models.BigAutoField(primary_key=True)
 
 
+import inspect
+
+
+class RestrictedQuerySet(models.QuerySet):
+    """A QuerySet that eliminates direct write access and mediates those through a security layer"""
+
+    ALLOWED_CALLERS = [
+        {
+            "filepath": "/plugin-runner/canvas_sdk/effects/custom_model/delete.py",
+            "qualified_names": ["Delete.apply"],
+        },
+        {
+            "filepath": "/plugin-runner/canvas_sdk/effects/custom_model/create.py",
+            "qualified_names": ["BulkCreate.apply", "Create.apply", "GetOrCreate.apply"],
+        },
+        {
+            "filepath": "/plugin-runner/canvas_sdk/effects/custom_model/update.py",
+            "qualified_names": ["Update.apply"],
+        },
+    ]
+
+    def assert_permitted_caller(self):
+        """Look back in the call stack and check if this there is a calling function that is allowed to
+        perform DML mutations
+        """
+        call_frame = inspect.currentframe()
+        for depth in range(1, 10):
+            call_frame = call_frame.f_back
+            caller = call_frame.f_code
+            for _ in self.ALLOWED_CALLERS:
+                if _["filepath"] == caller.co_filename and any(
+                    qn for qn in _["qualified_names"] if qn == caller.co_qualname
+                ):
+                    return
+        raise NotImplementedError()
+
+    def bulk_create(self, **kwargs) -> list["CustomModel"]:
+        self.assert_permitted_caller()
+        return super().bulk_create(**kwargs)
+
+    def delete(self):
+        self.assert_permitted_caller()
+        super().delete()
+
+    def create(self, **kwargs) -> "CustomModel":
+        self.assert_permitted_caller()
+        return super().create(**kwargs)
+
+    def get_or_create(self, **kwargs) -> tuple["CustomModel", bool]:
+        self.assert_permitted_caller()
+        return super().get_or_create(**kwargs)
+
+    def update(self, **kwargs):
+        self.assert_permitted_caller()
+        super().update(**kwargs)
+
+    def update_or_create(self, **kwargs):
+        self.assert_permitted_caller()
+        super().update_or_create(**kwargs)
+
+    def bulk_update(self, **kwargs):
+        self.assert_permitted_caller()
+        return super().bulk_update(**kwargs)
+
+
+class CustomModelManager(models.Manager):
+    def get_queryset(self):
+        return RestrictedQuerySet(self.model, using=self._db)
+
+
+class CustomModel(Model):
+    class Meta:
+        abstract = True
+
+    objects = CustomModelManager()
+
+    def save(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def delete(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
 class IdentifiableModel(Model):
     """A model that includes an identifier."""
 
@@ -272,4 +355,4 @@ class ValueSetTimeframeLookupQuerySet(TimeframeLookupQuerySetMixin, ValueSetLook
     pass
 
 
-__exports__ = ()
+__exports__ = "CustomModel"
