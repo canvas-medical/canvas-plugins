@@ -864,6 +864,7 @@
     "science_http"
   ],
   "canvas_sdk.v1.data.base": [
+    "CustomModel",
     "Model"
   ],
   "canvas_sdk.v1.data": [
