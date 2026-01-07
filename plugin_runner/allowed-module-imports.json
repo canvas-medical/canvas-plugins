@@ -273,6 +273,17 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.custom_model.delete": [
+    "Delete"
+  ],
+  "canvas_sdk.effects.custom_model.bulk_create": [
+    "BulkCreate"
+  ],
+  "canvas_sdk.effects.custom_model.create": [
+    "BulkCreate",
+    "Create",
+    "GetOrCreate"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
@@ -604,6 +615,7 @@
     "science_http"
   ],
   "canvas_sdk.v1.data.base": [
+    "CustomModel",
     "Model"
   ],
   "canvas_sdk.v1.data": [
