@@ -1,3 +1,3 @@
-from .base_validation_error import ValidationError
+from .base import ValidationError
 
 __all__ = __exports__ = ("ValidationError",)

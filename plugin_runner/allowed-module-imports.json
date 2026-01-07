@@ -527,7 +527,7 @@
   "canvas_sdk.effects.validation": [
     "ValidationError"
   ],
-  "canvas_sdk.effects.validation.base_validation_error": [
+  "canvas_sdk.effects.validation.base": [
     "ValidationError"
   ],
   "canvas_sdk.effects.widgets": [

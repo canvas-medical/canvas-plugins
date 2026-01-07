@@ -1,5 +1,5 @@
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.validation.base_validation_error import (
+from canvas_sdk.effects.validation.base import (
     ValidationError,
     _BaseValidationErrorEffect,
 )
