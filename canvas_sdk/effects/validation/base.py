@@ -1,11 +1,10 @@
-import json
 from dataclasses import dataclass
 from typing import Any, Self
 
 from pydantic import Field
 
-from canvas_sdk.base import Model
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import EffectType
+from canvas_sdk.effects.base import _BaseEffect
 
 
 @dataclass
@@ -39,7 +38,7 @@ class ValidationError:
         return f"ValidationError(message={self.message!r})"
 
 
-class _BaseValidationErrorEffect(Model):
+class _BaseValidationErrorEffect(_BaseEffect):
     """
     Abstract effect to abort an event.
     """
@@ -88,11 +87,6 @@ class _BaseValidationErrorEffect(Model):
     def effect_payload(self) -> dict[str, Any]:
         """Payload to include in the Effect."""
         return {"errors": [error.to_dict() for error in self.errors]}
-
-    def apply(self) -> Effect:
-        """Applies the EventValidationError effect."""
-        self._validate_before_effect("apply")
-        return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
 
 
 __exports__ = ("ValidationError",)
