@@ -383,6 +383,16 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
+  "canvas_sdk.effects.observation": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
+  ],
+  "canvas_sdk.effects.observation.base": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
+  ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"
   ],
