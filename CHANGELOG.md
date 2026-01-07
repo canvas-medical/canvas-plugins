@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.87.0 (2026-01-07)
+
+### Features
+
+- Implement effect for creating and updating observations
+  ([#1334](https://github.com/canvas-medical/canvas-plugins/pull/1334),
+  [`8108906`](https://github.com/canvas-medical/canvas-plugins/commit/8108906844ec88b20b3e233c789e33fec5b45184))
+
+
 ## v0.86.0 (2026-01-06)
 
 ### Bug Fixes
