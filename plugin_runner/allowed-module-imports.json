@@ -537,6 +537,12 @@
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
   ],
+  "canvas_sdk.effects.validation": [
+    "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.base": [
+    "ValidationError"
+  ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
   ],
