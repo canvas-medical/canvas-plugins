@@ -260,6 +260,10 @@
     "Coding",
     "ServiceProvider"
   ],
+  "canvas_sdk.commands.validation": [
+    "CommandValidationErrorEffect",
+    "ValidationError"
+  ],
   "canvas_sdk.effects": [
     "Effect",
     "EffectType",

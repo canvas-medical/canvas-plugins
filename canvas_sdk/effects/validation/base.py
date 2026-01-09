@@ -84,7 +84,7 @@ class _BaseValidationErrorEffect(_BaseEffect):
         return self
 
     @property
-    def effect_payload(self) -> dict[str, Any]:
+    def values(self) -> dict[str, Any]:
         """Payload to include in the Effect."""
         return {"errors": [error.to_dict() for error in self.errors]}
 
