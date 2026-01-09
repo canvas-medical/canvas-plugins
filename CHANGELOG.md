@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.88.0 (2026-01-09)
+
+### Features
+
+- Add events and effects for command validation
+  ([#1315](https://github.com/canvas-medical/canvas-plugins/pull/1315),
+  [`526e52a`](https://github.com/canvas-medical/canvas-plugins/commit/526e52a4249d02a140d3ba72522f3f2ecf0d9283))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
 ## v0.87.0 (2026-01-07)
 
 ### Features
