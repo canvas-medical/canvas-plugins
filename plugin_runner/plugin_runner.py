@@ -44,6 +44,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
+from canvas_sdk.v1.data import plugin_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.exceptions import PluginInstallationError, PluginUninstallationError
@@ -262,12 +263,16 @@ class PluginRunner(PluginRunnerServicer):
                         else None
                     )
                     handler_name = metrics.get_qualified_name(handler.compute)
-                    with metrics.measure(
-                        name=handler_name,
-                        extra_tags={
-                            "plugin": base_plugin_name,
-                            "event": event_name,
-                        },
+                    # Automatically set plugin context for PluginData access
+                    with (
+                        metrics.measure(
+                            name=handler_name,
+                            extra_tags={
+                                "plugin": base_plugin_name,
+                                "event": event_name,
+                            },
+                        ),
+                        plugin_context(base_plugin_name),
                     ):
                         _effects = handler.compute()
                         effects = [

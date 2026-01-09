@@ -833,7 +833,8 @@
     "TransactorAddress",
     "TransactorPhone",
     "UncategorizedClinicalDocument",
-    "UncategorizedClinicalDocumentReview"
+    "UncategorizedClinicalDocumentReview",
+    "plugin_context"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",

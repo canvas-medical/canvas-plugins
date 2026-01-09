@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import threading
 import uuid
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, ClassVar
+from typing import Any
 
 from django.db import connection, models
 from django.db.models import QuerySet
@@ -75,27 +78,35 @@ class PluginDataManager(models.Manager["PluginData"]):
     Custom manager that enforces plugin isolation via RLS session variable.
     """
 
-    _current_plugin: ClassVar[str | None] = None
+    _thread_local = threading.local()
 
     @classmethod
     def set_current_plugin(cls, plugin_name: str) -> None:
-        """Set the current plugin context for RLS."""
-        cls._current_plugin = plugin_name
+        """
+        Set the current plugin context.
+
+        Args:
+            plugin_name: The plugin identifier
+        """
+        cls._thread_local.current_plugin = plugin_name
 
     @classmethod
     def get_current_plugin(cls) -> str | None:
         """Get the current plugin context."""
-        return cls._current_plugin
+        return getattr(cls._thread_local, "current_plugin", None)
 
     def _set_plugin_context(self) -> None:
         """Set the PostgreSQL session variable for RLS."""
-        if not self._current_plugin:
+        current_plugin = self.get_current_plugin()
+        if not current_plugin:
             raise RuntimeError(
                 "Plugin context not set. Call PluginData.configure(plugin_name) "
                 "before accessing plugin data."
             )
+
+        # Always set RLS context - home-app's RLS policies handle access control
         with connection.cursor() as cursor:
-            cursor.execute("SET app.current_plugin = %s", [self._current_plugin])
+            cursor.execute("SET LOCAL app.current_plugin = %s", [current_plugin])
 
     def get_queryset(self) -> PluginDataQuerySet:
         """Return a queryset with plugin context set."""
@@ -113,16 +124,32 @@ class PluginData(models.Model):
     JSONB-based storage for plugin-specific data.
 
     This model provides persistent key-value storage with JSON document values.
-    Each plugin's data is isolated via PostgreSQL Row-Level Security.
+    Each plugin can access its own data, and can optionally share its data with
+    other plugins (read-only).
 
-    Setup:
-        At the top of your plugin's main handler file, configure the plugin name:
-    ```python
-        from canvas_sdk.v1.data.plugin_data import PluginData
+    Data Sharing Configuration:
+        Configure data sharing in your CANVAS_MANIFEST.json:
 
-        PLUGIN_NAME = "my_awesome_plugin"
-        PluginData.configure(PLUGIN_NAME)
-    ```
+        ```json
+        {
+          "name": "my_plugin",
+          "data_isolated": true,  // Keep my data private (default)
+          ...
+        }
+        ```
+
+        - `data_isolated: true` (default): Your plugin's data is private. Only you
+          can read/write it. Other plugins cannot access it.
+
+        - `data_isolated: false`: Your plugin's data is shared (read-only). Other
+          plugins can READ your data, but only you can WRITE to it. Use this when
+          you want to expose data as a shared cache or lookup table.
+
+        IMPORTANT: Setting `data_isolated: false` does NOT grant your plugin access
+        to other plugins' data. It only makes YOUR data readable by others.
+
+        The plugin runner automatically reads this setting from your manifest.
+        No code changes needed!
 
     Basic Usage:
     ```python
@@ -216,7 +243,7 @@ class PluginData(models.Model):
 
         # Set the RLS context before save
         with connection.cursor() as cursor:
-            cursor.execute("SET app.current_plugin = %s", [plugin_name])
+            cursor.execute("SET LOCAL app.current_plugin = %s", [plugin_name])
 
         super().save(*args, **kwargs)
 
@@ -228,23 +255,25 @@ class PluginData(models.Model):
                 "Plugin context not set. Call PluginData.configure(plugin_name) first."
             )
 
+        # Set the RLS context before delete
         with connection.cursor() as cursor:
-            cursor.execute("SET app.current_plugin = %s", [plugin_name])
+            cursor.execute("SET LOCAL app.current_plugin = %s", [plugin_name])
 
         return super().delete(*args, **kwargs)
 
     def soft_delete(self) -> None:
         """Mark this record as deleted without removing it from the database."""
         self.deleted_at = datetime.now()
-        self.save(update_fields=["deleted_at", "updated_at"])
+        self.save(update_fields=["deleted_at", "modified"])
 
     @classmethod
     def configure(cls, plugin_name: str) -> None:
         """
-        Configure the plugin context for data isolation.
+        Manually configure the plugin context.
 
-        This MUST be called before any PluginData operations.
-        Call this at module load time with your PLUGIN_NAME constant.
+        NOTE: This is typically NOT needed! The plugin runner automatically sets
+        the plugin context before calling handler.compute(). Only use this if you
+        need to manually set the context (e.g., in tests).
 
         Args:
             plugin_name: The unique identifier for your plugin
@@ -252,8 +281,46 @@ class PluginData(models.Model):
 
         Example:
         ```python
-            PLUGIN_NAME = "my_plugin"
-            PluginData.configure(PLUGIN_NAME)
+            # Manually set plugin context (mainly for testing)
+            PluginData.configure("my_plugin")
+
+            # Now can access plugin data
+            data = PluginData.objects.filter(key="config")
         ```
         """
         PluginDataManager.set_current_plugin(plugin_name)
+
+
+@contextmanager
+def plugin_context(plugin_name: str) -> Generator[None, None, None]:
+    """
+    Context manager to automatically set and clean up plugin context.
+
+    This is primarily used internally by the plugin runner to automatically
+    set the plugin context before executing handler code. Plugin developers
+    typically don't need to use this directly.
+
+    Args:
+        plugin_name: The unique identifier for the plugin
+
+    Example:
+    ```python
+        # Automatic context management (used by plugin runner)
+        with plugin_context("my_plugin"):
+            # All PluginData operations here use "my_plugin" context
+            PluginData.objects.upsert("key", {"value": 123})
+    ```
+    """
+    # Store previous context to restore later (for nested contexts)
+    previous_plugin = PluginDataManager.get_current_plugin()
+
+    try:
+        PluginDataManager.set_current_plugin(plugin_name)
+        yield
+    finally:
+        # Restore previous context
+        if previous_plugin is not None:
+            PluginDataManager.set_current_plugin(previous_plugin)
+        else:
+            # Clear the context if there was no previous context
+            PluginDataManager._thread_local.current_plugin = None
