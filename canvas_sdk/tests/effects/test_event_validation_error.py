@@ -13,15 +13,15 @@ def test_event_validation_error_payload() -> None:
     effect = EventValidationError(errors=[ValidationError(message=error_msg1)])
     effect.add_error(error_msg2)
     payload = json.loads(effect.apply().payload)
-    assert payload["errors"][0]["message"] == error_msg1
-    assert payload["errors"][1]["message"] == error_msg2
+    assert payload["data"]["errors"][0]["message"] == error_msg1
+    assert payload["data"]["errors"][1]["message"] == error_msg2
 
 
 def test_event_validation_error_single_message() -> None:
     """Test EventValidationError with a single error message."""
     effect = EventValidationError(errors=[ValidationError(message="foo ")])
     payload = json.loads(effect.apply().payload)
-    assert payload["errors"][0]["message"] == "foo"
+    assert payload["data"]["errors"][0]["message"] == "foo"
 
 
 def test_event_validation_error_add_error() -> None:
@@ -29,7 +29,7 @@ def test_event_validation_error_add_error() -> None:
     effect = EventValidationError(errors=[ValidationError(message="first")])
     effect.add_error("second")
     payload = json.loads(effect.apply().payload)
-    assert payload["errors"][1]["message"] == "second"
+    assert payload["data"]["errors"][1]["message"] == "second"
 
 
 def test_event_validation_error_repr() -> None:
@@ -65,8 +65,8 @@ def test_base_validation_error_effect_add_error_and_payload() -> None:
     effect = _BaseValidationErrorEffect()
     effect.add_error("err1").add_error(ValidationError("err2"))
     payload = effect.effect_payload
-    assert payload == {"errors": [{"message": "err1"}, {"message": "err2"}]}
+    assert payload == {"data": {"errors": [{"message": "err1"}, {"message": "err2"}]}}
 
     # Test empty errors list
     effect2 = _BaseValidationErrorEffect()
-    assert effect2.effect_payload == {"errors": []}
+    assert effect2.effect_payload == {"data": {"errors": []}}
