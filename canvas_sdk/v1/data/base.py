@@ -70,6 +70,9 @@ class RestrictedQuerySet(models.QuerySet):
         """Look back in the call stack and check if this there is a calling function that is allowed to
         perform DML mutations
         """
+        if IS_SQLITE:
+            return
+
         call_frame = inspect.currentframe()
         for depth in range(1, 10):
             call_frame = call_frame.f_back
@@ -122,10 +125,12 @@ class CustomModel(Model):
     objects = CustomModelManager()
 
     def save(self, *args, **kwargs):
-        raise NotImplementedError()
+        type(self).objects.get_queryset().assert_permitted_caller()
+        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise NotImplementedError()
+        type(self).objects.get_queryset().assert_permitted_caller()
+        super().delete(*args, **kwargs)
 
 
 class IdentifiableModel(Model):
