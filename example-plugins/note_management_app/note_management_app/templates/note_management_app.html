@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Management Application</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 900px;
+        width: 100%;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        color: #718096;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+
+      .section {
+        margin-bottom: 30px;
+      }
+
+      .section-title {
+        color: #4a5568;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .status {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status.disconnected {
+        background-color: #fed7d7;
+        color: #742a2a;
+      }
+
+      .status.connected {
+        background-color: #c6f6d5;
+        color: #22543d;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .status.disconnected .status-indicator {
+        background-color: #f56565;
+      }
+
+      .status.connected .status-indicator {
+        background-color: #48bb78;
+      }
+
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      button:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      button.danger {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      }
+
+      .input-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        color: #4a5568;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .button-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .button-grid button {
+        margin-bottom: 0;
+      }
+
+      .info {
+        background-color: #bee3f8;
+        color: #2c5282;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 20px;
+      }
+
+      .error {
+        background-color: #fed7d7;
+        color: #742a2a;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-top: 10px;
+        display: none;
+      }
+
+      .success {
+        background-color: #c6f6d5;
+        color: #22543d;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-top: 10px;
+        display: none;
+      }
+
+      .token-info {
+        background-color: #f7fafc;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        color: #4a5568;
+        margin-top: 15px;
+      }
+
+      .token-info strong {
+        color: #2d3748;
+      }
+
+      .code-block {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        margin-top: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: 13px;
+      }
+
+      th {
+        background-color: #f7fafc;
+        color: #2d3748;
+        font-weight: 600;
+        text-align: left;
+        padding: 12px 10px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+      }
+
+      tr:hover {
+        background-color: #f7fafc;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .status-badge.created {
+        background-color: #dbeafe;
+        color: #1e3a8a;
+      }
+
+      .status-badge.unlocked {
+        background-color: #fed7aa;
+        color: #7c2d12;
+      }
+
+      .status-badge.locked {
+        background-color: #fef3c7;
+        color: #78350f;
+      }
+
+      .status-badge.signed {
+        background-color: #d1fae5;
+        color: #065f46;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+
+      .action-buttons button {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin-bottom: 0;
+        width: auto;
+        flex: 0 0 auto;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #718096;
+      }
+
+      .note-id {
+        font-family: 'Courier New', monospace;
+        color: #4a5568;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Note Management</h1>
+      <p class="subtitle">Manage Canvas notes using OAuth 2.0 authentication</p>
+
+      <div id="authStatus" class="status disconnected">
+        <span class="status-indicator"></span>
+        <span>Not authenticated</span>
+      </div>
+
+      <div id="authSection" class="section">
+        <div class="section-title">Authentication</div>
+        <div class="info">
+          This application uses OAuth 2.0 Authorization Code Flow with PKCE for secure authentication.
+        </div>
+        <button id="loginBtn" onclick="initiateOAuth()">Connect to Canvas</button>
+        <button id="logoutBtn" onclick="logout()" style="display: none; background: #e53e3e;">Disconnect</button>
+
+        <div id="tokenInfo" class="token-info" style="display: none;">
+          <strong>Token expires in:</strong> <span id="tokenExpiry"></span><br>
+          <strong>Auto-refresh:</strong> Enabled
+        </div>
+      </div>
+
+      <div id="noteSection" class="section" style="display: none;">
+        <div class="section-title">Recent Notes</div>
+
+        <div id="notesLoading" class="loading">Loading notes...</div>
+        <div id="notesTableContainer" style="display: none;">
+          <table id="notesTable">
+            <thead>
+              <tr>
+                <th>Note ID</th>
+                <th>Patient</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="notesTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div id="successMsg" class="success"></div>
+        <div id="errorMsg" class="error"></div>
+      </div>
+    </div>
+
+    <script>
+      const CANVAS_INSTANCE = '{{ canvas_instance }}';
+      const CLIENT_ID = '{{ client_id }}';
+      const REDIRECT_URI = window.location.origin + window.location.pathname;
+      const SCOPES = 'offline_access';
+      const LAUNCH_CONTEXT = 'e30K'; // Base64 encoded {}
+
+        // Token storage keys
+      const ACCESS_TOKEN_KEY = 'canvas_access_token';
+      const REFRESH_TOKEN_KEY = 'canvas_refresh_token';
+      const TOKEN_EXPIRY_KEY = 'canvas_token_expiry';
+
+      let tokenRefreshTimer = null;
+
+        // PKCE helper functions
+      function generateRandomString(length) {
+        const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+        let result = '';
+        const randomValues = new Uint8Array(length);
+        crypto.getRandomValues(randomValues);
+        for (let i = 0; i < length; i++) {
+          result += charset[randomValues[i] % charset.length];
+        }
+        return result;
+      }
+
+      async function generateCodeChallenge(codeVerifier) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(codeVerifier);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(hash)));
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      }
+
+        // OAuth flow functions
+      async function initiateOAuth() {
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+            // Store code verifier for later use
+        sessionStorage.setItem('code_verifier', codeVerifier);
+
+        const authUrl = `${CANVAS_INSTANCE}/auth/authorize/?` +
+        `response_type=code` +
+        `&client_id=${encodeURIComponent(CLIENT_ID)}` +
+        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+        `&scope=${encodeURIComponent(SCOPES)}` +
+        `&code_challenge=${codeChallenge}` +
+        `&code_challenge_method=S256` +
+        `&launch=${LAUNCH_CONTEXT}`;
+
+        window.location.href = authUrl;
+      }
+
+      async function handleAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+
+        if (error) {
+          showError('Authentication failed: ' + error);
+          return;
+        }
+
+        if (code) {
+          const codeVerifier = sessionStorage.getItem('code_verifier');
+          if (!codeVerifier) {
+            showError('Code verifier not found. Please try again.');
+            return;
+          }
+
+          try {
+            const response = await fetch(`${CANVAS_INSTANCE}/auth/token/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                client_id: CLIENT_ID,
+                code_verifier: codeVerifier,
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Token exchange failed');
+            }
+
+            const data = await response.json();
+            saveTokens(data);
+
+                    // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+                    // Clean up session storage
+            sessionStorage.removeItem('code_verifier');
+
+            updateUI();
+          } catch (error) {
+            showError('Token exchange failed: ' + error.message);
+          }
+        }
+      }
+
+      function saveTokens(tokenData) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, tokenData.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, tokenData.refresh_token);
+
+            // Calculate expiry time (token is valid for 10 hours = 36000 seconds)
+        const expiryTime = Date.now() + (tokenData.expires_in * 1000);
+        localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+
+            // Schedule token refresh 5 minutes before expiry
+        scheduleTokenRefresh(tokenData.expires_in - 300);
+      }
+
+      function scheduleTokenRefresh(secondsUntilRefresh) {
+        if (tokenRefreshTimer) {
+          clearTimeout(tokenRefreshTimer);
+        }
+
+        tokenRefreshTimer = setTimeout(async () => {
+          await refreshAccessToken();
+        }, secondsUntilRefresh * 1000);
+
+        updateTokenExpiry();
+      }
+
+      async function refreshAccessToken() {
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+        if (!refreshToken) {
+          logout();
+          return;
+        }
+
+        try {
+          const response = await fetch(`${CANVAS_INSTANCE}/auth/token/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              grant_type: 'refresh_token',
+              refresh_token: refreshToken,
+              client_id: CLIENT_ID,
+              offline_access: SCOPES
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Token refresh failed');
+          }
+
+          const data = await response.json();
+          saveTokens(data);
+          showSuccess('Access token refreshed automatically');
+        } catch (error) {
+          showError('Token refresh failed. Please log in again.');
+          logout();
+        }
+      }
+
+      function updateTokenExpiry() {
+        const expiryTime = localStorage.getItem(TOKEN_EXPIRY_KEY);
+        if (!expiryTime) return;
+
+        const expiryEl = document.getElementById('tokenExpiry');
+
+        function updateDisplay() {
+          const now = Date.now();
+          const timeLeft = Math.max(0, parseInt(expiryTime) - now);
+          const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+          const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+          expiryEl.textContent = `${hours}h ${minutes}m`;
+
+          if (timeLeft > 0) {
+            setTimeout(updateDisplay, 60000); // Update every minute
+          }
+        }
+
+        updateDisplay();
+      }
+
+      function logout() {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        localStorage.removeItem(TOKEN_EXPIRY_KEY);
+
+        if (tokenRefreshTimer) {
+          clearTimeout(tokenRefreshTimer);
+        }
+
+        updateUI();
+      }
+
+      function isAuthenticated() {
+        const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+        const expiryTime = localStorage.getItem(TOKEN_EXPIRY_KEY);
+
+        if (!accessToken || !expiryTime) {
+          return false;
+        }
+
+        return Date.now() < parseInt(expiryTime);
+      }
+
+      function updateUI() {
+        const authenticated = isAuthenticated();
+
+        document.getElementById('authStatus').className = authenticated ? 'status connected' : 'status disconnected';
+        document.getElementById('authStatus').querySelector('span:last-child').textContent =
+          authenticated ? 'Connected to Canvas' : 'Not authenticated';
+
+        document.getElementById('loginBtn').style.display = authenticated ? 'none' : 'block';
+        document.getElementById('logoutBtn').style.display = authenticated ? 'block' : 'none';
+        document.getElementById('tokenInfo').style.display = authenticated ? 'block' : 'none';
+        document.getElementById('noteSection').style.display = authenticated ? 'block' : 'none';
+
+        if (authenticated) {
+          updateTokenExpiry();
+          loadRecentNotes();
+
+                // Check if we need to refresh soon
+          const expiryTime = parseInt(localStorage.getItem(TOKEN_EXPIRY_KEY));
+          const timeUntilExpiry = (expiryTime - Date.now()) / 1000;
+          if (timeUntilExpiry < 300) { // Less than 5 minutes
+            scheduleTokenRefresh(Math.max(0, timeUntilExpiry - 60));
+          } else {
+            scheduleTokenRefresh(timeUntilExpiry - 300);
+          }
+        }
+      }
+
+        // Load recent notes
+      async function loadRecentNotes() {
+        const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+        if (!accessToken) return;
+
+        document.getElementById('notesLoading').style.display = 'block';
+        document.getElementById('notesTableContainer').style.display = 'none';
+
+        try {
+          const response = await fetch(`${CANVAS_INSTANCE}/plugin-io/api/note_management_app/notes/recent`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load notes');
+          }
+
+          const data = await response.json();
+          renderNotesTable(data.notes);
+        } catch (error) {
+          showError('Failed to load notes: ' + error.message);
+          document.getElementById('notesLoading').textContent = 'Failed to load notes';
+        }
+      }
+
+        // Render notes table
+      function renderNotesTable(notes) {
+        const tbody = document.getElementById('notesTableBody');
+        tbody.innerHTML = '';
+
+        if (notes.length === 0) {
+          document.getElementById('notesLoading').textContent = 'No notes found';
+          return;
+        }
+
+        notes.forEach(note => {
+          const row = document.createElement('tr');
+
+                // Note ID cell
+          const idCell = document.createElement('td');
+          idCell.innerHTML = `<span class="note-id">${note.id.substring(0, 8)}...</span>`;
+          row.appendChild(idCell);
+
+                // Patient name cell
+          const patientCell = document.createElement('td');
+          patientCell.textContent = note.patient_name;
+          row.appendChild(patientCell);
+
+                // Status cell
+          const statusCell = document.createElement('td');
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `status-badge ${note.current_state.toLowerCase()}`;
+          statusBadge.textContent = note.current_state;
+          statusCell.appendChild(statusBadge);
+          row.appendChild(statusCell);
+
+                // Actions cell
+          const actionsCell = document.createElement('td');
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'action-buttons';
+
+                // Determine available actions based on note state
+          const actions = getAvailableActions(note.current_state, note.is_sig_required);
+          actions.forEach(action => {
+            const button = document.createElement('button');
+            button.textContent = action.label;
+            button.className = action.className || '';
+            button.onclick = () => performActionOnNote(note.id, action.action);
+            actionsDiv.appendChild(button);
+          });
+
+          actionsCell.appendChild(actionsDiv);
+          row.appendChild(actionsCell);
+
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('notesLoading').style.display = 'none';
+        document.getElementById('notesTableContainer').style.display = 'block';
+      }
+
+        // Get available actions based on note state
+      function getAvailableActions(state, isSigRequired) {
+        const actions = [];
+
+            // Normalize state to handle both display format and code format
+        const normalizedState = state.toUpperCase();
+
+        switch (normalizedState) {
+          case 'CREATED':  // NEW state displays as "Created"
+          case 'UNLOCKED':
+            actions.push({ action: 'lock', label: 'Lock' });
+            if (isSigRequired) {
+              actions.push({ action: 'lock_sign', label: 'Lock & Sign' });
+            }
+            break;
+
+          case 'LOCKED':
+            actions.push({ action: 'unlock', label: 'Unlock' });
+            if (isSigRequired) {
+              actions.push({ action: 'sign', label: 'Sign' });
+            }
+            break;
+
+          case 'SIGNED':
+            actions.push({ action: 'unlock', label: 'Amend' });
+            break;
+        }
+
+        return actions;
+      }
+
+        // Perform action on a specific note
+      async function performActionOnNote(noteId, action) {
+        const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+        if (!accessToken) {
+          showError('Not authenticated. Please log in.');
+          return;
+        }
+
+        const actionMap = {
+          'lock': '/lock',
+          'sign': '/sign',
+          'unlock': '/unlock',
+          'lock_sign': '/lock_sign',
+          'checkin': '/checkin',
+          'noshow': '/noshow'
+        };
+
+        const endpoint = actionMap[action];
+        if (!endpoint) {
+          showError('Invalid action');
+          return;
+        }
+
+        try {
+          const response = await fetch(`${CANVAS_INSTANCE}/plugin-io/api/note_management_app/notes/${noteId}${endpoint}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Action failed with status ${response.status}`);
+          }
+
+          showSuccess(`Successfully performed ${action} on note`);
+                // Reload notes after action
+          setTimeout(() => loadRecentNotes(), 1000);
+        } catch (error) {
+          showError('Operation failed: ' + error.message);
+        }
+      }
+
+        // Note operations
+      async function performAction(action) {
+        const noteId = document.getElementById('noteId').value.trim();
+
+        if (!noteId) {
+          showError('Please enter a note ID');
+          return;
+        }
+
+        const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+        if (!accessToken) {
+          showError('Not authenticated. Please log in.');
+          return;
+        }
+
+        const actionMap = {
+          'lock': '/lock',
+          'sign': '/sign',
+          'unlock': '/unlock',
+          'lock_sign': '/lock_sign',
+          'checkin': '/checkin',
+          'noshow': '/noshow'
+        };
+
+        const endpoint = actionMap[action];
+        if (!endpoint) {
+          showError('Invalid action');
+          return;
+        }
+
+        try {
+                // Call the plugin's API endpoint
+          const response = await fetch(`${CANVAS_INSTANCE}/plugin-io/api/note_management_app/notes/${noteId}${endpoint}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Action failed with status ${response.status}`);
+          }
+
+          showSuccess(`Successfully performed ${action} on note ${noteId}`);
+        } catch (error) {
+          showError('Operation failed: ' + error.message);
+
+                // If unauthorized, try refreshing token
+          if (error.message.includes('401') || error.message.includes('403')) {
+            await refreshAccessToken();
+          }
+        }
+      }
+
+      function showError(message) {
+        const errorEl = document.getElementById('errorMsg');
+        const successEl = document.getElementById('successMsg');
+
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        successEl.style.display = 'none';
+
+        setTimeout(() => {
+          errorEl.style.display = 'none';
+        }, 5000);
+      }
+
+      function showSuccess(message) {
+        const errorEl = document.getElementById('errorMsg');
+        const successEl = document.getElementById('successMsg');
+
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+        errorEl.style.display = 'none';
+
+        setTimeout(() => {
+          successEl.style.display = 'none';
+        }, 5000);
+      }
+
+        // Initialize on page load
+      window.addEventListener('DOMContentLoaded', () => {
+        handleAuthCallback();
+        updateUI();
+      });
+    </script>
+  </body>
+</html>
