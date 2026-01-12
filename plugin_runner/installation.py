@@ -182,15 +182,35 @@ def create_plugin_schema(plugin_name: str) -> None:
 
 
 def generate_create_table_sql(plugin_name: str, model_class) -> str:
-    """Generate CREATE TABLE SQL from Django model metadata."""
+    """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition."""
     table_name = f"{plugin_name}.{model_class._meta.db_table}"
 
-    # Build field definitions
-    field_definitions = []
+    # Separate primary key and regular fields
+    pk_fields = []
+    regular_fields = []
 
     for field in model_class._meta.local_fields:
+        if field.primary_key:
+            pk_fields.append(field)
+        else:
+            regular_fields.append(field)
+
+    # Build initial table with only primary key fields
+    field_definitions = []
+    for field in pk_fields:
         field_sql = generate_field_sql(field)
         field_definitions.append(f"    {field.column} {field_sql}")
+
+    # Construct CREATE TABLE statement with minimal columns
+    fields_sql = ",\n".join(field_definitions)
+    create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n{fields_sql}\n);"
+
+    # Generate ALTER TABLE statements for regular fields
+    alter_statements = []
+    for field in regular_fields:
+        field_sql = generate_field_sql(field)
+        alter_statement = f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
+        alter_statements.append(alter_statement)
 
     # Build index definitions
     index_statements = []
@@ -198,15 +218,14 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
         index_sql = generate_index_sql(plugin_name, model_class._meta.db_table, index)
         index_statements.append(index_sql)
 
-    # Construct CREATE TABLE statement
-    fields_sql = ",\n".join(field_definitions)
-    create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n{fields_sql}\n);"
-
-    # Add index statements
+    # Combine all statements
+    all_statements = [create_table]
+    if alter_statements:
+        all_statements.extend(alter_statements)
     if index_statements:
-        create_table += "\n\n" + "\n".join(index_statements)
+        all_statements.extend(index_statements)
 
-    return create_table
+    return "\n\n".join(all_statements)
 
 
 def generate_field_sql(field) -> str:
