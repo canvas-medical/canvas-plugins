@@ -276,13 +276,13 @@
   "canvas_sdk.effects.custom_model.delete": [
     "Delete"
   ],
-  "canvas_sdk.effects.custom_model.bulk_create": [
-    "BulkCreate"
-  ],
   "canvas_sdk.effects.custom_model.create": [
     "BulkCreate",
     "Create",
     "GetOrCreate"
+  ],
+  "canvas_sdk.effects.custom_model.update": [
+    "Update"
   ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
