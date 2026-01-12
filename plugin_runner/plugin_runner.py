@@ -44,7 +44,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
-from canvas_sdk.v1.data import plugin_context
+from canvas_sdk.v1.data.plugin_data import plugin_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
 from plugin_runner.exceptions import PluginInstallationError, PluginUninstallationError
