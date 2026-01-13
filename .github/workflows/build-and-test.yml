@@ -34,12 +34,21 @@ jobs:
               --verbosity 2 \
               --cov \
               --cov-branch \
-              --cov-report=xml
+              --cov-report=xml:coverage-${{ matrix.version }}.xml
 
-      - name: Upload coverage reports to Codecov
+      - name: Upload coverage to Codecov (per-version)
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-${{ matrix.version }}.xml
+          flags: py${{ matrix.version }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.version }}
+          path: coverage-${{ matrix.version }}.xml
+          retention-days: 1
 
       - name: Install pipx
         run: pip install pipx
@@ -54,6 +63,38 @@ jobs:
           canvas --version
           rm -rf dist/
         shell: bash
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install coverage tool
+        run: pip install coverage[toml]
+
+      - name: Combine coverage files
+        run: |
+          coverage combine --keep coverage-*.xml
+          coverage xml -o coverage.xml
+
+      - name: Upload merged coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          flags: merged
 
   integration-tests:
     runs-on: ubuntu-latest
