@@ -1,4 +1,4 @@
-from django.db.models import DO_NOTHING, Index, OneToOneField, TextField
+from django.db.models import DO_NOTHING, Index, OneToOneField, TextField, IntegerField
 
 from canvas_sdk.v1.data.base import CustomModel
 
@@ -18,3 +18,5 @@ class Biography(CustomModel):
         "StaffProxy", to_field="dbid", on_delete=DO_NOTHING, null=False, related_name="biography"
     )
     biography = TextField()
+    language = TextField()
+    practicing_since = IntegerField()
