@@ -50,14 +50,6 @@ jobs:
             exit 1
           fi
 
-      - name: Upload coverage to Codecov (per-version)
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-py${{ matrix.version }}.xml
-          flags: py${{ matrix.version }}
-          fail_ci_if_error: false
-
       - name: Upload coverage data artifact
         uses: actions/upload-artifact@v4
         with:
@@ -117,7 +109,23 @@ jobs:
           echo "Coverage XML files in current directory:"
           ls -la coverage-py*.xml 2>/dev/null || echo "No coverage files found"
 
-      - name: Upload merged coverage to Codecov
+      - name: Upload per-version coverage to Codecov (informational only)
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-py3.11.xml
+          flags: py3.11
+          fail_ci_if_error: false
+
+      - name: Upload per-version coverage to Codecov (informational only)
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-py3.12.xml
+          flags: py3.12
+          fail_ci_if_error: false
+
+      - name: Upload merged coverage to Codecov (commit status)
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
