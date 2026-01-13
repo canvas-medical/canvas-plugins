@@ -130,9 +130,9 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-py3.11.xml,./coverage-py3.12.xml
-          flags: sdk-core,merged
+          flags: sdk-core
           fail_ci_if_error: true
-  
+
   discover-plugins:
     runs-on: ubuntu-latest
     outputs:
