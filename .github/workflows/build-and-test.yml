@@ -39,6 +39,9 @@ jobs:
               --cov-branch \
               --cov-report=xml:coverage-py${{ matrix.version }}.xml
 
+          # Rename .coverage to version-specific name for merging
+          mv .coverage .coverage.py${{ matrix.version }}
+
       - name: Upload coverage to Codecov (per-version)
         uses: codecov/codecov-action@v5
         with:
@@ -52,7 +55,7 @@ jobs:
         with:
           name: coverage-data-py${{ matrix.version }}
           path: |
-            .coverage*
+            .coverage.py${{ matrix.version }}
             coverage-py${{ matrix.version }}.xml
           retention-days: 1
           if-no-files-found: error
@@ -95,18 +98,20 @@ jobs:
       - name: Combine coverage files
         run: |
           # Move all .coverage files to current directory
-          find coverage-artifacts -name ".coverage*" -exec mv {} . \;
+          find coverage-artifacts -name ".coverage.py*" -exec mv {} . \;
 
           # List files for debugging
-          ls -la .coverage* || echo "No .coverage files found"
+          echo "Coverage files found:"
+          ls -la .coverage.py* || echo "No .coverage files found"
 
           # Combine .coverage data files
-          coverage combine --keep
+          coverage combine --keep .coverage.py*
 
           # Generate merged XML report
           coverage xml -o coverage-merged.xml
 
           # Generate report for visibility
+          echo "Combined coverage report:"
           coverage report
 
       - name: Upload merged coverage to Codecov
