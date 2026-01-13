@@ -198,6 +198,29 @@ def test_support_type_annotations() -> None:
     sandbox.execute()
 
 
+def test_support_dataclasses() -> None:
+    """Test that dataclasses can be created."""
+    sandbox = _sandbox_from_code("""
+        from dataclasses import dataclass
+
+        @dataclass
+        class InventoryItem:
+            name: str
+            unit_price: float
+            quantity_on_hand: int = 0
+
+            def total_cost(self) -> float:
+                return self.unit_price * self.quantity_on_hand
+
+
+        item = InventoryItem(name='test', unit_price=0.5, quantity_on_hand=1)
+
+        assert item.total_cost() == 0.5
+    """)
+
+    sandbox.execute()
+
+
 @pytest.mark.parametrize("canvas_module", CANVAS_SUBMODULE_NAMES)
 def test_all_modules_implement_canvas_allowed_attributes(canvas_module: str) -> None:
     """
@@ -422,6 +445,51 @@ def test_multiple_functions_import() -> None:
     scope = sandbox.execute()
     assert scope["result"] == "Multiple functions import successful", (
         "Multiple functions should be importable together."
+    )
+
+
+def test_prefetch_import() -> None:
+    """Test that Prefetch can be imported from django.db.models and django.db.models.query."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Prefetch
+            from django.db.models.query import Prefetch
+            result = "Prefetch import successful"
+        """
+    )
+    scope = sandbox.execute()
+    assert scope["result"] == "Prefetch import successful", (
+        "Prefetch should be importable from django.db.models and django.db.models.query."
+    )
+
+
+def test_aggregations_import() -> None:
+    """Test that aggregation functions can be imported from django.db.models."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Sum, Avg, Min, Max
+            result = "Aggregation functions import successful"
+        """
+    )
+    scope = sandbox.execute()
+    assert scope["result"] == "Aggregation functions import successful", (
+        "Aggregation functions should be importable from django.db.models."
+    )
+
+
+def test_expressions_import() -> None:
+    """Test that expression functions can be imported from django.db.models and django.db.models.expressions."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Exists, OuterRef, Subquery
+            from django.db.models.expressions import Exists, OuterRef, Subquery
+            result = "Expressions import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Expressions import successful", (
+        "Expression functions should be importable from django.db.models and django.db.models.expressions."
     )
 
 
@@ -668,6 +736,10 @@ def test_aug_assign() -> None:
 
         a /= 2
         assert a == -10
+
+        a_list = [0, 1, 2]
+        a_list += [3]
+        assert a_list == [0, 1, 2, 3]
     """)
 
     sandbox.execute()
@@ -688,6 +760,21 @@ def test_safe_getattr() -> None:
 
         assert getattr(a, 'a') == 'test'
         assert getattr(a, '_a') == 'also works'
+    """)
+
+    sandbox.execute()
+
+
+def test_stripe_import() -> None:
+    """
+    Test that we can import StripeClient.
+    """
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.clients.third_party import StripeClient
+
+        stripe = StripeClient("")
+
+        assert stripe is not None
     """)
 
     sandbox.execute()

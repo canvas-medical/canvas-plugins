@@ -18,6 +18,7 @@ class _BaseCommand(TrackableFieldsModel):
         originate_required_fields = ("note_uuid",)
         edit_required_fields = ("command_uuid",)
         send_required_fields = ("command_uuid",)
+        review_required_fields = ("command_uuid",)
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
@@ -29,11 +30,16 @@ class _BaseCommand(TrackableFieldsModel):
 
     def __init__(self, /, **data: Any) -> None:
         """Initialize the command and mark all provided keys as dirty."""
+        if getattr(self.Meta, "abstract", False):
+            raise TypeError(f"Cannot instantiate abstract class {self.__class__.__name__!r}.")
+
         super().__init__(**data)
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that the command has a key and required fields."""
-        if not hasattr(cls.Meta, "key") or not cls.Meta.key:
+        if (not hasattr(cls.Meta, "key") or not cls.Meta.key) and not getattr(
+            cls.Meta, "abstract", False
+        ):
             raise ImproperlyConfigured(f"Command {cls.__name__!r} must specify Meta.key.")
 
         if hasattr(cls.Meta, "commit_required_fields"):
@@ -118,6 +124,17 @@ class _BaseCommand(TrackableFieldsModel):
             ),
         )
 
+    def _origination_payload_for_batch(self, line_number: int = -1) -> dict:
+        """Originate a new command in the note body for batch processing."""
+        self._validate_before_effect("originate")
+        return {
+            "type": f"ORIGINATE_{self.constantized_key()}_COMMAND",
+            "command": self.command_uuid,
+            "note": self.note_uuid,
+            "data": self.values,
+            "line_number": line_number,
+        }
+
     def edit(self) -> Effect:
         """Edit the command."""
         self._validate_before_effect("edit")
@@ -178,4 +195,14 @@ class _SendableCommandMixin:
         )
 
 
-__exports__ = ("_BaseCommand", "_SendableCommandMixin")
+class _ReviewableCommandMixin:
+    def review(self) -> Effect:
+        """Fire the review effect the command."""
+        self._validate_before_effect("review")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"REVIEW_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+__exports__ = ("_BaseCommand", "_SendableCommandMixin", "_ReviewableCommandMixin")

@@ -49,6 +49,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     SEND_PRESCRIBE_COMMAND: _ClassVar[EffectType]
+    REVIEW_PRESCRIBE_COMMAND: _ClassVar[EffectType]
     ORIGINATE_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
     EDIT_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
     DELETE_QUESTIONNAIRE_COMMAND: _ClassVar[EffectType]
@@ -126,6 +127,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_REFILL_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_REFILL_COMMAND: _ClassVar[EffectType]
     SEND_REFILL_COMMAND: _ClassVar[EffectType]
+    REVIEW_REFILL_COMMAND: _ClassVar[EffectType]
     ORIGINATE_VITALS_COMMAND: _ClassVar[EffectType]
     EDIT_VITALS_COMMAND: _ClassVar[EffectType]
     DELETE_VITALS_COMMAND: _ClassVar[EffectType]
@@ -197,13 +199,35 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     COMMIT_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     SEND_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
+    REVIEW_ADJUST_PRESCRIPTION_COMMAND: _ClassVar[EffectType]
     ORIGINATE_CHART_SECTION_REVIEW_COMMAND: _ClassVar[EffectType]
     ORIGINATE_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
     EDIT_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
     DELETE_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
     COMMIT_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
     ENTER_IN_ERROR_IMMUNIZATION_STATEMENT_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_LAB_REVIEW_COMMAND: _ClassVar[EffectType]
+    EDIT_LAB_REVIEW_COMMAND: _ClassVar[EffectType]
+    DELETE_LAB_REVIEW_COMMAND: _ClassVar[EffectType]
+    COMMIT_LAB_REVIEW_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_LAB_REVIEW_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_IMAGING_REVIEW_COMMAND: _ClassVar[EffectType]
+    EDIT_IMAGING_REVIEW_COMMAND: _ClassVar[EffectType]
+    DELETE_IMAGING_REVIEW_COMMAND: _ClassVar[EffectType]
+    COMMIT_IMAGING_REVIEW_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_IMAGING_REVIEW_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_REFERRAL_REVIEW_COMMAND: _ClassVar[EffectType]
+    EDIT_REFERRAL_REVIEW_COMMAND: _ClassVar[EffectType]
+    DELETE_REFERRAL_REVIEW_COMMAND: _ClassVar[EffectType]
+    COMMIT_REFERRAL_REVIEW_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_REFERRAL_REVIEW_COMMAND: _ClassVar[EffectType]
+    ORIGINATE_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
+    EDIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
+    DELETE_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
+    COMMIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
+    ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: _ClassVar[EffectType]
     COMMAND_AVAILABLE_ACTIONS_RESULTS: _ClassVar[EffectType]
+    COMMAND_VALIDATION_ERRORS: _ClassVar[EffectType]
     SHOW_ACTION_BUTTON: _ClassVar[EffectType]
     PATIENT_PORTAL__FORM_RESULT: _ClassVar[EffectType]
     PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: _ClassVar[EffectType]
@@ -224,6 +248,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ADD_BILLING_LINE_ITEM: _ClassVar[EffectType]
     UPDATE_BILLING_LINE_ITEM: _ClassVar[EffectType]
     REMOVE_BILLING_LINE_ITEM: _ClassVar[EffectType]
+    POST_CLAIM_PAYMENT: _ClassVar[EffectType]
+    POST_CLAIMS_REMIT: _ClassVar[EffectType]
     MOVE_CLAIM_TO_QUEUE: _ClassVar[EffectType]
     ADD_CLAIM_LABEL: _ClassVar[EffectType]
     REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
@@ -240,6 +266,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_NOTE: _ClassVar[EffectType]
     PUSH_NOTE_CHARGES: _ClassVar[EffectType]
     FAX_NOTE: _ClassVar[EffectType]
+    LOCK_NOTE: _ClassVar[EffectType]
+    UNLOCK_NOTE: _ClassVar[EffectType]
+    SIGN_NOTE: _ClassVar[EffectType]
+    CHECK_IN_NOTE: _ClassVar[EffectType]
+    NO_SHOW_NOTE: _ClassVar[EffectType]
     CREATE_APPOINTMENT: _ClassVar[EffectType]
     UPDATE_APPOINTMENT: _ClassVar[EffectType]
     RESCHEDULE_APPOINTMENT: _ClassVar[EffectType]
@@ -260,6 +291,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_PATIENT_PREFERRED_PHARMACIES: _ClassVar[EffectType]
     CREATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
     UPDATE_COMPOUND_MEDICATION: _ClassVar[EffectType]
+    CREATE_OBSERVATION: _ClassVar[EffectType]
+    UPDATE_OBSERVATION: _ClassVar[EffectType]
     PATIENT_CHART__GROUP_ITEMS: _ClassVar[EffectType]
     APPOINTMENT__FORM__PROVIDERS__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
     APPOINTMENT__FORM__LOCATIONS__PRE_SEARCH_RESULTS: _ClassVar[EffectType]
@@ -283,8 +316,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: _ClassVar[EffectType]
     GENERATE_FULL_CHART_PDF: _ClassVar[EffectType]
+    BATCH_ORIGINATE_COMMANDS: _ClassVar[EffectType]
     CALENDAR__CREATE: _ClassVar[EffectType]
     CALENDAR__EVENT__CREATE: _ClassVar[EffectType]
+    CALENDAR__EVENT__UPDATE: _ClassVar[EffectType]
+    CALENDAR__EVENT__DELETE: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -327,6 +363,7 @@ DELETE_PRESCRIBE_COMMAND: EffectType
 COMMIT_PRESCRIBE_COMMAND: EffectType
 ENTER_IN_ERROR_PRESCRIBE_COMMAND: EffectType
 SEND_PRESCRIBE_COMMAND: EffectType
+REVIEW_PRESCRIBE_COMMAND: EffectType
 ORIGINATE_QUESTIONNAIRE_COMMAND: EffectType
 EDIT_QUESTIONNAIRE_COMMAND: EffectType
 DELETE_QUESTIONNAIRE_COMMAND: EffectType
@@ -404,6 +441,7 @@ DELETE_REFILL_COMMAND: EffectType
 COMMIT_REFILL_COMMAND: EffectType
 ENTER_IN_ERROR_REFILL_COMMAND: EffectType
 SEND_REFILL_COMMAND: EffectType
+REVIEW_REFILL_COMMAND: EffectType
 ORIGINATE_VITALS_COMMAND: EffectType
 EDIT_VITALS_COMMAND: EffectType
 DELETE_VITALS_COMMAND: EffectType
@@ -475,13 +513,35 @@ DELETE_ADJUST_PRESCRIPTION_COMMAND: EffectType
 COMMIT_ADJUST_PRESCRIPTION_COMMAND: EffectType
 ENTER_IN_ERROR_ADJUST_PRESCRIPTION_COMMAND: EffectType
 SEND_ADJUST_PRESCRIPTION_COMMAND: EffectType
+REVIEW_ADJUST_PRESCRIPTION_COMMAND: EffectType
 ORIGINATE_CHART_SECTION_REVIEW_COMMAND: EffectType
 ORIGINATE_IMMUNIZATION_STATEMENT_COMMAND: EffectType
 EDIT_IMMUNIZATION_STATEMENT_COMMAND: EffectType
 DELETE_IMMUNIZATION_STATEMENT_COMMAND: EffectType
 COMMIT_IMMUNIZATION_STATEMENT_COMMAND: EffectType
 ENTER_IN_ERROR_IMMUNIZATION_STATEMENT_COMMAND: EffectType
+ORIGINATE_LAB_REVIEW_COMMAND: EffectType
+EDIT_LAB_REVIEW_COMMAND: EffectType
+DELETE_LAB_REVIEW_COMMAND: EffectType
+COMMIT_LAB_REVIEW_COMMAND: EffectType
+ENTER_IN_ERROR_LAB_REVIEW_COMMAND: EffectType
+ORIGINATE_IMAGING_REVIEW_COMMAND: EffectType
+EDIT_IMAGING_REVIEW_COMMAND: EffectType
+DELETE_IMAGING_REVIEW_COMMAND: EffectType
+COMMIT_IMAGING_REVIEW_COMMAND: EffectType
+ENTER_IN_ERROR_IMAGING_REVIEW_COMMAND: EffectType
+ORIGINATE_REFERRAL_REVIEW_COMMAND: EffectType
+EDIT_REFERRAL_REVIEW_COMMAND: EffectType
+DELETE_REFERRAL_REVIEW_COMMAND: EffectType
+COMMIT_REFERRAL_REVIEW_COMMAND: EffectType
+ENTER_IN_ERROR_REFERRAL_REVIEW_COMMAND: EffectType
+ORIGINATE_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
+EDIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
+DELETE_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
+COMMIT_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
+ENTER_IN_ERROR_UNCATEGORIZED_DOCUMENT_REVIEW_COMMAND: EffectType
 COMMAND_AVAILABLE_ACTIONS_RESULTS: EffectType
+COMMAND_VALIDATION_ERRORS: EffectType
 SHOW_ACTION_BUTTON: EffectType
 PATIENT_PORTAL__FORM_RESULT: EffectType
 PATIENT_PORTAL__APPOINTMENT_IS_CANCELABLE: EffectType
@@ -502,6 +562,8 @@ REMOVE_APPOINTMENT_LABEL: EffectType
 ADD_BILLING_LINE_ITEM: EffectType
 UPDATE_BILLING_LINE_ITEM: EffectType
 REMOVE_BILLING_LINE_ITEM: EffectType
+POST_CLAIM_PAYMENT: EffectType
+POST_CLAIMS_REMIT: EffectType
 MOVE_CLAIM_TO_QUEUE: EffectType
 ADD_CLAIM_LABEL: EffectType
 REMOVE_CLAIM_LABEL: EffectType
@@ -518,6 +580,11 @@ CREATE_NOTE: EffectType
 UPDATE_NOTE: EffectType
 PUSH_NOTE_CHARGES: EffectType
 FAX_NOTE: EffectType
+LOCK_NOTE: EffectType
+UNLOCK_NOTE: EffectType
+SIGN_NOTE: EffectType
+CHECK_IN_NOTE: EffectType
+NO_SHOW_NOTE: EffectType
 CREATE_APPOINTMENT: EffectType
 UPDATE_APPOINTMENT: EffectType
 RESCHEDULE_APPOINTMENT: EffectType
@@ -538,6 +605,8 @@ CREATE_PATIENT_EXTERNAL_IDENTIFIER: EffectType
 CREATE_PATIENT_PREFERRED_PHARMACIES: EffectType
 CREATE_COMPOUND_MEDICATION: EffectType
 UPDATE_COMPOUND_MEDICATION: EffectType
+CREATE_OBSERVATION: EffectType
+UPDATE_OBSERVATION: EffectType
 PATIENT_CHART__GROUP_ITEMS: EffectType
 APPOINTMENT__FORM__PROVIDERS__PRE_SEARCH_RESULTS: EffectType
 APPOINTMENT__FORM__LOCATIONS__PRE_SEARCH_RESULTS: EffectType
@@ -561,19 +630,26 @@ REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__ADD_RESPONSE: EffectType
 REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHOD__REMOVE_RESPONSE: EffectType
 GENERATE_FULL_CHART_PDF: EffectType
+BATCH_ORIGINATE_COMMANDS: EffectType
 CALENDAR__CREATE: EffectType
 CALENDAR__EVENT__CREATE: EffectType
+CALENDAR__EVENT__UPDATE: EffectType
+CALENDAR__EVENT__DELETE: EffectType
 
 class Effect(_message.Message):
-    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name")
+    __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     PLUGIN_NAME_FIELD_NUMBER: _ClassVar[int]
     CLASSNAME_FIELD_NUMBER: _ClassVar[int]
     HANDLER_NAME_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     type: EffectType
     payload: str
     plugin_name: str
     classname: str
     handler_name: str
-    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ...) -> None: ...
+    actor: str
+    source: str
+    def __init__(self, type: _Optional[_Union[EffectType, str]] = ..., payload: _Optional[str] = ..., plugin_name: _Optional[str] = ..., classname: _Optional[str] = ..., handler_name: _Optional[str] = ..., actor: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...

@@ -4,6 +4,7 @@ import uuid
 from enum import Enum
 
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.commands.base import _BaseCommand
@@ -107,6 +108,29 @@ def test_originate_raises_error_when_required_fields_not_set() -> None:
         cmd.originate()
 
 
+def test_batch_originate_successfully_returns_dict(
+    dummy_command_instance: DummyCommand,
+) -> None:
+    """Test that _origination_payload_for_batch() successfully returns the correct dict."""
+    batch_payload = dummy_command_instance._origination_payload_for_batch()
+
+    assert batch_payload == {
+        "type": "ORIGINATE_PLAN_COMMAND",
+        "command": dummy_command_instance.command_uuid,
+        "note": dummy_command_instance.note_uuid,
+        "data": dummy_command_instance.values,
+        "line_number": -1,
+    }
+
+
+def test_batch_originate_raises_error_when_required_fields_not_set() -> None:
+    """Test that _origination_payload_for_batch() raises an error when a required field is not set."""
+    cmd = DummyCommand()
+
+    with pytest.raises(ValueError, match="note_uuid"):
+        cmd._origination_payload_for_batch()
+
+
 def test_commit_successfully_returns_commit_effect(
     dummy_command_instance: DummyCommand,
 ) -> None:
@@ -192,3 +216,32 @@ def test_enter_in_error_raises_error_when_required_fields_not_set() -> None:
 
     with pytest.raises(ValueError, match="command_uuid"):
         cmd.enter_in_error()
+
+
+def test_init_subclass_raises_error_when_meta_key_missing() -> None:
+    """Test that __init_subclass__ raises an error when Meta.key is missing on a concrete (non-ABC) class."""
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
+
+        class CommandWithoutKey(_BaseCommand):
+            pass
+
+
+def test_init_subclass_raises_error_when_meta_key_empty() -> None:
+    """Test that __init_subclass__ raises an error when Meta.key is an empty string on a concrete class."""
+    with pytest.raises(ImproperlyConfigured, match="must specify Meta.key"):
+
+        class CommandWithEmptyKey(_BaseCommand):
+            class Meta:
+                key = ""
+
+
+def test_init__raises_error_when_abstract_class() -> None:
+    """Test that __init__ raised an error if Meta.abstract is True."""
+
+    # Should not raise an error
+    class AbstractCommand(_BaseCommand):
+        class Meta:
+            abstract = True
+
+    with pytest.raises(TypeError, match="Cannot instantiate abstract class 'AbstractCommand'"):
+        AbstractCommand()

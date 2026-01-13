@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "This protocol responds to the PRESCRIBE_COMMAND__POST_ORIGINATE event.\n\n    It is used to test whether the supervising provider field is automatically populated\n    when the Prescribe command is triggered. The protocol reacts to the command's creation\n    and sets the field accordingly.\n\n    The same logic can be tested for Refill and Adjust Prescription commands by updating\n    the RESPONDS_TO event and the command class."
+license = "MIT"
+name = "supervising_provider_prescribe"
+readme = "supervising_provider_prescribe/README.md"
+requires-python = ">=3.11"
+version = "0.0.1a"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]

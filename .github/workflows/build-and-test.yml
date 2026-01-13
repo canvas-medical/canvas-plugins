@@ -5,6 +5,8 @@ on:
     branches: ["main"]
   workflow_call:
   workflow_dispatch:
+  push:
+    branches: ["main"]
 
 jobs:
   build-and-test:
@@ -26,6 +28,7 @@ jobs:
           INTEGRATION_TEST_URL: "https://api-test-clinic.canvasmedical.com"
           INTEGRATION_TEST_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_CLIENT_ID }}
           INTEGRATION_TEST_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_CLIENT_SECRET }}
+          UV_PYTHON: ${{ matrix.version }}
         run: |
           uv run \
             pytest \
@@ -34,21 +37,25 @@ jobs:
               --verbosity 2 \
               --cov \
               --cov-branch \
-              --cov-report=xml:coverage-${{ matrix.version }}.xml
+              --cov-report=xml:coverage-py${{ matrix.version }}.xml
 
       - name: Upload coverage to Codecov (per-version)
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-${{ matrix.version }}.xml
+          files: coverage-py${{ matrix.version }}.xml
           flags: py${{ matrix.version }}
+          fail_ci_if_error: false
 
-      - name: Upload coverage artifact
+      - name: Upload coverage data artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.version }}
-          path: coverage-${{ matrix.version }}.xml
+          name: coverage-data-py${{ matrix.version }}
+          path: |
+            .coverage*
+            coverage-py${{ matrix.version }}.xml
           retention-days: 1
+          if-no-files-found: error
 
       - name: Install pipx
         run: pip install pipx
@@ -67,34 +74,120 @@ jobs:
   upload-coverage:
     runs-on: ubuntu-latest
     needs: build-and-test
+    if: always()
     steps:
       - uses: actions/checkout@v5
-
-      - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-*
-          merge-multiple: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      - name: Download all SDK coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-data-py*
+          path: coverage-artifacts
+
       - name: Install coverage tool
         run: pip install coverage[toml]
 
       - name: Combine coverage files
         run: |
-          coverage combine --keep coverage-*.xml
-          coverage xml -o coverage.xml
+          # Move all .coverage files to current directory
+          find coverage-artifacts -name ".coverage*" -exec mv {} . \;
+
+          # List files for debugging
+          ls -la .coverage* || echo "No .coverage files found"
+
+          # Combine .coverage data files
+          coverage combine --keep
+
+          # Generate merged XML report
+          coverage xml -o coverage-merged.xml
+
+          # Generate report for visibility
+          coverage report
 
       - name: Upload merged coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-          flags: merged
+          files: coverage-merged.xml
+          flags: sdk-core,merged
+          fail_ci_if_error: true
+  
+  discover-plugins:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.get-plugins.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Discover plugins with pyproject.toml
+        id: get-plugins
+        run: |
+          cd example-plugins
+          plugins=$(find . -maxdepth 2 -name "pyproject.toml" -type f | \
+            xargs -I {} dirname {} | \
+            xargs -I {} basename {} | \
+            jq -R -s -c 'split("\n")[:-1]')
+          echo "plugins=$plugins" >> $GITHUB_OUTPUT
+          echo "Discovered plugins: $plugins"
+
+  test-example-plugins:
+    needs: discover-plugins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJson(needs.discover-plugins.outputs.plugins) }}
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install-python-and-uv
+        with:
+          PYTHON_VERSION: "3.12"
+      - uses: ./.github/actions/install-canvas
+
+      - name: Test plugin ${{ matrix.plugin }}
+        env:
+          CUSTOMER_IDENTIFIER: "ci-unit-tests"
+        run: |
+          # Skip if no tests
+          if [ ! -d "example-plugins/${{ matrix.plugin }}/tests" ]; then
+            echo "⏭️  Skipping ${{ matrix.plugin }} (no tests directory)"
+            exit 0
+          fi
+
+          # Install the plugin in editable mode into the main venv
+          uv pip install -e example-plugins/${{ matrix.plugin }}
+
+          # Run tests using the main venv from the root directory
+          uv run pytest example-plugins/${{ matrix.plugin }}/tests \
+            --ff \
+            --verbosity 2 \
+            --cov=example-plugins/${{ matrix.plugin }} \
+            --cov-branch \
+            --cov-report=xml:example-plugins/${{ matrix.plugin }}/coverage.xml
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-plugin-${{ matrix.plugin }}
+          path: example-plugins/${{ matrix.plugin }}/coverage.xml
+          retention-days: 1
+          if-no-files-found: warn
+
+      - name: Upload coverage to Codecov (per-plugin)
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./example-plugins/${{ matrix.plugin }}/coverage.xml
+          flags: plugin-${{ matrix.plugin }}
+          fail_ci_if_error: false
 
   integration-tests:
     runs-on: ubuntu-latest
