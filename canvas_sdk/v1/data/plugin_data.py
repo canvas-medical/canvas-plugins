@@ -174,10 +174,10 @@ def plugin_context(plugin_name: str) -> Generator[None, None, None]:
     try:
         PluginDataManager._set_current_plugin(plugin_name)
         with connection.cursor() as cursor:
-            cursor.execute("SET LOCAL app.current_plugin = %s", [plugin_name])
+            cursor.execute("SET app.current_plugin = %s", [plugin_name])
         yield
     finally:
         PluginDataManager._set_current_plugin(previous_plugin)
         if previous_plugin:
             with connection.cursor() as cursor:
-                cursor.execute("SET LOCAL app.current_plugin = %s", [previous_plugin])
+                cursor.execute("SET app.current_plugin = %s", [previous_plugin])
