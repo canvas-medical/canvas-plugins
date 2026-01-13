@@ -100,46 +100,28 @@ jobs:
           pattern: coverage-data-py*
           path: coverage-artifacts
 
-      - name: Install coverage tool
-        run: pip install coverage[toml]
-
-      - name: Combine coverage files
+      - name: Prepare coverage files
         run: |
           # Debug: Show what was downloaded
           echo "Contents of coverage-artifacts directory:"
-          ls -la coverage-artifacts/
+          ls -la coverage-artifacts/ || echo "Directory not found"
           echo ""
           echo "Full tree structure:"
-          find coverage-artifacts -type f
+          find coverage-artifacts -type f || echo "No files found"
           echo ""
 
-          # Move all .coverage files to current directory
-          find coverage-artifacts -name ".coverage.py*" -exec mv {} . \;
+          # Copy all XML files to current directory
+          find coverage-artifacts -name "coverage-py*.xml" -exec cp {} . \; || echo "No XML files found"
 
-          # List files for debugging
-          echo "Coverage files in current directory:"
-          ls -la .coverage.py* || echo "No .coverage files found"
-
-          # Combine .coverage data files
-          if ls .coverage.py* 1> /dev/null 2>&1; then
-            coverage combine --keep .coverage.py*
-
-            # Generate merged XML report
-            coverage xml -o coverage-merged.xml
-
-            # Generate report for visibility
-            echo "Combined coverage report:"
-            coverage report
-          else
-            echo "Error: No coverage files found to combine"
-            exit 1
-          fi
+          # List what we have
+          echo "Coverage XML files in current directory:"
+          ls -la coverage-py*.xml 2>/dev/null || echo "No coverage files found"
 
       - name: Upload merged coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-merged.xml
+          files: ./coverage-py3.11.xml,./coverage-py3.12.xml
           flags: sdk-core,merged
           fail_ci_if_error: true
   
