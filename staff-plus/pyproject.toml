@@ -1,3 +1,6 @@
+#[tool.uv.sources]
+#canvas = { path = "../", editable = true }
+
 [project]
 authors = [
   {email = "engineering@canvasmedical.com", name = "Canvas Team"}
@@ -5,6 +8,7 @@ authors = [
 dependencies = [
   "canvas[test-utils]"
 ]
+
 description = "Some description of your project."
 license = "MIT"
 name = "staff-plus"

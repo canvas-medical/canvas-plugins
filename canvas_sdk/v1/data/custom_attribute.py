@@ -214,6 +214,93 @@ class CustomAttributeMixin(models.Model):
         attr.save()
         return attr
 
+    def set_attributes(self, attributes: dict[str, Any]) -> list[CustomAttribute]:
+        """Set multiple custom attributes using bulk operations."""
+        if not hasattr(self, "custom_attributes"):
+            raise AttributeError(
+                f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
+            )
+
+        # Get existing attributes from prefetched data or database
+        existing_attrs = {}
+        if (
+            hasattr(self, "_prefetched_objects_cache")
+            and "custom_attributes" in self._prefetched_objects_cache
+        ):
+            # Use prefetched data
+            for attr in self.custom_attributes.all():
+                existing_attrs[attr.name] = attr
+        else:
+            # Fall back to database query
+            for attr in CustomAttribute.objects.filter(
+                content_type_id=self._content_type_id, object_id=self.pk
+            ):
+                existing_attrs[attr.name] = attr
+
+        # Separate attributes to create vs update
+        to_create = []
+        to_update = []
+
+        for name, value in attributes.items():
+            if name in existing_attrs:
+                # Update existing attribute
+                attr = existing_attrs[name]
+                self._set_attribute_value_fields(attr, value)
+                to_update.append(attr)
+            else:
+                # Create new attribute
+                attr = CustomAttribute(
+                    content_type_id=self._content_type_id,
+                    object_id=self.pk,
+                    name=name
+                )
+                self._set_attribute_value_fields(attr, value)
+                to_create.append(attr)
+
+        # Perform bulk operations
+        created_attrs = []
+        if to_create:
+            created_attrs = CustomAttribute.objects.bulk_create(to_create)
+
+        if to_update:
+            CustomAttribute.objects.bulk_update(
+                to_update,
+                ['text_value', 'timestamp_value', 'int_value', 'decimal_value', 'bool_value', 'json_value']
+            )
+
+        return created_attrs + to_update
+
+    def _set_attribute_value_fields(self, attr: 'CustomAttribute', value: Any) -> None:
+        """Set the appropriate value fields on a CustomAttribute based on value type."""
+        import datetime
+        import decimal
+
+        # Clear all value fields first
+        attr.text_value = None
+        attr.timestamp_value = None
+        attr.int_value = None
+        attr.decimal_value = None
+        attr.bool_value = None
+        attr.json_value = None
+
+        # Set the appropriate field based on value type
+        # Note: Check bool BEFORE int since bool is a subclass of int in Python
+        if isinstance(value, bool):
+            attr.bool_value = value
+        elif isinstance(value, str):
+            attr.text_value = value
+        elif isinstance(value, int):
+            attr.int_value = value
+        elif isinstance(value, (float, decimal.Decimal)):
+            attr.decimal_value = value
+        elif isinstance(value, datetime.datetime):
+            attr.timestamp_value = value
+        elif value is None:
+            pass  # All fields already cleared
+        else:
+            # Store complex objects as JSON
+            attr.json_value = value
+
     def delete_attribute(self, name: str) -> bool:
         """Delete a custom attribute by name. Returns True if deleted, False if not found."""
         if not hasattr(self, "custom_attributes"):
