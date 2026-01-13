@@ -39,8 +39,16 @@ jobs:
               --cov-branch \
               --cov-report=xml:coverage-py${{ matrix.version }}.xml
 
-          # Rename .coverage to version-specific name for merging
-          mv .coverage .coverage.py${{ matrix.version }}
+          # Verify .coverage file exists and rename for merging
+          if [ -f .coverage ]; then
+            mv .coverage .coverage.py${{ matrix.version }}
+            echo "Created .coverage.py${{ matrix.version }}"
+            ls -la .coverage.py${{ matrix.version }}
+          else
+            echo "ERROR: .coverage file not found!"
+            ls -la .coverage* || echo "No .coverage files found"
+            exit 1
+          fi
 
       - name: Upload coverage to Codecov (per-version)
         uses: codecov/codecov-action@v5
@@ -97,22 +105,35 @@ jobs:
 
       - name: Combine coverage files
         run: |
+          # Debug: Show what was downloaded
+          echo "Contents of coverage-artifacts directory:"
+          ls -la coverage-artifacts/
+          echo ""
+          echo "Full tree structure:"
+          find coverage-artifacts -type f
+          echo ""
+
           # Move all .coverage files to current directory
           find coverage-artifacts -name ".coverage.py*" -exec mv {} . \;
 
           # List files for debugging
-          echo "Coverage files found:"
+          echo "Coverage files in current directory:"
           ls -la .coverage.py* || echo "No .coverage files found"
 
           # Combine .coverage data files
-          coverage combine --keep .coverage.py*
+          if ls .coverage.py* 1> /dev/null 2>&1; then
+            coverage combine --keep .coverage.py*
 
-          # Generate merged XML report
-          coverage xml -o coverage-merged.xml
+            # Generate merged XML report
+            coverage xml -o coverage-merged.xml
 
-          # Generate report for visibility
-          echo "Combined coverage report:"
-          coverage report
+            # Generate report for visibility
+            echo "Combined coverage report:"
+            coverage report
+          else
+            echo "Error: No coverage files found to combine"
+            exit 1
+          fi
 
       - name: Upload merged coverage to Codecov
         uses: codecov/codecov-action@v5
