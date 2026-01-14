@@ -1,6 +1,7 @@
 from datetime import datetime
 from hmac import compare_digest
 
+from canvas_sdk.v1.data import AttributeHub, Staff
 from logger import log
 from staff_plus.models.language import Language
 from staff_plus.models.biography import Biography
@@ -145,15 +146,15 @@ class MyAPI(SimpleAPI):
             specialties.append(specialty)
 
         # Clear existing associations and create new ones
-        # StaffSpecialty.objects.filter(staff=staff).delete()
-        qs = StaffSpecialty.objects.filter(staff=staff)
-        Delete(qs=qs).apply()
+        StaffSpecialty.objects.filter(staff=staff).delete()
+        # qs = StaffSpecialty.objects.filter(staff=staff)
+        # Delete(qs=qs).apply()
 
         staff_specialties = [
             StaffSpecialty(staff=staff, specialty=specialty) for specialty in specialties
         ]
-        # StaffSpecialty.objects.bulk_create(staff_specialties)
-        BulkCreate(StaffSpecialty.objects, objs=staff_specialties).apply()
+        StaffSpecialty.objects.bulk_create(objs=staff_specialties)
+        #BulkCreate(StaffSpecialty.objects, objs=staff_specialties).apply()
 
         biography_str = json_body.get("biography")
         if staff.biography is None:
@@ -258,6 +259,30 @@ class MyAPI(SimpleAPI):
                 info[staff.id]["specialties"].append(staff_specialty.specialty.name)
 
         return [JSONResponse(info)]
+
+    @api.post("/v3/<staff_id>")
+    def post_profile_v3(self):
+        staff_id = self.request.path_params["staff_id"]
+        staff = Staff.objects.get(id=staff_id)
+        json_body = self.request.json()
+        json_body["staff_id"] = staff_id
+
+        hub, created = AttributeHub.objects.get_or_create(type="staff_profile", externally_exposable_id=f"staff_id:{staff_id}")
+        hub.set_attribute("profile", json_body)
+
+        json_from_db = hub.get_attribute("profile")
+
+        profile = {
+            "first_name": staff.first_name,
+            "last_name": staff.last_name,
+            "biography": json_from_db["biography"],
+            "specialties": json_from_db["specialties"],
+            "languages": json_from_db["languages"],
+            "years_of_experience": datetime.today().year - json_from_db["practicing_since"],
+            "accepting_patient": json_from_db["accepting_patients"]
+        }
+
+        return [JSONResponse(profile)]
 
 
 # Inherit from BaseProtocol to properly get registered for events
