@@ -128,6 +128,7 @@ manifest_schema = {
                             "provider_menu_item",
                             "portal_menu_item",
                             "provider_companion",
+                            "note",
                         ],
                     },
                     "menu_position": {
