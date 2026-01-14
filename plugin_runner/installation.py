@@ -306,7 +306,13 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
                     if hasattr(value, "__module__") and value.__module__.startswith(
                         f"{plugin_name}.models"
                     ):
-                        if hasattr(value, "_meta") and not value._meta.proxy:
+                        if hasattr(value, "_meta"):
+                            if value._meta.proxy:
+                                continue
+                            db_table = value._meta.original_attrs["db_table"]
+                            if "." in db_table and not db_table.startswith(f"{plugin_name}"):
+                                print(f"Skipping {db_table} because it references another schema")
+                                continue
                             create_sql = generate_create_table_sql(plugin_name, value)
                             print(f"Generated SQL for {name}:")
                             print(create_sql)
