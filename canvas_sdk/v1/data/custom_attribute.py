@@ -317,7 +317,7 @@ class CustomAttributeMixin(models.Model):
             return False
 
 
-class AttributeHub(Model):
+class AttributeHub(Model, CustomAttributeMixin):
     """
     A simple model that serves only as a hub for custom attributes.
     Useful for storing arbitrary key-value data that doesn't belong to existing models.
@@ -327,58 +327,11 @@ class AttributeHub(Model):
         db_table = "attribute_hub"
 
     # Only id and type fields - all other data stored as custom attributes
-    type = models.CharField(max_length=255)
-
-    # GenericRelation for custom attributes
-    custom_attributes = GenericRelation(
-        CustomAttribute, content_type_field="content_type", object_id_field="object_id"
-    )
+    type = models.CharField(max_length=100)
+    externally_exposable_id = models.CharField(max_length=100)
 
     def __str__(self) -> str:
         return f"AttributeHub({self.type}): {self.dbid}"
-
-    @cached_property
-    def _content_type_id(self) -> int:
-        """Cache the content type ID lookup for AttributeHub."""
-        from django.db import connection
-
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT id FROM django_content_type WHERE app_label = 'v1' AND model = 'attributehub'"
-            )
-            row = cursor.fetchone()
-            if not row:
-                raise ValueError("ContentType not found for v1.attributehub")
-            return row[0]
-
-    def get_attribute(self, name: str) -> Any:
-        """Get a custom attribute value by name."""
-        try:
-            attr = CustomAttribute.objects.get(
-                content_type_id=self._content_type_id, object_id=self.pk, name=name
-            )
-            return attr.value
-        except CustomAttribute.DoesNotExist:
-            return None
-
-    def set_attribute(self, name: str, value: Any) -> CustomAttribute:
-        """Set a custom attribute value."""
-        attr, created = CustomAttribute.objects.get_or_create(
-            content_type_id=self._content_type_id, object_id=self.pk, name=name, defaults={}
-        )
-        attr.value = value
-        attr.save()
-        return attr
-
-    def delete_attribute(self, name: str) -> bool:
-        """Delete a custom attribute by name."""
-        try:
-            CustomAttribute.objects.get(
-                content_type_id=self._content_type_id, object_id=self.pk, name=name
-            ).delete()
-            return True
-        except CustomAttribute.DoesNotExist:
-            return False
 
 
 __exports__ = (

@@ -28,7 +28,8 @@ grant insert, update, delete on {plugin_name}.custom_attribute to canvas_sdk_rea
 
 create table if not exists {plugin_name}.attribute_hub (
     dbid serial primary key,
-    type varchar(100) not null
+    type varchar(100) not null,
+    externally_exposable_id varchar(100) not null
 );
 
 grant usage on {plugin_name}.attribute_hub_dbid_seq to canvas_sdk_read_only;
