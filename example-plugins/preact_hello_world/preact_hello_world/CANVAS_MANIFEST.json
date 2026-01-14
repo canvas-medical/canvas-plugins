@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "preact_hello_world",
+    "description": "A Hello World demo showing Vite + Preact integration with Canvas plugins",
+    "components": {
+        "protocols": [
+            {
+                "class": "preact_hello_world.protocols.counter_button:CounterButton",
+                "description": "ActionButton that launches a Preact counter demo in the right chart pane"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
