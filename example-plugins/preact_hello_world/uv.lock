@@ -632,7 +632,7 @@ wheels = [
 ]
 
 [[package]]
-name = "preact-hello-world"
+name = "preact_hello_world"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [

@@ -11,11 +11,8 @@ dev = [
 ]
 
 [project]
-dependencies = [
-  "canvas[test-utils]",
-  "django>=4.2.0"
-]
-name = "preact-hello-world"
+dependencies = ["canvas[test-utils]", "django>=4.2.0"]
+name = "preact_hello_world"
 requires-python = ">=3.12"
 version = "0.0.0"
 

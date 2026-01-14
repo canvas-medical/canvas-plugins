@@ -1,6 +1,6 @@
-# preact-hello-world
+# preact_hello_world
 
-`preact-hello-world` is an example plugin that shows how to embed a Preact UI inside a Canvas plugin.
+`preact_hello_world` is an example plugin that shows how to embed a Preact UI inside a Canvas plugin.
 
 Preact was chosen to reduce the bundle size, but if you need regular React you can replace all references to `preact` with `react`.
 
