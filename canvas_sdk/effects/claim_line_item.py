@@ -16,14 +16,18 @@ class UpdateClaimLineItem(_BaseEffect):
         effect_type = EffectType.UPDATE_CLAIM_LINE_ITEM
 
     claim_line_item_id: str | UUID
+    linked_diagnosis_codes: list[str | UUID] | None = None
     charge: float | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The values for the payload."""
-        if self.charge is None:
-            return {}
-        return {"charge": str(self.charge)}
+        v: dict[str, Any] = {}
+        if self.charge is not None:
+            v["charge"] = str(self.charge)
+        if self.linked_diagnosis_codes is not None:
+            v["linked_diagnosis_codes"] = [str(a) for a in self.linked_diagnosis_codes]
+        return v
 
     @property
     def effect_payload(self) -> dict[str, Any]:
@@ -33,7 +37,7 @@ class UpdateClaimLineItem(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if not ClaimLineItem.objects.filter(id=self.claim_line_item_id).exists():
+        if not (item := ClaimLineItem.objects.filter(id=self.claim_line_item_id).first()):
             errors.append(
                 self._create_error_detail(
                     "value",
@@ -41,6 +45,20 @@ class UpdateClaimLineItem(_BaseEffect):
                     self.claim_line_item_id,
                 )
             )
+            return errors
+        if self.linked_diagnosis_codes is not None:
+            existing_diags = item.diagnosis_codes.filter(
+                id__in=self.linked_diagnosis_codes
+            ).values_list("id", flat=True)
+            incorrect_ids = set(self.linked_diagnosis_codes) - set(existing_diags)
+            if len(incorrect_ids):
+                errors.append(
+                    self._create_error_detail(
+                        "value",
+                        "The provided ClaimLineItemDiagnosis ids do not correspond to the claim line item",
+                        incorrect_ids,
+                    )
+                )
         return errors
 
 

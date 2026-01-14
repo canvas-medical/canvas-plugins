@@ -24,7 +24,7 @@ from .claim import (
     InstallmentPlan,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCode
-from .claim_line_item import ClaimLineItem
+from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
 from .command import Command
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
@@ -158,6 +158,7 @@ __all__ = __exports__ = (
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",

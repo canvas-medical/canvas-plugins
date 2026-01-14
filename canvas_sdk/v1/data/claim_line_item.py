@@ -133,4 +133,31 @@ class ClaimLineItem(TimestampedModel, IdentifiableModel):
     family_planning = models.CharField(choices=FamilyPlanningOptions.choices, max_length=1)
 
 
-__exports__ = ("ClaimLineItem", "ClaimLineItemStatus", "LineItemCodes", "FamilyPlanningOptions")
+class ClaimLineItemDiagnosisCode(TimestampedModel):
+    """ClaimLineItemDiagnosisCode."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimlineitemdiagnosiscode_001"
+        ordering = ["claim_diagnosis_code__rank"]
+
+    line_item = models.ForeignKey(
+        "v1.ClaimLineItem", on_delete=models.CASCADE, related_name="diagnosis_codes"
+    )
+    claim_diagnosis_code = models.ForeignKey(
+        "v1.ClaimDiagnosisCode",
+        on_delete=models.CASCADE,
+        related_name="line_item_diagnosis_codes",
+        null=True,
+    )
+    code = models.CharField(max_length=20, blank=True)
+    poa = models.CharField(max_length=1, default="", blank=True)
+    linked = models.BooleanField(default=True)
+
+
+__exports__ = (
+    "ClaimLineItem",
+    "ClaimLineItemStatus",
+    "LineItemCodes",
+    "FamilyPlanningOptions",
+    "ClaimLineItemDiagnosisCode",
+)
