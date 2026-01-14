@@ -9,6 +9,7 @@ from .claim import (
     ClaimSubmissionFactory,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
+from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
 from .coverage import CoverageFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
@@ -73,6 +74,8 @@ __all__ = (
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
+    "ClaimLineItemFactory",
+    "ClaimLineItemDiagnosisCodeFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
