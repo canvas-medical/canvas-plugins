@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models
-from django.db.models import Q
+from django.db.models import Q, ForeignKey, OneToOneField
 from django.db.models.base import ModelBase
 
 if TYPE_CHECKING:
@@ -133,6 +133,14 @@ class CustomModelMetaclass(ModelMetaclass):
         # Set dynamic attributes
         meta.db_table = attrs["__qualname__"].lower()
         meta.app_label = attrs["__module__"].split(".")[0]
+
+        # Look for foreign keys and one to one fields. Index them.
+        for key, value in attrs.items():
+            if isinstance(value, ForeignKey) or isinstance(value, OneToOneField):
+                if not hasattr(meta, "indexes"):
+                    meta.indexes = []
+                if f"{key}_id" not in meta.indexes:
+                    meta.indexes.append(models.Index(fields=[f"{key}_id"]))
 
         new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
 
