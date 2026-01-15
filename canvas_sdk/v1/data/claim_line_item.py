@@ -117,7 +117,7 @@ class ClaimLineItem(TimestampedModel, IdentifiableModel):
     billing_line_item = models.ForeignKey("v1.BillingLineItem", on_delete=models.CASCADE, null=True)
     claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="line_items")
     status = models.CharField(choices=ClaimLineItemStatus.choices, max_length=10)
-    charge = models.DecimalField(max_digits=8, decimal_places=2)
+    charge = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     from_date = models.CharField(max_length=10)
     thru_date = models.CharField(max_length=10)
     narrative = models.CharField(max_length=2000)
@@ -133,7 +133,7 @@ class ClaimLineItem(TimestampedModel, IdentifiableModel):
     family_planning = models.CharField(choices=FamilyPlanningOptions.choices, max_length=1)
 
 
-class ClaimLineItemDiagnosisCode(TimestampedModel):
+class ClaimLineItemDiagnosisCode(TimestampedModel, IdentifiableModel):
     """ClaimLineItemDiagnosisCode."""
 
     class Meta:
