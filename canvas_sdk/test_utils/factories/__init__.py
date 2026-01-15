@@ -29,11 +29,16 @@ from .medication_history import (
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
-from .note import NoteFactory, NoteStateChangeEventFactory
-from .organization import OrganizationFactory
+from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .organization import (
+    OrganizationAddressFactory,
+    OrganizationContactPointFactory,
+    OrganizationFactory,
+)
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
+    PracticeLocationContactPointFactory,
     PracticeLocationFactory,
     PracticeLocationSettingFactory,
 )
@@ -53,6 +58,10 @@ from .task import (
     TaskLabelFactory,
     TaskMetadataFactory,
     TaskTaskLabelFactory,
+)
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocumentFactory,
+    UncategorizedClinicalDocumentReviewFactory,
 )
 from .user import CanvasUserFactory
 
@@ -88,12 +97,16 @@ __all__ = (
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
+    "NoteTypeFactory",
+    "OrganizationAddressFactory",
+    "OrganizationContactPointFactory",
     "OrganizationFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
+    "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
     "ProtocolCurrentFactory",
     "ReferralFactory",
@@ -110,4 +123,6 @@ __all__ = (
     "TaskLabelFactory",
     "TaskMetadataFactory",
     "TaskTaskLabelFactory",
+    "UncategorizedClinicalDocumentFactory",
+    "UncategorizedClinicalDocumentReviewFactory",
 )

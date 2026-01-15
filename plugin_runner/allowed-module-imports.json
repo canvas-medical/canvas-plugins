@@ -6,6 +6,72 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.llms": [
+    "LlmAnthropic",
+    "LlmGoogle",
+    "LlmOpenai",
+    "LlmResponse",
+    "LlmSettings",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.libraries": [
+    "LlmAnthropic",
+    "LlmApi",
+    "LlmGoogle",
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_anthropic": [
+    "LlmAnthropic"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_api": [
+    "LlmApi"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_google": [
+    "LlmGoogle"
+  ],
+  "canvas_sdk.clients.llms.libraries.llm_openai": [
+    "LlmOpenai"
+  ],
+  "canvas_sdk.clients.llms.structures": [
+    "LlmResponse",
+    "LlmTokens",
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_response": [
+    "LlmResponse"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_tokens": [
+    "LlmTokens"
+  ],
+  "canvas_sdk.clients.llms.structures.llm_turn": [
+    "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.structures.settings": [
+    "LlmSettings",
+    "LlmSettingsAnthropic",
+    "LlmSettingsGemini",
+    "LlmSettingsGpt4",
+    "LlmSettingsGpt5"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings": [
+    "LlmSettings"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_anthropic": [
+    "LlmSettingsAnthropic"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gemini": [
+    "LlmSettingsGemini"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt4": [
+    "LlmSettingsGpt4"
+  ],
+  "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
+    "LlmSettingsGpt5"
+  ],
+  "canvas_sdk.clients.third_party": [
+    "StripeClient"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
@@ -13,6 +79,7 @@
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "CustomCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -41,6 +108,7 @@
     "StopMedicationCommand",
     "StructuredAssessmentCommand",
     "TaskCommand",
+    "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand"
@@ -69,6 +137,9 @@
   ],
   "canvas_sdk.commands.commands.close_goal": [
     "CloseGoalCommand"
+  ],
+  "canvas_sdk.commands.commands.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.commands.commands.diagnose": [
     "DiagnoseCommand"
@@ -161,6 +232,9 @@
   "canvas_sdk.commands.commands.review.referral": [
     "ReferralReviewCommand"
   ],
+  "canvas_sdk.commands.commands.review.uncategorized_document": [
+    "UncategorizedDocumentReviewCommand"
+  ],
   "canvas_sdk.commands.commands.review_of_systems": [
     "ReviewOfSystemsCommand"
   ],
@@ -189,6 +263,10 @@
     "CodeSystems",
     "Coding",
     "ServiceProvider"
+  ],
+  "canvas_sdk.commands.validation": [
+    "CommandValidationErrorEffect",
+    "ValidationError"
   ],
   "canvas_sdk.effects": [
     "Effect",
@@ -312,6 +390,16 @@
   ],
   "canvas_sdk.effects.note.note": [
     "Note"
+  ],
+  "canvas_sdk.effects.observation": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
+  ],
+  "canvas_sdk.effects.observation.base": [
+    "CodingData",
+    "Observation",
+    "ObservationComponentData"
   ],
   "canvas_sdk.effects.panel_configuration": [
     "PanelConfiguration"
@@ -450,6 +538,12 @@
   ],
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
+  ],
+  "canvas_sdk.effects.validation": [
+    "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.base": [
+    "ValidationError"
   ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
@@ -693,6 +787,8 @@
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientConsent",
@@ -708,6 +804,7 @@
     "PayorSpecificCharge",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -737,7 +834,9 @@
     "TeamContactPoint",
     "Transactor",
     "TransactorAddress",
-    "TransactorPhone"
+    "TransactorPhone",
+    "UncategorizedClinicalDocument",
+    "UncategorizedClinicalDocumentReview"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
@@ -944,7 +1043,9 @@
     "ObservationValueCoding"
   ],
   "canvas_sdk.v1.data.organization": [
-    "Organization"
+    "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint"
   ],
   "canvas_sdk.v1.data.patient": [
     "ContactPointState",
@@ -981,6 +1082,7 @@
   "canvas_sdk.v1.data.practicelocation": [
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
   ],
@@ -1044,6 +1146,10 @@
     "Team",
     "TeamContactPoint",
     "TeamResponsibility"
+  ],
+  "canvas_sdk.v1.data.uncategorized_clinical_document": [
+    "UncategorizedClinicalDocument",
+    "UncategorizedClinicalDocumentReview"
   ],
   "canvas_sdk.v1.data.user": [
     "CanvasUser"

@@ -1,6 +1,126 @@
 # CHANGELOG
 
 
+## v0.89.0 (2026-01-14)
+
+### Chores
+
+- Update codecov logic for ci/cd
+  ([#1421](https://github.com/canvas-medical/canvas-plugins/pull/1421),
+  [`eb68cc3`](https://github.com/canvas-medical/canvas-plugins/commit/eb68cc35cfe4efcd1ef456c76204e227110ea841))
+
+### Features
+
+- Custom command ([#1351](https://github.com/canvas-medical/canvas-plugins/pull/1351),
+  [`168b155`](https://github.com/canvas-medical/canvas-plugins/commit/168b15590792e6e84b6d425d04ee3e92fce62164))
+
+
+## v0.88.0 (2026-01-09)
+
+### Features
+
+- Add events and effects for command validation
+  ([#1315](https://github.com/canvas-medical/canvas-plugins/pull/1315),
+  [`526e52a`](https://github.com/canvas-medical/canvas-plugins/commit/526e52a4249d02a140d3ba72522f3f2ecf0d9283))
+
+Co-authored-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+
+## v0.87.0 (2026-01-07)
+
+### Features
+
+- Implement effect for creating and updating observations
+  ([#1334](https://github.com/canvas-medical/canvas-plugins/pull/1334),
+  [`8108906`](https://github.com/canvas-medical/canvas-plugins/commit/8108906844ec88b20b3e233c789e33fec5b45184))
+
+
+## v0.86.0 (2026-01-06)
+
+### Bug Fixes
+
+- Add `.mypy_cache` to `.gitignore`
+  ([#1390](https://github.com/canvas-medical/canvas-plugins/pull/1390),
+  [`4ad1080`](https://github.com/canvas-medical/canvas-plugins/commit/4ad1080ce1d4a5ba399dcaa272f69cbe83201528))
+
+### Chores
+
+- Add test for list AugAssign ([#1387](https://github.com/canvas-medical/canvas-plugins/pull/1387),
+  [`d3db01b`](https://github.com/canvas-medical/canvas-plugins/commit/d3db01bdb2a006398cd654d97de1a69e72fc3db6))
+
+### Features
+
+- Allow importing StripeClient from canvas_sdk.clients.third_party
+  ([#1398](https://github.com/canvas-medical/canvas-plugins/pull/1398),
+  [`710ef71`](https://github.com/canvas-medical/canvas-plugins/commit/710ef71fc0f3f702ca1067cb47be056fd10a6f39))
+
+
+## v0.85.0 (2025-12-19)
+
+### Features
+
+- Add support for note lock, sign, unlock, check_in and no_show effects
+  ([#1292](https://github.com/canvas-medical/canvas-plugins/pull/1292),
+  [`ae59bf4`](https://github.com/canvas-medical/canvas-plugins/commit/ae59bf444687c1898cc704527bed23d008d426dc))
+
+
+## v0.84.0 (2025-12-18)
+
+### Bug Fixes
+
+- Adapt QuerysetProtocol to be used for typing purposes only
+  ([#1346](https://github.com/canvas-medical/canvas-plugins/pull/1346),
+  [`8fd3eef`](https://github.com/canvas-medical/canvas-plugins/commit/8fd3eef89a8802ad9d61354db35e3250aded66ed))
+
+### Chores
+
+- Plugin directory not found in path at module import time
+  ([#1332](https://github.com/canvas-medical/canvas-plugins/pull/1332),
+  [`4976144`](https://github.com/canvas-medical/canvas-plugins/commit/49761445b8ce235eca929551c6a9960377a47a9c))
+
+### Features
+
+- Add a safe `sum()` implementation
+  ([#1283](https://github.com/canvas-medical/canvas-plugins/pull/1283),
+  [`3596f04`](https://github.com/canvas-medical/canvas-plugins/commit/3596f0463c7087b62b77cd9a356153fad2e4fe19))
+
+- Add Prefetch, some aggregation and expression functions to the allowed imports
+  ([#1340](https://github.com/canvas-medical/canvas-plugins/pull/1340),
+  [`943bcda`](https://github.com/canvas-medical/canvas-plugins/commit/943bcdafd7e467916c1db687b931f5c0db07447f))
+
+- Enable events review commands
+  ([#1352](https://github.com/canvas-medical/canvas-plugins/pull/1352),
+  [`51cf355`](https://github.com/canvas-medical/canvas-plugins/commit/51cf355a4568309a61271d910a636cd0e54e533a))
+
+- **sdk**: Unified interface for basic interaction with main LLM vendors
+  ([#1300](https://github.com/canvas-medical/canvas-plugins/pull/1300),
+  [`f6f2a45`](https://github.com/canvas-medical/canvas-plugins/commit/f6f2a45b0628c14d4c6f25436d469e432d0523e8))
+
+
+## v0.83.0 (2025-12-12)
+
+### Bug Fixes
+
+- Appointment validator checking for deprecated note types
+  ([#1335](https://github.com/canvas-medical/canvas-plugins/pull/1335),
+  [`b938020`](https://github.com/canvas-medical/canvas-plugins/commit/b93802005ade918f9e8c69582d4e7592fdf1f048))
+
+### Features
+
+- Uncategorized clinical documents review command
+  ([#1314](https://github.com/canvas-medical/canvas-plugins/pull/1314),
+  [`4e2393d`](https://github.com/canvas-medical/canvas-plugins/commit/4e2393d1af395d271b311f344175b85c58a57abf))
+
+
+## v0.82.0 (2025-12-09)
+
+### Features
+
+- Data models for OrganizationAddress, OrganizationContactPoint, PracticeLocationContactPoint
+  ([#1316](https://github.com/canvas-medical/canvas-plugins/pull/1316),
+  [`690935f`](https://github.com/canvas-medical/canvas-plugins/commit/690935f15fa09f8de09994d63e3ed2b2c85a3eec))
+
+
 ## v0.81.0 (2025-12-04)
 
 ### Features

@@ -2,8 +2,19 @@ from datetime import date
 
 import factory
 
-from canvas_sdk.v1.data import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
-from canvas_sdk.v1.data.common import AddressState, AddressType, AddressUse
+from canvas_sdk.v1.data import (
+    PracticeLocation,
+    PracticeLocationAddress,
+    PracticeLocationContactPoint,
+    PracticeLocationSetting,
+)
+from canvas_sdk.v1.data.common import (
+    AddressState,
+    AddressType,
+    AddressUse,
+    ContactPointSystem,
+    ContactPointUse,
+)
 
 
 class PracticeLocationSettingFactory(factory.django.DjangoModelFactory[PracticeLocationSetting]):
@@ -60,3 +71,18 @@ class PracticeLocationAddressFactory(factory.django.DjangoModelFactory[PracticeL
     end = None
     country = "USA"
     state = AddressState.ACTIVE
+
+
+class PracticeLocationContactPointFactory(
+    factory.django.DjangoModelFactory[PracticeLocationContactPoint]
+):
+    """Factory for creating PracticeLocationContactPoint."""
+
+    class Meta:
+        model = PracticeLocationContactPoint
+
+    practice_location = factory.SubFactory(PracticeLocationFactory)
+    system = ContactPointSystem.PHONE
+    value = "8003701416"
+    use = ContactPointUse.WORK
+    rank = 1

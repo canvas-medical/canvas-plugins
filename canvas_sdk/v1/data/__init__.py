@@ -77,7 +77,7 @@ from .observation import (
     ObservationComponentCoding,
     ObservationValueCoding,
 )
-from .organization import Organization
+from .organization import Organization, OrganizationAddress, OrganizationContactPoint
 from .patient import (
     Patient,
     PatientAddress,
@@ -101,7 +101,12 @@ from .posting import (
     CoveragePosting,
     PatientPosting,
 )
-from .practicelocation import PracticeLocation, PracticeLocationAddress, PracticeLocationSetting
+from .practicelocation import (
+    PracticeLocation,
+    PracticeLocationAddress,
+    PracticeLocationContactPoint,
+    PracticeLocationSetting,
+)
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -121,6 +126,10 @@ from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPh
 from .stop_medication_event import StopMedicationEvent
 from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocument,
+    UncategorizedClinicalDocumentReview,
+)
 from .user import CanvasUser
 
 __all__ = __exports__ = (
@@ -213,6 +222,8 @@ __all__ = __exports__ = (
     "ObservationComponentCoding",
     "ObservationValueCoding",
     "Organization",
+    "OrganizationAddress",
+    "OrganizationContactPoint",
     "Patient",
     "PatientAddress",
     "PatientContactPoint",
@@ -228,6 +239,7 @@ __all__ = __exports__ = (
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationAddress",
+    "PracticeLocationContactPoint",
     "PracticeLocationSetting",
     "ProtocolCurrent",
     "ProtocolOverride",
@@ -258,4 +270,6 @@ __all__ = __exports__ = (
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
+    "UncategorizedClinicalDocumentReview",
+    "UncategorizedClinicalDocument",
 )

@@ -3,6 +3,7 @@ from canvas_sdk.commands.commands.allergy import AllergyCommand
 from canvas_sdk.commands.commands.assess import AssessCommand
 from canvas_sdk.commands.commands.chart_section_review import ChartSectionReviewCommand
 from canvas_sdk.commands.commands.close_goal import CloseGoalCommand
+from canvas_sdk.commands.commands.custom_command import CustomCommand
 from canvas_sdk.commands.commands.diagnose import DiagnoseCommand
 from canvas_sdk.commands.commands.exam import PhysicalExamCommand
 from canvas_sdk.commands.commands.family_history import FamilyHistoryCommand
@@ -31,6 +32,9 @@ from canvas_sdk.commands.commands.resolve_condition import ResolveConditionComma
 from canvas_sdk.commands.commands.review.imaging import ImagingReviewCommand
 from canvas_sdk.commands.commands.review.lab import LabReviewCommand
 from canvas_sdk.commands.commands.review.referral import ReferralReviewCommand
+from canvas_sdk.commands.commands.review.uncategorized_document import (
+    UncategorizedDocumentReviewCommand,
+)
 from canvas_sdk.commands.commands.review_of_systems import ReviewOfSystemsCommand
 from canvas_sdk.commands.commands.stop_medication import StopMedicationCommand
 from canvas_sdk.commands.commands.structured_assessment import StructuredAssessmentCommand
@@ -50,6 +54,7 @@ __all__ = __exports__ = (
     "FollowUpCommand",
     "GoalCommand",
     "HistoryOfPresentIllnessCommand",
+    "CustomCommand",
     "ImagingOrderCommand",
     "ImagingReviewCommand",
     "InstructCommand",
@@ -73,6 +78,7 @@ __all__ = __exports__ = (
     "StopMedicationCommand",
     "StructuredAssessmentCommand",
     "TaskCommand",
+    "UncategorizedDocumentReviewCommand",
     "UpdateDiagnosisCommand",
     "UpdateGoalCommand",
     "VitalsCommand",
