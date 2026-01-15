@@ -116,21 +116,31 @@ class ClaimLineItem(TimestampedModel, IdentifiableModel):
 
     billing_line_item = models.ForeignKey("v1.BillingLineItem", on_delete=models.CASCADE, null=True)
     claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="line_items")
-    status = models.CharField(choices=ClaimLineItemStatus.choices, max_length=10)
+    status = models.CharField(
+        choices=ClaimLineItemStatus.choices, max_length=10, default=ClaimLineItemStatus.ACTIVE
+    )
     charge = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
-    from_date = models.CharField(max_length=10)
-    thru_date = models.CharField(max_length=10)
-    narrative = models.CharField(max_length=2000)
-    ndc_code = models.CharField(max_length=100)
-    ndc_dosage = models.CharField(max_length=100)
-    ndc_measure = models.CharField(max_length=100)
-    place_of_service = models.CharField(choices=PracticeLocationPOS.choices, max_length=2)
-    proc_code = models.CharField(max_length=10)
-    display = models.CharField(max_length=255)
-    remote_chg_id = models.CharField(max_length=100)
-    units = models.IntegerField()
-    epsdt = models.CharField(max_length=2)
-    family_planning = models.CharField(choices=FamilyPlanningOptions.choices, max_length=1)
+    from_date = models.CharField(max_length=10, default="0000-00-00")
+    thru_date = models.CharField(max_length=10, default="0000-00-00")
+    narrative = models.CharField(max_length=2000, default="", blank=True)
+    ndc_code = models.CharField(max_length=100, default="", blank=True)
+    ndc_dosage = models.CharField(max_length=100, default="", blank=True)
+    ndc_measure = models.CharField(max_length=100, default="", blank=True)
+    place_of_service = models.CharField(
+        choices=PracticeLocationPOS.choices,
+        max_length=2,
+        default=PracticeLocationPOS.OFFICE,
+        blank=True,
+        null=True,
+    )
+    proc_code = models.CharField(max_length=10, default="")
+    display = models.CharField(max_length=255, default="", blank=True)
+    remote_chg_id = models.CharField(max_length=100, default="", blank=True)
+    units = models.IntegerField(default=1)
+    epsdt = models.CharField(max_length=2, default="", blank=True)
+    family_planning = models.CharField(
+        choices=FamilyPlanningOptions.choices, max_length=1, default="", blank=True
+    )
 
 
 class ClaimLineItemDiagnosisCode(TimestampedModel, IdentifiableModel):
