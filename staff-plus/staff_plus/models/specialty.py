@@ -1,9 +1,15 @@
 from django.db.models import CASCADE, ForeignKey, Index, TextField
 
 from canvas_sdk.v1.data.base import CustomModel
+from staff_plus.models.proxy import StaffProxy
 
 
 class Specialty(CustomModel):
+
+    class Meta:
+        indexes = [
+            Index(fields=["name"]),
+        ]
 
     name = TextField()
 
@@ -12,17 +18,13 @@ class Specialty(CustomModel):
 
 
 class StaffSpecialty(CustomModel):
-    class Meta:
-        indexes = [
-            Index(fields=["staff_id", "specialty_id"]),
-        ]
 
     staff = ForeignKey(
-        "staff_plus.StaffProxy",
+        StaffProxy,
         to_field="dbid",
         on_delete=CASCADE,
         related_name="staff_specialties",
     )
     specialty = ForeignKey(
-        "staff_plus.Specialty", to_field="dbid", on_delete=CASCADE, related_name="staff_specialties"
+        Specialty, to_field="dbid", on_delete=CASCADE, related_name="staff_specialties"
     )
