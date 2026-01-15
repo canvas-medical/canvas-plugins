@@ -1,9 +1,14 @@
 import json
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from preact_hello_world.protocols.counter_button import COUNTER_HTML, CounterButton
+from preact_hello_world.protocols.counter_button import CounterButton
 
 from canvas_sdk.handlers.action_button import ActionButton
+
+COUNTER_HTML = (
+    Path(__file__).parent.parent.parent / "preact_hello_world" / "templates" / "counter.html"
+).read_text()
 
 
 class TestCounterButtonConfiguration:
@@ -22,10 +27,13 @@ class TestCounterButtonConfiguration:
         assert CounterButton.BUTTON_LOCATION == ActionButton.ButtonLocation.NOTE_HEADER
 
 
+@patch("preact_hello_world.protocols.counter_button.render_to_string", return_value=COUNTER_HTML)
 class TestCounterButtonHandle:
     """Tests for handle() method."""
 
-    def test_handle_returns_launch_modal_effect(self, mock_event: MagicMock) -> None:
+    def test_handle_returns_launch_modal_effect(
+        self, mock_render: MagicMock, mock_event: MagicMock
+    ) -> None:
         """handle() should return a LaunchModalEffect for the right chart pane."""
         handler = CounterButton(event=mock_event)
 
@@ -40,7 +48,9 @@ class TestCounterButtonHandle:
         # Effect type 3000 is LAUNCH_MODAL_EFFECT
         assert effect.type == 3000
 
-    def test_handle_effect_has_correct_target(self, mock_event: MagicMock) -> None:
+    def test_handle_effect_has_correct_target(
+        self, mock_render: MagicMock, mock_event: MagicMock
+    ) -> None:
         """Effect should target RIGHT_CHART_PANE."""
         handler = CounterButton(event=mock_event)
 
@@ -54,7 +64,9 @@ class TestCounterButtonHandle:
         payload = json.loads(effect.payload)
         assert payload["data"]["target"] == "right_chart_pane"
 
-    def test_handle_effect_has_correct_title(self, mock_event: MagicMock) -> None:
+    def test_handle_effect_has_correct_title(
+        self, mock_render: MagicMock, mock_event: MagicMock
+    ) -> None:
         """Effect should have title 'Counter Demo'."""
         handler = CounterButton(event=mock_event)
 
@@ -68,7 +80,9 @@ class TestCounterButtonHandle:
         payload = json.loads(effect.payload)
         assert payload["data"]["title"] == "Counter Demo"
 
-    def test_handle_effect_contains_html_content(self, mock_event: MagicMock) -> None:
+    def test_handle_effect_contains_html_content(
+        self, mock_render: MagicMock, mock_event: MagicMock
+    ) -> None:
         """Effect should contain the bundled HTML content."""
         handler = CounterButton(event=mock_event)
 
