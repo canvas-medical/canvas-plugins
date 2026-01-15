@@ -4,9 +4,6 @@ from canvas_sdk.v1.data.base import CustomModel
 
 
 class Specialty(CustomModel):
-    class Meta:
-        db_table = "specialty"
-        app_label = "staff_plus"
 
     name = TextField()
 
@@ -16,8 +13,6 @@ class Specialty(CustomModel):
 
 class StaffSpecialty(CustomModel):
     class Meta:
-        app_label = "staff_plus"
-        db_table = "staff_specialties"
         indexes = [
             Index(fields=["staff_id", "specialty_id"]),
         ]

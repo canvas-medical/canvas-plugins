@@ -8,9 +8,6 @@ from staff_plus.models.proxy import StaffProxy
 class Language(CustomModel):
 
     class Meta:
-        db_table = "language"
-        app_label = "staff_plus"
-
         indexes = [
             Index(fields=["staff_id"]),
         ]

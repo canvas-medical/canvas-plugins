@@ -5,7 +5,6 @@ from canvas_sdk.v1.data import CustomAttributeAwareManager, CustomAttributeMixin
 # model
 class StaffProxy(Staff, CustomAttributeMixin):
     class Meta:
-        app_label = "staff_plus"
         proxy = True
 
     objects = CustomAttributeAwareManager()

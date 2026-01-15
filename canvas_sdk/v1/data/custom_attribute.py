@@ -1,14 +1,15 @@
 import datetime
 import decimal
-from typing import Any
+from typing import Any, cast
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Prefetch
+from django.db.models.base import ModelBase
 from django.utils.functional import cached_property
 
-from .base import Model, RestrictedQuerySet
+from .base import Model, RestrictedQuerySet, ModelMetaclass
 
 
 class CustomAttribute(Model):
@@ -116,8 +117,28 @@ class CustomAttributeAwareManager(models.Manager):
         )
 
 
+class CustomAttributeMetaClass(ModelMetaclass):
+    def __new__(cls, name, bases, attrs, **kwargs):
+        meta = attrs.get("Meta")
+        if meta is None:
+            attrs["Meta"] = type("Meta", (), {})
+
+        # Create Meta class if it doesn't exist
+        if meta is None:
+            meta = type('Meta', (), {})
+            attrs["Meta"] = meta
+
+        # set the app label for proxy models belonging to the plugin
+        if not attrs["__module__"].startswith("canvas_sdk"):
+            meta.app_label = attrs["__module__"].split(".")[0]
+
+        new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
+
+        return new_class
+
+
 # Mixin for models that want custom attributes
-class CustomAttributeMixin(models.Model):
+class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
     """
     Mixin to add custom attributes support to any SDK model.
     Automatically includes the GenericRelation field.
