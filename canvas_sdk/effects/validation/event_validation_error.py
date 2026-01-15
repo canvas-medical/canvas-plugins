@@ -4,7 +4,7 @@ from canvas_sdk.effects.validation.base import _BaseValidationErrorEffect
 
 class EventValidationError(_BaseValidationErrorEffect):
     """
-    Effect to abort an event, returned in response to a pre- event.
+    Effect to abort an event, returned in response to a pre-event.
     """
 
     class Meta:
