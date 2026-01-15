@@ -118,9 +118,30 @@ class CustomModelManager(models.Manager):
     def get_queryset(self):
         return RestrictedQuerySet(self.model, using=self._db)
 
+class CustomModelMetaclass(ModelMetaclass):
+    """A metaclass for configuring data models."""
+    def __new__(cls, name, bases, attrs, **kwargs):
+        meta = attrs.get("Meta")
+        if meta is None:
+            attrs["Meta"] = type("Meta", (), {})
 
-class CustomModel(Model):
+        # Create Meta class if it doesn't exist
+        if meta is None:
+            meta = type('Meta', (), {})
+            attrs["Meta"] = meta
+
+        # Set dynamic attributes
+        meta.db_table = attrs["__qualname__"].lower()
+        meta.app_label = attrs["__module__"].split(".")[0]
+
+        new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
+
+        return new_class
+
+
+class CustomModel(Model, metaclass=CustomModelMetaclass):
     class Meta:
+        print(f"INSIDE OF CustomModel META")
         abstract = True
 
     objects = CustomModelManager()
