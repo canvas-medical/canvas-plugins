@@ -16,8 +16,7 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    command: str | None = None
-    context: dict | None = None
+    commands: list | None = None
 
     @property
     def values(self) -> dict:
@@ -26,8 +25,28 @@ class Recommendation(BaseModel):
             "title": self.title,
             "button": self.button,
             "href": self.href,
-            "command": {"type": self.command} if self.command else {},
-            "context": self.context or {},
+            "commands": self.commands,
+        }
+
+
+class RecommendMultipleCommands(Recommendation):
+    """
+    A Recommendation for a Protocol Card with support for multiple commands.
+    Extends Recommendation to add commands functionality.
+    """
+
+    @property
+    def values(self) -> dict:
+        """The ProtocolCard recommendation's values with commands list."""
+        commands = (
+            [command.recommendation_context() for command in self.commands] if self.commands else []
+        )
+
+        return {
+            "title": self.title,
+            "button": self.button,
+            "href": self.href,
+            "commands": commands,
         }
 
 
@@ -92,12 +111,16 @@ class ProtocolCard(_BaseEffect):
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""
         recommendation = Recommendation(
-            title=title, button=button, href=href, command=command, context=context
+            title=title,
+            button=button,
+            href=href,
+            commands=[{"command": {"type": command}, "context": context}],
         )
         self.recommendations.append(recommendation)
 
 
 __exports__ = (
     "Recommendation",
+    "RecommendMultipleCommands",
     "ProtocolCard",
 )
