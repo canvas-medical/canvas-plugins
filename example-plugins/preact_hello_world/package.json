@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:plugin": "npm run build && uv run python scripts/build.py",
+    "build:plugin": "uv run python scripts/build.py",
     "preview": "vite preview"
   },
   "dependencies": {
