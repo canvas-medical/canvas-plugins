@@ -7,11 +7,6 @@ from staff_plus.models.proxy import StaffProxy
 
 class Language(CustomModel):
 
-    class Meta:
-        indexes = [
-            Index(fields=["staff_id"]),
-        ]
-
     staff = ForeignKey(StaffProxy, on_delete=DO_NOTHING, to_field="dbid", related_name="languages")
     name = TextField()
     code = TextField()
