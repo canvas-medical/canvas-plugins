@@ -51,7 +51,7 @@ class UpdateClaimLineItem(_BaseEffect):
                 id__in=self.linked_diagnosis_codes
             ).values_list("id", flat=True)
             incorrect_ids = set(self.linked_diagnosis_codes) - set(existing_diags)
-            if len(incorrect_ids):
+            if incorrect_ids:
                 errors.append(
                     self._create_error_detail(
                         "value",
