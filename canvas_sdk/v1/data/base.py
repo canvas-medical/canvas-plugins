@@ -139,8 +139,9 @@ class CustomModelMetaclass(ModelMetaclass):
             if isinstance(value, ForeignKey) or isinstance(value, OneToOneField):
                 if not hasattr(meta, "indexes"):
                     meta.indexes = []
-                if f"{key}_id" not in meta.indexes:
-                    meta.indexes.append(models.Index(fields=[f"{key}_id"]))
+                idx = models.Index(fields=[f"{key}_id"])
+                if idx not in meta.indexes:
+                    meta.indexes.append(idx)
 
         new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
 
