@@ -484,12 +484,10 @@
   ],
   "canvas_sdk.effects.protocol_card": [
     "ProtocolCard",
-    "RecommendMultipleCommands",
     "Recommendation"
   ],
   "canvas_sdk.effects.protocol_card.protocol_card": [
     "ProtocolCard",
-    "RecommendMultipleCommands",
     "Recommendation"
   ],
   "canvas_sdk.effects.questionnaire_result": [

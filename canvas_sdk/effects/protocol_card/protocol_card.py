@@ -16,7 +16,7 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    commands: list | None = None
+    commands: list[Any] | None = None  # todo - replace for BaseCommand
 
     @property
     def values(self) -> dict:
@@ -25,28 +25,9 @@ class Recommendation(BaseModel):
             "title": self.title,
             "button": self.button,
             "href": self.href,
-            "commands": self.commands,
-        }
-
-
-class RecommendMultipleCommands(Recommendation):
-    """
-    A Recommendation for a Protocol Card with support for multiple commands.
-    Extends Recommendation to add commands functionality.
-    """
-
-    @property
-    def values(self) -> dict:
-        """The ProtocolCard recommendation's values with commands list."""
-        commands = (
-            [command.recommendation_context() for command in self.commands] if self.commands else []
-        )
-
-        return {
-            "title": self.title,
-            "button": self.button,
-            "href": self.href,
-            "commands": commands,
+            "commands": [command.recommendation_context() for command in self.commands]
+            if self.commands
+            else [],
         }
 
 
@@ -106,21 +87,19 @@ class ProtocolCard(_BaseEffect):
         title: str = "",
         button: str = "",
         href: str | None = None,
-        command: str | None = None,
-        context: dict | None = None,
+        commands: list[Any] | None = None,  # todo - replace for BaseCommand
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""
         recommendation = Recommendation(
             title=title,
             button=button,
             href=href,
-            commands=[{"command": {"type": command}, "context": context}],
+            commands=commands,
         )
         self.recommendations.append(recommendation)
 
 
 __exports__ = (
     "Recommendation",
-    "RecommendMultipleCommands",
     "ProtocolCard",
 )
