@@ -113,7 +113,7 @@ class NoteTask(AuditedModel, IdentifiableModel):
         db_table = "canvas_sdk_data_api_notetask_001"
 
     note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="note_tasks")
-    task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks")
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks", null=True)
     patient = models.ForeignKey(
         "v1.Patient",
         on_delete=models.CASCADE,
