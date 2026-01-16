@@ -3,4 +3,4 @@ from canvas_sdk.effects.patient_facility_address.patient_facility_address import
     PatientFacilityAddress,
 )
 
-__all__ = ("PatientFacilityAddress", "AddressType")
+__all__ = __exports__ = ("PatientFacilityAddress", "AddressType")
