@@ -1,0 +1,18 @@
+name: Palliative Care Assessment
+form_type: QUES
+code_system: INTERNAL
+code: QQ_006
+can_originate_in_charting: true
+questions:
+  - content: "Functional Assessment of Chronic Illness Therapy - Palliative Care Questionnaire (FACIT-Pal)"
+    code_system: LOINC
+    code: "71007-9"
+    responses_code_system: SNOMED
+    responses_type: SING
+    responses:
+      - name: "Assessment completed - patient receiving palliative care"
+        code: "305284002"
+        value: "1"
+      - name: "Assessment completed - not receiving palliative care"
+        code: "373067005"
+        value: "0"
