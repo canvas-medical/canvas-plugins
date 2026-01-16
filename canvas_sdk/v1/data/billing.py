@@ -6,7 +6,6 @@ from canvas_sdk.v1.data.base import (
     IdentifiableModel,
     TimestampedModel,
     ValueSetTimeframeLookupQuerySet,
-    ValueSetType,
 )
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.value_set.value_set import CodeConstants, ValueSetType

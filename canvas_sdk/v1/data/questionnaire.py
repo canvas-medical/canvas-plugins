@@ -1,4 +1,5 @@
 from collections.abc import Container
+from typing import cast
 
 from django.db import models
 from django.db.models import Q
@@ -122,7 +123,7 @@ class Interview(AuditedModel, IdentifiableModel):
     class Meta:
         db_table = "canvas_sdk_data_api_interview_001"
 
-    objects = models.Manager.from_queryset(InterviewQuerySet)()
+    objects = cast(InterviewQuerySet, InterviewManager())
 
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
