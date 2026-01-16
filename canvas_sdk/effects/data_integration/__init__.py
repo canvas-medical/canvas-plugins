@@ -10,6 +10,7 @@ from .link_document_to_patient import (
     LinkDocumentConfidenceScores as LinkDocumentConfidenceScores,
 )
 from .link_document_to_patient import LinkDocumentToPatient as LinkDocumentToPatient
+from .prefill_document_fields import PrefillDocumentFields as PrefillDocumentFields
 from .remove_document_from_patient import (
     RemoveDocumentConfidenceScores as RemoveDocumentConfidenceScores,
 )
@@ -22,6 +23,7 @@ __all__ = __exports__ = (
     "JunkDocumentConfidenceScores",
     "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient",
+    "PrefillDocumentFields",
     "Priority",
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",

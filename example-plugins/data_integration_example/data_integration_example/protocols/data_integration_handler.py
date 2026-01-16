@@ -15,6 +15,7 @@ from canvas_sdk.effects.categorize_document import (
 from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
     LinkDocumentToPatient,
+    PrefillDocumentFields,
     Priority,
     ReviewMode,
 )
@@ -103,7 +104,9 @@ class DataIntegrationHandler(BaseProtocol):
         if categorize_effect:
             effects.append(categorize_effect)
 
-        log.info(f"[DOCUMENT_RECEIVED] Returning {len(effects)} effect(s) for document {document_id}")
+        log.info(
+            f"[DOCUMENT_RECEIVED] Returning {len(effects)} effect(s) for document {document_id}"
+        )
         return effects
 
     def _handle_document_linked_to_patient(self, document_id: str) -> list[Effect]:
@@ -150,7 +153,9 @@ class DataIntegrationHandler(BaseProtocol):
                     f"categorized as '{type_name}' ({report_type}) at {categorized_at}"
                 )
         else:
-            log.info(f"[DOCUMENT_CATEGORIZED] Document {document_id} uncategorized at {categorized_at}")
+            log.info(
+                f"[DOCUMENT_CATEGORIZED] Document {document_id} uncategorized at {categorized_at}"
+            )
         return []
 
     def _handle_document_reviewer_assigned(self, document_id: str) -> list[Effect]:
@@ -179,28 +184,39 @@ class DataIntegrationHandler(BaseProtocol):
                     f"assigned to {reviewer_type} '{reviewer_name}' (id={reviewer_id}) at {assigned_at}"
                 )
         else:
-            log.info(f"[DOCUMENT_REVIEWER_ASSIGNED] Document {document_id} reviewer unassigned at {assigned_at}")
+            log.info(
+                f"[DOCUMENT_REVIEWER_ASSIGNED] Document {document_id} reviewer unassigned at {assigned_at}"
+            )
         return []
 
     def _handle_document_fields_updated(self, document_id: str) -> list[Effect]:
-        """Handle DOCUMENT_FIELDS_UPDATED: Log field changes (no effect available)."""
+        """Handle DOCUMENT_FIELDS_UPDATED: Create prefill effect."""
         ctx = self.event.context
         updated_fields = ctx.get("updated_fields", [])
         updated_at = ctx.get("updated_at")
 
         if not updated_fields:
-            log.info(f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} updated with no field changes at {updated_at}")
+            log.info(
+                f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} updated with no field changes at {updated_at}"
+            )
             return []
 
-        log.info(f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} fields updated at {updated_at}:")
+        log.info(
+            f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} fields updated at {updated_at}:"
+        )
         for field in updated_fields:
             field_name = field.get("name", "Unknown")
             value = field.get("value")
             previous_value = field.get("previous_value")
             log.info(f"  - {field_name}: '{previous_value}' -> '{value}'")
 
-        log.info("[DOCUMENT_FIELDS_UPDATED] No UPDATE_DOCUMENT_FIELDS effect available yet")
-        return []
+        # Create prefill effect based on field updates
+        effects: list[Effect] = []
+        prefill_effect = self._create_prefill_document_fields_effect(document_id)
+        if prefill_effect:
+            effects.append(prefill_effect)
+
+        return effects
 
     def _handle_document_reviewed(self, document_id: str) -> list[Effect]:
         """Handle DOCUMENT_REVIEWED: Log review completion (no effect available)."""
@@ -239,7 +255,9 @@ class DataIntegrationHandler(BaseProtocol):
 
         if deleted_by:
             deleted_by_name = deleted_by.get("name", "Unknown")
-            log.info(f"[DOCUMENT_DELETED] Document {document_id} deleted by '{deleted_by_name}' at {deleted_at}")
+            log.info(
+                f"[DOCUMENT_DELETED] Document {document_id} deleted by '{deleted_by_name}' at {deleted_at}"
+            )
         else:
             log.info(f"[DOCUMENT_DELETED] Document {document_id} deleted at {deleted_at}")
 
@@ -279,9 +297,7 @@ class DataIntegrationHandler(BaseProtocol):
         # Fetch first available team (optional)
         team = Team.objects.first()
 
-        log.info(
-            f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}"
-        )
+        log.info(f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}")
 
         try:
             # Prefer staff over team assignment
@@ -357,11 +373,45 @@ class DataIntegrationHandler(BaseProtocol):
                 confidence_scores=confidence_scores,
             )
 
-            log.info(
-                f"Categorizing document {document_id} as {document_type['name']}"
-            )
+            log.info(f"Categorizing document {document_id} as {document_type['name']}")
             return effect.apply()
 
         except (ValidationError, KeyError) as e:
             log.error(f"Error creating CategorizeDocument effect: {e}")
+            return None
+
+    def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
+        """Create a PrefillDocumentFields effect with sample data."""
+        try:
+            effect = PrefillDocumentFields(
+                document_id=str(document_id),
+                templates=[
+                    {
+                        "templateId": 620,
+                        "templateName": "Thyroid Profile With Tsh",
+                        "fields": {
+                            "11580-8": {
+                                "value": "2.35",
+                                "unit": "uIU/mL",
+                                "referenceRange": "0.45 - 4.50",
+                                "annotations": [{"text": "AI 95%", "color": "#4CAF50"}],
+                            },
+                            "3016-3": {
+                                "value": "1.2",
+                                "unit": "ng/dL",
+                                "referenceRange": "0.8 - 1.8",
+                                "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                            },
+                        },
+                    }
+                ],
+                annotations=[
+                    {"text": "1 template matched", "color": "#2196F3"},
+                    {"text": "2 fields extracted", "color": "#4CAF50"},
+                ],
+            )
+            log.info(f"Created PrefillDocumentFields effect for document {document_id}")
+            return effect.apply()
+        except ValidationError as e:
+            log.error(f"Validation error creating PrefillDocumentFields: {e}")
             return None
