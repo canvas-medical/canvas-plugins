@@ -168,22 +168,41 @@ def create_plugin_schema(plugin_name: str) -> None:
             "select count(*) as count from pg_catalog.pg_namespace where nspname = %s",
             (plugin_name,),
         )
-        rows = cursor.fetchall()
-        if rows[0]["count"] == 0:
+        rows = cursor.fetchone()
+        if rows["count"] == 0:
             # Execute SQL file for plugin schema initialization
-            sql_file_path = Path(__file__).parent / "init_plugin_schema.sql"
-            with open(sql_file_path) as f:
+            with open(Path(__file__).parent / "init_plugin_schema.sql") as f:
                 sql_content = f.read()
                 # Replace placeholder with actual plugin name
                 sql_content = sql_content.replace("{plugin_name}", plugin_name)
                 conn.cursor().execute(sql_content)
+        # Execute SQL file to populate content types and create partitions. Always run this
+        # to pick up any changes to available models
+        with open(Path(__file__).parent / "init_plugin_partitions.sql") as f:
+            sql_content = f.read()
+            # Replace placeholder with actual plugin name
+            sql_content = sql_content.replace("{plugin_name}", plugin_name)
+            conn.cursor().execute(sql_content)
+        conn.commit()
 
-            conn.commit()
 
+SQL_STATEMENT_DELIMITER = "\n\n"
 
 def generate_create_table_sql(plugin_name: str, model_class) -> str:
-    """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition."""
-    table_name = f"{plugin_name}.{model_class._meta.db_table}"
+    """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition.
+
+    Automatically detects SQLite and generates compatible SQL without schema prefixes.
+    """
+    from django.conf import settings
+
+    # Detect if we're using SQLite
+    is_sqlite = 'sqlite3' in settings.DATABASES['default']['ENGINE']
+
+    # For SQLite, don't use schema prefix; for PostgreSQL, use plugin_name.table_name
+    if is_sqlite:
+        table_name = model_class._meta.db_table
+    else:
+        table_name = f"{plugin_name}.{model_class._meta.db_table}"
 
     # Separate primary key and regular fields
     pk_fields = []
@@ -195,27 +214,41 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
         else:
             regular_fields.append(field)
 
-    # Build initial table with only primary key fields
+    # Build initial table
+    # For SQLite: include all fields in CREATE TABLE (no dynamic ALTER TABLE support)
+    # For PostgreSQL: only include primary key, add other fields via ALTER TABLE
     field_definitions = []
-    for field in pk_fields:
-        field_sql = generate_field_sql(field)
-        field_definitions.append(f"    {field.column} {field_sql}")
 
-    # Construct CREATE TABLE statement with minimal columns
+    if is_sqlite:
+        # SQLite: include all fields in CREATE TABLE
+        for field in model_class._meta.local_fields:
+            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            field_definitions.append(f"    {field.column} {field_sql}")
+    else:
+        # PostgreSQL: only primary key fields initially
+        for field in pk_fields:
+            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            field_definitions.append(f"    {field.column} {field_sql}")
+
+    # Construct CREATE TABLE statement
     fields_sql = ",\n".join(field_definitions)
     create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n{fields_sql}\n);"
 
     # Generate ALTER TABLE statements for regular fields
+    # SQLite doesn't support "IF NOT EXISTS" in ALTER TABLE, so for SQLite we'll
+    # include all columns in the initial CREATE TABLE instead
     alter_statements = []
-    for field in regular_fields:
-        field_sql = generate_field_sql(field)
-        alter_statement = f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
-        alter_statements.append(alter_statement)
+    if not is_sqlite:
+        # PostgreSQL: use dynamic column addition with IF NOT EXISTS
+        for field in regular_fields:
+            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            alter_statement = f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
+            alter_statements.append(alter_statement)
 
     # Build index definitions
     index_statements = []
     for index in model_class._meta.indexes:
-        index_sql = generate_index_sql(plugin_name, model_class._meta.db_table, index)
+        index_sql = generate_index_sql(plugin_name, model_class._meta.db_table, index, is_sqlite=is_sqlite)
         index_statements.append(index_sql)
 
     # Combine all statements
@@ -225,11 +258,19 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
     if index_statements:
         all_statements.extend(index_statements)
 
-    return "\n\n".join(all_statements)
+    return SQL_STATEMENT_DELIMITER.join(all_statements)
 
 
-def generate_field_sql(field) -> str:
-    """Convert Django field to PostgreSQL column definition."""
+def generate_field_sql(field, is_sqlite: bool = False) -> str:
+    """Convert Django field to database-specific column definition.
+
+    Args:
+        field: Django model field instance
+        is_sqlite: If True, generate SQLite-compatible types; otherwise PostgreSQL types
+
+    Returns:
+        SQL column type definition
+    """
     from django.db.models import (
         BigAutoField,
         BooleanField,
@@ -249,32 +290,51 @@ def generate_field_sql(field) -> str:
     # default value on a large table (table rewrite), or needing to alter a datatype to chnage a constraint
 
     if isinstance(field, BigAutoField):
-        return "SERIAL PRIMARY KEY"
+        return "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite else "SERIAL PRIMARY KEY"
     elif isinstance(field, CharField) or isinstance(field, TextField):
         return "TEXT"
     elif isinstance(field, IntegerField):
         return "INTEGER"
     elif isinstance(field, DateTimeField):
-        return "TIMESTAMP WITH TIME ZONE"
+        return "TEXT" if is_sqlite else "TIMESTAMP WITH TIME ZONE"
     elif isinstance(field, BooleanField):
-        return "BOOLEAN"
+        return "INTEGER" if is_sqlite else "BOOLEAN"
     elif isinstance(field, ForeignKey) or isinstance(field, OneToOneField):
         return "INTEGER"
     elif isinstance(field, DecimalField):
-        max_digits = getattr(field, "max_digits", 10)
-        decimal_places = getattr(field, "decimal_places", 2)
-        return f"NUMERIC({max_digits},{decimal_places})"
+        if is_sqlite:
+            return "REAL"
+        else:
+            max_digits = getattr(field, "max_digits", 10)
+            decimal_places = getattr(field, "decimal_places", 2)
+            return f"NUMERIC({max_digits},{decimal_places})"
     elif isinstance(field, JSONField):
-        return "JSONB"
+        return "TEXT" if is_sqlite else "JSONB"
     else:
         # Fallback for unknown field types
         return "TEXT"
 
 
-def generate_index_sql(plugin_name: str, table_name: str, index: Index) -> str:
-    """Generate CREATE INDEX SQL from Django Index object."""
+def generate_index_sql(plugin_name: str, table_name: str, index: Index, is_sqlite: bool = False) -> str:
+    """Generate CREATE INDEX SQL from Django Index object.
+
+    Args:
+        plugin_name: Name of the plugin
+        table_name: Name of the table (without schema prefix)
+        index: Django Index object
+        is_sqlite: If True, generate SQLite-compatible SQL without schema prefix
+
+    Returns:
+        CREATE INDEX SQL statement
+    """
     index_name = f"{plugin_name}_{index.name}"
-    table_full_name = f"{plugin_name}.{table_name}"
+
+    # For SQLite, don't use schema prefix; for PostgreSQL, use plugin_name.table_name
+    if is_sqlite:
+        table_full_name = table_name
+    else:
+        table_full_name = f"{plugin_name}.{table_name}"
+
     field_list = ", ".join(index.fields)
 
     return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
@@ -317,11 +377,23 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
                             print(f"Generated SQL for {name}:")
                             print(create_sql)
 
-                            # Execute the CREATE TABLE statement
+                            # Execute the CREATE TABLE statements
+                            # SQLite requires executing one statement at a time
+                            from django.conf import settings
                             from django.db import connection
 
+                            is_sqlite = 'sqlite3' in settings.DATABASES['default']['ENGINE']
+
                             with connection.cursor() as cursor:
-                                cursor.execute(create_sql)
+                                if is_sqlite:
+                                    # Split by double newline and execute each statement separately
+                                    for statement in create_sql.split(SQL_STATEMENT_DELIMITER):
+                                        statement = statement.strip()
+                                        if statement:
+                                            cursor.execute(statement)
+                                else:
+                                    # PostgreSQL can handle multiple statements
+                                    cursor.execute(create_sql)
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
