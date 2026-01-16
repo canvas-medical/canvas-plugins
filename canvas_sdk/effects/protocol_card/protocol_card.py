@@ -1,9 +1,12 @@
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+if TYPE_CHECKING:
+    from canvas_sdk.commands.base import _BaseCommand
 
 
 class Recommendation(BaseModel):
@@ -16,7 +19,7 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    commands: list[Any] | None = None  # todo - replace for BaseCommand
+    commands: list["_BaseCommand"] | None = None
 
     @property
     def values(self) -> dict:
@@ -87,7 +90,7 @@ class ProtocolCard(_BaseEffect):
         title: str = "",
         button: str = "",
         href: str | None = None,
-        commands: list[Any] | None = None,  # todo - replace for BaseCommand
+        commands: list["_BaseCommand"] | None = None,
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""
         recommendation = Recommendation(
