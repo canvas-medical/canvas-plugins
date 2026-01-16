@@ -1,7 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, Model, TimestampedModel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 
 
@@ -106,30 +106,17 @@ class TaskTaskLabel(Model):
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, null=True)
 
 
-class NoteTask(IdentifiableModel):
+class NoteTask(AuditedModel, IdentifiableModel):
     """Note Task."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_notetask_001"
 
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-    originator = models.ForeignKey("v1.CanvasUser", on_delete=models.DO_NOTHING, related_name="+")
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    note = models.ForeignKey(
-        "v1.Note", on_delete=models.CASCADE, related_name="note_tasks", null=True
-    )
-    task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks", null=True)
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, related_name="note_tasks")
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, related_name="note_tasks")
     patient = models.ForeignKey(
         "v1.Patient",
         on_delete=models.CASCADE,
-        null=True,
     )
     original_title = models.TextField(blank=True, default="")
     original_assignee = models.ForeignKey(
