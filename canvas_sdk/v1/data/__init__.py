@@ -33,6 +33,7 @@ from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
 from .encounter import Encounter
+from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -176,6 +177,8 @@ __all__ = __exports__ = (
     "EligibilitySummary",
     "Encounter",
     "Event",
+    "ExternalEvent",
+    "ExternalVisit",
     "Facility",
     "Goal",
     "ImagingOrder",
