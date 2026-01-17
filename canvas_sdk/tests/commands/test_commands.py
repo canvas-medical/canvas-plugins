@@ -38,7 +38,7 @@ from canvas_sdk.tests.commands.utils import (
     trigger_commit_command,
     trigger_edit_command,
     trigger_originate,
-    write_protocol_code,
+    write_handler_code,
 )
 from canvas_sdk.tests.shared import (
     MaskedValue,
@@ -174,7 +174,7 @@ def install_plugin_commands(
         data = extract_return_statement(get_command_data) if get_command_data else "{}"
         commands.append(CommandCode(**{"data": data, "class": command_cls}))
 
-    write_protocol_code(cli_runner, plugin_dir, commands)
+    write_handler_code(cli_runner, plugin_dir, commands)
     install_plugin(plugin_dir / package_name, token)
     sleep(10)  # Wait for the plugin to be installed
 
