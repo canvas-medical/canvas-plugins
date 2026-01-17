@@ -1,0 +1,16 @@
+[project]
+authors = [
+  {email = "engineering@canvasmedical.com", name = "Canvas Team"}
+]
+dependencies = [
+  "canvas[test-utils]"
+]
+description = "CMS138v14 - Preventive Care and Screening: Tobacco Use Screening and Cessation Intervention. Percentage of patients aged 12 years and older who were screened for tobacco use one or more times during the measurement period AND who received tobacco cessation intervention if identified as a tobacco user."
+license = "MIT"
+name = "cms138v14_preventive_care_and_screening_tobacco_use_screening_and_cessation_intervention"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+
+[tool.pytest.ini_options]
+python_files = ["*_tests.py", "test_*.py", "tests.py"]
