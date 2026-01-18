@@ -210,6 +210,9 @@ THIRD_PARTY_MODULES = {
         "now",
         "utcnow",
     },
+    "django.contrib.postgres.indexes": {
+        "GinIndex",
+    },
     "django.db.models": {
         "Avg",
         "BigIntegerField",
