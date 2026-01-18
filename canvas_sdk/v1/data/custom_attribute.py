@@ -35,6 +35,7 @@ class CustomAttribute(Model):
 
     # Value storage fields - only one should be populated per attribute
     text_value = models.TextField(null=True, blank=True)
+    date_value = models.DateTimeField(null=True, blank=True)
     timestamp_value = models.DateTimeField(null=True, blank=True)
     int_value = models.IntegerField(null=True, blank=True)
     decimal_value = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
@@ -49,6 +50,8 @@ class CustomAttribute(Model):
         """Return the actual value regardless of which field it's stored in."""
         if self.text_value is not None:
             return self.text_value
+        elif self.date_value is not None:
+            return self.date_value
         elif self.timestamp_value is not None:
             return self.timestamp_value
         elif self.int_value is not None:
@@ -62,10 +65,11 @@ class CustomAttribute(Model):
         return None
 
     @value.setter
-    def value(self, val: Any) -> None:
+    def value(self, value: Any) -> None:
         """Set the value in the appropriate field based on type."""
         # Clear all value fields first
         self.text_value = None
+        self.date_value = None
         self.timestamp_value = None
         self.int_value = None
         self.decimal_value = None
@@ -74,21 +78,23 @@ class CustomAttribute(Model):
 
         # Set the appropriate field based on value type
         # Note: Check bool BEFORE int since bool is a subclass of int in Python
-        if isinstance(val, bool):
-            self.bool_value = val
-        elif isinstance(val, str):
-            self.text_value = val
-        elif isinstance(val, int):
-            self.int_value = val
-        elif isinstance(val, (float, decimal.Decimal)):
-            self.decimal_value = val
-        elif isinstance(val, datetime.datetime):
-            self.timestamp_value = val
-        elif val is None:
+        if isinstance(value, bool):
+            self.bool_value = value
+        elif isinstance(value, str):
+            self.text_value = value
+        elif isinstance(value, int):
+            self.int_value = value
+        elif isinstance(value, (float, decimal.Decimal)):
+            self.decimal_value = value
+        elif isinstance(value, datetime.datetime):
+            self.timestamp_value = value
+        elif isinstance(value, datetime.date):
+            self.date_value = value
+        elif value is None:
             pass  # All fields already cleared
         else:
             # Store complex objects as JSON
-            self.json_value = val
+            self.json_value = value
 
 
 class CustomAttributeAwareManager(models.Manager):
@@ -266,7 +272,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
             if name in existing_attrs:
                 # Update existing attribute
                 attr = existing_attrs[name]
-                self._set_attribute_value_fields(attr, value)
+                attr.value = value
                 to_update.append(attr)
             else:
                 # Create new attribute
@@ -275,7 +281,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
                     object_id=self.pk,
                     name=name
                 )
-                self._set_attribute_value_fields(attr, value)
+                attr.value = value
                 to_create.append(attr)
 
         # Perform bulk operations
@@ -291,36 +297,6 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
 
         return created_attrs + to_update
 
-    def _set_attribute_value_fields(self, attr: 'CustomAttribute', value: Any) -> None:
-        """Set the appropriate value fields on a CustomAttribute based on value type."""
-        import datetime
-        import decimal
-
-        # Clear all value fields first
-        attr.text_value = None
-        attr.timestamp_value = None
-        attr.int_value = None
-        attr.decimal_value = None
-        attr.bool_value = None
-        attr.json_value = None
-
-        # Set the appropriate field based on value type
-        # Note: Check bool BEFORE int since bool is a subclass of int in Python
-        if isinstance(value, bool):
-            attr.bool_value = value
-        elif isinstance(value, str):
-            attr.text_value = value
-        elif isinstance(value, int):
-            attr.int_value = value
-        elif isinstance(value, (float, decimal.Decimal)):
-            attr.decimal_value = value
-        elif isinstance(value, datetime.datetime):
-            attr.timestamp_value = value
-        elif value is None:
-            pass  # All fields already cleared
-        else:
-            # Store complex objects as JSON
-            attr.json_value = value
 
     def delete_attribute(self, name: str) -> bool:
         """Delete a custom attribute by name. Returns True if deleted, False if not found."""
@@ -352,7 +328,7 @@ class AttributeHub(Model, CustomAttributeMixin):
     externally_exposable_id = models.CharField(max_length=100)
 
     def __str__(self) -> str:
-        return f"AttributeHub({self.type}): {self.dbid}"
+        return f"AttributeHub({self.type}): {self.externally_exposable_id}"
 
 
 __exports__ = (

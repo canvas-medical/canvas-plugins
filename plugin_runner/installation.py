@@ -13,7 +13,8 @@ from urllib import parse
 import psycopg
 import requests
 import sentry_sdk
-from django.db.models import Index
+from django.contrib.postgres.indexes import GinIndex
+from django.db.models import Index, DateField
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -295,6 +296,8 @@ def generate_field_sql(field, is_sqlite: bool = False) -> str:
         return "TEXT"
     elif isinstance(field, IntegerField):
         return "INTEGER"
+    elif isinstance(field, DateField):
+        return "TEXT" if is_sqlite else "DATE"
     elif isinstance(field, DateTimeField):
         return "TEXT" if is_sqlite else "TIMESTAMP WITH TIME ZONE"
     elif isinstance(field, BooleanField):
@@ -335,9 +338,21 @@ def generate_index_sql(plugin_name: str, table_name: str, index: Index, is_sqlit
     else:
         table_full_name = f"{plugin_name}.{table_name}"
 
-    field_list = ", ".join(index.fields)
+    field_parts = []
+    for field in index.fields:
+        if field.startswith("-"):
+            # Descending order - remove the '-' prefix
+            field_parts.append(f"{field[1:]} DESC")
+        else:
+            # Ascending order (default)
+            field_parts.append(field)
+    field_list = ", ".join(field_parts)
 
-    return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
+    # Support GIN indexes on JSONB fields
+    if not is_sqlite and isinstance(index, GinIndex):
+        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} USING GIN({field_list});"
+    else:
+        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
 
 
 def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:

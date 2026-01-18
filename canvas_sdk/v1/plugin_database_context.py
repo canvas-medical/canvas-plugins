@@ -58,8 +58,5 @@ def plugin_database_context(plugin_name: str):
 
 
 __exports__ = (
-    "set_current_plugin",
-    "get_current_plugin",
-    "clear_current_plugin",
-    "plugin_context",
+    "get_current_plugin"
 )

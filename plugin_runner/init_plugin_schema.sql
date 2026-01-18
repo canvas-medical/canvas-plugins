@@ -6,6 +6,7 @@ create table if not exists {plugin_name}.custom_attribute (
     object_id int not null,
     name text not null,
     text_value text,
+    date_value date,
     timestamp_value timestamp with time zone,
     int_value int,
     decimal_value numeric(20,10),
@@ -16,6 +17,7 @@ create table if not exists {plugin_name}.custom_attribute (
 
 create index on {plugin_name}.custom_attribute (dbid);
 create index on {plugin_name}.custom_attribute (text_value) where text_value is not null;
+create index on {plugin_name}.custom_attribute (date_value) where date_value is not null;
 create index on {plugin_name}.custom_attribute (timestamp_value) where timestamp_value is not null;
 create index on {plugin_name}.custom_attribute (int_value) where int_value is not null;
 create index on {plugin_name}.custom_attribute (decimal_value) where decimal_value is not null;
@@ -29,7 +31,8 @@ grant insert, update, delete on {plugin_name}.custom_attribute to canvas_sdk_rea
 create table if not exists {plugin_name}.attribute_hub (
     dbid serial primary key,
     type varchar(100) not null,
-    externally_exposable_id varchar(100) not null
+    externally_exposable_id varchar(100) not null,
+    unique(type, externally_exposable_id)
 );
 
 grant usage on {plugin_name}.attribute_hub_dbid_seq to canvas_sdk_read_only;
