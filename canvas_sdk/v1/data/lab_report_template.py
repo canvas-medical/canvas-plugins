@@ -3,7 +3,7 @@ from typing import Self
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import BaseReportTemplateQuerySet, IdentifiableModel, Model
 
 
 class FieldType(models.TextChoices):
@@ -21,16 +21,8 @@ class FieldType(models.TextChoices):
     DATE = "date", "Date"
 
 
-class LabReportTemplateQuerySet(models.QuerySet):
+class LabReportTemplateQuerySet(BaseReportTemplateQuerySet):
     """QuerySet for LabReportTemplate with custom filtering methods."""
-
-    def active(self) -> Self:
-        """Return templates that are active."""
-        return self.filter(active=True)
-
-    def inactive(self) -> Self:
-        """Return templates that are inactive."""
-        return self.filter(active=False)
 
     def search(self, query: str) -> Self:
         """Search templates by name or search_keywords."""
@@ -41,14 +33,6 @@ class LabReportTemplateQuerySet(models.QuerySet):
     def point_of_care(self) -> Self:
         """Return Point of Care (POC) test templates."""
         return self.filter(poc=True)
-
-    def custom(self) -> Self:
-        """Return custom (user-created) templates."""
-        return self.filter(custom=True)
-
-    def builtin(self) -> Self:
-        """Return built-in (system) templates."""
-        return self.filter(custom=False)
 
 
 class LabReportTemplate(IdentifiableModel):

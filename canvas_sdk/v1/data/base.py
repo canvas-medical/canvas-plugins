@@ -96,6 +96,39 @@ class BaseQuerySet(models.QuerySet):
     pass
 
 
+class BaseReportTemplateQuerySet(BaseQuerySet):
+    """Base QuerySet for report templates with common filtering methods.
+
+    Provides shared filtering methods for template models like:
+    - SpecialtyReportTemplate
+    - LabReportTemplate
+    - ImagingReportTemplate
+    """
+
+    def active(self) -> Self:
+        """Filter to active templates only."""
+        return self.filter(active=True)
+
+    def inactive(self) -> Self:
+        """Filter to inactive templates only."""
+        return self.filter(active=False)
+
+    def search(self, query: str) -> Self:
+        """Search templates by search_keywords field.
+
+        Subclasses may override to search additional fields.
+        """
+        return self.filter(search_keywords__icontains=query)
+
+    def custom(self) -> Self:
+        """Filter to custom (user-created) templates."""
+        return self.filter(custom=True)
+
+    def builtin(self) -> Self:
+        """Filter to built-in (system) templates."""
+        return self.filter(custom=False)
+
+
 if TYPE_CHECKING:
     # For type checking: Define the Protocol with method signatures
     class QuerySetProtocol(Protocol):
