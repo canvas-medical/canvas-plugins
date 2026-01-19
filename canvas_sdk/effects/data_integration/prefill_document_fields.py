@@ -205,7 +205,9 @@ class PrefillDocumentFields(_BaseEffect):
 
         return errors
 
-    def _validate_annotation(self, annotation: dict[str, Any], path: str) -> list[InitErrorDetails]:
+    def _validate_annotation(
+        self, annotation: Annotation | dict[str, Any], path: str
+    ) -> list[InitErrorDetails]:
         """Validate a single annotation structure."""
         errors: list[InitErrorDetails] = []
 

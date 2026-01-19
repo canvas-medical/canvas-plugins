@@ -1,4 +1,5 @@
 import json
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
@@ -337,7 +338,7 @@ class TestPrefillDocumentFieldsAnnotationValidation:
                         "fields": {"f1": {"value": "v1"}},
                     }
                 ],
-                annotations=[{"color": "#FF0000"}],
+                annotations=cast(Any, [{"color": "#FF0000"}]),
             )
 
         assert "text" in str(exc_info.value).lower()
@@ -354,7 +355,7 @@ class TestPrefillDocumentFieldsAnnotationValidation:
                         "fields": {"f1": {"value": "v1"}},
                     }
                 ],
-                annotations=[{"text": "AI 95%"}],
+                annotations=cast(Any, [{"text": "AI 95%"}]),
             )
 
         assert "color" in str(exc_info.value).lower()
