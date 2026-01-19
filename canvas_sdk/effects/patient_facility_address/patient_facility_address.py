@@ -1,5 +1,5 @@
 import json
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +12,7 @@ from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.patient import PatientFacilityAddress as PatientFacilityAddressModel
 
 
-class AddressType(str, Enum):
+class AddressType(StrEnum):
     """Valid address types for PatientFacilityAddress."""
 
     PHYSICAL = "physical"
@@ -93,7 +93,7 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
     # Address-specific fields
     room_number: str | None = None
-    address_type: str | None = None  # "physical" or "both"
+    address_type: AddressType | None = None
 
     def _has_facility_creation_fields(self) -> bool:
         """Check if any required facility creation fields are set."""
@@ -109,38 +109,56 @@ class PatientFacilityAddress(TrackableFieldsModel):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate the patient facility address data."""
         errors = super()._get_error_details(method)
+        if method in ["create", "update"]:
+            if method == "create":
+                if self.id:
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            "ID should not be set when creating a new patient facility address.",
+                            self.id,
+                        )
+                    )
+                if not self.patient_id:
+                    errors.append(
+                        self._create_error_detail(
+                            "missing",
+                            "Field 'patient_id' is required to create a patient facility address.",
+                            self.patient_id,
+                        )
+                    )
+                elif not Patient.objects.filter(id=self.patient_id).exists():
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            f"Patient with ID {self.patient_id} does not exist.",
+                            self.patient_id,
+                        )
+                    )
 
-        if method == "create":
-            if self.id:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "ID should not be set when creating a new patient facility address.",
-                        self.id,
+            if method == "update":
+                if not self.id:
+                    errors.append(
+                        self._create_error_detail(
+                            "missing",
+                            "Field 'id' is required to update a patient facility address.",
+                            self.id,
+                        )
                     )
-                )
-            if not self.patient_id:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'patient_id' is required to create a patient facility address.",
-                        self.patient_id,
+                elif not PatientFacilityAddressModel.objects.filter(id=self.id).exists():
+                    errors.append(
+                        self._create_error_detail(
+                            "value",
+                            f"Patient facility address with ID {self.id} does not exist.",
+                            self.id,
+                        )
                     )
-                )
-            elif not Patient.objects.filter(id=self.patient_id).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Patient with ID {self.patient_id} does not exist.",
-                        self.patient_id,
-                    )
-                )
 
             # Must have either facility_id OR facility creation fields
             has_facility_id = self.facility_id is not None
             has_creation_fields = self._has_facility_creation_fields()
 
-            if not has_facility_id and not has_creation_fields:
+            if method == "create" and not has_facility_id and not has_creation_fields:
                 errors.append(
                     self._create_error_detail(
                         "missing",
@@ -202,98 +220,14 @@ class PatientFacilityAddress(TrackableFieldsModel):
                         )
                     )
 
-            if self.address_type and self.address_type not in [t.value for t in AddressType]:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Invalid address_type '{self.address_type}'. Must be one of: {[t.value for t in AddressType]}",
-                        self.address_type,
-                    )
-                )
-
-        if method == "update":
-            if not self.id:
-                errors.append(
-                    self._create_error_detail(
-                        "missing",
-                        "Field 'id' is required to update a patient facility address.",
-                        self.id,
-                    )
-                )
-            elif not PatientFacilityAddressModel.objects.filter(id=self.id).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Patient facility address with ID {self.id} does not exist.",
-                        self.id,
-                    )
-                )
-
-            # For update, can provide facility_id OR facility creation fields (to create new and switch)
-            has_facility_id = self.facility_id is not None
-            has_creation_fields = self._has_facility_creation_fields()
-
-            if has_facility_id and has_creation_fields:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Cannot specify both 'facility_id' and facility creation fields. Use one or the other.",
-                        None,
-                    )
-                )
-            elif self.facility_id is not None:
-                facility_id = self.facility_id
-                if not Facility.objects.filter(id=facility_id).exists():
-                    errors.append(
-                        self._create_error_detail(
-                            "value",
-                            f"Facility with ID {facility_id} does not exist.",
-                            facility_id,
-                        )
-                    )
-            elif has_creation_fields:
-                # Validate required fields for facility creation
-                if not self.facility_name:
-                    errors.append(
-                        self._create_error_detail(
-                            "missing",
-                            "Field 'facility_name' is required when creating a new facility.",
-                            self.facility_name,
-                        )
-                    )
-                if not self.facility_city:
-                    errors.append(
-                        self._create_error_detail(
-                            "missing",
-                            "Field 'facility_city' is required when creating a new facility.",
-                            self.facility_city,
-                        )
-                    )
-                if not self.facility_state_code:
-                    errors.append(
-                        self._create_error_detail(
-                            "missing",
-                            "Field 'facility_state_code' is required when creating a new facility.",
-                            self.facility_state_code,
-                        )
-                    )
-                if not self.facility_postal_code:
-                    errors.append(
-                        self._create_error_detail(
-                            "missing",
-                            "Field 'facility_postal_code' is required when creating a new facility.",
-                            self.facility_postal_code,
-                        )
-                    )
-
-            if self.address_type and self.address_type not in [t.value for t in AddressType]:
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        f"Invalid address_type '{self.address_type}'. Must be one of: {[t.value for t in AddressType]}",
-                        self.address_type,
-                    )
-                )
+            # if self.address_type and self.address_type not in [t.value for t in AddressType]:
+            #     errors.append(
+            #         self._create_error_detail(
+            #             "value",
+            #             f"Invalid address_type '{self.address_type}'. Must be one of: {[t.value for t in AddressType]}",
+            #             self.address_type,
+            #         )
+            #     )
 
         if method == "delete":
             if not self.id:

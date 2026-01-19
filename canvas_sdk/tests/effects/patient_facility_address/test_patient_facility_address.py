@@ -75,7 +75,7 @@ def valid_create_with_all_fields() -> dict[str, Any]:
         "facility_state_code": "MA",
         "facility_postal_code": "02101",
         "room_number": "101A",
-        "address_type": "physical",
+        "address_type": AddressType.PHYSICAL,
     }
 
 
@@ -114,7 +114,7 @@ def test_create_with_facility_id_and_optional_fields(
     address = PatientFacilityAddress(
         **valid_create_with_facility_id,
         room_number="202B",
-        address_type="both",
+        address_type=AddressType.BOTH,
     )
 
     address.create()
@@ -331,12 +331,11 @@ def test_create_fails_with_invalid_address_type(
     valid_create_with_facility_id: dict[str, Any],
 ) -> None:
     """Test create validation fails when address_type is invalid."""
-    address = PatientFacilityAddress(
-        **valid_create_with_facility_id,
-        address_type="invalid",
-    )
-
     with pytest.raises(ValidationError):
+        address = PatientFacilityAddress(
+            **valid_create_with_facility_id,
+            address_type="invalid",  # type: ignore[arg-type]
+        )
         address.create()
 
 
@@ -494,12 +493,11 @@ def test_update_fails_with_invalid_address_type(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
     """Test update validation fails when address_type is invalid."""
-    address = PatientFacilityAddress(
-        id="address-123",
-        address_type="invalid",
-    )
-
     with pytest.raises(ValidationError):
+        address = PatientFacilityAddress(
+            id="address-123",
+            address_type="invalid",  # type: ignore[arg-type]
+        )
         address.update()
 
 
@@ -647,7 +645,7 @@ def test_address_type_physical_is_valid(
     """Test 'physical' address type is valid."""
     address = PatientFacilityAddress(
         **valid_create_with_facility_id,
-        address_type="physical",
+        address_type=AddressType.PHYSICAL,
     )
     errors = address._get_error_details("create")
     assert not any("address_type" in str(e) for e in errors)
@@ -660,7 +658,7 @@ def test_address_type_both_is_valid(
     """Test 'both' address type is valid."""
     address = PatientFacilityAddress(
         **valid_create_with_facility_id,
-        address_type="both",
+        address_type=AddressType.BOTH,
     )
     errors = address._get_error_details("create")
     assert not any("address_type" in str(e) for e in errors)
