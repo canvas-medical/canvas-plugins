@@ -1,6 +1,7 @@
 import json
 
 from canvas_sdk.effects.categorize_document import (
+    AnnotationItem,
     CategorizeDocument,
     ConfidenceScores,
     DocumentType,
@@ -86,10 +87,18 @@ class CategorizeDocumentHandler(BaseHandler):
 
         log.info(f"{LOG_PREFIX} Categorizing document {document_id} as {document_type['name']}")
 
+        annotations: list[AnnotationItem] = [
+            {"text": "AI 95%", "color": "#00AA00"},
+            {"text": "Auto-detected", "color": "#2196F3"},
+        ]
+        log.info(f"{LOG_PREFIX} Annotations: {json.dumps(annotations, indent=2)}")
+
         effect = CategorizeDocument(
             document_id=document_id,
             document_type=document_type,
             confidence_scores=confidence_scores,
+            annotations=annotations,
+            source_protocol="categorize_document_plugin_v1",
         )
         log.info(f"{LOG_PREFIX} Effect created successfully")
 

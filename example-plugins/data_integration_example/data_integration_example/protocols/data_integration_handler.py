@@ -4,11 +4,10 @@ from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import (
+    AnnotationItem as CategorizeDocumentAnnotation,
     CategorizeDocument,
-    DocumentType,
-)
-from canvas_sdk.effects.categorize_document import (
     ConfidenceScores as CategorizeDocumentConfidenceScores,
+    DocumentType,
 )
 from canvas_sdk.effects.data_integration import (
     Annotation,
@@ -374,10 +373,17 @@ class DataIntegrationHandler(BaseProtocol):
                 },
             }
 
+            annotations: list[CategorizeDocumentAnnotation] = [
+                {"text": "AI 90%", "color": "#00AA00"},
+                {"text": "Data integration", "color": "#2196F3"},
+            ]
+
             effect = CategorizeDocument(
                 document_id=str(document_id),
                 document_type=document_type,
                 confidence_scores=confidence_scores,
+                annotations=annotations,
+                source_protocol="data_integration_example_v1",
             )
 
             log.info(f"Categorizing document {document_id} as {document_type['name']}")
