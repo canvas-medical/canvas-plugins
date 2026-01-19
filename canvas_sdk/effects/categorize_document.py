@@ -66,6 +66,19 @@ class DocumentType(TypedDict):
     template_type: str | None
 
 
+class AnnotationItem(TypedDict):
+    """
+    Annotation item with text and color for UI display.
+
+    Attributes:
+        text: The annotation label (e.g., "AI 97%", "Auto-detected")
+        color: Hex color code (e.g., "#FF0000" for red)
+    """
+
+    text: str
+    color: str
+
+
 VALID_REPORT_TYPES = frozenset(["CLINICAL", "ADMINISTRATIVE"])
 VALID_TEMPLATE_TYPES = frozenset(
     ["LabReportTemplate", "ImagingReportTemplate", "SpecialtyReportTemplate"]
@@ -97,6 +110,8 @@ class CategorizeDocument(_BaseEffect):
     document_id: str | int | None = None
     document_type: DocumentType | dict[str, Any] | None = None
     confidence_scores: ConfidenceScores | None = None
+    annotations: list[AnnotationItem] | None = None
+    source_protocol: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -138,6 +153,10 @@ class CategorizeDocument(_BaseEffect):
 
         if self.confidence_scores is not None:
             result["confidence_scores"] = self.confidence_scores
+        if self.annotations is not None:
+            result["annotations"] = self.annotations
+        if self.source_protocol is not None:
+            result["source_protocol"] = self.source_protocol
 
         return result
 
@@ -230,6 +249,7 @@ class CategorizeDocument(_BaseEffect):
 
 
 __exports__ = (
+    "AnnotationItem",
     "ConfidenceScores",
     "DocumentType",
     "DocumentTypeConfidenceScores",
