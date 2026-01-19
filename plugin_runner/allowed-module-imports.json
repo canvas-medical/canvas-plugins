@@ -353,6 +353,8 @@
     "JunkDocument",
     "JunkDocumentConfidenceScores",
     "LinkDocumentToPatient",
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
     "Priority",
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
@@ -369,8 +371,11 @@
     "JunkDocumentConfidenceScores"
   ],
   "canvas_sdk.effects.data_integration.link_document_to_patient": [
-    "Annotation",
     "LinkDocumentToPatient"
+  ],
+  "canvas_sdk.effects.data_integration.prefill_document_fields": [
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields"
   ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
     "RemoveDocumentConfidenceScores",

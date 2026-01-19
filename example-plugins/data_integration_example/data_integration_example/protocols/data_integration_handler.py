@@ -5,14 +5,19 @@ from pydantic import ValidationError
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import (
     AnnotationItem as CategorizeDocumentAnnotation,
+)
+from canvas_sdk.effects.categorize_document import (
     CategorizeDocument,
-    ConfidenceScores as CategorizeDocumentConfidenceScores,
     DocumentType,
+)
+from canvas_sdk.effects.categorize_document import (
+    ConfidenceScores as CategorizeDocumentConfidenceScores,
 )
 from canvas_sdk.effects.data_integration import (
     Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
+    PrefillDocumentFields,
     Priority,
     ReviewMode,
 )
@@ -187,7 +192,7 @@ class DataIntegrationHandler(BaseProtocol):
         return []
 
     def _handle_document_fields_updated(self, document_id: str) -> list[Effect]:
-        """Handle DOCUMENT_FIELDS_UPDATED: Log field changes (no effect available)."""
+        """Handle DOCUMENT_FIELDS_UPDATED: Create prefill effect."""
         ctx = self.event.context
         updated_fields = ctx.get("updated_fields", [])
         updated_at = ctx.get("updated_at")
@@ -207,8 +212,13 @@ class DataIntegrationHandler(BaseProtocol):
             previous_value = field.get("previous_value")
             log.info(f"  - {field_name}: '{previous_value}' -> '{value}'")
 
-        log.info("[DOCUMENT_FIELDS_UPDATED] No UPDATE_DOCUMENT_FIELDS effect available yet")
-        return []
+        # Create prefill effect based on field updates
+        effects: list[Effect] = []
+        prefill_effect = self._create_prefill_document_fields_effect(document_id)
+        if prefill_effect:
+            effects.append(prefill_effect)
+
+        return effects
 
     def _handle_document_reviewed(self, document_id: str) -> list[Effect]:
         """Handle DOCUMENT_REVIEWED: Log review completion (no effect available)."""
@@ -391,4 +401,40 @@ class DataIntegrationHandler(BaseProtocol):
 
         except (ValidationError, KeyError) as e:
             log.error(f"Error creating CategorizeDocument effect: {e}")
+            return None
+
+    def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
+        """Create a PrefillDocumentFields effect with sample data."""
+        try:
+            effect = PrefillDocumentFields(
+                document_id=str(document_id),
+                templates=[
+                    {
+                        "templateId": 620,
+                        "templateName": "Thyroid Profile With Tsh",
+                        "fields": {
+                            "11580-8": {
+                                "value": "2.35",
+                                "unit": "uIU/mL",
+                                "referenceRange": "0.45 - 4.50",
+                                "annotations": [{"text": "AI 95%", "color": "#4CAF50"}],
+                            },
+                            "3016-3": {
+                                "value": "1.2",
+                                "unit": "ng/dL",
+                                "referenceRange": "0.8 - 1.8",
+                                "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                            },
+                        },
+                    }
+                ],
+                annotations=[
+                    {"text": "1 template matched", "color": "#2196F3"},
+                    {"text": "2 fields extracted", "color": "#4CAF50"},
+                ],
+            )
+            log.info(f"Created PrefillDocumentFields effect for document {document_id}")
+            return effect.apply()
+        except ValidationError as e:
+            log.error(f"Validation error creating PrefillDocumentFields: {e}")
             return None
