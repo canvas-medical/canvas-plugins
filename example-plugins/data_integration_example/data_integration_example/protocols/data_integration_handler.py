@@ -11,6 +11,7 @@ from canvas_sdk.effects.categorize_document import (
     ConfidenceScores as CategorizeDocumentConfidenceScores,
 )
 from canvas_sdk.effects.data_integration import (
+    Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
     Priority,
@@ -101,7 +102,9 @@ class DataIntegrationHandler(BaseProtocol):
         if categorize_effect:
             effects.append(categorize_effect)
 
-        log.info(f"[DOCUMENT_RECEIVED] Returning {len(effects)} effect(s) for document {document_id}")
+        log.info(
+            f"[DOCUMENT_RECEIVED] Returning {len(effects)} effect(s) for document {document_id}"
+        )
         return effects
 
     def _handle_document_linked_to_patient(self, document_id: str) -> list[Effect]:
@@ -148,7 +151,9 @@ class DataIntegrationHandler(BaseProtocol):
                     f"categorized as '{type_name}' ({report_type}) at {categorized_at}"
                 )
         else:
-            log.info(f"[DOCUMENT_CATEGORIZED] Document {document_id} uncategorized at {categorized_at}")
+            log.info(
+                f"[DOCUMENT_CATEGORIZED] Document {document_id} uncategorized at {categorized_at}"
+            )
         return []
 
     def _handle_document_reviewer_assigned(self, document_id: str) -> list[Effect]:
@@ -177,7 +182,9 @@ class DataIntegrationHandler(BaseProtocol):
                     f"assigned to {reviewer_type} '{reviewer_name}' (id={reviewer_id}) at {assigned_at}"
                 )
         else:
-            log.info(f"[DOCUMENT_REVIEWER_ASSIGNED] Document {document_id} reviewer unassigned at {assigned_at}")
+            log.info(
+                f"[DOCUMENT_REVIEWER_ASSIGNED] Document {document_id} reviewer unassigned at {assigned_at}"
+            )
         return []
 
     def _handle_document_fields_updated(self, document_id: str) -> list[Effect]:
@@ -187,10 +194,14 @@ class DataIntegrationHandler(BaseProtocol):
         updated_at = ctx.get("updated_at")
 
         if not updated_fields:
-            log.info(f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} updated with no field changes at {updated_at}")
+            log.info(
+                f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} updated with no field changes at {updated_at}"
+            )
             return []
 
-        log.info(f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} fields updated at {updated_at}:")
+        log.info(
+            f"[DOCUMENT_FIELDS_UPDATED] Document {document_id} fields updated at {updated_at}:"
+        )
         for field in updated_fields:
             field_name = field.get("name", "Unknown")
             value = field.get("value")
@@ -237,7 +248,9 @@ class DataIntegrationHandler(BaseProtocol):
 
         if deleted_by:
             deleted_by_name = deleted_by.get("name", "Unknown")
-            log.info(f"[DOCUMENT_DELETED] Document {document_id} deleted by '{deleted_by_name}' at {deleted_at}")
+            log.info(
+                f"[DOCUMENT_DELETED] Document {document_id} deleted by '{deleted_by_name}' at {deleted_at}"
+            )
         else:
             log.info(f"[DOCUMENT_DELETED] Document {document_id} deleted at {deleted_at}")
 
@@ -282,9 +295,7 @@ class DataIntegrationHandler(BaseProtocol):
         # Fetch first available team (optional)
         team = Team.objects.first()
 
-        log.info(
-            f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}"
-        )
+        log.info(f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}")
 
         try:
             # Prefer staff over team assignment
@@ -292,9 +303,14 @@ class DataIntegrationHandler(BaseProtocol):
                 effect = AssignDocumentReviewer(
                     document_id=str(document_id),
                     reviewer_id=str(staff.id),
+                    team_id=str(team.id) if team else None,
                     priority=Priority.HIGH,
-                    review_mode=ReviewMode.REVIEW_REQUIRED,
-                    confidence_scores={"document_id": 0.95},
+                    review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
+                    annotations=[
+                        Annotation(text="Auto-assigned", color="#FF9800"),
+                        Annotation(text="Data integration", color="#2196F3"),
+                    ],
+                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned staff {staff.id} to document {document_id}")
             elif team:
@@ -302,8 +318,12 @@ class DataIntegrationHandler(BaseProtocol):
                     document_id=str(document_id),
                     team_id=str(team.id),
                     priority=Priority.HIGH,
-                    review_mode=ReviewMode.REVIEW_REQUIRED,
-                    confidence_scores={"document_id": 0.95},
+                    review_mode=ReviewMode.ALREADY_REVIEWED,
+                    annotations=[
+                        Annotation(text="Auto-assigned", color="#FF9800"),
+                        Annotation(text="Data integration", color="#2196F3"),
+                    ],
+                    source_protocol="data_integration_example",
                 )
                 log.info(f"Assigned team {team.id} to document {document_id}")
             else:
@@ -360,9 +380,7 @@ class DataIntegrationHandler(BaseProtocol):
                 confidence_scores=confidence_scores,
             )
 
-            log.info(
-                f"Categorizing document {document_id} as {document_type['name']}"
-            )
+            log.info(f"Categorizing document {document_id} as {document_type['name']}")
             return effect.apply()
 
         except (ValidationError, KeyError) as e:

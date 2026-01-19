@@ -1,78 +1,149 @@
-"""Protocol demonstrating the ASSIGN_DOCUMENT_REVIEWER effect."""
+"""Protocol demonstrating the full document processing flow with all Data Integration effects."""
 
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.categorize_document import CategorizeDocument
 from canvas_sdk.effects.data_integration import (
+    Annotation,
     AssignDocumentReviewer,
+    LinkDocumentToPatient,
     Priority,
     ReviewMode,
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.v1.data import Staff, Team
+from canvas_sdk.v1.data import Patient, Staff, Team
 from logger import log
 
 
 class AssignDocumentReviewerProtocol(BaseProtocol):
     """
-    A protocol that demonstrates assigning a reviewer to incoming documents.
-
-    This protocol responds to DOCUMENT_RECEIVED events and automatically assigns
-    a reviewer to the document based on configurable rules.
+    A protocol that demonstrates the full document processing flow.
 
     Triggers on: DOCUMENT_RECEIVED events
-    Effects: Assigns a staff member or team as document reviewer
+    Effects: LinkDocumentToPatient, CategorizeDocument, AssignDocumentReviewer
     """
 
     RESPONDS_TO = EventType.Name(EventType.DOCUMENT_RECEIVED)
 
     def compute(self) -> list[Effect]:
-        """
-        Assign a reviewer to the received document.
-
-        This method demonstrates emitting the ASSIGN_DOCUMENT_REVIEWER effect
-        by fetching the first available Staff and Team from the database.
-        """
-        # Get the document ID from the event target
+        """Process the received document with full flow."""
         document_id = self.event.context.get("document", {}).get("id")
 
-        log.info(f"Processing document {document_id} for reviewer assignment")
+        log.info(f"Processing document {document_id} for rewiewer assignment")
 
-        # Fetch first available staff member
-        staff = Staff.objects.first()
+        effects: list[Effect] = []
 
-        # Fetch first available team (optional)
-        team = Team.objects.first()
+        link_effect = self._create_link_effect(document_id)
+        if link_effect:
+            effects.append(link_effect)
 
-        log.info(f"Found staff: {staff.id if staff else None}, team: {team.id if team else None}")
+        categorize_effect = self._create_categorize_effect(document_id)
+        if categorize_effect:
+            effects.append(categorize_effect)
+
+        assign_effect = self._create_assign_effect(document_id)
+        if assign_effect:
+            effects.append(assign_effect)
+
+        log.info(f"Returning {len(effects)} effect(s) for document {document_id}")
+        return effects
+
+    def _create_link_effect(self, document_id: str) -> Effect | None:
+        """Create a LinkDocumentToPatient effect using first available patient."""
+        patient = Patient.objects.first()
+        if not patient:
+            log.warning(f"No patient available for document {document_id}")
+            return None
+
+        if not patient.birth_date:
+            log.warning(f"Patient {patient.id} has no birth_date")
+            return None
 
         try:
-            # Prefer staff over team assignment
-            if staff:
-                effect = AssignDocumentReviewer(
-                    document_id=str(document_id),
-                    reviewer_id=str(staff.id),
-                    priority=Priority.HIGH,
-                    review_mode=ReviewMode.REVIEW_REQUIRED,
-                    confidence_scores={"document_id": 0.95},
-                )
-                log.info(f"Assigned staff {staff.id} to document {document_id}")
-            elif team:
-                effect = AssignDocumentReviewer(
-                    document_id=str(document_id),
-                    team_id=str(team.id),
-                    priority=Priority.HIGH,
-                    review_mode=ReviewMode.REVIEW_REQUIRED,
-                    confidence_scores={"document_id": 0.95},
-                )
-                log.info(f"Assigned team {team.id} to document {document_id}")
-            else:
-                log.warning(f"No staff or team available for document {document_id}")
-                return []
-
-            return [effect.apply()]
-
+            effect = LinkDocumentToPatient(
+                document_id=str(document_id),
+                first_name=patient.first_name,
+                last_name=patient.last_name,
+                date_of_birth=patient.birth_date,
+                confidence_scores={
+                    "first_name": 0.95,
+                    "last_name": 0.95,
+                    "date_of_birth": 0.90,
+                },
+            )
+            log.info(
+                f"Linked document {document_id} to patient {patient.first_name} {patient.last_name}"
+            )
+            return effect.apply()
         except ValidationError as e:
-            log.error(f"Validation error assigning reviewer to document {document_id}: {e}")
-            return []
+            log.error(f"Validation error creating LinkDocumentToPatient: {e}")
+            return None
+
+    def _create_categorize_effect(self, document_id: str) -> Effect | None:
+        """Create a CategorizeDocument effect, preferring Lab Report type."""
+        available_document_types = self.event.context.get("available_document_types", [])
+
+        if not available_document_types:
+            log.warning(f"No available_document_types in context for document {document_id}")
+            return None
+
+        # Prefer "Lab Report" document type, fall back to first available
+        doc_type = next(
+            (dt for dt in available_document_types if dt.get("name") == "Lab Report"),
+            available_document_types[0],
+        )
+
+        try:
+            effect = CategorizeDocument(
+                document_id=str(document_id),
+                document_type={
+                    "key": doc_type["key"],
+                    "name": doc_type["name"],
+                    "report_type": doc_type["report_type"],
+                    "template_type": doc_type.get("template_type"),
+                },
+                confidence_scores={
+                    "document_id": 0.95,
+                    "document_type": {
+                        "key": 0.92,
+                        "name": 0.92,
+                        "report_type": 0.88,
+                    },
+                },
+            )
+            log.info(f"Categorized document {document_id} as {doc_type['name']}")
+            return effect.apply()
+        except (ValidationError, KeyError) as e:
+            log.error(f"Validation error creating CategorizeDocument: {e}")
+            return None
+
+    def _create_assign_effect(self, document_id: str) -> Effect | None:
+        """Create an AssignDocumentReviewer effect."""
+        staff = Staff.objects.first()
+        team = Team.objects.first()
+
+        if not staff:
+            log.warning(f"No staff available for document {document_id}")
+            return None
+
+        try:
+            effect = AssignDocumentReviewer(
+                document_id=str(document_id),
+                reviewer_id=str(staff.id),
+                team_id=str(team.id) if team else None,
+                priority=Priority.HIGH,
+                review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
+                annotations=[
+                    Annotation(text="Team lead", color="#4CAF50"),
+                    Annotation(text="Primary care", color="#2196F3"),
+                    Annotation(text="Auto-assigned", color="#FF9800"),
+                ],
+                source_protocol="assign_document_reviewer_example",
+            )
+            log.info(f"Assigned reviewer {staff.id} to document {document_id}")
+            return effect.apply()
+        except ValidationError as e:
+            log.error(f"Validation error creating AssignDocumentReviewer: {e}")
+            return None

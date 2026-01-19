@@ -349,7 +349,6 @@
   "canvas_sdk.effects.data_integration": [
     "Annotation",
     "AssignDocumentReviewer",
-    "AssignDocumentReviewerConfidenceScores",
     "JunkDocument",
     "JunkDocumentConfidenceScores",
     "LinkDocumentToPatient",
@@ -359,8 +358,8 @@
     "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "Annotation",
     "AssignDocumentReviewer",
-    "AssignDocumentReviewerConfidenceScores",
     "Priority",
     "ReviewMode"
   ],
