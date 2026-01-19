@@ -297,43 +297,65 @@ class TestPrefillDocumentFieldsFieldValidation:
         payload = json.loads(applied.payload)
         assert payload["data"]["templates"][0]["fields"]["f1"]["value"] == "test_value"
 
+    def test_apply_succeeds_with_abnormal_field(self) -> None:
+        """Test apply succeeds when field has abnormal flag."""
+        effect = PrefillDocumentFields(
+            document_id="12345",
+            templates=[
+                {
+                    "templateId": 620,
+                    "templateName": "Test",
+                    "fields": {
+                        "f1": {
+                            "value": "150",
+                            "unit": "mg/dL",
+                            "referenceRange": "70 - 100",
+                            "abnormal": True,
+                        }
+                    },
+                }
+            ],
+        )
+        applied = effect.apply()
+
+        payload = json.loads(applied.payload)
+        assert payload["data"]["templates"][0]["fields"]["f1"]["abnormal"] is True
+
 
 class TestPrefillDocumentFieldsAnnotationValidation:
     """Tests for annotation structure validation."""
 
     def test_apply_raises_error_when_annotation_missing_text(self) -> None:
         """Test apply raises error when annotation missing text."""
-        effect = PrefillDocumentFields(
-            document_id="12345",
-            templates=[
-                {
-                    "templateId": 620,
-                    "templateName": "Test",
-                    "fields": {"f1": {"value": "v1"}},
-                }
-            ],
-            annotations=[{"color": "#FF0000"}],
-        )
         with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
+            PrefillDocumentFields(
+                document_id="12345",
+                templates=[
+                    {
+                        "templateId": 620,
+                        "templateName": "Test",
+                        "fields": {"f1": {"value": "v1"}},
+                    }
+                ],
+                annotations=[{"color": "#FF0000"}],
+            )
 
         assert "text" in str(exc_info.value).lower()
 
     def test_apply_raises_error_when_annotation_missing_color(self) -> None:
         """Test apply raises error when annotation missing color."""
-        effect = PrefillDocumentFields(
-            document_id="12345",
-            templates=[
-                {
-                    "templateId": 620,
-                    "templateName": "Test",
-                    "fields": {"f1": {"value": "v1"}},
-                }
-            ],
-            annotations=[{"text": "AI 95%"}],
-        )
         with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
+            PrefillDocumentFields(
+                document_id="12345",
+                templates=[
+                    {
+                        "templateId": 620,
+                        "templateName": "Test",
+                        "fields": {"f1": {"value": "v1"}},
+                    }
+                ],
+                annotations=[{"text": "AI 95%"}],
+            )
 
         assert "color" in str(exc_info.value).lower()
 

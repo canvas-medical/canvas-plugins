@@ -1,13 +1,32 @@
-from typing import Any, TypeAlias
+from typing import Any, NotRequired, TypeAlias, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.data_integration.link_document_to_patient import Annotation
 
-Annotation: TypeAlias = dict[str, str]
-FieldData: TypeAlias = dict[str, Any]
-TemplateFields: TypeAlias = dict[str, FieldData]
+
+class PrefillDocumentFieldData(TypedDict):
+    """
+    Field data for a prefill template field.
+
+    Attributes:
+        value: The field value (required)
+        unit: The unit of measurement
+        referenceRange: The reference range for the value
+        abnormal: Whether the value is abnormal
+        annotations: List of annotations for the field
+    """
+
+    value: str
+    unit: NotRequired[str]
+    referenceRange: NotRequired[str]
+    abnormal: NotRequired[bool]
+    annotations: NotRequired[list[Annotation]]
+
+
+TemplateFields: TypeAlias = dict[str, PrefillDocumentFieldData]
 
 
 class PrefillTemplate(BaseModel):
@@ -211,4 +230,4 @@ class PrefillDocumentFields(_BaseEffect):
         return errors
 
 
-__exports__ = ("PrefillDocumentFields",)
+__exports__ = ("PrefillDocumentFieldData", "PrefillDocumentFields")
