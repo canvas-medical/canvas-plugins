@@ -1,15 +1,10 @@
 import json
-from datetime import date
 
 import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.data_integration import (
-    LinkDocumentConfidenceScores,
-    LinkDocumentToPatient,
-)
-from canvas_sdk.effects.data_integration.link_document_to_patient import CONFIDENCE_SCORE_KEYS
+from canvas_sdk.effects.data_integration import LinkDocumentToPatient
 
 
 class TestLinkDocumentToPatientEffectCreation:
@@ -18,74 +13,83 @@ class TestLinkDocumentToPatientEffectCreation:
     def test_create_effect_with_all_required_fields(self) -> None:
         """Test creating effect with all required fields succeeds."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
         )
         applied = effect.apply()
 
         assert applied.type == EffectType.LINK_DOCUMENT_TO_PATIENT
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["first_name"] == "John"
-        assert payload["data"]["last_name"] == "Doe"
-        assert payload["data"]["date_of_birth"] == "1990-05-15"
-        assert payload["data"]["document_id"] == "12345"
-        assert "confidence_scores" not in payload["data"]
+        assert payload["data"]["document_id"] == "task-uuid-12345"
+        assert payload["data"]["patient_key"] == "patient-uuid-67890"
+        assert "annotations" not in payload["data"]
+        assert "source_protocol" not in payload["data"]
 
     def test_create_effect_with_integer_document_id(self) -> None:
         """Test creating effect with integer document_id succeeds."""
         effect = LinkDocumentToPatient(
-            first_name="Jane",
-            last_name="Smith",
-            date_of_birth=date(1985, 12, 1),
             document_id=42,
+            patient_key="patient-uuid-67890",
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
         assert payload["data"]["document_id"] == "42"
 
-    def test_create_effect_with_confidence_scores(self) -> None:
-        """Test creating effect with confidence_scores succeeds."""
+    def test_create_effect_with_annotations(self) -> None:
+        """Test creating effect with annotations succeeds."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores={
-                "first_name": 0.95,
-                "last_name": 0.90,
-                "date_of_birth": 0.85,
-            },
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[
+                {"text": "AI 95%", "color": "#00AA00"},
+                {"text": "DOB matched", "color": "#2196F3"},
+            ],
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["confidence_scores"] == {
-            "first_name": 0.95,
-            "last_name": 0.90,
-            "date_of_birth": 0.85,
-        }
+        assert payload["data"]["annotations"] == [
+            {"text": "AI 95%", "color": "#00AA00"},
+            {"text": "DOB matched", "color": "#2196F3"},
+        ]
 
-    def test_create_effect_with_all_confidence_scores(self) -> None:
-        """Test creating effect with all confidence_scores keys."""
+    def test_create_effect_with_source_protocol(self) -> None:
+        """Test creating effect with source_protocol succeeds."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores={
-                "first_name": 0.95,
-                "last_name": 0.90,
-                "date_of_birth": 0.85,
-            },
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            source_protocol="llm_v1",
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert len(payload["data"]["confidence_scores"]) == 3
+        assert payload["data"]["source_protocol"] == "llm_v1"
+
+    def test_create_effect_with_all_optional_fields(self) -> None:
+        """Test creating effect with all optional fields succeeds."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[
+                {"text": "AI 95%", "color": "#00AA00"},
+                {"text": "DOB matched", "color": "#2196F3"},
+                {"text": "Name verified", "color": "#4CAF50"},
+            ],
+            source_protocol="llm_v1",
+        )
+        applied = effect.apply()
+
+        payload = json.loads(applied.payload)
+        assert payload["data"]["document_id"] == "task-uuid-12345"
+        assert payload["data"]["patient_key"] == "patient-uuid-67890"
+        assert payload["data"]["annotations"] == [
+            {"text": "AI 95%", "color": "#00AA00"},
+            {"text": "DOB matched", "color": "#2196F3"},
+            {"text": "Name verified", "color": "#4CAF50"},
+        ]
+        assert payload["data"]["source_protocol"] == "llm_v1"
 
 
 class TestLinkDocumentToPatientValuesProperty:
@@ -94,101 +98,103 @@ class TestLinkDocumentToPatientValuesProperty:
     def test_values_property_returns_correct_structure(self) -> None:
         """Test values property returns correctly structured dict."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
         )
 
         values = effect.values
 
         assert values == {
-            "first_name": "John",
-            "last_name": "Doe",
-            "date_of_birth": "1990-05-15",
-            "document_id": "12345",
+            "document_id": "task-uuid-12345",
+            "patient_key": "patient-uuid-67890",
         }
 
-    def test_values_property_with_confidence_scores(self) -> None:
-        """Test values property includes confidence_scores when provided."""
+    def test_values_property_with_annotations(self) -> None:
+        """Test values property includes annotations when provided."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores={"first_name": 0.9},
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[{"text": "AI 95%", "color": "#00AA00"}],
         )
 
         values = effect.values
 
-        assert "confidence_scores" in values
-        assert values["confidence_scores"] == {"first_name": 0.9}
+        assert "annotations" in values
+        assert values["annotations"] == [{"text": "AI 95%", "color": "#00AA00"}]
 
-    def test_values_property_excludes_none_confidence_scores(self) -> None:
-        """Test values property excludes confidence_scores when None."""
+    def test_values_property_excludes_none_annotations(self) -> None:
+        """Test values property excludes annotations when None."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores=None,
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=None,
         )
 
         values = effect.values
 
-        assert "confidence_scores" not in values
+        assert "annotations" not in values
+
+    def test_values_property_with_source_protocol(self) -> None:
+        """Test values property includes source_protocol when provided."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            source_protocol="llm_v1",
+        )
+
+        values = effect.values
+
+        assert "source_protocol" in values
+        assert values["source_protocol"] == "llm_v1"
+
+    def test_values_property_excludes_none_source_protocol(self) -> None:
+        """Test values property excludes source_protocol when None."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            source_protocol=None,
+        )
+
+        values = effect.values
+
+        assert "source_protocol" not in values
+
+    def test_values_property_with_empty_annotations_list(self) -> None:
+        """Test values property includes empty annotations list when explicitly set."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[],
+        )
+
+        values = effect.values
+
+        assert "annotations" in values
+        assert values["annotations"] == []
 
 
 class TestLinkDocumentToPatientRequiredFieldValidation:
     """Tests for required field validation errors."""
 
-    def test_apply_raises_error_when_first_name_missing(self) -> None:
-        """Test apply raises error when first_name is missing."""
-        effect = LinkDocumentToPatient(
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "first_name" in str(exc_info.value)
-
-    def test_apply_raises_error_when_last_name_missing(self) -> None:
-        """Test apply raises error when last_name is missing."""
-        effect = LinkDocumentToPatient(
-            first_name="John",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "last_name" in str(exc_info.value)
-
-    def test_apply_raises_error_when_date_of_birth_missing(self) -> None:
-        """Test apply raises error when date_of_birth is missing."""
-        effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "date_of_birth" in str(exc_info.value)
-
     def test_apply_raises_error_when_document_id_missing(self) -> None:
         """Test apply raises error when document_id is missing."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
+            patient_key="patient-uuid-67890",
         )
         with pytest.raises(ValidationError) as exc_info:
             effect.apply()
 
         assert "document_id" in str(exc_info.value)
+
+    def test_apply_raises_error_when_patient_key_missing(self) -> None:
+        """Test apply raises error when patient_key is missing."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            effect.apply()
+
+        assert "patient_key" in str(exc_info.value)
 
     def test_apply_raises_error_when_all_required_fields_missing(self) -> None:
         """Test apply raises error when all required fields are missing."""
@@ -197,66 +203,8 @@ class TestLinkDocumentToPatientRequiredFieldValidation:
             effect.apply()
 
         err_msg = str(exc_info.value)
-        assert "first_name" in err_msg
-        assert "last_name" in err_msg
-        assert "date_of_birth" in err_msg
         assert "document_id" in err_msg
-
-
-class TestLinkDocumentToPatientNameValidation:
-    """Tests for name field validation (empty string checks)."""
-
-    def test_apply_raises_error_when_first_name_is_empty(self) -> None:
-        """Test apply raises error when first_name is empty string."""
-        effect = LinkDocumentToPatient(
-            first_name="",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "first_name must be a non-empty string" in str(exc_info.value)
-
-    def test_apply_raises_error_when_first_name_is_whitespace(self) -> None:
-        """Test apply raises error when first_name is only whitespace."""
-        effect = LinkDocumentToPatient(
-            first_name="   ",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "first_name must be a non-empty string" in str(exc_info.value)
-
-    def test_apply_raises_error_when_last_name_is_empty(self) -> None:
-        """Test apply raises error when last_name is empty string."""
-        effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "last_name must be a non-empty string" in str(exc_info.value)
-
-    def test_apply_raises_error_when_last_name_is_whitespace(self) -> None:
-        """Test apply raises error when last_name is only whitespace."""
-        effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="\t\n",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            effect.apply()
-
-        assert "last_name must be a non-empty string" in str(exc_info.value)
+        assert "patient_key" in err_msg
 
 
 class TestLinkDocumentToPatientDocumentIdValidation:
@@ -265,10 +213,8 @@ class TestLinkDocumentToPatientDocumentIdValidation:
     def test_apply_raises_error_when_document_id_is_empty(self) -> None:
         """Test apply raises error when document_id is empty string."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
             document_id="",
+            patient_key="patient-uuid-67890",
         )
         with pytest.raises(ValidationError) as exc_info:
             effect.apply()
@@ -278,10 +224,8 @@ class TestLinkDocumentToPatientDocumentIdValidation:
     def test_apply_raises_error_when_document_id_is_whitespace(self) -> None:
         """Test apply raises error when document_id is only whitespace."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
             document_id="   ",
+            patient_key="patient-uuid-67890",
         )
         with pytest.raises(ValidationError) as exc_info:
             effect.apply()
@@ -289,226 +233,122 @@ class TestLinkDocumentToPatientDocumentIdValidation:
         assert "document_id must be a non-empty string" in str(exc_info.value)
 
 
+class TestLinkDocumentToPatientPatientKeyValidation:
+    """Tests for patient_key field validation."""
+
+    def test_apply_raises_error_when_patient_key_is_empty(self) -> None:
+        """Test apply raises error when patient_key is empty string."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="",
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            effect.apply()
+
+        assert "patient_key must be a non-empty string" in str(exc_info.value)
+
+    def test_apply_raises_error_when_patient_key_is_whitespace(self) -> None:
+        """Test apply raises error when patient_key is only whitespace."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="   ",
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            effect.apply()
+
+        assert "patient_key must be a non-empty string" in str(exc_info.value)
+
+
 class TestLinkDocumentToPatientWhitespaceNormalization:
     """Tests for whitespace normalization in serialization."""
-
-    def test_values_strips_whitespace_from_first_name(self) -> None:
-        """Test values property strips leading/trailing whitespace from first_name."""
-        effect = LinkDocumentToPatient(
-            first_name="  John  ",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        applied = effect.apply()
-
-        payload = json.loads(applied.payload)
-        assert payload["data"]["first_name"] == "John"
-
-    def test_values_strips_whitespace_from_last_name(self) -> None:
-        """Test values property strips leading/trailing whitespace from last_name."""
-        effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="\tDoe\n",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-        )
-        applied = effect.apply()
-
-        payload = json.loads(applied.payload)
-        assert payload["data"]["last_name"] == "Doe"
 
     def test_values_strips_whitespace_from_document_id(self) -> None:
         """Test values property strips whitespace from document_id."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id=" 12345 ",
+            document_id=" task-uuid-12345 ",
+            patient_key="patient-uuid-67890",
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["document_id"] == "12345"
+        assert payload["data"]["document_id"] == "task-uuid-12345"
 
-
-class TestLinkDocumentToPatientLinkDocumentConfidenceScoresValidation:
-    """Tests for confidence_scores validation."""
-
-    def test_creation_raises_error_for_invalid_confidence_scores_key(self) -> None:
-        """Test creation raises error for invalid keys in confidence_scores.
-
-        The model_validator catches invalid keys before Pydantic processes
-        the TypedDict (which would otherwise silently drop unknown keys).
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            LinkDocumentToPatient(
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                document_id="12345",
-                confidence_scores={
-                    "first_name": 0.9,
-                    "invalid_key": 0.5,  # type: ignore[typeddict-unknown-key]
-                },
-            )
-
-        err_msg = str(exc_info.value)
-        assert "invalid keys" in err_msg
-        assert "invalid_key" in err_msg
-
-    def test_creation_raises_error_for_multiple_invalid_keys(self) -> None:
-        """Test creation raises error for multiple invalid keys."""
-        with pytest.raises(ValidationError) as exc_info:
-            LinkDocumentToPatient(
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                document_id="12345",
-                confidence_scores={
-                    "first_name": 0.9,
-                    "bad_key_1": 0.5,  # type: ignore[typeddict-unknown-key]
-                    "bad_key_2": 0.7,  # type: ignore[typeddict-unknown-key]
-                },
-            )
-
-        err_msg = str(exc_info.value)
-        assert "bad_key_1" in err_msg
-        assert "bad_key_2" in err_msg
-
-    def test_creation_raises_error_when_confidence_score_below_zero(self) -> None:
-        """Test creation raises error when confidence score is below 0.
-
-        Pydantic validates the range constraint at construction time via
-        the Annotated[float, Field(ge=0.0, le=1.0)] type annotation.
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            LinkDocumentToPatient(
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                document_id="12345",
-                confidence_scores={"first_name": -0.1},
-            )
-
-        err_msg = str(exc_info.value)
-        assert "greater_than_equal" in err_msg or "greater than or equal to 0" in err_msg
-
-    def test_creation_raises_error_when_confidence_score_above_one(self) -> None:
-        """Test creation raises error when confidence score is above 1.0.
-
-        Pydantic validates the range constraint at construction time via
-        the Annotated[float, Field(ge=0.0, le=1.0)] type annotation.
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            LinkDocumentToPatient(
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                document_id="12345",
-                confidence_scores={"last_name": 1.5},
-            )
-
-        err_msg = str(exc_info.value)
-        assert "less_than_equal" in err_msg or "less than or equal to 1" in err_msg
-
-    def test_creation_raises_error_when_confidence_score_is_not_numeric(self) -> None:
-        """Test creation raises error when confidence score is not a number.
-
-        Pydantic validates types at construction time, so this error happens
-        during effect creation rather than during apply().
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            LinkDocumentToPatient(
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                document_id="12345",
-                confidence_scores={"first_name": "high"},  # type: ignore[dict-item]
-            )
-
-        err_msg = str(exc_info.value)
-        assert "float_type" in err_msg or "valid number" in err_msg
-
-    def test_apply_succeeds_with_boundary_confidence_scores(self) -> None:
-        """Test apply succeeds with boundary values 0.0 and 1.0."""
+    def test_values_strips_whitespace_from_patient_key(self) -> None:
+        """Test values property strips whitespace from patient_key."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores={
-                "first_name": 0.0,
-                "last_name": 1.0,
-            },
+            document_id="task-uuid-12345",
+            patient_key=" patient-uuid-67890 ",
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["confidence_scores"]["first_name"] == 0.0
-        assert payload["data"]["confidence_scores"]["last_name"] == 1.0
+        assert payload["data"]["patient_key"] == "patient-uuid-67890"
 
-    def test_apply_accepts_integer_confidence_scores(self) -> None:
-        """Test apply accepts integer values for confidence scores."""
+
+class TestLinkDocumentToPatientAnnotations:
+    """Tests for annotations field behavior."""
+
+    def test_annotations_accepts_list_of_dicts(self) -> None:
+        """Test annotations accepts a list of dicts with text and color."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores={"first_name": 1, "last_name": 0},
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[
+                {"text": "Tag 1", "color": "#FF0000"},
+                {"text": "Tag 2", "color": "#00FF00"},
+                {"text": "Tag 3", "color": "#0000FF"},
+            ],
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["confidence_scores"]["first_name"] == 1
-        assert payload["data"]["confidence_scores"]["last_name"] == 0
+        assert payload["data"]["annotations"] == [
+            {"text": "Tag 1", "color": "#FF0000"},
+            {"text": "Tag 2", "color": "#00FF00"},
+            {"text": "Tag 3", "color": "#0000FF"},
+        ]
 
-
-class TestLinkDocumentToPatientConstants:
-    """Tests for module constants."""
-
-    def test_confidence_score_keys_are_correct(self) -> None:
-        """Test CONFIDENCE_SCORE_KEYS contains expected keys."""
-        expected = {"first_name", "last_name", "date_of_birth"}
-        assert expected == CONFIDENCE_SCORE_KEYS
-
-    def test_confidence_score_keys_is_frozen(self) -> None:
-        """Test CONFIDENCE_SCORE_KEYS is immutable."""
-        assert isinstance(CONFIDENCE_SCORE_KEYS, frozenset)
-
-    def test_confidence_score_keys_derived_from_typeddict(self) -> None:
-        """Test CONFIDENCE_SCORE_KEYS matches LinkDocumentConfidenceScores TypedDict annotations."""
-        assert frozenset(LinkDocumentConfidenceScores.__annotations__.keys()) == CONFIDENCE_SCORE_KEYS
-
-
-class TestLinkDocumentConfidenceScoresTypedDict:
-    """Tests for LinkDocumentConfidenceScores TypedDict."""
-
-    def test_confidence_scores_accepts_valid_typed_dict(self) -> None:
-        """Test that LinkDocumentConfidenceScores TypedDict works with valid values."""
-        scores: LinkDocumentConfidenceScores = {
-            "first_name": 0.95,
-            "last_name": 0.90,
-        }
+    def test_annotations_accepts_single_item_list(self) -> None:
+        """Test annotations accepts a single-item list."""
         effect = LinkDocumentToPatient(
-            first_name="John",
-            last_name="Doe",
-            date_of_birth=date(1990, 5, 15),
-            document_id="12345",
-            confidence_scores=scores,
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[{"text": "Only annotation", "color": "#FF0000"}],
         )
         applied = effect.apply()
 
         payload = json.loads(applied.payload)
-        assert payload["data"]["confidence_scores"]["first_name"] == 0.95
-        assert payload["data"]["confidence_scores"]["last_name"] == 0.90
+        assert payload["data"]["annotations"] == [{"text": "Only annotation", "color": "#FF0000"}]
 
-    def test_confidence_scores_typeddict_has_all_expected_keys(self) -> None:
-        """Test LinkDocumentConfidenceScores TypedDict defines all expected keys."""
-        expected_keys = {"first_name", "last_name", "date_of_birth"}
-        assert set(LinkDocumentConfidenceScores.__annotations__.keys()) == expected_keys
+    def test_annotations_preserves_order(self) -> None:
+        """Test annotations preserves the order of items."""
+        annotations = [
+            {"text": "First", "color": "#FF0000"},
+            {"text": "Second", "color": "#00FF00"},
+            {"text": "Third", "color": "#0000FF"},
+        ]
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=annotations,
+        )
+        applied = effect.apply()
 
-    def test_confidence_scores_typeddict_is_total_false(self) -> None:
-        """Test LinkDocumentConfidenceScores TypedDict has total=False (all keys optional)."""
-        # total=False means __required_keys__ should be empty
-        assert not LinkDocumentConfidenceScores.__required_keys__
+        payload = json.loads(applied.payload)
+        assert payload["data"]["annotations"] == [
+            {"text": "First", "color": "#FF0000"},
+            {"text": "Second", "color": "#00FF00"},
+            {"text": "Third", "color": "#0000FF"},
+        ]
+
+    def test_annotations_with_color_only(self) -> None:
+        """Test annotations can include color attribute."""
+        effect = LinkDocumentToPatient(
+            document_id="task-uuid-12345",
+            patient_key="patient-uuid-67890",
+            annotations=[{"text": "Alert", "color": "#FF0000"}],
+        )
+        applied = effect.apply()
+
+        payload = json.loads(applied.payload)
+        assert payload["data"]["annotations"] == [{"text": "Alert", "color": "#FF0000"}]

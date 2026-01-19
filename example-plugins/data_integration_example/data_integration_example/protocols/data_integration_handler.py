@@ -1,7 +1,5 @@
 """Protocol demonstrating all Data Integration effects."""
 
-from datetime import date
-
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
@@ -250,20 +248,19 @@ class DataIntegrationHandler(BaseProtocol):
         return []
 
     def _create_link_document_effect(self, document_id: str) -> Effect | None:
-        """Create a LinkDocumentToPatient effect with sample patient data."""
+        """Create a LinkDocumentToPatient effect using patient key."""
         try:
-            # In a real implementation, you would extract patient demographics
-            # from the document using OCR/LLM. This uses sample data for demo.
+            # Sample patient key - in production, this would come from patient matching
+            sample_patient_key = "5e4e107888564e359e1b3592e08f502f"
+
             effect = LinkDocumentToPatient(
                 document_id=str(document_id),
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                confidence_scores={
-                    "first_name": 0.95,
-                    "last_name": 0.92,
-                    "date_of_birth": 0.88,
-                },
+                patient_key=sample_patient_key,
+                annotations=[
+                    {"text": "AI 95%", "color": "#00AA00"},
+                    {"text": "DOB matched", "color": "#2196F3"},
+                ],
+                source_protocol="data_integration_example_v1",
             )
             log.info(f"Created LinkDocumentToPatient effect for document {document_id}")
             return effect.apply()
