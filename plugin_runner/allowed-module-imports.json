@@ -324,6 +324,7 @@
     "EventRecurrence"
   ],
   "canvas_sdk.effects.categorize_document": [
+    "AnnotationItem",
     "CategorizeDocument",
     "ConfidenceScores",
     "DocumentType",
