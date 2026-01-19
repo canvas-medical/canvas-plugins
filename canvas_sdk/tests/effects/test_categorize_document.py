@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.categorize_document import (
+    AnnotationItem,
     CategorizeDocument,
     ConfidenceScores,
     DocumentType,
@@ -35,6 +36,15 @@ def valid_confidence_scores() -> ConfidenceScores:
             "template_type": 0.90,
         },
     }
+
+
+@pytest.fixture
+def valid_annotations() -> list[AnnotationItem]:
+    """Valid annotations for testing."""
+    return [
+        {"text": "AI 97%", "color": "#00FF00"},
+        {"text": "Auto-detected", "color": "#0000FF"},
+    ]
 
 
 class TestCategorizeDocumentCreation:
@@ -309,3 +319,84 @@ class TestConfidenceScoresValidation:
         values = effect.values
         assert values["confidence_scores"]["document_id"] == 0.9
         assert "document_type" not in values["confidence_scores"]
+
+
+class TestAnnotationsAndSourceProtocol:
+    """Tests for annotations and source_protocol fields."""
+
+    def test_annotations_included_in_payload(
+        self, valid_document_type: DocumentType, valid_annotations: list[AnnotationItem]
+    ) -> None:
+        """Test that annotations are included in effect payload."""
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+            annotations=valid_annotations,
+        )
+        assert effect.values["annotations"] == valid_annotations
+
+    def test_source_protocol_included_in_payload(self, valid_document_type: DocumentType) -> None:
+        """Test that source_protocol is included in effect payload."""
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+            source_protocol="llm_v1",
+        )
+        assert effect.values["source_protocol"] == "llm_v1"
+
+    def test_annotations_and_source_protocol_omitted_when_none(
+        self, valid_document_type: DocumentType
+    ) -> None:
+        """Test that None values are not included in payload."""
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+        )
+        assert "annotations" not in effect.values
+        assert "source_protocol" not in effect.values
+
+    def test_annotations_and_source_protocol_in_applied_payload(
+        self, valid_document_type: DocumentType
+    ) -> None:
+        """Test that annotations and source_protocol appear in applied payload."""
+        annotations: list[AnnotationItem] = [{"text": "AI 95%", "color": "#00FF00"}]
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+            annotations=annotations,
+            source_protocol="test_plugin",
+        )
+        applied = effect.apply()
+        payload_data = json.loads(applied.payload)
+        assert payload_data["annotations"] == annotations
+        assert payload_data["source_protocol"] == "test_plugin"
+
+    def test_empty_annotations_list_included(self, valid_document_type: DocumentType) -> None:
+        """Test that an empty annotations list is included in payload when explicitly set."""
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+            annotations=[],
+        )
+        assert effect.values["annotations"] == []
+
+    def test_all_fields_together(
+        self,
+        valid_document_type: DocumentType,
+        valid_confidence_scores: ConfidenceScores,
+        valid_annotations: list[AnnotationItem],
+    ) -> None:
+        """Test that all fields work together."""
+        effect = CategorizeDocument(
+            document_id="test-uuid",
+            document_type=valid_document_type,
+            confidence_scores=valid_confidence_scores,
+            annotations=valid_annotations,
+            source_protocol="llm_v1",
+        )
+        values = effect.values
+        assert values["document_id"] == "test-uuid"
+        assert values["document_type"] == valid_document_type
+        assert values["confidence_scores"] == valid_confidence_scores
+        assert values["annotations"] == valid_annotations
+        assert values["source_protocol"] == "llm_v1"
