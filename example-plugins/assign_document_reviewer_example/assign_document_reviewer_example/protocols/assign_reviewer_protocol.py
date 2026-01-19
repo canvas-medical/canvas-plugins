@@ -1,44 +1,134 @@
-"""Protocol demonstrating the ASSIGN_DOCUMENT_REVIEWER effect."""
+"""Protocol demonstrating the full document processing flow with all Data Integration effects."""
 
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.categorize_document import CategorizeDocument
 from canvas_sdk.effects.data_integration import (
     Annotation,
     AssignDocumentReviewer,
+    LinkDocumentToPatient,
     Priority,
     ReviewMode,
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.v1.data import Staff, Team
+from canvas_sdk.v1.data import Patient, Staff, Team
 from logger import log
 
 
 class AssignDocumentReviewerProtocol(BaseProtocol):
     """
-    A protocol that demonstrates the AssignDocumentReviewer effect.
+    A protocol that demonstrates the full document processing flow.
 
     Triggers on: DOCUMENT_RECEIVED events
-    Effects: AssignDocumentReviewer
+    Effects: LinkDocumentToPatient, CategorizeDocument, AssignDocumentReviewer
     """
 
     RESPONDS_TO = EventType.Name(EventType.DOCUMENT_RECEIVED)
 
     def compute(self) -> list[Effect]:
-        """Assign a reviewer to the received document."""
+        """Process the received document with full flow."""
         document_id = self.event.context.get("document", {}).get("id")
 
-        log.info(f"Processing document {document_id}")
+        log.info(f"Processing document {document_id} for rewiewer assignment")
+
+        effects: list[Effect] = []
+
+        link_effect = self._create_link_effect(document_id)
+        if link_effect:
+            effects.append(link_effect)
+
+        categorize_effect = self._create_categorize_effect(document_id)
+        if categorize_effect:
+            effects.append(categorize_effect)
+
+        assign_effect = self._create_assign_effect(document_id)
+        if assign_effect:
+            effects.append(assign_effect)
+
+        log.info(f"Returning {len(effects)} effect(s) for document {document_id}")
+        return effects
+
+    def _create_link_effect(self, document_id: str) -> Effect | None:
+        """Create a LinkDocumentToPatient effect using first available patient."""
+        patient = Patient.objects.first()
+        if not patient:
+            log.warning(f"No patient available for document {document_id}")
+            return None
+
+        if not patient.birth_date:
+            log.warning(f"Patient {patient.id} has no birth_date")
+            return None
 
         try:
-            staff = Staff.objects.first()
-            team = Team.objects.first()
+            effect = LinkDocumentToPatient(
+                document_id=str(document_id),
+                first_name=patient.first_name,
+                last_name=patient.last_name,
+                date_of_birth=patient.birth_date,
+                confidence_scores={
+                    "first_name": 0.95,
+                    "last_name": 0.95,
+                    "date_of_birth": 0.90,
+                },
+            )
+            log.info(
+                f"Linked document {document_id} to patient {patient.first_name} {patient.last_name}"
+            )
+            return effect.apply()
+        except ValidationError as e:
+            log.error(f"Validation error creating LinkDocumentToPatient: {e}")
+            return None
 
-            if not staff:
-                log.warning(f"No staff available for document {document_id}")
-                return []
+    def _create_categorize_effect(self, document_id: str) -> Effect | None:
+        """Create a CategorizeDocument effect, preferring Lab Report type."""
+        available_document_types = self.event.context.get("available_document_types", [])
 
+        if not available_document_types:
+            log.warning(f"No available_document_types in context for document {document_id}")
+            return None
+
+        # Prefer "Lab Report" document type, fall back to first available
+        doc_type = next(
+            (dt for dt in available_document_types if dt.get("name") == "Lab Report"),
+            available_document_types[0],
+        )
+
+        try:
+            effect = CategorizeDocument(
+                document_id=str(document_id),
+                document_type={
+                    "key": doc_type["key"],
+                    "name": doc_type["name"],
+                    "report_type": doc_type["report_type"],
+                    "template_type": doc_type.get("template_type"),
+                },
+                confidence_scores={
+                    "document_id": 0.95,
+                    "document_type": {
+                        "key": 0.92,
+                        "name": 0.92,
+                        "report_type": 0.88,
+                    },
+                },
+            )
+            log.info(f"Categorized document {document_id} as {doc_type['name']}")
+            return effect.apply()
+        except (ValidationError, KeyError) as e:
+            log.error(f"Validation error creating CategorizeDocument: {e}")
+            return None
+
+    def _create_assign_effect(self, document_id: str) -> Effect | None:
+        """Create an AssignDocumentReviewer effect."""
+        staff = Staff.objects.first()
+        team = Team.objects.first()
+
+        if not staff:
+            log.warning(f"No staff available for document {document_id}")
+            return None
+
+        try:
             effect = AssignDocumentReviewer(
                 document_id=str(document_id),
                 reviewer_id=str(staff.id),
@@ -52,10 +142,8 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
                 ],
                 source_protocol="assign_document_reviewer_example",
             )
-
             log.info(f"Assigned reviewer {staff.id} to document {document_id}")
-            return [effect.apply()]
-
+            return effect.apply()
         except ValidationError as e:
-            log.error(f"Validation error processing document {document_id}: {e}")
-            return []
+            log.error(f"Validation error creating AssignDocumentReviewer: {e}")
+            return None
