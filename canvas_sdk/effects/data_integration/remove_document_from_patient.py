@@ -1,10 +1,11 @@
 from typing import Annotated, Any
 
-from pydantic import Field, model_validator
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 from typing_extensions import TypedDict
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 
 
 class RemoveDocumentConfidenceScores(TypedDict, total=False):
@@ -22,11 +23,11 @@ class RemoveDocumentConfidenceScores(TypedDict, total=False):
     removal: Annotated[float, Field(ge=0.0, le=1.0)]
 
 
-# Valid keys for confidence_scores dictionary (derived from TypedDict for validation)
+# Public constant for backward compatibility with tests
 CONFIDENCE_SCORE_KEYS = frozenset(RemoveDocumentConfidenceScores.__annotations__.keys())
 
 
-class RemoveDocumentFromPatient(_BaseEffect):
+class RemoveDocumentFromPatient(_BaseDocumentEffect):
     """
     An Effect that removes/unlinks a document from a patient in the Data Integration queue.
 
@@ -52,24 +53,10 @@ class RemoveDocumentFromPatient(_BaseEffect):
     patient_id: str | None = None
     confidence_scores: RemoveDocumentConfidenceScores | None = None
 
-    @model_validator(mode="before")
     @classmethod
-    def validate_confidence_scores_keys(cls, data: Any) -> Any:
-        """Validate confidence_scores keys before Pydantic processes the TypedDict.
-
-        TypedDict in Pydantic silently drops unknown keys, so we validate
-        them here to provide a clear error message to users.
-        """
-        if isinstance(data, dict) and "confidence_scores" in data:
-            scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-        return data
+    def _get_confidence_score_keys(cls) -> frozenset[str]:
+        """Return valid keys for confidence_scores validation."""
+        return frozenset(RemoveDocumentConfidenceScores.__annotations__.keys())
 
     @property
     def values(self) -> dict[str, Any]:
@@ -86,16 +73,7 @@ class RemoveDocumentFromPatient(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate the effect fields and return any error details."""
         errors = super()._get_error_details(method)
-
-        # Validate document_id is non-empty if provided as string
-        if isinstance(self.document_id, str) and not self.document_id.strip():
-            errors.append(
-                self._create_error_detail(
-                    "value_error",
-                    "document_id must be a non-empty string",
-                    self.document_id,
-                )
-            )
+        self._validate_document_id_not_empty(errors)
 
         # Validate patient_id is non-empty if provided
         if self.patient_id is not None and not self.patient_id.strip():

@@ -2,48 +2,18 @@ from typing import Self, cast
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, Model
+from canvas_sdk.v1.data.base import BaseReportTemplateQuerySet, IdentifiableModel, Model
 
 
-class SpecialtyReportTemplateQuerySet(BaseQuerySet):
+class SpecialtyReportTemplateQuerySet(BaseReportTemplateQuerySet):
     """QuerySet for SpecialtyReportTemplate with filtering methods."""
-
-    def active(self) -> Self:
-        """Return a queryset that filters for active templates."""
-        return self.filter(active=True)
-
-    def search(self, query: str) -> Self:
-        """Perform full-text search using the search_keywords field."""
-        return self.filter(search_keywords__icontains=query)
-
-    def custom(self) -> Self:
-        """Return a queryset that filters for custom templates."""
-        return self.filter(custom=True)
-
-    def builtin(self) -> Self:
-        """Return a queryset that filters for built-in templates."""
-        return self.filter(custom=False)
 
     def by_specialty(self, specialty_code: str) -> Self:
         """Filter templates by specialty taxonomy code."""
         return self.filter(specialty_code=specialty_code)
 
 
-class SpecialtyReportTemplateBaseManager(models.Manager):
-    """Base manager for SpecialtyReportTemplate.
-
-    Note: This manager doesn't filter by deleted since views don't have a deleted field.
-    """
-
-    def get_queryset(self) -> SpecialtyReportTemplateQuerySet:
-        """Return a queryset without filtering by deleted (views don't have deleted field)."""
-        return SpecialtyReportTemplateQuerySet(self.model, using=self._db)
-
-
-# Create manager with QuerySet methods exposed
-SpecialtyReportTemplateManager = SpecialtyReportTemplateBaseManager.from_queryset(
-    SpecialtyReportTemplateQuerySet
-)
+SpecialtyReportTemplateManager = models.Manager.from_queryset(SpecialtyReportTemplateQuerySet)
 
 
 class SpecialtyReportTemplate(IdentifiableModel):

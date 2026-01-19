@@ -5,7 +5,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseQuerySet,
+    BaseReportTemplateQuerySet,
     IdentifiableModel,
     Model,
     TimestampedModel,
@@ -115,24 +115,10 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
-class ImagingReportTemplateQuerySet(BaseQuerySet):
+class ImagingReportTemplateQuerySet(BaseReportTemplateQuerySet):
     """QuerySet for ImagingReportTemplate with filtering methods."""
 
-    def active(self) -> Self:
-        """Filter to active templates only."""
-        return self.filter(active=True)
-
-    def search(self, query: str) -> Self:
-        """Search templates by keywords."""
-        return self.filter(search_keywords__icontains=query)
-
-    def custom(self) -> Self:
-        """Filter to custom (user-created) templates."""
-        return self.filter(custom=True)
-
-    def builtin(self) -> Self:
-        """Filter to built-in templates."""
-        return self.filter(custom=False)
+    pass
 
 
 ImagingReportTemplateManager = models.Manager.from_queryset(ImagingReportTemplateQuerySet)
