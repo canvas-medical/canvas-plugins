@@ -34,9 +34,7 @@ The handler reads action flags from the event context:
        "target": { "id": "12345" },
        "context": {
          "link_to_patient": {
-           "first_name": "John",
-           "last_name": "Doe",
-           "date_of_birth": "1990-05-15"
+           "patient_key": "5e4e107888564e359e1b3592e08f502f"
          }
        }
      }

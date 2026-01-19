@@ -3,7 +3,7 @@ Example handler demonstrating the LINK_DOCUMENT_TO_PATIENT effect.
 
 This handler responds to DOCUMENT_RECEIVED events and demonstrates how to
 use the LinkDocumentToPatient effect to link documents to patients using
-the patient's key (UUID).
+the patient's key.
 
 In a real implementation, this would integrate with an LLM or OCR system
 to extract patient information from the document content and find the
