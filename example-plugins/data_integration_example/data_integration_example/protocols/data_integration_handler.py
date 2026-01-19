@@ -5,9 +5,13 @@ from pydantic import ValidationError
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import (
     AnnotationItem as CategorizeDocumentAnnotation,
+)
+from canvas_sdk.effects.categorize_document import (
     CategorizeDocument,
-    ConfidenceScores as CategorizeDocumentConfidenceScores,
     DocumentType,
+)
+from canvas_sdk.effects.categorize_document import (
+    ConfidenceScores as CategorizeDocumentConfidenceScores,
 )
 from canvas_sdk.effects.data_integration import (
     Annotation,
