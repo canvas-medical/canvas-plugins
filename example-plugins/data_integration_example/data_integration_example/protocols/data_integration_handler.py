@@ -1,7 +1,5 @@
 """Protocol demonstrating all Data Integration effects."""
 
-from datetime import date
-
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
@@ -20,7 +18,7 @@ from canvas_sdk.effects.data_integration import (
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.v1.data import Staff, Team
+from canvas_sdk.v1.data import Patient, Staff, Team
 from logger import log
 
 
@@ -250,20 +248,25 @@ class DataIntegrationHandler(BaseProtocol):
         return []
 
     def _create_link_document_effect(self, document_id: str) -> Effect | None:
-        """Create a LinkDocumentToPatient effect with sample patient data."""
+        """Create a LinkDocumentToPatient effect using patient key."""
         try:
-            # In a real implementation, you would extract patient demographics
-            # from the document using OCR/LLM. This uses sample data for demo.
+            # Fetch first available patient - in production, this would come from patient matching
+            patient = Patient.objects.first()
+
+            if not patient:
+                log.warning(f"No patient available for document {document_id}")
+                return None
+
+            log.info(f"Found patient: {patient.id} ({patient.first_name} {patient.last_name})")
+
             effect = LinkDocumentToPatient(
                 document_id=str(document_id),
-                first_name="John",
-                last_name="Doe",
-                date_of_birth=date(1990, 5, 15),
-                confidence_scores={
-                    "first_name": 0.95,
-                    "last_name": 0.92,
-                    "date_of_birth": 0.88,
-                },
+                patient_key=str(patient.id),
+                annotations=[
+                    {"text": "AI 95%", "color": "#00AA00"},
+                    {"text": "DOB matched", "color": "#2196F3"},
+                ],
+                source_protocol="data_integration_example_v1",
             )
             log.info(f"Created LinkDocumentToPatient effect for document {document_id}")
             return effect.apply()

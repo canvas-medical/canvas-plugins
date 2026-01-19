@@ -9,7 +9,7 @@ When a document enters the Data Integration queue, this plugin:
 1. Responds to the `DOCUMENT_RECEIVED` event
 2. Checks the event context for action flags to determine which effects to apply
 3. Creates and returns the appropriate Data Integration effects:
-   - **LINK_DOCUMENT_TO_PATIENT**: Link documents to patients based on demographics
+   - **LINK_DOCUMENT_TO_PATIENT**: Link documents to patients using patient key
    - **JUNK_DOCUMENT**: Mark documents as junk/spam
    - **REMOVE_DOCUMENT_FROM_PATIENT**: Remove/unlink documents from patients
    - **ASSIGN_DOCUMENT_REVIEWER**: Assign a reviewer (staff or team) to documents
@@ -34,9 +34,7 @@ The handler reads action flags from the event context:
        "target": { "id": "12345" },
        "context": {
          "link_to_patient": {
-           "first_name": "John",
-           "last_name": "Doe",
-           "date_of_birth": "1990-05-15"
+           "patient_key": "5e4e107888564e359e1b3592e08f502f"
          }
        }
      }
@@ -98,36 +96,37 @@ The handler reads action flags from the event context:
 
 ### 1. LINK_DOCUMENT_TO_PATIENT
 
-Links a document to a patient based on patient demographics (first name, last name, date of birth).
+Links a document to a patient using the patient's key. The plugin is responsible for finding/matching the patient and providing their key.
 
 ```python
-from datetime import date
 from canvas_sdk.effects.data_integration import LinkDocumentToPatient
+from canvas_sdk.v1.data import Patient
+
+# Fetch patient (in production, this would come from patient matching logic)
+patient = Patient.objects.first()
 
 effect = LinkDocumentToPatient(
-    first_name="John",           # Required: patient's first name
-    last_name="Doe",             # Required: patient's last name
-    date_of_birth=date(1990, 5, 15),  # Required: patient's DOB
-    document_id="12345",         # Required: IntegrationTask ID
-    confidence_scores={          # Optional: confidence scores for monitoring
-        "first_name": 0.95,
-        "last_name": 0.90,
-        "date_of_birth": 0.85,
-    },
+    document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",  # Required: IntegrationTask UUID
+    patient_key=str(patient.id),                         # Required: patient's key (32-char hex string)
+    annotations=[                                        # Optional: display annotations
+        {"text": "AI 95%", "color": "#00AA00"},
+        {"text": "DOB matched", "color": "#2196F3"},
+    ],
+    source_protocol="llm_v1",                            # Optional: protocol/plugin identifier
 )
 ```
 
 **Fields:**
-- `first_name` (str, required): Patient's first name (non-empty)
-- `last_name` (str, required): Patient's last name (non-empty)
-- `date_of_birth` (date, required): Patient's date of birth
-- `document_id` (str/int, required): The IntegrationTask ID to link
-- `confidence_scores` (dict, optional): Confidence scores for each field (0.0-1.0)
+- `document_id` (str/int, required): The IntegrationTask UUID to link
+- `patient_key` (str, required): The patient's key (32-character hex string, not a UUID)
+- `annotations` (list[dict], optional): Display annotations with `text` and `color` fields
+- `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
-**Matching Logic:**
-- Filters patients by demographics (case-insensitive names, exact date match)
-- If exactly one patient matches, links the document to that patient
-- If zero or multiple patients match, throws an exception
+**Behavior:**
+- Looks up the patient by key
+- Links the document to that patient
+- Creates an IntegrationTaskPrefill record with patient data and annotations
+- Raises ValidationError if patient or document doesn't exist
 
 ### 2. JUNK_DOCUMENT
 
@@ -222,20 +221,21 @@ effect = AssignDocumentReviewer(
 
 1. When a document is received, the `DataIntegrationHandler` is triggered
 2. The handler demonstrates how to create each type of effect:
-   - Extracts patient demographics (simulated) for `LinkDocumentToPatient`
+   - Fetches first available patient for `LinkDocumentToPatient` (in production, would use patient matching)
    - Determines if document is junk (simulated) for `JunkDocument`
    - Determines if document should be removed (simulated) for `RemoveDocumentFromPatient`
-   - Determines reviewer assignment (simulated) for `AssignDocumentReviewer`
+   - Fetches first available staff/team for `AssignDocumentReviewer`
 3. Returns a list of effects to apply
 
 ## Implementation Notes
 
 This is an **example plugin** that demonstrates the structure and usage of Data Integration effects. In a production implementation, you would:
 
-1. **Extract Patient Demographics** (for `LinkDocumentToPatient`):
+1. **Match Patient** (for `LinkDocumentToPatient`):
    - Fetch the document content
-   - Use an LLM or OCR system to extract patient demographics
-   - Handle confidence scores returned by the extraction system
+   - Use an LLM or OCR system to extract patient demographics from the document
+   - Use the extracted demographics to find matching patients in the system
+   - Handle confidence scores returned by the matching system
    - Implement retry logic or manual review workflows for ambiguous matches
 
 2. **Classify Documents** (for `JunkDocument`):
