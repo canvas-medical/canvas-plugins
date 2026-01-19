@@ -5,7 +5,8 @@ from pydantic import Field, model_validator
 from pydantic_core import InitErrorDetails
 from typing_extensions import TypedDict
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 
 
 class DocumentTypeConfidenceScores(TypedDict, total=False):
@@ -44,8 +45,7 @@ class ConfidenceScores(TypedDict, total=False):
     document_type: DocumentTypeConfidenceScores
 
 
-CONFIDENCE_SCORE_KEYS = frozenset(ConfidenceScores.__annotations__.keys())
-DOCUMENT_TYPE_CONFIDENCE_KEYS = frozenset(DocumentTypeConfidenceScores.__annotations__.keys())
+_DOCUMENT_TYPE_CONFIDENCE_KEYS = frozenset(DocumentTypeConfidenceScores.__annotations__.keys())
 
 
 class DocumentType(TypedDict):
@@ -72,7 +72,7 @@ VALID_TEMPLATE_TYPES = frozenset(
 )
 
 
-class CategorizeDocument(_BaseEffect):
+class CategorizeDocument(_BaseDocumentEffect):
     """
     An Effect that categorizes a document in the Data Integration queue into a specific document type.
 
@@ -98,33 +98,34 @@ class CategorizeDocument(_BaseEffect):
     document_type: DocumentType | dict[str, Any] | None = None
     confidence_scores: ConfidenceScores | None = None
 
+    @classmethod
+    def _get_confidence_score_keys(cls) -> frozenset[str]:
+        """Return valid keys for confidence_scores validation."""
+        return frozenset(ConfidenceScores.__annotations__.keys())
+
     @model_validator(mode="before")
     @classmethod
     def validate_confidence_scores_keys(cls, data: Any) -> Any:
         """Validate confidence_scores keys before Pydantic processes the TypedDict.
 
+        Extends the base class validation to also validate nested document_type keys.
         TypedDict in Pydantic silently drops unknown keys, so we validate
         them here to provide a clear error message to users.
         """
+        # Call base class validation for top-level confidence_scores keys
+        data = super().validate_confidence_scores_keys.__func__(cls, data)
+
+        # Additional validation for nested document_type confidence scores
         if isinstance(data, dict) and "confidence_scores" in data:
             scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-
-                if "document_type" in scores and isinstance(scores["document_type"], dict):
-                    doc_type_scores = scores["document_type"]
-                    invalid_doc_type_keys = (
-                        set(doc_type_scores.keys()) - DOCUMENT_TYPE_CONFIDENCE_KEYS
-                    )
+            if isinstance(scores, dict) and "document_type" in scores:
+                doc_type_scores = scores["document_type"]
+                if isinstance(doc_type_scores, dict):
+                    invalid_doc_type_keys = set(doc_type_scores.keys()) - _DOCUMENT_TYPE_CONFIDENCE_KEYS
                     if invalid_doc_type_keys:
                         raise ValueError(
                             f"confidence_scores.document_type contains invalid keys: {sorted(invalid_doc_type_keys)}. "
-                            f"Valid keys are: {sorted(DOCUMENT_TYPE_CONFIDENCE_KEYS)}"
+                            f"Valid keys are: {sorted(_DOCUMENT_TYPE_CONFIDENCE_KEYS)}"
                         )
         return data
 

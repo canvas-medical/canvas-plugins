@@ -3,10 +3,11 @@
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import Field, model_validator
+from pydantic import Field
 from typing_extensions import TypedDict
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 
 
 class Priority(StrEnum):
@@ -26,17 +27,17 @@ class Priority(StrEnum):
 class ReviewMode(StrEnum):
     """Review mode for document review.
 
-    Maps to short codes in database: RR, AR, RN.
+    Values are the database short codes used by the home-app interpreter.
 
     Attributes:
-        REVIEW_REQUIRED: Document requires active review and action (default) - maps to "RR"
-        ALREADY_REVIEWED: Document was already reviewed offline - maps to "AR"
-        REVIEW_NOT_REQUIRED: Document does not require review - maps to "RN"
+        REVIEW_REQUIRED: Document requires active review and action (default)
+        ALREADY_REVIEWED: Document was already reviewed offline
+        REVIEW_NOT_REQUIRED: Document does not require review
     """
 
-    REVIEW_REQUIRED = "review_required"
-    ALREADY_REVIEWED = "already_reviewed"
-    REVIEW_NOT_REQUIRED = "review_not_required"
+    REVIEW_REQUIRED = "RR"
+    ALREADY_REVIEWED = "AR"
+    REVIEW_NOT_REQUIRED = "RN"
 
 
 class AssignDocumentReviewerConfidenceScores(TypedDict, total=False):
@@ -53,11 +54,7 @@ class AssignDocumentReviewerConfidenceScores(TypedDict, total=False):
     document_id: Annotated[float, Field(ge=0.0, le=1.0)]
 
 
-# Valid keys for confidence_scores dictionary (derived from TypedDict for validation)
-CONFIDENCE_SCORE_KEYS = frozenset(AssignDocumentReviewerConfidenceScores.__annotations__.keys())
-
-
-class AssignDocumentReviewer(_BaseEffect):
+class AssignDocumentReviewer(_BaseDocumentEffect):
     """
     An Effect that assigns a staff member or team as reviewer to a document
     in the Data Integration queue.
@@ -99,31 +96,10 @@ class AssignDocumentReviewer(_BaseEffect):
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
     confidence_scores: AssignDocumentReviewerConfidenceScores | None = None
 
-    @model_validator(mode="before")
     @classmethod
-    def validate_confidence_scores_keys(cls, data: Any) -> Any:
-        """Validate confidence_scores keys before Pydantic processes the TypedDict.
-
-        TypedDict in Pydantic silently drops unknown keys, so we validate
-        them here to provide a clear error message to users.
-        """
-        if isinstance(data, dict) and "confidence_scores" in data:
-            scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-        return data
-
-    # Mapping from SDK review_mode values to database short codes
-    _REVIEW_MODE_TO_DB: dict[str, str] = {
-        "review_required": "RR",
-        "already_reviewed": "AR",
-        "review_not_required": "RN",
-    }
+    def _get_confidence_score_keys(cls) -> frozenset[str]:
+        """Return valid keys for confidence_scores validation."""
+        return frozenset(AssignDocumentReviewerConfidenceScores.__annotations__.keys())
 
     @property
     def values(self) -> dict[str, Any]:
@@ -132,12 +108,12 @@ class AssignDocumentReviewer(_BaseEffect):
         Strings are stripped of leading/trailing whitespace during serialization.
         document_id is always converted to string.
         priority is converted to boolean (HIGH=True, NORMAL=False).
-        review_mode is converted to database short codes (RR, AR, RN).
+        review_mode uses the enum value directly (database short codes).
         """
         result: dict[str, Any] = {
             "document_id": str(self.document_id).strip() if self.document_id is not None else None,
             "priority": self.priority == Priority.HIGH,
-            "review_mode": self._REVIEW_MODE_TO_DB[self.review_mode.value],
+            "review_mode": self.review_mode.value,
         }
         if self.reviewer_id is not None:
             result["reviewer_id"] = str(self.reviewer_id).strip()

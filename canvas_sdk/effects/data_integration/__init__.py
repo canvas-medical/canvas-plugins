@@ -1,4 +1,5 @@
 from .assign_document_reviewer import AssignDocumentReviewer as AssignDocumentReviewer
+from .base import _BaseDocumentEffect as _BaseDocumentEffect
 from .assign_document_reviewer import (
     AssignDocumentReviewerConfidenceScores as AssignDocumentReviewerConfidenceScores,
 )
@@ -16,6 +17,7 @@ from .remove_document_from_patient import (
 from .remove_document_from_patient import RemoveDocumentFromPatient as RemoveDocumentFromPatient
 
 __all__ = __exports__ = (
+    "_BaseDocumentEffect",
     "AssignDocumentReviewer",
     "AssignDocumentReviewerConfidenceScores",
     "JunkDocument",
