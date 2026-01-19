@@ -3,7 +3,18 @@
 from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+
+class Annotation(BaseModel):
+    """An annotation to display alongside a prefill field."""
+
+    model_config = ConfigDict(strict=True, validate_assignment=True)
+
+    text: str
+    color: str
 
 
 class Priority(StrEnum):
@@ -63,8 +74,8 @@ class AssignDocumentReviewer(_BaseEffect):
         priority: Priority level for the review (normal, high). Defaults to normal.
         review_mode: Review mode (review_required, already_reviewed, review_not_required).
             Defaults to review_required.
-        annotations: Optional list of annotation objects to display with the prefill.
-            Each annotation has "text" and "color" attributes (e.g., [{"text": "Team lead", "color": "#FF0000"}]).
+        annotations: Optional list of Annotation objects to display with the reviewer prefill.
+            Each annotation has "text" and "color" attributes (e.g., [Annotation(text="Team lead", color="#FF0000")]).
         source_protocol: Optional identifier for the protocol/plugin that generated this effect.
             Used for tracking and debugging (e.g., "llm_v1").
     """
@@ -78,7 +89,7 @@ class AssignDocumentReviewer(_BaseEffect):
     team_id: str | int | None = None
     priority: Priority = Priority.NORMAL
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
-    annotations: list[dict[str, str]] | None = None
+    annotations: list[Annotation] | None = None
     source_protocol: str | None = None
 
     # Mapping from SDK review_mode values to database short codes
@@ -96,7 +107,7 @@ class AssignDocumentReviewer(_BaseEffect):
         document_id is always converted to string.
         priority is converted to boolean (HIGH=True, NORMAL=False).
         review_mode is converted to database short codes (RR, AR, RN).
-        annotations is passed as-is (list of annotation objects with text and color).
+        annotations is serialized as list of dicts with text and color keys.
         source_protocol is stripped of leading/trailing whitespace.
         """
         result: dict[str, Any] = {
@@ -109,7 +120,7 @@ class AssignDocumentReviewer(_BaseEffect):
         if self.team_id is not None:
             result["team_id"] = str(self.team_id).strip()
         if self.annotations is not None:
-            result["annotations"] = self.annotations
+            result["annotations"] = [a.model_dump() for a in self.annotations]
         if self.source_protocol is not None:
             result["source_protocol"] = self.source_protocol.strip()
         return result
@@ -124,6 +135,7 @@ class AssignDocumentReviewer(_BaseEffect):
 
 
 __exports__ = (
+    "Annotation",
     "AssignDocumentReviewer",
     "Priority",
     "ReviewMode",

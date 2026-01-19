@@ -347,6 +347,7 @@
     "CompoundMedication"
   ],
   "canvas_sdk.effects.data_integration": [
+    "Annotation",
     "AssignDocumentReviewer",
     "JunkDocument",
     "JunkDocumentConfidenceScores",
@@ -358,6 +359,7 @@
     "ReviewMode"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "Annotation",
     "AssignDocumentReviewer",
     "Priority",
     "ReviewMode"
