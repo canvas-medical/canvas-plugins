@@ -14,6 +14,7 @@ from canvas_sdk.effects import Effect
 from canvas_sdk.effects.data_integration import LinkDocumentToPatient
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
+from canvas_sdk.v1.data import Patient
 from logger import log
 
 
@@ -102,13 +103,25 @@ class LinkDocumentHandler(BaseHandler):
             A dictionary containing the patient_key and annotations,
             or None if no matching patient was found.
         """
-        # This is a placeholder implementation for demonstration purposes.
-        # Example return value - replace with actual patient lookup
+        # Fetch first available patient - in production, this would come from patient matching
+        patient = Patient.objects.first()
+
+        if not patient:
+            log.warning("No patient available in system for document: %s", document_id)
+            return None
+
+        log.info(
+            "Found patient: %s (%s %s)",
+            patient.id,
+            patient.first_name,
+            patient.last_name,
+        )
+
         return {
-            "patient_key": "1d46a570bc31443d8448ef43b0600609",
+            "patient_key": str(patient.id),
             "annotations": [
                 {"text": "AI 95%", "color": "#00AA00"},
-                {"text": "DOB matched"},
+                {"text": "DOB matched", "color": "#2196F3"},
             ],
             "source_protocol": "llm_v1",
         }
@@ -179,8 +192,21 @@ class ConditionalLinkDocumentHandler(BaseHandler):
         2. Search for patients using Canvas FHIR API
         3. Return the best match with confidence score
         """
-        # Placeholder - replace with actual implementation
+        # Fetch first available patient - in production, this would come from patient matching
+        patient = Patient.objects.first()
+
+        if not patient:
+            log.warning("No patient available in system for document: %s", document_id)
+            return None
+
+        log.info(
+            "Found patient: %s (%s %s)",
+            patient.id,
+            patient.first_name,
+            patient.last_name,
+        )
+
         return {
-            "patient_key": "1d46a570bc31443d8448ef43b0600609",
+            "patient_key": str(patient.id),
             "confidence": 0.92,
         }

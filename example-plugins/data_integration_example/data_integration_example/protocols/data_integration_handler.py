@@ -18,7 +18,7 @@ from canvas_sdk.effects.data_integration import (
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.v1.data import Staff, Team
+from canvas_sdk.v1.data import Patient, Staff, Team
 from logger import log
 
 
@@ -250,12 +250,18 @@ class DataIntegrationHandler(BaseProtocol):
     def _create_link_document_effect(self, document_id: str) -> Effect | None:
         """Create a LinkDocumentToPatient effect using patient key."""
         try:
-            # Sample patient key - in production, this would come from patient matching
-            sample_patient_key = "5e4e107888564e359e1b3592e08f502f"
+            # Fetch first available patient - in production, this would come from patient matching
+            patient = Patient.objects.first()
+
+            if not patient:
+                log.warning(f"No patient available for document {document_id}")
+                return None
+
+            log.info(f"Found patient: {patient.id} ({patient.first_name} {patient.last_name})")
 
             effect = LinkDocumentToPatient(
                 document_id=str(document_id),
-                patient_key=sample_patient_key,
+                patient_key=str(patient.id),
                 annotations=[
                     {"text": "AI 95%", "color": "#00AA00"},
                     {"text": "DOB matched", "color": "#2196F3"},
