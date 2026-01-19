@@ -9,11 +9,12 @@ import json
 from typing import Any
 from unittest.mock import Mock, patch
 
-from canvas_sdk.effects.simple_api import JSONResponse
-from canvas_sdk.v1.data import SpecialtyReportTemplate
 from speciality_report_explorer.protocols.specialty_report_template_api import (
     SpecialtyReportTemplateAPI,
 )
+
+from canvas_sdk.effects.simple_api import JSONResponse
+from canvas_sdk.v1.data import SpecialtyReportTemplate
 
 
 # Test Fixtures and Helpers

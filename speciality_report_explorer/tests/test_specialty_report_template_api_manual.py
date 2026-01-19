@@ -18,7 +18,7 @@ Requirements:
 import json
 import subprocess
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 # Configuration
 BASE_URL = (

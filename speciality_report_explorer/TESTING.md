@@ -33,15 +33,15 @@ python tests/test_specialty_report_template_api_manual.py
 - **Test 3.1**: Search for "cardiology"
   - Finds templates with "cardiology" in search_keywords
   - Should find TEST_CARD001 and TEST_CARD003
-  
+
 - **Test 3.2**: Search for "cardiac"
   - Finds templates with "cardiac" in search_keywords
   - Should find TEST_CARD001 and TEST_CARD002
-  
+
 - **Test 3.3**: Search for "heart"
   - Finds templates with "heart" in search_keywords
   - Should find TEST_CARD001 and TEST_CARD002
-  
+
 - **Test 3.4**: Search for non-existent term
   - Returns empty result set (count: 0)
 
@@ -49,7 +49,7 @@ python tests/test_specialty_report_template_api_manual.py
 - **Test 4.1**: Get custom templates
   - Returns only templates where `custom=true`
   - Should return TEST_CARD002
-  
+
 - **Test 4.2**: Get builtin templates
   - Returns only templates where `custom=false`
   - Should exclude TEST_CARD002
@@ -58,11 +58,11 @@ python tests/test_specialty_report_template_api_manual.py
 - **Test 5.1**: Filter by Cardiology specialty (207RC0000X)
   - Returns all Cardiology templates
   - Should find TEST_CARD001, TEST_CARD002, TEST_CARD003
-  
+
 - **Test 5.2**: Filter by Dermatology specialty (207ND0100X)
   - Returns Dermatology templates
   - Should find TEST_DERM001
-  
+
 - **Test 5.3**: Filter by non-existent specialty
   - Returns empty result set
 
@@ -70,7 +70,7 @@ python tests/test_specialty_report_template_api_manual.py
 - **Test 6.1**: Get templates with fields
   - Verifies `include_fields=true` adds fields array
   - TEST_CARD001 should have 6 fields
-  
+
 - **Test 6.2**: Verify field structure
   - Validates field sequences: [1, 2, 3, 4, 5, 6]
   - Validates field labels and types
@@ -81,7 +81,7 @@ python tests/test_specialty_report_template_api_manual.py
   - Verifies `include_options=true` adds options array
   - Assessment field should have 3 options
   - Recommendation field should have 3 options
-  
+
 - **Test 7.2**: Verify option structure
   - Validates option keys and labels
   - Confirms all required option data is present
@@ -90,40 +90,40 @@ python tests/test_specialty_report_template_api_manual.py
 - **Test 8.1**: Active + Specialty Code
   - Returns only active Cardiology templates
   - Should exclude TEST_CARD003 (inactive)
-  
+
 - **Test 8.2**: Active + Search
   - Returns active templates matching search
-  
+
 - **Test 8.3**: Active + Custom
   - Returns active custom templates
   - Should return TEST_CARD002
-  
+
 - **Test 8.4**: Active + Builtin
   - Returns active builtin templates
-  
+
 - **Test 8.5**: Active + Specialty + Fields
   - Returns active Cardiology templates with fields
   - TEST_CARD001 should have 6 fields
   - TEST_CARD002 should have 0 fields
-  
+
 - **Test 8.6**: Active + Specialty + Fields + Options
   - Returns active Cardiology templates with fields and options
   - Assessment and Recommendation fields should have options
-  
+
 - **Test 8.7**: Search + Custom + Fields
   - Returns custom templates matching search with fields
 
 ### 9. Edge Cases
 - **Test 9.1**: Empty result set
   - Returns valid JSON with count: 0
-  
+
 - **Test 9.2**: Template without fields (TEST_EMPTY001)
   - Template correctly shows field_count: 0
   - Fields array is empty
-  
+
 - **Test 9.3**: Field without options
   - "Select Without Options" field correctly shows empty options
-  
+
 - **Test 9.4**: Invalid query parameters
   - Unknown parameters are ignored gracefully
   - Valid response still returned
@@ -142,22 +142,22 @@ The tests use the following test data created by the verification plugin:
   - Specialty: 207RC0000X (Cardiology)
   - Fields: 6 (Chief Complaint, Assessment, Ejection Fraction, Recommendation, Notes, Select Without Options)
   - Options: Assessment (3), Recommendation (3)
-  
+
 - **TEST_CARD002**: Custom Cardiology Template
   - Active: true, Custom: true
   - Specialty: 207RC0000X (Cardiology)
   - Fields: 0
-  
+
 - **TEST_CARD003**: Inactive Cardiology Template
   - Active: false, Custom: false
   - Specialty: 207RC0000X (Cardiology)
   - Fields: 0
-  
+
 - **TEST_DERM001**: Dermatology Consultation Report
   - Active: true, Custom: false
   - Specialty: 207ND0100X (Dermatology)
   - Fields: 0
-  
+
 - **TEST_EMPTY001**: Empty Template
   - Active: true, Custom: false
   - Specialty: 208D00000X (General)
@@ -236,14 +236,14 @@ Example:
 def test_new_feature() -> None:
     """
     Test new feature
-    
+
     Verifies:
     - Feature works as expected
     """
     print("\n=== Test: New feature ===")
     url = f"{BASE_URL}?new_param=value"
     data = run_curl(url)
-    
+
     assert_test(
         "New feature works",
         data["count"] > 0,
@@ -283,4 +283,3 @@ The script exits with code 0 on success, 1 on failure, making it suitable for CI
 
 - [README.md](README.md) - API endpoint documentation
 - [CANVAS_MANIFEST.json](CANVAS_MANIFEST.json) - Plugin configuration
-

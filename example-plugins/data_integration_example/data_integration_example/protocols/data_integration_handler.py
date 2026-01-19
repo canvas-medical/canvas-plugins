@@ -106,6 +106,10 @@ class DataIntegrationHandler(BaseProtocol):
         if categorize_effect:
             effects.append(categorize_effect)
 
+        prefill_effect = self._create_prefill_document_fields_effect(document_id)
+        if prefill_effect:
+            effects.append(prefill_effect)
+
         log.info(
             f"[DOCUMENT_RECEIVED] Returning {len(effects)} effect(s) for document {document_id}"
         )
@@ -405,36 +409,102 @@ class DataIntegrationHandler(BaseProtocol):
 
     def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
         """Create a PrefillDocumentFields effect with sample data."""
+        log.info(f"[PREFILL] Creating PrefillDocumentFields effect for document {document_id}")
         try:
-            effect = PrefillDocumentFields(
-                document_id=str(document_id),
-                templates=[
-                    {
-                        "templateId": 620,
-                        "templateName": "Thyroid Profile With Tsh",
-                        "fields": {
+            templates = [
+                {
+                    "templateId": 620,
+                    "templateName": "Thyroid Profile With Tsh",
+                    "fields": {
+                            # Thyroid Stimulating Hormone (LOINC: 11580-8)
                             "11580-8": {
                                 "value": "2.35",
                                 "unit": "uIU/mL",
-                                "referenceRange": "0.45 - 4.50",
-                                "annotations": [{"text": "AI 95%", "color": "#4CAF50"}],
-                            },
-                            "3016-3": {
-                                "value": "1.2",
-                                "unit": "ng/dL",
-                                "referenceRange": "0.8 - 1.8",
+                                "referenceRange": "0.45 - 4.50 uIU/mL",
                                 "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
                             },
+                            # Also store by label for fallback matching
+                            "Thyroid Stimulating Hormone": {
+                                "value": "2.35",
+                                "unit": "uIU/mL",
+                                "referenceRange": "0.45 - 4.50 uIU/mL",
+                                "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                            },
+                            # Thyroxine T4 (LOINC: 3026-2)
+                            "3026-2": {
+                                "value": "7.8",
+                                "unit": "ug/dL",
+                                "referenceRange": "4.5 - 12.0 ug/dL",
+                                "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                            },
+                            "Thyroxine (T4)": {
+                                "value": "7.8",
+                                "unit": "ug/dL",
+                                "referenceRange": "4.5 - 12.0 ug/dL",
+                                "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                            },
+                            # T3 Uptake (LOINC: 3050-2)
+                            "3050-2": {
+                                "value": "32",
+                                "unit": "%",
+                                "referenceRange": "24 - 39 %",
+                                "annotations": [
+                                    {"text": "AI 87%", "color": "#4CAF50"},
+                                    {"text": "Verify", "color": "#FF9800"},
+                                ],
+                            },
+                            "T3 Uptake": {
+                                "value": "32",
+                                "unit": "%",
+                                "referenceRange": "24 - 39 %",
+                                "annotations": [
+                                    {"text": "AI 87%", "color": "#4CAF50"},
+                                    {"text": "Verify", "color": "#FF9800"},
+                                ],
+                            },
+                            # Free Thyroxine Index (LOINC: 32215-6)
+                            "32215-6": {
+                                "value": "2.5",
+                                "referenceRange": "1.2 - 4.9",
+                                "annotations": [
+                                    {"text": "AI 78%", "color": "#FFC107"},
+                                    {"text": "Low confidence", "color": "#F44336"},
+                                ],
+                            },
+                            "Free Thyroxine Index": {
+                                "value": "2.5",
+                                "referenceRange": "1.2 - 4.9",
+                                "annotations": [
+                                    {"text": "AI 78%", "color": "#FFC107"},
+                                    {"text": "Low confidence", "color": "#F44336"},
+                                ],
+                            },
                         },
-                    }
-                ],
-                annotations=[
+                }
+            ]
+            annotations = [
                     {"text": "1 template matched", "color": "#2196F3"},
-                    {"text": "2 fields extracted", "color": "#4CAF50"},
-                ],
+                    {"text": "4 fields extracted", "color": "#00BCD4"},
+                ]
+
+            log.info(f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['templateId'] for t in templates]}")
+            for tmpl in templates:
+                log.info(f"[PREFILL]   Template '{tmpl['templateName']}' (id={tmpl['templateId']}): {len(tmpl['fields'])} fields")
+                for field_key, field_data in tmpl["fields"].items():
+                    log.info(f"[PREFILL]     Field {field_key}: value={field_data['value']} {field_data.get('unit', '')}")
+
+            effect = PrefillDocumentFields(
+                document_id=str(document_id),
+                templates=templates,
+                annotations=annotations,
             )
-            log.info(f"Created PrefillDocumentFields effect for document {document_id}")
-            return effect.apply()
+            log.info(f"[PREFILL] Effect created, calling apply()")
+            applied = effect.apply()
+            log.info(f"[PREFILL] Effect applied successfully for document {document_id}")
+            return applied
         except ValidationError as e:
-            log.error(f"Validation error creating PrefillDocumentFields: {e}")
+            log.error(f"[PREFILL] Validation error creating PrefillDocumentFields: {e}")
+            return None
+        except Exception as e:
+            log.error(f"[PREFILL] Unexpected error creating PrefillDocumentFields: {e}")
             return None
