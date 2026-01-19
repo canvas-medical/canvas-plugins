@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Any
 
 from canvas_sdk.effects.payment_processor import (
     AddPaymentMethodResponse,
@@ -28,7 +29,7 @@ class CustomPaymentProcessor(CardPaymentProcessor):
         return PaymentProcessorForm(content=form, intent=CardPaymentProcessor.PaymentIntent.PAY)
 
     def charge(
-        self, amount: Decimal, token: str, patient: Patient | None = None
+        self, amount: Decimal, token: str, patient: Patient | None = None, **kwargs: Any
     ) -> CardTransaction:
         """Process a charge using the provided token."""
         return CardTransaction(success=True, transaction_id="txn_123", api_response={})

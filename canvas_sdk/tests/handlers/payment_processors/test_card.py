@@ -1,6 +1,6 @@
 from collections.abc import Generator
 from decimal import Decimal
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,7 +49,7 @@ class DummyCardProcessor(CardPaymentProcessor):
         pass
 
     def charge(  # type: ignore[empty-body]
-        self, amount: Decimal, token: str, patient: Patient | None = None
+        self, amount: Decimal, token: str, patient: Patient | None = None, **kwargs: Any
     ) -> CardTransaction:
         """Return a mock credit card transaction."""
         pass
@@ -180,6 +180,7 @@ def test_charge(
             amount=Decimal(cast(str, context.get("amount"))),
             token=context["token"],
             patient=patient,
+            additional_context=None,
         )
     else:
         mock_charge.assert_not_called()
@@ -283,6 +284,55 @@ def test_add_payment_method(
         mock_add_payment_method.assert_called_once_with(token=context["token"], patient=patient)
     else:
         mock_add_payment_method.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "additional_context, expected_kwargs",
+    [
+        (None, {"additional_context": None}),
+        ('{"key": "value"}', {"key": "value"}),
+        ("just a string", {"additional_context": "just a string"}),
+        ("123", {"additional_context": 123}),
+        ("true", {"additional_context": True}),
+    ],
+    ids=[
+        "none",
+        "stringified_dict",
+        "plain_string",
+        "stringified_number",
+        "stringified_boolean",
+    ],
+)
+@patch.object(
+    DummyCardProcessor,
+    "charge",
+    return_value=CardTransaction(success=True, transaction_id="txn_123", api_response={}),
+)
+def test_charge_additional_context(
+    mock_charge: MagicMock,
+    mock_patient_model: MagicMock,
+    additional_context: str | None,
+    expected_kwargs: dict,
+) -> None:
+    """Test that charge is called with correctly parsed additional_context."""
+    context = {
+        "identifier": "dummy_processor",
+        "token": "pmt_token",
+        "amount": "10.00",
+        "additional_context": additional_context,
+    }
+    event = create_event(type=EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE, context=context)
+    processor = DummyCardProcessor(event=event)
+
+    result = processor.compute()
+
+    assert len(result) == 1
+    mock_charge.assert_called_once_with(
+        amount=Decimal("10.00"),
+        token="pmt_token",
+        patient=None,
+        **expected_kwargs,
+    )
 
 
 @patch.object(

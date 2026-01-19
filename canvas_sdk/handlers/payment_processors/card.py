@@ -1,6 +1,8 @@
+import json
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.payment_processor import (
@@ -46,7 +48,16 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
             amount = Decimal(str(self.event.context.get("amount")))
             token = str(self.event.context.get("token"))
-            effect = self.charge(amount=amount, token=token, patient=patient)
+            additional_context = self.event.context.get("additional_context")
+
+            try:
+                additional_context = json.loads(additional_context)  # type: ignore[arg-type]
+                if not isinstance(additional_context, dict):
+                    additional_context = {"additional_context": additional_context}
+            except (json.JSONDecodeError, TypeError):
+                additional_context = {"additional_context": additional_context}
+
+            effect = self.charge(amount=amount, token=token, patient=patient, **additional_context)
 
             return effect.apply() if effect else None
 
@@ -144,7 +155,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
 
     @abstractmethod
     def charge(
-        self, amount: Decimal, token: str, patient: Patient | None = None
+        self, amount: Decimal, token: str, patient: Patient | None = None, **kwargs: Any
     ) -> CardTransaction:
         """Charge a credit/debit card using the provided token.
 
@@ -152,6 +163,7 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
             amount (Decimal): The amount to charge.
             token (str): The token representing the credit card.
             patient (Patient | None): The patient for whom the charge is being made.
+            **kwargs (Any): Additional context for the charge.
 
         Returns:
             CardTransaction: The result of the card transaction.
