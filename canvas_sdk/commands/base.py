@@ -2,14 +2,16 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.protocol_card import Recommendation
+
+if TYPE_CHECKING:
+    from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -179,8 +181,10 @@ class _BaseCommand(TrackableFieldsModel):
             | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
         }
 
-    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+    def recommend(self, title: str = "", button: str | None = None) -> "Recommendation":
         """Returns a command recommendation to be inserted via Protocol Card."""
+        from canvas_sdk.effects.protocol_card import Recommendation
+
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
         return Recommendation(title=title, button=button, commands=[self])
