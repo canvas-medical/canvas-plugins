@@ -471,7 +471,7 @@ def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: lis
                 f"Warning: Model {model_class} has app_label {model_class._meta.app_label}, expected {app_label}"
             )
 
-        print(f"Associated {model_classes} models with app {app_label}")
+    print(f"Associated {model_classes} models with app {app_label}")
 
 
 def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> list[CustomModel]:
