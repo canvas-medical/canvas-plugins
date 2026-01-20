@@ -1,20 +1,47 @@
-from datetime import datetime
+from datetime import date, datetime
 from hmac import compare_digest
 
-from canvas_sdk.v1.data import AttributeHub, Staff
-from logger import log
-from staff_plus.models.language import Language
 from staff_plus.models.biography import Biography
+from staff_plus.models.language import Language
 from staff_plus.models.proxy import StaffProxy
 from staff_plus.models.specialty import Specialty, StaffSpecialty
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.custom_model.create import BulkCreate, Create, GetOrCreate
-from canvas_sdk.effects.custom_model.delete import Delete
+from canvas_sdk.effects.custom_model.create import Create, GetOrCreate
 from canvas_sdk.effects.custom_model.update import Update
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPI, api
 from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.v1.data import AttributeHub, Staff
+from canvas_sdk.v1.plugin_database_context import get_current_plugin
+from logger import log
+
+
+class ProfileService:
+    def __init__(self, staff: StaffProxy):
+        self.staff = staff
+
+    def get_profile_v1(self):
+        pass
+
+    def upsert_profile_v1(self, json_body):
+        biography = json_body.get("biography")
+        specialties = json_body.get("specialties")
+        languages = json_body.get("languages")
+        practicing_since = json_body.get("practicing_since")
+        accepting_patients = json_body.get("accepting_patients")
+
+        self.staff.set_attributes(
+            {
+                "biography": biography,
+                "specialties": specialties,
+                "languages": languages,
+                "practicing_since": practicing_since,
+                "accepting_patients": accepting_patients,
+                "created_date": date.today(),
+                "created_time": datetime.now(),
+            }
+        )
 
 
 class MyAPI(SimpleAPI):
@@ -28,20 +55,16 @@ class MyAPI(SimpleAPI):
 
     @api.post("/<staff_id>")
     def post_profile(self):
+        plugin = get_current_plugin()
+        log.info(f"Current plugin: {plugin}")
         staff_id = self.request.path_params["staff_id"]
-        json_body = self.request.json()
-        biography = json_body.get("biography")
-        specialties = json_body.get("specialties")
-        languages = json_body.get("languages")
-        accepting_patients = json_body.get("accepting_patients")
         staff = StaffProxy.objects.get(id=staff_id)
-        staff.set_attributes({
-            "biography": biography,
-            "specialties": specialties,
-            "languages": languages,
-            "practicing_since": json_body.get("practicing_since"),
-            "accepting_patients": accepting_patients,
-        })
+        service = ProfileService(staff)
+
+        json_body = self.request.json()
+
+        service.upsert_profile_v1(json_body)
+
         staff.refresh_from_db()
         return [
             JSONResponse(
@@ -51,7 +74,8 @@ class MyAPI(SimpleAPI):
                     "biography": staff.get_attribute("biography"),
                     "specialties": staff.get_attribute("specialties"),
                     "languages": staff.get_attribute("languages"),
-                    "years_of_experience": datetime.today().year - int(staff.get_attribute("practicing_since")),
+                    "years_of_experience": datetime.today().year
+                    - int(staff.get_attribute("practicing_since")),
                 }
             )
         ]
@@ -68,7 +92,7 @@ class MyAPI(SimpleAPI):
             "specialties": staff.get_attribute("specialties"),
             "languages": staff.get_attribute("languages"),
             "years_of_experience": datetime.today().year - staff.get_attribute("practicing_since"),
-            "accepting_patient": staff.get_attribute("accepting_patients")
+            "accepting_patient": staff.get_attribute("accepting_patients"),
         }
 
         return [JSONResponse(profile)]
@@ -88,11 +112,7 @@ class MyAPI(SimpleAPI):
         # Combine the name requirement with the OR conditions
         combined_filter = Q(custom_attributes__name="specialties") & specialty_filters
 
-        matching_staff = (
-            StaffProxy.objects
-            .filter(combined_filter)
-            .all()
-        )
+        matching_staff = StaffProxy.objects.filter(combined_filter).all()
         info = {}
         for staff in matching_staff:
             info[staff.id] = {
@@ -101,8 +121,9 @@ class MyAPI(SimpleAPI):
                 "biography": staff.get_attribute("biography"),
                 "specialties": staff.get_attribute("specialties"),
                 "languages": staff.get_attribute("languages"),
-                "years_of_experience": datetime.today().year - staff.get_attribute("practicing_since"),
-                "accepting_patients": staff.get_attribute("accepting_patients")
+                "years_of_experience": datetime.today().year
+                - staff.get_attribute("practicing_since"),
+                "accepting_patients": staff.get_attribute("accepting_patients"),
             }
 
         return [JSONResponse(info)]
@@ -118,8 +139,11 @@ class MyAPI(SimpleAPI):
                 "biography": staff.get_attribute("biography"),
                 "specialties": staff.get_attribute("specialties"),
                 "languages": staff.get_attribute("languages"),
-                "years_of_experience": datetime.today().year - staff.get_attribute("practicing_since") if staff.get_attribute("practicing_since") else 0,
-                "accepting_patient": staff.get_attribute("accepting_patients")
+                "years_of_experience": datetime.today().year
+                - staff.get_attribute("practicing_since")
+                if staff.get_attribute("practicing_since")
+                else 0,
+                "accepting_patient": staff.get_attribute("accepting_patients"),
             }
 
         return [JSONResponse(info)]
@@ -154,18 +178,26 @@ class MyAPI(SimpleAPI):
             StaffSpecialty(staff=staff, specialty=specialty) for specialty in specialties
         ]
         StaffSpecialty.objects.bulk_create(objs=staff_specialties)
-        #BulkCreate(StaffSpecialty.objects, objs=staff_specialties).apply()
+        # BulkCreate(StaffSpecialty.objects, objs=staff_specialties).apply()
 
         biography_str = json_body.get("biography")
         if staff.biography is None:
             # Biography.objects.create(staff=staff, biography=biography_str)
-            Create(qs=Biography.objects, staff=staff, biography=biography_str, language="English",
-                   practicing_since=practicing_since).apply()
+            Create(
+                qs=Biography.objects,
+                staff=staff,
+                biography=biography_str,
+                practicing_since=practicing_since,
+            ).apply()
         else:
             # staff.biography.biography = biography_str
             # staff.biography.save()
-            Update(Biography.objects.filter(staff=staff), biography=biography_str, language="English",
-                   practicing_since=practicing_since).apply()
+            Update(
+                Biography.objects.filter(staff=staff),
+                biography=biography_str,
+                language="English",
+                practicing_since=practicing_since,
+            ).apply()
 
         staff.refresh_from_db()
         staff.biography.refresh_from_db()
@@ -177,7 +209,9 @@ class MyAPI(SimpleAPI):
             "biography": staff.biography.biography,
             "specialties": specialties,
             "languages": languages,
-            "years_of_experience": datetime.today().year - staff.biography.practicing_since if staff.biography.practicing_since else 0,
+            "years_of_experience": datetime.today().year - staff.biography.practicing_since
+            if staff.biography.practicing_since
+            else 0,
             "accepting_patients": staff.get_attribute("accepting_patients"),
         }
 
@@ -197,8 +231,10 @@ class MyAPI(SimpleAPI):
             "biography": staff.biography.biography,
             "specialties": specialties,
             "languages": languages,
-            "years_of_experience": datetime.today().year - staff.biography.practicing_since if staff.biography.practicing_since else 0,
-            "accepting_patients": staff.get_attribute("accepting_patients")
+            "years_of_experience": datetime.today().year - staff.biography.practicing_since
+            if staff.biography.practicing_since
+            else 0,
+            "accepting_patients": staff.get_attribute("accepting_patients"),
         }
 
         return [JSONResponse(profile)]
@@ -220,12 +256,44 @@ class MyAPI(SimpleAPI):
             info[staff.id]["biography"] = staff.biography.biography
             info[staff.id]["specialties"] = []
             info[staff.id]["languages"] = [l.name for l in staff.languages.all()]
-            info[staff.id]["years_of_experience"] = datetime.today().year - staff.biography.practicing_since if staff.biography.practicing_since else 0
+            info[staff.id]["years_of_experience"] = (
+                datetime.today().year - staff.biography.practicing_since
+                if staff.biography.practicing_since
+                else 0
+            )
             info[staff.id]["accepting_patients"] = staff.get_attribute("accepting_patients")
             for staff_specialty in staff.staff_specialties.all():
                 info[staff.id]["specialties"].append(staff_specialty.specialty.name)
 
         return [JSONResponse(info)]
+
+    @api.post("/v2/delete_specialty/<specialty_name>")
+    def delete_cascade(self):
+        speciality_name = self.request.path_params["specialty_name"]
+        specialty = Specialty.objects.get(name=speciality_name)
+        # field = StaffSpecialty._meta.related_objects
+        # field = StaffSpecialty._meta.get_field('specialty')
+        # log.info(f"FIELD IS {field}")
+        # Check app registry
+        from django.apps import apps
+
+        log.info(f"STAFFY {specialty.staff.all()}")
+
+        # Are both models registered?
+        # log.info(f"Specialty registered: {apps.is_installed('staff_plus')}")
+        #        log.info(f"Specialty model: {apps.get_model('staff_plus', 'Specialty')}")
+        log.info(f"StaffSpecialty model: {apps.get_model('staff_plus', 'StaffSpecialty')}")
+        #
+        # # What does Django think the app_label is for each?
+        # log.info(f"Specialty app_label: {Specialty._meta.app_label}")
+        # log.info(f"StaffSpecialty app_label: {StaffSpecialty._meta.app_label}")
+        #
+        # # Check if the reverse relation exists in the app's model cache
+        specialty_model = apps.get_model("staff_plus", "Specialty")
+        log.info(f"Related objects from app registry: {specialty_model._meta.related_objects}")
+
+        # specialty.delete()
+        return [JSONResponse({"deleted?": True})]
 
     @api.get("/v2/search/")
     def search_v2(self) -> list[Response | Effect]:
@@ -238,8 +306,7 @@ class MyAPI(SimpleAPI):
         )
 
         matching_staff = (
-            StaffProxy.objects
-            .with_only(attribute_names=["accepting_patients"])
+            StaffProxy.objects.with_only(attribute_names=["accepting_patients"])
             .prefetch_related("biography")
             .prefetch_related("staff_specialties__specialty")
             .filter(dbid__in=staff_ids)
@@ -253,7 +320,11 @@ class MyAPI(SimpleAPI):
             info[staff.id]["biography"] = staff.biography.biography
             info[staff.id]["specialties"] = []
             info[staff.id]["languages"] = [l.name for l in staff.languages.all()]
-            info[staff.id]["years_of_experience"] = datetime.today().year - staff.biography.practicing_since if staff.biography.practicing_since else 0
+            info[staff.id]["years_of_experience"] = (
+                datetime.today().year - staff.biography.practicing_since
+                if staff.biography.practicing_since
+                else 0
+            )
             info[staff.id]["accepting_patients"] = staff.get_attribute("accepting_patients")
             for staff_specialty in staff.staff_specialties.all():
                 info[staff.id]["specialties"].append(staff_specialty.specialty.name)
@@ -267,7 +338,9 @@ class MyAPI(SimpleAPI):
         json_body = self.request.json()
         json_body["staff_id"] = staff_id
 
-        hub, created = AttributeHub.objects.get_or_create(type="staff_profile", externally_exposable_id=f"staff_id:{staff_id}")
+        hub, created = AttributeHub.objects.get_or_create(
+            type="staff_profile", externally_exposable_id=f"staff_id:{staff_id}"
+        )
         hub.set_attribute("profile", json_body)
 
         json_from_db = hub.get_attribute("profile")
@@ -279,7 +352,7 @@ class MyAPI(SimpleAPI):
             "specialties": json_from_db["specialties"],
             "languages": json_from_db["languages"],
             "years_of_experience": datetime.today().year - json_from_db["practicing_since"],
-            "accepting_patient": json_from_db["accepting_patients"]
+            "accepting_patient": json_from_db["accepting_patients"],
         }
 
         return [JSONResponse(profile)]
