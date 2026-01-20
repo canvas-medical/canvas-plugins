@@ -57,4 +57,4 @@ def plugin_database_context(plugin_name: str):
                 cursor.execute("SET search_path = public")
 
 
-__exports__ = "get_current_plugin"
+__exports__ = ("get_current_plugin")
