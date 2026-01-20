@@ -7,6 +7,7 @@ import tempfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+from types import ModuleType
 from typing import TypedDict, cast
 from urllib import parse
 
@@ -14,10 +15,11 @@ import psycopg
 import requests
 import sentry_sdk
 from django.contrib.postgres.indexes import GinIndex
-from django.db.models import Index, DateField
+from django.db.models import DateField, Index
 from psycopg import Connection
 from psycopg.rows import dict_row
 
+from canvas_sdk.v1.data.base import CustomModel
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.exceptions import (
@@ -160,6 +162,82 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         yield download_path
 
 
+from django.apps import apps
+from django.apps.config import AppConfig
+from django.conf import settings
+
+
+def register_plugin_as_django_app(plugin_name: str, plugin_path: str) -> None:
+    """
+    Dynamically register a plugin as a Django app.
+    Must be called BEFORE any models from the plugin are imported.
+    """
+    # Normalize plugin name for use as app label (no hyphens)
+    app_label = plugin_name.replace("-", "_")
+
+    # Check if already registered
+    if apps.is_installed(app_label):
+        print(f"Plugin {plugin_name} already registered as Django app")
+        return
+
+    # Create a minimal mock module for Django's app registry
+    mock_module = ModuleType(plugin_name)
+    mock_module.__name__ = plugin_name
+    mock_module.__package__ = plugin_name
+    mock_module.__path__ = [plugin_path]  # Point to actual plugin directory
+    mock_module.__file__ = f"{plugin_path}/__init__.py"
+
+    # Create mock models submodule
+    models_module_name = f"{plugin_name}.models"
+    mock_models = ModuleType(models_module_name)
+    mock_models.__name__ = models_module_name
+    mock_models.__package__ = plugin_name
+    mock_models.__path__ = [f"{plugin_path}/models"]
+    mock_models.__file__ = f"{plugin_path}/models/__init__.py"
+
+    # Register both in sys.modules
+    sys.modules[plugin_name] = mock_module
+    sys.modules[models_module_name] = mock_models
+
+    # Link models module to parent
+    mock_module.models = mock_models
+
+    # Add to INSTALLED_APPS if not present
+    if plugin_name not in settings.INSTALLED_APPS:
+        settings.INSTALLED_APPS = list(settings.INSTALLED_APPS) + [plugin_name]
+
+    class Apps:
+        def check_models_ready(self):
+            return True
+
+    # Create a dynamic AppConfig
+    class DynamicPluginAppConfig(AppConfig):
+        name = plugin_name
+        label = app_label
+        verbose_name = plugin_name
+        path = None  # Will be set by Django if module can be imported
+
+        def __init__(self, app_name, app_module):
+            # Override to prevent Django from doing too much introspection
+            self.apps = Apps()
+            self.name = app_name
+            self.module = app_module
+            self.label = app_label
+            self.verbose_name = plugin_name + "_verbose"
+            self.path = plugin_path
+            self.models_module = None  # Will be populated when sandbox loads models
+            self.models = {}
+
+    # Register with Django's app registry
+    app_config = DynamicPluginAppConfig(plugin_name, None)
+    apps.app_configs[app_label] = app_config
+
+    # Clear the models cache to ensure fresh registration
+    apps.all_models[app_label] = {}
+
+    print(f"Registered plugin {plugin_name} as Django app with label {app_label}")
+
+
 def create_plugin_schema(plugin_name: str) -> None:
     """Run database migrations for the given plugin."""
     log.info(f"Running migrations for plugin '{plugin_name}'")
@@ -189,6 +267,7 @@ def create_plugin_schema(plugin_name: str) -> None:
 
 SQL_STATEMENT_DELIMITER = "\n\n"
 
+
 def generate_create_table_sql(plugin_name: str, model_class) -> str:
     """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition.
 
@@ -197,7 +276,7 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
     from django.conf import settings
 
     # Detect if we're using SQLite
-    is_sqlite = 'sqlite3' in settings.DATABASES['default']['ENGINE']
+    is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
 
     # For SQLite, don't use schema prefix; for PostgreSQL, use plugin_name.table_name
     if is_sqlite:
@@ -243,13 +322,17 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
         # PostgreSQL: use dynamic column addition with IF NOT EXISTS
         for field in regular_fields:
             field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
-            alter_statement = f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
+            alter_statement = (
+                f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
+            )
             alter_statements.append(alter_statement)
 
     # Build index definitions
     index_statements = []
     for index in model_class._meta.indexes:
-        index_sql = generate_index_sql(plugin_name, model_class._meta.db_table, index, is_sqlite=is_sqlite)
+        index_sql = generate_index_sql(
+            plugin_name, model_class._meta.db_table, index, is_sqlite=is_sqlite
+        )
         index_statements.append(index_sql)
 
     # Combine all statements
@@ -289,36 +372,37 @@ def generate_field_sql(field, is_sqlite: bool = False) -> str:
     # Validations will be performed by the plugin and the plugin runner
     # This is a decision meant to protect us from customers doing dangerous things like adding a column with a
     # default value on a large table (table rewrite), or needing to alter a datatype to chnage a constraint
-
-    if isinstance(field, BigAutoField):
+    if type(field) is BigAutoField:
         return "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite else "SERIAL PRIMARY KEY"
-    elif isinstance(field, CharField) or isinstance(field, TextField):
+    elif type(field) in (CharField, TextField):
         return "TEXT"
-    elif isinstance(field, IntegerField):
+    elif type(field) is IntegerField:
         return "INTEGER"
-    elif isinstance(field, DateField):
+    elif type(field) is DateField:
         return "TEXT" if is_sqlite else "DATE"
-    elif isinstance(field, DateTimeField):
+    elif type(field) is DateTimeField:
         return "TEXT" if is_sqlite else "TIMESTAMP WITH TIME ZONE"
-    elif isinstance(field, BooleanField):
+    elif type(field) is BooleanField:
         return "INTEGER" if is_sqlite else "BOOLEAN"
-    elif isinstance(field, ForeignKey) or isinstance(field, OneToOneField):
+    elif type(field) in (ForeignKey, OneToOneField):
         return "INTEGER"
-    elif isinstance(field, DecimalField):
+    elif type(field) is DecimalField:
         if is_sqlite:
             return "REAL"
         else:
-            max_digits = getattr(field, "max_digits", 10)
-            decimal_places = getattr(field, "decimal_places", 2)
+            max_digits = field.max_digits or 20
+            decimal_places = field.decimal_places or 10
             return f"NUMERIC({max_digits},{decimal_places})"
-    elif isinstance(field, JSONField):
+    elif type(field) is JSONField:
         return "TEXT" if is_sqlite else "JSONB"
     else:
         # Fallback for unknown field types
         return "TEXT"
 
 
-def generate_index_sql(plugin_name: str, table_name: str, index: Index, is_sqlite: bool = False) -> str:
+def generate_index_sql(
+    plugin_name: str, table_name: str, index: Index, is_sqlite: bool = False
+) -> str:
     """Generate CREATE INDEX SQL from Django Index object.
 
     Args:
@@ -350,14 +434,50 @@ def generate_index_sql(plugin_name: str, table_name: str, index: Index, is_sqlit
 
     # Support GIN indexes on JSONB fields
     if not is_sqlite and isinstance(index, GinIndex):
-        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} USING GIN({field_list});"
+        return (
+            f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} USING GIN({field_list});"
+        )
     else:
         return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
 
 
-def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
+def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: list) -> None:
+    """
+    After models are loaded in the sandbox, associate them with the registered app.
+
+    Args:
+        plugin_name: Name of the plugin
+        model_classes: List of CustomModel classes from the sandbox
+    """
+    app_label = plugin_name.replace("-", "_")
+
+    if not apps.is_installed(app_label):
+        raise RuntimeError(
+            f"App {app_label} not registered. Call register_plugin_as_django_app first."
+        )
+
+    # Get the AppConfig we created
+    app_config = apps.app_configs[app_label]
+
+    # Register each model with the app
+    for model_class in model_classes:
+        model_name = model_class._meta.model_name
+        # apps.all_models[app_label][model_name] = model_class
+        app_config.models[model_name] = model_class
+
+        # Ensure the model knows its app
+        if model_class._meta.app_label != app_label:
+            print(
+                f"Warning: Model {model_class} has app_label {model_class._meta.app_label}, expected {app_label}"
+            )
+
+        print(f"Associated {model_classes} models with app {app_label}")
+
+
+def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> list[CustomModel]:
     """Generate Django migrations for plugin models."""
     log.info(f"Generating migrations for plugin '{plugin_name}'")
+    discovered_models = []
     try:
         # Add plugin directory to Python path
         if str(plugin_path) not in sys.path:
@@ -374,13 +494,13 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
                 print(f"Loading module {module_name} from {model_file}")
                 s = Sandbox(model_file, namespace=module_name)
                 cls = s.execute()
-                print(cls.keys())
 
                 # Generate CREATE TABLE SQL for each model
                 for name, value in cls.items():
                     if hasattr(value, "__module__") and value.__module__.startswith(
                         f"{plugin_name}.models"
                     ):
+                        discovered_models.append(value)
                         if hasattr(value, "_meta"):
                             if value._meta.proxy:
                                 continue
@@ -397,7 +517,7 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
                             from django.conf import settings
                             from django.db import connection
 
-                            is_sqlite = 'sqlite3' in settings.DATABASES['default']['ENGINE']
+                            is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
 
                             with connection.cursor() as cursor:
                                 if is_sqlite:
@@ -413,6 +533,7 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> None:
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
         raise e
+    return discovered_models
 
 
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
@@ -429,13 +550,15 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         with download_plugin(attributes["package"]) as plugin_file_path:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
+        register_plugin_as_django_app(plugin_name, plugin_installation_path)
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
 
         # if ENABLE_MIGRATIONS:
         create_plugin_schema(plugin_name=plugin_name)
 
         # Generate and apply migrations for plugin models
-        generate_plugin_migrations(plugin_name, plugin_installation_path)
+        discovered_models = generate_plugin_migrations(plugin_name, plugin_installation_path)
+        associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
 
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
