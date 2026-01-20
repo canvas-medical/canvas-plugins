@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -93,7 +94,7 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
     # Address-specific fields
     room_number: str | None = None
-    address_type: AddressType | None = None
+    address_type: AddressType | None = Field(default=None, strict=False)
 
     def _has_facility_creation_fields(self) -> bool:
         """Check if any required facility creation fields are set."""

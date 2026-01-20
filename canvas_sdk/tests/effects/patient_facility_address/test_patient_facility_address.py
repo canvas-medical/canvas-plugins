@@ -638,27 +638,33 @@ def test_address_type_enum_values() -> None:
     assert AddressType.BOTH.value == "both"
 
 
+@pytest.mark.parametrize(
+    "address_type_value", [AddressType.PHYSICAL, "physical"], ids=["enum", "string"]
+)
 def test_address_type_physical_is_valid(
     mock_db_queries: dict[str, MagicMock],
     valid_create_with_facility_id: dict[str, Any],
+    address_type_value: AddressType,
 ) -> None:
     """Test 'physical' address type is valid."""
     address = PatientFacilityAddress(
         **valid_create_with_facility_id,
-        address_type=AddressType.PHYSICAL,
+        address_type=address_type_value,
     )
     errors = address._get_error_details("create")
     assert not any("address_type" in str(e) for e in errors)
 
 
+@pytest.mark.parametrize("address_type_value", [AddressType.BOTH, "both"], ids=["enum", "string"])
 def test_address_type_both_is_valid(
     mock_db_queries: dict[str, MagicMock],
     valid_create_with_facility_id: dict[str, Any],
+    address_type_value: AddressType,
 ) -> None:
     """Test 'both' address type is valid."""
     address = PatientFacilityAddress(
         **valid_create_with_facility_id,
-        address_type=AddressType.BOTH,
+        address_type=address_type_value,
     )
     errors = address._get_error_details("create")
     assert not any("address_type" in str(e) for e in errors)
