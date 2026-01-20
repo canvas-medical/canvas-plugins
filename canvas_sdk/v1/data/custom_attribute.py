@@ -76,19 +76,19 @@ class CustomAttribute(Model):
         self.bool_value = None
         self.json_value = None
 
-        # Set the appropriate field based on value type
-        # Note: Check bool BEFORE int since bool is a subclass of int in Python
-        if isinstance(value, bool):
+        # Set the appropriate field based on value type (exact type match, no inheritance)
+        value_type = type(value)
+        if value_type is bool:
             self.bool_value = value
-        elif isinstance(value, str):
+        elif value_type is str:
             self.text_value = value
-        elif isinstance(value, int):
+        elif value_type is int:
             self.int_value = value
-        elif isinstance(value, (float, decimal.Decimal)):
+        elif value_type in (float, decimal.Decimal):
             self.decimal_value = value
-        elif isinstance(value, datetime.datetime):
+        elif value_type is datetime.datetime:
             self.timestamp_value = value
-        elif isinstance(value, datetime.date):
+        elif value_type is datetime.date:
             self.date_value = value
         elif value is None:
             pass  # All fields already cleared

@@ -372,28 +372,29 @@ def generate_field_sql(field, is_sqlite: bool = False) -> str:
     # Validations will be performed by the plugin and the plugin runner
     # This is a decision meant to protect us from customers doing dangerous things like adding a column with a
     # default value on a large table (table rewrite), or needing to alter a datatype to chnage a constraint
-    if type(field) is BigAutoField:
+    field_type = type(field)
+    if field_type is BigAutoField:
         return "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite else "SERIAL PRIMARY KEY"
-    elif type(field) in (CharField, TextField):
+    elif field_type in (CharField, TextField):
         return "TEXT"
-    elif type(field) is IntegerField:
+    elif field_type is IntegerField:
         return "INTEGER"
-    elif type(field) is DateField:
+    elif field_type is DateField:
         return "TEXT" if is_sqlite else "DATE"
-    elif type(field) is DateTimeField:
+    elif field_type is DateTimeField:
         return "TEXT" if is_sqlite else "TIMESTAMP WITH TIME ZONE"
-    elif type(field) is BooleanField:
+    elif field_type is BooleanField:
         return "INTEGER" if is_sqlite else "BOOLEAN"
-    elif type(field) in (ForeignKey, OneToOneField):
+    elif field_type in (ForeignKey, OneToOneField):
         return "INTEGER"
-    elif type(field) is DecimalField:
+    elif field_type is DecimalField:
         if is_sqlite:
             return "REAL"
         else:
             max_digits = field.max_digits or 20
             decimal_places = field.decimal_places or 10
             return f"NUMERIC({max_digits},{decimal_places})"
-    elif type(field) is JSONField:
+    elif field_type is JSONField:
         return "TEXT" if is_sqlite else "JSONB"
     else:
         # Fallback for unknown field types
