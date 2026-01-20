@@ -7,8 +7,8 @@ from .appointment import (
     AppointmentMetadata,
 )
 from .assessment import Assessment
-from .base import CustomModel
 from .banner_alert import BannerAlert
+from .base import CustomModel
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -211,6 +211,7 @@ __all__ = __exports__ = (
     "CustomAttribute",
     "CustomAttributeAwareManager",
     "CustomAttributeMixin",
+    "CustomModel",
     "CoveragePosting",
     "CurrentNoteStateEvent",
     "DetectedIssue",

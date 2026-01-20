@@ -11,4 +11,4 @@ class Update(Mutation):
         self.qs.update(**self._kwargs)
 
 
-__exports__ = "Update"
+__exports__ = ("Update")
