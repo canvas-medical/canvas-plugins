@@ -7,4 +7,4 @@ class Delete(Mutation):
         self.qs.delete()
 
 
-__exports__ = "Delete"
+__exports__ = ("Delete")
