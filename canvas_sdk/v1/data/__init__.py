@@ -7,6 +7,7 @@ from .appointment import (
     AppointmentMetadata,
 )
 from .assessment import Assessment
+from .base import CustomModel
 from .banner_alert import BannerAlert
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
