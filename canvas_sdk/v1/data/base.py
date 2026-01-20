@@ -152,7 +152,6 @@ class CustomModelMetaclass(ModelMetaclass):
 
 class CustomModel(Model, metaclass=CustomModelMetaclass):
     class Meta:
-        print("INSIDE OF CustomModel META")
         abstract = True
 
     objects = CustomModelManager()
@@ -382,4 +381,4 @@ class ValueSetTimeframeLookupQuerySet(ValueSetLookupQuerySet, TimeframeLookupQue
     pass
 
 
-__exports__ = "CustomModel"
+__exports__ = ("CustomModel")
