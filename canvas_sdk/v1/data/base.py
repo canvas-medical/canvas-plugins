@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Protocol, Self, cast
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models
-from django.db.models import Q, ForeignKey, OneToOneField
+from django.db.models import ForeignKey, OneToOneField, Q
 from django.db.models.base import ModelBase
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class RestrictedQuerySet(models.QuerySet):
                     qn for qn in _["qualified_names"] if qn == caller.co_qualname
                 ):
                     return
-#        raise NotImplementedError()
+        #        raise NotImplementedError()
         print("DIRECT CRUD ACTION DETECTED")
 
     def bulk_create(self, **kwargs) -> list["CustomModel"]:
@@ -118,8 +118,10 @@ class CustomModelManager(models.Manager):
     def get_queryset(self):
         return RestrictedQuerySet(self.model, using=self._db)
 
+
 class CustomModelMetaclass(ModelMetaclass):
     """A metaclass for configuring data models."""
+
     def __new__(cls, name, bases, attrs, **kwargs):
         meta = attrs.get("Meta")
         if meta is None:
@@ -127,7 +129,7 @@ class CustomModelMetaclass(ModelMetaclass):
 
         # Create Meta class if it doesn't exist
         if meta is None:
-            meta = type('Meta', (), {})
+            meta = type("Meta", (), {})
             attrs["Meta"] = meta
 
         # Set dynamic attributes
@@ -150,7 +152,7 @@ class CustomModelMetaclass(ModelMetaclass):
 
 class CustomModel(Model, metaclass=CustomModelMetaclass):
     class Meta:
-        print(f"INSIDE OF CustomModel META")
+        print("INSIDE OF CustomModel META")
         abstract = True
 
     objects = CustomModelManager()

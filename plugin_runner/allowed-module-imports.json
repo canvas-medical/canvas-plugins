@@ -273,13 +273,13 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
-  "canvas_sdk.effects.custom_model.delete": [
-    "Delete"
-  ],
   "canvas_sdk.effects.custom_model.create": [
     "BulkCreate",
     "Create",
     "GetOrCreate"
+  ],
+  "canvas_sdk.effects.custom_model.delete": [
+    "Delete"
   ],
   "canvas_sdk.effects.custom_model.update": [
     "Update"
@@ -614,9 +614,18 @@
     "pharmacy_http",
     "science_http"
   ],
-  "canvas_sdk.v1.data.base": [
-    "CustomModel",
-    "Model"
+  "canvas_sdk.v1": [
+    "_",
+    "c",
+    "e",
+    "g",
+    "i",
+    "l",
+    "n",
+    "p",
+    "r",
+    "t",
+    "u"
   ],
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
@@ -775,6 +784,9 @@
   ],
   "canvas_sdk.v1.data.banner_alert": [
     "BannerAlert"
+  ],
+  "canvas_sdk.v1.data.base": [
+    "CustomModel"
   ],
   "canvas_sdk.v1.data.billing": [
     "BillingLineItem",
@@ -1074,10 +1086,7 @@
     "CanvasUser"
   ],
   "canvas_sdk.v1.plugin_database_context": [
-    "clear_current_plugin",
-    "get_current_plugin",
-    "plugin_context",
-    "set_current_plugin"
+    "get_current_plugin"
   ],
   "canvas_sdk.value_set.custom": [
     "Antiarrhythmics",
