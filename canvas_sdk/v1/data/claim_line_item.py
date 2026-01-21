@@ -147,7 +147,7 @@ class ClaimLineItemDiagnosisCode(TimestampedModel, IdentifiableModel):
     """ClaimLineItemDiagnosisCode."""
 
     class Meta:
-        db_table = "canvas_sdk_data_quality_and_revenue_claimlineitemdiagnosiscode_001"
+        db_table = "canvas_sdk_data_quality_and_revenue_lineitemdiagnosiscode_001"
         ordering = ["claim_diagnosis_code__rank"]
 
     line_item = models.ForeignKey(
