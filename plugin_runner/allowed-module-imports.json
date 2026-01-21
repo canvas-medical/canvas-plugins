@@ -434,6 +434,14 @@
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
   ],
+  "canvas_sdk.effects.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
+  ],
+  "canvas_sdk.effects.patient_facility_address.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
+  ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",
     "InputType",
