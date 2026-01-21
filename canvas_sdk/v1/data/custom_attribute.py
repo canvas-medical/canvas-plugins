@@ -6,10 +6,9 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Prefetch
-from django.db.models.base import ModelBase
 from django.utils.functional import cached_property
 
-from .base import Model, RestrictedQuerySet, ModelMetaclass
+from .base import Model, ModelMetaclass, RestrictedQuerySet
 
 
 class CustomAttribute(Model):
@@ -123,7 +122,7 @@ class CustomAttributeAwareManager(models.Manager):
         )
 
 
-class CustomAttributeMetaClass(ModelMetaclass):
+class CustomAttributeMixinMetaClass(ModelMetaclass):
     def __new__(cls, name, bases, attrs, **kwargs):
         meta = attrs.get("Meta")
         if meta is None:
@@ -131,7 +130,7 @@ class CustomAttributeMetaClass(ModelMetaclass):
 
         # Create Meta class if it doesn't exist
         if meta is None:
-            meta = type('Meta', (), {})
+            meta = type("Meta", (), {})
             attrs["Meta"] = meta
 
         # set the app label for proxy models belonging to the plugin
@@ -144,7 +143,7 @@ class CustomAttributeMetaClass(ModelMetaclass):
 
 
 # Mixin for models that want custom attributes
-class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
+class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass):
     """
     Mixin to add custom attributes support to any SDK model.
     Automatically includes the GenericRelation field.
@@ -156,7 +155,6 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Add GenericRelation to any class that inherits this mixin
-        from django.contrib.contenttypes.fields import GenericRelation
 
         cls.add_to_class(
             "custom_attributes",
@@ -277,9 +275,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
             else:
                 # Create new attribute
                 attr = CustomAttribute(
-                    content_type_id=self._content_type_id,
-                    object_id=self.pk,
-                    name=name
+                    content_type_id=self._content_type_id, object_id=self.pk, name=name
                 )
                 attr.value = value
                 to_create.append(attr)
@@ -292,11 +288,17 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMetaClass):
         if to_update:
             CustomAttribute.objects.bulk_update(
                 to_update,
-                ['text_value', 'timestamp_value', 'int_value', 'decimal_value', 'bool_value', 'json_value']
+                [
+                    "text_value",
+                    "timestamp_value",
+                    "int_value",
+                    "decimal_value",
+                    "bool_value",
+                    "json_value",
+                ],
             )
 
         return created_attrs + to_update
-
 
     def delete_attribute(self, name: str) -> bool:
         """Delete a custom attribute by name. Returns True if deleted, False if not found."""
