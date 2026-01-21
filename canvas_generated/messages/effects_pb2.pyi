@@ -323,6 +323,11 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CALENDAR__EVENT__UPDATE: _ClassVar[EffectType]
     CALENDAR__EVENT__DELETE: _ClassVar[EffectType]
     ORIGINATE_CUSTOM_COMMAND_COMMAND: _ClassVar[EffectType]
+    CREATE_EXTERNAL_EVENT: _ClassVar[EffectType]
+    UPDATE_EXTERNAL_EVENT: _ClassVar[EffectType]
+    CREATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
+    UPDATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
+    DELETE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -639,6 +644,11 @@ CALENDAR__EVENT__CREATE: EffectType
 CALENDAR__EVENT__UPDATE: EffectType
 CALENDAR__EVENT__DELETE: EffectType
 ORIGINATE_CUSTOM_COMMAND_COMMAND: EffectType
+CREATE_EXTERNAL_EVENT: EffectType
+UPDATE_EXTERNAL_EVENT: EffectType
+CREATE_PATIENT_FACILITY_ADDRESS: EffectType
+UPDATE_PATIENT_FACILITY_ADDRESS: EffectType
+DELETE_PATIENT_FACILITY_ADDRESS: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

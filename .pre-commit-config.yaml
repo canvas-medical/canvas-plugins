@@ -5,7 +5,8 @@ exclude: |
     CHANGELOG.md|
     canvas_sdk/value_set/v2022/|
     canvas_sdk/value_set/v2026/|
-    canvas_cli/templates/
+    canvas_cli/templates/|
+    example-plugins/preact_hello_world/preact_hello_world/templates/counter.html
   )
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -39,7 +40,7 @@ repos:
     rev: v0.14.0
     hooks:
       - id: ruff-check
-        args: [ --fix ]
+        args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/rtts/djhtml

@@ -351,6 +351,12 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.external_event": [
+    "ExternalEvent"
+  ],
+  "canvas_sdk.effects.external_event.external_event": [
+    "ExternalEvent"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
@@ -433,6 +439,14 @@
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
+  ],
+  "canvas_sdk.effects.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
+  ],
+  "canvas_sdk.effects.patient_facility_address.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
   ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",
@@ -745,6 +759,8 @@
     "EligibilitySummary",
     "Encounter",
     "Event",
+    "ExternalEvent",
+    "ExternalVisit",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -960,6 +976,10 @@
     "Encounter",
     "EncounterMedium",
     "EncounterState"
+  ],
+  "canvas_sdk.v1.data.external_event": [
+    "ExternalEvent",
+    "ExternalVisit"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"
