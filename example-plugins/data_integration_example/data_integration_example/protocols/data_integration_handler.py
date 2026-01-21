@@ -413,41 +413,41 @@ class DataIntegrationHandler(BaseProtocol):
         try:
             templates = [
                 {
-                    "templateId": 620,
-                    "templateName": "Thyroid Profile With Tsh",
+                    "template_id": 620,
+                    "template_name": "Thyroid Profile With Tsh",
                     "fields": {
                             # Thyroid Stimulating Hormone (LOINC: 11580-8)
                             "11580-8": {
                                 "value": "2.35",
                                 "unit": "uIU/mL",
-                                "referenceRange": "0.45 - 4.50 uIU/mL",
+                                "reference_range": "0.45 - 4.50 uIU/mL",
                                 "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
                             },
                             # Also store by label for fallback matching
                             "Thyroid Stimulating Hormone": {
                                 "value": "2.35",
                                 "unit": "uIU/mL",
-                                "referenceRange": "0.45 - 4.50 uIU/mL",
+                                "reference_range": "0.45 - 4.50 uIU/mL",
                                 "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
                             },
                             # Thyroxine T4 (LOINC: 3026-2)
                             "3026-2": {
                                 "value": "7.8",
                                 "unit": "ug/dL",
-                                "referenceRange": "4.5 - 12.0 ug/dL",
+                                "reference_range": "4.5 - 12.0 ug/dL",
                                 "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
                             },
                             "Thyroxine (T4)": {
                                 "value": "7.8",
                                 "unit": "ug/dL",
-                                "referenceRange": "4.5 - 12.0 ug/dL",
+                                "reference_range": "4.5 - 12.0 ug/dL",
                                 "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
                             },
                             # T3 Uptake (LOINC: 3050-2)
                             "3050-2": {
                                 "value": "32",
                                 "unit": "%",
-                                "referenceRange": "24 - 39 %",
+                                "reference_range": "24 - 39 %",
                                 "annotations": [
                                     {"text": "AI 87%", "color": "#4CAF50"},
                                     {"text": "Verify", "color": "#FF9800"},
@@ -456,7 +456,7 @@ class DataIntegrationHandler(BaseProtocol):
                             "T3 Uptake": {
                                 "value": "32",
                                 "unit": "%",
-                                "referenceRange": "24 - 39 %",
+                                "reference_range": "24 - 39 %",
                                 "annotations": [
                                     {"text": "AI 87%", "color": "#4CAF50"},
                                     {"text": "Verify", "color": "#FF9800"},
@@ -465,7 +465,7 @@ class DataIntegrationHandler(BaseProtocol):
                             # Free Thyroxine Index (LOINC: 32215-6)
                             "32215-6": {
                                 "value": "2.5",
-                                "referenceRange": "1.2 - 4.9",
+                                "reference_range": "1.2 - 4.9",
                                 "annotations": [
                                     {"text": "AI 78%", "color": "#FFC107"},
                                     {"text": "Low confidence", "color": "#F44336"},
@@ -473,7 +473,7 @@ class DataIntegrationHandler(BaseProtocol):
                             },
                             "Free Thyroxine Index": {
                                 "value": "2.5",
-                                "referenceRange": "1.2 - 4.9",
+                                "reference_range": "1.2 - 4.9",
                                 "annotations": [
                                     {"text": "AI 78%", "color": "#FFC107"},
                                     {"text": "Low confidence", "color": "#F44336"},
@@ -487,9 +487,9 @@ class DataIntegrationHandler(BaseProtocol):
                     {"text": "4 fields extracted", "color": "#00BCD4"},
                 ]
 
-            log.info(f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['templateId'] for t in templates]}")
+            log.info(f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['template_id'] for t in templates]}")
             for tmpl in templates:
-                log.info(f"[PREFILL]   Template '{tmpl['templateName']}' (id={tmpl['templateId']}): {len(tmpl['fields'])} fields")
+                log.info(f"[PREFILL]   Template '{tmpl['template_name']}' (id={tmpl['template_id']}): {len(tmpl['fields'])} fields")
                 for field_key, field_data in tmpl["fields"].items():
                     log.info(f"[PREFILL]     Field {field_key}: value={field_data['value']} {field_data.get('unit', '')}")
 

@@ -323,9 +323,14 @@ def test_apply_raises_error_when_annotation_missing_text() -> None:
             document_id="12345",
             templates=[
                 {
-                    "templateId": 620,
-                    "templateName": "Test",
-                    "fields": {"f1": {"value": "v1"}},
+                    "template_id": 620,
+                    "template_name": "Test",
+                    "fields": {
+                        "f1": {
+                            "value": "v1",
+                            "annotations": [{"color": "#FF0000"}],
+                        }
+                    },
                 }
             ],
             annotations=cast(Any, [{"color": "#FF0000"}]),
