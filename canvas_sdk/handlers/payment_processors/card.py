@@ -89,7 +89,16 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
                 return None
 
             token = str(self.event.context.get("token"))
-            effect = self.add_payment_method(token=token, patient=patient)
+            additional_context = self.event.context.get("additional_context")
+
+            try:
+                additional_context = json.loads(additional_context)  # type: ignore[arg-type]
+                if not isinstance(additional_context, dict):
+                    additional_context = {"additional_context": additional_context}
+            except (json.JSONDecodeError, TypeError):
+                additional_context = {"additional_context": additional_context}
+
+            effect = self.add_payment_method(token=token, patient=patient, **additional_context)
             return effect.apply() if effect else None
 
         return None
@@ -183,12 +192,15 @@ class CardPaymentProcessor(PaymentProcessor, ABC):
         raise NotImplementedError("Subclasses must implement the payment_methods method.")
 
     @abstractmethod
-    def add_payment_method(self, token: str, patient: Patient) -> AddPaymentMethodResponse:
+    def add_payment_method(
+        self, token: str, patient: Patient, **kwargs: Any
+    ) -> AddPaymentMethodResponse:
         """Add a payment method for the card payment processor.
 
         Args:
             token (str): The token representing the payment method.
             patient (Patient): The patient for whom the payment method is being added.
+            **kwargs (Any): Additional context for adding the payment method.
 
         Returns:
             AddPaymentMethodResponse: The response indicating the result of the addition operation.

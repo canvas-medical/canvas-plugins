@@ -48,7 +48,9 @@ class CustomPaymentProcessor(CardPaymentProcessor):
             )
         ]
 
-    def add_payment_method(self, token: str, patient: Patient) -> AddPaymentMethodResponse:
+    def add_payment_method(
+        self, token: str, patient: Patient, **kwargs: Any
+    ) -> AddPaymentMethodResponse:
         """Add a payment method for the patient using the provided token."""
         return AddPaymentMethodResponse(success=True)
 
