@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.89.0 (2026-01-14)
+
+### Chores
+
+- Update codecov logic for ci/cd
+  ([#1421](https://github.com/canvas-medical/canvas-plugins/pull/1421),
+  [`eb68cc3`](https://github.com/canvas-medical/canvas-plugins/commit/eb68cc35cfe4efcd1ef456c76204e227110ea841))
+
+### Features
+
+- Custom command ([#1351](https://github.com/canvas-medical/canvas-plugins/pull/1351),
+  [`168b155`](https://github.com/canvas-medical/canvas-plugins/commit/168b15590792e6e84b6d425d04ee3e92fce62164))
+
+
 ## v0.88.0 (2026-01-09)
 
 ### Features

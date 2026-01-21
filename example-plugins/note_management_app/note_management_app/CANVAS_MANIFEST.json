@@ -1,0 +1,37 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "note_management_app",
+    "description": "Application for locking and signing notes via OAuth 2.0.",
+    "components": {
+        "applications": [
+            {
+                "class": "note_management_app.handlers.application:NoteManagementApplication",
+                "name": "Note Management",
+                "description": "Manage notes with OAuth 2.0 authentication",
+                "scope": "global",
+                "icon": "assets/note_icon.png"
+            }
+        ],
+        "protocols": [
+            {
+                "class": "note_management_app.handlers.api:AppApi",
+                "description": "SimpleAPI handler for serving the note management application."
+            },
+            {
+                "class": "note_management_app.handlers.api:NoteApi",
+                "description": "SimpleAPI handler for locking and signing notes."
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["client_id"],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
