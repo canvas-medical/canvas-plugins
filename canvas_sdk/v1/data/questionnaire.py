@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
+    AuditedModel,
     BaseModelManager,
     BaseQuerySet,
     CommittableQuerySetMixin,
@@ -116,7 +117,7 @@ class InterviewQuerySet(ForPatientQuerySetMixin, CommittableQuerySetMixin, BaseQ
 InterviewManager = BaseModelManager.from_queryset(InterviewQuerySet)
 
 
-class Interview(TimestampedModel, IdentifiableModel):
+class Interview(AuditedModel, IdentifiableModel):
     """Interview."""
 
     class Meta:
@@ -124,13 +125,6 @@ class Interview(TimestampedModel, IdentifiableModel):
 
     objects = cast(InterviewQuerySet, InterviewManager())
 
-    deleted = models.BooleanField()
-    committer = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
-    entered_in_error = models.ForeignKey(
-        "v1.CanvasUser", on_delete=models.DO_NOTHING, null=True, related_name="+"
-    )
     status = models.CharField(max_length=2)
     name = models.CharField(max_length=255)
     language_id = models.BigIntegerField()
@@ -138,7 +132,7 @@ class Interview(TimestampedModel, IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="interviews", null=True
     )
-    note_id = models.BigIntegerField()
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, null=True)
     appointment_id = models.BigIntegerField()
     questionnaires = models.ManyToManyField(
         Questionnaire,

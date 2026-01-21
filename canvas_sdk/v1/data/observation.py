@@ -42,7 +42,7 @@ class Observation(AuditedModel, IdentifiableModel):
     category = models.CharField(max_length=14)
     units = models.TextField()
     value = models.TextField()
-    note_id = models.BigIntegerField()
+    note = models.ForeignKey("v1.Note", on_delete=models.CASCADE, null=True)
     name = models.TextField()
     effective_datetime = models.DateTimeField()
 

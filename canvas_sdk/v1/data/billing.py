@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from django.db import models
 
@@ -8,16 +8,13 @@ from canvas_sdk.v1.data.base import (
     ValueSetTimeframeLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
-from canvas_sdk.value_set.value_set import CodeConstants
-
-if TYPE_CHECKING:
-    from canvas_sdk.value_set.value_set import ValueSet
+from canvas_sdk.value_set.value_set import CodeConstants, ValueSetType
 
 
 class BillingLineItemQuerySet(ValueSetTimeframeLookupQuerySet):
     """A class that adds functionality to filter BillingLineItem objects."""
 
-    def find(self, value_set: type["ValueSet"]) -> Self:
+    def find(self, value_set: ValueSetType) -> Self:
         """
         This method is overridden to use for BillingLineItem CPT codes.
         The codes are saved as string values in the BillingLineItem.cpt field,
@@ -54,13 +51,15 @@ class BillingLineItem(TimestampedModel, IdentifiableModel):
         related_name="billing_line_items",
         null=True,
     )
-    cpt = models.CharField(max_length=10)
-    charge = models.DecimalField(decimal_places=2, max_digits=8)
-    description = models.CharField(max_length=255)
-    units = models.IntegerField()
-    command_type = models.CharField(max_length=50)
-    command_id = models.IntegerField()
-    status = models.CharField(choices=BillingLineItemStatus.choices, max_length=20)
+    cpt = models.CharField(max_length=10, default="99213")
+    charge = models.DecimalField(decimal_places=2, max_digits=8, default=0.00)
+    description = models.CharField(max_length=255, blank=True, default="")
+    units = models.IntegerField(default=1)
+    command_type = models.CharField(max_length=50, blank=True, default="")
+    command_id = models.IntegerField(null=True)
+    status = models.CharField(
+        choices=BillingLineItemStatus.choices, max_length=20, default=BillingLineItemStatus.ACTIVE
+    )
 
 
 class BillingLineItemModifier(Coding):
