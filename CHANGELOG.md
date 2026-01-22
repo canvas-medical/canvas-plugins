@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.90.0 (2026-01-21)
+
+### Chores
+
+- Add preact_hello_world example plugin
+  ([#1427](https://github.com/canvas-medical/canvas-plugins/pull/1427),
+  [`43f7665`](https://github.com/canvas-medical/canvas-plugins/commit/43f7665ee4989b47f9cb72838ab3ccefbe4a9757))
+
+- Note management via oauth example plugin
+  ([#1418](https://github.com/canvas-medical/canvas-plugins/pull/1418),
+  [`355db9e`](https://github.com/canvas-medical/canvas-plugins/commit/355db9e257d2ee4c405297aa68b74e53d548b6d2))
+
+### Features
+
+- Implement external event data model and effect
+  ([#1439](https://github.com/canvas-medical/canvas-plugins/pull/1439),
+  [`8649e7e`](https://github.com/canvas-medical/canvas-plugins/commit/8649e7ece8301120bb47c84735aaa0e02f130b3d))
+
+- Implement patient facility address effects
+  ([#1445](https://github.com/canvas-medical/canvas-plugins/pull/1445),
+  [`194c411`](https://github.com/canvas-medical/canvas-plugins/commit/194c4110829a1f80ba8d26518600c4b5f5a19a2e))
+
+- **payments**: Passing additional context to charge and add_payment_method
+  ([#1453](https://github.com/canvas-medical/canvas-plugins/pull/1453),
+  [`030b0d8`](https://github.com/canvas-medical/canvas-plugins/commit/030b0d82d1c0daf8e680d57bbe0df9a33bebd34d))
+
+
 ## v0.89.0 (2026-01-14)
 
 ### Chores
