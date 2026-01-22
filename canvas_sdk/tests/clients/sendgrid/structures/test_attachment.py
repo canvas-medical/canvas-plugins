@@ -1,5 +1,3 @@
-from dataclasses import fields as dataclass_fields
-from dataclasses import is_dataclass as dataclass_is_dataclass
 from http import HTTPStatus
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
@@ -9,14 +7,22 @@ import pytest
 from canvas_sdk.clients.sendgrid.constants.attachment_disposition import AttachmentDisposition
 from canvas_sdk.clients.sendgrid.structures.attachment import Attachment
 from canvas_sdk.clients.sendgrid.structures.request_failed import RequestFailed
+from canvas_sdk.tests.conftest import is_dataclass
 
 
 def test_class() -> None:
     """Test Attachment dataclass has correct field types."""
     tested = Attachment
-    assert dataclass_is_dataclass(tested)
-    field_names = {field.name for field in dataclass_fields(tested)}
-    assert field_names == {"content_id", "content", "type", "filename", "disposition"}
+    fields = {
+        "content_id": "str",
+        "content": "str",
+        "type": "str",
+        "filename": "str",
+        "disposition": "AttachmentDisposition",
+    }
+    result = is_dataclass(tested, fields)
+    expected = True
+    assert result is expected
 
 
 @pytest.mark.parametrize(

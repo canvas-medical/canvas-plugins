@@ -20,7 +20,7 @@ from canvas_sdk.clients.sendgrid.structures.parse_setting import ParseSetting
 from canvas_sdk.clients.sendgrid.structures.recipient import Recipient
 from canvas_sdk.clients.sendgrid.structures.request_failed import RequestFailed
 from canvas_sdk.clients.sendgrid.structures.sent_email import SentEmail
-from canvas_sdk.clients.sendgrid.structures.sent_email_detailed import SentEmailDetailed
+from canvas_sdk.clients.sendgrid.structures.sent_email_detail import SentEmailDetail
 from canvas_sdk.clients.sendgrid.structures.settings import Settings
 
 
@@ -457,7 +457,7 @@ def test_logged_email() -> None:
     mock_response = SimpleNamespace()
     mock_get = MagicMock(side_effect=[mock_response])
 
-    sent_email_detailed = SentEmailDetailed(
+    sent_email_detailed = SentEmailDetail(
         from_email="from@example.com",
         message_id="MSG123",
         subject="Test Subject",
@@ -478,7 +478,7 @@ def test_logged_email() -> None:
     exp_calls = [call("/v3/logs/MSG123", headers={"Authorization": "Bearer test_api_key"})]
     assert mock_get.mock_calls == exp_calls
 
-    exp_calls = [call(mock_response, [HTTPStatus.OK], SentEmailDetailed)]
+    exp_calls = [call(mock_response, [HTTPStatus.OK], SentEmailDetail)]
     assert mock_valid_content.mock_calls == exp_calls
 
 

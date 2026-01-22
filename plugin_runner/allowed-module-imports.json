@@ -158,10 +158,14 @@
     "EventWebhookRecord",
     "LoggedEmailCriteria",
     "ParseSetting",
+    "ParsedAttachment",
+    "ParsedEmail",
+    "ParsedEnvelope",
+    "ParsedHeader",
     "Recipient",
     "RequestFailed",
     "SentEmail",
-    "SentEmailDetailed",
+    "SentEmailDetail",
     "Settings"
   ],
   "canvas_sdk.clients.third_party": [

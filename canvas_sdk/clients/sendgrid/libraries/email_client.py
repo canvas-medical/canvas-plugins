@@ -12,7 +12,7 @@ from canvas_sdk.clients.sendgrid.structures.logged_email_criteria import LoggedE
 from canvas_sdk.clients.sendgrid.structures.parse_setting import ParseSetting
 from canvas_sdk.clients.sendgrid.structures.request_failed import RequestFailed
 from canvas_sdk.clients.sendgrid.structures.sent_email import SentEmail
-from canvas_sdk.clients.sendgrid.structures.sent_email_detailed import SentEmailDetailed
+from canvas_sdk.clients.sendgrid.structures.sent_email_detail import SentEmailDetail
 from canvas_sdk.clients.sendgrid.structures.settings import Settings
 from canvas_sdk.clients.sendgrid.structures.structure import Structure
 from canvas_sdk.utils import Http
@@ -163,11 +163,11 @@ class EmailClient:
         request = self.http.post(url, json=data, headers=headers)
         yield from self._valid_content_list(request, HTTPStatus.OK, "messages", SentEmail)
 
-    def logged_email(self, message_id: str) -> SentEmailDetailed:
+    def logged_email(self, message_id: str) -> SentEmailDetail:
         """Retrieve detailed information for a specific email by message ID."""
         url = f"/v3/logs/{message_id}"
         request = self.http.get(url, headers=self._auth_header())
-        return self._valid_content(request, [HTTPStatus.OK], SentEmailDetailed)
+        return self._valid_content(request, [HTTPStatus.OK], SentEmailDetail)
 
     # incoming emails:
     # - SendGrid UI  : https://app.sendgrid.com/settings/parse

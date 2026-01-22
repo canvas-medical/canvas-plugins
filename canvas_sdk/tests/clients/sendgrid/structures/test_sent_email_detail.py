@@ -5,13 +5,13 @@ import pytest
 from canvas_sdk.clients.sendgrid.constants.event_email import EventEmail
 from canvas_sdk.clients.sendgrid.constants.status_email import StatusEmail
 from canvas_sdk.clients.sendgrid.structures.email_event import EmailEvent
-from canvas_sdk.clients.sendgrid.structures.sent_email_detailed import SentEmailDetailed
+from canvas_sdk.clients.sendgrid.structures.sent_email_detail import SentEmailDetail
 from canvas_sdk.tests.conftest import is_dataclass
 
 
 def test_class() -> None:
-    """Test SentEmailDetailed dataclass has correct field types."""
-    tested = SentEmailDetailed
+    """Test SentEmailDetail dataclass has correct field types."""
+    tested = SentEmailDetail
     fields = {
         "from_email": str,
         "message_id": str,
@@ -51,7 +51,7 @@ def test_class() -> None:
                     },
                 ],
             },
-            SentEmailDetailed(
+            SentEmailDetail(
                 from_email="sender@example.com",
                 message_id="MSG123",
                 subject="Test Email",
@@ -86,9 +86,9 @@ def test_class() -> None:
         ),
     ],
 )
-def test_from_dict(data: dict, expected: SentEmailDetailed) -> None:
-    """Test SentEmailDetailed.from_dict creates instance from dictionary."""
-    test = SentEmailDetailed
+def test_from_dict(data: dict, expected: SentEmailDetail) -> None:
+    """Test SentEmailDetail.from_dict creates instance from dictionary."""
+    test = SentEmailDetail
     result = test.from_dict(data)
     assert result == expected
 
@@ -97,7 +97,7 @@ def test_from_dict(data: dict, expected: SentEmailDetailed) -> None:
     ("email_detailed", "expected"),
     [
         pytest.param(
-            SentEmailDetailed(
+            SentEmailDetail(
                 from_email="sender@example.com",
                 message_id="MSG123",
                 subject="Test Email",
@@ -141,7 +141,7 @@ def test_from_dict(data: dict, expected: SentEmailDetailed) -> None:
         ),
     ],
 )
-def test_to_dict(email_detailed: SentEmailDetailed, expected: dict) -> None:
-    """Test SentEmailDetailed.to_dict converts instance to dictionary."""
+def test_to_dict(email_detailed: SentEmailDetail, expected: dict) -> None:
+    """Test SentEmailDetail.to_dict converts instance to dictionary."""
     result = email_detailed.to_dict()
     assert result == expected

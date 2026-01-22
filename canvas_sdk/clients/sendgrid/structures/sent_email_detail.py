@@ -7,7 +7,7 @@ from canvas_sdk.clients.sendgrid.structures.structure import Structure
 
 
 @dataclass(frozen=True)
-class SentEmailDetailed(Structure):
+class SentEmailDetail(Structure):
     """Represents a sent email with its current event history."""
 
     from_email: str
@@ -19,7 +19,7 @@ class SentEmailDetailed(Structure):
 
     @classmethod
     def from_dict(cls, data: dict) -> Self:
-        """Create SentEmailDetailed instance from dictionary."""
+        """Create SentEmailDetail instance from dictionary."""
         return cls(
             from_email=data["from_email"],
             message_id=data["sg_message_id"],
