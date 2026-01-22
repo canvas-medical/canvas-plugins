@@ -166,7 +166,7 @@ class S3:
         Returns:
             Request headers with AWS signature
         """
-        return self._headers_full(object_key, None, params)
+        return self._headers_full("GET", object_key, None, params)
 
     def _headers_with_data(self, object_key: str, data: tuple[bytes, str]) -> dict:
         """Generate headers for request with data payload.
@@ -178,7 +178,7 @@ class S3:
         Returns:
             Request headers with AWS signature
         """
-        return self._headers_full(object_key, data, None)
+        return self._headers_full("PUT", object_key, data, None)
 
     def _headers(self, object_key: str) -> dict:
         """Generate headers for simple GET request.
@@ -189,10 +189,11 @@ class S3:
         Returns:
             Request headers with AWS signature
         """
-        return self._headers_full(object_key, None, None)
+        return self._headers_full("GET", object_key, None, None)
 
     def _headers_full(
         self,
+        method: str,
         object_key: str,
         data: tuple[bytes, str] | None,
         params: dict | None,
@@ -200,6 +201,7 @@ class S3:
         """Generate complete AWS Signature V4 headers.
 
         Args:
+            method: HTTP method (GET, PUT, DELETE, etc.)
             object_key: S3 object key
             data: Optional tuple of (binary_data, content_type)
             params: Optional query parameters
@@ -207,12 +209,10 @@ class S3:
         Returns:
             Complete request headers with AWS signature
         """
-        # Determine HTTP method and extract data
+        # Extract data if provided
         if data is None:
-            method = "GET"
             binary_data, content_type = b"", ""
         else:
-            method = "PUT"
             binary_data, content_type = data
 
         # Generate base components
@@ -318,6 +318,21 @@ class S3:
         }
         endpoint = f"https://{headers['Host']}/"
         return Http(endpoint).put(url=object_key, headers=headers, data=binary_data)
+
+    def delete_object(self, object_key: str) -> Response | None:
+        """Delete an object from S3.
+
+        Args:
+            object_key: S3 object key to delete
+
+        Returns:
+            HTTP response from S3, or None if credentials not ready
+        """
+        if not self.is_ready():
+            return None
+        headers = self._headers_full("DELETE", object_key, None, None)
+        endpoint = f"https://{headers['Host']}/"
+        return Http(endpoint).delete(url=object_key, headers=headers)
 
     def list_s3_objects(self, prefix: str) -> list[S3Item] | None:
         """List all objects in S3 with given prefix.
