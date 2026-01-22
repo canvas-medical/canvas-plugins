@@ -164,9 +164,10 @@ def measure(
         pipeline.incr("plugins.executions", tags=tags)
         if track_queries:
             query_count = len(connection.queries)
-            query_duration = sum(float(q["time"]) for q in connection.queries)
-            pipeline.timing("plugins.query_count", query_count, tags=tags)
-            pipeline.timing("plugins.query_duration_ms", query_duration, tags=tags)
+            query_duration_seconds = sum(float(q["time"]) for q in connection.queries)
+            query_duration_ms = query_duration_seconds * 1000
+            pipeline.timing("plugins.query_count", delta=query_count, tags=tags)
+            pipeline.timing("plugins.query_duration_ms", delta=query_duration_ms, tags=tags)
             connection.force_debug_cursor = False
 
         pipeline.send()
