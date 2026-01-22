@@ -17,7 +17,10 @@ class _BatchableRequest:
     """Representation of a request that will be executed in parallel with other requests."""
 
     def __init__(
-        self, method: Literal["GET", "POST", "PUT", "PATCH"], url: str, **kwargs: Any
+        self,
+        method: Literal["GET", "POST", "PUT", "PATCH"],
+        url: str,
+        **kwargs: Any,
     ) -> None:
         self._method = method
         self._url = url
@@ -56,7 +59,8 @@ class BatchableRequest(Protocol):
 
 
 def batch_get(
-    url: str, headers: Mapping[str, str | bytes | None] | None = None
+    url: str,
+    headers: Mapping[str, str | bytes | None] | None = None,
 ) -> BatchableRequest:
     """Return a batchable GET request."""
     return _BatchableRequest("GET", url, headers=headers)
@@ -117,7 +121,9 @@ class Http:
 
     @measured(track_plugins_usage=True)
     def get(
-        self, url: str, headers: Mapping[str, str | bytes | None] | None = None
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a GET request."""
         if headers is None:
@@ -181,7 +187,9 @@ class Http:
 
     @measured(track_plugins_usage=True)
     def delete(
-        self, url: str, headers: Mapping[str, str | bytes | None] | None = None
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
     ) -> requests.Response:
         """Sends a DELETE request."""
         if headers is None:

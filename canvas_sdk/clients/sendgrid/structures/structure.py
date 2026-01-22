@@ -3,7 +3,7 @@ from typing import Self
 
 
 class Structure(ABC):
-    """Abstract base class for data structures in the Extend AI client.
+    """Abstract base class for data structures in the Sendgrid client.
 
     All data structures that represent API entities must inherit from this class
     and implement methods for serialization and deserialization.
