@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.91.0 (2026-01-22)
+
+### Features
+
+- Add database metrics to the context manager
+  ([#1462](https://github.com/canvas-medical/canvas-plugins/pull/1462),
+  [`0aeeec5`](https://github.com/canvas-medical/canvas-plugins/commit/0aeeec50a63a7a5f693ff713eba254892acb99c9))
+
+
 ## v0.90.0 (2026-01-21)
 
 ### Chores
