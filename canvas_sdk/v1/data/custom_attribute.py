@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.utils.functional import cached_property
 
-from .base import Model, ModelMetaclass, RestrictedQuerySet
+from .base import Model, ModelMetaclass
 
 
 class CustomAttribute(Model):
@@ -99,7 +99,7 @@ class CustomAttribute(Model):
 class CustomAttributeAwareManager(models.Manager):
     def get_queryset(self):
         """Prefetch all custom attributes for the queryset."""
-        return RestrictedQuerySet(self.model, using=self._db).prefetch_related("custom_attributes")
+        return super().get_queryset().prefetch_related("custom_attributes")
 
     def with_only(self, attribute_names=None):
         if attribute_names is None:

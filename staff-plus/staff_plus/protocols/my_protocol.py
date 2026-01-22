@@ -7,8 +7,6 @@ from staff_plus.models.proxy import StaffProxy
 from staff_plus.models.specialty import Specialty, StaffSpecialty
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.custom_model.create import Create, GetOrCreate
-from canvas_sdk.effects.custom_model.update import Update
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import APIKeyCredentials, SimpleAPI, api
 from canvas_sdk.protocols import BaseProtocol
@@ -161,43 +159,29 @@ class MyAPI(SimpleAPI):
         staff.set_attribute("accepting_patients", accepting_patients)
 
         for l_name in language_names:
-            language, created = GetOrCreate(qs=Language.objects, name=l_name, staff=staff).apply()
+            Language.objects.get_or_create(name=l_name, staff=staff)
 
         specialties = []
         for name in specialty_names:
-            # specialty, created = Specialty.objects.get_or_create(name=name)
-            specialty, created = GetOrCreate(qs=Specialty.objects, name=name).apply()
+            specialty, created = Specialty.objects.get_or_create(name=name)
             specialties.append(specialty)
 
         # Clear existing associations and create new ones
         StaffSpecialty.objects.filter(staff=staff).delete()
-        # qs = StaffSpecialty.objects.filter(staff=staff)
-        # Delete(qs=qs).apply()
 
         staff_specialties = [
             StaffSpecialty(staff=staff, specialty=specialty) for specialty in specialties
         ]
         StaffSpecialty.objects.bulk_create(objs=staff_specialties)
-        # BulkCreate(StaffSpecialty.objects, objs=staff_specialties).apply()
 
         biography_str = json_body.get("biography")
         if staff.biography is None:
-            # Biography.objects.create(staff=staff, biography=biography_str)
-            Create(
-                qs=Biography.objects,
-                staff=staff,
-                biography=biography_str,
-                practicing_since=practicing_since,
-            ).apply()
+            Biography.objects.create(staff=staff, biography=biography_str, practicing_since=practicing_since)
         else:
-            # staff.biography.biography = biography_str
-            # staff.biography.save()
-            Update(
-                Biography.objects.filter(staff=staff),
-                biography=biography_str,
-                language="English",
-                practicing_since=practicing_since,
-            ).apply()
+            staff.biography.biography = biography_str
+            staff.biography.languages = "English"
+            staff.biography.practicing_since = practicing_since
+            staff.biography.save()
 
         staff.refresh_from_db()
         staff.biography.refresh_from_db()
