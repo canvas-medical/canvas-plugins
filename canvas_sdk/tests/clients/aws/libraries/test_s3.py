@@ -182,7 +182,7 @@ def test__headers_with_params(mock_headers_full: MagicMock) -> None:
     expected = {"header": "value"}
     assert result == expected
 
-    calls = [call("file.txt", None, {"key": "value"})]
+    calls = [call("GET", "file.txt", None, {"key": "value"})]
     assert mock_headers_full.mock_calls == calls
 
 
@@ -202,7 +202,7 @@ def test__headers_with_data(mock_headers_full: MagicMock) -> None:
     expected = {"header": "value"}
     assert result == expected
 
-    calls = [call("file.txt", (b"data", "text/plain"), None)]
+    calls = [call("PUT", "file.txt", (b"data", "text/plain"), None)]
     assert mock_headers_full.mock_calls == calls
 
 
@@ -222,14 +222,15 @@ def test__headers(mock_headers_full: MagicMock) -> None:
     expected = {"header": "value"}
     assert result == expected
 
-    calls = [call("file.txt", None, None)]
+    calls = [call("GET", "file.txt", None, None)]
     assert mock_headers_full.mock_calls == calls
 
 
 @pytest.mark.parametrize(
-    ("object_key", "data", "params", "exp_signed", "exp_signature", "exp_sha256"),
+    ("method", "object_key", "data", "params", "exp_signed", "exp_signature", "exp_sha256"),
     [
         pytest.param(
+            "GET",
             "file.txt",
             None,
             None,
@@ -239,6 +240,7 @@ def test__headers(mock_headers_full: MagicMock) -> None:
             id="get_request_no_data",
         ),
         pytest.param(
+            "PUT",
             "file.txt",
             (b"content", "text/plain"),
             None,
@@ -248,6 +250,7 @@ def test__headers(mock_headers_full: MagicMock) -> None:
             id="put_request_with_data",
         ),
         pytest.param(
+            "GET",
             "file.txt",
             None,
             {"key": "value"},
@@ -261,6 +264,7 @@ def test__headers(mock_headers_full: MagicMock) -> None:
 @patch.object(S3, "_amz_date_time")
 def test__headers_full(
     mock_amz_date_time: MagicMock,
+    method: str,
     object_key: str,
     data: Any,
     params: Any,
@@ -277,7 +281,7 @@ def test__headers_full(
     )
     tested = S3(credentials)
     mock_amz_date_time.side_effect = ["20251201T121543Z"]
-    result = tested._headers_full(object_key, data, params)
+    result = tested._headers_full(method, object_key, data, params)
 
     authorization = (
         "AWS4-HMAC-SHA256 Credential=theKey/20251201/theRegion/s3/aws4_request, "
@@ -449,6 +453,69 @@ def test_upload_binary_to_s3(
     calls = [call()]
     assert mock_is_ready.mock_calls == calls
     assert mock_headers_with_data.mock_calls == exp_headers_calls
+    assert mock_http.mock_calls == exp_http_calls
+
+
+@pytest.mark.parametrize(
+    ("is_ready", "expect_response", "exp_headers_full_calls", "exp_http_calls"),
+    [
+        pytest.param(
+            True,
+            True,
+            [call("DELETE", "path/to/file.txt", None, None)],
+            [
+                call("https://theHost/"),
+                call().delete(
+                    url="path/to/file.txt", headers={"Host": "theHost", "Authorization": "..."}
+                ),
+            ],
+            id="is_ready",
+        ),
+        pytest.param(
+            False,
+            False,
+            [],
+            [],
+            id="not_is_ready",
+        ),
+    ],
+)
+@patch("canvas_sdk.clients.aws.libraries.s3.Http")
+@patch.object(S3, "_headers_full")
+@patch.object(S3, "is_ready")
+def test_delete_object(
+    mock_is_ready: MagicMock,
+    mock_headers_full: MagicMock,
+    mock_http: MagicMock,
+    is_ready: bool,
+    expect_response: bool,
+    exp_headers_full_calls: list,
+    exp_http_calls: list,
+) -> None:
+    """Test delete_object method deletes objects from S3."""
+    credentials = Credentials(
+        key="theKey",
+        secret="theSecret",
+        region="theRegion",
+        bucket="theBucket",
+    )
+
+    tested = S3(credentials)
+
+    mock_is_ready.side_effect = [is_ready]
+    mock_headers_full.side_effect = [{"Host": "theHost", "Authorization": "..."}]
+    response = Response()
+    mock_http.return_value.delete.side_effect = [response]
+
+    result = tested.delete_object("path/to/file.txt")
+    if expect_response:
+        assert result is response
+    else:
+        assert result is None
+
+    calls = [call()]
+    assert mock_is_ready.mock_calls == calls
+    assert mock_headers_full.mock_calls == exp_headers_full_calls
     assert mock_http.mock_calls == exp_http_calls
 
 
