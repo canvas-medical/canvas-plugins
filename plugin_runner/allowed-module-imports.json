@@ -79,6 +79,7 @@
     "AssessCommand",
     "ChartSectionReviewCommand",
     "CloseGoalCommand",
+    "CustomCommand",
     "DiagnoseCommand",
     "FamilyHistoryCommand",
     "FollowUpCommand",
@@ -136,6 +137,9 @@
   ],
   "canvas_sdk.commands.commands.close_goal": [
     "CloseGoalCommand"
+  ],
+  "canvas_sdk.commands.commands.custom_command": [
+    "CustomCommand"
   ],
   "canvas_sdk.commands.commands.diagnose": [
     "DiagnoseCommand"
@@ -260,6 +264,10 @@
     "Coding",
     "ServiceProvider"
   ],
+  "canvas_sdk.commands.validation": [
+    "CommandValidationErrorEffect",
+    "ValidationError"
+  ],
   "canvas_sdk.effects": [
     "Effect",
     "EffectType",
@@ -343,6 +351,12 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.external_event": [
+    "ExternalEvent"
+  ],
+  "canvas_sdk.effects.external_event.external_event": [
+    "ExternalEvent"
+  ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
   ],
@@ -425,6 +439,14 @@
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
+  ],
+  "canvas_sdk.effects.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
+  ],
+  "canvas_sdk.effects.patient_facility_address.patient_facility_address": [
+    "AddressType",
+    "PatientFacilityAddress"
   ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",
@@ -530,6 +552,12 @@
   ],
   "canvas_sdk.effects.update_user": [
     "UpdateUserEffect"
+  ],
+  "canvas_sdk.effects.validation": [
+    "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.base": [
+    "ValidationError"
   ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
@@ -727,6 +755,8 @@
     "EligibilitySummary",
     "Encounter",
     "Event",
+    "ExternalEvent",
+    "ExternalVisit",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -942,6 +972,10 @@
     "Encounter",
     "EncounterMedium",
     "EncounterState"
+  ],
+  "canvas_sdk.v1.data.external_event": [
+    "ExternalEvent",
+    "ExternalVisit"
   ],
   "canvas_sdk.v1.data.facility": [
     "Facility"

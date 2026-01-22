@@ -205,4 +205,8 @@ class _ReviewableCommandMixin:
         )
 
 
-__exports__ = ("_BaseCommand", "_SendableCommandMixin", "_ReviewableCommandMixin")
+__exports__ = (
+    "_BaseCommand",
+    "_SendableCommandMixin",
+    "_ReviewableCommandMixin",
+)
