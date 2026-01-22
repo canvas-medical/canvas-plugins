@@ -6,6 +6,7 @@ from functools import wraps
 from typing import Any, TypeVar, cast, overload
 
 from django.conf import settings
+from django.db import connection
 from statsd.client.base import StatsClientBase
 from statsd.client.udp import Pipeline
 from statsd.defaults.env import statsd as default_statsd_client
@@ -114,6 +115,7 @@ def measure(
     extra_tags: dict[str, str] | None = None,
     client: StatsDClientProxy | None = None,
     track_plugins_usage: bool = False,
+    track_queries: bool = False,
 ) -> Generator[PipelineProxy, None, None]:
     """A context manager for collecting metrics about a context block.
 
@@ -122,6 +124,7 @@ def measure(
         extra_tags: A dict of extra tags to be added to all recorded metrics.
         client: An optional alternate StatsD client.
         track_plugins_usage: Whether to track plugin usage (Adds plugin and handler tags if the caller was a plugin).
+        track_queries: Whether to track queries (Adds query count and duration metrics).
 
     Yields:
         A pipeline for collecting additional metrics in the same batch.
@@ -136,6 +139,10 @@ def measure(
             extra_tags = extra_tags or {}
             extra_tags["plugin"] = caller.split(".")[0]
             extra_tags["handler"] = caller
+
+    if track_queries:
+        connection.force_debug_cursor = True
+        connection.queries_log.clear()
 
     tags = {
         "name": name,
@@ -155,6 +162,13 @@ def measure(
         duration_ms = (time.perf_counter_ns() - timing_start) / 1_000_000
         pipeline.timing("plugins.timings", duration_ms, tags=tags)
         pipeline.incr("plugins.executions", tags=tags)
+        if track_queries:
+            query_count = len(connection.queries)
+            query_duration = sum(float(q["time"]) for q in connection.queries)
+            pipeline.timing("plugins.query_count", query_count, tags=tags)
+            pipeline.timing("plugins.query_duration_ms", query_duration, tags=tags)
+            connection.force_debug_cursor = False
+
         pipeline.send()
 
 

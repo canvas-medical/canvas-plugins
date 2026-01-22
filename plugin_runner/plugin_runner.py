@@ -264,6 +264,7 @@ class PluginRunner(PluginRunnerServicer):
                     handler_name = metrics.get_qualified_name(handler.compute)
                     with metrics.measure(
                         name=handler_name,
+                        track_queries=True,
                         extra_tags={
                             "plugin": base_plugin_name,
                             "event": event_name,
