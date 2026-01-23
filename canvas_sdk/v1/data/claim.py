@@ -404,12 +404,24 @@ class ClaimSubmission(IdentifiableModel):
     claim_index = models.PositiveIntegerField(default=0)
 
 
+class ClaimMetadata(IdentifiableModel, TimestampedModel):
+    """ClaimMetadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_claimmetadata_001"
+
+    claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="metadata")
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
+
+
 __exports__ = (
     "Claim",
     "ClaimLabel",
     "ClaimQueue",
     "ClaimComment",
     "ClaimCoverage",
+    "ClaimMetadata",
     "ClaimPatient",
     "ClaimPayerOrder",
     "ClaimProvider",
