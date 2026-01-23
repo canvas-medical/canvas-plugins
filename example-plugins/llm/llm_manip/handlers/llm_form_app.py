@@ -20,6 +20,7 @@ class LlmFormApp(Application):
             {
                 "animalsCountURL": f"{self.PLUGIN_API_BASE_ROUTE}/animals_count",
                 "chatURL": f"{self.PLUGIN_API_BASE_ROUTE}/chat",
+                "fileURL": f"{self.PLUGIN_API_BASE_ROUTE}/file",
             },
         )
 

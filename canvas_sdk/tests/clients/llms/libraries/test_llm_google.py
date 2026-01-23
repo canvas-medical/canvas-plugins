@@ -71,19 +71,21 @@ def test_to_dict() -> None:
 
 
 @pytest.mark.parametrize(
-    ("prompts", "exp_key", "exp_files", "exp_calls"),
+    ("prompts", "exp_key", "exp_file_urls", "exp_file_contents", "exp_calls"),
     [
         pytest.param(
             [],
             "exp_empty",
-            6,
+            3,
+            3,
             False,
             id="no_turn",
         ),
         pytest.param(
             [LlmTurn(role="model", text=["the response"])],
             "exp_model",
-            6,
+            3,
+            3,
             False,
             id="model_turn",
         ),
@@ -91,12 +93,14 @@ def test_to_dict() -> None:
             [LlmTurn(role="system", text=["the prompt"])],
             "exp_user",
             0,
+            0,
             True,
             id="system_turn",
         ),
         pytest.param(
             [LlmTurn(role="user", text=["the prompt"])],
             "exp_user",
+            0,
             0,
             True,
             id="user_turn",
@@ -107,7 +111,8 @@ def test_to_dict__with_files(
     mocker: MockerFixture,
     prompts: list,
     exp_key: str,
-    exp_files: int,
+    exp_file_urls: int,
+    exp_file_contents: int,
     exp_calls: bool,
 ) -> None:
     """Test conversion of prompts with file attachments to Google API format."""
@@ -133,7 +138,7 @@ def test_to_dict__with_files(
                         {"inline_data": {"data": "Y29udGVudDE=", "mime_type": "type1"}},
                         {"inline_data": {"data": "Y29udGVudDI=", "mime_type": "type2"}},
                         {"inline_data": {"data": "Y29udGVudDM=", "mime_type": "type3"}},
-                        {"inline_data": {"data": "Y29udGVudDY=", "mime_type": "type6"}},
+                        {"inline_data": {"data": "Y29udGVudDQ=", "mime_type": "type4"}},
                     ],
                     "role": "user",
                 }
@@ -144,9 +149,6 @@ def test_to_dict__with_files(
         call(LlmFileUrl(url="https://example.com/doc1.pdf", type=FileType.PDF)),
         call(LlmFileUrl(url="https://example.com/pic1.jpg", type=FileType.IMAGE)),
         call(LlmFileUrl(url="https://example.com/text1.txt", type=FileType.TEXT)),
-        call(LlmFileUrl(url="https://example.com/doc2.pdf", type=FileType.PDF)),
-        call(LlmFileUrl(url="https://example.com/pic2.jpg", type=FileType.IMAGE)),
-        call(LlmFileUrl(url="https://example.com/text2.txt", type=FileType.TEXT)),
     ]
 
     settings = LlmSettings(api_key="test_key", model="test_model")
@@ -155,28 +157,27 @@ def test_to_dict__with_files(
         LlmFileUrl(url="https://example.com/doc1.pdf", type=FileType.PDF),
         LlmFileUrl(url="https://example.com/pic1.jpg", type=FileType.IMAGE),
         LlmFileUrl(url="https://example.com/text1.txt", type=FileType.TEXT),
-        LlmFileUrl(url="https://example.com/doc2.pdf", type=FileType.PDF),
-        LlmFileUrl(url="https://example.com/pic2.jpg", type=FileType.IMAGE),
-        LlmFileUrl(url="https://example.com/text2.txt", type=FileType.TEXT),
     ]
-    assert len(tested.file_urls) == 6
+    assert len(tested.file_urls) == 3
+    tested.file_contents = [
+        FileContent(mime_type="type4", size=1 * 1024 * 1024, content=base64.b64encode(b"content4")),
+        FileContent(mime_type="type5", size=2 * 1024 * 1024, content=base64.b64encode(b"content5")),
+        FileContent(mime_type="type6", size=2 * 1024 * 1024, content=base64.b64encode(b"content6")),
+    ]
+    assert len(tested.file_contents) == 3
 
     for prompt in prompts:
         tested.add_prompt(prompt)
 
     base64_encoded_content_of.side_effect = [
-        FileContent(mime_type="type1", content=base64.b64encode(b"content1"), size=4 * 1024 * 1024),
+        FileContent(mime_type="type1", content=base64.b64encode(b"content1"), size=3 * 1024 * 1024),
         FileContent(mime_type="type2", content=base64.b64encode(b"content2"), size=3 * 1024 * 1024),
         FileContent(mime_type="type3", content=base64.b64encode(b"content3"), size=2 * 1024 * 1024),
-        FileContent(mime_type="type4", content=base64.b64encode(b"content4"), size=2 * 1024 * 1024),
-        FileContent(mime_type="type5", content=base64.b64encode(b"content5"), size=2 * 1024 * 1024),
-        FileContent(
-            mime_type="type6", content=base64.b64encode(b"content6"), size=1 * 1024 * 1024 - 1
-        ),
     ]
     result = tested.to_dict()
     assert result == to_dict_returns[exp_key]
-    assert len(tested.file_urls) == exp_files
+    assert len(tested.file_urls) == exp_file_urls
+    assert len(tested.file_contents) == exp_file_contents
     calls = []
     if exp_calls:
         calls = call_on_files
@@ -304,8 +305,8 @@ def test__api_base_url() -> None:
 )
 def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) -> None:
     """Test successful API request to Google."""
-    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
-    http.return_value.post.side_effect = [response]
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.post.side_effect = [response]
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmGoogle(settings)
@@ -314,7 +315,7 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
     result = tested.request()
     assert result == expected
 
-    calls = [
+    exp_calls = [
         call("https://generativelanguage.googleapis.com"),
         call().post(
             "/v1beta/test_model:generateContent?key=test_key",
@@ -330,4 +331,4 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
             "}",
         ),
     ]
-    assert http.mock_calls == calls
+    assert mock_http.mock_calls == exp_calls

@@ -21,6 +21,95 @@ from canvas_sdk.clients.llms.structures.llm_turn import LlmTurn
 from canvas_sdk.clients.llms.structures.settings.llm_settings import LlmSettings
 
 
+@pytest.mark.parametrize(
+    ("file_content", "expected"),
+    [
+        pytest.param(
+            FileContent(mime_type="image/jpeg", content=b"imgData", size=10),
+            {
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": "imgData"},
+            },
+            id="image",
+        ),
+        pytest.param(
+            FileContent(mime_type="application/pdf", content=b"pdfData", size=20),
+            {
+                "type": "document",
+                "source": {"type": "base64", "media_type": "application/pdf", "data": "pdfData"},
+            },
+            id="pdf",
+        ),
+        pytest.param(
+            FileContent(mime_type="text/plain", content=base64.b64encode(b"textData"), size=30),
+            {
+                "type": "document",
+                "source": {"type": "text", "media_type": "text/plain", "data": "textData"},
+            },
+            id="text",
+        ),
+        pytest.param(
+            FileContent(mime_type="application/octet-stream", content=b"binData", size=40),
+            None,
+            id="unknown",
+        ),
+    ],
+)
+def test__file_content_to_content_item(file_content: FileContent, expected: dict | None) -> None:
+    """Test conversion of FileContent to Anthropic content item."""
+    tested = LlmAnthropic
+    result = tested._file_content_to_content_item(file_content)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("file_url", "mock_content", "expected", "exp_calls"),
+    [
+        pytest.param(
+            LlmFileUrl(url="https://example.com/doc.pdf", type=FileType.PDF),
+            None,
+            {"type": "document", "source": {"type": "url", "url": "https://example.com/doc.pdf"}},
+            [],
+            id="pdf",
+        ),
+        pytest.param(
+            LlmFileUrl(url="https://example.com/image.jpg", type=FileType.IMAGE),
+            None,
+            {"type": "image", "source": {"type": "url", "url": "https://example.com/image.jpg"}},
+            [],
+            id="image",
+        ),
+        pytest.param(
+            LlmFileUrl(url="https://example.com/file.txt", type=FileType.TEXT),
+            FileContent(mime_type="text/plain", content=base64.b64encode(b"text content"), size=12),
+            {
+                "type": "document",
+                "source": {"type": "text", "media_type": "text/plain", "data": "text content"},
+            },
+            [call(LlmFileUrl(url="https://example.com/file.txt", type=FileType.TEXT))],
+            id="text",
+        ),
+    ],
+)
+def test__file_url_to_content_item(
+    mocker: MockerFixture,
+    file_url: LlmFileUrl,
+    mock_content: FileContent | None,
+    expected: dict | None,
+    exp_calls: list,
+) -> None:
+    """Test conversion of LlmFileUrl to Anthropic content item."""
+    mock_base64 = mocker.patch.object(LlmAnthropic, "base64_encoded_content_of")
+    mock_base64.side_effect = [mock_content] if mock_content else []
+
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmAnthropic(settings)
+
+    result = tested._file_url_to_content_item(file_url)
+    assert result == expected
+    assert mock_base64.mock_calls == exp_calls
+
+
 def test_to_dict() -> None:
     """Test conversion of prompts to Anthropic API format."""
     settings = LlmSettings(api_key="test_key", model="test_model")
@@ -71,13 +160,14 @@ def test_to_dict() -> None:
 
 
 @pytest.mark.parametrize(
-    ("prompts", "exp_key", "exp_files", "exp_calls"),
+    ("prompts", "exp_key", "exp_file_urls", "exp_file_contents", "exp_calls"),
     [
         # no turn
         pytest.param(
             [],
             "exp_empty",
             4,
+            3,
             [],
             id="no_turn",
         ),
@@ -86,6 +176,7 @@ def test_to_dict() -> None:
             [LlmTurn(role="model", text=["the response"])],
             "exp_model",
             4,
+            3,
             [],
             id="model_turn",
         ),
@@ -94,6 +185,7 @@ def test_to_dict() -> None:
             [LlmTurn(role="system", text=["the prompt"])],
             "exp_user",
             0,
+            0,
             [call(LlmFileUrl(url="https://example.com/text.txt", type=FileType.TEXT))],
             id="system_turn",
         ),
@@ -101,6 +193,7 @@ def test_to_dict() -> None:
         pytest.param(
             [LlmTurn(role="user", text=["the prompt"])],
             "exp_user",
+            0,
             0,
             [call(LlmFileUrl(url="https://example.com/text.txt", type=FileType.TEXT))],
             id="user_turn",
@@ -111,7 +204,8 @@ def test_to_dict__with_files(
     mocker: MockerFixture,
     prompts: list,
     exp_key: str,
-    exp_files: int,
+    exp_file_urls: int,
+    exp_file_contents: int,
     exp_calls: list,
 ) -> None:
     """Test conversion of prompts with file attachments to Anthropic API format."""
@@ -159,6 +253,30 @@ def test_to_dict__with_files(
                             },
                             "type": "document",
                         },
+                        {
+                            "source": {
+                                "data": "Y29udGVudDQ=",
+                                "media_type": "image/png",
+                                "type": "base64",
+                            },
+                            "type": "image",
+                        },
+                        {
+                            "source": {
+                                "data": "Y29udGVudDU=",
+                                "media_type": "application/pdf",
+                                "type": "base64",
+                            },
+                            "type": "document",
+                        },
+                        {
+                            "source": {
+                                "data": "content6",
+                                "media_type": "text/plain",
+                                "type": "text",
+                            },
+                            "type": "document",
+                        },
                     ],
                     "role": "user",
                 },
@@ -176,6 +294,18 @@ def test_to_dict__with_files(
         LlmFileUrl(url="https://example.com/some.nop", type="unknown"),  # type: ignore
     ]
     assert len(tested.file_urls) == 4
+    tested.file_contents = [
+        FileContent(
+            mime_type="image/png", size=1 * 1024 * 1024, content=base64.b64encode(b"content4")
+        ),
+        FileContent(
+            mime_type="application/pdf", size=2 * 1024 * 1024, content=base64.b64encode(b"content5")
+        ),
+        FileContent(
+            mime_type="text/plain", size=2 * 1024 * 1024, content=base64.b64encode(b"content6")
+        ),
+    ]
+    assert len(tested.file_contents) == 3
 
     for prompt in prompts:
         tested.add_prompt(prompt)
@@ -189,7 +319,8 @@ def test_to_dict__with_files(
     ]
     result = tested.to_dict()
     assert result == to_dict_returns[exp_key]
-    assert len(tested.file_urls) == exp_files
+    assert len(tested.file_urls) == exp_file_urls
+    assert len(tested.file_contents) == exp_file_contents
 
     assert base64_encoded_content_of.mock_calls == exp_calls
 
@@ -345,8 +476,8 @@ def test_request(
     expected: LlmResponse,
 ) -> None:
     """Test successful API request to Anthropic."""
-    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
-    http.return_value.post.side_effect = [response]
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.post.side_effect = [response]
 
     class SchemaLlm(BaseModelLlmJson):
         first_field: int = Field(description="the first field")
@@ -362,7 +493,7 @@ def test_request(
     result = tested.request()
     assert result == expected
 
-    calls = [
+    exp_calls = [
         call("https://api.anthropic.com"),
         call().post(
             "/v1/messages",
@@ -381,7 +512,7 @@ def test_request(
         ),
     ]
     if with_schema:
-        calls[1] = call().post(
+        exp_calls[1] = call().post(
             "/v1/messages",
             headers={
                 "Content-Type": "application/json",
@@ -404,4 +535,4 @@ def test_request(
             '"messages": [{"role": "user", "content": [{"type": "text", "text": "test"}]}]}',
         )
 
-    assert http.mock_calls == calls
+    assert mock_http.mock_calls == exp_calls

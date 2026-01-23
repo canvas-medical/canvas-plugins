@@ -43,6 +43,7 @@ class LlmApi(ABC):
         self.prompts: list[LlmTurn] = []
         self.http = Http(self._api_base_url())
         self.file_urls: list[LlmFileUrl] = []
+        self.file_contents: list[FileContent] = []
         self.schema: type[BaseModelLlmJson] | None = None
 
     def reset_prompts(self) -> None:

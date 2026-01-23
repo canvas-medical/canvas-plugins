@@ -12,6 +12,7 @@ from requests import exceptions
 from canvas_sdk.clients.llms.constants.file_type import FileType
 from canvas_sdk.clients.llms.libraries.llm_openai import LlmOpenai
 from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
+from canvas_sdk.clients.llms.structures.file_content import FileContent
 from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
@@ -141,6 +142,58 @@ def test_to_dict__with_files(prompts: list, expected: dict, exp_files: int) -> N
     result = tested.to_dict()
     assert result == expected
     assert len(tested.file_urls) == exp_files
+
+
+def test_to_dict__with_file_content() -> None:
+    """Test conversion of prompts with file_content attachments to OpenAI API format."""
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmOpenai(settings)
+
+    tested.add_prompt(LlmTurn(role="user", text=["the prompt"]))
+    tested.file_contents = [
+        FileContent(
+            mime_type="image/png",
+            content=b"imageContentBase64",
+            size=100,
+        ),
+        FileContent(
+            mime_type="application/pdf",
+            content=b"pdfContentBase64",
+            size=200,
+        ),
+        FileContent(
+            mime_type="application/unknown",
+            content=b"unknownContent",
+            size=30,
+        ),
+    ]
+    assert len(tested.file_contents) == 3
+
+    result = tested.to_dict()
+
+    expected = {
+        "model": "test_model",
+        "instructions": "",
+        "input": [
+            {
+                "content": [
+                    {"text": "the prompt", "type": "input_text"},
+                    {
+                        "type": "input_image",
+                        "image_url": "data:image/png;base64,imageContentBase64",
+                    },
+                    {
+                        "type": "input_file",
+                        "filename": "inputFile",
+                        "file_data": "data:application/pdf;base64,pdfContentBase64",
+                    },
+                ],
+                "role": "user",
+            },
+        ],
+    }
+    assert result == expected
+    assert len(tested.file_contents) == 0
 
 
 def test_to_dict__schema() -> None:
@@ -285,8 +338,8 @@ def test__api_base_url() -> None:
 )
 def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) -> None:
     """Test successful API request to OpenAI."""
-    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
-    http.return_value.post.side_effect = [response]
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.post.side_effect = [response]
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmOpenai(settings)
@@ -295,7 +348,7 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
     result = tested.request()
     assert result == expected
 
-    calls = [
+    exp_calls = [
         call("https://us.api.openai.com"),
         call().post(
             "/v1/responses",
@@ -313,4 +366,4 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
             "}",
         ),
     ]
-    assert http.mock_calls == calls
+    assert mock_http.mock_calls == exp_calls

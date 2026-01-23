@@ -1,14 +1,16 @@
+import base64
 from http import HTTPStatus
 
 from pydantic import Field
 
 from canvas_sdk.clients.llms.constants import FileType
 from canvas_sdk.clients.llms.libraries import LlmOpenai
-from canvas_sdk.clients.llms.structures import BaseModelLlmJson, LlmFileUrl
+from canvas_sdk.clients.llms.structures import BaseModelLlmJson, FileContent, LlmFileUrl
 from canvas_sdk.clients.llms.structures.settings import LlmSettingsGpt4
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, PlainTextResponse, Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+from canvas_sdk.handlers.simple_api.api import FileFormPart, StringFormPart
 from llm_manip.constants.secrets import Secrets
 
 
@@ -102,6 +104,39 @@ class LlmManip(SimpleAPI):
                 client.set_user_prompt([turn.get("prompt", "")])
             else:
                 client.set_model_prompt([turn.get("prompt", "")])
+
+        response = client.attempt_requests(attempts=1)[0]
+        return [PlainTextResponse(response.response, status_code=response.code)]
+
+    @api.post("/file")
+    def file(self) -> list[Response | Effect]:
+        """Analyze file content based on the use input using LLM.
+
+        Returns:
+            Plain text response containing the LLM's reply to the user.
+        """
+        content = b""
+        mime_type = ""
+        user_input = ""
+        form_data = self.request.form_data()
+        if "file" in form_data and isinstance(form_data["file"], FileFormPart):
+            content = form_data["file"].content
+            mime_type = form_data["file"].content_type
+        if "input" in form_data and isinstance(form_data["input"], StringFormPart):
+            user_input = form_data["input"].value
+
+        if not (content and mime_type and user_input):
+            return [PlainTextResponse("nothing to do", status_code=HTTPStatus(HTTPStatus.OK))]
+
+        client = self._llm_client()
+        file = FileContent(
+            mime_type=mime_type,
+            content=base64.b64encode(content),
+            size=len(content),
+        )
+        client.file_content.append(file)
+        client.set_system_prompt(["Answer to the question about the file, clearly and concisely."])
+        client.set_user_prompt([user_input or "what is in the file?"])
 
         response = client.attempt_requests(attempts=1)[0]
         return [PlainTextResponse(response.response, status_code=response.code)]

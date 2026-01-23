@@ -6,6 +6,8 @@ from requests import exceptions
 
 from canvas_sdk.clients.llms.constants.file_type import FileType
 from canvas_sdk.clients.llms.libraries.llm_api import LlmApi
+from canvas_sdk.clients.llms.structures.file_content import FileContent
+from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 
@@ -15,6 +17,50 @@ class LlmAnthropic(LlmApi):
 
     Implements the LlmBase interface for Anthropic's Claude API.
     """
+
+    def _file_url_to_content_item(self, file_url: LlmFileUrl) -> dict | None:
+        """Convert a file URL to an Anthropic content item."""
+        if file_url.type == FileType.PDF:
+            return {"type": "document", "source": {"type": "url", "url": file_url.url}}
+        elif file_url.type == FileType.IMAGE:
+            return {"type": "image", "source": {"type": "url", "url": file_url.url}}
+        elif file_url.type == FileType.TEXT:
+            content = self.base64_encoded_content_of(file_url)
+            return {
+                "type": "document",
+                "source": {
+                    "type": "text",
+                    "media_type": "text/plain",
+                    "data": base64.standard_b64decode(content.content).decode("utf-8"),
+                },
+            }
+
+    @classmethod
+    def _file_content_to_content_item(cls, file_content: FileContent) -> dict | None:
+        """Convert file content to an Anthropic content item."""
+        if file_content.mime_type.startswith("image/"):
+            item_type, source_type = "image", "base64"
+        elif file_content.mime_type.endswith("/pdf"):
+            item_type, source_type = "document", "base64"
+        elif file_content.mime_type.startswith("text/"):
+            return {
+                "type": "document",
+                "source": {
+                    "type": "text",
+                    "media_type": "text/plain",
+                    "data": base64.standard_b64decode(file_content.content).decode("utf-8"),
+                },
+            }
+        else:
+            return None
+        return {
+            "type": item_type,
+            "source": {
+                "type": source_type,
+                "media_type": file_content.mime_type,
+                "data": file_content.content.decode("utf-8"),
+            },
+        }
 
     def to_dict(self) -> dict:
         """Convert prompts and add the necessary information to Anthropic API request format.
@@ -39,37 +85,17 @@ class LlmAnthropic(LlmApi):
                 messages.append({"role": role, "content": [part]})
 
         # if there are files and the last message has the user's role
-        if self.file_urls and messages and messages[-1]["role"] == roles[self.ROLE_USER]:
-            while self.file_urls and (file_url := self.file_urls.pop(0)):
-                item = {}
-                if file_url.type == FileType.PDF:
-                    item = {
-                        "type": "document",
-                        "source": {
-                            "type": "url",
-                            "url": file_url.url,
-                        },
-                    }
-                elif file_url.type == FileType.IMAGE:
-                    item = {
-                        "type": "image",
-                        "source": {
-                            "type": "url",
-                            "url": file_url.url,
-                        },
-                    }
-                elif file_url.type == FileType.TEXT:
-                    file_content = self.base64_encoded_content_of(file_url)
-                    item = {
-                        "type": "document",
-                        "source": {
-                            "type": "text",
-                            "media_type": "text/plain",
-                            "data": base64.standard_b64decode(file_content.content).decode("utf-8"),
-                        },
-                    }
-                if item:
+        if messages and messages[-1]["role"] == roles[self.ROLE_USER]:
+            for file_url in self.file_urls:
+                if item := self._file_url_to_content_item(file_url):
                     messages[-1]["content"].append(item)
+
+            for file_content in self.file_contents:
+                if item := self._file_content_to_content_item(file_content):
+                    messages[-1]["content"].append(item)
+
+            self.file_urls = []
+            self.file_contents = []
         # structured output requested
         structured = {}
         if self.schema:

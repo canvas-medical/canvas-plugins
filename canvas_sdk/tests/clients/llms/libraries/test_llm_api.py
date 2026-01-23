@@ -52,6 +52,7 @@ def test___init__() -> None:
     assert isinstance(tested.http, Http)
     assert tested.http._base_url == "https://some.url"
     assert tested.file_urls == []
+    assert tested.file_contents == []
     assert tested.schema is None
 
 
@@ -183,12 +184,12 @@ def test_set_schema(
     tested.set_schema(BaseModelLlmJson)
     assert tested.schema is exp_schema
 
-    calls = [call()]
-    assert validate_nested_models.call_args_list == calls
+    exp_calls = [call()]
+    assert validate_nested_models.mock_calls == exp_calls
 
 
 @pytest.mark.parametrize(
-    ("side_effects", "attempts", "expected", "expected_calls"),
+    ("side_effects", "attempts", "expected", "exp_calls"),
     [
         pytest.param(
             [
@@ -304,7 +305,7 @@ def test_attempt_requests(
     side_effects: list,
     attempts: int,
     expected: list,
-    expected_calls: list,
+    exp_calls: list,
 ) -> None:
     """Test attempt_requests retries until success or max attempts."""
     request = mocker.patch.object(ImplementedLlmApi, "request")
@@ -315,7 +316,7 @@ def test_attempt_requests(
 
     result = tested.attempt_requests(attempts)
     assert result == expected
-    assert request.mock_calls == expected_calls
+    assert request.mock_calls == exp_calls
 
 
 @pytest.mark.parametrize(
@@ -354,15 +355,16 @@ def test_base64_encoded_content_of(
     mocker: MockerFixture, side_effects: list, expected: FileContent
 ) -> None:
     """Test base64 encoding of file content from URL."""
-    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.get.side_effect = side_effects
 
-    http.return_value.get.side_effect = side_effects
-
+    tested = LlmApi
     file_url = LlmFileUrl(url="https://example.com/file.pdf", type=FileType.PDF)
-    result = LlmApi.base64_encoded_content_of(file_url)
+    result = tested.base64_encoded_content_of(file_url)
     assert result == expected
-    calls = [
+
+    exp_calls = [
         call("https://example.com/file.pdf"),
         call().get(""),
     ]
-    assert http.mock_calls == calls
+    assert mock_http.mock_calls == exp_calls
