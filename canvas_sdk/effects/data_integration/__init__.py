@@ -7,6 +7,7 @@ from .junk_document import JunkDocumentConfidenceScores as JunkDocumentConfidenc
 from .link_document_to_patient import LinkDocumentToPatient as LinkDocumentToPatient
 from .prefill_document_fields import PrefillDocumentFieldData as PrefillDocumentFieldData
 from .prefill_document_fields import PrefillDocumentFields as PrefillDocumentFields
+from .prefill_document_fields import TemplateFields as TemplateFields
 from .remove_document_from_patient import (
     RemoveDocumentConfidenceScores as RemoveDocumentConfidenceScores,
 )
@@ -24,4 +25,5 @@ __all__ = __exports__ = (
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
     "ReviewMode",
+    "TemplateFields",
 )
