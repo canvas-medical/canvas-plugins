@@ -1,5 +1,7 @@
 """Protocol demonstrating all Data Integration effects."""
 
+from typing import cast
+
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
@@ -13,13 +15,17 @@ from canvas_sdk.effects.categorize_document import (
 from canvas_sdk.effects.categorize_document import (
     ConfidenceScores as CategorizeDocumentConfidenceScores,
 )
+from canvas_sdk.effects.data_integration import Annotation as ReviewerAnnotation
 from canvas_sdk.effects.data_integration import (
-    Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
     PrefillDocumentFields,
     Priority,
     ReviewMode,
+    TemplateFields,
+)
+from canvas_sdk.effects.data_integration.link_document_to_patient import (
+    Annotation as PrefillAnnotation,
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
@@ -320,8 +326,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                     annotations=[
-                        Annotation(text="Auto-assigned", color="#FF9800"),
-                        Annotation(text="Data integration", color="#2196F3"),
+                        ReviewerAnnotation(text="Auto-assigned", color="#FF9800"),
+                        ReviewerAnnotation(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -333,8 +339,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.ALREADY_REVIEWED,
                     annotations=[
-                        Annotation(text="Auto-assigned", color="#FF9800"),
-                        Annotation(text="Data integration", color="#2196F3"),
+                        ReviewerAnnotation(text="Auto-assigned", color="#FF9800"),
+                        ReviewerAnnotation(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -413,92 +419,99 @@ class DataIntegrationHandler(BaseProtocol):
         try:
             templates = [
                 {
-                    "templateId": 620,
-                    "templateName": "Thyroid Profile With Tsh",
+                    "template_id": 620,
+                    "template_name": "Thyroid Profile With Tsh",
                     "fields": {
-                            # Thyroid Stimulating Hormone (LOINC: 11580-8)
-                            "11580-8": {
-                                "value": "2.35",
-                                "unit": "uIU/mL",
-                                "referenceRange": "0.45 - 4.50 uIU/mL",
-                                "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
-                            },
-                            # Also store by label for fallback matching
-                            "Thyroid Stimulating Hormone": {
-                                "value": "2.35",
-                                "unit": "uIU/mL",
-                                "referenceRange": "0.45 - 4.50 uIU/mL",
-                                "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
-                            },
-                            # Thyroxine T4 (LOINC: 3026-2)
-                            "3026-2": {
-                                "value": "7.8",
-                                "unit": "ug/dL",
-                                "referenceRange": "4.5 - 12.0 ug/dL",
-                                "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
-                            },
-                            "Thyroxine (T4)": {
-                                "value": "7.8",
-                                "unit": "ug/dL",
-                                "referenceRange": "4.5 - 12.0 ug/dL",
-                                "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
-                            },
-                            # T3 Uptake (LOINC: 3050-2)
-                            "3050-2": {
-                                "value": "32",
-                                "unit": "%",
-                                "referenceRange": "24 - 39 %",
-                                "annotations": [
-                                    {"text": "AI 87%", "color": "#4CAF50"},
-                                    {"text": "Verify", "color": "#FF9800"},
-                                ],
-                            },
-                            "T3 Uptake": {
-                                "value": "32",
-                                "unit": "%",
-                                "referenceRange": "24 - 39 %",
-                                "annotations": [
-                                    {"text": "AI 87%", "color": "#4CAF50"},
-                                    {"text": "Verify", "color": "#FF9800"},
-                                ],
-                            },
-                            # Free Thyroxine Index (LOINC: 32215-6)
-                            "32215-6": {
-                                "value": "2.5",
-                                "referenceRange": "1.2 - 4.9",
-                                "annotations": [
-                                    {"text": "AI 78%", "color": "#FFC107"},
-                                    {"text": "Low confidence", "color": "#F44336"},
-                                ],
-                            },
-                            "Free Thyroxine Index": {
-                                "value": "2.5",
-                                "referenceRange": "1.2 - 4.9",
-                                "annotations": [
-                                    {"text": "AI 78%", "color": "#FFC107"},
-                                    {"text": "Low confidence", "color": "#F44336"},
-                                ],
-                            },
+                        # Thyroid Stimulating Hormone (LOINC: 11580-8)
+                        "11580-8": {
+                            "value": "2.35",
+                            "unit": "uIU/mL",
+                            "reference_range": "0.45 - 4.50 uIU/mL",
+                            "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
                         },
+                        # Also store by label for fallback matching
+                        "Thyroid Stimulating Hormone": {
+                            "value": "2.35",
+                            "unit": "uIU/mL",
+                            "reference_range": "0.45 - 4.50 uIU/mL",
+                            "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                        },
+                        # Thyroxine T4 (LOINC: 3026-2)
+                        "3026-2": {
+                            "value": "7.8",
+                            "unit": "ug/dL",
+                            "reference_range": "4.5 - 12.0 ug/dL",
+                            "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                        },
+                        "Thyroxine (T4)": {
+                            "value": "7.8",
+                            "unit": "ug/dL",
+                            "reference_range": "4.5 - 12.0 ug/dL",
+                            "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                        },
+                        # T3 Uptake (LOINC: 3050-2)
+                        "3050-2": {
+                            "value": "32",
+                            "unit": "%",
+                            "reference_range": "24 - 39 %",
+                            "annotations": [
+                                {"text": "AI 87%", "color": "#4CAF50"},
+                                {"text": "Verify", "color": "#FF9800"},
+                            ],
+                        },
+                        "T3 Uptake": {
+                            "value": "32",
+                            "unit": "%",
+                            "reference_range": "24 - 39 %",
+                            "annotations": [
+                                {"text": "AI 87%", "color": "#4CAF50"},
+                                {"text": "Verify", "color": "#FF9800"},
+                            ],
+                        },
+                        # Free Thyroxine Index (LOINC: 32215-6)
+                        "32215-6": {
+                            "value": "2.5",
+                            "reference_range": "1.2 - 4.9",
+                            "annotations": [
+                                {"text": "AI 78%", "color": "#FFC107"},
+                                {"text": "Low confidence", "color": "#F44336"},
+                            ],
+                        },
+                        "Free Thyroxine Index": {
+                            "value": "2.5",
+                            "reference_range": "1.2 - 4.9",
+                            "annotations": [
+                                {"text": "AI 78%", "color": "#FFC107"},
+                                {"text": "Low confidence", "color": "#F44336"},
+                            ],
+                        },
+                    },
                 }
             ]
-            annotations = [
-                    {"text": "1 template matched", "color": "#2196F3"},
-                    {"text": "4 fields extracted", "color": "#00BCD4"},
-                ]
+            annotations: list[PrefillAnnotation] = [
+                {"text": "1 template matched", "color": "#2196F3"},
+                {"text": "4 fields extracted", "color": "#00BCD4"},
+            ]
 
-            log.info(f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['templateId'] for t in templates]}")
+            log.info(
+                f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['template_id'] for t in templates]}"
+            )
             for tmpl in templates:
-                log.info(f"[PREFILL]   Template '{tmpl['templateName']}' (id={tmpl['templateId']}): {len(tmpl['fields'])} fields")
-                for field_key, field_data in tmpl["fields"].items():
-                    log.info(f"[PREFILL]     Field {field_key}: value={field_data['value']} {field_data.get('unit', '')}")
+                fields = cast(TemplateFields, tmpl["fields"])
+                log.info(
+                    f"[PREFILL]   Template '{tmpl['template_name']}' (id={tmpl['template_id']}): {len(fields)} fields"
+                )
+                for field_key, field_data in fields.items():
+                    log.info(
+                        f"[PREFILL]     Field {field_key}: value={field_data['value']} {field_data.get('unit', '')}"
+                    )
 
             effect = PrefillDocumentFields(
                 document_id=str(document_id),
                 templates=templates,
                 annotations=annotations,
             )
-            log.info(f"[PREFILL] Effect created, calling apply()")
+            log.info("[PREFILL] Effect created, calling apply()")
             applied = effect.apply()
             log.info(f"[PREFILL] Effect applied successfully for document {document_id}")
             return applied

@@ -358,7 +358,8 @@
     "Priority",
     "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
-    "ReviewMode"
+    "ReviewMode",
+    "TemplateFields"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "Annotation",

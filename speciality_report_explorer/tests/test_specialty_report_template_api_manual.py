@@ -1,5 +1,5 @@
 """
-Manual API Testing Script for SpecialtyReportTemplateAPI
+Manual API Testing Script for SpecialtyReportTemplateAPI.
 
 This script performs comprehensive manual testing of the SpecialtyReportTemplateAPI endpoint
 by executing curl commands and validating the responses. It tests all query parameters,
@@ -80,7 +80,7 @@ def assert_test(name: str, condition: bool, message: str = "") -> None:
 
 def test_1_1_get_all_templates() -> None:
     """
-    Test 1.1: Get all templates
+    Test 1.1: Get all templates.
 
     Verifies:
     - Endpoint returns valid JSON
@@ -131,7 +131,7 @@ def test_1_1_get_all_templates() -> None:
 
 def test_2_1_get_active_templates() -> None:
     """
-    Test 2.1: Get active templates only
+    Test 2.1: Get active templates only.
 
     Verifies:
     - active=true filter returns only active templates
@@ -157,7 +157,7 @@ def test_2_1_get_active_templates() -> None:
 
 def test_3_search_filters() -> None:
     """
-    Test 3.1-3.4: Search filter tests
+    Test 3.1-3.4: Search filter tests.
 
     Verifies:
     - Search for "cardiology" finds matching templates
@@ -217,7 +217,7 @@ def test_3_search_filters() -> None:
 
 def test_4_custom_builtin_filters() -> None:
     """
-    Test 4.1-4.2: Custom/Builtin filter tests
+    Test 4.1-4.2: Custom/Builtin filter tests.
 
     Verifies:
     - custom=true returns only custom templates
@@ -259,7 +259,7 @@ def test_4_custom_builtin_filters() -> None:
 
 def test_5_specialty_code_filters() -> None:
     """
-    Test 5.1-5.3: Specialty code filter tests
+    Test 5.1-5.3: Specialty code filter tests.
 
     Verifies:
     - Filter by Cardiology specialty (207RC0000X) finds all test templates
@@ -313,7 +313,7 @@ def test_5_specialty_code_filters() -> None:
 
 def test_6_include_fields() -> None:
     """
-    Test 6.1-6.2: Include fields tests
+    Test 6.1-6.2: Include fields tests.
 
     Verifies:
     - include_fields=true adds fields array to templates
@@ -410,7 +410,7 @@ def test_6_include_fields() -> None:
 
 def test_7_include_options() -> None:
     """
-    Test 7.1-7.2: Include options tests
+    Test 7.1-7.2: Include options tests.
 
     Verifies:
     - include_options=true adds options array to fields
@@ -492,7 +492,7 @@ def test_7_include_options() -> None:
 
 def test_8_combined_filters() -> None:
     """
-    Test 8.1-8.7: Combined filter tests
+    Test 8.1-8.7: Combined filter tests.
 
     Verifies:
     - Active + Specialty Code filter works
@@ -610,7 +610,7 @@ def test_8_combined_filters() -> None:
 
 def test_9_edge_cases() -> None:
     """
-    Test 9.1-9.4: Edge cases
+    Test 9.1-9.4: Edge cases.
 
     Verifies:
     - Empty result set returns valid JSON
@@ -699,7 +699,7 @@ def test_9_edge_cases() -> None:
 
 def test_11_performance_limits() -> None:
     """
-    Test 11.1: Performance and limits
+    Test 11.1: Performance and limits.
 
     Verifies:
     - Response is limited to 20 templates

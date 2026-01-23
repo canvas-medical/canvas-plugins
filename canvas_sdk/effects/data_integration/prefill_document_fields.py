@@ -1,6 +1,6 @@
 from typing import Any, NotRequired, TypeAlias, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -14,14 +14,14 @@ class PrefillDocumentFieldData(TypedDict):
     Attributes:
         value: The field value (required)
         unit: The unit of measurement
-        referenceRange: The reference range for the value
+        reference_range: The reference range for the value
         abnormal: Whether the value is abnormal
         annotations: List of annotations for the field
     """
 
     value: str
     unit: NotRequired[str]
-    referenceRange: NotRequired[str]
+    reference_range: NotRequired[str]
     abnormal: NotRequired[bool]
     annotations: NotRequired[list[Annotation]]
 
@@ -32,17 +32,15 @@ TemplateFields: TypeAlias = dict[str, PrefillDocumentFieldData]
 class PrefillTemplate(BaseModel):
     """A template with fields to prefill."""
 
-    model_config = ConfigDict(populate_by_name=True)
-
-    template_id: int = Field(alias="templateId")
-    template_name: str = Field(alias="templateName")
+    template_id: int
+    template_name: str
     fields: TemplateFields
 
     @model_validator(mode="after")
     def validate_template(self) -> "PrefillTemplate":
         """Validate template fields."""
         if not self.template_name or not self.template_name.strip():
-            raise ValueError("templateName must be a non-empty string")
+            raise ValueError("template_name must be a non-empty string")
         return self
 
 
@@ -128,31 +126,31 @@ class PrefillDocumentFields(_BaseEffect):
         errors: list[InitErrorDetails] = []
         prefix = f"templates[{index}]"
 
-        # Check templateId
-        if "templateId" not in template:
+        # Check template_id
+        if "template_id" not in template:
             errors.append(
                 self._create_error_detail(
                     "value_error",
-                    f"{prefix}.templateId is required",
+                    f"{prefix}.template_id is required",
                     template,
                 )
             )
 
-        # Check templateName
-        if "templateName" not in template:
+        # Check template_name
+        if "template_name" not in template:
             errors.append(
                 self._create_error_detail(
                     "value_error",
-                    f"{prefix}.templateName is required",
+                    f"{prefix}.template_name is required",
                     template,
                 )
             )
-        elif not template.get("templateName", "").strip():
+        elif not template.get("template_name", "").strip():
             errors.append(
                 self._create_error_detail(
                     "value_error",
-                    f"{prefix}.templateName must be a non-empty string",
-                    template.get("templateName"),
+                    f"{prefix}.template_name must be a non-empty string",
+                    template.get("template_name"),
                 )
             )
 
