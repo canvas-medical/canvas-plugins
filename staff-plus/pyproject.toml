@@ -1,5 +1,5 @@
-#[tool.uv.sources]
-#canvas = { path = "../", editable = true }
+[tool.uv.sources]
+canvas = { path = "../", editable = true }
 
 [project]
 authors = [
