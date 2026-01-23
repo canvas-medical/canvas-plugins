@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Interface</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 5px 20px 20px 20px;
+        display: flex;
+        flex-direction: column;
+      }
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #ccc;
+      }
+      .tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+      }
+      .tab.active {
+        background-color: white;
+        border-bottom: 2px solid white;
+        margin-bottom: -2px;
+        font-weight: bold;
+      }
+      .tab-content {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+      }
+      .tab-content.active {
+        display: flex;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        resize: vertical;
+        background-color: white;
+      }
+      textarea:disabled, textarea[readonly] {
+        background-color: #f5f5f5;
+      }
+      .file-input-wrapper {
+        margin-bottom: 10px;
+      }
+      .file-input-wrapper input[type="file"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .file-preview {
+        margin-top: 10px;
+        text-align: center;
+      }
+      .file-preview img {
+        max-width: 100%;
+        max-height: 200px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .file-preview .file-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      button .material-icons {
+        font-size: 18px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      #previewImageBtn {
+        background-color: #ff9800;
+      }
+      #previewImageBtn:hover {
+        background-color: #e68a00;
+      }
+      #submitAnimalsBtn {
+        background-color: #2196F3;
+      }
+      #submitAnimalsBtn:hover {
+        background-color: #0b7dda;
+      }
+      #submitChatBtn {
+        background-color: #9c27b0;
+      }
+      #submitChatBtn:hover {
+        background-color: #7b1fa2;
+      }
+      #clearChatBtn {
+        background-color: #f44336;
+      }
+      #clearChatBtn:hover {
+        background-color: #da190b;
+      }
+      .status {
+        font-size: 12px;
+        margin-top: 10px;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .status.success {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .status.error {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+      .status.info {
+        background-color: #d9edf7;
+        color: #31708f;
+      }
+      .conversation-history {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: #fafafa;
+      }
+      .message-block {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .message-block.system {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+      }
+      .message-block.user {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+      }
+      .message-block.model {
+        background-color: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+      }
+      .message-block label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 5px;
+      }
+      .message-block textarea {
+        min-height: 60px;
+      }
+      .message-block .content-display,
+      .content-display {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        background-color: #f5f5f5;
+        min-height: 60px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-y: auto;
+        max-height: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('chat')">Chat</div>
+      <div class="tab" onclick="switchTab('animals')">Animals</div>
+    </div>
+
+    <div id="animals" class="tab-content">
+      <div class="form-group">
+        <label for="imageUrl">Image URL:</label>
+        <input type="text" id="imageUrl" placeholder="Enter image URL (png, jpg, jpeg)..." value="https://images.unsplash.com/photo-1563460716037-460a3ad24ba9?w=125">
+        <div id="imagePreview" class="file-preview"></div>
+      </div>
+
+      <div class="button-group">
+        <button id="previewImageBtn" title="Preview Image">
+          <span class="material-icons">visibility</span>
+          Preview
+        </button>
+        <button id="submitAnimalsBtn" title="Count Animals">
+          <span class="material-icons">pets</span>
+          Submit
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label for="animalsResponse">Response:</label>
+        <textarea id="animalsResponse" rows="10" readonly placeholder="Response will appear here..."></textarea>
+      </div>
+
+      <div id="animalsStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div id="chat" class="tab-content active">
+      <div id="conversationContainer">
+        <div class="message-block system">
+          <label>System Prompt:</label>
+          <textarea id="systemPrompt" rows="3" placeholder="Enter system prompt...">execute the computation requested by the user, and reply with just the value, no other content</textarea>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <textarea id="userPrompt" rows="4" placeholder="Enter your message...">what is 5 + 9 +3 + 6</textarea>
+      </div>
+
+      <div class="button-group">
+        <button id="submitChatBtn" title="Send Message">
+          <span class="material-icons">send</span>
+          Submit
+        </button>
+        <button id="clearChatBtn" title="Clear Conversation">
+          <span class="material-icons">delete_sweep</span>
+          Clear
+        </button>
+      </div>
+
+      <div id="chatStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+      const animalsCountURL = "{{animalsCountURL | safe}}";
+      const chatURL = "{{chatURL | safe}}";
+
+        // Conversation state
+      let conversationHistory = [];
+      let firstSubmitDone = false;
+
+        // Switch between tabs
+      function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+      }
+
+        // Show status message
+      function showStatus(elementId, message, type) {
+        const statusEl = document.getElementById(elementId);
+        statusEl.textContent = message;
+        statusEl.className = 'status ' + type;
+        statusEl.style.display = 'block';
+
+        if (type === 'success') {
+          setTimeout(() => {
+            statusEl.style.display = 'none';
+          }, 3000);
+        }
+      }
+
+        // Image preview handler
+      document.getElementById('previewImageBtn').addEventListener('click', function() {
+        const imageUrl = document.getElementById('imageUrl').value.trim();
+        const imagePreview = document.getElementById('imagePreview');
+
+        if (!imageUrl) {
+          showStatus('animalsStatus', 'Please enter an image URL', 'error');
+          imagePreview.innerHTML = '';
+          return;
+        }
+
+        imagePreview.innerHTML = `
+                <img src="${imageUrl}" alt="Preview" onerror="this.parentElement.innerHTML='<div class=\\'file-info\\' style=\\'color:red\\'>Failed to load image</div>'">
+                <div class="file-info">${imageUrl}</div>
+            `;
+      });
+
+        // Submit animals handler
+      document.getElementById('submitAnimalsBtn').addEventListener('click', async function() {
+        const imageUrl = document.getElementById('imageUrl').value.trim();
+        const btn = this;
+
+        if (!imageUrl) {
+          showStatus('animalsStatus', 'Please enter an image URL', 'error');
+          return;
+        }
+
+        try {
+          btn.disabled = true;
+          showStatus('animalsStatus', 'Processing image...', 'info');
+
+          const response = await fetch(animalsCountURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url: imageUrl })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const innerResponse = JSON.parse(data[0].response);
+          document.getElementById('animalsResponse').value = JSON.stringify(innerResponse, null, 2);
+          showStatus('animalsStatus', 'Image processed successfully', 'success');
+        } catch (error) {
+          console.error('Error:', error);
+          showStatus('animalsStatus', 'Error: ' + error.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Render conversation history in the UI
+      function renderConversation() {
+        const container = document.getElementById('conversationContainer');
+        container.innerHTML = '';
+
+            // System prompt block
+        const systemBlock = document.createElement('div');
+        systemBlock.className = 'message-block system';
+        const systemMsg = conversationHistory.find(m => m.role === 'system');
+
+        if (firstSubmitDone) {
+                // After first submit, show as div
+          systemBlock.innerHTML = `
+                    <label>System Prompt:</label>
+                    <div class="content-display">${systemMsg ? escapeHtml(systemMsg.prompt) : ''}</div>
+                `;
+        } else {
+                // Before first submit, show as editable textarea
+          const defaultSystemPrompt = 'execute the computation requested by the user, and reply with just the value, no other content';
+          systemBlock.innerHTML = `
+                    <label>System Prompt:</label>
+                    <textarea id="systemPrompt" rows="3" placeholder="Enter system prompt..."></textarea>
+                `;
+          systemBlock.querySelector('#systemPrompt').value = systemMsg ? systemMsg.prompt : defaultSystemPrompt;
+        }
+        container.appendChild(systemBlock);
+
+            // User and model messages (excluding system)
+        const messages = conversationHistory.filter(m => m.role !== 'system');
+        messages.forEach((msg, index) => {
+          const block = document.createElement('div');
+          block.className = `message-block ${msg.role}`;
+          block.innerHTML = `
+                    <label>${msg.role === 'user' ? 'User' : 'Model'}:</label>
+                    <div class="content-display">${escapeHtml(msg.prompt)}</div>
+                `;
+          container.appendChild(block);
+        });
+      }
+
+        // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+        // Submit chat handler
+      document.getElementById('submitChatBtn').addEventListener('click', async function() {
+        const systemPromptEl = document.getElementById('systemPrompt');
+        const userPromptEl = document.getElementById('userPrompt');
+        const btn = this;
+
+        const userPrompt = userPromptEl.value.trim();
+        if (!userPrompt) {
+          showStatus('chatStatus', 'Please enter a message', 'error');
+          return;
+        }
+
+        try {
+          btn.disabled = true;
+          showStatus('chatStatus', 'Sending message...', 'info');
+
+                // Build the conversation array
+          if (!firstSubmitDone) {
+                    // First submission - include system prompt
+            const systemPrompt = systemPromptEl.value.trim();
+            if (systemPrompt) {
+              conversationHistory.push({ role: 'system', prompt: systemPrompt });
+            }
+            firstSubmitDone = true;
+          }
+
+                // Add the new user message
+          conversationHistory.push({ role: 'user', prompt: userPrompt });
+
+                // Build the payload
+          const payload = [...conversationHistory];
+
+          const response = await fetch(chatURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed: ${response.status}`);
+          }
+
+          const modelPrompt = await response.text();
+
+                // Add model response to history
+          conversationHistory.push({ role: 'model', prompt: modelPrompt });
+
+                // Update UI
+          renderConversation();
+          userPromptEl.value = '';
+
+          showStatus('chatStatus', 'Response received', 'success');
+        } catch (error) {
+          console.error('Error:', error);
+          showStatus('chatStatus', 'Error: ' + error.message, 'error');
+                // Remove the user message that failed
+          if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
+            conversationHistory.pop();
+          }
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Clear chat handler
+      document.getElementById('clearChatBtn').addEventListener('click', function() {
+        conversationHistory = [];
+        firstSubmitDone = false;
+        document.getElementById('userPrompt').value = '';
+        renderConversation();
+        showStatus('chatStatus', 'Conversation cleared', 'info');
+      });
+
+        // Initialize conversation UI
+      renderConversation();
+    </script>
+  </body>
+</html>

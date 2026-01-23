@@ -1,0 +1,36 @@
+{
+  "sdk_version": "0.81.0",
+  "plugin_version": "0.0.1",
+  "name": "llm_manip",
+  "description": "use LLM to interact with the user",
+  "components": {
+    "protocols": [
+      {
+        "class": "llm_manip.handlers.llm_manip:LlmManip",
+        "description": "LLM communication wrapper"
+      }
+    ],
+    "applications": [
+      {
+        "class": "llm_manip.handlers.llm_form_app:LlmFormApp",
+        "name": "LLM Interactions",
+        "description": "LLM interactions with the user",
+        "icon": "static/llm_manip.png",
+        "scope": "patient_specific",
+        "show_in_panel": false
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [
+    "LlmKey"
+  ],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
