@@ -19,7 +19,7 @@ from canvas_sdk.v1.data.base import CustomModel
 class Biography(CustomModel):
     biography = TextField()
     practicing_since = IntegerField()
-    version = DecimalField(default=1.0)
+    version = DecimalField(max_digits=10, decimal_places=2, default=1.0)
     is_accepting_patients = BooleanField()
     created_date = DateField(auto_now_add=True)
     last_modified_at = DateTimeField(auto_now_add=True)
