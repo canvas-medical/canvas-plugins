@@ -7,25 +7,16 @@ from pydantic import ValidationError
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import (
     AnnotationItem as CategorizeDocumentAnnotation,
-)
-from canvas_sdk.effects.categorize_document import (
     CategorizeDocument,
     DocumentType,
 )
-from canvas_sdk.effects.categorize_document import (
-    ConfidenceScores as CategorizeDocumentConfidenceScores,
-)
-from canvas_sdk.effects.data_integration import Annotation as ReviewerAnnotation
 from canvas_sdk.effects.data_integration import (
+    Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
     PrefillDocumentFields,
     Priority,
     ReviewMode,
-    TemplateFields,
-)
-from canvas_sdk.effects.data_integration.link_document_to_patient import (
-    Annotation as PrefillAnnotation,
 )
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
@@ -38,9 +29,10 @@ class DataIntegrationHandler(BaseProtocol):
     Protocol that demonstrates all Data Integration effects and document lifecycle events.
 
     Effects (emitted on DOCUMENT_RECEIVED):
-    1. LinkDocumentToPatient - Links documents to patients based on demographics
+    1. LinkDocumentToPatient - Links documents to patients using patient key
     2. AssignDocumentReviewer - Assigns a reviewer (staff or team) to documents
     3. CategorizeDocument - Categorizes documents into specific document types
+    4. PrefillDocumentFields - Prefills document fields with extracted data
 
     Document Lifecycle Events (logged only):
     - DOCUMENT_LINKED_TO_PATIENT - Fires when document is linked to a patient
@@ -296,11 +288,10 @@ class DataIntegrationHandler(BaseProtocol):
                 patient_key=str(patient.id),
                 annotations=[
                     {"text": "AI 95%", "color": "#00AA00"},
-                    {"text": "DOB matched", "color": "#2196F3"},
+                    {"text": "Auto-linked", "color": "#2196F3"},
                 ],
-                source_protocol="data_integration_example_v1",
+                source_protocol="data_integration_example",
             )
-            log.info(f"Created LinkDocumentToPatient effect for document {document_id}")
             return effect.apply()
         except ValidationError as e:
             log.error(f"Validation error creating LinkDocumentToPatient: {e}")
@@ -326,8 +317,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                     annotations=[
-                        ReviewerAnnotation(text="Auto-assigned", color="#FF9800"),
-                        ReviewerAnnotation(text="Data integration", color="#2196F3"),
+                        Annotation(text="Auto-assigned", color="#FF9800"),
+                        Annotation(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -339,8 +330,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.ALREADY_REVIEWED,
                     annotations=[
-                        ReviewerAnnotation(text="Auto-assigned", color="#FF9800"),
-                        ReviewerAnnotation(text="Data integration", color="#2196F3"),
+                        Annotation(text="Auto-assigned", color="#FF9800"),
+                        Annotation(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -384,15 +375,6 @@ class DataIntegrationHandler(BaseProtocol):
                 "template_type": lab_report_type.get("template_type"),
             }
 
-            confidence_scores: CategorizeDocumentConfidenceScores = {
-                "document_id": 0.90,
-                "document_type": {
-                    "key": 0.90,
-                    "name": 0.95,
-                    "report_type": 0.85,
-                },
-            }
-
             annotations: list[CategorizeDocumentAnnotation] = [
                 {"text": "AI 90%", "color": "#00AA00"},
                 {"text": "Data integration", "color": "#2196F3"},
@@ -401,12 +383,9 @@ class DataIntegrationHandler(BaseProtocol):
             effect = CategorizeDocument(
                 document_id=str(document_id),
                 document_type=document_type,
-                confidence_scores=confidence_scores,
                 annotations=annotations,
-                source_protocol="data_integration_example_v1",
+                source_protocol="data_integration_example",
             )
-
-            log.info(f"Categorizing document {document_id} as {document_type['name']}")
             return effect.apply()
 
         except (ValidationError, KeyError) as e:
@@ -415,7 +394,6 @@ class DataIntegrationHandler(BaseProtocol):
 
     def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
         """Create a PrefillDocumentFields effect with sample data."""
-        log.info(f"[PREFILL] Creating PrefillDocumentFields effect for document {document_id}")
         try:
             templates = [
                 {
@@ -488,36 +466,20 @@ class DataIntegrationHandler(BaseProtocol):
                     },
                 }
             ]
-            annotations: list[PrefillAnnotation] = [
+            annotations: list[Annotation] = [
                 {"text": "1 template matched", "color": "#2196F3"},
                 {"text": "4 fields extracted", "color": "#00BCD4"},
             ]
-
-            log.info(
-                f"[PREFILL] Templates: {len(templates)}, template_ids: {[t['template_id'] for t in templates]}"
-            )
-            for tmpl in templates:
-                fields = cast(TemplateFields, tmpl["fields"])
-                log.info(
-                    f"[PREFILL]   Template '{tmpl['template_name']}' (id={tmpl['template_id']}): {len(fields)} fields"
-                )
-                for field_key, field_data in fields.items():
-                    log.info(
-                        f"[PREFILL]     Field {field_key}: value={field_data['value']} {field_data.get('unit', '')}"
-                    )
 
             effect = PrefillDocumentFields(
                 document_id=str(document_id),
                 templates=templates,
                 annotations=annotations,
             )
-            log.info("[PREFILL] Effect created, calling apply()")
-            applied = effect.apply()
-            log.info(f"[PREFILL] Effect applied successfully for document {document_id}")
-            return applied
+            return effect.apply()
         except ValidationError as e:
-            log.error(f"[PREFILL] Validation error creating PrefillDocumentFields: {e}")
+            log.error(f"Validation error creating PrefillDocumentFields: {e}")
             return None
         except Exception as e:
-            log.error(f"[PREFILL] Unexpected error creating PrefillDocumentFields: {e}")
+            log.error(f"Unexpected error creating PrefillDocumentFields: {e}")
             return None
