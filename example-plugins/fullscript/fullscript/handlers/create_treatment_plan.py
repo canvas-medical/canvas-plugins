@@ -30,11 +30,13 @@ def get_application_url(
 
 
 def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: dict) -> dict:
-    """Create a treatment plan in Fullscript based on the prescribe commands in the note."""
+    """Create a treatment plan in Fullscript based on the prescribe and refill commands in the note."""
     log.info("!! Fullscript create treatment plan")
 
+    schema_key_commands = ["prescribe", "refill"]
+
     prescribe_commands = Command.objects.filter(
-        note__id=note_id, schema_key="prescribe", committer__isnull=False
+        note__id=note_id, schema_key__in=schema_key_commands, committer__isnull=False
     ).all()
 
     if prescribe_commands:
@@ -49,7 +51,7 @@ def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: 
     for command in prescribe_commands:
         log.info(f"!! Command {command.data}")
 
-        medication = command.data.get("prescribe", {})
+        medication = command.data.get("prescribe", {})  # todo handle refills?
         first_coding = medication.get("extra", {}).get("coding", {})[0]
         medication_code = first_coding.get("code", "")
         medication_id = medication_code[len("fullscript-") :]
@@ -158,6 +160,30 @@ class LaunchFullscriptApplicationButton(ActionButton):
     BUTTON_TITLE = "Open Fullscript Application"
     BUTTON_KEY = "OPEN_FULLSCRIPT_APPLICATION"
     BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_HEADER
+
+    def visible(self) -> bool:
+        """Determine if the button should be visible."""
+        note_id = self.context.get("note_id", None)
+
+        allowed_note_types = (
+            [t.strip() for t in self.secrets["FULLSCRIPT_NOTE_TYPES"].split(",")]
+            if self.secrets["FULLSCRIPT_NOTE_TYPES"]
+            else []
+        )
+
+        if allowed_note_types:
+            # Verify that the note type is allowed
+            note = Note.objects.filter(
+                dbid=note_id, note_type_version__name__in=allowed_note_types
+            ).exists()
+
+            if not note:
+                log.info(
+                    f"Note type is not allowed for Fullscript application. Allowed types: {allowed_note_types}"
+                )
+                return False
+
+        return True
 
     def handle(self) -> list[Effect]:
         """Handle the button click to launch the Fullscript application."""
