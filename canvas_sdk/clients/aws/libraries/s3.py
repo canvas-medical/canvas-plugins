@@ -4,7 +4,6 @@ from hmac import new as hmac_new
 from http import HTTPStatus
 from re import DOTALL
 from re import compile as re_compile
-from re import search as re_search
 from urllib.parse import quote
 
 from requests import Response
@@ -28,9 +27,9 @@ class S3:
     _TRUNCATED_PATTERN = re_compile(r"<IsTruncated>(true|false)</IsTruncated>")
     _TOKEN_PATTERN = re_compile(r"<NextContinuationToken>(.*?)</NextContinuationToken>")
     _CONTENTS_PATTERN = re_compile(r"<Contents>(.*?)</Contents>", DOTALL)
-    _KEY_PATTERN = r"<Key>(.*?)</Key>"
-    _SIZE_PATTERN = r"<Size>(.*?)</Size>"
-    _MODIFIED_PATTERN = r"<LastModified>(.*?)</LastModified>"
+    _KEY_PATTERN = re_compile(r"<Key>(.*?)</Key>")
+    _SIZE_PATTERN = re_compile(r"<Size>(.*?)</Size>")
+    _MODIFIED_PATTERN = re_compile(r"<LastModified>(.*?)</LastModified>")
 
     @classmethod
     def _querystring(cls, params: dict | None) -> str:
@@ -374,9 +373,9 @@ class S3:
             response_text = response.content.decode("utf-8")
             for content_match in self._CONTENTS_PATTERN.finditer(response_text):
                 content_xml = content_match.group(1)
-                key_match = re_search(self._KEY_PATTERN, content_xml)
-                size_match = re_search(self._SIZE_PATTERN, content_xml)
-                modified_match = re_search(self._MODIFIED_PATTERN, content_xml)
+                key_match = self._KEY_PATTERN.search(content_xml)
+                size_match = self._SIZE_PATTERN.search(content_xml)
+                modified_match = self._MODIFIED_PATTERN.search(content_xml)
 
                 if key_match and size_match and modified_match:
                     result.append(
