@@ -1,4 +1,4 @@
-from canvas_sdk.effects.data_integration import JunkDocument, JunkDocumentConfidenceScores
+from canvas_sdk.effects.data_integration import JunkDocument
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 from logger import log
@@ -29,11 +29,7 @@ class JunkDocumentHandler(BaseHandler):
 
         log.info(f"Marking document {document_id} as junk")
 
-        # Create JunkDocument effect with optional confidence score
-        confidence_scores: JunkDocumentConfidenceScores = {"junk": 0.90}
-        effect = JunkDocument(
-            document_id=document_id,
-            confidence_scores=confidence_scores,
-        )
+        # Create JunkDocument effect
+        effect = JunkDocument(document_id=document_id)
 
         return [effect.apply()]
