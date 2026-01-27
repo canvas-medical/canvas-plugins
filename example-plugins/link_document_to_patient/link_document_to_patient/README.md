@@ -1,33 +1,30 @@
 # Link Document to Patient Example Plugin
 
-This example plugin demonstrates how to use the `LINK_DOCUMENT_TO_PATIENT` effect to automatically link documents in the Data Integration queue to patients based on patient demographics.
+This example plugin demonstrates how to use the `LinkDocumentToPatient` effect to link documents in the Data Integration queue to patients using the patient's key.
 
 ## Overview
 
 When a document enters the Data Integration queue, this plugin:
 
 1. Responds to the `DOCUMENT_RECEIVED` event
-2. Extracts patient demographics (first name, last name, date of birth) from the document
-3. Emits a `LinkDocumentToPatient` effect to link the document to the matching patient
+2. Finds the matching patient (the plugin is responsible for patient matching)
+3. Emits a `LinkDocumentToPatient` effect with the patient's key
 
 ## The LinkDocumentToPatient Effect
 
-The `LinkDocumentToPatient` effect links a document to a patient based on demographics:
+The `LinkDocumentToPatient` effect links a document to a patient using the patient's key:
 
 ```python
-from datetime import date
 from canvas_sdk.effects.data_integration import LinkDocumentToPatient
 
 effect = LinkDocumentToPatient(
-    first_name="John",           # Required: patient's first name
-    last_name="Doe",             # Required: patient's last name
-    date_of_birth=date(1990, 5, 15),  # Required: patient's DOB
-    document_id="12345",         # Required: IntegrationTask ID
-    confidence_scores={          # Optional: confidence scores for monitoring
-        "first_name": 0.95,
-        "last_name": 0.90,
-        "date_of_birth": 0.85,
-    },
+    document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",  # Required: IntegrationTask UUID
+    patient_key="8d84776879de49518a4bc3bb81d96dd4",      # Required: patient's key (32-char hex)
+    annotations=[                                        # Optional: display annotations
+        {"text": "AI 95%", "color": "#00AA00"},
+        {"text": "Auto-linked", "color": "#2196F3"},
+    ],
+    source_protocol="llm_v1",                            # Optional: protocol/plugin identifier
 )
 
 # Apply the effect
@@ -38,36 +35,36 @@ effects = [effect.apply()]
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `first_name` | str | Yes | Patient's first name (non-empty) |
-| `last_name` | str | Yes | Patient's last name (non-empty) |
-| `date_of_birth` | date | Yes | Patient's date of birth |
 | `document_id` | str/int | Yes | The IntegrationTask ID to link |
-| `confidence_scores` | dict | No | Confidence scores for each field (0.0-1.0) |
+| `patient_key` | str | Yes | The patient's key (32-character hex string) |
+| `annotations` | list[dict] | No | Display annotations with `text` and `color` fields |
+| `source_protocol` | str | No | Protocol/plugin identifier for tracking |
 
-### Confidence Scores
+### Annotations
 
-The optional `confidence_scores` dict can include scores for:
-- `first_name`
-- `last_name`
-- `date_of_birth`
+Annotations are displayed in the Data Integration UI to help reviewers understand how the document was linked:
 
-These scores are logged for monitoring/debugging and represent the extraction confidence for each demographic field.
+```python
+annotations = [
+    {"text": "AI 95%", "color": "#00AA00"},      # Green - confidence level
+    {"text": "Auto-linked", "color": "#2196F3"}, # Blue - informational
+]
+```
 
-## Matching Logic
+Each annotation must have:
+- `text` (str, required): The annotation text to display
+- `color` (str, required): Hex color code for display
 
-When the effect is processed:
+## How It Works
 
-1. **Patient Lookup**: Filters patients by:
-   - First name (case-insensitive, trimmed)
-   - Last name (case-insensitive, trimmed)
-   - Date of birth (exact date match)
-   - Active status (excludes inactive patients)
+The plugin is responsible for finding/matching the patient and providing their key:
 
-2. **Single Match**: If exactly one patient matches, the document is linked
+1. **Plugin Extracts Demographics**: Use an LLM or OCR system to extract patient information from the document
+2. **Plugin Finds Patient**: Search for the patient in Canvas using the extracted demographics
+3. **Plugin Provides Key**: Pass the patient's `patient_key` to the effect
+4. **Interpreter Links Document**: The home-app interpreter looks up the patient by key and links the document
 
-3. **Zero Matches**: A `ValidationError` is raised with details about the demographics searched
-
-4. **Multiple Matches**: A `ValidationError` is raised listing the matching patient IDs
+This approach simplifies the interpreter and eliminates edge cases with 0 or multiple patient matches - the plugin handles all matching logic.
 
 ## Usage Patterns
 
@@ -80,15 +77,21 @@ class LinkDocumentHandler(BaseHandler):
     def compute(self) -> list[Effect]:
         document_id = self.event.target.id
 
-        # Extract demographics from document (implement your extraction logic)
-        demographics = self.extract_demographics(document_id)
+        # Find patient (implement your matching logic)
+        patient = self.find_patient_from_document(document_id)
+
+        if not patient:
+            return []
 
         return [
             LinkDocumentToPatient(
-                first_name=demographics["first_name"],
-                last_name=demographics["last_name"],
-                date_of_birth=demographics["date_of_birth"],
                 document_id=document_id,
+                patient_key=str(patient.id),
+                annotations=[
+                    {"text": "AI 95%", "color": "#00AA00"},
+                    {"text": "Auto-linked", "color": "#2196F3"},
+                ],
+                source_protocol="my_plugin_v1",
             ).apply()
         ]
 ```
@@ -100,21 +103,25 @@ MIN_CONFIDENCE = 0.85
 
 def compute(self) -> list[Effect]:
     document_id = self.event.target.id
-    extraction = self.extract_with_llm(document_id)
+    result = self.extract_and_match_patient(document_id)
+
+    if not result:
+        return []
 
     # Only auto-link if confidence is high enough
-    avg_confidence = sum(extraction["confidence_scores"].values()) / 3
-    if avg_confidence < MIN_CONFIDENCE:
+    if result["confidence"] < MIN_CONFIDENCE:
         log.info("Confidence too low, routing to manual review")
         return []
 
     return [
         LinkDocumentToPatient(
-            first_name=extraction["first_name"],
-            last_name=extraction["last_name"],
-            date_of_birth=extraction["date_of_birth"],
             document_id=document_id,
-            confidence_scores=extraction["confidence_scores"],
+            patient_key=result["patient_key"],
+            annotations=[
+                {"text": f"AI {int(result['confidence'] * 100)}%", "color": "#00AA00"},
+                {"text": "Auto-linked", "color": "#2196F3"},
+            ],
+            source_protocol="llm_v1",
         ).apply()
     ]
 ```
@@ -123,26 +130,26 @@ def compute(self) -> list[Effect]:
 
 The effect validates inputs and raises `ValidationError` for:
 
-- Empty or whitespace-only first/last names
-- Missing required fields
-- Invalid date formats
-- Invalid confidence score keys
-- Confidence scores outside 0.0-1.0 range
+- Missing required fields (`document_id`, `patient_key`)
+- Empty or whitespace-only `patient_key`
+- Annotations missing required `text` or `color` fields
 
 At the interpreter level, `ValidationError` is raised for:
 
 - Non-existent IntegrationTask (document_id)
-- No matching patients found
-- Multiple matching patients found
+- Non-existent patient (patient_key)
 
 ## Production Considerations
 
-1. **Document Extraction**: Integrate with an LLM or OCR service to extract demographics from document content
+1. **Document Extraction**: Integrate with an LLM or OCR service to extract patient demographics from document content
 
-2. **Confidence Thresholds**: Set appropriate thresholds based on your accuracy requirements
+2. **Patient Matching**: Implement robust patient matching logic:
+   - Search by extracted demographics (name, DOB, MRN)
+   - Handle fuzzy matching for name variations
+   - Set confidence thresholds for auto-linking vs manual review
 
-3. **Manual Review Workflow**: Create tasks for low-confidence extractions that need human review
+3. **Manual Review Workflow**: Create tasks for low-confidence matches that need human review
 
-4. **Monitoring**: Use the logged confidence scores to track extraction accuracy over time
+4. **Monitoring**: Use annotations to track extraction/matching accuracy over time
 
 5. **Error Handling**: Implement retry logic or fallback workflows for failed matches

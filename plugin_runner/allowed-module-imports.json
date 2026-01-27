@@ -338,10 +338,9 @@
     "AddClaimComment"
   ],
   "canvas_sdk.effects.categorize_document": [
+    "AnnotationItem",
     "CategorizeDocument",
-    "ConfidenceScores",
-    "DocumentType",
-    "DocumentTypeConfidenceScores"
+    "DocumentType"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
@@ -368,33 +367,40 @@
   ],
   "canvas_sdk.effects.data_integration": [
     "AssignDocumentReviewer",
-    "AssignDocumentReviewerConfidenceScores",
     "JunkDocument",
-    "JunkDocumentConfidenceScores",
-    "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient",
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
     "Priority",
-    "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
-    "ReviewMode"
+    "ReviewMode",
+    "TemplateFields"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
-    "AssignDocumentReviewerConfidenceScores",
     "Priority",
     "ReviewMode"
   ],
+  "canvas_sdk.effects.data_integration.constants": [
+    "VALID_REPORT_TYPES",
+    "VALID_TEMPLATE_TYPES"
+  ],
   "canvas_sdk.effects.data_integration.junk_document": [
-    "JunkDocument",
-    "JunkDocumentConfidenceScores"
+    "JunkDocument"
   ],
   "canvas_sdk.effects.data_integration.link_document_to_patient": [
-    "LinkDocumentConfidenceScores",
     "LinkDocumentToPatient"
   ],
+  "canvas_sdk.effects.data_integration.prefill_document_fields": [
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields"
+  ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
-    "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.types": [
+    "AnnotationItem",
+    "DocumentType"
   ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
@@ -545,9 +551,6 @@
   ],
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
-  ],
-  "canvas_sdk.effects.remove_document_from_patient": [
-    "RemoveDocumentFromPatient"
   ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
