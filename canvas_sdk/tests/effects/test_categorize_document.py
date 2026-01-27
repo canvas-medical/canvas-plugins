@@ -8,7 +8,6 @@ from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects.categorize_document import (
     AnnotationItem,
     CategorizeDocument,
-    ConfidenceScores,
     DocumentType,
 )
 
@@ -25,25 +24,11 @@ def valid_document_type() -> DocumentType:
 
 
 @pytest.fixture
-def valid_confidence_scores() -> ConfidenceScores:
-    """Valid confidence scores for testing."""
-    return {
-        "document_id": 0.90,
-        "document_type": {
-            "key": 0.90,
-            "name": 0.95,
-            "report_type": 0.85,
-            "template_type": 0.90,
-        },
-    }
-
-
-@pytest.fixture
 def valid_annotations() -> list[AnnotationItem]:
     """Valid annotations for testing."""
     return [
-        {"text": "AI 97%", "color": "#00FF00"},
-        {"text": "Auto-detected", "color": "#0000FF"},
+        AnnotationItem(text="AI 97%", color="#00FF00"),
+        AnnotationItem(text="Auto-detected", color="#0000FF"),
     ]
 
 
@@ -55,7 +40,6 @@ class TestCategorizeDocumentCreation:
         effect = CategorizeDocument(document_id="123", document_type=valid_document_type)
         assert effect.document_id == "123"
         assert effect.document_type == valid_document_type
-        assert effect.confidence_scores is None
 
     def test_creation_with_int_document_id(self, valid_document_type: DocumentType) -> None:
         """Test that document_id can be an int and is serialized as string."""
@@ -63,42 +47,34 @@ class TestCategorizeDocumentCreation:
         assert effect.document_id == 123
         assert effect.values["document_id"] == "123"
 
-    def test_creation_with_confidence_scores(
-        self, valid_document_type: DocumentType, valid_confidence_scores: ConfidenceScores
-    ) -> None:
-        """Test that CategorizeDocument can be created with confidence_scores."""
-        effect = CategorizeDocument(
-            document_id="456",
-            document_type=valid_document_type,
-            confidence_scores=valid_confidence_scores,
-        )
-        assert effect.confidence_scores == valid_confidence_scores
-
 
 class TestCategorizeDocumentValues:
     """Tests for the values property."""
 
-    def test_values_with_confidence_scores(
-        self, valid_document_type: DocumentType, valid_confidence_scores: ConfidenceScores
+    def test_values_with_all_fields(
+        self, valid_document_type: DocumentType, valid_annotations: list[AnnotationItem]
     ) -> None:
-        """Test that values property includes confidence_scores when provided."""
+        """Test that values property includes all fields when provided."""
         effect = CategorizeDocument(
             document_id=789,
             document_type=valid_document_type,
-            confidence_scores=valid_confidence_scores,
+            annotations=valid_annotations,
+            source_protocol="test_plugin",
         )
         values = effect.values
         assert values == {
             "document_id": "789",
             "document_type": valid_document_type,
-            "confidence_scores": valid_confidence_scores,
+            "annotations": valid_annotations,
+            "source_protocol": "test_plugin",
         }
 
-    def test_values_without_confidence_scores(self, valid_document_type: DocumentType) -> None:
-        """Test that values property excludes confidence_scores when not provided."""
+    def test_values_without_optional_fields(self, valid_document_type: DocumentType) -> None:
+        """Test that values property excludes optional fields when not provided."""
         effect = CategorizeDocument(document_id="999", document_type=valid_document_type)
         values = effect.values
-        assert "confidence_scores" not in values
+        assert "annotations" not in values
+        assert "source_protocol" not in values
         assert values == {
             "document_id": "999",
             "document_type": valid_document_type,
@@ -221,106 +197,6 @@ class TestDocumentTypeValidation:
         assert "document_type.template_type must be a string or null" in repr(exc_info.value)
 
 
-class TestConfidenceScoresValidation:
-    """Tests for confidence_scores field validation."""
-
-    def test_invalid_top_level_keys(self, valid_document_type: DocumentType) -> None:
-        """Test that invalid top-level confidence_scores keys raise ValueError."""
-        invalid_scores = {"invalid_key": 0.5, "document_id": 0.9}
-        with pytest.raises(ValueError, match="confidence_scores contains invalid keys"):
-            CategorizeDocument(
-                document_id="123",
-                document_type=valid_document_type,
-                confidence_scores=invalid_scores,  # type: ignore[arg-type]
-            )
-
-    def test_invalid_nested_keys(self, valid_document_type: DocumentType) -> None:
-        """Test that invalid nested confidence_scores keys raise ValueError."""
-        invalid_scores = {
-            "document_id": 0.9,
-            "document_type": {"invalid_key": 0.5, "key": 0.9},
-        }
-        with pytest.raises(
-            ValueError, match="confidence_scores.document_type contains invalid keys"
-        ):
-            CategorizeDocument(
-                document_id="123",
-                document_type=valid_document_type,
-                confidence_scores=invalid_scores,  # type: ignore[arg-type]
-            )
-
-    @pytest.mark.parametrize("value", [-0.1, 1.1])
-    def test_out_of_range_values(self, value: float, valid_document_type: DocumentType) -> None:
-        """Test that confidence_scores values outside 0.0-1.0 raise ValidationError."""
-        if value < 0:
-            invalid_scores: ConfidenceScores = {
-                "document_id": value,
-                "document_type": {
-                    "key": 0.9,
-                    "name": 0.95,
-                    "report_type": 0.85,
-                    "template_type": 0.9,
-                },
-            }
-        else:
-            invalid_scores = {
-                "document_id": 0.9,
-                "document_type": {
-                    "key": value,
-                    "name": 0.95,
-                    "report_type": 0.85,
-                    "template_type": 0.9,
-                },
-            }
-        with pytest.raises(ValidationError):
-            CategorizeDocument(
-                document_id="123",
-                document_type=valid_document_type,
-                confidence_scores=invalid_scores,
-            )
-
-    @pytest.mark.parametrize("value", [0.0, 1.0])
-    def test_boundary_values(self, value: float, valid_document_type: DocumentType) -> None:
-        """Test that confidence_scores boundary values (0.0, 1.0) are valid."""
-        confidence_scores: ConfidenceScores = {
-            "document_id": value,
-            "document_type": {
-                "key": value,
-                "name": value,
-                "report_type": value,
-                "template_type": value,
-            },
-        }
-        effect = CategorizeDocument(
-            document_id="123",
-            document_type=valid_document_type,
-            confidence_scores=confidence_scores,
-        )
-        applied = effect.apply()
-        assert applied.type == EffectType.CATEGORIZE_DOCUMENT
-
-    def test_confidence_scores_must_be_dict(self, valid_document_type: DocumentType) -> None:
-        """Test that confidence_scores must be a dict if provided."""
-        with pytest.raises(ValidationError):
-            CategorizeDocument(
-                document_id="123",
-                document_type=valid_document_type,
-                confidence_scores="not_a_dict",  # type: ignore[arg-type]
-            )
-
-    def test_partial_confidence_scores(self, valid_document_type: DocumentType) -> None:
-        """Test that confidence_scores can have only some keys."""
-        partial_scores: ConfidenceScores = {"document_id": 0.9}
-        effect = CategorizeDocument(
-            document_id="123", document_type=valid_document_type, confidence_scores=partial_scores
-        )
-        applied = effect.apply()
-        assert applied.type == EffectType.CATEGORIZE_DOCUMENT
-        values = effect.values
-        assert values["confidence_scores"]["document_id"] == 0.9
-        assert "document_type" not in values["confidence_scores"]
-
-
 class TestAnnotationsAndSourceProtocol:
     """Tests for annotations and source_protocol fields."""
 
@@ -359,7 +235,7 @@ class TestAnnotationsAndSourceProtocol:
         self, valid_document_type: DocumentType
     ) -> None:
         """Test that annotations and source_protocol appear in applied payload."""
-        annotations: list[AnnotationItem] = [{"text": "AI 95%", "color": "#00FF00"}]
+        annotations: list[AnnotationItem] = [AnnotationItem(text="AI 95%", color="#00FF00")]
         effect = CategorizeDocument(
             document_id="test-uuid",
             document_type=valid_document_type,
@@ -383,20 +259,17 @@ class TestAnnotationsAndSourceProtocol:
     def test_all_fields_together(
         self,
         valid_document_type: DocumentType,
-        valid_confidence_scores: ConfidenceScores,
         valid_annotations: list[AnnotationItem],
     ) -> None:
         """Test that all fields work together."""
         effect = CategorizeDocument(
             document_id="test-uuid",
             document_type=valid_document_type,
-            confidence_scores=valid_confidence_scores,
             annotations=valid_annotations,
             source_protocol="llm_v1",
         )
         values = effect.values
         assert values["document_id"] == "test-uuid"
         assert values["document_type"] == valid_document_type
-        assert values["confidence_scores"] == valid_confidence_scores
         assert values["annotations"] == valid_annotations
         assert values["source_protocol"] == "llm_v1"
