@@ -10,8 +10,8 @@ from .claim import (
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .coverage import CoverageFactory
-from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .encounter import EncounterFactory
+from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
 from .lab import (
@@ -33,11 +33,6 @@ from .medication_history import (
     MedicationHistoryResponseFactory,
 )
 from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
-from .organization import (
-    OrganizationAddressFactory,
-    OrganizationContactPointFactory,
-    OrganizationFactory,
-)
 from .observation import (
     ObservationCodingFactory,
     ObservationComponentCodingFactory,

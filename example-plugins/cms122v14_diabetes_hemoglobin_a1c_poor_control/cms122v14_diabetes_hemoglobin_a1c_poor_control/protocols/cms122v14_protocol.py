@@ -2,27 +2,6 @@ import datetime
 from typing import Any
 
 import arrow
-from cms122v14_diabetes_hemoglobin_a1c_poor_control.constants import (
-    ADDITIONAL_ENCOUNTER_SNOMED_CODES,
-    AGE_RANGE_END,
-    AGE_RANGE_START,
-    DISCHARGE_TO_FACILITY_HOSPICE_SNOMED,
-    DISCHARGE_TO_HOME_HOSPICE_SNOMED,
-    GLYCEMIC_THRESHOLD,
-    GMI_LOINC_CODE,
-    HOSPICE_MDS_LOINC,
-    HOUSING_STATUS_LOINC,
-    LIVES_IN_NURSING_HOME_SNOMED,
-    LOINC_SYSTEM_IDENTIFIERS,
-    MNT_CPT_CODES,
-    MNT_HCPCS_CODES,
-    PALLIATIVE_CARE_ASSESSMENT_LOINC,
-    PROTOCOL_KEY,
-    SNOMED_SYSTEM_IDENTIFIERS,
-    TEST_TYPE_GMI,
-    TEST_TYPE_HBA1C,
-    YES_QUALIFIER_SNOMED,
-)
 from django.db.models import Q
 
 from canvas_sdk.commands import InstructCommand, LabOrderCommand
@@ -71,6 +50,27 @@ from canvas_sdk.value_set.v2026.intervention import (
 from canvas_sdk.value_set.v2026.laboratory_test import Hba1cLaboratoryTest
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
 from canvas_sdk.value_set.v2026.symptom import FrailtySymptom
+from cms122v14_diabetes_hemoglobin_a1c_poor_control.constants import (
+    ADDITIONAL_ENCOUNTER_SNOMED_CODES,
+    AGE_RANGE_END,
+    AGE_RANGE_START,
+    DISCHARGE_TO_FACILITY_HOSPICE_SNOMED,
+    DISCHARGE_TO_HOME_HOSPICE_SNOMED,
+    GLYCEMIC_THRESHOLD,
+    GMI_LOINC_CODE,
+    HOSPICE_MDS_LOINC,
+    HOUSING_STATUS_LOINC,
+    LIVES_IN_NURSING_HOME_SNOMED,
+    LOINC_SYSTEM_IDENTIFIERS,
+    MNT_CPT_CODES,
+    MNT_HCPCS_CODES,
+    PALLIATIVE_CARE_ASSESSMENT_LOINC,
+    PROTOCOL_KEY,
+    SNOMED_SYSTEM_IDENTIFIERS,
+    TEST_TYPE_GMI,
+    TEST_TYPE_HBA1C,
+    YES_QUALIFIER_SNOMED,
+)
 from logger import log
 
 
