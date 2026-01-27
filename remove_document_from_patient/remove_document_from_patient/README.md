@@ -14,17 +14,13 @@ Removes/unlinks a patient association from a document in the Data Integration qu
 ```json
 {
     "document_id": 12345,
-    "patient_id": 67890,
-    "confidence_score": 0.95
+    "patient_id": 67890
 }
 ```
 
 **Required Fields:**
 - `document_id` (int): The ID of the IntegrationTask/document
 - `patient_id` (int): The ID of the patient (used for logging/audit)
-
-**Optional Fields:**
-- `confidence_score` (float): Confidence level between 0.0 and 1.0 (for monitoring/debugging)
 
 **Response:**
 ```json
@@ -44,14 +40,6 @@ Removes/unlinks a patient association from a document in the Data Integration qu
 curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
      -H "Content-Type: application/json" \
      -d '{"document_id": 12345, "patient_id": 67890}'
-```
-
-### With Confidence Score
-
-```bash
-curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
-     -H "Content-Type: application/json" \
-     -d '{"document_id": 12345, "patient_id": 67890, "confidence_score": 0.95}'
 ```
 
 ## Behavior

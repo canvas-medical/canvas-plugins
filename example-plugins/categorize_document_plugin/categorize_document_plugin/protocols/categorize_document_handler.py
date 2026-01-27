@@ -48,8 +48,8 @@ class CategorizeDocumentHandler(BaseHandler):
         }
 
         annotations: list[AnnotationItem] = [
-            {"text": "AI 95%", "color": "#00AA00"},
-            {"text": "Auto-detected", "color": "#2196F3"},
+            AnnotationItem(text="AI 95%", color="#00AA00"),
+            AnnotationItem(text="Auto-detected", color="#2196F3"),
         ]
 
         effect = CategorizeDocument(

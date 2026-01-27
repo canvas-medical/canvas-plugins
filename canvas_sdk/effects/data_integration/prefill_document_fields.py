@@ -4,7 +4,7 @@ from pydantic import BaseModel, model_validator
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-from canvas_sdk.effects.data_integration.link_document_to_patient import Annotation
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 class PrefillDocumentFieldData(TypedDict):
@@ -23,7 +23,7 @@ class PrefillDocumentFieldData(TypedDict):
     unit: NotRequired[str]
     reference_range: NotRequired[str]
     abnormal: NotRequired[bool]
-    annotations: NotRequired[list[Annotation]]
+    annotations: NotRequired[list[AnnotationItem]]
 
 
 TemplateFields: TypeAlias = dict[str, PrefillDocumentFieldData]
@@ -66,7 +66,7 @@ class PrefillDocumentFields(_BaseEffect):
 
     document_id: str | None = None
     templates: list[dict[str, Any]] | None = None
-    annotations: list[Annotation] | None = None
+    annotations: list[AnnotationItem] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
@@ -204,7 +204,7 @@ class PrefillDocumentFields(_BaseEffect):
         return errors
 
     def _validate_annotation(
-        self, annotation: Annotation | dict[str, Any], path: str
+        self, annotation: AnnotationItem | dict[str, Any], path: str
     ) -> list[InitErrorDetails]:
         """Validate a single annotation structure."""
         errors: list[InitErrorDetails] = []

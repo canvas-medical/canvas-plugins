@@ -27,8 +27,8 @@ def valid_document_type() -> DocumentType:
 def valid_annotations() -> list[AnnotationItem]:
     """Valid annotations for testing."""
     return [
-        {"text": "AI 97%", "color": "#00FF00"},
-        {"text": "Auto-detected", "color": "#0000FF"},
+        AnnotationItem(text="AI 97%", color="#00FF00"),
+        AnnotationItem(text="Auto-detected", color="#0000FF"),
     ]
 
 
@@ -235,7 +235,7 @@ class TestAnnotationsAndSourceProtocol:
         self, valid_document_type: DocumentType
     ) -> None:
         """Test that annotations and source_protocol appear in applied payload."""
-        annotations: list[AnnotationItem] = [{"text": "AI 95%", "color": "#00FF00"}]
+        annotations: list[AnnotationItem] = [AnnotationItem(text="AI 95%", color="#00FF00")]
         effect = CategorizeDocument(
             document_id="test-uuid",
             document_type=valid_document_type,

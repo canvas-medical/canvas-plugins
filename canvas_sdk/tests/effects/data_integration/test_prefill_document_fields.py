@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import PrefillDocumentFields
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 def test_create_effect_with_all_required_fields() -> None:
@@ -16,14 +17,14 @@ def test_create_effect_with_all_required_fields() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Thyroid Profile With Tsh",
+                "template_id": 620,
+                "template_name": "Thyroid Profile With Tsh",
                 "fields": {
                     "11580-8": {
                         "value": "2.35",
                         "unit": "uIU/mL",
-                        "referenceRange": "0.45 - 4.50",
-                        "annotations": [{"text": "AI 95%", "color": "#4CAF50"}],
+                        "reference_range": "0.45 - 4.50",
+                        "annotations": [AnnotationItem(text="AI 95%", color="#4CAF50")],
                     }
                 },
             }
@@ -36,7 +37,7 @@ def test_create_effect_with_all_required_fields() -> None:
     payload = json.loads(applied.payload)
     assert payload["data"]["document_id"] == "12345"
     assert len(payload["data"]["templates"]) == 1
-    assert payload["data"]["templates"][0]["templateId"] == 620
+    assert payload["data"]["templates"][0]["template_id"] == 620
 
 
 def test_create_effect_with_top_level_annotations() -> None:
@@ -45,14 +46,14 @@ def test_create_effect_with_top_level_annotations() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Thyroid Profile",
+                "template_id": 620,
+                "template_name": "Thyroid Profile",
                 "fields": {"11580-8": {"value": "2.35"}},
             }
         ],
         annotations=[
-            {"text": "1 template matched", "color": "#2196F3"},
-            {"text": "1 field extracted", "color": "#4CAF50"},
+            AnnotationItem(text="1 template matched", color="#2196F3"),
+            AnnotationItem(text="1 field extracted", color="#4CAF50"),
         ],
     )
     applied = effect.apply()
@@ -68,13 +69,13 @@ def test_create_effect_with_multiple_templates() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Template 1",
+                "template_id": 620,
+                "template_name": "Template 1",
                 "fields": {"field1": {"value": "val1"}},
             },
             {
-                "templateId": 621,
-                "templateName": "Template 2",
+                "template_id": 621,
+                "template_name": "Template 2",
                 "fields": {"field2": {"value": "val2"}},
             },
         ],
@@ -91,8 +92,8 @@ def test_values_property_returns_correct_structure() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test Template",
+                "template_id": 620,
+                "template_name": "Test Template",
                 "fields": {"field1": {"value": "val1"}},
             }
         ],
@@ -102,7 +103,7 @@ def test_values_property_returns_correct_structure() -> None:
 
     assert values["document_id"] == "12345"
     assert "templates" in values
-    assert values["templates"][0]["templateId"] == 620
+    assert values["templates"][0]["template_id"] == 620
 
 
 def test_values_property_excludes_none_annotations() -> None:
@@ -111,8 +112,8 @@ def test_values_property_excludes_none_annotations() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test Template",
+                "template_id": 620,
+                "template_name": "Test Template",
                 "fields": {"field1": {"value": "val1"}},
             }
         ],
@@ -129,8 +130,8 @@ def test_apply_raises_error_when_document_id_missing() -> None:
     effect = PrefillDocumentFields(
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -165,8 +166,8 @@ def test_apply_raises_error_when_document_id_is_empty() -> None:
         document_id="",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -183,8 +184,8 @@ def test_apply_raises_error_when_document_id_is_whitespace() -> None:
         document_id="   ",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -196,12 +197,12 @@ def test_apply_raises_error_when_document_id_is_whitespace() -> None:
 
 
 def test_apply_raises_error_when_template_missing_id() -> None:
-    """Test apply raises error when template missing templateId."""
+    """Test apply raises error when template missing template_id."""
     effect = PrefillDocumentFields(
         document_id="12345",
         templates=[
             {
-                "templateName": "Test",
+                "template_name": "Test",
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -215,12 +216,12 @@ def test_apply_raises_error_when_template_missing_id() -> None:
 
 
 def test_apply_raises_error_when_template_missing_name() -> None:
-    """Test apply raises error when template missing templateName."""
+    """Test apply raises error when template missing template_name."""
     effect = PrefillDocumentFields(
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
+                "template_id": 620,
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -235,13 +236,13 @@ def test_apply_raises_error_when_template_missing_name() -> None:
 
 
 def test_apply_raises_error_when_template_name_empty() -> None:
-    """Test apply raises error when templateName is empty."""
+    """Test apply raises error when template_name is empty."""
     effect = PrefillDocumentFields(
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "",
+                "template_id": 620,
+                "template_name": "",
                 "fields": {"f1": {"value": "v1"}},
             }
         ],
@@ -261,8 +262,8 @@ def test_apply_raises_error_when_field_missing_value() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {"f1": {"unit": "mg"}},
             }
         ],
@@ -279,8 +280,8 @@ def test_apply_succeeds_with_minimal_field() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {"f1": {"value": "test_value"}},
             }
         ],
@@ -297,13 +298,13 @@ def test_apply_succeeds_with_abnormal_field() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {
                     "f1": {
                         "value": "150",
                         "unit": "mg/dL",
-                        "referenceRange": "70 - 100",
+                        "reference_range": "70 - 100",
                         "abnormal": True,
                     }
                 },
@@ -328,7 +329,7 @@ def test_apply_raises_error_when_annotation_missing_text() -> None:
                     "fields": {
                         "f1": {
                             "value": "v1",
-                            "annotations": [{"color": "#FF0000"}],
+                            "annotations": cast(Any, [{"color": "#FF0000"}]),
                         }
                     },
                 }
@@ -346,8 +347,8 @@ def test_apply_raises_error_when_annotation_missing_color() -> None:
             document_id="12345",
             templates=[
                 {
-                    "templateId": 620,
-                    "templateName": "Test",
+                    "template_id": 620,
+                    "template_name": "Test",
                     "fields": {"f1": {"value": "v1"}},
                 }
             ],
@@ -363,12 +364,12 @@ def test_apply_raises_error_when_field_annotation_missing_text() -> None:
         document_id="12345",
         templates=[
             {
-                "templateId": 620,
-                "templateName": "Test",
+                "template_id": 620,
+                "template_name": "Test",
                 "fields": {
                     "f1": {
                         "value": "v1",
-                        "annotations": [{"color": "#FF0000"}],
+                        "annotations": cast(Any, [{"color": "#FF0000"}]),
                     }
                 },
             }

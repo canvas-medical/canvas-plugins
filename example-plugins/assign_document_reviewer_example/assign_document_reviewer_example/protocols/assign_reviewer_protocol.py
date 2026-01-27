@@ -5,12 +5,12 @@ from pydantic import ValidationError
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import CategorizeDocument
 from canvas_sdk.effects.data_integration import (
-    Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
     Priority,
     ReviewMode,
 )
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Patient, Staff, Team
@@ -62,8 +62,8 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
                 document_id=str(document_id),
                 patient_key=str(patient.id),
                 annotations=[
-                    {"text": "AI 95%", "color": "#00AA00"},
-                    {"text": "Auto-linked", "color": "#2196F3"},
+                    AnnotationItem(text="AI 95%", color="#00AA00"),
+                    AnnotationItem(text="Auto-linked", color="#2196F3"),
                 ],
                 source_protocol="assign_document_reviewer_example",
             )
@@ -99,8 +99,8 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
                     "template_type": doc_type.get("template_type"),
                 },
                 annotations=[
-                    {"text": "AI 92%", "color": "#00AA00"},
-                    {"text": "Auto-categorized", "color": "#2196F3"},
+                    AnnotationItem(text="AI 92%", color="#00AA00"),
+                    AnnotationItem(text="Auto-categorized", color="#2196F3"),
                 ],
                 source_protocol="assign_document_reviewer_example",
             )
@@ -127,9 +127,9 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
                 priority=Priority.HIGH,
                 review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                 annotations=[
-                    Annotation(text="Team lead", color="#4CAF50"),
-                    Annotation(text="Primary care", color="#2196F3"),
-                    Annotation(text="Auto-assigned", color="#FF9800"),
+                    AnnotationItem(text="Team lead", color="#4CAF50"),
+                    AnnotationItem(text="Primary care", color="#2196F3"),
+                    AnnotationItem(text="Auto-assigned", color="#FF9800"),
                 ],
                 source_protocol="assign_document_reviewer_example",
             )

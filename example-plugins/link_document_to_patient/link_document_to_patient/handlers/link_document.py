@@ -12,6 +12,7 @@ matching patient. This example uses sample data for demonstration purposes.
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.data_integration import LinkDocumentToPatient
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers.base import BaseHandler
 from canvas_sdk.v1.data import Patient
@@ -120,8 +121,8 @@ class LinkDocumentHandler(BaseHandler):
         return {
             "patient_key": str(patient.id),
             "annotations": [
-                {"text": "AI 95%", "color": "#00AA00"},
-                {"text": "Auto-linked", "color": "#2196F3"},
+                AnnotationItem(text="AI 95%", color="#00AA00"),
+                AnnotationItem(text="Auto-linked", color="#2196F3"),
             ],
             "source_protocol": "llm_v1",
         }

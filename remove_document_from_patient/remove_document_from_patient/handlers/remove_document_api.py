@@ -7,12 +7,7 @@ from a document in the Data Integration queue.
 Example usage:
     curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
          -H "Content-Type: application/json" \
-         -d '{"document_id": "50272cbb-3051-4bcd-b627-8d5b6c3e1cde"}'
-
-    # With optional confidence score:
-    curl -X POST /plugin-io/api/remove_document_from_patient/remove-document-from-patient \
-         -H "Content-Type: application/json" \
-         -d '{"document_id": "50272cbb-3051-4bcd-b627-8d5b6c3e1cde", "confidence_score": 0.95}'
+         -d '{"document_id": "50272cbb-3051-4bcd-b627-8d5b6c3e1cde", "patient_id": 67890}'
 """
 
 from canvas_sdk.effects.data_integration import RemoveDocumentFromPatient
@@ -31,8 +26,8 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
 
     POST /remove-document-from-patient
     Body: {
-        "document_id": str,       # Required: ID or UUID of the document
-        "confidence_score": float # Optional: Confidence score (0.0-1.0)
+        "document_id": int | str, # Required: ID or UUID of the document
+        "patient_id": int | str,  # Required: Patient ID to unlink
     }
     """
 
@@ -56,7 +51,7 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
 
             effect = self._create_effect(params)
 
-            log.info(f"Removing patient from document {params['document_id']}")
+            log.info(f"Removing patient {params['patient_id']} from document {params['document_id']}")
 
             return [
                 effect.apply(),
@@ -65,6 +60,7 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
                         "success": True,
                         "message": f"Patient removed from document {params['document_id']}",
                         "document_id": params["document_id"],
+                        "patient_id": params["patient_id"],
                     }
                 ),
             ]
@@ -77,8 +73,8 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
 
         Returns:
             dict: Dictionary containing:
-                - document_id: str (ID or UUID)
-                - confidence_score: float | None
+                - document_id: int | str (ID or UUID, type preserved)
+                - patient_id: int | str (patient ID, type preserved)
                 - error: str (only if validation fails)
         """
         try:
@@ -87,45 +83,42 @@ class RemoveDocumentFromPatientAPI(SimpleAPIRoute):
             return {"error": "Invalid JSON body"}
 
         document_id = body.get("document_id")
-        confidence_score = body.get("confidence_score")
+        patient_id = body.get("patient_id")
 
         if document_id is None:
             return {"error": "document_id is required"}
 
-        # Accept string (UUID) or integer
+        if patient_id is None:
+            return {"error": "patient_id is required"}
+
+        # Accept string (UUID) or integer for document_id
         if not isinstance(document_id, (str, int)):
-            return {"error": "document_id must be a string or integer"}
-        document_id = str(document_id)
+            return {"error": "document_id must be an integer"}
 
-        if confidence_score is not None:
-            if not isinstance(confidence_score, (int, float)):
-                return {"error": "confidence_score must be a number"}
-            if not (0.0 <= confidence_score <= 1.0):
-                return {"error": "confidence_score must be between 0.0 and 1.0"}
+        # Accept string or integer for patient_id
+        if not isinstance(patient_id, (str, int)):
+            return {"error": "patient_id must be an integer"}
 
-        log.info(f"Params - document_id: {document_id}, confidence_score: {confidence_score}")
+        log.info(f"Params - document_id: {document_id}, patient_id: {patient_id}")
 
         return {
             "document_id": document_id,
-            "confidence_score": confidence_score,
+            "patient_id": patient_id,
         }
 
     def _create_effect(self, params: dict) -> RemoveDocumentFromPatient:
         """Create the RemoveDocumentFromPatient effect with given parameters.
 
         Args:
-            params: Dictionary with document_id and optional confidence_score
+            params: Dictionary with document_id and patient_id
 
         Returns:
             RemoveDocumentFromPatient: The configured effect
         """
-        document_id = str(params["document_id"])
-        confidence_score = params.get("confidence_score")
+        document_id = params["document_id"]
+        patient_id = params["patient_id"]
 
-        if confidence_score is not None:
-            return RemoveDocumentFromPatient(
-                document_id=document_id,
-                confidence_scores={"removal": confidence_score},
-            )
-
-        return RemoveDocumentFromPatient(document_id=document_id)
+        return RemoveDocumentFromPatient(
+            document_id=str(document_id),
+            patient_id=str(patient_id),
+        )

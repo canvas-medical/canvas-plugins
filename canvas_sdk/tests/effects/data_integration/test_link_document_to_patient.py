@@ -1,5 +1,3 @@
-"""Tests for LinkDocumentToPatient effect."""
-
 import json
 
 import pytest
@@ -7,6 +5,7 @@ from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import LinkDocumentToPatient
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 def test_create_effect_with_all_required_fields() -> None:
@@ -44,8 +43,8 @@ def test_create_effect_with_annotations() -> None:
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
         annotations=[
-            {"text": "AI 95%", "color": "#00AA00"},
-            {"text": "DOB matched", "color": "#2196F3"},
+            AnnotationItem(text="AI 95%", color="#00AA00"),
+            AnnotationItem(text="DOB matched", color="#2196F3"),
         ],
     )
     applied = effect.apply()
@@ -76,9 +75,9 @@ def test_create_effect_with_all_optional_fields() -> None:
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
         annotations=[
-            {"text": "AI 95%", "color": "#00AA00"},
-            {"text": "DOB matched", "color": "#2196F3"},
-            {"text": "Name verified", "color": "#4CAF50"},
+            AnnotationItem(text="AI 95%", color="#00AA00"),
+            AnnotationItem(text="DOB matched", color="#2196F3"),
+            AnnotationItem(text="Name verified", color="#4CAF50"),
         ],
         source_protocol="llm_v1",
     )
@@ -115,7 +114,7 @@ def test_values_property_with_annotations() -> None:
     effect = LinkDocumentToPatient(
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
-        annotations=[{"text": "AI 95%", "color": "#00AA00"}],
+        annotations=[AnnotationItem(text="AI 95%", color="#00AA00")],
     )
 
     values = effect.values
@@ -289,9 +288,9 @@ def test_annotations_accepts_list_of_dicts() -> None:
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
         annotations=[
-            {"text": "Tag 1", "color": "#FF0000"},
-            {"text": "Tag 2", "color": "#00FF00"},
-            {"text": "Tag 3", "color": "#0000FF"},
+            AnnotationItem(text="Tag 1", color="#FF0000"),
+            AnnotationItem(text="Tag 2", color="#00FF00"),
+            AnnotationItem(text="Tag 3", color="#0000FF"),
         ],
     )
     applied = effect.apply()
@@ -309,7 +308,7 @@ def test_annotations_accepts_single_item_list() -> None:
     effect = LinkDocumentToPatient(
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
-        annotations=[{"text": "Only annotation", "color": "#FF0000"}],
+        annotations=[AnnotationItem(text="Only annotation", color="#FF0000")],
     )
     applied = effect.apply()
 
@@ -319,10 +318,10 @@ def test_annotations_accepts_single_item_list() -> None:
 
 def test_annotations_preserves_order() -> None:
     """Test annotations preserves the order of items."""
-    annotations = [
-        {"text": "First", "color": "#FF0000"},
-        {"text": "Second", "color": "#00FF00"},
-        {"text": "Third", "color": "#0000FF"},
+    annotations: list[AnnotationItem] = [
+        AnnotationItem(text="First", color="#FF0000"),
+        AnnotationItem(text="Second", color="#00FF00"),
+        AnnotationItem(text="Third", color="#0000FF"),
     ]
     effect = LinkDocumentToPatient(
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -344,7 +343,7 @@ def test_annotations_with_color_only() -> None:
     effect = LinkDocumentToPatient(
         document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         patient_key="patient-key-67890",
-        annotations=[{"text": "Alert", "color": "#FF0000"}],
+        annotations=[AnnotationItem(text="Alert", color="#FF0000")],
     )
     applied = effect.apply()
 

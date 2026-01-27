@@ -15,6 +15,8 @@ from canvas_sdk.effects.data_integration import (
     Priority,
     ReviewMode,
 )
+from canvas_sdk.effects.data_integration.types import AnnotationItem
+
 
 # Assign a reviewer with all options
 effect = AssignDocumentReviewer(
@@ -24,8 +26,8 @@ effect = AssignDocumentReviewer(
     priority=Priority.HIGH,                 # normal or high (default: normal)
     review_mode=ReviewMode.REVIEW_REQUIRED, # review_required, already_reviewed, or review_not_required
     annotations=[                           # Optional: display annotations for prefill
-        {"text": "Team lead", "color": "#4CAF50"},
-        {"text": "Primary care", "color": "#2196F3"},
+        AnnotationItem(text="Team lead", color="#4CAF50")
+        AnnotationItem(text="Primary care", color="#2196F3")
     ],
     source_protocol="llm_v1",               # Optional: identifies the source plugin/protocol
 )

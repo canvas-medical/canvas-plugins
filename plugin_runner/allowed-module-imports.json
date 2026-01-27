@@ -326,9 +326,7 @@
   "canvas_sdk.effects.categorize_document": [
     "AnnotationItem",
     "CategorizeDocument",
-    "ConfidenceScores",
-    "DocumentType",
-    "DocumentTypeConfidenceScores"
+    "DocumentType"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
@@ -348,28 +346,27 @@
     "CompoundMedication"
   ],
   "canvas_sdk.effects.data_integration": [
-    "Annotation",
     "AssignDocumentReviewer",
     "JunkDocument",
-    "JunkDocumentConfidenceScores",
     "LinkDocumentToPatient",
     "PrefillDocumentFieldData",
     "PrefillDocumentFields",
     "Priority",
-    "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient",
     "ReviewMode",
     "TemplateFields"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
-    "Annotation",
     "AssignDocumentReviewer",
     "Priority",
     "ReviewMode"
   ],
+  "canvas_sdk.effects.data_integration.constants": [
+    "VALID_REPORT_TYPES",
+    "VALID_TEMPLATE_TYPES"
+  ],
   "canvas_sdk.effects.data_integration.junk_document": [
-    "JunkDocument",
-    "JunkDocumentConfidenceScores"
+    "JunkDocument"
   ],
   "canvas_sdk.effects.data_integration.link_document_to_patient": [
     "LinkDocumentToPatient"
@@ -379,8 +376,11 @@
     "PrefillDocumentFields"
   ],
   "canvas_sdk.effects.data_integration.remove_document_from_patient": [
-    "RemoveDocumentConfidenceScores",
     "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.types": [
+    "AnnotationItem",
+    "DocumentType"
   ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"

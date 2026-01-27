@@ -1,21 +1,9 @@
-from typing import Any, TypedDict
+from typing import Any
 
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-
-
-class Annotation(TypedDict):
-    """
-    An annotation with text and color for display in the UI.
-
-    Attributes:
-        text: The annotation text to display
-        color: Hex color code
-    """
-
-    text: str
-    color: str
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 class LinkDocumentToPatient(_BaseEffect):
@@ -35,8 +23,8 @@ class LinkDocumentToPatient(_BaseEffect):
         document_id: The ID of the IntegrationTask document to link (required, non-empty).
             Accepts str or int; always serialized as string in the payload.
         patient_key: The patient's key (required, non-empty string).
-        annotations: Optional list of Annotation dicts with text and color.
-            Example: [{"text": "AI 95%", "color": "#00AA00"}, {"text": "DOB matched", "color": "#2196F3"}]
+        annotations: Optional list of AnnotationItem dicts with text and color.
+            Example: [AnnotationItem(text="AI 95%", color="#00AA00"), AnnotationItem(text="DOB matched", color="#2196F3")]
         source_protocol: Optional protocol/plugin identifier (e.g., "llm_v1").
     """
 
@@ -49,7 +37,7 @@ class LinkDocumentToPatient(_BaseEffect):
 
     document_id: str | int | None = None
     patient_key: str | None = None
-    annotations: list[Annotation] | None = None
+    annotations: list[AnnotationItem] | None = None
     source_protocol: str | None = None
 
     @property

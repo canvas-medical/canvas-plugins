@@ -21,7 +21,6 @@ When a document enters the Data Integration queue, this plugin:
    - `DOCUMENT_REVIEWED` - When document review is completed
    - `DOCUMENT_DELETED` - When document is soft-deleted
 
-
 ## Available Effects
 
 ### 1. LinkDocumentToPatient
@@ -47,12 +46,14 @@ effect = LinkDocumentToPatient(
 ```
 
 **Fields:**
+
 - `document_id` (str/int, required): The IntegrationTask UUID to link
 - `patient_key` (str, required): The patient's key (32-character hex string, not a UUID)
 - `annotations` (list[dict], optional): Display annotations with `text` and `color` fields
 - `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Behavior:**
+
 - Looks up the patient by key
 - Links the document to that patient
 - Creates an IntegrationTaskPrefill record with patient data and annotations
@@ -63,7 +64,9 @@ effect = LinkDocumentToPatient(
 Assigns a reviewer (staff member or team) to a document in the Data Integration queue.
 
 ```python
-from canvas_sdk.effects.data_integration import AssignDocumentReviewer, Annotation, Priority, ReviewMode
+from canvas_sdk.effects.data_integration import AssignDocumentReviewer, Priority, ReviewMode
+from canvas_sdk.effects.data_integration.types import AnnotationItem
+
 
 effect = AssignDocumentReviewer(
     document_id="12345",         # Required: IntegrationTask ID
@@ -72,28 +75,31 @@ effect = AssignDocumentReviewer(
     priority=Priority.HIGH,      # Optional: Priority level (NORMAL or HIGH), defaults to NORMAL
     review_mode=ReviewMode.REVIEW_REQUIRED,  # Optional: Review mode, defaults to REVIEW_REQUIRED
     annotations=[                # Optional: display annotations
-        Annotation(text="Auto-assigned", color="#FF9800"),
-        Annotation(text="Data integration", color="#2196F3"),
+        AnnotationItem(text="Auto-assigned", color="#FF9800"),
+        AnnotationItem(text="Data integration", color="#2196F3"),
     ],
     source_protocol="my_plugin", # Optional: protocol/plugin identifier
 )
 ```
 
 **Fields:**
+
 - `document_id` (str/int, required): The IntegrationTask ID to assign a reviewer to
 - `reviewer_id` (str, optional): Staff member key to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
 - `team_id` (str, optional): Team UUID to assign as reviewer. At least one of `reviewer_id` or `team_id` must be provided
 - `priority` (Priority, optional): Priority level - `Priority.NORMAL` or `Priority.HIGH`, defaults to `Priority.NORMAL`
 - `review_mode` (ReviewMode, optional): Review mode - `ReviewMode.REVIEW_REQUIRED`, `ReviewMode.ALREADY_REVIEWED`, or `ReviewMode.REVIEW_NOT_REQUIRED`, defaults to `ReviewMode.REVIEW_REQUIRED`
-- `annotations` (list[Annotation], optional): Display annotations with `text` and `color` fields
+- `annotations` (list[AnnotationItem], optional): Display annotations with `text` and `color` fields
 - `source_protocol` (str, optional): Protocol/plugin identifier for tracking
 
 **Review Modes:**
+
 - `REVIEW_REQUIRED`: Document requires review (default)
 - `ALREADY_REVIEWED`: Document has already been reviewed
 - `REVIEW_NOT_REQUIRED`: Document does not require review
 
 **Behavior:**
+
 - Validates the document exists
 - Assigns either a staff member or team as the reviewer
 - Sets the priority level for the review
@@ -132,6 +138,7 @@ effect = CategorizeDocument(
 ```
 
 **Fields:**
+
 - `document_id` (str/int, required): The IntegrationTask ID to categorize
 - `document_type` (DocumentType, required): The document type to assign, containing:
   - `key` (str): Unique key for the document type
@@ -142,6 +149,7 @@ effect = CategorizeDocument(
 - `source_protocol` (str, optional): Protocol/plugin identifier
 
 **Behavior:**
+
 - Validates the document exists
 - Assigns the document type to the document
 - Stores annotations for display in the UI
@@ -187,6 +195,7 @@ effect = PrefillDocumentFields(
 ```
 
 **Fields:**
+
 - `document_id` (str/int, required): The IntegrationTask ID to prefill
 - `templates` (list[dict], required): List of templates with fields to prefill:
   - `template_id` (int): Template identifier
@@ -200,11 +209,11 @@ effect = PrefillDocumentFields(
 - `annotations` (list[dict], optional): Top-level annotations for the prefill
 
 **Behavior:**
+
 - Validates the document exists
 - Creates or updates IntegrationTaskPrefill record
 - Stores templates with extracted field values
 - Supports both LOINC codes and field labels as keys
-
 
 ## How It Works
 

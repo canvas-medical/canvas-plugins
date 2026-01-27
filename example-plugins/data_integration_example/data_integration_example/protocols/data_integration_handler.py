@@ -1,23 +1,23 @@
 """Protocol demonstrating all Data Integration effects."""
 
-from typing import cast
-
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.categorize_document import (
     AnnotationItem as CategorizeDocumentAnnotation,
+)
+from canvas_sdk.effects.categorize_document import (
     CategorizeDocument,
     DocumentType,
 )
 from canvas_sdk.effects.data_integration import (
-    Annotation,
     AssignDocumentReviewer,
     LinkDocumentToPatient,
     PrefillDocumentFields,
     Priority,
     ReviewMode,
 )
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Patient, Staff, Team
@@ -287,8 +287,8 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 patient_key=str(patient.id),
                 annotations=[
-                    {"text": "AI 95%", "color": "#00AA00"},
-                    {"text": "Auto-linked", "color": "#2196F3"},
+                    AnnotationItem(text="AI 95%", color="#00AA00"),
+                    AnnotationItem(text="Auto-linked", color="#2196F3"),
                 ],
                 source_protocol="data_integration_example",
             )
@@ -317,8 +317,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
                     annotations=[
-                        Annotation(text="Auto-assigned", color="#FF9800"),
-                        Annotation(text="Data integration", color="#2196F3"),
+                        AnnotationItem(text="Auto-assigned", color="#FF9800"),
+                        AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -330,8 +330,8 @@ class DataIntegrationHandler(BaseProtocol):
                     priority=Priority.HIGH,
                     review_mode=ReviewMode.ALREADY_REVIEWED,
                     annotations=[
-                        Annotation(text="Auto-assigned", color="#FF9800"),
-                        Annotation(text="Data integration", color="#2196F3"),
+                        AnnotationItem(text="Auto-assigned", color="#FF9800"),
+                        AnnotationItem(text="Data integration", color="#2196F3"),
                     ],
                     source_protocol="data_integration_example",
                 )
@@ -376,8 +376,8 @@ class DataIntegrationHandler(BaseProtocol):
             }
 
             annotations: list[CategorizeDocumentAnnotation] = [
-                {"text": "AI 90%", "color": "#00AA00"},
-                {"text": "Data integration", "color": "#2196F3"},
+                CategorizeDocumentAnnotation(text="AI 90%", color="#00AA00"),
+                CategorizeDocumentAnnotation(text="Data integration", color="#2196F3"),
             ]
 
             effect = CategorizeDocument(
@@ -405,27 +405,27 @@ class DataIntegrationHandler(BaseProtocol):
                             "value": "2.35",
                             "unit": "uIU/mL",
                             "reference_range": "0.45 - 4.50 uIU/mL",
-                            "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                            "annotations": [AnnotationItem(text="AI 92%", color="#4CAF50")],
                         },
                         # Also store by label for fallback matching
                         "Thyroid Stimulating Hormone": {
                             "value": "2.35",
                             "unit": "uIU/mL",
                             "reference_range": "0.45 - 4.50 uIU/mL",
-                            "annotations": [{"text": "AI 92%", "color": "#4CAF50"}],
+                            "annotations": [AnnotationItem(text="AI 92%", color="#4CAF50")],
                         },
                         # Thyroxine T4 (LOINC: 3026-2)
                         "3026-2": {
                             "value": "7.8",
                             "unit": "ug/dL",
                             "reference_range": "4.5 - 12.0 ug/dL",
-                            "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                            "annotations": [AnnotationItem(text="AI 89%", color="#4CAF50")],
                         },
                         "Thyroxine (T4)": {
                             "value": "7.8",
                             "unit": "ug/dL",
                             "reference_range": "4.5 - 12.0 ug/dL",
-                            "annotations": [{"text": "AI 89%", "color": "#4CAF50"}],
+                            "annotations": [AnnotationItem(text="AI 89%", color="#4CAF50")],
                         },
                         # T3 Uptake (LOINC: 3050-2)
                         "3050-2": {
@@ -433,8 +433,8 @@ class DataIntegrationHandler(BaseProtocol):
                             "unit": "%",
                             "reference_range": "24 - 39 %",
                             "annotations": [
-                                {"text": "AI 87%", "color": "#4CAF50"},
-                                {"text": "Verify", "color": "#FF9800"},
+                                AnnotationItem(text="AI 87%", color="#4CAF50"),
+                                AnnotationItem(text="Verify", color="#FF9800"),
                             ],
                         },
                         "T3 Uptake": {
@@ -442,8 +442,8 @@ class DataIntegrationHandler(BaseProtocol):
                             "unit": "%",
                             "reference_range": "24 - 39 %",
                             "annotations": [
-                                {"text": "AI 87%", "color": "#4CAF50"},
-                                {"text": "Verify", "color": "#FF9800"},
+                                AnnotationItem(text="AI 87%", color="#4CAF50"),
+                                AnnotationItem(text="Verify", color="#FF9800"),
                             ],
                         },
                         # Free Thyroxine Index (LOINC: 32215-6)
@@ -451,24 +451,24 @@ class DataIntegrationHandler(BaseProtocol):
                             "value": "2.5",
                             "reference_range": "1.2 - 4.9",
                             "annotations": [
-                                {"text": "AI 78%", "color": "#FFC107"},
-                                {"text": "Low confidence", "color": "#F44336"},
+                                AnnotationItem(text="AI 78%", color="#FFC107"),
+                                AnnotationItem(text="Low confidence", color="#F44336"),
                             ],
                         },
                         "Free Thyroxine Index": {
                             "value": "2.5",
                             "reference_range": "1.2 - 4.9",
                             "annotations": [
-                                {"text": "AI 78%", "color": "#FFC107"},
-                                {"text": "Low confidence", "color": "#F44336"},
+                                AnnotationItem(text="AI 78%", color="#FFC107"),
+                                AnnotationItem(text="Low confidence", color="#F44336"),
                             ],
                         },
                     },
                 }
             ]
-            annotations: list[Annotation] = [
-                {"text": "1 template matched", "color": "#2196F3"},
-                {"text": "4 fields extracted", "color": "#00BCD4"},
+            annotations: list[AnnotationItem] = [
+                AnnotationItem(text="Prefilled via AI", color="#FF9800"),
+                AnnotationItem(text="Data integration", color="#2196F3"),
             ]
 
             effect = PrefillDocumentFields(
