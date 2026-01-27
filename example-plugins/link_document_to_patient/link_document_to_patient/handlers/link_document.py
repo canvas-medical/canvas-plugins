@@ -121,7 +121,7 @@ class LinkDocumentHandler(BaseHandler):
             "patient_key": str(patient.id),
             "annotations": [
                 {"text": "AI 95%", "color": "#00AA00"},
-                {"text": "DOB matched", "color": "#2196F3"},
+                {"text": "Auto-linked", "color": "#2196F3"},
             ],
             "source_protocol": "llm_v1",
         }

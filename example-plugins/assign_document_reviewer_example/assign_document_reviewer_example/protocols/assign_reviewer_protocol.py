@@ -57,21 +57,15 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
             log.warning(f"No patient available for document {document_id}")
             return None
 
-        if not patient.birth_date:
-            log.warning(f"Patient {patient.id} has no birth_date")
-            return None
-
         try:
             effect = LinkDocumentToPatient(
                 document_id=str(document_id),
-                first_name=patient.first_name,
-                last_name=patient.last_name,
-                date_of_birth=patient.birth_date,
-                confidence_scores={
-                    "first_name": 0.95,
-                    "last_name": 0.95,
-                    "date_of_birth": 0.90,
-                },
+                patient_key=str(patient.id),
+                annotations=[
+                    {"text": "AI 95%", "color": "#00AA00"},
+                    {"text": "Auto-linked", "color": "#2196F3"},
+                ],
+                source_protocol="assign_document_reviewer_example",
             )
             log.info(
                 f"Linked document {document_id} to patient {patient.first_name} {patient.last_name}"
@@ -104,14 +98,11 @@ class AssignDocumentReviewerProtocol(BaseProtocol):
                     "report_type": doc_type["report_type"],
                     "template_type": doc_type.get("template_type"),
                 },
-                confidence_scores={
-                    "document_id": 0.95,
-                    "document_type": {
-                        "key": 0.92,
-                        "name": 0.92,
-                        "report_type": 0.88,
-                    },
-                },
+                annotations=[
+                    {"text": "AI 92%", "color": "#00AA00"},
+                    {"text": "Auto-categorized", "color": "#2196F3"},
+                ],
+                source_protocol="assign_document_reviewer_example",
             )
             log.info(f"Categorized document {document_id} as {doc_type['name']}")
             return effect.apply()

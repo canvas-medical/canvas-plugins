@@ -6,11 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.data_integration import (
-    RemoveDocumentConfidenceScores,
-    RemoveDocumentFromPatient,
-)
-from canvas_sdk.effects.data_integration.remove_document_from_patient import CONFIDENCE_SCORE_KEYS
+from canvas_sdk.effects.data_integration import RemoveDocumentFromPatient
 
 
 def test_create_effect_with_document_id_only() -> None:
@@ -47,18 +43,6 @@ def test_create_effect_with_patient_id() -> None:
     assert payload["data"]["patient_id"] == "abc123"
 
 
-def test_create_effect_with_confidence_scores() -> None:
-    """Test creating effect with confidence_scores succeeds."""
-    effect = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores={"removal": 0.95},
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["confidence_scores"] == {"removal": 0.95}
-
-
 def test_values_property_returns_correct_structure() -> None:
     """Test values property returns correctly structured dict."""
     effect = RemoveDocumentFromPatient(document_id="12345")
@@ -93,28 +77,6 @@ def test_values_property_excludes_none_patient_id() -> None:
     values = effect.values
 
     assert "patient_id" not in values
-
-
-def test_values_property_with_confidence_scores() -> None:
-    """Test values property includes confidence_scores when provided."""
-    effect = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores={"removal": 0.9},
-    )
-
-    values = effect.values
-
-    assert "confidence_scores" in values
-    assert values["confidence_scores"] == {"removal": 0.9}
-
-
-def test_values_property_excludes_none_confidence_scores() -> None:
-    """Test values property excludes confidence_scores when None."""
-    effect = RemoveDocumentFromPatient(document_id="12345")
-
-    values = effect.values
-
-    assert "confidence_scores" not in values
 
 
 def test_apply_raises_error_when_document_id_missing() -> None:
@@ -209,156 +171,14 @@ def test_effect_payload_uses_data_wrapper() -> None:
     assert payload["data"]["document_id"] == "12345"
 
 
-def test_creation_raises_error_for_invalid_confidence_scores_key() -> None:
-    """Test creation raises error for invalid keys in confidence_scores.
-
-    The model_validator catches invalid keys before Pydantic processes
-    the TypedDict (which would otherwise silently drop unknown keys).
-    """
-    with pytest.raises(ValidationError) as exc_info:
-        RemoveDocumentFromPatient(
-            document_id="12345",
-            confidence_scores={
-                "removal": 0.9,
-                "invalid_key": 0.5,  # type: ignore[typeddict-unknown-key]
-            },
-        )
-
-    err_msg = str(exc_info.value)
-    assert "invalid keys" in err_msg
-    assert "invalid_key" in err_msg
-
-
-def test_creation_raises_error_when_confidence_score_below_zero() -> None:
-    """Test creation raises error when confidence score is below 0.
-
-    Pydantic validates the range constraint at construction time via
-    the Annotated[float, Field(ge=0.0, le=1.0)] type annotation.
-    """
-    with pytest.raises(ValidationError) as exc_info:
-        RemoveDocumentFromPatient(
-            document_id="12345",
-            confidence_scores={"removal": -0.1},
-        )
-
-    err_msg = str(exc_info.value)
-    assert "greater_than_equal" in err_msg or "greater than or equal to 0" in err_msg
-
-
-def test_creation_raises_error_when_confidence_score_above_one() -> None:
-    """Test creation raises error when confidence score is above 1.0.
-
-    Pydantic validates the range constraint at construction time via
-    the Annotated[float, Field(ge=0.0, le=1.0)] type annotation.
-    """
-    with pytest.raises(ValidationError) as exc_info:
-        RemoveDocumentFromPatient(
-            document_id="12345",
-            confidence_scores={"removal": 1.5},
-        )
-
-    err_msg = str(exc_info.value)
-    assert "less_than_equal" in err_msg or "less than or equal to 1" in err_msg
-
-
-def test_creation_raises_error_when_confidence_score_is_not_numeric() -> None:
-    """Test creation raises error when confidence score is not a number.
-
-    Pydantic validates types at construction time.
-    """
-    with pytest.raises(ValidationError) as exc_info:
-        RemoveDocumentFromPatient(
-            document_id="12345",
-            confidence_scores={"removal": "high"},  # type: ignore[typeddict-item]
-        )
-
-    err_msg = str(exc_info.value)
-    assert "float_type" in err_msg or "valid number" in err_msg
-
-
-def test_apply_succeeds_with_boundary_confidence_scores() -> None:
-    """Test apply succeeds with boundary values 0.0 and 1.0."""
-    effect = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores={"removal": 0.0},
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["confidence_scores"]["removal"] == 0.0
-
-    effect2 = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores={"removal": 1.0},
-    )
-    applied2 = effect2.apply()
-
-    payload2 = json.loads(applied2.payload)
-    assert payload2["data"]["confidence_scores"]["removal"] == 1.0
-
-
-def test_apply_accepts_integer_confidence_scores() -> None:
-    """Test apply accepts integer values for confidence scores."""
-    effect = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores={"removal": 1},
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["confidence_scores"]["removal"] == 1
-
-
 def test_apply_with_all_fields() -> None:
     """Test apply with all fields populated."""
     effect = RemoveDocumentFromPatient(
         document_id="12345",
         patient_id="patient123",
-        confidence_scores={"removal": 0.87},
     )
     applied = effect.apply()
 
     payload = json.loads(applied.payload)
     assert payload["data"]["document_id"] == "12345"
     assert payload["data"]["patient_id"] == "patient123"
-    assert payload["data"]["confidence_scores"]["removal"] == 0.87
-
-
-def test_confidence_score_keys_are_correct() -> None:
-    """Test CONFIDENCE_SCORE_KEYS contains expected keys."""
-    expected = {"removal"}
-    assert expected == CONFIDENCE_SCORE_KEYS
-
-
-def test_confidence_score_keys_is_frozen() -> None:
-    """Test CONFIDENCE_SCORE_KEYS is immutable."""
-    assert isinstance(CONFIDENCE_SCORE_KEYS, frozenset)
-
-
-def test_confidence_score_keys_derived_from_typeddict() -> None:
-    """Test CONFIDENCE_SCORE_KEYS matches RemoveDocumentConfidenceScores TypedDict annotations."""
-    assert frozenset(RemoveDocumentConfidenceScores.__annotations__.keys()) == CONFIDENCE_SCORE_KEYS
-
-
-def test_confidence_scores_accepts_valid_typed_dict() -> None:
-    """Test that RemoveDocumentConfidenceScores TypedDict works with valid values."""
-    scores: RemoveDocumentConfidenceScores = {"removal": 0.95}
-    effect = RemoveDocumentFromPatient(
-        document_id="12345",
-        confidence_scores=scores,
-    )
-    applied = effect.apply()
-
-    payload = json.loads(applied.payload)
-    assert payload["data"]["confidence_scores"]["removal"] == 0.95
-
-
-def test_confidence_scores_typeddict_has_expected_keys() -> None:
-    """Test RemoveDocumentConfidenceScores TypedDict defines expected keys."""
-    expected_keys = {"removal"}
-    assert set(RemoveDocumentConfidenceScores.__annotations__.keys()) == expected_keys
-
-
-def test_confidence_scores_typeddict_is_total_false() -> None:
-    """Test RemoveDocumentConfidenceScores TypedDict has total=False (all keys optional)."""
-    assert not RemoveDocumentConfidenceScores.__required_keys__

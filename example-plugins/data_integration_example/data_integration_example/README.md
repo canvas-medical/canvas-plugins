@@ -108,24 +108,14 @@ Categorizes a document in the Data Integration queue into a specific document ty
 from canvas_sdk.effects.categorize_document import (
     CategorizeDocument,
     DocumentType,
-    ConfidenceScores,
     AnnotationItem,
 )
 
 document_type: DocumentType = {
     "key": "lab-report-key",
     "name": "Lab Report",
-    "report_type": "LAB",
-    "template_type": "lab_template",  # Optional
-}
-
-confidence_scores: ConfidenceScores = {
-    "document_id": 0.90,
-    "document_type": {
-        "key": 0.90,
-        "name": 0.95,
-        "report_type": 0.85,
-    },
+    "report_type": "CLINICAL",
+    "template_type": "LabReportTemplate",  # Optional
 }
 
 annotations: list[AnnotationItem] = [
@@ -136,9 +126,8 @@ annotations: list[AnnotationItem] = [
 effect = CategorizeDocument(
     document_id="12345",
     document_type=document_type,
-    confidence_scores=confidence_scores,
     annotations=annotations,
-    source_protocol="data_integration_example_v1",
+    source_protocol="data_integration_example",
 )
 ```
 
@@ -147,16 +136,15 @@ effect = CategorizeDocument(
 - `document_type` (DocumentType, required): The document type to assign, containing:
   - `key` (str): Unique key for the document type
   - `name` (str): Display name
-  - `report_type` (str): Report type code (e.g., "LAB", "RADIOLOGY")
-  - `template_type` (str, optional): Template type identifier
-- `confidence_scores` (ConfidenceScores, optional): Confidence scores for monitoring
+  - `report_type` (str): Report type ("CLINICAL" or "ADMINISTRATIVE")
+  - `template_type` (str, optional): Template type identifier ("LabReportTemplate", "ImagingReportTemplate", "SpecialtyReportTemplate", or null)
 - `annotations` (list[AnnotationItem], optional): Display annotations
 - `source_protocol` (str, optional): Protocol/plugin identifier
 
 **Behavior:**
 - Validates the document exists
 - Assigns the document type to the document
-- Stores confidence scores and annotations for display
+- Stores annotations for display in the UI
 
 ### 4. PrefillDocumentFields
 
@@ -243,12 +231,12 @@ This is an **example plugin** that demonstrates the structure and usage of Data 
 2. **Categorize Documents** (for `CategorizeDocument`):
    - Analyze the document content
    - Use an LLM or classification model to determine document type
-   - Return confidence scores for monitoring/debugging
+   - Add annotations to show confidence levels in the UI
 
 3. **Extract Fields** (for `PrefillDocumentFields`):
    - Use OCR or LLM to extract structured data from documents
    - Match extracted fields to template fields using LOINC codes or labels
-   - Include confidence scores at the field level
+   - Include annotations at the field level to show extraction confidence
 
 4. **Assign Reviewers** (for `AssignDocumentReviewer`):
    - Determine appropriate reviewer based on document type, specialty, or workload

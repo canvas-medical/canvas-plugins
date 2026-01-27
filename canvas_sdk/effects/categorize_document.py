@@ -1,51 +1,10 @@
 from collections.abc import Mapping
-from typing import Annotated, Any
+from typing import Any
 
-from pydantic import Field, model_validator
 from pydantic_core import InitErrorDetails
 from typing_extensions import TypedDict
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-
-
-class DocumentTypeConfidenceScores(TypedDict, total=False):
-    """
-    Confidence scores for individual document_type fields.
-
-    All fields are optional. Values must be floats between 0.0 and 1.0.
-
-    Attributes:
-        key: Confidence in key match (0.0-1.0)
-        name: Confidence in name match (0.0-1.0)
-        report_type: Confidence in report_type (0.0-1.0)
-        template_type: Confidence in template_type (0.0-1.0)
-    """
-
-    key: Annotated[float, Field(ge=0.0, le=1.0)]
-    name: Annotated[float, Field(ge=0.0, le=1.0)]
-    report_type: Annotated[float, Field(ge=0.0, le=1.0)]
-    template_type: Annotated[float, Field(ge=0.0, le=1.0)]
-
-
-class ConfidenceScores(TypedDict, total=False):
-    """
-    Confidence scores for document fields extracted from a document.
-
-    All fields are optional. Values must be floats between 0.0 and 1.0,
-    representing the confidence level of each extracted field (e.g., from OCR).
-
-    Attributes:
-        document_id: Confidence score for the document_id field (0.0-1.0)
-        document_type: Confidence scores for document_type fields, as a nested dict
-            with keys: key, name, report_type, template_type (each 0.0-1.0)
-    """
-
-    document_id: Annotated[float, Field(ge=0.0, le=1.0)]
-    document_type: DocumentTypeConfidenceScores
-
-
-CONFIDENCE_SCORE_KEYS = frozenset(ConfidenceScores.__annotations__.keys())
-DOCUMENT_TYPE_CONFIDENCE_KEYS = frozenset(DocumentTypeConfidenceScores.__annotations__.keys())
 
 
 class DocumentType(TypedDict):
@@ -99,8 +58,8 @@ class CategorizeDocument(_BaseEffect):
         document_id: The ID of the IntegrationTask document to categorize (required, non-empty).
             Accepts str or int; always serialized as string in the payload.
         document_type: Document type information dict with required fields: key, name, report_type, template_type.
-        confidence_scores: Optional confidence scores for document fields.
-            See ConfidenceScores TypedDict for valid keys and value constraints.
+        annotations: Optional list of annotations for UI display.
+        source_protocol: Optional protocol/plugin identifier for tracking.
     """
 
     class Meta:
@@ -109,39 +68,8 @@ class CategorizeDocument(_BaseEffect):
 
     document_id: str | int | None = None
     document_type: DocumentType | dict[str, Any] | None = None
-    confidence_scores: ConfidenceScores | None = None
     annotations: list[AnnotationItem] | None = None
     source_protocol: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_confidence_scores_keys(cls, data: Any) -> Any:
-        """Validate confidence_scores keys before Pydantic processes the TypedDict.
-
-        TypedDict in Pydantic silently drops unknown keys, so we validate
-        them here to provide a clear error message to users.
-        """
-        if isinstance(data, dict) and "confidence_scores" in data:
-            scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-
-                if "document_type" in scores and isinstance(scores["document_type"], dict):
-                    doc_type_scores = scores["document_type"]
-                    invalid_doc_type_keys = (
-                        set(doc_type_scores.keys()) - DOCUMENT_TYPE_CONFIDENCE_KEYS
-                    )
-                    if invalid_doc_type_keys:
-                        raise ValueError(
-                            f"confidence_scores.document_type contains invalid keys: {sorted(invalid_doc_type_keys)}. "
-                            f"Valid keys are: {sorted(DOCUMENT_TYPE_CONFIDENCE_KEYS)}"
-                        )
-        return data
 
     @property
     def values(self) -> dict[str, Any]:
@@ -151,8 +79,6 @@ class CategorizeDocument(_BaseEffect):
             "document_type": self.document_type,
         }
 
-        if self.confidence_scores is not None:
-            result["confidence_scores"] = self.confidence_scores
         if self.annotations is not None:
             result["annotations"] = self.annotations
         if self.source_protocol is not None:
@@ -224,12 +150,7 @@ class CategorizeDocument(_BaseEffect):
             )
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        """Validate the effect fields and return any error details.
-
-        Note: confidence_scores validation (invalid keys, range constraints) is
-        handled by Pydantic at construction time via model_validator and TypedDict
-        with Annotated field constraints.
-        """
+        """Validate the effect fields and return any error details."""
         errors = super()._get_error_details(method)
 
         if self.document_type is not None:
@@ -250,8 +171,6 @@ class CategorizeDocument(_BaseEffect):
 
 __exports__ = (
     "AnnotationItem",
-    "ConfidenceScores",
     "DocumentType",
-    "DocumentTypeConfidenceScores",
     "CategorizeDocument",
 )
