@@ -564,9 +564,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     manifest_file = path / MANIFEST_FILE_NAME
 
     # If installed via `canvas install` we can rely on the manifest file
-    # existing. But our customers sometimes automate their plugin installation
-    # via the same endpoints `canvas install` does, in which case we want to
-    # prevent the plugin runner from crashing here if there's no manifest!
+    # existing. If installed via another method we still need to avoid crashing
+    # the entire runner if there's no manifest.
     if not manifest_file.exists():
         log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
         return False
