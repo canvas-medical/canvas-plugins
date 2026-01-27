@@ -66,9 +66,19 @@ class Staff(TimestampedModel):
     tax_id = models.CharField(max_length=25)
     tax_id_type = models.CharField(choices=TaxIDType.choices, max_length=1)
     spi_number = models.CharField(max_length=50)
-    # TODO - uncomment when Language is developed
-    # language = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_speakers", null=True)
-    # language_secondary = models.ForeignKey('v1.Language', on_delete=models.DO_NOTHING, related_name="staff_secondary_speakers", null=True)
+    language = models.ForeignKey(
+        "v1.Language",
+        on_delete=models.PROTECT,
+        related_name="staff_speakers",
+    )
+    language_secondary = models.ForeignKey(
+        "v1.Language",
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="staff_secondary_speakers",
+    )
     personal_meeting_room_link = models.URLField(null=True)
     state = models.JSONField(default=dict, blank=True)
     user = models.OneToOneField("v1.CanvasUser", on_delete=models.DO_NOTHING, null=True)
