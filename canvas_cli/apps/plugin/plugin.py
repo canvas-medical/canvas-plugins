@@ -572,6 +572,7 @@ def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> built
 
         except Exception:
             # Skip files that can't be parsed
+            print(f"Warning: Could not parse file '{py_file}'")
             pass
 
     return unreferenced
