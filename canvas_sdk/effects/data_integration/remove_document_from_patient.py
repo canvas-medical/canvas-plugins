@@ -1,29 +1,8 @@
-from typing import Annotated, Any
+from typing import Any
 
-from pydantic import Field, model_validator
 from pydantic_core import InitErrorDetails
-from typing_extensions import TypedDict
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
-
-
-class RemoveDocumentConfidenceScores(TypedDict, total=False):
-    """
-    Confidence scores for document removal decision.
-
-    All fields are optional. Values must be floats between 0.0 and 1.0,
-    representing the confidence level of the removal decision.
-
-    Attributes:
-        removal: Confidence score that this document should be removed from the patient (0.0-1.0).
-            Higher values indicate greater confidence in the removal decision.
-    """
-
-    removal: Annotated[float, Field(ge=0.0, le=1.0)]
-
-
-# Valid keys for confidence_scores dictionary (derived from TypedDict for validation)
-CONFIDENCE_SCORE_KEYS = frozenset(RemoveDocumentConfidenceScores.__annotations__.keys())
 
 
 class RemoveDocumentFromPatient(_BaseEffect):
@@ -40,8 +19,6 @@ class RemoveDocumentFromPatient(_BaseEffect):
             Accepts str or int; always serialized as string in the payload.
         patient_id: Optional patient ID to specify which patient link to remove.
             If not provided, removes the current patient association.
-        confidence_scores: Optional confidence scores for the removal decision.
-            See RemoveDocumentConfidenceScores TypedDict for valid keys and value constraints.
     """
 
     class Meta:
@@ -50,26 +27,6 @@ class RemoveDocumentFromPatient(_BaseEffect):
 
     document_id: str | int | None = None
     patient_id: str | None = None
-    confidence_scores: RemoveDocumentConfidenceScores | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_confidence_scores_keys(cls, data: Any) -> Any:
-        """Validate confidence_scores keys before Pydantic processes the TypedDict.
-
-        TypedDict in Pydantic silently drops unknown keys, so we validate
-        them here to provide a clear error message to users.
-        """
-        if isinstance(data, dict) and "confidence_scores" in data:
-            scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-        return data
 
     @property
     def values(self) -> dict[str, Any]:
@@ -79,8 +36,6 @@ class RemoveDocumentFromPatient(_BaseEffect):
         }
         if self.patient_id is not None:
             result["patient_id"] = self.patient_id.strip() if self.patient_id else None
-        if self.confidence_scores is not None:
-            result["confidence_scores"] = self.confidence_scores
         return result
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
@@ -110,4 +65,4 @@ class RemoveDocumentFromPatient(_BaseEffect):
         return errors
 
 
-__exports__ = ("RemoveDocumentConfidenceScores", "RemoveDocumentFromPatient")
+__exports__ = ("RemoveDocumentFromPatient",)

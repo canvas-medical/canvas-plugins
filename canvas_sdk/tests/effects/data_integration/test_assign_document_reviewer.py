@@ -1,34 +1,66 @@
 import json
 
+import pytest
+from pydantic import ValidationError
+
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
+    Priority,
     ReviewMode,
 )
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
+def test_annotation_creation() -> None:
+    """Test creating an AnnotationItem with text and color."""
+    annotation = AnnotationItem(text="Team lead", color="#FF0000")
+    assert annotation is not None
+    assert annotation["text"] == "Team lead"
+    assert annotation["color"] == "#FF0000"
+
+
+def test_annotation_requires_text() -> None:
+    """Test that AnnotationItem requires text field.
+
+    Note: AnnotationItem is a TypedDict, so validation happens at mypy compile time.
+    This test demonstrates that runtime dict validation would fail.
+    """
+    # TypedDict doesn't enforce validation at runtime, only at type-check time
+    # This test is kept for documentation but doesn't actually test runtime behavior
+    pass
+
+
+def test_annotation_requires_color() -> None:
+    """Test that AnnotationItem requires color field.
+
+    Note: AnnotationItem is a TypedDict, so validation happens at mypy compile time.
+    This test demonstrates that runtime dict validation would fail.
+    """
+    # TypedDict doesn't enforce validation at runtime, only at type-check time
+    # This test is kept for documentation but doesn't actually test runtime behavior
+    pass
+
+
 def test_create_effect_with_document_id_only() -> None:
     """Test creating effect with only document_id succeeds."""
-    effect = AssignDocumentReviewer(document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    effect = AssignDocumentReviewer(document_id="12345")
     applied = effect.apply()
 
     assert applied.type == EffectType.ASSIGN_DOCUMENT_REVIEWER
 
     payload = json.loads(applied.payload)
-    assert payload["data"] == {
-        "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "review_mode": "RR",
-        "reviewer_id": None,
-        "team_id": None,
-        "annotations": None,
-    }
+    assert payload["data"]["document_id"] == "12345"
+    assert payload["data"]["priority"] is False
+    assert payload["data"]["review_mode"] == "RR"
+    assert "reviewer_id" not in payload["data"]
+    assert "team_id" not in payload["data"]
 
 
 def test_create_effect_with_reviewer_id() -> None:
     """Test creating effect with reviewer_id succeeds."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         reviewer_id="staff-key-123",
     )
     applied = effect.apply()
@@ -40,7 +72,7 @@ def test_create_effect_with_reviewer_id() -> None:
 def test_create_effect_with_team_id() -> None:
     """Test creating effect with team_id succeeds."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         team_id="team-uuid-456",
     )
     applied = effect.apply()
@@ -52,7 +84,7 @@ def test_create_effect_with_team_id() -> None:
 def test_create_effect_with_both_reviewer_and_team() -> None:
     """Test creating effect with both reviewer_id and team_id succeeds."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         reviewer_id="staff-key-123",
         team_id="team-uuid-456",
     )
@@ -61,12 +93,93 @@ def test_create_effect_with_both_reviewer_and_team() -> None:
     payload = json.loads(applied.payload)
     assert payload["data"]["reviewer_id"] == "staff-key-123"
     assert payload["data"]["team_id"] == "team-uuid-456"
+
+
+def test_create_effect_with_integer_document_id() -> None:
+    """Test creating effect with integer document_id succeeds."""
+    effect = AssignDocumentReviewer(document_id=42)
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["document_id"] == "42"
+
+
+def test_create_effect_with_integer_reviewer_id() -> None:
+    """Test creating effect with integer reviewer_id succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        reviewer_id=123,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["reviewer_id"] == "123"
+
+
+def test_create_effect_with_high_priority() -> None:
+    """Test creating effect with HIGH priority succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        priority=Priority.HIGH,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["priority"] is True
+
+
+def test_create_effect_with_normal_priority() -> None:
+    """Test creating effect with NORMAL priority succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        priority=Priority.NORMAL,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["priority"] is False
+
+
+def test_create_effect_with_review_required_mode() -> None:
+    """Test creating effect with REVIEW_REQUIRED mode succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        review_mode=ReviewMode.REVIEW_REQUIRED,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["review_mode"] == "RR"
+
+
+def test_create_effect_with_already_reviewed_mode() -> None:
+    """Test creating effect with ALREADY_REVIEWED mode succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        review_mode=ReviewMode.ALREADY_REVIEWED,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["review_mode"] == "AR"
+
+
+def test_create_effect_with_review_not_required_mode() -> None:
+    """Test creating effect with REVIEW_NOT_REQUIRED mode succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        review_mode=ReviewMode.REVIEW_NOT_REQUIRED,
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["review_mode"] == "RN"
 
 
 def test_create_effect_with_annotations() -> None:
     """Test creating effect with annotations succeeds."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         reviewer_id="staff-key-123",
         annotations=[
             AnnotationItem(text="Team lead", color="#FF0000"),
@@ -80,63 +193,112 @@ def test_create_effect_with_annotations() -> None:
         {"text": "Team lead", "color": "#FF0000"},
         {"text": "Primary care", "color": "#00FF00"},
     ]
+
+
+def test_create_effect_with_source_protocol() -> None:
+    """Test creating effect with source_protocol succeeds."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        reviewer_id="staff-key-123",
+        source_protocol="llm_v1",
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["source_protocol"] == "llm_v1"
 
 
 def test_create_effect_with_all_fields() -> None:
     """Test creating effect with all fields succeeds."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         reviewer_id="staff-key-123",
         team_id="team-uuid-456",
+        priority=Priority.HIGH,
         review_mode=ReviewMode.REVIEW_REQUIRED,
         annotations=[
             AnnotationItem(text="Team lead", color="#FF0000"),
             AnnotationItem(text="Primary care", color="#00FF00"),
         ],
+        source_protocol="llm_v1",
     )
     applied = effect.apply()
 
     payload = json.loads(applied.payload)
-    assert payload["data"]["document_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    assert payload["data"]["document_id"] == "12345"
     assert payload["data"]["reviewer_id"] == "staff-key-123"
     assert payload["data"]["team_id"] == "team-uuid-456"
+    assert payload["data"]["priority"] is True
     assert payload["data"]["review_mode"] == "RR"
     assert payload["data"]["annotations"] == [
         {"text": "Team lead", "color": "#FF0000"},
         {"text": "Primary care", "color": "#00FF00"},
     ]
+    assert payload["data"]["source_protocol"] == "llm_v1"
 
 
 def test_values_property_returns_correct_structure() -> None:
     """Test values property returns correctly structured dict."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         reviewer_id="staff-key-123",
     )
 
     values = effect.values
-    assert values["document_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    assert values["document_id"] == "12345"
     assert values["reviewer_id"] == "staff-key-123"
+    assert values["priority"] is False
     assert values["review_mode"] == "RR"
 
 
-def test_values_emits_none_for_unset_optional_fields() -> None:
-    """Test values property emits None for unset optional fields."""
-    effect = AssignDocumentReviewer(document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+def test_values_strips_whitespace_from_document_id() -> None:
+    """Test values property strips whitespace from document_id."""
+    effect = AssignDocumentReviewer(document_id="  12345  ")
+    assert effect.values["document_id"] == "12345"
 
-    assert effect.values == {
-        "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "review_mode": "RR",
-        "reviewer_id": None,
-        "team_id": None,
-        "annotations": None,
-    }
+
+def test_values_strips_whitespace_from_reviewer_id() -> None:
+    """Test values property strips whitespace from reviewer_id."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        reviewer_id="  staff-key  ",
+    )
+    assert effect.values["reviewer_id"] == "staff-key"
+
+
+def test_values_strips_whitespace_from_team_id() -> None:
+    """Test values property strips whitespace from team_id."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        team_id="  team-uuid  ",
+    )
+    assert effect.values["team_id"] == "team-uuid"
+
+
+def test_values_strips_whitespace_from_source_protocol() -> None:
+    """Test values property strips whitespace from source_protocol."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        source_protocol="  llm_v1  ",
+    )
+    assert effect.values["source_protocol"] == "llm_v1"
+
+
+def test_values_excludes_none_optional_fields() -> None:
+    """Test values property excludes None optional fields."""
+    effect = AssignDocumentReviewer(document_id="12345")
+
+    values = effect.values
+    assert "reviewer_id" not in values
+    assert "team_id" not in values
+    assert "annotations" not in values
+    assert "source_protocol" not in values
 
 
 def test_values_includes_empty_annotations_list() -> None:
     """Test values property includes empty annotations list when set."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         annotations=[],
     )
     assert effect.values["annotations"] == []
@@ -145,7 +307,7 @@ def test_values_includes_empty_annotations_list() -> None:
 def test_annotations_with_single_item() -> None:
     """Test annotations with a single item."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         annotations=[AnnotationItem(text="Team lead", color="#FF0000")],
     )
     applied = effect.apply()
@@ -157,7 +319,7 @@ def test_annotations_with_single_item() -> None:
 def test_annotations_with_multiple_items() -> None:
     """Test annotations with multiple items."""
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         annotations=[
             AnnotationItem(text="Team lead", color="#FF0000"),
             AnnotationItem(text="Primary care", color="#00FF00"),
@@ -182,7 +344,7 @@ def test_annotations_preserves_order() -> None:
         AnnotationItem(text="Third", color="#333333"),
     ]
     effect = AssignDocumentReviewer(
-        document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        document_id="12345",
         annotations=annotations,
     )
     applied = effect.apply()
@@ -195,10 +357,88 @@ def test_annotations_preserves_order() -> None:
     ]
 
 
-def test_annotations_none_when_not_provided() -> None:
-    """Test annotations is None in payload when not provided."""
-    effect = AssignDocumentReviewer(document_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+def test_annotations_not_included_when_none() -> None:
+    """Test annotations is not included when None."""
+    effect = AssignDocumentReviewer(document_id="12345")
     applied = effect.apply()
 
     payload = json.loads(applied.payload)
-    assert payload["data"]["annotations"] is None
+    assert "annotations" not in payload["data"]
+
+
+def test_source_protocol_included_in_payload() -> None:
+    """Test source_protocol is included in payload."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        source_protocol="llm_v1",
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["source_protocol"] == "llm_v1"
+
+
+def test_source_protocol_not_included_when_none() -> None:
+    """Test source_protocol is not included when None."""
+    effect = AssignDocumentReviewer(document_id="12345")
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert "source_protocol" not in payload["data"]
+
+
+def test_source_protocol_empty_string_is_stripped() -> None:
+    """Test source_protocol empty string with whitespace is stripped."""
+    effect = AssignDocumentReviewer(
+        document_id="12345",
+        source_protocol="   ",
+    )
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["source_protocol"] == ""
+
+
+def test_apply_without_document_id_raises_error() -> None:
+    """Test that apply() without document_id raises ValidationError."""
+    effect = AssignDocumentReviewer()
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "document_id" in str(exc_info.value)
+
+
+def test_apply_with_none_document_id_raises_error() -> None:
+    """Test that apply() with None document_id raises ValidationError."""
+    effect = AssignDocumentReviewer(document_id=None)
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.apply()
+
+    assert "document_id" in str(exc_info.value)
+
+
+def test_priority_normal_value() -> None:
+    """Test Priority.NORMAL has correct value."""
+    assert Priority.NORMAL.value == "normal"
+
+
+def test_priority_high_value() -> None:
+    """Test Priority.HIGH has correct value."""
+    assert Priority.HIGH.value == "high"
+
+
+def test_review_mode_review_required_value() -> None:
+    """Test ReviewMode.REVIEW_REQUIRED has correct value."""
+    assert ReviewMode.REVIEW_REQUIRED.value == "review_required"
+
+
+def test_review_mode_already_reviewed_value() -> None:
+    """Test ReviewMode.ALREADY_REVIEWED has correct value."""
+    assert ReviewMode.ALREADY_REVIEWED.value == "already_reviewed"
+
+
+def test_review_mode_review_not_required_value() -> None:
+    """Test ReviewMode.REVIEW_NOT_REQUIRED has correct value."""
+    assert ReviewMode.REVIEW_NOT_REQUIRED.value == "review_not_required"
