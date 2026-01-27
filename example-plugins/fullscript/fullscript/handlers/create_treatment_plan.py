@@ -35,12 +35,14 @@ def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: 
 
     schema_key_commands = ["prescribe", "refill"]
 
-    prescribe_commands = Command.objects.filter(
+    log.info(f"NOTE_ID {note_id}")
+
+    commands = Command.objects.filter(
         note__id=note_id, schema_key__in=schema_key_commands, committer__isnull=False
     ).all()
 
-    if prescribe_commands:
-        log.info(f"!! Prescribe commands {prescribe_commands}")
+    if commands:
+        log.info(f"!! Prescribe commands {commands}")
     else:
         log.info("!! No prescribe commands found, skipping Fullscript treatment plan creation")
 
@@ -48,7 +50,7 @@ def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: 
 
     medications = []
 
-    for command in prescribe_commands:
+    for command in commands:
         log.info(f"!! Command {command.data}")
 
         medication = command.data.get("prescribe", {})  # todo handle refills?

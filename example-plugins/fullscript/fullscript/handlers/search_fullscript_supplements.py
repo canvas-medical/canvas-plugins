@@ -48,7 +48,7 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
 
         access_token = token_result.get("access_token", "")
 
-        fullscript_products = []
+        variants = []
         post_processed_results = results.copy()
 
         result = FullscriptAPI.fetch_products(
@@ -56,21 +56,21 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
         )
 
         if result.get("success"):
-            fullscript_products = result.get("products", [])
-            log.info(f"!! Found {len(fullscript_products)} Fullscript products")
+            variants = result.get("variants", [])
+            log.info(f"!! Found {len(variants)} Fullscript products")
         else:
             log.warning(f"!! Fullscript search failed: {result.get('error')}")
 
-        log.info(f"!! {fullscript_products}")
+        log.info(f"!! {variants}")
 
-        for product in fullscript_products:
-            product_id = product.get("primary_variant", {}).get("id", "")
-            name = product.get("name", "")
-            brand_name = product.get("brand", {}).get("name", "")
+        for variant in variants:
+            product_id = variant.get("id", {})
+            name = variant.get("product_name", "")
+            brand_name = variant.get("product_brand", "")
             code = f"fullscript-{product_id}"
-            quantity_description = product.get("primary_variant", {}).get("unit_of_measure", "")
-            availability = product.get("primary_variant", {}).get("availability", "")
-            units = product.get("primary_variant", {}).get("units", 0)
+            quantity_description = variant.get("unit_of_measure", "")
+            availability = variant.get("availability", "")
+            units = variant.get("units", 0)
 
             product_name = f"{brand_name} - {name}"
 

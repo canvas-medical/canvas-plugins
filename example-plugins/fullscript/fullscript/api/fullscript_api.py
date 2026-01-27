@@ -660,6 +660,45 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    def fetch_product(access_token: str, product_id: str) -> dict:
+        """
+        Helper method to fetch a single product with all its variants from Fullscript catalog API.
+        Endpoint: GET /api/catalog/products/{id} .
+        """
+        try:
+            log.info(f"!! Fetching Fullscript product: {product_id}")
+
+            response = requests.get(
+                f"https://api-us-snd.fullscript.io/api/catalog/products/{product_id}",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                product = data.get("product", {})
+                variants = product.get("variants", [])
+
+                log.info(f"!! Found product with {len(variants)} variants")
+                return {"success": True, "product": product, "variants": variants}
+            else:
+                log.error(
+                    f"!! Fullscript product fetch failed: {response.status_code} - {response.text}"
+                )
+                return {
+                    "success": False,
+                    "error": "Failed to get product",
+                    "details": response.text,
+                }
+
+        except requests.RequestException as e:
+            log.error(f"!! Error fetching product: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
     def fetch_products(access_token: str, query: str | None, page_size: str | None) -> dict:
         """
         Helper method to fetch products from Fullscript catalog API.
@@ -684,7 +723,27 @@ class FullscriptAPI(StaffSessionAuthMixin, SimpleAPI):
                 data = response.json()
                 products = data.get("products", [])
                 log.info(f"!! Found {len(products)} Fullscript products")
-                return {"success": True, "products": products}
+
+                all_variants = []
+                for product in products:
+                    product_id = product.get("id")
+                    product_name = product.get("name")
+                    product_brand = product.get("brand", {}).get("name", "")
+
+                    log.info(f"!! Product: {product_name} - ID: {product_id}")
+
+                    result = FullscriptAPI.fetch_product(access_token, product_id)
+
+                    if result.get("success"):
+                        variants = result.get("variants", [])
+                        for variant in variants:
+                            variant["product_id"] = product_id
+                            variant["product_name"] = product_name
+                            variant["product_brand"] = product_brand
+
+                        all_variants.extend(variants)
+
+                return {"success": True, "variants": all_variants}
             else:
                 log.error(f"!! Fullscript search failed: {response.status_code} - {response.text}")
                 return {
