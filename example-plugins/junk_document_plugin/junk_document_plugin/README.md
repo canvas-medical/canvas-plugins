@@ -10,7 +10,6 @@ This plugin listens for `DOCUMENT_RECEIVED` events and automatically marks docum
 
 - Listens to `DOCUMENT_RECEIVED` events
 - Emits `JUNK_DOCUMENT` effect to mark documents as junk
-- Includes confidence scores for monitoring/debugging
 
 ## How It Works
 
@@ -18,7 +17,6 @@ This plugin listens for `DOCUMENT_RECEIVED` events and automatically marks docum
 2. The handler extracts the document ID from the event context
 3. Emits `JUNK_DOCUMENT` effect with:
    - `document_id`: The ID of the document to mark as junk
-   - `confidence_scores`: Optional confidence score (0.0-1.0)
 
 ## Example Usage
 
@@ -37,7 +35,7 @@ The plugin will emit:
 ```json
 {
   "type": "JUNK_DOCUMENT",
-  "payload": "{\"data\": {\"document_id\": \"12345\", \"confidence_scores\": {\"document_id\": 0.90}}}"
+  "payload": "{\"data\": {\"document_id\": \"12345\"}}"
 }
 ```
 
@@ -52,5 +50,4 @@ To test this plugin:
 ## Notes
 
 - Documents marked as junk will be excluded from normal processing workflows
-- The confidence score is for monitoring/debugging only
 - This is a simple example - you can add custom logic to determine when to mark documents as junk
