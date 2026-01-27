@@ -1,5 +1,3 @@
-"""Tests for SpecialtyReportTemplate models and querysets."""
-
 import pytest
 
 from canvas_sdk.v1.data.specialty_report_template import (
