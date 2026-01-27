@@ -1,12 +1,10 @@
 """Effect for assigning a document reviewer."""
 
 from enum import StrEnum
-from typing import Annotated, Any
-
-from pydantic import Field, model_validator
-from typing_extensions import TypedDict
+from typing import Any
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
 class Priority(StrEnum):
@@ -39,24 +37,6 @@ class ReviewMode(StrEnum):
     REVIEW_NOT_REQUIRED = "review_not_required"
 
 
-class AssignDocumentReviewerConfidenceScores(TypedDict, total=False):
-    """Confidence scores for document reviewer assignment.
-
-    Used for monitoring and debugging purposes only, not used in assignment logic.
-    All fields are optional. Values must be floats between 0.0 and 1.0,
-    representing the confidence level of the document identification.
-
-    Attributes:
-        document_id: Confidence score for the document identification (0.0-1.0)
-    """
-
-    document_id: Annotated[float, Field(ge=0.0, le=1.0)]
-
-
-# Valid keys for confidence_scores dictionary (derived from TypedDict for validation)
-CONFIDENCE_SCORE_KEYS = frozenset(AssignDocumentReviewerConfidenceScores.__annotations__.keys())
-
-
 class AssignDocumentReviewer(_BaseEffect):
     """
     An Effect that assigns a staff member or team as reviewer to a document
@@ -68,6 +48,7 @@ class AssignDocumentReviewer(_BaseEffect):
     - Validate the Team exists if team_id is provided
     - Assign the reviewer and/or team to the document with the specified priority and review_mode
     - If both reviewer_id and team_id are provided, both will be assigned
+    - Create/update an IntegrationTaskPrefill record with field_type="reviewer"
 
     This effect is typically emitted by LLM-based document processing plugins
     and supports both initial reviewer assignment and reassignment.
@@ -83,9 +64,10 @@ class AssignDocumentReviewer(_BaseEffect):
         priority: Priority level for the review (normal, high). Defaults to normal.
         review_mode: Review mode (review_required, already_reviewed, review_not_required).
             Defaults to review_required.
-        confidence_scores: Optional confidence scores for document identification.
-            See AssignDocumentReviewerConfidenceScores TypedDict for valid keys and value constraints.
-            Used for monitoring/debugging only, not used in assignment logic.
+        annotations: Optional list of AnnotationItem objects to display with the reviewer prefill.
+            Each annotation has "text" and "color" attributes (e.g., [AnnotationItem(text="Team lead", color="#FF0000")]).
+        source_protocol: Optional identifier for the protocol/plugin that generated this effect.
+            Used for tracking and debugging (e.g., "llm_v1").
     """
 
     class Meta:
@@ -97,26 +79,8 @@ class AssignDocumentReviewer(_BaseEffect):
     team_id: str | int | None = None
     priority: Priority = Priority.NORMAL
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
-    confidence_scores: AssignDocumentReviewerConfidenceScores | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_confidence_scores_keys(cls, data: Any) -> Any:
-        """Validate confidence_scores keys before Pydantic processes the TypedDict.
-
-        TypedDict in Pydantic silently drops unknown keys, so we validate
-        them here to provide a clear error message to users.
-        """
-        if isinstance(data, dict) and "confidence_scores" in data:
-            scores = data.get("confidence_scores")
-            if isinstance(scores, dict):
-                invalid_keys = set(scores.keys()) - CONFIDENCE_SCORE_KEYS
-                if invalid_keys:
-                    raise ValueError(
-                        f"confidence_scores contains invalid keys: {sorted(invalid_keys)}. "
-                        f"Valid keys are: {sorted(CONFIDENCE_SCORE_KEYS)}"
-                    )
-        return data
+    annotations: list[AnnotationItem] | None = None
+    source_protocol: str | None = None
 
     # Mapping from SDK review_mode values to database short codes
     _REVIEW_MODE_TO_DB: dict[str, str] = {
@@ -133,6 +97,8 @@ class AssignDocumentReviewer(_BaseEffect):
         document_id is always converted to string.
         priority is converted to boolean (HIGH=True, NORMAL=False).
         review_mode is converted to database short codes (RR, AR, RN).
+        annotations is serialized as list of dicts with text and color keys.
+        source_protocol is stripped of leading/trailing whitespace.
         """
         result: dict[str, Any] = {
             "document_id": str(self.document_id).strip() if self.document_id is not None else None,
@@ -143,16 +109,14 @@ class AssignDocumentReviewer(_BaseEffect):
             result["reviewer_id"] = str(self.reviewer_id).strip()
         if self.team_id is not None:
             result["team_id"] = str(self.team_id).strip()
-        if self.confidence_scores is not None:
-            result["confidence_scores"] = self.confidence_scores
+        if self.annotations is not None:
+            result["annotations"] = self.annotations
+        if self.source_protocol is not None:
+            result["source_protocol"] = self.source_protocol.strip()
         return result
 
     def _get_error_details(self, method: Any) -> list:
         """Validate the effect fields and return any error details.
-
-        Note: confidence_scores validation (invalid keys, range constraints) is
-        handled by Pydantic at construction time via model_validator and TypedDict
-        with Annotated field constraints.
 
         Note: Database existence validation (IntegrationTask, Staff, Team) is
         handled by the home-app interpreter, not the SDK.
@@ -162,8 +126,6 @@ class AssignDocumentReviewer(_BaseEffect):
 
 __exports__ = (
     "AssignDocumentReviewer",
-    "AssignDocumentReviewerConfidenceScores",
     "Priority",
     "ReviewMode",
 )
-

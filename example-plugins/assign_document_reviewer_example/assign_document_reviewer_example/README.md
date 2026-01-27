@@ -15,6 +15,8 @@ from canvas_sdk.effects.data_integration import (
     Priority,
     ReviewMode,
 )
+from canvas_sdk.effects.data_integration.types import AnnotationItem
+
 
 # Assign a reviewer with all options
 effect = AssignDocumentReviewer(
@@ -23,7 +25,11 @@ effect = AssignDocumentReviewer(
     team_id="team-uuid",                    # Optional: Team to assign
     priority=Priority.HIGH,                 # normal or high (default: normal)
     review_mode=ReviewMode.REVIEW_REQUIRED, # review_required, already_reviewed, or review_not_required
-    confidence_scores={"document_id": 0.95},# Optional: confidence score (0.0-1.0)
+    annotations=[                           # Optional: display annotations for prefill
+        AnnotationItem(text="Team lead", color="#4CAF50")
+        AnnotationItem(text="Primary care", color="#2196F3")
+    ],
+    source_protocol="llm_v1",               # Optional: identifies the source plugin/protocol
 )
 
 applied = effect.apply()
@@ -38,7 +44,8 @@ applied = effect.apply()
 | team_id | str | No | None | Team UUID to assign |
 | priority | Priority | No | NORMAL | Review priority level (normal/high) |
 | review_mode | ReviewMode | No | REVIEW_REQUIRED | Review mode |
-| confidence_scores | dict | No | None | Confidence score for document ID |
+| annotations | list[dict] | No | None | Display annotations (objects with text and color) |
+| source_protocol | str | No | None | Identifies the source plugin/protocol |
 
 ## Priority Values
 
@@ -61,14 +68,17 @@ applied = effect.apply()
 
 Responds to events and assigns a reviewer with high priority and review required.
 
-## Confidence Scores
+## Prefill Support
 
-The `confidence_scores` field is used for monitoring and debugging only.
-It accepts a dictionary with `"document_id"` as the key and a float (0.0-1.0) as the value:
+When the effect is processed, an `IntegrationTaskPrefill` record is created/updated with:
 
-```python
-confidence_scores={"document_id": 0.95}
-```
+- `field_type`: "reviewer"
+- `value`: Contains `reviewer_id`, `reviewer_name`, `team_id`, `team_name` as applicable
+- `annotations`: The list provided by the plugin (stored as-is)
+- `source_protocol`: The identifier provided by the plugin
+
+This prefill data can be used by the UI to pre-populate reviewer fields and display
+annotations to help users understand why a particular reviewer was suggested.
 
 ## Notes
 
@@ -76,3 +86,4 @@ confidence_scores={"document_id": 0.95}
 - If both are provided, the home-app interpreter will assign both
 - The home-app interpreter validates that the document, staff, and team exist
 - Whitespace is automatically stripped from string fields
+- Annotations are passed directly to the prefill without modification
