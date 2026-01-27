@@ -59,7 +59,14 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["FULLSCRIPT_CLIENT_ID", "FULLSCRIPT_CLIENT_SECRET", "FULLSCRIPT_SEARCH_PAGE_SIZE", "FULLSCRIPT_APPLICATION_ID", "FULLSCRIPT_NOTE_TYPES"],
+    "secrets": [
+        "FULLSCRIPT_CLIENT_ID",
+        "FULLSCRIPT_CLIENT_SECRET",
+        "FULLSCRIPT_SEARCH_PAGE_SIZE",
+        "FULLSCRIPT_APPLICATION_ID",
+        "FULLSCRIPT_NOTE_TYPES",
+        "FULLSCRIPT_API_ENABLED"
+    ],
     "tags": {},
     "references": [],
     "license": "",

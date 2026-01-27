@@ -53,7 +53,7 @@ def handle_treatment_plan(patient_id: str, note_id: str, user_id: str, secrets: 
     for command in commands:
         log.info(f"!! Command {command.data}")
 
-        medication = command.data.get("prescribe", {})  # todo handle refills?
+        medication = command.data.get("prescribe", {})
         first_coding = medication.get("extra", {}).get("coding", {})[0]
         medication_code = first_coding.get("code", "")
         medication_id = medication_code[len("fullscript-") :]
@@ -127,6 +127,10 @@ class CreateTreatmentPlanButton(ActionButton):
     BUTTON_TITLE = "Send supplements to patient"
     BUTTON_KEY = "CREATE_FULLSCRIPT_TREATMENT_PLAN"
     BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_FOOTER
+
+    def visible(self) -> bool:
+        """Determine if the button should be visible based on secrets."""
+        return self.secrets.get("FULLSCRIPT_API_ENABLED", "false").lower() == "true"
 
     def handle(self) -> list[Effect]:
         """Handle the button click to create a Fullscript treatment plan."""
@@ -214,6 +218,10 @@ class CreateTreatmentPlan(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """Create a treatment plan in Fullscript based on the note update."""
+        if self.secrets.get("FULLSCRIPT_API_ENABLED", "false").lower() != "true":
+            log.info("!! Fullscript API is not enabled, skipping treatment plan creation")
+            return []
+
         note_event_id = self.target  # Note state change event id
         patient_id = self.context.get("patient_id")
         state = self.context.get("state")

@@ -19,6 +19,10 @@ class SearchFullscriptSupplementsForPrescribe(BaseHandler):
         """Fetch Fullscript products and add them to the prescribe autocomplete with clinical quantities."""
         log.info("!! Fullscript search protocol")
 
+        if self.secrets.get("FULLSCRIPT_API_ENABLED", "false").lower() != "true":
+            log.info("!! Fullscript API is not enabled, skipping Fullscript search")
+            return []
+
         user_id = self.context.get("user", {}).get("staff", None)
         query = self.context.get("search_term", None)
         results = self.context.get("results", [])
