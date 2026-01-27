@@ -13,6 +13,7 @@ class AnnotationItem(TypedDict):
     text: str
     color: str
 
+
 class DocumentType(TypedDict):
     """
     Document type information for categorizing a document.
