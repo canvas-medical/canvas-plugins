@@ -153,6 +153,12 @@
       #clearChatBtn:hover {
         background-color: #da190b;
       }
+      #submitFilesBtn {
+        background-color: #009688;
+      }
+      #submitFilesBtn:hover {
+        background-color: #00897b;
+      }
       .status {
         font-size: 12px;
         margin-top: 10px;
@@ -170,6 +176,28 @@
       .status.info {
         background-color: #d9edf7;
         color: #31708f;
+      }
+      .provider-selector {
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .provider-selector label {
+        margin-bottom: 0;
+        font-weight: bold;
+      }
+      .provider-selector select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+        background-color: white;
+        cursor: pointer;
+      }
+      .provider-selector select:focus {
+        outline: none;
+        border-color: #4CAF50;
       }
       .conversation-history {
         border: 1px solid #ccc;
@@ -223,9 +251,19 @@
     </style>
   </head>
   <body>
+    <div class="provider-selector">
+      <label for="llmProvider">LLM Provider:</label>
+      <select id="llmProvider">
+        <option value="0">Anthropic</option>
+        <option value="1">Google</option>
+        <option value="2">OpenAI</option>
+      </select>
+    </div>
+
     <div class="tabs">
       <div class="tab active" onclick="switchTab('chat')">Chat</div>
       <div class="tab" onclick="switchTab('animals')">Animals</div>
+      <div class="tab" onclick="switchTab('files')">Files</div>
     </div>
 
     <div id="animals" class="tab-content">
@@ -280,9 +318,41 @@
       <div id="chatStatus" class="status" style="display: none;"></div>
     </div>
 
+    <div id="files" class="tab-content">
+      <div class="form-group">
+        <label for="fileSelectInput">Select File:</label>
+        <input type="file" id="fileSelectInput" accept="image/*,.pdf,.txt">
+      </div>
+
+      <div class="form-group">
+        <textarea id="fileTextInput" rows="6" placeholder="Enter your input...">what is in the file</textarea>
+      </div>
+
+      <div class="button-group">
+        <button id="submitFilesBtn" title="Submit">
+          <span class="material-icons">upload_file</span>
+          Submit
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label>Response:</label>
+        <div id="filesResponse" class="content-display"></div>
+      </div>
+
+      <div id="filesStatus" class="status" style="display: none;"></div>
+    </div>
+
     <script>
       const animalsCountURL = "{{animalsCountURL | safe}}";
       const chatURL = "{{chatURL | safe}}";
+      const fileURL = "{{fileURL | safe}}";
+
+        // Get URL with provider appended
+      function getUrlWithProvider(baseUrl) {
+        const provider = document.getElementById('llmProvider').value;
+        return `${baseUrl}/${provider}`;
+      }
 
         // Conversation state
       let conversationHistory = [];
@@ -345,7 +415,7 @@
           btn.disabled = true;
           showStatus('animalsStatus', 'Processing image...', 'info');
 
-          const response = await fetch(animalsCountURL, {
+          const response = await fetch(getUrlWithProvider(animalsCountURL), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -364,6 +434,43 @@
         } catch (error) {
           console.error('Error:', error);
           showStatus('animalsStatus', 'Error: ' + error.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Submit files handler
+      document.getElementById('submitFilesBtn').addEventListener('click', async function() {
+        const fileInput = document.getElementById('fileSelectInput').files[0];
+        const textInput = document.getElementById('fileTextInput').value.trim();
+        const btn = this;
+
+        try {
+          btn.disabled = true;
+          showStatus('filesStatus', 'Processing...', 'info');
+
+          const formData = new FormData();
+          formData.append('type', fileInput ? fileInput.type : '');
+          formData.append('input', textInput);
+          if (fileInput) {
+            formData.append('file', fileInput);
+          }
+
+          const response = await fetch(getUrlWithProvider(fileURL), {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed: ${response.status}`);
+          }
+
+          const data = await response.text();
+          document.getElementById('filesResponse').textContent = data;
+          showStatus('filesStatus', 'Request processed', 'success');
+        } catch (error) {
+          console.error('Error:', error);
+          showStatus('filesStatus', 'Error: ' + error.message, 'error');
         } finally {
           btn.disabled = false;
         }
@@ -448,7 +555,7 @@
                 // Build the payload
           const payload = [...conversationHistory];
 
-          const response = await fetch(chatURL, {
+          const response = await fetch(getUrlWithProvider(chatURL), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

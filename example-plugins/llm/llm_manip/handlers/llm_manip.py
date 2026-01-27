@@ -4,9 +4,13 @@ from http import HTTPStatus
 from pydantic import Field
 
 from canvas_sdk.clients.llms.constants import FileType
-from canvas_sdk.clients.llms.libraries import LlmOpenai
+from canvas_sdk.clients.llms.libraries import LlmAnthropic, LlmApi, LlmGoogle, LlmOpenai
 from canvas_sdk.clients.llms.structures import BaseModelLlmJson, FileContent, LlmFileUrl
-from canvas_sdk.clients.llms.structures.settings import LlmSettingsGpt4
+from canvas_sdk.clients.llms.structures.settings import (
+    LlmSettingsAnthropic,
+    LlmSettingsGemini,
+    LlmSettingsGpt4,
+)
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, PlainTextResponse, Response
 from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
@@ -33,6 +37,9 @@ class LlmManip(SimpleAPI):
     """Simple API handler for LLM-based image analysis and chat operations."""
 
     PREFIX = None
+    LLM_ANTHROPIC = 0
+    LLM_GOOGLE = 1
+    LLM_OPENAI = 2
 
     def authenticate(self, credentials: Credentials) -> bool:
         """Authenticate API requests.
@@ -45,21 +52,41 @@ class LlmManip(SimpleAPI):
         """
         return True
 
-    def _llm_client(self) -> LlmOpenai:
-        """Create and configure an OpenAI LLM client with credentials from secrets.
+    def _llm_client(self, provider: int) -> LlmApi:
+        """Create and configure a LLM client with credentials from secrets.
 
         Returns:
-            Configured LlmOpenai client instance using GPT-4o model.
+            Configured LlmApi client instance.
         """
-        return LlmOpenai(
-            LlmSettingsGpt4(
-                api_key=self.secrets[Secrets.llm_key],
-                model="gpt-4o",
-                temperature=2.0,
+        if provider == self.LLM_ANTHROPIC:
+            return LlmAnthropic(
+                LlmSettingsAnthropic(
+                    api_key=self.secrets[Secrets.anthropic_key],
+                    model="claude-sonnet-4-5",
+                    temperature=1.0,
+                    max_tokens=8192,
+                )
             )
-        )
+        elif provider == self.LLM_GOOGLE:
+            return (
+                LlmGoogle(
+                    LlmSettingsGemini(
+                        api_key=self.secrets[Secrets.anthropic_key],
+                        model="models/gemini-2.5-flash",
+                        temperature=1.0,
+                    )
+                ),
+            )
+        else:
+            return LlmOpenai(
+                LlmSettingsGpt4(
+                    api_key=self.secrets[Secrets.openai_key],
+                    model="gpt-4o",
+                    temperature=2.0,
+                )
+            )
 
-    @api.post("/animals_count")
+    @api.post("/animals_count/<llm_provider>")
     def animals_count(self) -> list[Response | Effect]:
         """Analyze an image URL to count animals using LLM vision capabilities.
 
@@ -69,7 +96,7 @@ class LlmManip(SimpleAPI):
         Returns:
             JSON response containing the LLM's structured analysis of animals in the image.
         """
-        client = self._llm_client()
+        client = self._llm_client(self.request.path_params["llm_provider"])
         url = self.request.json().get("url")
         if not url:
             url = "https://images.unsplash.com/photo-1563460716037-460a3ad24ba9?w=125"
@@ -84,7 +111,7 @@ class LlmManip(SimpleAPI):
         content = [r.to_dict() for r in responses]
         return [JSONResponse(content, status_code=HTTPStatus(HTTPStatus.OK))]
 
-    @api.post("/chat")
+    @api.post("/chat/<llm_provider>")
     def chat(self) -> list[Response | Effect]:
         """Process a multi-turn chat conversation with the LLM.
 
@@ -94,7 +121,7 @@ class LlmManip(SimpleAPI):
         Returns:
             Plain text response containing the LLM's reply to the conversation.
         """
-        client = self._llm_client()
+        client = self._llm_client(self.request.path_params["llm_provider"])
         for turn in self.request.json():
             if not isinstance(turn, dict):
                 continue
@@ -108,7 +135,7 @@ class LlmManip(SimpleAPI):
         response = client.attempt_requests(attempts=1)[0]
         return [PlainTextResponse(response.response, status_code=response.code)]
 
-    @api.post("/file")
+    @api.post("/file/<llm_provider>")
     def file(self) -> list[Response | Effect]:
         """Analyze file content based on the use input using LLM.
 
@@ -128,13 +155,13 @@ class LlmManip(SimpleAPI):
         if not (content and mime_type and user_input):
             return [PlainTextResponse("nothing to do", status_code=HTTPStatus(HTTPStatus.OK))]
 
-        client = self._llm_client()
+        client = self._llm_client(self.request.path_params["llm_provider"])
         file = FileContent(
             mime_type=mime_type,
             content=base64.b64encode(content),
             size=len(content),
         )
-        client.file_content.append(file)
+        client.file_contents.append(file)
         client.set_system_prompt(["Answer to the question about the file, clearly and concisely."])
         client.set_user_prompt([user_input or "what is in the file?"])
 

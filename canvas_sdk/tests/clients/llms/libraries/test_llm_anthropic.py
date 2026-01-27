@@ -81,7 +81,7 @@ def test__file_content_to_content_item(file_content: FileContent, expected: dict
         ),
         pytest.param(
             LlmFileUrl(url="https://example.com/file.txt", type=FileType.TEXT),
-            FileContent(mime_type="text/plain", content=base64.b64encode(b"text content"), size=12),
+            "text content",
             {
                 "type": "document",
                 "source": {"type": "text", "media_type": "text/plain", "data": "text content"},
@@ -94,20 +94,20 @@ def test__file_content_to_content_item(file_content: FileContent, expected: dict
 def test__file_url_to_content_item(
     mocker: MockerFixture,
     file_url: LlmFileUrl,
-    mock_content: FileContent | None,
+    mock_content: str | None,
     expected: dict | None,
     exp_calls: list,
 ) -> None:
     """Test conversion of LlmFileUrl to Anthropic content item."""
-    mock_base64 = mocker.patch.object(LlmAnthropic, "base64_encoded_content_of")
-    mock_base64.side_effect = [mock_content] if mock_content else []
+    mock_str_content = mocker.patch.object(LlmAnthropic, "str_content_of")
+    mock_str_content.side_effect = [mock_content] if mock_content else []
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmAnthropic(settings)
 
     result = tested._file_url_to_content_item(file_url)
     assert result == expected
-    assert mock_base64.mock_calls == exp_calls
+    assert mock_str_content.mock_calls == exp_calls
 
 
 def test_to_dict() -> None:
@@ -209,7 +209,7 @@ def test_to_dict__with_files(
     exp_calls: list,
 ) -> None:
     """Test conversion of prompts with file attachments to Anthropic API format."""
-    base64_encoded_content_of = mocker.patch.object(LlmAnthropic, "base64_encoded_content_of")
+    str_content_of = mocker.patch.object(LlmAnthropic, "str_content_of")
 
     to_dict_returns = {
         "exp_empty": {"model": "test_model", "messages": []},
@@ -310,19 +310,13 @@ def test_to_dict__with_files(
     for prompt in prompts:
         tested.add_prompt(prompt)
 
-    base64_encoded_content_of.side_effect = [
-        FileContent(
-            mime_type="theMimeType",
-            content=base64.b64encode(b"theContent"),
-            size=123,
-        )
-    ]
+    str_content_of.side_effect = ["theContent"]
     result = tested.to_dict()
     assert result == to_dict_returns[exp_key]
     assert len(tested.file_urls) == exp_file_urls
     assert len(tested.file_contents) == exp_file_contents
 
-    assert base64_encoded_content_of.mock_calls == exp_calls
+    assert str_content_of.mock_calls == exp_calls
 
 
 def test_to_dict__schema() -> None:

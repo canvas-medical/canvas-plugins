@@ -5,4 +5,6 @@ from dataclasses import dataclass
 class Secrets:
     """Secret key names for LLM API credentials stored in the plugin secrets."""
 
-    llm_key: str = "LlmKey"
+    anthropic_key: str = "AnthropicKey"
+    google_key: str = "GoogleKey"
+    openai_key: str = "OpenaiKey"

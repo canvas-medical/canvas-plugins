@@ -368,3 +368,35 @@ def test_base64_encoded_content_of(
         call().get(""),
     ]
     assert mock_http.mock_calls == exp_calls
+
+
+@pytest.mark.parametrize(
+    ("side_effects", "expected"),
+    [
+        pytest.param(
+            [SimpleNamespace(text="file text content")],
+            "file text content",
+            id="success",
+        ),
+        pytest.param(
+            [exceptions.RequestException("Connection error")],
+            "",
+            id="with_error",
+        ),
+    ],
+)
+def test_str_content_of(mocker: MockerFixture, side_effects: list, expected: str) -> None:
+    """Test retrieval of text content from URL."""
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.get.side_effect = side_effects
+
+    tested = LlmApi
+    file_url = LlmFileUrl(url="https://example.com/file.txt", type=FileType.TEXT)
+    result = tested.str_content_of(file_url)
+    assert result == expected
+
+    exp_calls = [
+        call("https://example.com/file.txt"),
+        call().get(""),
+    ]
+    assert mock_http.mock_calls == exp_calls

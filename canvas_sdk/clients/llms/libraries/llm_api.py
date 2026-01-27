@@ -195,5 +195,23 @@ class LlmApi(ABC):
 
         return result
 
+    @classmethod
+    def str_content_of(cls, file_url: LlmFileUrl) -> str:
+        """Download a file from a URL and return its text content.
+
+        Args:
+            file_url: The URL and type of the file to download.
+
+        Returns:
+            The text content of the file, or an empty string if the request fails.
+        """
+        try:
+            response = Http(file_url.url).get("")
+            result = response.text
+        except exceptions.RequestException:
+            result = ""
+
+        return result
+
 
 __exports__ = ("LlmApi",)

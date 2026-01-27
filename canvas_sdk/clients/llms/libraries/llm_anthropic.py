@@ -25,13 +25,13 @@ class LlmAnthropic(LlmApi):
         elif file_url.type == FileType.IMAGE:
             return {"type": "image", "source": {"type": "url", "url": file_url.url}}
         elif file_url.type == FileType.TEXT:
-            content = self.base64_encoded_content_of(file_url)
+            content = self.str_content_of(file_url)
             return {
                 "type": "document",
                 "source": {
                     "type": "text",
                     "media_type": "text/plain",
-                    "data": base64.standard_b64decode(content.content).decode("utf-8"),
+                    "data": content,
                 },
             }
 
