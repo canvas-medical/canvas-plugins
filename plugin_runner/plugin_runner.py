@@ -558,11 +558,19 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
 
-    manifest_file = path / MANIFEST_FILE_NAME
-    manifest_json_str = manifest_file.read_text()
-
     # the name is the folder name underneath the plugins directory
     name = path.name
+
+    manifest_file = path / MANIFEST_FILE_NAME
+
+    # If installed via `canvas install` we can rely on the manifest file
+    # existing. If installed via another method we still need to avoid crashing
+    # the entire runner if there's no manifest.
+    if not manifest_file.exists():
+        log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
+        return False
+
+    manifest_json_str = manifest_file.read_text()
 
     try:
         manifest_json: PluginManifest = json.loads(manifest_json_str)
