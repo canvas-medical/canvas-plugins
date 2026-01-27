@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import base64
 import builtins
@@ -503,6 +505,79 @@ def set_secrets(
     update(name=plugin, package_path=None, secrets=secrets, host=host, is_enabled=None)
 
 
+def _find_unreferenced_handlers(plugin_path: Path, manifest_json: dict) -> builtins.list[str]:
+    """Find handler classes that aren't referenced in the manifest.
+
+    Uses AST parsing to avoid executing untrusted code during validation.
+    """
+    # Get all handler/protocol class references from manifest
+    components = manifest_json.get("components", {})
+    referenced_classes = set()
+
+    # Check both "handlers" and "protocols" keys for backwards compatibility
+    for key in ["handlers", "protocols"]:
+        for item in components.get(key, []):
+            class_ref = item.get("class", "")
+            # Store just the class part (module.path:ClassName)
+            referenced_classes.add(class_ref)
+
+    # Find all Python files in the plugin
+    unreferenced = []
+    python_files = builtins.list(plugin_path.rglob("*.py"))
+
+    # Known base class names to look for in inheritance
+    base_handler_names = {"BaseHandler", "BaseProtocol"}
+
+    for py_file in python_files:
+        # Skip test files, __pycache__, and __init__ files
+        # Check if file is in a test directory or is a test file itself
+        parts = py_file.parts
+        if "__pycache__" in str(py_file) or py_file.name == "__init__.py":
+            continue
+        if "tests" in parts or "test" in parts or py_file.stem.startswith("test_"):
+            continue
+
+        # Parse the file using AST to avoid executing code
+        try:
+            tree = ast.parse(py_file.read_text())
+
+            # Find all class definitions
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    # Check if this class inherits from BaseHandler or BaseProtocol
+                    inherits_from_base = False
+                    for base in node.bases:
+                        # Handle direct inheritance: class Foo(BaseHandler)
+                        if isinstance(base, ast.Name) and base.id in base_handler_names:
+                            inherits_from_base = True
+                            break
+                        # Handle module-qualified inheritance: class Foo(handlers.BaseHandler)
+                        elif isinstance(base, ast.Attribute):
+                            if base.attr in base_handler_names:
+                                inherits_from_base = True
+                                break
+
+                    if inherits_from_base:
+                        # Build the class reference string
+                        # Get relative path from plugin root
+                        relative_path = py_file.relative_to(plugin_path)
+                        module_path = str(relative_path.with_suffix("")).replace("/", ".")
+                        # Include package name prefix to match manifest format
+                        package_name = plugin_path.name
+                        class_ref = f"{package_name}.{module_path}:{node.name}"
+
+                        # Check if it's referenced in the manifest
+                        if not any(class_ref in ref for ref in referenced_classes):
+                            unreferenced.append(class_ref)
+
+        except Exception:
+            # Skip files that can't be parsed
+            print(f"Warning: Could not parse file '{py_file}'")
+            pass
+
+    return unreferenced
+
+
 def validate_manifest(
     plugin_name: Path = typer.Argument(..., help="Path to plugin to validate"),
 ) -> None:
@@ -536,6 +611,16 @@ def validate_manifest(
         raise typer.Abort() from None
 
     validate_manifest_file(manifest_json)
+
+    # Check for unreferenced handlers
+    unreferenced = _find_unreferenced_handlers(plugin_name, manifest_json)
+    if unreferenced:
+        print(
+            "\nWarning: Found handler classes that are not referenced in the CANVAS_MANIFEST.json:"
+        )
+        for handler in unreferenced:
+            print(f"  - {handler}")
+        print("These handlers will not be loaded unless you add them to the manifest.\n")
 
     print(f"Plugin {plugin_name} has a valid CANVAS_MANIFEST.json file")
 

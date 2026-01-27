@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from time import sleep
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 import grpc
 import redis
@@ -584,9 +584,12 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
 
     # TODO add existing schema validation from Michela here
     try:
-        handlers = manifest_json["components"].get("protocols", []) + manifest_json[
-            "components"
-        ].get("applications", [])
+        components = manifest_json["components"]
+        handlers = (
+            cast(list, components.get("protocols", []))
+            + cast(list, components.get("applications", []))
+            + cast(list, components.get("handlers", []))
+        )
     except Exception as e:
         log.exception(f'Unable to load plugin "{name}"')
         sentry_sdk.capture_exception(e)
