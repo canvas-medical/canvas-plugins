@@ -47,6 +47,7 @@ class Note(NoteOrAppointmentABC):
     datetime_of_service: datetime.datetime | None = None
     patient_id: str | None = None
     title: str | None = None
+    related_data: dict | None = None
 
     def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
