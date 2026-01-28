@@ -200,9 +200,9 @@ def create_protocol_instance(
 
         original_class = type(protocol)
 
-        class _ProtocolWithCustomTimeframe(original_class):
+        class _ProtocolWithCustomTimeframe(original_class):  # type: ignore[valid-type, misc]
             @property
-            def timeframe(self):
+            def timeframe(self) -> Timeframe:
                 return self._custom_timeframe
 
         protocol.__class__ = _ProtocolWithCustomTimeframe
