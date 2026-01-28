@@ -126,7 +126,7 @@ from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
-from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
 from .uncategorized_clinical_document import (
     UncategorizedClinicalDocument,
@@ -222,6 +222,7 @@ __all__ = __exports__ = (
     "NewLineItemPayment",
     "Note",
     "NoteStateChangeEvent",
+    "NoteTask",
     "NoteType",
     "Observation",
     "ObservationCoding",

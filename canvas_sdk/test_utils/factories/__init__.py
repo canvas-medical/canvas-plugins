@@ -56,6 +56,7 @@ from .staff import (
     StaffRoleFactory,
 )
 from .task import (
+    NoteTaskFactory,
     TaskCommentFactory,
     TaskFactory,
     TaskLabelFactory,
@@ -127,6 +128,7 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffContactPointFactory",
     "StaffAddressFactory",
+    "NoteTaskFactory",
     "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
