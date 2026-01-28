@@ -35,9 +35,43 @@ class LlmGoogle(LlmApi):
             else:
                 contents.append({"role": role, "parts": [part]})
 
-        return self.settings.to_dict() | {
-            "contents": contents,
-        }
+        # if there are files and the last message has the user's role
+
+        if contents and contents[-1]["role"] == roles[self.ROLE_USER]:
+            size_sum = 0
+            max_size = 10 * 1024 * 1024  # 10MB
+            # 10MB - arbitrary limit to prevent high latency (hard limit for Gemini 2.0 is 500MB)
+            all_file_contents = [self.base64_encoded_content_of(url) for url in self.file_urls]
+            all_file_contents.extend(self.file_contents)
+
+            for file_content in all_file_contents:
+                if (
+                    file_content is not None
+                    and file_content.size > 0
+                    and size_sum + file_content.size < max_size
+                ):
+                    size_sum += file_content.size
+                    contents[-1]["parts"].append(
+                        {
+                            "inline_data": {
+                                "mime_type": file_content.mime_type,
+                                "data": file_content.content.decode("utf-8"),
+                            },
+                        }
+                    )
+            self.file_urls = []
+            self.file_contents = []
+
+        # structured output requested
+        structured = {}
+        if self.schema:
+            structured = {
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "responseJsonSchema": self.schema.model_json_schema(),
+                },
+            }
+        return self.settings.to_dict() | structured | {"contents": contents}
 
     @classmethod
     def _api_base_url(cls) -> str:

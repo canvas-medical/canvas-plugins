@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import base64
 from abc import ABC, abstractmethod
 from http import HTTPStatus
 
+from requests import exceptions
+
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
+from canvas_sdk.clients.llms.structures.file_content import FileContent
+from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 from canvas_sdk.clients.llms.structures.llm_turn import LlmTurn
@@ -36,10 +42,23 @@ class LlmApi(ABC):
         self.settings = settings
         self.prompts: list[LlmTurn] = []
         self.http = Http(self._api_base_url())
+        self.file_urls: list[LlmFileUrl] = []
+        self.file_contents: list[FileContent] = []
+        self.schema: type[BaseModelLlmJson] | None = None
 
     def reset_prompts(self) -> None:
         """Clear all stored prompts."""
         self.prompts = []
+
+    def add_url_file(self, url_file: LlmFileUrl) -> None:
+        """Add a file to the conversation.
+
+        The files should be added to the conversation on the next request if the last turn has the ROLE_USER role.
+
+        Args:
+            url_file: LlmFileUrl object to add to the conversation.
+        """
+        self.file_urls.append(url_file)
 
     def add_prompt(self, prompt: LlmTurn) -> None:
         """Add a conversation turn to the prompt history.
@@ -86,6 +105,18 @@ class LlmApi(ABC):
             text: List of text strings for the model prompt.
         """
         self.prompts.append(LlmTurn(role=self.ROLE_MODEL, text=text))
+
+    def set_schema(self, schema: type[BaseModelLlmJson] | None) -> None:
+        """Set the schema for the conversation.
+
+        Set to None prevent a structured output.
+
+        Using BaseModelLlmJson subclasses ensures the validity of the JSON Schema passed to the LLMs.
+
+        """
+        self.schema = None
+        if schema and issubclass(schema, BaseModelLlmJson) and schema.validate_nested_models():
+            self.schema = schema
 
     @abstractmethod
     def request(self) -> LlmResponse:
@@ -137,6 +168,49 @@ class LlmApi(ABC):
                     tokens=LlmTokens(prompt=0, generated=0),
                 )
             )
+        return result
+
+    @classmethod
+    def base64_encoded_content_of(cls, file_url: LlmFileUrl) -> FileContent:
+        """Download a file from a URL and return its base64-encoded content.
+
+        Args:
+            file_url: The URL and type of the file to download.
+
+        Returns:
+            FileContent with MIME type, base64-encoded content, and size, or None if the request fails.
+        """
+        try:
+            response = Http(file_url.url).get("")
+
+            mime_type: str = response.headers.get("Content-Type", "application/octet-stream")
+            encoded_content: bytes = base64.b64encode(response.content)
+            result = FileContent(
+                mime_type=mime_type,
+                content=encoded_content,
+                size=len(response.content),
+            )
+        except exceptions.RequestException:
+            result = FileContent(mime_type="", content=b"", size=0)
+
+        return result
+
+    @classmethod
+    def str_content_of(cls, file_url: LlmFileUrl) -> str:
+        """Download a file from a URL and return its text content.
+
+        Args:
+            file_url: The URL and type of the file to download.
+
+        Returns:
+            The text content of the file, or an empty string if the request fails.
+        """
+        try:
+            response = Http(file_url.url).get("")
+            result = response.text
+        except exceptions.RequestException:
+            result = ""
+
         return result
 
 

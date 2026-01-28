@@ -1,13 +1,19 @@
+from datetime import date
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import call
 
 import pytest
+from pydantic import Field
 from pytest_mock import MockerFixture
 from requests import exceptions
 
+from canvas_sdk.clients.llms.constants.file_type import FileType
 from canvas_sdk.clients.llms.libraries.llm_openai import LlmOpenai
+from canvas_sdk.clients.llms.structures.base_model_llm_json import BaseModelLlmJson
+from canvas_sdk.clients.llms.structures.file_content import FileContent
+from canvas_sdk.clients.llms.structures.llm_file_url import LlmFileUrl
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
 from canvas_sdk.clients.llms.structures.llm_turn import LlmTurn
@@ -61,6 +67,190 @@ def test_to_dict() -> None:
         ],
         "instructions": "system prompt 2",
         "model": "test_model",
+    }
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("prompts", "expected", "exp_files"),
+    [
+        pytest.param(
+            [],
+            {"model": "test_model", "instructions": "", "input": []},
+            3,
+            id="no_turn",
+        ),
+        pytest.param(
+            [LlmTurn(role="model", text=["the response"])],
+            {
+                "model": "test_model",
+                "instructions": "",
+                "input": [
+                    {
+                        "content": [{"text": "the response", "type": "output_text"}],
+                        "role": "assistant",
+                    }
+                ],
+            },
+            3,
+            id="model_turn",
+        ),
+        pytest.param(
+            [LlmTurn(role="system", text=["the system prompt"])],
+            {"model": "test_model", "instructions": "the system prompt", "input": []},
+            3,
+            id="system_turn",
+        ),
+        pytest.param(
+            [LlmTurn(role="user", text=["the user prompt"])],
+            {
+                "model": "test_model",
+                "instructions": "",
+                "input": [
+                    {
+                        "content": [
+                            {"text": "the user prompt", "type": "input_text"},
+                            {"file_url": "https://example.com/doc.pdf", "type": "input_file"},
+                            {"image_url": "https://example.com/pic.jpg", "type": "input_image"},
+                        ],
+                        "role": "user",
+                    }
+                ],
+            },
+            0,
+            id="user_turn",
+        ),
+    ],
+)
+def test_to_dict__with_files(prompts: list, expected: dict, exp_files: int) -> None:
+    """Test conversion of prompts with file attachments to OpenAI API format."""
+    settings = LlmSettings(api_key="test_key", model="test_model")
+
+    tested = LlmOpenai(settings)
+
+    tested.file_urls = [
+        LlmFileUrl(url="https://example.com/doc.pdf", type=FileType.PDF),
+        LlmFileUrl(url="https://example.com/pic.jpg", type=FileType.IMAGE),
+        LlmFileUrl(url="https://example.com/text.txt", type=FileType.TEXT),
+    ]
+    assert len(tested.file_urls) == 3
+
+    for prompt in prompts:
+        tested.add_prompt(prompt)
+
+    result = tested.to_dict()
+    assert result == expected
+    assert len(tested.file_urls) == exp_files
+
+
+def test_to_dict__with_file_content() -> None:
+    """Test conversion of prompts with file_content attachments to OpenAI API format."""
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmOpenai(settings)
+
+    tested.add_prompt(LlmTurn(role="user", text=["the prompt"]))
+    tested.file_contents = [
+        FileContent(
+            mime_type="image/png",
+            content=b"imageContentBase64",
+            size=100,
+        ),
+        FileContent(
+            mime_type="application/pdf",
+            content=b"pdfContentBase64",
+            size=200,
+        ),
+        FileContent(
+            mime_type="application/unknown",
+            content=b"unknownContent",
+            size=30,
+        ),
+    ]
+    assert len(tested.file_contents) == 3
+
+    result = tested.to_dict()
+
+    expected = {
+        "model": "test_model",
+        "instructions": "",
+        "input": [
+            {
+                "content": [
+                    {"text": "the prompt", "type": "input_text"},
+                    {
+                        "type": "input_image",
+                        "image_url": "data:image/png;base64,imageContentBase64",
+                    },
+                    {
+                        "type": "input_file",
+                        "filename": "inputFile",
+                        "file_data": "data:application/pdf;base64,pdfContentBase64",
+                    },
+                ],
+                "role": "user",
+            },
+        ],
+    }
+    assert result == expected
+    assert len(tested.file_contents) == 0
+
+
+def test_to_dict__schema() -> None:
+    """Test conversion of prompts with schema to Google API format."""
+
+    class SchemaLlm(BaseModelLlmJson):
+        first_field: int = Field(description="the first field")
+        second_field: str = Field(description="the second field")
+        third_field: date = Field(description="the third field")
+
+    settings = LlmSettings(api_key="test_key", model="test_model")
+    tested = LlmOpenai(settings)
+    tested.add_prompt(LlmTurn(role="system", text=["system prompt"]))
+    tested.add_prompt(LlmTurn(role="user", text=["user message"]))
+
+    tested.set_schema(SchemaLlm)
+    result = tested.to_dict()
+    expected = {
+        "input": [
+            {
+                "content": [{"text": "user message", "type": "input_text"}],
+                "role": "user",
+            },
+        ],
+        "instructions": "system prompt",
+        "model": "test_model",
+        "text": {
+            "format": {
+                "name": "SchemaLlm",
+                "schema": {
+                    "additionalProperties": False,
+                    "properties": {
+                        "firstField": {
+                            "description": "the first field",
+                            "title": "Firstfield",
+                            "type": "integer",
+                        },
+                        "secondField": {
+                            "description": "the second field",
+                            "title": "Secondfield",
+                            "type": "string",
+                        },
+                        "thirdField": {
+                            "description": "the third field",
+                            "format": "date",
+                            "title": "Thirdfield",
+                            "type": "string",
+                        },
+                    },
+                    "required": ["firstField", "secondField", "thirdField"],
+                    "title": "SchemaLlm",
+                    "type": "object",
+                },
+                "strict": True,
+                "type": "json_schema",
+            },
+        },
     }
 
     assert result == expected
@@ -148,8 +338,8 @@ def test__api_base_url() -> None:
 )
 def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) -> None:
     """Test successful API request to OpenAI."""
-    http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
-    http.return_value.post.side_effect = [response]
+    mock_http = mocker.patch("canvas_sdk.clients.llms.libraries.llm_api.Http")
+    mock_http.return_value.post.side_effect = [response]
 
     settings = LlmSettings(api_key="test_key", model="test_model")
     tested = LlmOpenai(settings)
@@ -158,7 +348,7 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
     result = tested.request()
     assert result == expected
 
-    calls = [
+    exp_calls = [
         call("https://us.api.openai.com"),
         call().post(
             "/v1/responses",
@@ -176,4 +366,4 @@ def test_request(mocker: MockerFixture, response: Any, expected: LlmResponse) ->
             "}",
         ),
     ]
-    assert http.mock_calls == calls
+    assert mock_http.mock_calls == exp_calls
