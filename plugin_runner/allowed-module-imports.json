@@ -557,10 +557,14 @@
     "UpdateUserEffect"
   ],
   "canvas_sdk.effects.validation": [
+    "EventValidationError",
     "ValidationError"
   ],
   "canvas_sdk.effects.validation.base": [
     "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.event_validation_error": [
+    "EventValidationError"
   ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
