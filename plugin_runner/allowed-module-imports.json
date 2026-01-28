@@ -781,6 +781,8 @@
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "Language",
+    "Letter",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -1019,6 +1021,10 @@
     "LabValue",
     "LabValueCoding",
     "TransmissionType"
+  ],
+  "canvas_sdk.v1.data.letter": [
+    "Language",
+    "Letter"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
