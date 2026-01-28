@@ -1,0 +1,39 @@
+{
+  "sdk_version": "0.81.0",
+  "plugin_version": "0.0.1",
+  "name": "aws_manip",
+  "description": "use AWS S3 to store, retrieve and delete documents",
+  "components": {
+    "protocols": [
+      {
+        "class": "aws_manip.handlers.aws_manip:AwsManip",
+        "description": "AWS extractor based on AWS S3"
+      }
+    ],
+    "applications": [
+      {
+        "class": "aws_manip.handlers.aws_form_app:AwsFormApp",
+        "name": "AWS S3 Document Management",
+        "description": "AWS S3 manip",
+        "icon": "static/aws_manip.png",
+        "scope": "patient_specific",
+        "show_in_panel": false
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [
+    "S3Key",
+    "S3Secret",
+    "S3Region",
+    "S3Bucket"
+  ],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}
