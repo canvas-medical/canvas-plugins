@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.92.0 (2026-01-27)
+
+### Features
+
+- Add letter models ([#1468](https://github.com/canvas-medical/canvas-plugins/pull/1468),
+  [`d7f4d43`](https://github.com/canvas-medical/canvas-plugins/commit/d7f4d431c215053c3952ce7751e2d040e5d66293))
+
+- Add PATIENT_PREFERRED_PHARMACY_UPDATED event
+  ([#1465](https://github.com/canvas-medical/canvas-plugins/pull/1465),
+  [`3187b3f`](https://github.com/canvas-medical/canvas-plugins/commit/3187b3f39cca0d8b4054efc45f8d4dde9486e032))
+
+- Update canvas init handler template
+  ([#1260](https://github.com/canvas-medical/canvas-plugins/pull/1260),
+  [`d96ff2c`](https://github.com/canvas-medical/canvas-plugins/commit/d96ff2c893d79737c758bb5b534bde0c8a0afcdb))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.91.0 (2026-01-22)
 
 ### Features
