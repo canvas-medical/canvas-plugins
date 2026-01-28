@@ -740,6 +740,7 @@
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
@@ -919,6 +920,7 @@
   ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
