@@ -195,6 +195,23 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_load_plugin_with_missing_manifest(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a plugin with a missing manifest file fails to load gracefully."""
+    manifest_file = install_test_plugin / "CANVAS_MANIFEST.json"
+    manifest_file.unlink()
+
+    with caplog.at_level(logging.ERROR):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+    assert any("missing CANVAS_MANIFEST.json" in record.message for record in caplog.records), (
+        "Expected log message about missing manifest was not found"
+    )
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test reloading a plugin."""
     load_plugins()
