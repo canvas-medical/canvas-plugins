@@ -2,6 +2,7 @@
 
 import json
 import uuid
+from typing import Any
 from unittest.mock import Mock
 
 import arrow
@@ -29,7 +30,9 @@ from canvas_sdk.test_utils.helpers import (
 )
 from canvas_sdk.v1.data import Device, NoteType
 from canvas_sdk.v1.data.claim_line_item import ClaimLineItem, ClaimLineItemStatus
-from canvas_sdk.v1.data.note import NoteTypeCategories, PracticeLocationPOS
+from canvas_sdk.v1.data.condition import Condition
+from canvas_sdk.v1.data.note import Note, NoteTypeCategories, PracticeLocationPOS
+from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.value_set.v2026.condition import (
     AdvancedIllness,
     Diabetes,
@@ -45,7 +48,7 @@ from canvas_sdk.value_set.v2026.encounter import (
 from canvas_sdk.value_set.v2026.medication import DementiaMedications
 
 
-def extract_card(effects: list) -> dict:
+def extract_card(effects: list[Any]) -> dict[str, Any]:
     """Return protocol card 'data' from a single effect."""
     assert len(effects) == 1, f"Expected 1 effect, got {len(effects)}"
     eff = effects[0]
@@ -53,7 +56,7 @@ def extract_card(effects: list) -> dict:
     return json.loads(eff.payload)["data"]
 
 
-def _create_note_type(now: arrow.Arrow, code: str, name: str, pos: str) -> NoteType:
+def _create_note_type(now: arrow.Arrow, code: str, name: str, pos: PracticeLocationPOS) -> NoteType:
     """Helper to create a NoteType."""
     return NoteType.objects.create(
         code=code,
@@ -83,13 +86,13 @@ def _create_note_type(now: arrow.Arrow, code: str, name: str, pos: str) -> NoteT
 
 
 @pytest.fixture
-def now():
+def now() -> arrow.Arrow:
     """Fixed timestamp for consistent test dates."""
     return arrow.get("2026-12-31T12:00:00Z")
 
 
 @pytest.fixture
-def protocol_instance(now):
+def protocol_instance(now: arrow.Arrow) -> CMS122v14DiabetesGlycemicStatusPoorControl:
     """Create a protocol instance for testing."""
     timeframe_start = arrow.get("2026-01-01T00:00:00Z")
     timeframe_end = now
@@ -101,19 +104,19 @@ def protocol_instance(now):
 
 
 @pytest.fixture
-def patient_age_50(now):
+def patient_age_50(now: arrow.Arrow) -> Patient:
     """Patient aged 50 (within 18-75 range)."""
     return PatientFactory.create(birth_date=now.shift(years=-50).date())
 
 
 @pytest.fixture
-def patient_age_70(now):
+def patient_age_70(now: arrow.Arrow) -> Patient:
     """Patient aged 70 (for age 66+ exclusion tests)."""
     return PatientFactory.create(birth_date=now.shift(years=-70).date())
 
 
 @pytest.fixture
-def diabetes_condition_age_50(patient_age_50, now):
+def diabetes_condition_age_50(patient_age_50: Patient, now: arrow.Arrow) -> Condition:
     """Create a diabetes condition for patient_age_50."""
     diabetes_codes = list(getattr(Diabetes, "SNOMEDCT", []) or [])
     if not diabetes_codes:
@@ -126,7 +129,7 @@ def diabetes_condition_age_50(patient_age_50, now):
 
 
 @pytest.fixture
-def diabetes_condition_age_70(patient_age_70, now):
+def diabetes_condition_age_70(patient_age_70: Patient, now: arrow.Arrow) -> Condition:
     """Create a diabetes condition for patient_age_70."""
     diabetes_codes = list(getattr(Diabetes, "SNOMEDCT", []) or [])
     if not diabetes_codes:
@@ -139,7 +142,7 @@ def diabetes_condition_age_70(patient_age_70, now):
 
 
 @pytest.fixture
-def eligible_note(patient_age_50, now):
+def eligible_note(patient_age_50: Patient, now: arrow.Arrow) -> Note:
     """Create an eligible encounter note for patient_age_50."""
     note = NoteFactory.create(
         patient=patient_age_50, datetime_of_service=now.shift(months=-6).datetime
@@ -157,7 +160,7 @@ def eligible_note(patient_age_50, now):
 
 
 @pytest.fixture
-def eligible_note_age_70(patient_age_70, now):
+def eligible_note_age_70(patient_age_70: Patient, now: arrow.Arrow) -> Note:
     """Create an eligible encounter note for patient_age_70."""
     note = NoteFactory.create(
         patient=patient_age_70, datetime_of_service=now.shift(months=-6).datetime
@@ -182,7 +185,7 @@ def eligible_note_age_70(patient_age_70, now):
         EventType.CONDITION_RESOLVED,
     ],
 )
-def test_responds_to_condition_events(event_type):
+def test_responds_to_condition_events(event_type: int) -> None:
     """Test that protocol responds to condition events."""
     assert EventType.Name(event_type) in CMS122v14DiabetesGlycemicStatusPoorControl.RESPONDS_TO
 
@@ -194,7 +197,7 @@ def test_responds_to_condition_events(event_type):
         EventType.LAB_REPORT_UPDATED,
     ],
 )
-def test_responds_to_lab_report_events(event_type):
+def test_responds_to_lab_report_events(event_type: int) -> None:
     """Test that protocol responds to lab report events."""
     assert EventType.Name(event_type) in CMS122v14DiabetesGlycemicStatusPoorControl.RESPONDS_TO
 
@@ -206,7 +209,7 @@ def test_responds_to_lab_report_events(event_type):
         EventType.PATIENT_UPDATED,
     ],
 )
-def test_responds_to_patient_events(event_type):
+def test_responds_to_patient_events(event_type: int) -> None:
     """Test that protocol responds to patient events."""
     assert EventType.Name(event_type) in CMS122v14DiabetesGlycemicStatusPoorControl.RESPONDS_TO
 
@@ -218,7 +221,7 @@ def test_responds_to_patient_events(event_type):
         EventType.ENCOUNTER_UPDATED,
     ],
 )
-def test_responds_to_encounter_events(event_type):
+def test_responds_to_encounter_events(event_type: int) -> None:
     """Test that protocol responds to encounter events (new in v14)."""
     assert EventType.Name(event_type) in CMS122v14DiabetesGlycemicStatusPoorControl.RESPONDS_TO
 
@@ -230,29 +233,31 @@ def test_responds_to_encounter_events(event_type):
         EventType.CLAIM_UPDATED,
     ],
 )
-def test_responds_to_claim_events(event_type):
+def test_responds_to_claim_events(event_type: int) -> None:
     """Test that protocol responds to claim events (new in v14)."""
     assert EventType.Name(event_type) in CMS122v14DiabetesGlycemicStatusPoorControl.RESPONDS_TO
 
 
-def test_meta_title():
+def test_meta_title() -> None:
     """Test that meta title reflects v14 naming."""
     assert CMS122v14DiabetesGlycemicStatusPoorControl.Meta.title == (
         "Diabetes: Glycemic Status Assessment Greater Than 9%"
     )
 
 
-def test_meta_identifiers():
+def test_meta_identifiers() -> None:
     """Test that CMS identifier is v14."""
     assert "CMS122v14" in CMS122v14DiabetesGlycemicStatusPoorControl.Meta.identifiers
 
 
-def test_meta_version():
+def test_meta_version() -> None:
     """Test that version indicates 2026 measurement period."""
     assert "2026" in CMS122v14DiabetesGlycemicStatusPoorControl.Meta.version
 
 
-def test_get_value_set_codes_extracts_from_multiple_attributes(protocol_instance):
+def test_get_value_set_codes_extracts_from_multiple_attributes(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test that codes are combined from multiple value set attributes."""
 
     class MockValueSet:
@@ -263,7 +268,9 @@ def test_get_value_set_codes_extracts_from_multiple_attributes(protocol_instance
     assert codes == {"123456", "789012", "99213", "99214"}
 
 
-def test_get_value_set_codes_handles_missing_attributes(protocol_instance):
+def test_get_value_set_codes_handles_missing_attributes(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test graceful handling when requested attribute doesn't exist."""
 
     class MockValueSet:
@@ -273,7 +280,9 @@ def test_get_value_set_codes_handles_missing_attributes(protocol_instance):
     assert codes == {"123456"}
 
 
-def test_get_value_set_codes_returns_empty_for_missing_attributes(protocol_instance):
+def test_get_value_set_codes_returns_empty_for_missing_attributes(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test returns empty set when no requested attributes exist."""
 
     class MockValueSet:
@@ -284,44 +293,54 @@ def test_get_value_set_codes_returns_empty_for_missing_attributes(protocol_insta
 
 
 @pytest.mark.parametrize("age", [0, 10, 17])
-def test_age_below_18_not_in_population(protocol_instance, age):
+def test_age_below_18_not_in_population(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl, age: int
+) -> None:
     """Test patients below age 18 are excluded."""
     patient = Mock()
     assert protocol_instance._in_initial_population(patient, age) is False
 
 
 @pytest.mark.parametrize("age", [76, 80, 100])
-def test_age_above_75_not_in_population(protocol_instance, age):
+def test_age_above_75_not_in_population(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl, age: int
+) -> None:
     """Test patients above age 75 are excluded."""
     patient = Mock()
     assert protocol_instance._in_initial_population(patient, age) is False
 
 
-def test_get_test_type_returns_hba1c_for_non_gmi_code(protocol_instance):
+def test_get_test_type_returns_hba1c_for_non_gmi_code(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test HbA1c is returned when coding doesn't match GMI."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
     mock_coding = Mock()
-    mock_coding.code = "4548-4"  # HbA1c LOINC code
+    mock_coding.code = "4548-4"
     mock_lab_value.codings.all.return_value = [mock_coding]
     mock_lab_report.values.first.return_value = mock_lab_value
 
     assert protocol_instance._get_test_type(mock_lab_report) == "HbA1c"
 
 
-def test_get_test_type_returns_gmi_for_gmi_code(protocol_instance):
+def test_get_test_type_returns_gmi_for_gmi_code(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test GMI is returned when coding matches GMI LOINC code."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
     mock_coding = Mock()
-    mock_coding.code = "97506-0"  # GMI LOINC code
+    mock_coding.code = "97506-0"
     mock_lab_value.codings.all.return_value = [mock_coding]
     mock_lab_report.values.first.return_value = mock_lab_value
 
     assert protocol_instance._get_test_type(mock_lab_report) == "GMI"
 
 
-def test_get_test_type_returns_hba1c_when_no_lab_value(protocol_instance):
+def test_get_test_type_returns_hba1c_when_no_lab_value(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test defaults to HbA1c when no lab value exists."""
     mock_lab_report = Mock()
     mock_lab_report.values.first.return_value = None
@@ -329,7 +348,9 @@ def test_get_test_type_returns_hba1c_when_no_lab_value(protocol_instance):
     assert protocol_instance._get_test_type(mock_lab_report) == "HbA1c"
 
 
-def test_get_glycemic_value_extracts_numeric_value(protocol_instance):
+def test_get_glycemic_value_extracts_numeric_value(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test extraction of numeric glycemic value."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
@@ -339,7 +360,9 @@ def test_get_glycemic_value_extracts_numeric_value(protocol_instance):
     assert protocol_instance._get_glycemic_value(mock_lab_report) == 8.5
 
 
-def test_get_glycemic_value_extracts_string_value(protocol_instance):
+def test_get_glycemic_value_extracts_string_value(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test extraction of string glycemic value."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
@@ -349,7 +372,9 @@ def test_get_glycemic_value_extracts_string_value(protocol_instance):
     assert protocol_instance._get_glycemic_value(mock_lab_report) == 9.2
 
 
-def test_get_glycemic_value_returns_none_for_empty_string(protocol_instance):
+def test_get_glycemic_value_returns_none_for_empty_string(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test returns None when value is empty string."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
@@ -359,7 +384,9 @@ def test_get_glycemic_value_returns_none_for_empty_string(protocol_instance):
     assert protocol_instance._get_glycemic_value(mock_lab_report) is None
 
 
-def test_get_glycemic_value_returns_none_for_none_value(protocol_instance):
+def test_get_glycemic_value_returns_none_for_none_value(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test returns None when value is None."""
     mock_lab_report = Mock()
     mock_lab_value = Mock()
@@ -369,7 +396,9 @@ def test_get_glycemic_value_returns_none_for_none_value(protocol_instance):
     assert protocol_instance._get_glycemic_value(mock_lab_report) is None
 
 
-def test_get_glycemic_value_returns_none_when_no_lab_value(protocol_instance):
+def test_get_glycemic_value_returns_none_when_no_lab_value(
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+) -> None:
     """Test returns None when no lab value exists."""
     mock_lab_report = Mock()
     mock_lab_report.values.first.return_value = None
@@ -379,14 +408,17 @@ def test_get_glycemic_value_returns_none_when_no_lab_value(protocol_instance):
 
 @pytest.mark.django_db
 def test_inpatient_discharge_to_hospice_excludes(
-    now, protocol_instance, patient_age_50, diabetes_condition_age_50, eligible_note
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_50: Patient,
+    diabetes_condition_age_50: Condition,
+    eligible_note: Note,
+) -> None:
     """Test that inpatient encounter with discharge disposition to hospice excludes patient."""
     inpatient_codes = list(getattr(EncounterInpatient, "SNOMEDCT", []) or [])
     if not inpatient_codes:
         pytest.skip("EncounterInpatient codes missing")
 
-    # Create note for inpatient encounter
     inpatient_note = NoteFactory.create(
         patient=patient_age_50,
         datetime_of_service=now.shift(months=-6).datetime,
@@ -397,13 +429,11 @@ def test_inpatient_discharge_to_hospice_excludes(
     inpatient_note.note_type_version = note_type
     inpatient_note.save()
 
-    # Create encounter that ends during measurement period
     EncounterFactory.create(
         note=inpatient_note,
         end_time=now.shift(months=-6).datetime,
     )
 
-    # Create discharge disposition observation linked to the note
     observation = ObservationFactory.create(
         patient=patient_age_50,
         note_id=inpatient_note.dbid,
@@ -415,7 +445,7 @@ def test_inpatient_discharge_to_hospice_excludes(
     )
     ObservationValueCodingFactory.create(
         observation=observation,
-        code="428361000124107",  # Discharge to home for hospice care
+        code="428361000124107",
         system="http://snomed.info/sct",
         display="Discharge to home for hospice care",
     )
@@ -428,8 +458,12 @@ def test_inpatient_discharge_to_hospice_excludes(
 
 @pytest.mark.django_db
 def test_hospice_diagnosis_excludes(
-    now, protocol_instance, patient_age_50, diabetes_condition_age_50, eligible_note
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_50: Patient,
+    diabetes_condition_age_50: Condition,
+    eligible_note: Note,
+) -> None:
     """Test that hospice diagnosis excludes patient."""
     hospice_codes = list(getattr(HospiceDiagnosis, "SNOMEDCT", []) or [])
     if not hospice_codes:
@@ -449,20 +483,21 @@ def test_hospice_diagnosis_excludes(
 
 @pytest.mark.django_db
 def test_frailty_device_order_during_period_detected(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+) -> None:
     """Test that frailty device order during measurement period is detected."""
     frailty_device_hcpcs = list(getattr(FrailtyDevice, "HCPCSLEVELII", []) or [])
     if not frailty_device_hcpcs:
         pytest.skip("FrailtyDevice HCPCS codes missing")
 
-    # Create note during measurement period
     note = NoteFactory.create(
         patient=patient_age_70,
         datetime_of_service=now.shift(months=-6).datetime,
     )
 
-    # Create claim with frailty device code
     claim = ClaimFactory.create(note=note)
     ClaimLineItem.objects.create(
         claim=claim,
@@ -488,16 +523,17 @@ def test_frailty_device_order_during_period_detected(
 
 @pytest.mark.django_db
 def test_frailty_device_order_before_period_not_detected(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+) -> None:
     """Test that frailty device order before measurement period is NOT detected."""
-    # Create note before measurement period
     note = NoteFactory.create(
         patient=patient_age_70,
-        datetime_of_service=now.shift(years=-2).datetime,  # 2 years ago
+        datetime_of_service=now.shift(years=-2).datetime,
     )
 
-    # Create device order linked to the note
     Device.objects.create(
         patient=patient_age_70,
         note_id=note.dbid,
@@ -528,17 +564,20 @@ def test_frailty_device_order_before_period_not_detected(
 
 @pytest.mark.django_db
 def test_nursing_home_encounter_before_period_excludes(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70, eligible_note_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+    eligible_note_age_70: Note,
+) -> None:
     """Test that nursing home encounter before measurement period (but on or before end) excludes patient."""
     nursing_codes = list(getattr(NursingFacilityVisit, "SNOMEDCT", []) or [])
     if not nursing_codes:
         pytest.skip("NursingFacilityVisit codes missing")
 
-    # Create note BEFORE measurement period start
     note = NoteFactory.create(
         patient=patient_age_70,
-        datetime_of_service=now.shift(years=-2).datetime,  # 2 years ago (before MP start)
+        datetime_of_service=now.shift(years=-2).datetime,
     )
     note_type = _create_note_type(
         now, nursing_codes[0], "Nursing Facility Visit", PracticeLocationPOS.NURSING
@@ -546,7 +585,6 @@ def test_nursing_home_encounter_before_period_excludes(
     note.note_type_version = note_type
     note.save()
 
-    # Create encounter with start_time before period (but <= end)
     EncounterFactory.create(
         note=note,
         start_time=now.shift(years=-2).datetime,
@@ -555,32 +593,33 @@ def test_nursing_home_encounter_before_period_excludes(
     set_protocol_patient_context(protocol_instance, patient_age_70.id)
     card = extract_card(protocol_instance.compute())
 
-    # Should be excluded because encounter is "on or before end" of measurement period
     assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
 
 @pytest.mark.django_db
 def test_nursing_home_claim_before_period_excludes(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70, eligible_note_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+    eligible_note_age_70: Note,
+) -> None:
     """Test that nursing home claim before measurement period (but on or before end) excludes patient."""
     nursing_cpt_codes = list(getattr(NursingFacilityVisit, "CPT", []) or [])
     if not nursing_cpt_codes:
         pytest.skip("NursingFacilityVisit CPT codes missing")
 
-    # Create note BEFORE measurement period start
     note = NoteFactory.create(
         patient=patient_age_70,
-        datetime_of_service=now.shift(years=-2).datetime,  # 2 years ago
+        datetime_of_service=now.shift(years=-2).datetime,
     )
 
-    # Create claim with from_date before period (but <= end)
     claim = ClaimFactory.create(note=note)
     ClaimLineItem.objects.create(
         claim=claim,
         status=ClaimLineItemStatus.ACTIVE,
         charge=100.00,
-        from_date=now.shift(years=-2).date().isoformat(),  # Before MP start
+        from_date=now.shift(years=-2).date().isoformat(),
         thru_date=now.shift(years=-2).date().isoformat(),
         narrative="Nursing facility visit",
         ndc_code="",
@@ -598,20 +637,22 @@ def test_nursing_home_claim_before_period_excludes(
     set_protocol_patient_context(protocol_instance, patient_age_70.id)
     card = extract_card(protocol_instance.compute())
 
-    # Should be excluded because claim is "on or before end" of measurement period
     assert card["status"] == ProtocolCard.Status.NOT_APPLICABLE.value
 
 
 @pytest.mark.django_db
 def test_advanced_illness_in_prior_year_excludes(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70, eligible_note_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+    eligible_note_age_70: Note,
+) -> None:
     """Test that advanced illness diagnosis in year before measurement period excludes patient."""
     advanced_illness_codes = list(getattr(AdvancedIllness, "SNOMEDCT", []) or [])
     if not advanced_illness_codes:
         pytest.skip("AdvancedIllness codes missing")
 
-    # Create frailty diagnosis first (required for exclusion)
     frailty_codes = list(getattr(FrailtyDiagnosis, "SNOMEDCT", []) or [])
     if not frailty_codes:
         pytest.skip("FrailtyDiagnosis codes missing")
@@ -622,11 +663,10 @@ def test_advanced_illness_in_prior_year_excludes(
         onset_date=now.shift(months=-6).date(),
     )
 
-    # Create advanced illness in year BEFORE measurement period (but within lookback)
     create_condition_with_coding(
         patient_age_70,
         AdvancedIllness,
-        onset_date=now.shift(years=-1, months=-6).date(),  # 1.5 years ago (in prior year)
+        onset_date=now.shift(years=-1, months=-6).date(),
     )
 
     set_protocol_patient_context(protocol_instance, patient_age_70.id)
@@ -637,10 +677,13 @@ def test_advanced_illness_in_prior_year_excludes(
 
 @pytest.mark.django_db
 def test_dementia_meds_in_prior_year_excludes(
-    now, protocol_instance, patient_age_70, diabetes_condition_age_70, eligible_note_age_70
-):
+    now: arrow.Arrow,
+    protocol_instance: CMS122v14DiabetesGlycemicStatusPoorControl,
+    patient_age_70: Patient,
+    diabetes_condition_age_70: Condition,
+    eligible_note_age_70: Note,
+) -> None:
     """Test that dementia medications in year before measurement period excludes patient."""
-    # Create frailty diagnosis first (required for exclusion)
     frailty_codes = list(getattr(FrailtyDiagnosis, "SNOMEDCT", []) or [])
     if not frailty_codes:
         pytest.skip("FrailtyDiagnosis codes missing")
@@ -651,7 +694,6 @@ def test_dementia_meds_in_prior_year_excludes(
         onset_date=now.shift(months=-6).date(),
     )
 
-    # Create dementia medication in year BEFORE measurement period
     dementia_med_codes = list(getattr(DementiaMedications, "RXNORM", []) or [])
     if not dementia_med_codes:
         pytest.skip("DementiaMedications codes missing")
@@ -660,7 +702,7 @@ def test_dementia_meds_in_prior_year_excludes(
         patient_age_70,
         dementia_med_codes[0],
         "http://www.nlm.nih.gov/research/umls/rxnorm",
-        start_date=now.shift(years=-1, months=-6).date(),  # 1.5 years ago
+        start_date=now.shift(years=-1, months=-6).date(),
         display="Dementia Medication",
     )
 
