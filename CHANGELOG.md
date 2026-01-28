@@ -1,6 +1,63 @@
 # CHANGELOG
 
 
+## v0.93.0 (2026-01-28)
+
+### Bug Fixes
+
+- Make the plugin runner resilient to missing manifests
+  ([#1473](https://github.com/canvas-medical/canvas-plugins/pull/1473),
+  [`05df5d4`](https://github.com/canvas-medical/canvas-plugins/commit/05df5d41f71a519824886da6e10651a6550187cf))
+
+### Features
+
+- Add assessments to billinglineitem model
+  ([#1402](https://github.com/canvas-medical/canvas-plugins/pull/1402),
+  [`7b7df16`](https://github.com/canvas-medical/canvas-plugins/commit/7b7df168f32e160eac54942b4778636922213e60))
+
+- Add events for patient_facility_address
+  ([#1475](https://github.com/canvas-medical/canvas-plugins/pull/1475),
+  [`b3c8f58`](https://github.com/canvas-medical/canvas-plugins/commit/b3c8f58def9cf2b81bb672485e1c4932d8de0a3b))
+
+- Add NOTE_STATE_CHANGE_EVENT_PRE_CREATE event and EventValidationError effect
+  ([#1339](https://github.com/canvas-medical/canvas-plugins/pull/1339),
+  [`42bb5b2`](https://github.com/canvas-medical/canvas-plugins/commit/42bb5b2f17a7a435589d6111610ff84a9329532d))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+- Create AddClaimComment effect
+  ([#1466](https://github.com/canvas-medical/canvas-plugins/pull/1466),
+  [`da43fcb`](https://github.com/canvas-medical/canvas-plugins/commit/da43fcb4155eab99c96f121cac4452a202da8f54))
+
+- Effect for updating claimlineitem diagnosis links
+  ([#1434](https://github.com/canvas-medical/canvas-plugins/pull/1434),
+  [`935de64`](https://github.com/canvas-medical/canvas-plugins/commit/935de64fb53ae08dd2eacd45450961541c3e800c))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.92.0 (2026-01-27)
+
+### Features
+
+- Add letter models ([#1468](https://github.com/canvas-medical/canvas-plugins/pull/1468),
+  [`d7f4d43`](https://github.com/canvas-medical/canvas-plugins/commit/d7f4d431c215053c3952ce7751e2d040e5d66293))
+
+- Add PATIENT_PREFERRED_PHARMACY_UPDATED event
+  ([#1465](https://github.com/canvas-medical/canvas-plugins/pull/1465),
+  [`3187b3f`](https://github.com/canvas-medical/canvas-plugins/commit/3187b3f39cca0d8b4054efc45f8d4dde9486e032))
+
+- Update canvas init handler template
+  ([#1260](https://github.com/canvas-medical/canvas-plugins/pull/1260),
+  [`d96ff2c`](https://github.com/canvas-medical/canvas-plugins/commit/d96ff2c893d79737c758bb5b534bde0c8a0afcdb))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+
 ## v0.91.0 (2026-01-22)
 
 ### Features
