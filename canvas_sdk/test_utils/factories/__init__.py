@@ -11,6 +11,7 @@ from .claim import (
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
 from .coverage import CoverageFactory
+from .encounter import EncounterFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
 from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
@@ -33,6 +34,13 @@ from .medication_history import (
     MedicationHistoryResponseFactory,
 )
 from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .observation import (
+    ObservationCodingFactory,
+    ObservationComponentCodingFactory,
+    ObservationComponentFactory,
+    ObservationFactory,
+    ObservationValueCodingFactory,
+)
 from .organization import (
     OrganizationAddressFactory,
     OrganizationContactPointFactory,
@@ -71,10 +79,10 @@ from .user import CanvasUserFactory
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
-    "ClaimFactory",
     "ClaimCommentFactory",
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
+    "ClaimFactory",
     "ClaimLabelFactory",
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
@@ -82,6 +90,7 @@ __all__ = (
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
     "CoverageFactory",
+    "EncounterFactory",
     "EventFactory",
     "ExternalEventFactory",
     "ExternalVisitFactory",
@@ -103,30 +112,36 @@ __all__ = (
     "LetterFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
+    "MedicationHistoryMedicationFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",
     "NoteTypeFactory",
     "OrganizationAddressFactory",
     "OrganizationContactPointFactory",
+    "ObservationCodingFactory",
+    "ObservationComponentCodingFactory",
+    "ObservationComponentFactory",
+    "ObservationFactory",
+    "ObservationValueCodingFactory",
     "OrganizationFactory",
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
-    "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
+    "PracticeLocationFactory",
     "PracticeLocationSettingFactory",
     "ProtocolCurrentFactory",
     "ReferralFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "StaffAddressFactory",
+    "StaffContactPointFactory",
     "StaffFactory",
+    "StaffLicenseFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",
-    "StaffLicenseFactory",
-    "StaffContactPointFactory",
-    "StaffAddressFactory",
     "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
