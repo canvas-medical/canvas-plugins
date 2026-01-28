@@ -6,19 +6,15 @@ from canvas_sdk.clients.extend_ai.libraries import Client
 from canvas_sdk.clients.extend_ai.structures import RequestFailed
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import JSONResponse, Response
-from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from pdf_manip.constants.secrets import Secrets
 
 
-class PdfManip(SimpleAPI):
+class PdfManip(StaffSessionAuthMixin, SimpleAPI):
     """API handler for Extend AI PDF processing operations."""
 
     PREFIX = None
     USER_TYPE_STAFF = "Staff"
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate the API request. Always returns True (no authentication required)."""
-        return True
 
     def _extend_client(self) -> Client:
         """Create and return a configured Extend AI client."""
