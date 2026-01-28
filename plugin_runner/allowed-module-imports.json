@@ -334,6 +334,9 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim_comment": [
+    "AddClaimComment"
+  ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
     "Label",
