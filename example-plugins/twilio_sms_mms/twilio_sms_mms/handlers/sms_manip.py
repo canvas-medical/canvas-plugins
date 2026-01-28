@@ -11,13 +11,13 @@ from canvas_sdk.clients.twilio.structures import (
 )
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.simple_api import HTMLResponse, JSONResponse, Response
-from canvas_sdk.handlers.simple_api import Credentials, SimpleAPI, api
+from canvas_sdk.handlers.simple_api import SimpleAPI, StaffSessionAuthMixin, api
 from logger import log
 
 from ..constants.constants import Constants
 
 
-class SmsManip(SimpleAPI):
+class SmsManip(StaffSessionAuthMixin, SimpleAPI):
     """API handler for Twilio SMS/MMS operations.
 
     This class provides REST API endpoints for managing Twilio SMS/MMS functionality,
@@ -26,17 +26,6 @@ class SmsManip(SimpleAPI):
     """
 
     PREFIX = None
-
-    def authenticate(self, credentials: Credentials) -> bool:
-        """Authenticate API requests.
-
-        Args:
-            credentials: The credentials to authenticate.
-
-        Returns:
-            bool: Always returns True for simplicity. TODO: implement proper authentication.
-        """
-        return True
 
     def _twillio_client(self) -> SmsClient:
         """Create and configure a Twilio SMS client.
