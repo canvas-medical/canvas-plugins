@@ -1,8 +1,9 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
@@ -16,8 +17,18 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    command: str | None = None
-    context: dict | None = None
+    commands: list[Any] | None = None
+
+    @field_validator("commands", mode="before")
+    @classmethod
+    def check_subclass(cls, commands: list[Any] | None) -> list[Any] | None:
+        """Validates that all commands are subclasses of _BaseCommand."""
+        if commands is None:
+            return commands
+        for command in commands:
+            if not isinstance(command, _BaseCommand):
+                raise TypeError(f"'{type(command)}' must be subclass of _BaseCommand")
+        return commands
 
     @property
     def values(self) -> dict:
@@ -26,8 +37,9 @@ class Recommendation(BaseModel):
             "title": self.title,
             "button": self.button,
             "href": self.href,
-            "command": {"type": self.command} if self.command else {},
-            "context": self.context or {},
+            "commands": [command.recommendation_context() for command in self.commands]
+            if self.commands
+            else [],
         }
 
 
@@ -87,12 +99,14 @@ class ProtocolCard(_BaseEffect):
         title: str = "",
         button: str = "",
         href: str | None = None,
-        command: str | None = None,
-        context: dict | None = None,
+        commands: list[Any] | None = None,
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""
         recommendation = Recommendation(
-            title=title, button=button, href=href, command=command, context=context
+            title=title,
+            button=button,
+            href=href,
+            commands=commands,
         )
         self.recommendations.append(recommendation)
 
