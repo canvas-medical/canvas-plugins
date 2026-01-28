@@ -13,6 +13,7 @@ manifest_schema = {
             "properties": {
                 "commands": {"$ref": "#/$defs/commands"},
                 "protocols": {"$ref": "#/$defs/component"},
+                "handlers": {"$ref": "#/$defs/component"},
                 "content": {"$ref": "#/$defs/component"},
                 "effects": {"$ref": "#/$defs/component"},
                 "views": {"$ref": "#/$defs/component"},

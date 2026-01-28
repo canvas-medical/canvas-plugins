@@ -56,6 +56,7 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
+from .letter import Language, Letter
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -204,6 +205,8 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "Language",
+    "Letter",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",

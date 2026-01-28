@@ -109,12 +109,12 @@ def get_commands_in_note(
     ]
 
 
-def write_protocol_code(
+def write_handler_code(
     cli_runner: CliRunner,
     plugin_path: Path,
     commands: list[CommandCode],
 ) -> None:
-    """Test that the protocol code is written correctly."""
+    """Write handler code for testing command functionality."""
     imports = ", ".join(
         [cast(type[_BaseCommand], command.get("class")).__name__ for command in commands]
     )
@@ -123,19 +123,19 @@ def write_protocol_code(
 from canvas_sdk.commands.commands.allergy import Allergen, AllergenType
 from datetime import datetime, date
 from canvas_sdk.v1.data import Condition
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 """
 
-    protocol_classes = []
+    handler_classes = []
 
     for command in commands:
         command_cls = command["class"]
         data = command["data"]
         event_prefix = command_event_prefix(command_cls)
-        protocol_classes.append(f"""
+        handler_classes.append(f"""
 
 
-class Originate{command_cls.__name__}Protocol(BaseProtocol):
+class Originate{command_cls.__name__}Handler(BaseHandler):
     RESPONDS_TO = "{event_prefix}_COMMAND__POST_INSERTED_INTO_NOTE"
     def compute(self):
         is_ci = self.event.context.get("ci_originate")
@@ -150,7 +150,7 @@ class Originate{command_cls.__name__}Protocol(BaseProtocol):
             return [{command_cls.__name__}(note_uuid=note["uuid"], **{data}).originate()]
 
 
-class Edit{command_cls.__name__}Protocol(BaseProtocol):
+class Edit{command_cls.__name__}Handler(BaseHandler):
     RESPONDS_TO = "{event_prefix}_COMMAND__POST_INSERTED_INTO_NOTE"
     def compute(self):
         is_ci = self.event.context.get("ci_edit")
@@ -159,7 +159,7 @@ class Edit{command_cls.__name__}Protocol(BaseProtocol):
         return [{command_cls.__name__}(command_uuid=self.event.target.id, **{data}).edit()]
 
 
-class Commit{command_cls.__name__}Protocol(BaseProtocol):
+class Commit{command_cls.__name__}Handler(BaseHandler):
     RESPONDS_TO = "{event_prefix}_COMMAND__POST_INSERTED_INTO_NOTE"
     def compute(self):
         is_ci = self.event.context.get("ci_commit")
@@ -168,38 +168,36 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
         return [{command_cls.__name__}(command_uuid=self.event.target.id).commit()]
 """)
 
-    protocol_code = f"{imports}{''.join(protocol_classes)}"
+    handler_code = f"{imports}{''.join(handler_classes)}"
 
     with chdir(plugin_path.parent):
         cli_runner.invoke(app, "init", input=plugin_path.name)
 
     package_name = plugin_path.name.replace("-", "_")
 
-    with open(plugin_path / package_name / "protocols" / "my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    # Write handler code to the handlers directory (created by canvas init)
+    with open(plugin_path / package_name / "handlers" / "event_handlers.py", "w") as handler_file:
+        handler_file.write(handler_code)
 
-    protocols = []
+    handlers = []
 
     for command in commands:
         command_cls = command["class"]
         originate = {
-            "class": f"{plugin_path.name}.protocols.my_protocol:Originate{command_cls.__name__}Protocol",
-            "description": "A protocol that does xyz...",
-            "data_access": {"event": "", "read": [], "write": []},
+            "class": f"{package_name}.handlers.event_handlers:Originate{command_cls.__name__}Handler",
+            "description": f"Handler that originates {command_cls.__name__}",
         }
         edit = {
-            "class": f"{plugin_path.name}.protocols.my_protocol:Edit{command_cls.__name__}Protocol",
-            "description": "A protocol that does xyz...",
-            "data_access": {"event": "", "read": [], "write": []},
+            "class": f"{package_name}.handlers.event_handlers:Edit{command_cls.__name__}Handler",
+            "description": f"Handler that edits {command_cls.__name__}",
         }
         commit = {
-            "class": f"{plugin_path.name}.protocols.my_protocol:Commit{command_cls.__name__}Protocol",
-            "description": "A protocol that does xyz...",
-            "data_access": {"event": "", "read": [], "write": []},
+            "class": f"{package_name}.handlers.event_handlers:Commit{command_cls.__name__}Handler",
+            "description": f"Handler that commits {command_cls.__name__}",
         }
-        protocols.append(originate)
-        protocols.append(edit)
-        protocols.append(commit)
+        handlers.append(originate)
+        handlers.append(edit)
+        handlers.append(commit)
 
     manifest = {
         "sdk_version": "0.1.4",
@@ -207,7 +205,7 @@ class Commit{command_cls.__name__}Protocol(BaseProtocol):
         "name": plugin_path.name,
         "description": "Edit the description in CANVAS_MANIFEST.json",
         "components": {
-            "protocols": protocols,
+            "handlers": handlers,
             "commands": [],
             "content": [],
             "effects": [],
