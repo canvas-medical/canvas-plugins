@@ -130,7 +130,6 @@ manifest_schema = {
                             "portal_menu_item",
                             "provider_companion",
                             "full_chart",
-                            "note",
                         ],
                     },
                     "menu_position": {
@@ -140,7 +139,6 @@ manifest_schema = {
                     "menu_order": {"type": "integer"},
                     "show_in_panel": {"type": "boolean"},
                     "panel_priority": {"type": "integer"},
-                    "note_types": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["class", "icon", "scope", "name", "description"],
                 "additionalProperties": False,
