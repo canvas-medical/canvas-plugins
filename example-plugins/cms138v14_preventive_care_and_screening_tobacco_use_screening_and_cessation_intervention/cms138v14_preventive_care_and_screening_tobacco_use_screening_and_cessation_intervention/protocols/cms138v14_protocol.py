@@ -122,10 +122,9 @@ class PopulationResult:
         in_numerator: True if patient meets the rate's numerator criteria.
     """
 
-    def __init__(self) -> None:
-        self.in_initial_population: bool = False
-        self.in_denominator: bool = False
-        self.in_numerator: bool = False
+    in_initial_population: bool = False
+    in_denominator: bool = False
+    in_numerator: bool = False
 
 
 class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
@@ -296,7 +295,7 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
     def _in_initial_population(self, patient: Patient) -> bool:
         """Check if patient is in initial population for CMS138v14."""
-        if not getattr(patient, "birth_date", None):
+        if not patient.birth_date:
             return False
 
         age = patient.age_at(self.timeframe.start)

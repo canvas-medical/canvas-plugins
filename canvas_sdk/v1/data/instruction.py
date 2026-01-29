@@ -1,6 +1,5 @@
 from typing import cast
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from canvas_sdk.v1.data.base import (
@@ -39,20 +38,16 @@ class Instruction(AuditedModel, IdentifiableModel):
 
     patient = models.ForeignKey(
         "v1.Patient",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="instructions",
-        null=True,
     )
     note = models.ForeignKey(
         "v1.Note",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name="instructions",
-        null=True,
     )
 
     narrative = models.CharField(max_length=4000, default="", blank=True)
-
-    editors = ArrayField(models.IntegerField(), default=list, blank=True)
 
     def __str__(self) -> str:
         return f"Instruction {self.id} for patient {self.patient_id}"
@@ -66,8 +61,8 @@ class InstructionCoding(Coding):
 
     instruction = models.ForeignKey(
         Instruction,
-        on_delete=models.DO_NOTHING,
-        related_name="codings",
+        on_delete=models.CASCADE,
+        related_name="coding",
         null=True,
     )
 
