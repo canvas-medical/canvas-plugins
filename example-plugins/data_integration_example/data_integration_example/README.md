@@ -111,10 +111,10 @@ effect = AssignDocumentReviewer(
 Categorizes a document in the Data Integration queue into a specific document type.
 
 ```python
-from canvas_sdk.effects.categorize_document import (
-    CategorizeDocument,
-    DocumentType,
+from canvas_sdk.effects.data_integration import CategorizeDocument
+from canvas_sdk.effects.data_integration.types import (
     AnnotationItem,
+    DocumentType,
 )
 
 document_type: DocumentType = {
