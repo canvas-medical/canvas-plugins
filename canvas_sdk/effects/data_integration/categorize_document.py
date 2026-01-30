@@ -3,12 +3,13 @@ from typing import Any
 
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 from canvas_sdk.effects.data_integration.constants import VALID_REPORT_TYPES, VALID_TEMPLATE_TYPES
-from canvas_sdk.effects.data_integration.types import AnnotationItem, DocumentType
+from canvas_sdk.effects.data_integration.types import DocumentType
 
 
-class CategorizeDocument(_BaseEffect):
+class CategorizeDocument(_BaseDocumentEffect):
     """
     An Effect that categorizes a document in the Data Integration queue into a specific document type.
 
@@ -30,23 +31,20 @@ class CategorizeDocument(_BaseEffect):
         effect_type = EffectType.CATEGORIZE_DOCUMENT
         apply_required_fields = ("document_id", "document_type")
 
-    document_id: str | int | None = None
     document_type: DocumentType | dict[str, Any] | None = None
-    annotations: list[AnnotationItem] | None = None
-    source_protocol: str | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The effect's values to be sent in the payload."""
         result: dict[str, Any] = {
-            "document_id": str(self.document_id) if self.document_id is not None else None,
+            "document_id": self._serialize_document_id(),
             "document_type": self.document_type,
         }
 
         if self.annotations is not None:
             result["annotations"] = self.annotations
         if self.source_protocol is not None:
-            result["source_protocol"] = self.source_protocol
+            result["source_protocol"] = self._serialize_source_protocol()
 
         return result
 
@@ -133,8 +131,4 @@ class CategorizeDocument(_BaseEffect):
         return errors
 
 
-__exports__ = (
-    "AnnotationItem",
-    "DocumentType",
-    "CategorizeDocument",
-)
+__exports__ = ("CategorizeDocument",)

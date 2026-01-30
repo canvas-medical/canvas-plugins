@@ -502,7 +502,10 @@
     "ExternalEvent"
   ],
   "canvas_sdk.effects.data_integration": [
+    "AnnotationItem",
     "AssignDocumentReviewer",
+    "CategorizeDocument",
+    "DocumentType",
     "JunkDocument",
     "LinkDocumentToPatient",
     "PrefillDocumentFieldData",
@@ -510,12 +513,19 @@
     "Priority",
     "RemoveDocumentFromPatient",
     "ReviewMode",
-    "TemplateFields"
+    "TemplateFields",
+    "_BaseDocumentEffect"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
     "Priority",
     "ReviewMode"
+  ],
+  "canvas_sdk.effects.data_integration.base": [
+    "_BaseDocumentEffect"
+  ],
+  "canvas_sdk.effects.data_integration.categorize_document": [
+    "CategorizeDocument"
   ],
   "canvas_sdk.effects.data_integration.constants": [
     "VALID_REPORT_TYPES",

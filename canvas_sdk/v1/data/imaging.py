@@ -1,5 +1,5 @@
 import json
-from typing import Self, cast
+from typing import Self
 
 from django.db import models
 
@@ -135,16 +135,13 @@ class ImagingReportTemplateQuerySet(BaseQuerySet):
         return self.filter(custom=False)
 
 
-ImagingReportTemplateManager = models.Manager.from_queryset(ImagingReportTemplateQuerySet)
-
-
 class ImagingReportTemplate(IdentifiableModel):
     """Model to read ImagingReportTemplate data for LLM-powered imaging report parsing."""
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_imagingreporttemplate_001"
 
-    objects = cast(ImagingReportTemplateQuerySet, ImagingReportTemplateManager())
+    objects = models.Manager.from_queryset(ImagingReportTemplateQuerySet)()
 
     name = models.CharField(max_length=250)
     long_name = models.CharField(max_length=1000)

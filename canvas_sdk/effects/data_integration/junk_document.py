@@ -1,11 +1,10 @@
 from typing import Any
 
-from pydantic_core import InitErrorDetails
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
 
-
-class JunkDocument(_BaseEffect):
+class JunkDocument(_BaseDocumentEffect):
     """
     An Effect that marks a document in the Data Integration queue as junk (spam).
 
@@ -22,30 +21,12 @@ class JunkDocument(_BaseEffect):
         effect_type = EffectType.JUNK_DOCUMENT
         apply_required_fields = ("document_id",)
 
-    document_id: str | int | None = None
-
     @property
     def values(self) -> dict[str, Any]:
         """The effect's values to be sent in the payload."""
         return {
-            "document_id": str(self.document_id).strip() if self.document_id is not None else None,
+            "document_id": self._serialize_document_id(),
         }
-
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        """Validate the effect fields and return any error details."""
-        errors = super()._get_error_details(method)
-
-        # Validate document_id is non-empty if provided as string
-        if isinstance(self.document_id, str) and not self.document_id.strip():
-            errors.append(
-                self._create_error_detail(
-                    "value_error",
-                    "document_id must be a non-empty string",
-                    self.document_id,
-                )
-            )
-
-        return errors
 
 
 __exports__ = ("JunkDocument",)
