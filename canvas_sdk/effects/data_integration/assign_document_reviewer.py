@@ -1,10 +1,10 @@
 """Effect for assigning a document reviewer."""
 
-from enum import StrEnum
+from enum import Enum, StrEnum
 from typing import Any
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
-from canvas_sdk.effects.data_integration.types import AnnotationItem
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 
 
 class Priority(StrEnum):
@@ -21,7 +21,7 @@ class Priority(StrEnum):
     HIGH = "high"
 
 
-class ReviewMode(StrEnum):
+class ReviewMode(Enum):
     """Review mode for document review.
 
     Maps to short codes in database: RR, AR, RN.
@@ -32,12 +32,21 @@ class ReviewMode(StrEnum):
         REVIEW_NOT_REQUIRED: Document does not require review - maps to "RN"
     """
 
-    REVIEW_REQUIRED = "review_required"
-    ALREADY_REVIEWED = "already_reviewed"
-    REVIEW_NOT_REQUIRED = "review_not_required"
+    REVIEW_REQUIRED = ("review_required", "RR")
+    ALREADY_REVIEWED = ("already_reviewed", "AR")
+    REVIEW_NOT_REQUIRED = ("review_not_required", "RN")
+
+    def __init__(self, sdk_value: str, db_code: str):
+        self.sdk_value = sdk_value
+        self.db_code = db_code
+
+    @property
+    def value(self) -> str:
+        """SDK value for serialization."""
+        return self.sdk_value
 
 
-class AssignDocumentReviewer(_BaseEffect):
+class AssignDocumentReviewer(_BaseDocumentEffect):
     """
     An Effect that assigns a staff member or team as reviewer to a document
     in the Data Integration queue.
@@ -74,20 +83,10 @@ class AssignDocumentReviewer(_BaseEffect):
         effect_type = EffectType.ASSIGN_DOCUMENT_REVIEWER
         apply_required_fields = ("document_id",)
 
-    document_id: str | int | None = None
     reviewer_id: str | int | None = None
     team_id: str | int | None = None
     priority: Priority = Priority.NORMAL
     review_mode: ReviewMode = ReviewMode.REVIEW_REQUIRED
-    annotations: list[AnnotationItem] | None = None
-    source_protocol: str | None = None
-
-    # Mapping from SDK review_mode values to database short codes
-    _REVIEW_MODE_TO_DB: dict[str, str] = {
-        "review_required": "RR",
-        "already_reviewed": "AR",
-        "review_not_required": "RN",
-    }
 
     @property
     def values(self) -> dict[str, Any]:
@@ -101,9 +100,9 @@ class AssignDocumentReviewer(_BaseEffect):
         source_protocol is stripped of leading/trailing whitespace.
         """
         result: dict[str, Any] = {
-            "document_id": str(self.document_id).strip() if self.document_id is not None else None,
+            "document_id": self._serialize_document_id(),
             "priority": self.priority == Priority.HIGH,
-            "review_mode": self._REVIEW_MODE_TO_DB[self.review_mode.value],
+            "review_mode": self.review_mode.db_code,
         }
         if self.reviewer_id is not None:
             result["reviewer_id"] = str(self.reviewer_id).strip()
@@ -112,16 +111,8 @@ class AssignDocumentReviewer(_BaseEffect):
         if self.annotations is not None:
             result["annotations"] = self.annotations
         if self.source_protocol is not None:
-            result["source_protocol"] = self.source_protocol.strip()
+            result["source_protocol"] = self._serialize_source_protocol()
         return result
-
-    def _get_error_details(self, method: Any) -> list:
-        """Validate the effect fields and return any error details.
-
-        Note: Database existence validation (IntegrationTask, Staff, Team) is
-        handled by the home-app interpreter, not the SDK.
-        """
-        return super()._get_error_details(method)
 
 
 __exports__ = (

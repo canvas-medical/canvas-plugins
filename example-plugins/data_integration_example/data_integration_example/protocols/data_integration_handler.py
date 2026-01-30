@@ -1,23 +1,18 @@
-"""Protocol demonstrating all Data Integration effects."""
-
 from pydantic import ValidationError
 
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.categorize_document import (
-    AnnotationItem as CategorizeDocumentAnnotation,
-)
-from canvas_sdk.effects.categorize_document import (
-    CategorizeDocument,
-    DocumentType,
-)
 from canvas_sdk.effects.data_integration import (
     AssignDocumentReviewer,
+    CategorizeDocument,
     LinkDocumentToPatient,
     PrefillDocumentFields,
     Priority,
     ReviewMode,
 )
-from canvas_sdk.effects.data_integration.types import AnnotationItem
+from canvas_sdk.effects.data_integration.types import (
+    AnnotationItem,
+    DocumentType,
+)
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Patient, Staff, Team
@@ -375,9 +370,9 @@ class DataIntegrationHandler(BaseProtocol):
                 "template_type": lab_report_type.get("template_type"),
             }
 
-            annotations: list[CategorizeDocumentAnnotation] = [
-                CategorizeDocumentAnnotation(text="AI 90%", color="#00AA00"),
-                CategorizeDocumentAnnotation(text="Data integration", color="#2196F3"),
+            annotations: list[AnnotationItem] = [
+                AnnotationItem(text="AI 90%", color="#00AA00"),
+                AnnotationItem(text="Data integration", color="#2196F3"),
             ]
 
             effect = CategorizeDocument(
