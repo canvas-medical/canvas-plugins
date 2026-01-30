@@ -32,6 +32,3 @@ class AddClaimComment(_BaseEffect):
                 )
             )
         return errors
-
-
-__exports__ = ("AddClaimComment",)

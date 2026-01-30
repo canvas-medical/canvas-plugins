@@ -44,6 +44,3 @@ class MoveClaimToQueue(_BaseEffect):
                 )
             )
         return errors
-
-
-__exports__ = ("MoveClaimToQueue",)

@@ -1,16 +1,13 @@
-import json
 from uuid import UUID
-
-from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
-from canvas_sdk.effects.claim.claim_label import Label
-from canvas_sdk.v1.data import Claim as ClaimModel
-from canvas_sdk.v1.data import ClaimQueue
+from canvas_sdk.effects.claim.claim_comment import AddClaimComment
+from canvas_sdk.effects.claim.claim_label import AddClaimLabel, ColorEnum, Label, RemoveClaimLabel
+from canvas_sdk.effects.claim.claim_queue import MoveClaimToQueue
 
 
-class Claim(_BaseEffect):
+class ClaimEffect(_BaseEffect):
     """
     Effect for performing actions on a Claim.
 
@@ -33,11 +30,7 @@ class Claim(_BaseEffect):
         Returns:
             Effect: An effect that adds the comment to the claim.
         """
-        self._validate_before_effect("add_comment")
-        return Effect(
-            type=EffectType.ADD_CLAIM_COMMENT,
-            payload=json.dumps({"data": {"claim_id": str(self.claim_id), "comment": comment}}),
-        )
+        return AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
 
     def add_label(self, labels: list[str | Label]) -> Effect:
         """
@@ -49,17 +42,7 @@ class Claim(_BaseEffect):
         Returns:
             Effect: An effect that adds the labels to the claim.
         """
-        self._validate_before_effect("add_label")
-        label_data = {
-            "claim_id": str(self.claim_id),
-            "labels": [
-                label.to_dict() if isinstance(label, Label) else {"name": label} for label in labels
-            ],
-        }
-        return Effect(
-            type=EffectType.ADD_CLAIM_LABEL,
-            payload=json.dumps({"data": label_data}),
-        )
+        return AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
     def remove_label(self, labels: list[str]) -> Effect:
         """
@@ -71,11 +54,7 @@ class Claim(_BaseEffect):
         Returns:
             Effect: An effect that removes the labels from the claim.
         """
-        self._validate_before_effect("remove_label")
-        return Effect(
-            type=EffectType.REMOVE_CLAIM_LABEL,
-            payload=json.dumps({"data": {"claim_id": str(self.claim_id), "labels": list(labels)}}),
-        )
+        return RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
     def move_to_queue(self, queue: str) -> Effect:
         """
@@ -87,46 +66,11 @@ class Claim(_BaseEffect):
         Returns:
             Effect: An effect that moves the claim to the specified queue.
         """
-        self._queue = queue
-        self._validate_before_effect("move_to_queue")
-        return Effect(
-            type=EffectType.MOVE_CLAIM_TO_QUEUE,
-            payload=json.dumps({"data": {"claim_id": str(self.claim_id), "queue": queue}}),
-        )
-
-    def _get_error_details(self, method: str) -> list[InitErrorDetails]:
-        """
-        Validates the claim and returns a list of error details if validation fails.
-
-        Args:
-            method (str): The method being validated.
-
-        Returns:
-            list[InitErrorDetails]: A list of error details for validation failures.
-        """
-        errors = super()._get_error_details(method)
-
-        if not ClaimModel.objects.filter(id=self.claim_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Claim with id {self.claim_id} does not exist.",
-                    self.claim_id,
-                )
-            )
-
-        if method == "move_to_queue":
-            queue = getattr(self, "_queue", None)
-            if queue and not ClaimQueue.objects.filter(name=queue).exists():
-                errors.append(
-                    self._create_error_detail(
-                        "value",
-                        "Queue does not exist",
-                        queue,
-                    )
-                )
-
-        return errors
+        return MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
 
 
-__exports__ = ("Claim", "Label")
+__all__ = __exports__ = (
+    "ClaimEffect",
+    "Label",
+    "ColorEnum",
+)

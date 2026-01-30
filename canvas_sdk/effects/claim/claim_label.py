@@ -84,10 +84,3 @@ class RemoveClaimLabel(_ClaimLabelBase):
     def values(self) -> dict[str, Any]:
         """The values for removing a claim label."""
         return {"claim_id": str(self.claim_id), "labels": list(self.labels)}
-
-
-__exports__ = (
-    "Label",
-    "AddClaimLabel",
-    "RemoveClaimLabel",
-)

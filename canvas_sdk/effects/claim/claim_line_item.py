@@ -60,6 +60,3 @@ class UpdateClaimLineItem(_BaseEffect):
                     )
                 )
         return errors
-
-
-__exports__ = ("UpdateClaimLineItem",)
