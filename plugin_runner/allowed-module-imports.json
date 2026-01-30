@@ -334,11 +334,39 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim": [
+    "AddClaimComment",
+    "AddClaimLabel",
+    "Claim",
+    "Label",
+    "MoveClaimToQueue",
+    "RemoveClaimLabel",
+    "UpdateClaimLineItem"
+  ],
+  "canvas_sdk.effects.claim.claim": [
+    "Claim",
+    "Label"
+  ],
+  "canvas_sdk.effects.claim.claim_comment": [
+    "AddClaimComment"
+  ],
+  "canvas_sdk.effects.claim.claim_label": [
+    "AddClaimLabel",
+    "Label",
+    "RemoveClaimLabel"
+  ],
+  "canvas_sdk.effects.claim.claim_line_item": [
+    "UpdateClaimLineItem"
+  ],
+  "canvas_sdk.effects.claim.claim_queue": [
+    "MoveClaimToQueue"
+  ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
+    "ColorEnum",
     "Label",
     "RemoveClaimLabel"
   ],
