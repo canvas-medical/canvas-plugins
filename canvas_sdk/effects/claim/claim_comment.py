@@ -7,7 +7,7 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim
 
 
-class AddClaimComment(_BaseEffect):
+class _AddClaimComment(_BaseEffect):
     """Effect to add a comment to a Claim."""
 
     class Meta:
@@ -32,3 +32,6 @@ class AddClaimComment(_BaseEffect):
                 )
             )
         return errors
+
+
+__exports__ = ()

@@ -2,9 +2,9 @@ from uuid import UUID
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
-from canvas_sdk.effects.claim.claim_comment import AddClaimComment
-from canvas_sdk.effects.claim.claim_label import AddClaimLabel, ColorEnum, Label, RemoveClaimLabel
-from canvas_sdk.effects.claim.claim_queue import MoveClaimToQueue
+from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
+from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
+from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
 
 
 class ClaimEffect(_BaseEffect):
@@ -30,7 +30,7 @@ class ClaimEffect(_BaseEffect):
         Returns:
             Effect: An effect that adds the comment to the claim.
         """
-        return AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
+        return _AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
 
     def add_label(self, labels: list[str | Label]) -> Effect:
         """
@@ -42,7 +42,7 @@ class ClaimEffect(_BaseEffect):
         Returns:
             Effect: An effect that adds the labels to the claim.
         """
-        return AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
+        return _AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
     def remove_label(self, labels: list[str]) -> Effect:
         """
@@ -54,7 +54,7 @@ class ClaimEffect(_BaseEffect):
         Returns:
             Effect: An effect that removes the labels from the claim.
         """
-        return RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply()
+        return _RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
     def move_to_queue(self, queue: str) -> Effect:
         """
@@ -66,7 +66,7 @@ class ClaimEffect(_BaseEffect):
         Returns:
             Effect: An effect that moves the claim to the specified queue.
         """
-        return MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
+        return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
 
 
 __all__ = __exports__ = (

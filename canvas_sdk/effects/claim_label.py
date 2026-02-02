@@ -2,9 +2,7 @@ import importlib.metadata
 
 import deprecation
 
-from canvas_sdk.effects.claim.claim_label import AddClaimLabel as _AddClaimLabel
-from canvas_sdk.effects.claim.claim_label import Label
-from canvas_sdk.effects.claim.claim_label import RemoveClaimLabel as _RemoveClaimLabel
+from canvas_sdk.effects.claim.claim_label import Label, _AddClaimLabel, _RemoveClaimLabel
 from canvas_sdk.v1.data.common import ColorEnum
 
 version = importlib.metadata.version("canvas")

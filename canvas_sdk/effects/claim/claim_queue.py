@@ -8,7 +8,7 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim, ClaimQueue
 
 
-class MoveClaimToQueue(_BaseEffect):
+class _MoveClaimToQueue(_BaseEffect):
     """
     An Effect that moves a Claim to a Queue.
     """
@@ -44,3 +44,6 @@ class MoveClaimToQueue(_BaseEffect):
                 )
             )
         return errors
+
+
+__exports__ = ()

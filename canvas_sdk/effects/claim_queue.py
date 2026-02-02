@@ -2,7 +2,7 @@ import importlib.metadata
 
 import deprecation
 
-from canvas_sdk.effects.claim.claim_queue import MoveClaimToQueue as _MoveClaimToQueue
+from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
 
 version = importlib.metadata.version("canvas")
 

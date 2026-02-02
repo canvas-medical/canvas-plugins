@@ -54,7 +54,7 @@ class _ClaimLabelBase(_BaseEffect):
         return errors
 
 
-class AddClaimLabel(_ClaimLabelBase):
+class _AddClaimLabel(_ClaimLabelBase):
     """Effect to add a label to a Claim."""
 
     class Meta:
@@ -72,7 +72,7 @@ class AddClaimLabel(_ClaimLabelBase):
         }
 
 
-class RemoveClaimLabel(_ClaimLabelBase):
+class _RemoveClaimLabel(_ClaimLabelBase):
     """Effect to remove a label from a Claim."""
 
     class Meta:
@@ -84,3 +84,6 @@ class RemoveClaimLabel(_ClaimLabelBase):
     def values(self) -> dict[str, Any]:
         """The values for removing a claim label."""
         return {"claim_id": str(self.claim_id), "labels": list(self.labels)}
+
+
+__exports__ = ()

@@ -2,7 +2,7 @@ import importlib.metadata
 
 import deprecation
 
-from canvas_sdk.effects.claim.claim_comment import AddClaimComment as _AddClaimComment
+from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 
 version = importlib.metadata.version("canvas")
 
