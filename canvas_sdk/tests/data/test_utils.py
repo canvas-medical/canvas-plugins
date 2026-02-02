@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 
 from canvas_sdk.v1.data.utils import generate_mrn, presigned_url, quantize
 
@@ -95,13 +96,12 @@ def test_raises_runtime_error_after_max_attempts(mock_patient: MagicMock) -> Non
     assert mock_patient.objects.filter.call_count == 100
 
 
-@patch("canvas_sdk.v1.data.utils.settings")
-def test_presigned_url_generates_valid_url(mock_settings: MagicMock) -> None:
+def test_presigned_url_generates_valid_url(settings: SettingsWrapper) -> None:
     """Test that presigned_url generates a valid URL with expected components."""
-    mock_settings.AWS_ACCESS_KEY_ID = "test-access-key"
-    mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
-    mock_settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
-    mock_settings.AWS_REGION = "us-west-2"
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
 
     url = presigned_url("path/to/file.pdf")
 
@@ -115,26 +115,24 @@ def test_presigned_url_generates_valid_url(mock_settings: MagicMock) -> None:
     assert "X-Amz-Signature=" in url
 
 
-@patch("canvas_sdk.v1.data.utils.settings")
-def test_presigned_url_with_custom_expiry(mock_settings: MagicMock) -> None:
+def test_presigned_url_with_custom_expiry(settings: SettingsWrapper) -> None:
     """Test that presigned_url respects custom expiry time."""
-    mock_settings.AWS_ACCESS_KEY_ID = "test-access-key"
-    mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
-    mock_settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
-    mock_settings.AWS_REGION = "us-west-2"
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
 
     url = presigned_url("path/to/file.pdf", expires_in=7200)
 
     assert "X-Amz-Expires=7200" in url
 
 
-@patch("canvas_sdk.v1.data.utils.settings")
-def test_presigned_url_removes_bucket_prefix(mock_settings: MagicMock) -> None:
+def test_presigned_url_removes_bucket_prefix(settings: SettingsWrapper) -> None:
     """Test that presigned_url removes bucket prefix from key."""
-    mock_settings.AWS_ACCESS_KEY_ID = "test-access-key"
-    mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
-    mock_settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
-    mock_settings.AWS_REGION = "us-west-2"
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
 
     url = presigned_url("test-bucket/path/to/file.pdf")
 
@@ -143,25 +141,23 @@ def test_presigned_url_removes_bucket_prefix(mock_settings: MagicMock) -> None:
     assert "/test-bucket/path/to/file.pdf?" not in url
 
 
-@patch("canvas_sdk.v1.data.utils.settings")
-def test_presigned_url_raises_error_without_credentials(mock_settings: MagicMock) -> None:
+def test_presigned_url_raises_error_without_credentials(settings: SettingsWrapper) -> None:
     """Test that presigned_url raises ValueError when AWS credentials are missing."""
-    mock_settings.AWS_ACCESS_KEY_ID = ""
-    mock_settings.AWS_SECRET_ACCESS_KEY = ""
-    mock_settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
-    mock_settings.AWS_REGION = "us-west-2"
+    settings.AWS_ACCESS_KEY_ID = ""
+    settings.AWS_SECRET_ACCESS_KEY = ""
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
 
     with pytest.raises(ValueError, match="AWS credentials not configured"):
         presigned_url("path/to/file.pdf")
 
 
-@patch("canvas_sdk.v1.data.utils.settings")
-def test_presigned_url_with_custom_bucket_and_region(mock_settings: MagicMock) -> None:
+def test_presigned_url_with_custom_bucket_and_region(settings: SettingsWrapper) -> None:
     """Test that presigned_url uses custom bucket and region when provided."""
-    mock_settings.AWS_ACCESS_KEY_ID = "test-access-key"
-    mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
-    mock_settings.MEDIA_S3_BUCKET_NAME = "default-bucket"
-    mock_settings.AWS_REGION = "us-west-2"
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "default-bucket"
+    settings.AWS_REGION = "us-west-2"
 
     url = presigned_url("path/to/file.pdf", bucket="custom-bucket", region="eu-west-1")
 
