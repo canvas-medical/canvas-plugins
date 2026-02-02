@@ -2,7 +2,7 @@ import importlib.metadata
 
 import deprecation
 
-from canvas_sdk.effects.claim.claim_payment import _PostClaimPayment
+from canvas_sdk.effects.claim.payment.claim_payment import _PostClaimPayment
 
 version = importlib.metadata.version("canvas")
 

@@ -9,12 +9,13 @@ from django.db.models import QuerySet
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-
-# isort: off
-# Import from payment.base first to avoid circular import issues
-from canvas_sdk.effects.payment.base import LineItemTransaction, PaymentMethod
-from canvas_sdk.effects.claim.claim import ClaimEffect, ColorEnum, Label
-# isort: on
+from canvas_sdk.effects.claim import (
+    ClaimEffect,
+    ColorEnum,
+    Label,
+    LineItemTransaction,
+    PaymentMethod,
+)
 
 
 @pytest.fixture
@@ -25,9 +26,9 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.claim.claim_label.Claim") as mock_claim_label,
         patch("canvas_sdk.effects.claim.claim_queue.Claim") as mock_claim_queue,
         patch("canvas_sdk.effects.claim.claim_queue.ClaimQueue") as mock_queue,
-        patch("canvas_sdk.effects.payment.base.Claim.objects") as mock_payment_claim,
-        patch("canvas_sdk.effects.payment.base.ClaimLineItem.objects") as mock_cli,
-        patch("canvas_sdk.effects.payment.base.ClaimQueue.objects") as mock_payment_queue,
+        patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
+        patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli,
+        patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
     ):
         # Setup default behaviors - objects exist
         mock_claim_comment.objects.filter.return_value.exists.return_value = True

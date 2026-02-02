@@ -6,9 +6,13 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
-from canvas_sdk.effects.claim.claim_payment import _PostClaimPayment
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
-from canvas_sdk.effects.payment.base import ClaimAllocation, LineItemTransaction, PaymentMethod
+from canvas_sdk.effects.claim.payment.base import (
+    ClaimAllocation,
+    LineItemTransaction,
+    PaymentMethod,
+)
+from canvas_sdk.effects.claim.payment.claim_payment import _PostClaimPayment
 
 
 class ClaimEffect(_BaseEffect):

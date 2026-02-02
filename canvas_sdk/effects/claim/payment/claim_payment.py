@@ -4,7 +4,7 @@ from typing import Any
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType
-from canvas_sdk.effects.payment.base import (
+from canvas_sdk.effects.claim.payment.base import (
     ClaimAllocation,
     PostPaymentBase,
 )
