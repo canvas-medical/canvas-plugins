@@ -337,12 +337,16 @@
   "canvas_sdk.effects.claim": [
     "ClaimEffect",
     "ColorEnum",
-    "Label"
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
   ],
   "canvas_sdk.effects.claim.claim": [
     "ClaimEffect",
     "ColorEnum",
-    "Label"
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
   ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
