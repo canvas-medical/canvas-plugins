@@ -1,6 +1,6 @@
 import factory
 
-from canvas_sdk.v1.data import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from canvas_sdk.v1.data import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 from canvas_sdk.v1.data.task import TaskLabelModule, TaskStatus, TaskType
 
@@ -64,3 +64,22 @@ class TaskTaskLabelFactory(factory.django.DjangoModelFactory[TaskTaskLabel]):
 
     task = factory.SubFactory(TaskFactory)
     task_label = factory.SubFactory(TaskLabelFactory)
+
+
+class NoteTaskFactory(factory.django.DjangoModelFactory[NoteTask]):
+    """Factory for creating NoteTask."""
+
+    class Meta:
+        model = NoteTask
+
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
+    task = factory.SubFactory(TaskFactory)
+    patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
+    original_title = factory.Faker("sentence", nb_words=4)
+    original_assignee = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+    original_team = None
+    original_role = None
+    original_due = factory.Faker("date_time")
+    internal_comment = factory.Faker("sentence", nb_words=6)
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    committer = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")

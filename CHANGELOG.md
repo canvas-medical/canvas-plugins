@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v0.94.0 (2026-01-30)
+
+### Features
+
+- Add NoteTask to data module ([#1270](https://github.com/canvas-medical/canvas-plugins/pull/1270),
+  [`09a831c`](https://github.com/canvas-medical/canvas-plugins/commit/09a831ce6155568417b481f0e315eda874babb06))
+
+Co-authored-by: Reagan Elm <reagan.elm@gmail.com>
+
+Co-authored-by: Nuno Silva <nuno.silva@canvasmedical.com>
+
+
 ## v0.93.0 (2026-01-28)
 
 ### Bug Fixes
