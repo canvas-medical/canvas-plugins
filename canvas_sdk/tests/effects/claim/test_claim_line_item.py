@@ -12,9 +12,7 @@ from canvas_sdk.effects.claim_line_item import UpdateClaimLineItem
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
-        patch(
-            "canvas_sdk.effects.claim.claim_line_item.ClaimLineItem.objects"
-        ) as mock_claim_line_item,
+        patch("canvas_sdk.effects.claim_line_item.ClaimLineItem.objects") as mock_claim_line_item,
     ):
         # Setup default behaviors - objects exist
         mock_claim_line_item.filter.return_value.first.return_value = True
