@@ -28,21 +28,9 @@ class _ClaimLabelBase(_BaseEffect):
     claim_id: UUID | str
     labels: conlist(str | Label, min_length=1)  # type: ignore
 
-    def _check_if_claim_exists(self) -> list[InitErrorDetails]:
-        if Claim.objects.filter(id=self.claim_id).exists():
-            return []
-        return [
-            (
-                self._create_error_detail(
-                    "value",
-                    f"Claim with id {self.claim_id} does not exist.",
-                    self.claim_id,
-                )
-            )
-        ]
-
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
+        print("HI I'M IN HERE")
         if not Claim.objects.filter(id=self.claim_id).exists():
             errors.append(
                 self._create_error_detail(
@@ -51,6 +39,7 @@ class _ClaimLabelBase(_BaseEffect):
                     self.claim_id,
                 )
             )
+        print("ERRORS:", errors)
         return errors
 
 
