@@ -100,10 +100,10 @@ def test_claim_effect_add_comment_requires_existing_claim(
     assert "Claim with id invalid-claim-id does not exist." in err_msg
 
 
-def test_claim_effect_add_label_with_strings(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that add_label returns the correct effect with string labels."""
+def test_claim_effect_add_labels_with_strings(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_labels returns the correct effect with string labels."""
     claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.add_label(["urgent", "routine"])
+    effect = claim.add_labels(["urgent", "routine"])
 
     assert effect.type == EffectType.ADD_CLAIM_LABEL
     assert (
@@ -112,10 +112,10 @@ def test_claim_effect_add_label_with_strings(mock_db_queries: dict[str, MagicMoc
     )
 
 
-def test_claim_effect_add_label_with_label_objects(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that add_label returns the correct effect with Label objects."""
+def test_claim_effect_add_labels_with_label_objects(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_labels returns the correct effect with Label objects."""
     claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.add_label([Label(color=ColorEnum.PINK, name="test")])
+    effect = claim.add_labels([Label(color=ColorEnum.PINK, name="test")])
 
     assert effect.type == EffectType.ADD_CLAIM_LABEL
     assert (
@@ -124,10 +124,10 @@ def test_claim_effect_add_label_with_label_objects(mock_db_queries: dict[str, Ma
     )
 
 
-def test_claim_effect_add_label_with_mixed_labels(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that add_label returns the correct effect with mixed string and Label objects."""
+def test_claim_effect_add_labels_with_mixed_labels(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_labels returns the correct effect with mixed string and Label objects."""
     claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.add_label(["urgent", Label(color=ColorEnum.PINK, name="test")])
+    effect = claim.add_labels(["urgent", Label(color=ColorEnum.PINK, name="test")])
 
     assert effect.type == EffectType.ADD_CLAIM_LABEL
     assert (
@@ -136,38 +136,38 @@ def test_claim_effect_add_label_with_mixed_labels(mock_db_queries: dict[str, Mag
     )
 
 
-def test_claim_effect_remove_label(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that remove_label returns the correct effect."""
+def test_claim_effect_remove_labels(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that remove_labels returns the correct effect."""
     claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.remove_label(["urgent", "routine"])
+    effect = claim.remove_labels(["urgent", "routine"])
 
     assert effect.type == EffectType.REMOVE_CLAIM_LABEL
     assert effect.payload == '{"data": {"claim_id": "claim-id", "labels": ["urgent", "routine"]}}'
 
 
-def test_claim_effect_add_label_requires_existing_claim(
+def test_claim_effect_add_labels_requires_existing_claim(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
-    """Test that add_label validates the claim exists."""
+    """Test that add_labels validates the claim exists."""
     mock_db_queries["claim_label"].objects.filter.return_value.exists.return_value = False
     claim = ClaimEffect(claim_id="invalid-claim-id")
 
     with pytest.raises(ValidationError) as e:
-        claim.add_label(["urgent"])
+        claim.add_labels(["urgent"])
 
     err_msg = repr(e.value)
     assert "Claim with id invalid-claim-id does not exist." in err_msg
 
 
-def test_claim_effect_remove_label_requires_existing_claim(
+def test_claim_effect_remove_labels_requires_existing_claim(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
-    """Test that remove_label validates the claim exists."""
+    """Test that remove_labels validates the claim exists."""
     mock_db_queries["claim_label"].objects.filter.return_value.exists.return_value = False
     claim = ClaimEffect(claim_id="invalid-claim-id")
 
     with pytest.raises(ValidationError) as e:
-        claim.remove_label(["urgent"])
+        claim.remove_labels(["urgent"])
 
     err_msg = repr(e.value)
     assert "Claim with id invalid-claim-id does not exist." in err_msg

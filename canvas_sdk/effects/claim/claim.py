@@ -40,7 +40,7 @@ class ClaimEffect(_BaseEffect):
         """
         return _AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
 
-    def add_label(self, labels: list[str | Label]) -> Effect:
+    def add_labels(self, labels: list[str | Label]) -> Effect:
         """
         Adds one or more labels to the claim.
 
@@ -52,7 +52,7 @@ class ClaimEffect(_BaseEffect):
         """
         return _AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
 
-    def remove_label(self, labels: list[str]) -> Effect:
+    def remove_labels(self, labels: list[str]) -> Effect:
         """
         Removes one or more labels from the claim.
 

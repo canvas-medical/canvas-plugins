@@ -12,10 +12,10 @@ version = importlib.metadata.version("canvas")
     deprecated_in="0.95.0",
     removed_in="1.0.0",
     current_version=version,
-    details="Use canvas_sdk.effects.claim.Claim::add_label instead",
+    details="Instead, use canvas_sdk.effects.claim.Claim::add_labels",
 )
 class AddClaimLabel(_AddClaimLabel):
-    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::add_label."""
+    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::add_labels."""
 
     pass
 
@@ -24,10 +24,10 @@ class AddClaimLabel(_AddClaimLabel):
     deprecated_in="0.95.0",
     removed_in="1.0.0",
     current_version=version,
-    details="Use canvas_sdk.effects.claim.Claim::remove_label instead",
+    details="Instead, use canvas_sdk.effects.claim.Claim::remove_labels",
 )
 class RemoveClaimLabel(_RemoveClaimLabel):
-    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::remove_label."""
+    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::remove_labels."""
 
     pass
 
