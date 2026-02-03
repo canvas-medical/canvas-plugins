@@ -122,7 +122,7 @@ class Broadcast(_BaseEffect):
 
     def is_valid_channel_name(self) -> bool:
         """Check if the channel name is valid."""
-        return re.fullmatch(r"\w+", self.channel) is not None
+        return re.fullmatch(r"[\w-]+", self.channel) is not None
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
@@ -131,7 +131,7 @@ class Broadcast(_BaseEffect):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Invalid channel name. Channel name must be alphanumeric and can contain underscores.",
+                    "Invalid channel name. Channel name must be alphanumeric and can contain underscores or hyphens.",
                     self.channel,
                 )
             )
