@@ -10,6 +10,7 @@ from .claim import (
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
+from .condition import ConditionCodingFactory, ConditionFactory
 from .coverage import CoverageFactory
 from .encounter import EncounterFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
@@ -28,6 +29,7 @@ from .lab import (
     LabValueFactory,
 )
 from .letter import LanguageFactory, LetterFactory
+from .medication import MedicationCodingFactory, MedicationFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
@@ -84,6 +86,8 @@ __all__ = (
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimFactory",
+    "ConditionCodingFactory",
+    "ConditionFactory",
     "ClaimLabelFactory",
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
@@ -111,9 +115,10 @@ __all__ = (
     "LabValueFactory",
     "LanguageFactory",
     "LetterFactory",
+    "MedicationCodingFactory",
+    "MedicationFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
-    "MedicationHistoryMedicationFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
     "NoteStateChangeEventFactory",

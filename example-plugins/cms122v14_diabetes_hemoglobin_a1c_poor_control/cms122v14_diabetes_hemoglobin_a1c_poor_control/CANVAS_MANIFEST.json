@@ -8,22 +8,6 @@
       {
         "class": "cms122v14_diabetes_hemoglobin_a1c_poor_control.protocols.cms122v14_protocol:CMS122v14DiabetesGlycemicStatusPoorControl",
         "description": "Percentage of patients 18-75 years of age with diabetes who had a glycemic status assessment (HbA1c or GMI) > 9.0% during the measurement period",
-        "data_access": {
-          "read": [
-            "patients",
-            "conditions",
-            "billing_line_items",
-            "lab_reports",
-            "medications",
-            "coverages",
-            "protocol_overrides",
-            "encounters",
-            "observations",
-            "claim_line_items",
-            "devices"
-          ],
-          "write": []
-        },
         "meta": {
           "title": "Diabetes: Glycemic Status Assessment Greater Than 9%",
           "version": "2026-v14.0.000",

@@ -863,6 +863,7 @@ class CMS122v14DiabetesGlycemicStatusPoorControl(ClinicalQualityMeasure):
                 original_date__lte=self.timeframe.end.datetime,
                 junked=False,
             )
+            .prefetch_related("values", "values__codings")
             .distinct()
             .order_by("-original_date")
         )
@@ -967,20 +968,17 @@ class CMS122v14DiabetesGlycemicStatusPoorControl(ClinicalQualityMeasure):
 
     def _get_diabetes_diagnosis_codes(self, patient: Patient) -> list[str]:
         """Extract ICD-10 codes from patient's diabetes diagnoses."""
-        diagnosis_codes = []
-
         diabetes_conditions = (
             Condition.objects.for_patient(patient.id)
             .find(Diabetes)
             .active()
             .filter(entered_in_error_id__isnull=True)
+            .prefetch_related("codings")
         )
 
-        for condition in diabetes_conditions:
-            for coding in condition.codings.all():
-                diagnosis_codes.append(coding.code)
-
-        return diagnosis_codes
+        return [
+            coding.code for condition in diabetes_conditions for coding in condition.codings.all()
+        ]
 
     def _create_due_card(self, patient: Patient) -> Effect:
         """Create a DUE protocol card with recommendations."""
