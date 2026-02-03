@@ -11,19 +11,12 @@ from decimal import Decimal
 from django.conf import settings
 
 
-def presigned_url(
-    s3_key: str,
-    bucket: str | None = None,
-    region: str | None = None,
-    expires_in: int = 3600,
-) -> str:
+def presigned_url(s3_key: str, expires_in: int = 3600) -> str:
     """
     Generate a presigned URL for an S3 object.
 
     Args:
         s3_key: The S3 object key (path within the bucket).
-        bucket: The S3 bucket name. Defaults to settings.MEDIA_S3_BUCKET_NAME.
-        region: The AWS region. Defaults to settings.AWS_REGION.
         expires_in: URL expiration time in seconds. Defaults to 3600 (1 hour).
 
     Returns:
@@ -31,8 +24,8 @@ def presigned_url(
     """
     access_key_id = settings.AWS_ACCESS_KEY_ID
     secret_access_key = settings.AWS_SECRET_ACCESS_KEY
-    bucket = bucket or settings.MEDIA_S3_BUCKET_NAME
-    region = region or settings.AWS_REGION
+    bucket = settings.MEDIA_S3_BUCKET_NAME
+    region = settings.AWS_REGION
 
     if not access_key_id or not secret_access_key:
         raise ValueError("AWS credentials not configured")
