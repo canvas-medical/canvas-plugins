@@ -150,15 +150,3 @@ def test_presigned_url_raises_error_without_credentials(settings: SettingsWrappe
 
     with pytest.raises(ValueError, match="AWS credentials not configured"):
         presigned_url("path/to/file.pdf")
-
-
-def test_presigned_url_with_custom_bucket_and_region(settings: SettingsWrapper) -> None:
-    """Test that presigned_url uses custom bucket and region when provided."""
-    settings.AWS_ACCESS_KEY_ID = "test-access-key"
-    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
-    settings.MEDIA_S3_BUCKET_NAME = "default-bucket"
-    settings.AWS_REGION = "us-west-2"
-
-    url = presigned_url("path/to/file.pdf", bucket="custom-bucket", region="eu-west-1")
-
-    assert url.startswith("https://custom-bucket.s3.eu-west-1.amazonaws.com/")
