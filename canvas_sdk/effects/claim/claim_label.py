@@ -30,7 +30,6 @@ class _ClaimLabelBase(_BaseEffect):
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
-        print("HI I'M IN HERE")
         if not Claim.objects.filter(id=self.claim_id).exists():
             errors.append(
                 self._create_error_detail(
@@ -39,7 +38,6 @@ class _ClaimLabelBase(_BaseEffect):
                     self.claim_id,
                 )
             )
-        print("ERRORS:", errors)
         return errors
 
 

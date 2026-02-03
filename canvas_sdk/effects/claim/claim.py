@@ -2,8 +2,8 @@ from datetime import date
 from typing import Literal
 from uuid import UUID
 
-from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_sdk.base import Model
+from canvas_sdk.effects import Effect
 from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
@@ -15,16 +15,13 @@ from canvas_sdk.effects.claim.payment.base import (
 from canvas_sdk.effects.claim.payment.claim_payment import _PostClaimPayment
 
 
-class ClaimEffect(_BaseEffect):
+class ClaimEffect(Model):
     """
     Effect for performing actions on a Claim.
 
     Attributes:
         claim_id (UUID | str): The unique identifier for the claim instance.
     """
-
-    class Meta:
-        effect_type = EffectType.UNKNOWN_EFFECT
 
     claim_id: UUID | str
 
