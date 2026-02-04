@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Extract</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 2px auto;
+        padding: 2px;
+        display: flex;
+        flex-direction: column;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 2px;
+        padding: 2px;
+      }
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #ccc;
+      }
+      .tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+      }
+      .tab.active {
+        background-color: white;
+        border-bottom: 2px solid white;
+        margin-bottom: -2px;
+        font-weight: bold;
+      }
+      .tab-content {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+      }
+      .tab-content.active {
+        display: flex;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .files-list {
+        width: 100%;
+        height: 300px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      #deleteBtn {
+        margin-left: auto;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      select, input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      #processorId {
+        font-size: 14px;
+      }
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        resize: vertical;
+      }
+      button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      button .material-icons {
+        font-size: 18px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      #deleteBtn {
+        background-color: #f44336;
+      }
+      #deleteBtn:hover {
+        background-color: #da190b;
+      }
+      #selectAllBtn, #invertBtn, #refreshBtn {
+        background-color: #2196F3;
+      }
+      #selectAllBtn:hover, #invertBtn:hover, #refreshBtn:hover {
+        background-color: #0b7dda;
+      }
+      .status-section {
+        margin-top: 30px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .submit-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #refreshExtractionBtn {
+        background-color: #2196F3;
+        margin-right: auto;
+      }
+      #refreshExtractionBtn:hover {
+        background-color: #0b7dda;
+      }
+      #viewProcessorBtn {
+        background-color: #2196F3;
+      }
+      #viewProcessorBtn:hover {
+        background-color: #0b7dda;
+      }
+      #submitBtn {
+        margin-left: auto;
+      }
+      #statusText {
+        font-size: 12px;
+        font-weight: bold;
+      }
+      #resultText {
+        background-color: #f5f5f5;
+        flex: 1;
+        min-height: 150px;
+        margin-bottom: 60px;
+      }
+      .error {
+        color: red;
+      }
+      .processing {
+        color: #ff9800;
+      }
+      .success {
+        color: #4CAF50;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PDF Extract</h1>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('extraction')">Extraction</div>
+      <div class="tab" onclick="switchTab('files')">Files</div>
+    </div>
+
+    <div id="extraction" class="tab-content active">
+      <form id="pdfForm">
+        <div class="form-group">
+          <label for="fileAwsS3Url">File AWS S3 URL:</label>
+          <input type="text" id="fileAwsS3Url" name="fileAwsS3Url" placeholder="Enter AWS S3 URL" required>
+        </div>
+
+        <div class="form-group">
+          <select id="processorId" name="processorId" required>
+            <option value="">-- Select a processor --</option>
+          </select>
+        </div>
+
+        <div class="submit-row">
+          <button type="button" id="refreshExtractionBtn" title="Refresh"><span class="material-icons">refresh</span></button>
+          <button type="button" id="viewProcessorBtn" title="View Processor"><span class="material-icons">article</span></button>
+          <button type="submit" id="submitBtn" title="Submit"><span class="material-icons">play_circle</span></button>
+        </div>
+      </form>
+
+      <div id="statusText"></div>
+
+      <div class="status-section">
+        <textarea id="resultText" name="resultText" rows="15" readonly></textarea>
+      </div>
+    </div>
+
+    <div id="files" class="tab-content">
+      <div class="form-group">
+        <select id="filesList" class="files-list" multiple>
+        </select>
+      </div>
+
+      <div class="button-group">
+        <button id="refreshBtn" title="Refresh"><span class="material-icons">refresh</span></button>
+        <button id="selectAllBtn" title="All"><span class="material-icons">select_all</span></button>
+        <button id="invertBtn" title="Invert"><span class="material-icons">deselect</span></button>
+        <button id="deleteBtn" title="Delete"><span class="material-icons">delete</span></button>
+      </div>
+    </div>
+
+    <script>
+      const processorsURL = "{{processorsURL | safe}}";
+      const executeURL = "{{executeURL | safe}}";
+      const statusURL = "{{statusURL | safe}}";
+      const resultURL = "{{resultURL | safe}}";
+      const storedFilesURL = "{{storedFilesURL | safe}}";
+      const deleteFilesURL = "{{deleteFilesURL | safe}}";
+
+        // Switch between tabs
+      function switchTab(tabName) {
+            // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+
+            // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+
+            // Show selected tab content
+        document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked tab
+        event.target.classList.add('active');
+      }
+
+        // Load processors into combobox
+      async function loadProcessors() {
+        try {
+          const response = await fetch(processorsURL);
+          if (!response.ok) {
+            throw new Error(`Failed to load processors: ${response.status}`);
+          }
+          const processors = await response.json();
+          const processorSelect = document.getElementById('processorId');
+
+          processors.forEach(processor => {
+            const option = document.createElement('option');
+            option.value = processor.id;
+            option.textContent = processor.name;
+            processorSelect.appendChild(option);
+          });
+        } catch (error) {
+          console.error('Error loading processors:', error);
+          document.getElementById('statusText').textContent = 'Error loading processors: ' + error.message;
+          document.getElementById('statusText').className = 'error';
+        }
+      }
+
+        // Check status periodically
+      async function checkStatus(runId) {
+        try {
+          const response = await fetch(`${statusURL}/${runId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to check status: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.status;
+        } catch (error) {
+          console.error('Error checking status:', error);
+          return null;
+        }
+      }
+
+        // Get result
+      async function getResult(runId) {
+        try {
+          const response = await fetch(`${resultURL}/${runId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to get result: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.result;
+        } catch (error) {
+          console.error('Error getting result:', error);
+          return null;
+        }
+      }
+
+        // Poll status until completion
+      async function pollStatus(runId) {
+        const submitBtn = document.getElementById('submitBtn');
+        const statusText = document.getElementById('statusText');
+        const resultText = document.getElementById('resultText');
+
+        while (true) {
+          const status = await checkStatus(runId);
+
+          if (!status) {
+            statusText.textContent = 'Error: Unable to check status';
+            statusText.className = 'error';
+            resultText.value = JSON.stringify({"result": "error"}, null, 2);
+            submitBtn.disabled = false;
+            break;
+          }
+
+          statusText.textContent = `Status: ${status}`;
+
+          if (status === 'PENDING' || status === 'PROCESSING') {
+            statusText.className = 'processing';
+                    // Wait 2 seconds before next poll
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else if (status === 'PROCESSED') {
+            statusText.textContent = 'Status: PROCESSED';
+            statusText.className = 'success';
+
+            const result = await getResult(runId);
+            if (result) {
+              resultText.value = JSON.stringify(result, null, 2);
+            } else {
+              resultText.value = JSON.stringify({"result": "error"}, null, 2);
+            }
+
+            submitBtn.disabled = false;
+            break;
+          } else {
+            statusText.textContent = `Status: ${status}`;
+            statusText.className = 'error';
+            resultText.value = JSON.stringify({"result": "error"}, null, 2);
+            submitBtn.disabled = false;
+            break;
+          }
+        }
+      }
+
+        // Handle form submission
+      document.getElementById('pdfForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitBtn');
+        const statusText = document.getElementById('statusText');
+        const resultText = document.getElementById('resultText');
+        const fileAwsS3Url = document.getElementById('fileAwsS3Url').value;
+        const processorId = document.getElementById('processorId').value;
+
+        try {
+          submitBtn.disabled = true;
+          statusText.textContent = 'Submitting...';
+          statusText.className = 'processing';
+          resultText.value = '';
+
+          const response = await fetch(executeURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileAwsS3Url: fileAwsS3Url,
+              processorId: processorId
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          const runId = result.runId;
+          const status = result.status;
+
+          statusText.textContent = `Status: ${status} (Run ID: ${runId})`;
+
+                // Start polling if status is PENDING or PROCESSING
+          if (status === 'PENDING' || status === 'PROCESSING') {
+            await pollStatus(runId);
+          } else if (status === 'PROCESSED') {
+            statusText.className = 'success';
+            const finalResult = await getResult(runId);
+            if (finalResult) {
+              resultText.value = JSON.stringify(finalResult, null, 2);
+            } else {
+              resultText.value = JSON.stringify({"result": "error"}, null, 2);
+            }
+            submitBtn.disabled = false;
+          } else {
+            statusText.className = 'error';
+            resultText.value = JSON.stringify({"result": "error"}, null, 2);
+            submitBtn.disabled = false;
+          }
+
+        } catch (error) {
+          statusText.textContent = 'Error: ' + error.message;
+          statusText.className = 'error';
+          resultText.value = JSON.stringify({"result": "error"}, null, 2);
+          submitBtn.disabled = false;
+        }
+      });
+
+        // Load stored files into list
+      async function loadStoredFiles() {
+        try {
+          const response = await fetch(storedFilesURL);
+          if (!response.ok) {
+            throw new Error(`Failed to load stored files: ${response.status}`);
+          }
+          const files = await response.json();
+          const filesList = document.getElementById('filesList');
+
+          files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file.id;
+            option.textContent = file.name;
+            filesList.appendChild(option);
+          });
+        } catch (error) {
+          console.error('Error loading stored files:', error);
+          alert('Error loading stored files: ' + error.message);
+        }
+      }
+
+        // Select all files
+      document.getElementById('selectAllBtn').addEventListener('click', function() {
+        const filesList = document.getElementById('filesList');
+        for (let i = 0; i < filesList.options.length; i++) {
+          filesList.options[i].selected = true;
+        }
+      });
+
+        // Invert selection
+      document.getElementById('invertBtn').addEventListener('click', function() {
+        const filesList = document.getElementById('filesList');
+        for (let i = 0; i < filesList.options.length; i++) {
+          filesList.options[i].selected = !filesList.options[i].selected;
+        }
+      });
+
+        // Refresh file list
+      document.getElementById('refreshBtn').addEventListener('click', async function() {
+        const filesList = document.getElementById('filesList');
+        filesList.innerHTML = '';
+        await loadStoredFiles();
+      });
+
+        // Delete selected files
+      document.getElementById('deleteBtn').addEventListener('click', async function() {
+        const filesList = document.getElementById('filesList');
+        const selectedIds = Array.from(filesList.selectedOptions).map(option => option.value);
+
+        if (selectedIds.length === 0) {
+          alert('Please select at least one file to delete');
+          return;
+        }
+
+        try {
+          const response = await fetch(deleteFilesURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileIds: selectedIds
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to delete files: ${response.status}`);
+          }
+
+                // Remove deleted files from the list
+          selectedIds.forEach(id => {
+            const option = filesList.querySelector(`option[value="${id}"]`);
+            if (option) {
+              option.remove();
+            }
+          });
+        } catch (error) {
+          console.error('Error deleting files:', error);
+          alert('Error deleting files: ' + error.message);
+        }
+      });
+
+        // Refresh extraction page data
+      document.getElementById('refreshExtractionBtn').addEventListener('click', async function() {
+        const processorSelect = document.getElementById('processorId');
+
+            // Clear existing options (keep the default option)
+        processorSelect.innerHTML = '<option value="">-- Select a processor --</option>';
+
+            // Reload data
+        await loadProcessors();
+      });
+
+        // View processor definition
+      document.getElementById('viewProcessorBtn').addEventListener('click', async function() {
+        const processorId = document.getElementById('processorId').value;
+        const resultText = document.getElementById('resultText');
+        const statusText = document.getElementById('statusText');
+
+        if (!processorId) {
+          alert('Please select a processor first');
+          return;
+        }
+
+        try {
+          statusText.textContent = 'Loading processor definition...';
+          statusText.className = 'processing';
+
+          const response = await fetch(`${processorsURL}/${processorId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch processor: ${response.status}`);
+          }
+
+          const data = await response.json();
+          resultText.value = JSON.stringify(data, null, 2);
+
+          statusText.textContent = 'Processor definition loaded';
+          statusText.className = 'success';
+        } catch (error) {
+          console.error('Error fetching processor:', error);
+          statusText.textContent = 'Error: ' + error.message;
+          statusText.className = 'error';
+          resultText.value = JSON.stringify({"result": "error"}, null, 2);
+        }
+      });
+
+        // Load processors and stored files on page load
+      loadProcessors();
+      loadStoredFiles();
+    </script>
+  </body>
+</html>
