@@ -6,6 +6,67 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.aws": [
+    "Credentials",
+    "S3",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.constants": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.libraries": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.libraries.s3": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.structures": [
+    "Credentials",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.structures.credentials": [
+    "Credentials"
+  ],
+  "canvas_sdk.clients.aws.structures.s3_item": [
+    "S3Item"
+  ],
+  "canvas_sdk.clients.extend_ai.constants": [
+    "BaseProcessor",
+    "ParserChunking",
+    "ParserTarget",
+    "ProcessorType",
+    "RunStatus",
+    "SplitMethod",
+    "VersionName"
+  ],
+  "canvas_sdk.clients.extend_ai.libraries": [
+    "Client"
+  ],
+  "canvas_sdk.clients.extend_ai.structures": [
+    "Classification",
+    "ProcessorMeta",
+    "ProcessorRun",
+    "ProcessorVersion",
+    "RequestFailed",
+    "StoredFile"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.config": [
+    "AdvancedOptionsClassification",
+    "AdvancedOptionsExtraction",
+    "AdvancedOptionsSplitter",
+    "ConfigClassification",
+    "ConfigExtraction",
+    "ConfigSplitter",
+    "Parser",
+    "PartRange"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.processor_result": [
+    "Insight",
+    "ResultClassification",
+    "ResultExtraction",
+    "ResultSplitter",
+    "Split"
+  ],
   "canvas_sdk.clients.llms": [
     "LlmAnthropic",
     "LlmGoogle",
@@ -14,6 +75,9 @@
     "LlmSettings",
     "LlmTokens",
     "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.constants": [
+    "FileType"
   ],
   "canvas_sdk.clients.llms.libraries": [
     "LlmAnthropic",
@@ -34,6 +98,9 @@
     "LlmOpenai"
   ],
   "canvas_sdk.clients.llms.structures": [
+    "BaseModelLlmJson",
+    "FileContent",
+    "LlmFileUrl",
     "LlmResponse",
     "LlmTokens",
     "LlmTurn"
@@ -69,8 +136,62 @@
   "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
     "LlmSettingsGpt5"
   ],
+  "canvas_sdk.clients.sendgrid.constants": [
+    "AttachmentDisposition",
+    "Constants",
+    "CriterionOperation",
+    "EventEmail",
+    "RecipientType",
+    "StatusEmail"
+  ],
+  "canvas_sdk.clients.sendgrid.libraries": [
+    "EmailClient"
+  ],
+  "canvas_sdk.clients.sendgrid.structures": [
+    "Address",
+    "Attachment",
+    "BodyContent",
+    "CriterionDatetime",
+    "Email",
+    "EmailEvent",
+    "EventWebhook",
+    "EventWebhookRecord",
+    "LoggedEmailCriteria",
+    "ParseSetting",
+    "ParsedAttachment",
+    "ParsedEmail",
+    "ParsedEnvelope",
+    "ParsedHeader",
+    "Recipient",
+    "RequestFailed",
+    "SentEmail",
+    "SentEmailDetail",
+    "Settings"
+  ],
   "canvas_sdk.clients.third_party": [
     "StripeClient"
+  ],
+  "canvas_sdk.clients.twilio.constants": [
+    "Constants",
+    "DateOperation",
+    "HttpMethod",
+    "MessageDirection",
+    "MessageStatus"
+  ],
+  "canvas_sdk.clients.twilio.libraries": [
+    "SmsClient"
+  ],
+  "canvas_sdk.clients.twilio.structures": [
+    "Capabilities",
+    "Media",
+    "Message",
+    "Phone",
+    "RequestFailed",
+    "Settings",
+    "SmsMms",
+    "StatusInbound",
+    "StatusOutboundApi",
+    "TwiMlMessage"
   ],
   "canvas_sdk.commands": [
     "*",
