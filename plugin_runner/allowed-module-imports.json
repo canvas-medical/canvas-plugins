@@ -472,11 +472,6 @@
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
-  "canvas_sdk.effects.categorize_document": [
-    "AnnotationItem",
-    "CategorizeDocument",
-    "DocumentType"
-  ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
     "ColorEnum",
@@ -494,12 +489,6 @@
   ],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
-  ],
-  "canvas_sdk.effects.external_event": [
-    "ExternalEvent"
-  ],
-  "canvas_sdk.effects.external_event.external_event": [
-    "ExternalEvent"
   ],
   "canvas_sdk.effects.data_integration": [
     "AnnotationItem",
@@ -547,6 +536,12 @@
   "canvas_sdk.effects.data_integration.types": [
     "AnnotationItem",
     "DocumentType"
+  ],
+  "canvas_sdk.effects.external_event": [
+    "ExternalEvent"
+  ],
+  "canvas_sdk.effects.external_event.external_event": [
+    "ExternalEvent"
   ],
   "canvas_sdk.effects.fax": [
     "FaxNoteEffect"
@@ -982,12 +977,6 @@
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
-    "LabReview",
-    "LabTest",
-    "LabValue",
-    "LabValueCoding",
-    "Language",
-    "Letter",
     "LabReportTemplate",
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
@@ -996,6 +985,8 @@
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "Language",
+    "Letter",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -1252,16 +1243,16 @@
     "LabValueCoding",
     "TransmissionType"
   ],
-  "canvas_sdk.v1.data.letter": [
-    "Language",
-    "Letter"
-  ],
   "canvas_sdk.v1.data.lab_report_template": [
     "FieldType",
     "LabReportTemplate",
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet"
+  ],
+  "canvas_sdk.v1.data.letter": [
+    "Language",
+    "Letter"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
