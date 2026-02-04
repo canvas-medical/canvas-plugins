@@ -455,6 +455,14 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim": [
+    "BannerAlertIntent",
+    "ClaimEffect"
+  ],
+  "canvas_sdk.effects.claim.claim": [
+    "BannerAlertIntent",
+    "ClaimEffect"
+  ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
