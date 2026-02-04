@@ -136,6 +136,38 @@
   "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
     "LlmSettingsGpt5"
   ],
+  "canvas_sdk.clients.sendgrid.constants": [
+    "AttachmentDisposition",
+    "Constants",
+    "CriterionOperation",
+    "EventEmail",
+    "RecipientType",
+    "StatusEmail"
+  ],
+  "canvas_sdk.clients.sendgrid.libraries": [
+    "EmailClient"
+  ],
+  "canvas_sdk.clients.sendgrid.structures": [
+    "Address",
+    "Attachment",
+    "BodyContent",
+    "CriterionDatetime",
+    "Email",
+    "EmailEvent",
+    "EventWebhook",
+    "EventWebhookRecord",
+    "LoggedEmailCriteria",
+    "ParseSetting",
+    "ParsedAttachment",
+    "ParsedEmail",
+    "ParsedEnvelope",
+    "ParsedHeader",
+    "Recipient",
+    "RequestFailed",
+    "SentEmail",
+    "SentEmailDetail",
+    "Settings"
+  ],
   "canvas_sdk.clients.third_party": [
     "StripeClient"
   ],
