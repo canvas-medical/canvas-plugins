@@ -171,6 +171,28 @@
   "canvas_sdk.clients.third_party": [
     "StripeClient"
   ],
+  "canvas_sdk.clients.twilio.constants": [
+    "Constants",
+    "DateOperation",
+    "HttpMethod",
+    "MessageDirection",
+    "MessageStatus"
+  ],
+  "canvas_sdk.clients.twilio.libraries": [
+    "SmsClient"
+  ],
+  "canvas_sdk.clients.twilio.structures": [
+    "Capabilities",
+    "Media",
+    "Message",
+    "Phone",
+    "RequestFailed",
+    "Settings",
+    "SmsMms",
+    "StatusInbound",
+    "StatusOutboundApi",
+    "TwiMlMessage"
+  ],
   "canvas_sdk.commands": [
     "*",
     "AdjustPrescriptionCommand",
