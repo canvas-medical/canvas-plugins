@@ -479,3 +479,23 @@ def test_claim_effect_post_payment_requires_adjustment_code(
 
     err_msg = repr(e.value)
     assert "Specify an adjustment code for the adjustment amount" in err_msg
+
+
+def test_line_item_transaction_is_first_transaction_not_in_list() -> None:
+    """Test that is_first_transaction_for_line_item returns False when transaction is not in the list."""
+    # Create a transaction with a claim_line_item_id that won't be in the list
+    transaction = LineItemTransaction(
+        claim_line_item_id="line-not-in-list",
+        payment=Decimal("5.00"),
+    )
+
+    # Create a list of transactions that doesn't contain any matching claim_line_item_id
+    other_transactions = [
+        LineItemTransaction(claim_line_item_id="line-1", payment=Decimal("10.00")),
+        LineItemTransaction(claim_line_item_id="line-2", payment=Decimal("15.00")),
+    ]
+
+    # The transaction's claim_line_item_id is not in other_transactions, so should return False
+    result = transaction.is_first_transaction_for_line_item(other_transactions, index=0)
+
+    assert result is False
