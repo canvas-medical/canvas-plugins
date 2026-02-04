@@ -1,6 +1,7 @@
 """CMS138v14 Preventive Care and Screening: Tobacco Use Screening and Cessation Intervention."""
 
 import datetime
+from dataclasses import dataclass
 from typing import Any
 
 import arrow
@@ -107,6 +108,7 @@ class ScreeningData:
         return self.counseling_date is not None or self.pharmacotherapy_date is not None
 
 
+@dataclass
 class PopulationResult:
     """
     Track population membership for CMS measure rates.
@@ -289,8 +291,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                 log.debug(f"CMS138v14: Patient {patient.id} not in numerator - DUE")
                 return [self._create_due_card(patient, screening_data)]
 
-        except Exception:
-            log.error("CMS138v14: Error in compute")
+        except Exception as e:
+            log.error(f"CMS138v14: Error in compute: {e}")
             return []
 
     def _in_initial_population(self, patient: Patient) -> bool:
@@ -364,8 +366,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
             return len(qualifying_note_ids)
 
-        except Exception:
-            log.error("CMS138v14: Error counting qualifying visits")
+        except Exception as e:
+            log.error(f"CMS138v14: Error counting qualifying visits: {e}")
             return 0
 
     def _count_preventive_visits(self, patient: Patient) -> int:
@@ -409,8 +411,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
             return len(preventive_note_ids)
 
-        except Exception:
-            log.error("CMS138v14: Error counting preventive visits")
+        except Exception as e:
+            log.error(f"CMS138v14: Error counting preventive visits: {e}")
             return 0
 
     def _build_period_overlap_query(self, start_date: datetime.date, end_date: datetime.date) -> Q:
@@ -549,6 +551,7 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                 .committed()
                 .find(HospiceCareAmbulatory)
                 .filter(
+                    entered_in_error__isnull=True,
                     note__datetime_of_service__gte=start_date,
                     note__datetime_of_service__lte=end_date,
                 )
@@ -561,8 +564,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
             return False
 
-        except Exception:
-            log.error("CMS138v14: Error checking hospice status")
+        except Exception as e:
+            log.error(f"CMS138v14: Error checking hospice status: {e}")
             return False
 
     def _get_screening_data(self, patient: Patient) -> ScreeningData:
@@ -651,8 +654,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                         f"CMS138v14: Most recent screening indicates NON-USER on {screening_date}"
                     )
 
-        except Exception:
-            log.error("CMS138v14: Error checking interview responses")
+        except Exception as e:
+            log.error(f"CMS138v14: Error checking interview responses: {e}")
 
     def _check_observation_screening(
         self,
@@ -672,6 +675,7 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                     effective_datetime__lte=self.timeframe.end.datetime,
                     codings__code__in=screening_codes,
                 )
+                .prefetch_related("value_codings")
                 .order_by("-effective_datetime")
                 .first()
             )
@@ -679,23 +683,20 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
             if screening_obs:
                 obs_date = arrow.get(screening_obs.effective_datetime)
 
-                if hasattr(screening_obs, "value_codings"):
-                    for coding in screening_obs.value_codings.all():
-                        if coding.code in tobacco_user_codes:
-                            result.most_recent_user = obs_date
-                            log.debug(
-                                f"CMS138v14: Found tobacco USER via observation on {obs_date}"
-                            )
-                            return
-                        if coding.code in tobacco_non_user_codes:
-                            result.most_recent_non_user = obs_date
-                            log.debug(
-                                f"CMS138v14: Found tobacco NON-USER via observation on {obs_date}"
-                            )
-                            return
+                for coding in screening_obs.value_codings.all():
+                    if coding.code in tobacco_user_codes:
+                        result.most_recent_user = obs_date
+                        log.debug(f"CMS138v14: Found tobacco USER via observation on {obs_date}")
+                        return
+                    if coding.code in tobacco_non_user_codes:
+                        result.most_recent_non_user = obs_date
+                        log.debug(
+                            f"CMS138v14: Found tobacco NON-USER via observation on {obs_date}"
+                        )
+                        return
 
-        except Exception:
-            log.error("CMS138v14: Error checking observation screening")
+        except Exception as e:
+            log.error(f"CMS138v14: Error checking observation screening: {e}")
 
     def _get_counseling_date(
         self, patient: Patient, start: "arrow.Arrow", end: "arrow.Arrow"
@@ -751,8 +752,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
             return most_recent
 
-        except Exception:
-            log.error("CMS138v14: Error getting counseling date")
+        except Exception as e:
+            log.error(f"CMS138v14: Error getting counseling date: {e}")
             return None
 
     def _get_z71_6_counseling_date(
@@ -793,8 +794,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                     most_recent = z71_date
                     log.debug(f"CMS138v14: Found Z71.6 diagnosis on {most_recent}")
 
-        except Exception:
-            log.error("CMS138v14: Error checking Z71.6 diagnosis")
+        except Exception as e:
+            log.error(f"CMS138v14: Error checking Z71.6 diagnosis: {e}")
 
         return most_recent
 
@@ -817,6 +818,7 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                     note__datetime_of_service__gte=start.datetime,
                     note__datetime_of_service__lte=end.datetime,
                 )
+                .select_related("note")
                 .order_by("-note__datetime_of_service")
                 .first()
             )
@@ -827,8 +829,8 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
                     most_recent = instruction_date
                     log.debug(f"CMS138v14: Found counseling instruction on {most_recent}")
 
-        except Exception:
-            log.error("CMS138v14: Error checking instruction counseling")
+        except Exception as e:
+            log.error(f"CMS138v14: Error checking instruction counseling: {e}")
 
         return most_recent
 
@@ -839,55 +841,34 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         try:
             start_datetime = start.datetime
             end_datetime = end.datetime
-            start_date = start.date()
-            end_date = end.date()
 
-            most_recent = None
-
-            ordered_med = (
-                Medication.objects.for_patient(patient.id)
-                .committed()
-                .find(TobaccoUseCessationPharmacotherapy)
-                .filter(
-                    entered_in_error__isnull=True,
-                    start_date__gte=start_datetime,
-                    start_date__lte=end_datetime,
-                )
-                .order_by("-start_date")
-                .first()
-            )
-
-            if ordered_med and ordered_med.start_date:
-                most_recent = arrow.get(ordered_med.start_date)
-                log.debug(f"CMS138v14: Found pharmacotherapy order on {most_recent}")
-
-            active_med = (
+            med = (
                 Medication.objects.for_patient(patient.id)
                 .committed()
                 .find(TobaccoUseCessationPharmacotherapy)
                 .filter(entered_in_error__isnull=True)
                 .filter(
-                    Q(
-                        start_date__lte=end_date,
-                        end_date__gte=start_date,
+                    Q(start_date__gte=start_datetime, start_date__lte=end_datetime)
+                    | Q(
+                        start_date__lte=end_datetime,
+                        end_date__gte=start_datetime,
                         end_date__isnull=False,
                     )
-                    | Q(start_date__lte=end_date, end_date__isnull=True)
+                    | Q(start_date__lte=end_datetime, end_date__isnull=True)
                 )
                 .order_by("-start_date")
                 .first()
             )
 
-            if active_med and active_med.start_date:
-                active_date = arrow.get(active_med.start_date)
-                if most_recent is None or active_date > most_recent:
-                    most_recent = active_date
-                    log.debug(f"CMS138v14: Found active pharmacotherapy on {most_recent}")
+            most_recent = None
+            if med and med.start_date:
+                most_recent = arrow.get(med.start_date)
+                log.debug(f"CMS138v14: Found pharmacotherapy on {most_recent}")
 
             return most_recent
 
-        except Exception:
-            log.error("CMS138v14: Error getting pharmacotherapy date")
+        except Exception as e:
+            log.error(f"CMS138v14: Error getting pharmacotherapy date: {e}")
             return None
 
     def _compute_populations(self, screening_data: ScreeningData) -> None:
