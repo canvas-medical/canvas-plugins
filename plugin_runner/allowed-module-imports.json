@@ -652,6 +652,9 @@
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
   ],
+  "canvas_sdk.effects.set_default_homepage": [
+    "SetDefaultHomepage"
+  ],
   "canvas_sdk.effects.show_button": [
     "ShowButtonEffect"
   ],

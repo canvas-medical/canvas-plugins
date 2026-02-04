@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "homepage",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "handlers": [
+            {
+                "class": "homepage.handlers.event_handlers:Homepage",
+                "description": ""
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
