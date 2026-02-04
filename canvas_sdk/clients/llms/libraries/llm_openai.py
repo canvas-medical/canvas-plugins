@@ -5,6 +5,7 @@ from http import HTTPStatus
 
 from requests import exceptions
 
+from canvas_sdk.clients.llms.constants.file_type import FileType
 from canvas_sdk.clients.llms.libraries.llm_api import LlmApi
 from canvas_sdk.clients.llms.structures.llm_response import LlmResponse
 from canvas_sdk.clients.llms.structures.llm_tokens import LlmTokens
@@ -40,14 +41,58 @@ class LlmOpenai(LlmApi):
             for prompt in self.prompts
             if prompt.role != self.ROLE_SYSTEM
         ]
+        # if there are files and the last message has the user's role
+        if messages and messages[-1]["role"] == roles[self.ROLE_USER]:
+            for file_url in self.file_urls:
+                item = {}
+                if file_url.type == FileType.PDF:
+                    item = {"type": "input_file", "file_url": file_url.url}
+                elif file_url.type == FileType.IMAGE:
+                    item = {"type": "input_image", "image_url": file_url.url}
+                if item:
+                    messages[-1]["content"].append(item)
+
+            for file_content in self.file_contents:
+                if file_content.mime_type.startswith("image/"):
+                    messages[-1]["content"].append(
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:{file_content.mime_type};base64,{file_content.content.decode('utf-8')}",
+                        }
+                    )
+                elif file_content.mime_type.endswith("/pdf"):
+                    messages[-1]["content"].append(
+                        {
+                            "type": "input_file",
+                            "filename": "inputFile",
+                            "file_data": f"data:{file_content.mime_type};base64,{file_content.content.decode('utf-8')}",
+                        }
+                    )
+
+            self.file_urls = []
+            self.file_contents = []
 
         system_prompt = "\n".join(
             ["\n".join(prompt.text) for prompt in self.prompts if prompt.role == self.ROLE_SYSTEM]
         )
-        return self.settings.to_dict() | {
-            "instructions": system_prompt,
-            "input": messages,
-        }
+        # structured output requested
+        structured = {}
+        if self.schema:
+            structured = {
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": self.schema.__name__,
+                        "strict": True,
+                        "schema": self.schema.model_json_schema(),
+                    }
+                }
+            }
+        return (
+            self.settings.to_dict()
+            | structured
+            | {"instructions": system_prompt, "input": messages}
+        )
 
     @classmethod
     def _api_base_url(cls) -> str:

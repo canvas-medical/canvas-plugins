@@ -76,6 +76,9 @@
     "LlmTokens",
     "LlmTurn"
   ],
+  "canvas_sdk.clients.llms.constants": [
+    "FileType"
+  ],
   "canvas_sdk.clients.llms.libraries": [
     "LlmAnthropic",
     "LlmApi",
@@ -95,6 +98,9 @@
     "LlmOpenai"
   ],
   "canvas_sdk.clients.llms.structures": [
+    "BaseModelLlmJson",
+    "FileContent",
+    "LlmFileUrl",
     "LlmResponse",
     "LlmTokens",
     "LlmTurn"
