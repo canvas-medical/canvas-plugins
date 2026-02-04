@@ -58,6 +58,45 @@ def note(auth_header: dict) -> dict:
     return response.json()
 
 
+def has_constants(cls: type, constants: dict) -> bool:
+    """Verify a class has expected constant attributes with specific values.
+
+    Validates that a class has all expected constants (uppercase attributes that are not
+    callable and don't start with underscore) with matching values. Prints diagnostic
+    messages for any mismatches.
+
+    Args:
+        cls: Class to verify
+        constants: Dictionary mapping constant names to their expected values
+
+    Returns:
+        True if class has all expected constants with matching values, False otherwise
+    """
+    result = True
+    count = 0
+    tested_keys = set()
+    for attr in dir(cls):
+        if attr.upper() == attr and not (attr.startswith("_") or callable(getattr(cls, attr))):
+            tested_keys.add(attr)
+            count += 1
+            if attr not in constants:
+                print(f"Tested has new attribute not expected: '{attr}'")
+                result = False
+
+    if count != len(constants.keys()):
+        print(f"----> counts: {count} != {len(constants.keys())}")
+        result = False
+
+    for key, value in constants.items():
+        if key not in tested_keys:
+            print(f"Expected attributes not in tested: '{key}'")
+        if getattr(cls, key) != value:
+            print(f"----> {key} value is {getattr(cls, key)}")
+            result = False
+
+    return result
+
+
 def is_dataclass(cls: type, fields: dict) -> bool:
     """Verify a class is a dataclass with expected fields and types.
 
