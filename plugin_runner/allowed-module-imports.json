@@ -490,6 +490,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.default_homepage": [
+    "DefaultHomepageEffect"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
@@ -651,9 +654,6 @@
   ],
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
-  ],
-  "canvas_sdk.effects.set_default_homepage": [
-    "SetDefaultHomepage"
   ],
   "canvas_sdk.effects.show_button": [
     "ShowButtonEffect"

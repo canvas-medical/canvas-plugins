@@ -6,7 +6,7 @@ from pydantic_core import InitErrorDetails
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
-class SetDefaultHomepage(_BaseEffect):
+class DefaultHomepageEffect(_BaseEffect):
     """
     An Effect that will set the default homepage for a user.
     """
@@ -22,14 +22,14 @@ class SetDefaultHomepage(_BaseEffect):
         DATA_INTEGRATION = "/data-integration"
 
     page: Pages | None = None
-    application_id: str | None = None
+    application_url: str | None = None
 
     @property
     def values(self) -> dict[str, Any]:
-        """The user's id."""
+        """Homepage configuration values."""
         return {
             "page": self.page.value if self.page else None,
-            "application_id": self.application_id,
+            "application_url": self.application_url,
         }
 
     @property
@@ -40,20 +40,11 @@ class SetDefaultHomepage(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.page is None and self.application_id is None:
+        if self.page is None and self.application_url is None:
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Either page or application_id must be provided",
-                    self.page,
-                )
-            )
-
-        if self.page not in self.Pages:
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    "Url is not valid",
+                    "Either page or application_url must be provided",
                     self.page,
                 )
             )
@@ -61,4 +52,4 @@ class SetDefaultHomepage(_BaseEffect):
         return errors
 
 
-__exports__ = ("SetDefaultHomepage",)
+__exports__ = ("DefaultHomepageEffect",)
