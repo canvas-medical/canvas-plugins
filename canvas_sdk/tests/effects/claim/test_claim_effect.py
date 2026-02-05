@@ -24,7 +24,7 @@ from canvas_sdk.effects.claim import (
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
-        patch("canvas_sdk.effects.claim.claim_banner_alert.Claim.objects") as mock_banner_claim,
+        patch("canvas_sdk.effects.claim.claim_banner_alert.Claim") as mock_banner_claim,
         patch("canvas_sdk.effects.claim.claim_comment.Claim") as mock_claim_comment,
         patch("canvas_sdk.effects.claim.claim_label.Claim") as mock_claim_label,
         patch("canvas_sdk.effects.claim.claim_queue.Claim") as mock_claim_queue,
@@ -34,7 +34,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
     ):
         # Setup default behaviors - objects exist
-        mock_banner_claim.filter.return_value.exists.return_value = True
+        mock_banner_claim.objects.filter.return_value.exists.return_value = True
         mock_claim_comment.objects.filter.return_value.exists.return_value = True
         mock_claim_label.objects.filter.return_value.exists.return_value = True
         mock_claim_queue.objects.filter.return_value.exists.return_value = True
@@ -169,7 +169,7 @@ class TestAddBanner:
         self, mock_db_queries: dict[str, MagicMock]
     ) -> None:
         """Test that add_banner validates claim exists."""
-        mock_db_queries["banner_claim"].filter.return_value.exists.return_value = False
+        mock_db_queries["banner_claim"].objects.filter.return_value.exists.return_value = False
         effect = ClaimEffect(claim_id="nonexistent-claim")
 
         with pytest.raises(ValidationError) as exc_info:
