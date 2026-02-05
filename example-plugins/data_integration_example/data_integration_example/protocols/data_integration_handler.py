@@ -470,6 +470,7 @@ class DataIntegrationHandler(BaseProtocol):
                 document_id=str(document_id),
                 templates=templates,
                 annotations=annotations,
+                source_protocol="data_integration_example",
             )
             return effect.apply()
         except ValidationError as e:

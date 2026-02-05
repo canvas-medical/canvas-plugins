@@ -3,7 +3,8 @@ from typing import Any, NotRequired, TypeAlias, TypedDict
 from pydantic import BaseModel, model_validator
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType
+from canvas_sdk.effects.data_integration.base import _BaseDocumentEffect
 from canvas_sdk.effects.data_integration.types import AnnotationItem
 
 
@@ -44,7 +45,7 @@ class PrefillTemplate(BaseModel):
         return self
 
 
-class PrefillDocumentFields(_BaseEffect):
+class PrefillDocumentFields(_BaseDocumentEffect):
     """
     An Effect that creates or updates an IntegrationTaskPrefill record
     with field_type=REPORT_TYPE for a document in the Data Integration queue.
@@ -64,19 +65,19 @@ class PrefillDocumentFields(_BaseEffect):
         effect_type = EffectType.UPDATE_DOCUMENT_FIELDS
         apply_required_fields = ("document_id", "templates")
 
-    document_id: str | None = None
     templates: list[dict[str, Any]] | None = None
-    annotations: list[AnnotationItem] | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """The effect's values to be sent in the payload."""
         result: dict[str, Any] = {
-            "document_id": str(self.document_id).strip() if self.document_id else None,
+            "document_id": self._serialize_document_id(),
             "templates": self._serialize_templates(),
         }
         if self.annotations is not None:
             result["annotations"] = self.annotations
+        if self.source_protocol is not None:
+            result["source_protocol"] = self._serialize_source_protocol()
         return result
 
     def _serialize_templates(self) -> list[dict[str, Any]]:
@@ -88,16 +89,6 @@ class PrefillDocumentFields(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate the effect fields and return any error details."""
         errors = super()._get_error_details(method)
-
-        # Validate document_id is non-empty if provided
-        if self.document_id is not None and not str(self.document_id).strip():
-            errors.append(
-                self._create_error_detail(
-                    "value_error",
-                    "document_id must be a non-empty string",
-                    self.document_id,
-                )
-            )
 
         # Validate templates is non-empty list
         if self.templates is not None and len(self.templates) == 0:
