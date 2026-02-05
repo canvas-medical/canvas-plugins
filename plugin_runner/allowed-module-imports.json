@@ -576,6 +576,9 @@
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
   ],
+  "canvas_sdk.effects.patient.timeline": [
+    "PatientTimelineEffect"
+  ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
   ],
