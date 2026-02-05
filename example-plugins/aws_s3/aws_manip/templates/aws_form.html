@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS S3 Browser</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+      }
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #ccc;
+      }
+      .tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+      }
+      .tab.active {
+        background-color: white;
+        border-bottom: 2px solid white;
+        margin-bottom: -2px;
+        font-weight: bold;
+      }
+      .tab-content {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+      }
+      .tab-content.active {
+        display: flex;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      select, input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      #itemsList {
+        height: 200px;
+      }
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-family: monospace;
+        resize: vertical;
+        background-color: #f5f5f5;
+      }
+      #saveContent {
+        background-color: white;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      button .material-icons {
+        font-size: 18px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      #refreshBtn {
+        background-color: #2196F3;
+      }
+      #refreshBtn:hover {
+        background-color: #0b7dda;
+      }
+      #getContentBtn {
+        background-color: #4CAF50;
+      }
+      #getContentBtn:hover {
+        background-color: #45a049;
+      }
+      #copyUrlBtn {
+        background-color: #ff9800;
+      }
+      #copyUrlBtn:hover {
+        background-color: #e68a00;
+      }
+      #deleteItemBtn {
+        background-color: #f44336;
+      }
+      #deleteItemBtn:hover {
+        background-color: #da190b;
+      }
+      #saveBtn, #saveBinaryBtn {
+        background-color: #9c27b0;
+      }
+      #saveBtn:hover, #saveBinaryBtn:hover {
+        background-color: #7b1fa2;
+      }
+      .file-input-wrapper {
+        margin-bottom: 10px;
+      }
+      .file-input-wrapper input[type="file"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .file-preview {
+        margin-top: 10px;
+        text-align: center;
+      }
+      .file-preview img {
+        max-width: 100%;
+        max-height: 200px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .file-preview .file-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+      .status {
+        font-size: 12px;
+        margin-top: 10px;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .status.success {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .status.error {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+      .status.info {
+        background-color: #d9edf7;
+        color: #31708f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('listget')">List/Get</div>
+      <div class="tab" onclick="switchTab('savetext')">Save Text</div>
+      <div class="tab" onclick="switchTab('savebinary')">Save Binary</div>
+    </div>
+
+    <div id="listget" class="tab-content active">
+      <div class="form-group">
+        <label for="itemsList">S3 Items:</label>
+        <select id="itemsList" size="10">
+        </select>
+      </div>
+
+      <div class="button-group">
+        <button id="refreshBtn" title="Refresh List">
+          <span class="material-icons">refresh</span>
+        </button>
+        <button id="getContentBtn" title="Get Content">
+          <span class="material-icons">description</span>
+        </button>
+        <button id="copyUrlBtn" title="Copy Presigned URL">
+          <span class="material-icons">content_copy</span>
+        </button>
+        <button id="deleteItemBtn" title="Delete Item">
+          <span class="material-icons">delete</span>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label for="contentArea">Content:</label>
+        <textarea id="contentArea" rows="15" readonly></textarea>
+      </div>
+
+      <div id="listgetStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div id="savetext" class="tab-content">
+      <form id="saveForm">
+        <div class="form-group">
+          <label for="itemName">Item Name (S3 Key):</label>
+          <input type="text" id="itemName" name="itemName" placeholder="Enter item name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="saveContent">Content:</label>
+          <textarea id="saveContent" rows="15" placeholder="Enter content to save"></textarea>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" id="saveBtn" title="Save to S3">
+            <span class="material-icons">cloud_upload</span>
+          </button>
+        </div>
+      </form>
+
+      <div id="savetextStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div id="savebinary" class="tab-content">
+      <form id="saveBinaryForm">
+        <div class="form-group">
+          <label for="binaryItemName">Item Name (S3 Key):</label>
+          <input type="text" id="binaryItemName" name="binaryItemName" placeholder="Enter item name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="fileInput">Image File:</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="fileInput" name="fileInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp" required>
+          </div>
+          <div id="filePreview" class="file-preview"></div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" id="saveBinaryBtn" title="Save to S3">
+            <span class="material-icons">cloud_upload</span>
+          </button>
+        </div>
+      </form>
+
+      <div id="savebinaryStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+      const listItemsURL = "{{listItemsURL | safe}}";
+      const getItemURL = "{{getItemURL | safe}}";
+      const presignedUrlURL = "{{presignedUrlURL | safe}}";
+      const uploadItemURL = "{{uploadItemURL | safe}}";
+      const deleteItemURL = "{{deleteItemURL | safe}}";
+
+        // Switch between tabs
+      function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+      }
+
+        // Show status message
+      function showStatus(elementId, message, type) {
+        const statusEl = document.getElementById(elementId);
+        statusEl.textContent = message;
+        statusEl.className = 'status ' + type;
+        statusEl.style.display = 'block';
+
+        if (type === 'success') {
+          setTimeout(() => {
+            statusEl.style.display = 'none';
+          }, 3000);
+        }
+      }
+
+        // Load items into listbox
+      async function loadItems() {
+        const itemsList = document.getElementById('itemsList');
+        itemsList.innerHTML = '';
+
+        try {
+          showStatus('listgetStatus', 'Loading items...', 'info');
+          const response = await fetch(listItemsURL);
+          if (!response.ok) {
+            throw new Error(`Failed to load items: ${response.status}`);
+          }
+          const items = await response.json();
+
+          items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            itemsList.appendChild(option);
+          });
+
+          showStatus('listgetStatus', `Loaded ${items.length} items`, 'success');
+        } catch (error) {
+          console.error('Error loading items:', error);
+          showStatus('listgetStatus', 'Error loading items: ' + error.message, 'error');
+        }
+      }
+
+        // Get selected item key
+      function getSelectedKey() {
+        const itemsList = document.getElementById('itemsList');
+        if (itemsList.selectedIndex === -1) {
+          return null;
+        }
+        return itemsList.options[itemsList.selectedIndex].value;
+      }
+
+        // Refresh button handler
+      document.getElementById('refreshBtn').addEventListener('click', loadItems);
+
+        // Get content button handler
+      document.getElementById('getContentBtn').addEventListener('click', async function() {
+        const key = getSelectedKey();
+        if (!key) {
+          showStatus('listgetStatus', 'Please select an item first', 'error');
+          return;
+        }
+
+        const contentArea = document.getElementById('contentArea');
+        const btn = this;
+
+        try {
+          btn.disabled = true;
+          showStatus('listgetStatus', 'Fetching content...', 'info');
+
+          const response = await fetch(`${getItemURL}/${encodeURIComponent(key)}`);
+          if (!response.ok) {
+            throw new Error(`Failed to get content: ${response.status}`);
+          }
+
+          const data = await response.text();
+          contentArea.value = data;
+
+          showStatus('listgetStatus', 'Content loaded', 'success');
+        } catch (error) {
+          console.error('Error getting content:', error);
+          showStatus('listgetStatus', 'Error getting content: ' + error.message, 'error');
+          contentArea.value = '';
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Copy presigned URL button handler
+      document.getElementById('copyUrlBtn').addEventListener('click', async function() {
+        const key = getSelectedKey();
+        if (!key) {
+          showStatus('listgetStatus', 'Please select an item first', 'error');
+          return;
+        }
+
+        const btn = this;
+
+        try {
+          btn.disabled = true;
+          showStatus('listgetStatus', 'Getting presigned URL...', 'info');
+
+          const response = await fetch(`${presignedUrlURL}/${encodeURIComponent(key)}`);
+          if (!response.ok) {
+            throw new Error(`Failed to get presigned URL: ${response.status}`);
+          }
+
+          const url = await response.text();
+
+          await navigator.clipboard.writeText(url);
+          showStatus('listgetStatus', 'Presigned URL copied to clipboard', 'success');
+        } catch (error) {
+          console.error('Error copying presigned URL:', error);
+          showStatus('listgetStatus', 'Error: ' + error.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Delete item button handler
+      document.getElementById('deleteItemBtn').addEventListener('click', async function() {
+        const key = getSelectedKey();
+        if (!key) {
+          showStatus('listgetStatus', 'Please select an item first', 'error');
+          return;
+        }
+
+        if (!confirm(`Are you sure you want to delete "${key}"?`)) {
+          return;
+        }
+
+        const btn = this;
+
+        try {
+          btn.disabled = true;
+          showStatus('listgetStatus', 'Deleting...', 'info');
+
+          const response = await fetch(`${deleteItemURL}/${encodeURIComponent(key)}`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to delete: ${response.status}`);
+          }
+
+                // Remove the item from the list
+          const itemsList = document.getElementById('itemsList');
+          const selectedOption = itemsList.options[itemsList.selectedIndex];
+          if (selectedOption) {
+            selectedOption.remove();
+          }
+
+                // Clear the content area
+          document.getElementById('contentArea').value = '';
+
+          showStatus('listgetStatus', 'Item deleted successfully', 'success');
+        } catch (error) {
+          console.error('Error deleting item:', error);
+          showStatus('listgetStatus', 'Error: ' + error.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+        // Save form submission handler
+      document.getElementById('saveForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const itemName = document.getElementById('itemName').value.trim();
+        const content = document.getElementById('saveContent').value;
+        const saveBtn = document.getElementById('saveBtn');
+
+        if (!itemName) {
+          showStatus('savetextStatus', 'Please enter an item name', 'error');
+          return;
+        }
+
+        try {
+          saveBtn.disabled = true;
+          showStatus('savetextStatus', 'Saving...', 'info');
+
+          const response = await fetch(`${uploadItemURL}/${encodeURIComponent(itemName)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+            body: content
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to save: ${response.status}`);
+          }
+
+          showStatus('savetextStatus', 'Item saved successfully', 'success');
+        } catch (error) {
+          console.error('Error saving item:', error);
+          showStatus('savetextStatus', 'Error saving: ' + error.message, 'error');
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+
+        // File input preview handler
+      document.getElementById('fileInput').addEventListener('change', function(e) {
+        const filePreview = document.getElementById('filePreview');
+        const file = e.target.files[0];
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            filePreview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div class="file-info">${file.name} (${(file.size / 1024).toFixed(2)} KB)</div>
+                    `;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          filePreview.innerHTML = '';
+        }
+      });
+
+        // Save binary form submission handler
+      document.getElementById('saveBinaryForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const itemName = document.getElementById('binaryItemName').value.trim();
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const saveBinaryBtn = document.getElementById('saveBinaryBtn');
+
+        if (!itemName) {
+          showStatus('savebinaryStatus', 'Please enter an item name', 'error');
+          return;
+        }
+
+        if (!file) {
+          showStatus('savebinaryStatus', 'Please select a file', 'error');
+          return;
+        }
+
+        try {
+          saveBinaryBtn.disabled = true;
+          showStatus('savebinaryStatus', 'Uploading...', 'info');
+
+          const response = await fetch(`${uploadItemURL}/${encodeURIComponent(itemName)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': file.type,
+            },
+            body: file
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to save: ${response.status}`);
+          }
+
+          showStatus('savebinaryStatus', 'Image saved successfully', 'success');
+        } catch (error) {
+          console.error('Error saving image:', error);
+          showStatus('savebinaryStatus', 'Error saving: ' + error.message, 'error');
+        } finally {
+          saveBinaryBtn.disabled = false;
+        }
+      });
+
+        // Load items on page load
+      loadItems();
+    </script>
+  </body>
+</html>
