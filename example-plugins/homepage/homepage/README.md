@@ -3,7 +3,7 @@ homepage
 
 ## Description
 
-A description of this plugin
+Plugin to set the provider application default homepage
 
 ### CANVAS_MANIFEST
 
