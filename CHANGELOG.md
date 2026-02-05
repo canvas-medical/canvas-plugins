@@ -1,6 +1,48 @@
 # CHANGELOG
 
 
+## v0.95.0 (2026-02-05)
+
+### Bug Fixes
+
+- Add the db_table for assessment field on Referral model
+  ([#1476](https://github.com/canvas-medical/canvas-plugins/pull/1476),
+  [`49d3a76`](https://github.com/canvas-medical/canvas-plugins/commit/49d3a76b4d96caf73eea89d8970875c2802e8245))
+
+### Chores
+
+- Add tests for CronTask ([#1482](https://github.com/canvas-medical/canvas-plugins/pull/1482),
+  [`1e62a5c`](https://github.com/canvas-medical/canvas-plugins/commit/1e62a5c5ec2351f80867d21ed6fcedd12d95c281))
+
+### Features
+
+- Consolidate all claim effects into a single ClaimEffect
+  ([#1480](https://github.com/canvas-medical/canvas-plugins/pull/1480),
+  [`af81ce0`](https://github.com/canvas-medical/canvas-plugins/commit/af81ce0abdae632cd94e5b2bd35f322e104e0d85))
+
+- **sdk**: Add AWS S3 support for basic operations
+  ([#1342](https://github.com/canvas-medical/canvas-plugins/pull/1342),
+  [`5e3d20d`](https://github.com/canvas-medical/canvas-plugins/commit/5e3d20df62f929b37c9504e0d60447c96e244a47))
+
+Co-authored-by: Beau Gunderson <beau@beaugunderson.com>
+
+- **sdk**: Add Extend.ai support for most processor endpoints
+  ([#1353](https://github.com/canvas-medical/canvas-plugins/pull/1353),
+  [`c57302d`](https://github.com/canvas-medical/canvas-plugins/commit/c57302d8a224853c7270ae38388ceb45783fb8fa))
+
+- **sdk**: Add Sendgrid support to basic email handling
+  ([#1405](https://github.com/canvas-medical/canvas-plugins/pull/1405),
+  [`de80b41`](https://github.com/canvas-medical/canvas-plugins/commit/de80b41974a423831c589a0937284bf9c3579d20))
+
+- **sdk**: Add support for files (url) and structured outputs to the LLMs
+  ([#1366](https://github.com/canvas-medical/canvas-plugins/pull/1366),
+  [`21f115b`](https://github.com/canvas-medical/canvas-plugins/commit/21f115b4785b874a295c56dc4184d16aa626e307))
+
+- **sdk**: Add Twilio support to basic SMS/MMS management
+  ([#1368](https://github.com/canvas-medical/canvas-plugins/pull/1368),
+  [`af434d9`](https://github.com/canvas-medical/canvas-plugins/commit/af434d9eb782f64cf10eed8a5721b0eb3832bc23))
+
+
 ## v0.94.0 (2026-01-30)
 
 ### Features
