@@ -12,7 +12,7 @@ from canvas_sdk.effects.claim_comment import AddClaimComment
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
-        patch("canvas_sdk.effects.claim_comment.Claim.objects") as mock_claim,
+        patch("canvas_sdk.effects.claim.claim_comment.Claim.objects") as mock_claim,
     ):
         # Setup default behaviors - objects exist
         mock_claim.filter.return_value.exists.return_value = True

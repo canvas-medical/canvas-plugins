@@ -457,17 +457,26 @@
   ],
   "canvas_sdk.effects.claim": [
     "BannerAlertIntent",
-    "ClaimEffect"
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
   ],
   "canvas_sdk.effects.claim.claim": [
     "BannerAlertIntent",
-    "ClaimEffect"
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
   ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
+    "ColorEnum",
     "Label",
     "RemoveClaimLabel"
   ],

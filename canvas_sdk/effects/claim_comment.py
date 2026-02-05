@@ -1,37 +1,22 @@
-from typing import Any
-from uuid import UUID
+import importlib.metadata
 
-from pydantic_core import InitErrorDetails
+import deprecation
 
-from canvas_sdk.effects.base import EffectType, _BaseEffect
-from canvas_sdk.v1.data import Claim
+from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 
-
-class AddClaimComment(_BaseEffect):
-    """Effect to add a comment to a Claim."""
-
-    class Meta:
-        effect_type = EffectType.ADD_CLAIM_COMMENT
-
-    claim_id: UUID | str
-    comment: str
-
-    @property
-    def values(self) -> dict[str, Any]:
-        """The values for adding a claim comment."""
-        return {"claim_id": str(self.claim_id), "comment": self.comment}
-
-    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
-        errors = super()._get_error_details(method)
-        if not Claim.objects.filter(id=self.claim_id).exists():
-            errors.append(
-                self._create_error_detail(
-                    "value",
-                    f"Claim with id {self.claim_id} does not exist.",
-                    self.claim_id,
-                )
-            )
-        return errors
+version = importlib.metadata.version("canvas")
 
 
-__exports__ = ("AddClaimComment",)
+@deprecation.deprecated(
+    deprecated_in="0.95.0",
+    removed_in="1.0.0",
+    current_version=version,
+    details="Use canvas_sdk.effects.claim.Claim::add_comment instead",
+)
+class AddClaimComment(_AddClaimComment):
+    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::add_comment."""
+
+    pass
+
+
+__all__ = __exports__ = ("AddClaimComment",)

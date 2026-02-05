@@ -8,17 +8,21 @@ import pytest
 from django.db.models import QuerySet
 from pydantic import ValidationError
 
-from canvas_sdk.effects.payment.base import ClaimAllocation, LineItemTransaction, PaymentMethod
-from canvas_sdk.effects.payment.post_claim_payment import PostClaimPayment
+from canvas_sdk.effects.claim.payment.base import (
+    ClaimAllocation,
+    LineItemTransaction,
+    PaymentMethod,
+)
+from canvas_sdk.effects.payment import PostClaimPayment
 
 
 @pytest.fixture
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock common DB queries used by post_claim_payment._get_error_details."""
     with (
-        patch("canvas_sdk.effects.payment.base.Claim.objects") as mock_claim_q,
-        patch("canvas_sdk.effects.payment.base.ClaimLineItem.objects") as mock_cli_q,
-        patch("canvas_sdk.effects.payment.base.ClaimQueue.objects") as mock_queue,
+        patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_claim_q,
+        patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli_q,
+        patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_queue,
     ):
         # A representative Claim object used by tests
         mock_claim = MagicMock()
