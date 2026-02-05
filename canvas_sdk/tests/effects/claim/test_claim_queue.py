@@ -12,8 +12,8 @@ from canvas_sdk.effects.claim_queue import MoveClaimToQueue
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
-        patch("canvas_sdk.effects.claim_queue.Claim.objects") as mock_claim,
-        patch("canvas_sdk.effects.claim_queue.ClaimQueue.objects") as mock_queue,
+        patch("canvas_sdk.effects.claim.claim_queue.Claim.objects") as mock_claim,
+        patch("canvas_sdk.effects.claim.claim_queue.ClaimQueue.objects") as mock_queue,
     ):
         # Setup default behaviors - objects exist
         mock_claim.filter.return_value.exists.return_value = True

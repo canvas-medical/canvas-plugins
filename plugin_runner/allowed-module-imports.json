@@ -455,11 +455,26 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim": [
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
+  "canvas_sdk.effects.claim.claim": [
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
   "canvas_sdk.effects.claim_comment": [
     "AddClaimComment"
   ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
+    "ColorEnum",
     "Label",
     "RemoveClaimLabel"
   ],
