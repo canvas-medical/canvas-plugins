@@ -121,10 +121,18 @@ class IntegrationTask(TimestampedModel, IdentifiableModel):
 
     objects = models.Manager.from_queryset(IntegrationTaskQuerySet)()
 
-    status = models.CharField(max_length=3, choices=IntegrationTaskStatus.choices)
-    type = models.CharField(max_length=125)
-    title = models.CharField(max_length=256)
-    channel = models.CharField(max_length=50, choices=IntegrationTaskChannel.choices)
+    status = models.CharField(
+        max_length=3,
+        choices=IntegrationTaskStatus.choices,
+        default=IntegrationTaskStatus.UNREAD,
+        db_index=True,
+    )
+    type = models.CharField(max_length=125, blank=True, default="")
+    title = models.CharField(max_length=256, blank=True, default="")
+    document = models.FileField(max_length=255)
+    channel = models.CharField(
+        max_length=50, choices=IntegrationTaskChannel.choices, db_index=True
+    )
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, null=True, related_name="integration_tasks"
     )

@@ -206,3 +206,14 @@ def test_option_str_representation() -> None:
     """Test __str__ returns label and key."""
     option = LabReportTemplateFieldOption.objects.get(key="pos")
     assert str(option) == "Positive (pos)"
+
+
+def test_lab_report_template_queryset_point_of_care():
+    """Test LabReportTemplateQuerySet.point_of_care() filters POC templates."""
+    poc_template = LabReportTemplateFactory(poc=True)
+    regular_template = LabReportTemplateFactory(poc=False)
+
+    result = LabReportTemplate.objects.point_of_care()
+
+    assert poc_template in result
+    assert regular_template not in result
