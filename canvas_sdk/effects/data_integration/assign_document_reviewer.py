@@ -1,6 +1,6 @@
 """Effect for assigning a document reviewer."""
 
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any
 
 from canvas_sdk.effects.base import EffectType
@@ -21,7 +21,7 @@ class Priority(StrEnum):
     HIGH = "high"
 
 
-class ReviewMode(Enum):
+class ReviewMode(StrEnum):
     """Review mode for document review.
 
     Maps to short codes in database: RR, AR, RN.
@@ -32,18 +32,19 @@ class ReviewMode(Enum):
         REVIEW_NOT_REQUIRED: Document does not require review - maps to "RN"
     """
 
-    REVIEW_REQUIRED = ("review_required", "RR")
-    ALREADY_REVIEWED = ("already_reviewed", "AR")
-    REVIEW_NOT_REQUIRED = ("review_not_required", "RN")
-
-    def __init__(self, sdk_value: str, db_code: str):
-        self.sdk_value = sdk_value
-        self.db_code = db_code
+    REVIEW_REQUIRED = "review_required"
+    ALREADY_REVIEWED = "already_reviewed"
+    REVIEW_NOT_REQUIRED = "review_not_required"
 
     @property
-    def value(self) -> str:
-        """SDK value for serialization."""
-        return self.sdk_value
+    def db_code(self) -> str:
+        """Get database short code for this review mode."""
+        _DB_CODES = {
+            ReviewMode.REVIEW_REQUIRED: "RR",
+            ReviewMode.ALREADY_REVIEWED: "AR",
+            ReviewMode.REVIEW_NOT_REQUIRED: "RN",
+        }
+        return _DB_CODES[self]
 
 
 class AssignDocumentReviewer(_BaseDocumentEffect):
