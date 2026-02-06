@@ -43,10 +43,10 @@ class SpecialtyReportTemplate(IdentifiableModel):
     search_keywords = models.CharField(max_length=500)
     active = models.BooleanField()
     custom = models.BooleanField()
-    search_as = models.CharField(max_length=255,  default="", blank=True)
-    specialty_name = models.CharField(max_length=255,  default="", blank=True)
-    specialty_code = models.CharField(max_length=255,  default="", blank=True)
-    specialty_code_system = models.CharField(max_length=255,  default="", blank=True)
+    search_as = models.CharField(max_length=255, default="", blank=True)
+    specialty_name = models.CharField(max_length=255, default="", blank=True)
+    specialty_code = models.CharField(max_length=255, default="", blank=True)
+    specialty_code_system = models.CharField(max_length=255, default="", blank=True)
 
 
 class SpecialtyReportTemplateField(Model):

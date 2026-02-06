@@ -208,10 +208,11 @@ def test_option_str_representation() -> None:
     assert str(option) == "Positive (pos)"
 
 
-def test_lab_report_template_queryset_point_of_care():
+@pytest.mark.django_db
+def test_lab_report_template_queryset_point_of_care() -> None:
     """Test LabReportTemplateQuerySet.point_of_care() filters POC templates."""
-    poc_template = LabReportTemplateFactory(poc=True)
-    regular_template = LabReportTemplateFactory(poc=False)
+    poc_template = LabReportTemplateFactory.create(poc=True)
+    regular_template = LabReportTemplateFactory.create(poc=False)
 
     result = LabReportTemplate.objects.point_of_care()
 
