@@ -1,12 +1,18 @@
 import json
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import cast
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 from urllib import parse
 
 import psycopg

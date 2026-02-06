@@ -11,7 +11,12 @@ from _ast import AnnAssign
 from collections.abc import Iterable, Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 from frozendict import frozendict
 from RestrictedPython import (
