@@ -1,5 +1,3 @@
-"""Effect for assigning a document reviewer."""
-
 from enum import StrEnum
 from typing import Any
 
