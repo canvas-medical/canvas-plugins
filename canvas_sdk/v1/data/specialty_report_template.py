@@ -34,7 +34,6 @@ class SpecialtyReportTemplate(IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_specialtyreporttemplate_001"
-        managed = False
 
     objects = models.Manager.from_queryset(SpecialtyReportTemplateQuerySet)()
 
@@ -44,10 +43,10 @@ class SpecialtyReportTemplate(IdentifiableModel):
     search_keywords = models.CharField(max_length=500)
     active = models.BooleanField()
     custom = models.BooleanField()
-    search_as = models.CharField(max_length=255)
-    specialty_name = models.CharField(max_length=255)
-    specialty_code = models.CharField(max_length=255)
-    specialty_code_system = models.CharField(max_length=255)
+    search_as = models.CharField(max_length=255,  default="", blank=True)
+    specialty_name = models.CharField(max_length=255,  default="", blank=True)
+    specialty_code = models.CharField(max_length=255,  default="", blank=True)
+    specialty_code_system = models.CharField(max_length=255,  default="", blank=True)
 
 
 class SpecialtyReportTemplateField(Model):
@@ -55,7 +54,6 @@ class SpecialtyReportTemplateField(Model):
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_specialtyrpttmplfield_001"
-        managed = False
 
     report_template = models.ForeignKey(
         SpecialtyReportTemplate,
@@ -78,7 +76,6 @@ class SpecialtyReportTemplateFieldOption(Model):
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_specialtyrpttmplfieldopt_001"
-        managed = False
 
     field = models.ForeignKey(
         SpecialtyReportTemplateField,
