@@ -65,7 +65,7 @@ class LabReportTemplate(IdentifiableModel):
     search_keywords = models.CharField(max_length=500, blank=True, default="")
     active = models.BooleanField(default=True)
     custom = models.BooleanField(default=True)
-    poc = models.BooleanField(default=False)
+    poc = models.BooleanField("Point of Care Test", default=False, db_index=True)
 
     def __str__(self) -> str:
         return self.name
