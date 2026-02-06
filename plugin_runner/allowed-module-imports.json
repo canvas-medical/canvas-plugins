@@ -544,9 +544,11 @@
     "AddAppointmentLabel",
     "Appointment",
     "AppointmentIdentifier",
+    "FreezeNoteEffect",
     "Note",
     "RemoveAppointmentLabel",
-    "ScheduleEvent"
+    "ScheduleEvent",
+    "UnfreezeNoteEffect"
   ],
   "canvas_sdk.effects.note.appointment": [
     "AddAppointmentLabel",
@@ -558,6 +560,10 @@
     "AppointmentABC",
     "AppointmentIdentifier",
     "NoteOrAppointmentABC"
+  ],
+  "canvas_sdk.effects.note.freeze": [
+    "FreezeNoteEffect",
+    "UnfreezeNoteEffect"
   ],
   "canvas_sdk.effects.note.message": [
     "Message"
