@@ -74,7 +74,7 @@ wheels = [
 
 [[package]]
 name = "canvas"
-version = "0.81.0"
+version = "0.95.0"
 source = { editable = "../" }
 dependencies = [
     { name = "cookiecutter" },
@@ -104,6 +104,7 @@ dependencies = [
     { name = "restrictedpython" },
     { name = "sentry-sdk" },
     { name = "statsd" },
+    { name = "stripe" },
     { name = "typer" },
     { name = "typing-extensions" },
     { name = "websocket-client" },
@@ -144,6 +145,7 @@ requires-dist = [
     { name = "restrictedpython", specifier = ">=8.0" },
     { name = "sentry-sdk", specifier = ">=2.33.2" },
     { name = "statsd", specifier = ">=4.0.1,<5" },
+    { name = "stripe", specifier = ">=14.1.0" },
     { name = "typer" },
     { name = "typing-extensions", specifier = ">=4.8,<4.13" },
     { name = "websocket-client", specifier = ">=1.7.0,<2" },
@@ -1751,6 +1753,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/27/29/05e9f50946f4cf2ed182726c60d9c0ae523bb3f180588c574dd9746de557/statsd-4.0.1.tar.gz", hash = "sha256:99763da81bfea8daf6b3d22d11aaccb01a8d0f52ea521daab37e758a4ca7d128", size = 27814, upload-time = "2022-11-06T14:17:36.194Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/d0/c9543b52c067a390ae6ae632d7fd1b97a35cdc8d69d40c0b7d334b326410/statsd-4.0.1-py2.py3-none-any.whl", hash = "sha256:c2676519927f7afade3723aca9ca8ea986ef5b059556a980a867721ca69df093", size = 13118, upload-time = "2022-11-06T14:17:34.258Z" },
+]
+
+[[package]]
+name = "stripe"
+version = "14.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/67/8a38222a57fc2ba359c4dcb66528d94c00d803c7fde8f8d8470ad6bdccbb/stripe-14.3.0.tar.gz", hash = "sha256:4c76137d741bd43e8bb433a596c198ca20f4cdf17a8fe04604faf37c74b01978", size = 1463618, upload-time = "2026-01-28T21:20:29.856Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/4b/0b7d5920f2be5e42d72bdfc44a9fae57b422668bfc8dacdf2f74886f6daa/stripe-14.3.0-py3-none-any.whl", hash = "sha256:3e36b68b256c8970e99b703e195d947e2a2919095758788c7074ac4485ac255e", size = 2106980, upload-time = "2026-01-28T21:20:27.566Z" },
 ]
 
 [[package]]
