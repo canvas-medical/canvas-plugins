@@ -4,6 +4,7 @@ from typing import Any
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.v1.data import Application
 
 
 class DefaultHomepageEffect(_BaseEffect):
@@ -22,14 +23,14 @@ class DefaultHomepageEffect(_BaseEffect):
         DATA_INTEGRATION = "/data-integration"
 
     page: Pages | None = None
-    application_url: str | None = None
+    application_identifier: str | None = None
 
     @property
     def values(self) -> dict[str, Any]:
         """Homepage configuration values."""
         return {
             "page": self.page.value if self.page else None,
-            "application_url": self.application_url,
+            "application_identifier": self.application_identifier,
         }
 
     @property
@@ -40,14 +41,27 @@ class DefaultHomepageEffect(_BaseEffect):
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.page is None and self.application_url is None:
+        if self.page is None and self.application_identifier is None:
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Either page or application_url must be provided",
+                    "Either page or application must be provided",
                     self.page,
                 )
             )
+
+        if self.application_identifier:
+            application = Application.objects.filter(
+                identifier=self.application_identifier
+            ).exists()
+            if not application:
+                errors.append(
+                    self._create_error_detail(
+                        "application_identifier",
+                        f"Application with identifier {self.application_identifier} does not exist",
+                        self.application_identifier,
+                    )
+                )
 
         return errors
 
