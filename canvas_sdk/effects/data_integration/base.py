@@ -71,4 +71,4 @@ class _BaseDocumentEffect(_BaseEffect):
         return errors
 
 
-__exports__ = ("_BaseDocumentEffect",)
+__exports__ = ()
