@@ -411,16 +411,24 @@ class DataIntegrationHandler(BaseProtocol):
                         },
                         # Thyroxine T4 (LOINC: 3026-2)
                         "3026-2": {
-                            "value": "7.8",
+                            "value": "13.5",
                             "unit": "ug/dL",
                             "reference_range": "4.5 - 12.0 ug/dL",
-                            "annotations": [AnnotationItem(text="AI 89%", color="#4CAF50")],
+                            "abnormal": True,
+                            "annotations": [
+                                AnnotationItem(text="AI 89%", color="#4CAF50"),
+                                AnnotationItem(text="High", color="#F44336"),
+                            ],
                         },
                         "Thyroxine (T4)": {
-                            "value": "7.8",
+                            "value": "13.5",
                             "unit": "ug/dL",
                             "reference_range": "4.5 - 12.0 ug/dL",
-                            "annotations": [AnnotationItem(text="AI 89%", color="#4CAF50")],
+                            "abnormal": True,
+                            "annotations": [
+                                AnnotationItem(text="AI 89%", color="#4CAF50"),
+                                AnnotationItem(text="High", color="#F44336"),
+                            ],
                         },
                         # T3 Uptake (LOINC: 3050-2)
                         "3050-2": {
