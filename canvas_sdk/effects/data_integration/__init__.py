@@ -1,7 +1,6 @@
 from .assign_document_reviewer import AssignDocumentReviewer as AssignDocumentReviewer
 from .assign_document_reviewer import Priority as Priority
 from .assign_document_reviewer import ReviewMode as ReviewMode
-from .base import _BaseDocumentEffect as _BaseDocumentEffect
 from .categorize_document import CategorizeDocument as CategorizeDocument
 from .junk_document import JunkDocument as JunkDocument
 from .link_document_to_patient import LinkDocumentToPatient as LinkDocumentToPatient
@@ -13,7 +12,6 @@ from .types import AnnotationItem as AnnotationItem
 from .types import DocumentType as DocumentType
 
 __all__ = __exports__ = (
-    "_BaseDocumentEffect",
     "AnnotationItem",
     "AssignDocumentReviewer",
     "CategorizeDocument",
