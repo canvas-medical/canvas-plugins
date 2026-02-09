@@ -3,7 +3,7 @@ from typing import Self
 from django.db import models
 from django.db.models import Q
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model
+from canvas_sdk.v1.data.base import BaseQuerySet, IdentifiableModel, Model
 
 
 class FieldType(models.TextChoices):
@@ -21,7 +21,7 @@ class FieldType(models.TextChoices):
     DATE = "date", "Date"
 
 
-class LabReportTemplateQuerySet(models.QuerySet):
+class LabReportTemplateQuerySet(BaseQuerySet):
     """QuerySet for LabReportTemplate with custom filtering methods."""
 
     def active(self) -> Self:
