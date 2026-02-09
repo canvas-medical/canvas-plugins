@@ -59,8 +59,6 @@ class SpecialtyReportTemplateField(Model):
         SpecialtyReportTemplate,
         on_delete=models.DO_NOTHING,
         related_name="fields",
-        db_column="report_template_id",
-        to_field="dbid",
     )
     sequence = models.IntegerField()
     code = models.CharField(max_length=255, null=True, blank=True)
@@ -81,8 +79,6 @@ class SpecialtyReportTemplateFieldOption(Model):
         SpecialtyReportTemplateField,
         on_delete=models.DO_NOTHING,
         related_name="options",
-        db_column="field_id",
-        to_field="dbid",
     )
     label = models.CharField(max_length=255)
     key = models.CharField(max_length=255)
