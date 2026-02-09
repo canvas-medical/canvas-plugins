@@ -790,55 +790,60 @@ def test_custom_command_subclass_without_meta() -> None:
     assert effect.type == EffectType.ORIGINATE_CUSTOM_COMMAND_COMMAND
 
 
-class TestVitalsCommandBodyTemperature:
-    """Tests for VitalsCommand body_temperature field accepting float values."""
+def test_vitals_body_temperature_accepts_float() -> None:
+    """Test that body_temperature accepts a float value like 98.6."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
+    assert command.body_temperature == 98.6
 
-    def test_body_temperature_accepts_float(self) -> None:
-        """Test that body_temperature accepts a float value like 98.6."""
-        command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
-        assert command.body_temperature == 98.6
 
-    def test_body_temperature_accepts_integer(self) -> None:
-        """Test that body_temperature still accepts integer values."""
-        command = VitalsCommand(note_uuid="test_uuid", body_temperature=98)
-        assert command.body_temperature == 98.0
+def test_vitals_body_temperature_accepts_integer() -> None:
+    """Test that body_temperature still accepts integer values."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98)
+    assert command.body_temperature == 98.0
 
-    def test_body_temperature_accepts_boundary_float_values(self) -> None:
-        """Test that body_temperature accepts float values at the boundaries."""
-        low = VitalsCommand(note_uuid="test_uuid", body_temperature=85.0)
-        assert low.body_temperature == 85.0
 
-        high = VitalsCommand(note_uuid="test_uuid", body_temperature=107.0)
-        assert high.body_temperature == 107.0
+def test_vitals_body_temperature_accepts_boundary_float_values() -> None:
+    """Test that body_temperature accepts float values at the boundaries."""
+    low = VitalsCommand(note_uuid="test_uuid", body_temperature=85.0)
+    assert low.body_temperature == 85.0
 
-    def test_body_temperature_accepts_decimal_precision(self) -> None:
-        """Test that body_temperature preserves decimal precision."""
-        command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.64)
-        assert command.body_temperature == 98.64
+    high = VitalsCommand(note_uuid="test_uuid", body_temperature=107.0)
+    assert high.body_temperature == 107.0
 
-    def test_body_temperature_rejects_below_minimum(self) -> None:
-        """Test that body_temperature rejects values below 85."""
-        with pytest.raises(ValidationError):
-            VitalsCommand(note_uuid="test_uuid", body_temperature=84.9)
 
-    def test_body_temperature_rejects_above_maximum(self) -> None:
-        """Test that body_temperature rejects values above 107."""
-        with pytest.raises(ValidationError):
-            VitalsCommand(note_uuid="test_uuid", body_temperature=107.1)
+def test_vitals_body_temperature_accepts_decimal_precision() -> None:
+    """Test that body_temperature preserves decimal precision."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.64)
+    assert command.body_temperature == 98.64
 
-    def test_body_temperature_allows_none(self) -> None:
-        """Test that body_temperature can be None."""
-        command = VitalsCommand(note_uuid="test_uuid", body_temperature=None)
-        assert command.body_temperature is None
 
-    def test_body_temperature_defaults_to_none(self) -> None:
-        """Test that body_temperature defaults to None."""
-        command = VitalsCommand(note_uuid="test_uuid")
-        assert command.body_temperature is None
+def test_vitals_body_temperature_rejects_below_minimum() -> None:
+    """Test that body_temperature rejects values below 85."""
+    with pytest.raises(ValidationError):
+        VitalsCommand(note_uuid="test_uuid", body_temperature=84.9)
 
-    def test_body_temperature_float_in_originate_payload(self) -> None:
-        """Test that a float body_temperature is preserved in the originate payload."""
-        command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
-        effect = command.originate()
-        payload = json.loads(effect.payload)
-        assert payload["data"]["body_temperature"] == 98.6
+
+def test_vitals_body_temperature_rejects_above_maximum() -> None:
+    """Test that body_temperature rejects values above 107."""
+    with pytest.raises(ValidationError):
+        VitalsCommand(note_uuid="test_uuid", body_temperature=107.1)
+
+
+def test_vitals_body_temperature_allows_none() -> None:
+    """Test that body_temperature can be None."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=None)
+    assert command.body_temperature is None
+
+
+def test_vitals_body_temperature_defaults_to_none() -> None:
+    """Test that body_temperature defaults to None."""
+    command = VitalsCommand(note_uuid="test_uuid")
+    assert command.body_temperature is None
+
+
+def test_vitals_body_temperature_float_in_originate_payload() -> None:
+    """Test that a float body_temperature is preserved in the originate payload."""
+    command = VitalsCommand(note_uuid="test_uuid", body_temperature=98.6)
+    effect = command.originate()
+    payload = json.loads(effect.payload)
+    assert payload["data"]["body_temperature"] == 98.6
