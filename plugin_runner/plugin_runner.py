@@ -11,7 +11,12 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from time import sleep
-from typing import Any, TypedDict, cast
+from typing import Any, cast
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import grpc
 import redis

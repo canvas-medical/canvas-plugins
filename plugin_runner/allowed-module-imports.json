@@ -490,6 +490,53 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.data_integration": [
+    "AnnotationItem",
+    "AssignDocumentReviewer",
+    "CategorizeDocument",
+    "DocumentType",
+    "JunkDocument",
+    "LinkDocumentToPatient",
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
+    "Priority",
+    "RemoveDocumentFromPatient",
+    "ReviewMode",
+    "TemplateFields",
+    "_BaseDocumentEffect"
+  ],
+  "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "AssignDocumentReviewer",
+    "Priority",
+    "ReviewMode"
+  ],
+  "canvas_sdk.effects.data_integration.base": [
+    "_BaseDocumentEffect"
+  ],
+  "canvas_sdk.effects.data_integration.categorize_document": [
+    "CategorizeDocument"
+  ],
+  "canvas_sdk.effects.data_integration.constants": [
+    "VALID_REPORT_TYPES",
+    "VALID_TEMPLATE_TYPES"
+  ],
+  "canvas_sdk.effects.data_integration.junk_document": [
+    "JunkDocument"
+  ],
+  "canvas_sdk.effects.data_integration.link_document_to_patient": [
+    "LinkDocumentToPatient"
+  ],
+  "canvas_sdk.effects.data_integration.prefill_document_fields": [
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields"
+  ],
+  "canvas_sdk.effects.data_integration.remove_document_from_patient": [
+    "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.types": [
+    "AnnotationItem",
+    "DocumentType"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
@@ -902,15 +949,24 @@
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
@@ -921,6 +977,10 @@
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LabReview",
     "LabTest",
     "LabValue",
@@ -981,6 +1041,9 @@
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
@@ -1137,6 +1200,10 @@
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
@@ -1146,6 +1213,14 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.integration_task": [
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskQuerySet",
+    "IntegrationTaskReview",
+    "IntegrationTaskReviewQuerySet",
+    "IntegrationTaskStatus"
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
@@ -1167,6 +1242,13 @@
     "LabValue",
     "LabValueCoding",
     "TransmissionType"
+  ],
+  "canvas_sdk.v1.data.lab_report_template": [
+    "FieldType",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet"
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
@@ -1291,6 +1373,11 @@
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.v1.data.specialty_report_template": [
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption"
   ],
   "canvas_sdk.v1.data.staff": [
     "Staff",
