@@ -4,6 +4,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import _BaseEffect
 from canvas_sdk.effects.data_integration.types import AnnotationItem
+from logger import log
 
 
 class _BaseDocumentEffect(_BaseEffect):
@@ -34,7 +35,18 @@ class _BaseDocumentEffect(_BaseEffect):
 
     def _serialize_source_protocol(self) -> str | None:
         """Serialize source_protocol with whitespace stripped."""
-        return self.source_protocol.strip() if self.source_protocol is not None else None
+        log.info("[report_type] _serialize_source_protocol called")
+        log.info(f"[report_type] source_protocol raw value: {self.source_protocol!r}")
+        log.info(f"[report_type] source_protocol is None: {self.source_protocol is None}")
+
+        if self.source_protocol is not None:
+            serialized = self.source_protocol.strip()
+            log.info(f"[report_type] source_protocol after strip(): {serialized!r}")
+            log.info(f"[report_type] source_protocol is empty after strip: {len(serialized) == 0}")
+            return serialized
+        else:
+            log.warning("[report_type] source_protocol is None, returning None")
+            return None
 
     def _validate_document_id(self) -> list[InitErrorDetails]:
         """Validate document_id is non-empty if provided as string."""
