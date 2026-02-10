@@ -24,7 +24,7 @@ class Homepage(BaseHandler):
             log.info("HOMEPAGE - SCHEDULE")
             return [DefaultHomepageEffect(application_identifier="no_app").apply()]
 
-        if provider.first_name == "Larry" and application:
+        if provider.first_name == "Michael" and application:
             log.info("HOMEPAGE - APPLICATION")
             return [DefaultHomepageEffect(application_identifier=application.identifier).apply()]
 
