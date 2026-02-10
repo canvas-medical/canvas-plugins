@@ -14,7 +14,7 @@ class DefaultHomepageEffect(_BaseEffect):
     """
 
     class Meta:
-        effect_type = EffectType.HOMEPAGE_CONFIGURATION_RESULT
+        effect_type = EffectType.HOMEPAGE_CONFIGURATION
 
     class Pages(StrEnum):
         PATIENTS = "/patients"

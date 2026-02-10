@@ -10,7 +10,7 @@ from logger import log
 class Homepage(BaseHandler):
     """Handler for homepage configuration events."""
 
-    RESPONDS_TO = EventType.Name(EventType.HOMEPAGE_CONFIGURATION)
+    RESPONDS_TO = EventType.Name(EventType.GET_HOMEPAGE_CONFIGURATION)
 
     def compute(self) -> list[Effect]:
         """Set the default homepage."""
