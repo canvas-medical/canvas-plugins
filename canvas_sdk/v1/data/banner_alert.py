@@ -1,10 +1,10 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class BannerAlert(TimestampedModel):
+class BannerAlert(TimestampedModel, IdentifiableModel):
     """BannerAlert."""
 
     class Meta:
