@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Any
 
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -22,7 +23,7 @@ class DefaultHomepageEffect(_BaseEffect):
         CAMPAIGNS = "/campaigns"
         DATA_INTEGRATION = "/data-integration"
 
-    page: Pages | None = None
+    page: Pages | None = Field(default=None, strict=False)
     application_identifier: str | None = None
 
     @property
