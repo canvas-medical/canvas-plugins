@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from canvas_sdk.effects import Effect
+from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import Event, EventRequest, EventType
 from canvas_sdk.handlers.action_button import ActionButton
@@ -47,6 +47,7 @@ def test_compute_handles_action_button_clicked_with_matching_key() -> None:
 
     assert len(result) == 1
     assert isinstance(result[0], Effect)
+    assert result[0].type == EffectType.LAUNCH_MODAL
 
 
 def test_compute_returns_empty_when_key_does_not_match() -> None:
