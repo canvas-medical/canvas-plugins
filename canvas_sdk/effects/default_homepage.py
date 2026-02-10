@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic_core import InitErrorDetails
@@ -15,7 +15,7 @@ class DefaultHomepageEffect(_BaseEffect):
     class Meta:
         effect_type = EffectType.HOMEPAGE_CONFIGURATION_RESULT
 
-    class Pages(Enum):
+    class Pages(StrEnum):
         PATIENTS = "/patients"
         SCHEDULE = "/schedule"
         REVENUE = "/revenue"

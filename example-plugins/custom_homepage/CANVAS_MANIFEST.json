@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "custom_homepage",
-    "description": "An example plugin that sets a custom homepage application or a different provider application page",
+    "description": "An example plugin that sets a custom homepage application or an alternative provider application page",
     "url_permissions": [
         {
             "url": "https://www.canvasmedical.com/extensions",

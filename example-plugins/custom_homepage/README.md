@@ -3,7 +3,7 @@ custom_homepage
 
 ## Description
 
-A description of this plugin
+An example plugin that sets a custom homepage application or an alternative provider application page
 
 ### Important Note!
 
