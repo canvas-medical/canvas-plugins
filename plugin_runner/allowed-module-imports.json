@@ -490,6 +490,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.default_homepage": [
+    "DefaultHomepageEffect"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
@@ -858,6 +861,7 @@
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "Application",
     "Appointment",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
@@ -1005,6 +1009,9 @@
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding"
+  ],
+  "canvas_sdk.v1.data.application": [
+    "Application"
   ],
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
