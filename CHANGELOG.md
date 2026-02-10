@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.96.0 (2026-02-10)
+
+### Features
+
+- Add note as a scope and target for applications
+  ([#1452](https://github.com/canvas-medical/canvas-plugins/pull/1452),
+  [`3e9f785`](https://github.com/canvas-medical/canvas-plugins/commit/3e9f785171b7fb98711216ce7b41cf10b658c497))
+
+
 ## v0.95.0 (2026-02-05)
 
 ### Bug Fixes
