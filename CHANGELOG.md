@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.97.0 (2026-02-10)
+
+### Features
+
+- Add homepage effect ([#1491](https://github.com/canvas-medical/canvas-plugins/pull/1491),
+  [`ea08396`](https://github.com/canvas-medical/canvas-plugins/commit/ea083966103ccab87f254cd3ad4a406c0a3d1864))
+
+
 ## v0.96.0 (2026-02-10)
 
 ### Features
