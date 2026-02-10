@@ -726,7 +726,8 @@
     "SHOW_BUTTON_REGEX"
   ],
   "canvas_sdk.handlers.application": [
-    "Application"
+    "Application",
+    "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
     "BaseHandler",
