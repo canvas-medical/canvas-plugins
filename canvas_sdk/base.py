@@ -6,8 +6,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
 
-from logger import log
-
 
 class Model(BaseModel):
     """A base model that includes validation methods."""
@@ -51,23 +49,9 @@ class Model(BaseModel):
         return error_details
 
     def _validate_before_effect(self, method: str) -> None:
-        log.info(f"[report_type] _validate_before_effect called for {self.__class__.__name__}, method: {method}")
-
-        # Log source_protocol if it exists
-        if hasattr(self, 'source_protocol'):
-            log.info(f"[report_type] source_protocol before model_validate: {self.source_protocol!r}")
-
         self.model_validate(self)
-
-        # Log source_protocol after validation
-        if hasattr(self, 'source_protocol'):
-            log.info(f"[report_type] source_protocol after model_validate: {self.source_protocol!r}")
-
         if error_details := self._get_error_details(method):
-            log.error(f"[report_type] Validation errors found: {len(error_details)} errors")
             raise ValidationError.from_exception_data(self.__class__.__name__, error_details)
-
-        log.info("[report_type] _validate_before_effect completed successfully")
 
 
 class TrackableFieldsModel(Model):
