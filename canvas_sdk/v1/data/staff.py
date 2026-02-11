@@ -223,7 +223,7 @@ class StaffRole(Model):
     internal_code = models.CharField(max_length=10)
     public_abbreviation = models.CharField(max_length=10, default="", blank=True)
     domain = models.CharField(max_length=3, choices=RoleDomain.choices, db_index=True)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=128)
     domain_privilege_level = models.IntegerField(default=0)
     permissions = models.JSONField(default=dict, blank=True, null=True)
     role_type = models.CharField(max_length=50, choices=RoleType.choices, blank=True)
