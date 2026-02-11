@@ -343,14 +343,11 @@ class DataIntegrationHandler(BaseProtocol):
 
     def _create_categorize_document_effect(self, document_id: str) -> Effect | None:
         """Create a CategorizeDocument effect using available document types."""
-        log.info(f"[report_type] _create_categorize_document_effect called for document_id: {document_id}")
         available_document_types = self.event.context.get("available_document_types", [])
 
         if not available_document_types:
-            log.warning(f"[report_type] No available_document_types in context for document {document_id}")
+            log.warning(f"No available_document_types in context for document {document_id}")
             return None
-
-        log.info(f"[report_type] Found {len(available_document_types)} available document types")
 
         # Find "Lab Report" document type, or use the first available
         lab_report_type = next(
@@ -362,10 +359,8 @@ class DataIntegrationHandler(BaseProtocol):
             # Fall back to first available document type
             lab_report_type = available_document_types[0]
             log.info(
-                f"[report_type] Lab Report not found, using first available type: {lab_report_type.get('name')}"
+                f"Lab Report not found, using first available type: {lab_report_type.get('name')}"
             )
-        else:
-            log.info("[report_type] Found Lab Report document type")
 
         try:
             document_type: DocumentType = {
@@ -375,22 +370,10 @@ class DataIntegrationHandler(BaseProtocol):
                 "template_type": lab_report_type.get("template_type"),
             }
 
-            log.info("[report_type] Constructed document_type:")
-            log.info(f"[report_type]   key: {document_type['key']!r}")
-            log.info(f"[report_type]   name: {document_type['name']!r}")
-            log.info(f"[report_type]   report_type: {document_type['report_type']!r}")
-            log.info(f"[report_type]   template_type: {document_type.get('template_type')!r}")
-
             annotations: list[AnnotationItem] = [
                 AnnotationItem(text="AI 90%", color="#00AA00"),
                 AnnotationItem(text="Data integration", color="#2196F3"),
             ]
-
-            log.info("[report_type] Creating CategorizeDocument effect with:")
-            log.info(f"[report_type]   document_id: {document_id!r}")
-            log.info(f"[report_type]   document_type: {document_type}")
-            log.info(f"[report_type]   annotations count: {len(annotations)}")
-            log.info("[report_type]   source_protocol: 'data_integration_example'")
 
             effect = CategorizeDocument(
                 document_id=str(document_id),
@@ -398,28 +381,14 @@ class DataIntegrationHandler(BaseProtocol):
                 annotations=annotations,
                 source_protocol="data_integration_example",
             )
-
-            log.info("[report_type] CategorizeDocument effect created successfully")
-            log.info(f"[report_type] Effect.source_protocol value: {effect.source_protocol!r}")
-            log.info(f"[report_type] Effect.document_id value: {effect.document_id!r}")
-            log.info(f"[report_type] Effect.document_type: {effect.document_type}")
-
-            log.info("[report_type] Calling effect.apply() for CategorizeDocument")
-            applied_effect = effect.apply()
-            log.info(f"[report_type] effect.apply() returned: {type(applied_effect).__name__}")
-            log.info(f"[report_type] Applied effect details: {applied_effect}")
-
-            return applied_effect
+            return effect.apply()
 
         except (ValidationError, KeyError) as e:
-            log.error(f"[report_type] Error creating CategorizeDocument effect: {e}")
-            import traceback
-            log.error(f"[report_type] Traceback: {traceback.format_exc()}")
+            log.error(f"Error creating CategorizeDocument effect: {e}")
             return None
 
     def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
         """Create a PrefillDocumentFields effect with sample data."""
-        log.info(f"[report_type] _create_prefill_document_fields_effect called for document_id: {document_id}")
         try:
             templates = [
                 {
@@ -505,36 +474,16 @@ class DataIntegrationHandler(BaseProtocol):
                 AnnotationItem(text="Data integration", color="#2196F3"),
             ]
 
-            log.info("[report_type] Creating PrefillDocumentFields effect with:")
-            log.info(f"[report_type]   document_id: {document_id!r}")
-            log.info(f"[report_type]   templates count: {len(templates)}")
-            log.info(f"[report_type]   annotations count: {len(annotations)}")
-            log.info("[report_type]   source_protocol: 'data_integration_example'")
-
             effect = PrefillDocumentFields(
                 document_id=str(document_id),
                 templates=templates,
                 annotations=annotations,
                 source_protocol="data_integration_example",
             )
-
-            log.info("[report_type] PrefillDocumentFields effect created successfully")
-            log.info(f"[report_type] Effect.source_protocol value: {effect.source_protocol!r}")
-            log.info(f"[report_type] Effect.document_id value: {effect.document_id!r}")
-            log.info(f"[report_type] Effect.templates count: {len(effect.templates) if effect.templates else 0}")
-            log.info(f"[report_type] Effect.annotations count: {len(effect.annotations) if effect.annotations else 0}")
-
-            log.info("[report_type] Calling effect.apply() for PrefillDocumentFields")
-            applied_effect = effect.apply()
-            log.info(f"[report_type] effect.apply() returned: {type(applied_effect).__name__}")
-            log.info(f"[report_type] Applied effect details: {applied_effect}")
-
-            return applied_effect
+            return effect.apply()
         except ValidationError as e:
-            log.error(f"[report_type] Validation error creating PrefillDocumentFields: {e}")
+            log.error(f"Validation error creating PrefillDocumentFields: {e}")
             return None
         except Exception as e:
-            log.error(f"[report_type] Unexpected error creating PrefillDocumentFields: {e}")
-            import traceback
-            log.error(f"[report_type] Traceback: {traceback.format_exc()}")
+            log.error(f"Unexpected error creating PrefillDocumentFields: {e}")
             return None
