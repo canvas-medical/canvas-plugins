@@ -16,8 +16,12 @@ import pytest
 from django.db import connection
 
 from canvas_sdk.v1.plugin_database_context import (
+    _plugin_context,
     clear_current_plugin,
+    get_access_level,
     get_current_plugin,
+    get_current_schema,
+    is_write_allowed,
     plugin_database_context,
     set_current_plugin,
 )
@@ -123,9 +127,7 @@ class TestPluginContextThreadIsolation:
             return plugin_name, result
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = {
-                executor.submit(worker, f"plugin_{i}"): i for i in range(num_threads)
-            }
+            futures = {executor.submit(worker, f"plugin_{i}"): i for i in range(num_threads)}
 
             for future in as_completed(futures):
                 expected, actual = future.result()
@@ -337,13 +339,15 @@ class TestPluginDatabaseContextThreadSafetyMocked:
                             success = actual == plugin_name
 
                             with lock:
-                                results.append({
-                                    "thread_id": thread_id,
-                                    "iteration": iteration,
-                                    "expected": plugin_name,
-                                    "actual": actual,
-                                    "success": success,
-                                })
+                                results.append(
+                                    {
+                                        "thread_id": thread_id,
+                                        "iteration": iteration,
+                                        "expected": plugin_name,
+                                        "actual": actual,
+                                        "success": success,
+                                    }
+                                )
 
                             if not success:
                                 with lock:
@@ -597,3 +601,200 @@ class TestPluginDatabaseContextPostgres:
                 f"Thread {thread_id}: search_path '{result['search_path']}' "
                 f"does not contain '{result['plugin_name']}'"
             )
+
+
+class TestAccessLevel:
+    """Tests for access level functionality."""
+
+    def setup_method(self):
+        """Clear any existing plugin context before each test."""
+        clear_current_plugin()
+        for attr in ("schema", "access_level"):
+            if hasattr(_plugin_context, attr):
+                delattr(_plugin_context, attr)
+
+    def test_get_access_level_defaults_to_read(self):
+        """get_access_level should default to 'read' when not set (principle of least privilege)."""
+        assert get_access_level() == "read"
+
+    def test_get_access_level_returns_set_value(self):
+        """get_access_level should return the value that was set."""
+        _plugin_context.access_level = "read_write"
+        assert get_access_level() == "read_write"
+
+        _plugin_context.access_level = "read"
+        assert get_access_level() == "read"
+
+    def test_is_write_allowed_returns_false_by_default(self):
+        """is_write_allowed should return False when access_level is not set."""
+        assert is_write_allowed() is False
+
+    def test_is_write_allowed_returns_true_for_read_write(self):
+        """is_write_allowed should return True only when access_level is 'read_write'."""
+        _plugin_context.access_level = "read_write"
+        assert is_write_allowed() is True
+
+    def test_is_write_allowed_returns_false_for_read(self):
+        """is_write_allowed should return False when access_level is 'read'."""
+        _plugin_context.access_level = "read"
+        assert is_write_allowed() is False
+
+    def test_get_current_schema_returns_none_when_not_set(self):
+        """get_current_schema should return None when not in a plugin context."""
+        assert get_current_schema() is None
+
+    def test_get_current_schema_returns_set_value(self):
+        """get_current_schema should return the schema that was set."""
+        _plugin_context.schema = "my_namespace"
+        assert get_current_schema() == "my_namespace"
+
+
+class TestAccessLevelInContextManager:
+    """Tests for access level handling in the context manager."""
+
+    def setup_method(self):
+        """Clear any existing plugin context before each test."""
+        clear_current_plugin()
+        for attr in ("schema", "access_level"):
+            if hasattr(_plugin_context, attr):
+                delattr(_plugin_context, attr)
+
+    def test_context_sets_access_level(self):
+        """Context manager should set the access level."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("test_plugin", access_level="read_write"):
+                assert get_access_level() == "read_write"
+
+    def test_context_defaults_to_read_write_access(self):
+        """Context manager should default to read_write access level."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("test_plugin"):
+                assert get_access_level() == "read_write"
+
+    def test_context_with_read_only_access(self):
+        """Context manager should allow read-only access level."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("test_plugin", access_level="read"):
+                assert get_access_level() == "read"
+                assert is_write_allowed() is False
+
+    def test_context_clears_access_level_on_exit(self):
+        """Context manager should clear access level when exiting."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("test_plugin", access_level="read_write"):
+                pass
+
+        # After context, access_level should be cleared (returning default "read")
+        assert get_access_level() == "read"
+
+    def test_nested_contexts_restore_access_level(self):
+        """Nested contexts should restore the outer access level."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("outer_plugin", access_level="read"):
+                assert get_access_level() == "read"
+
+                with plugin_database_context("inner_plugin", access_level="read_write"):
+                    assert get_access_level() == "read_write"
+
+                # Should be restored to outer access level
+                assert get_access_level() == "read"
+
+    def test_context_sets_schema_for_namespace(self):
+        """Context manager should set schema when namespace is provided."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("my_plugin", namespace="shared_namespace"):
+                assert get_current_plugin() == "my_plugin"
+                assert get_current_schema() == "shared_namespace"
+
+    def test_context_uses_plugin_name_as_schema_when_no_namespace(self):
+        """Context manager should use plugin name as schema when no namespace provided."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("my_plugin"):
+                assert get_current_plugin() == "my_plugin"
+                assert get_current_schema() == "my_plugin"
+
+
+class TestAccessLevelThreadIsolation:
+    """Tests for thread isolation of access level."""
+
+    def test_threads_have_isolated_access_levels(self):
+        """Each thread should have its own access level."""
+        results = {}
+        errors = []
+        barrier = threading.Barrier(2)
+
+        def worker_read():
+            try:
+                barrier.wait()
+                with patch("django.db.connection") as mock_conn:
+                    mock_cursor = MagicMock()
+                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+                    with plugin_database_context("plugin_read", access_level="read"):
+                        time.sleep(0.01)
+                        results["read_thread"] = {
+                            "access_level": get_access_level(),
+                            "is_write_allowed": is_write_allowed(),
+                        }
+            except Exception as e:
+                errors.append(("read", str(e)))
+
+        def worker_write():
+            try:
+                barrier.wait()
+                with patch("django.db.connection") as mock_conn:
+                    mock_cursor = MagicMock()
+                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+                    with plugin_database_context("plugin_write", access_level="read_write"):
+                        time.sleep(0.01)
+                        results["write_thread"] = {
+                            "access_level": get_access_level(),
+                            "is_write_allowed": is_write_allowed(),
+                        }
+            except Exception as e:
+                errors.append(("write", str(e)))
+
+        t1 = threading.Thread(target=worker_read)
+        t2 = threading.Thread(target=worker_write)
+
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert len(errors) == 0, f"Thread errors: {errors}"
+        assert results["read_thread"]["access_level"] == "read"
+        assert results["read_thread"]["is_write_allowed"] is False
+        assert results["write_thread"]["access_level"] == "read_write"
+        assert results["write_thread"]["is_write_allowed"] is True

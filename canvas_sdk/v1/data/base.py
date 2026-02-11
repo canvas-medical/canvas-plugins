@@ -36,6 +36,12 @@ class ModelMetaclass(ModelBase):
         return new_class
 
 
+class NamespaceWriteDenied(Exception):
+    """Raised when a write operation is attempted without write access."""
+
+    pass
+
+
 class Model(models.Model, metaclass=ModelMetaclass):
     """A base model."""
 
@@ -43,6 +49,35 @@ class Model(models.Model, metaclass=ModelMetaclass):
         abstract = True
 
     dbid = models.BigAutoField(primary_key=True)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save the model instance, checking write permissions first."""
+        self._check_write_permission()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        """Delete the model instance, checking write permissions first."""
+        self._check_write_permission()
+        return super().delete(*args, **kwargs)
+
+    def _check_write_permission(self) -> None:
+        """Check if write operations are allowed in the current context.
+
+        Raises:
+            NamespaceWriteDenied: If in a namespace context with read-only access.
+        """
+        from canvas_sdk.v1.plugin_database_context import get_current_schema, is_write_allowed
+
+        schema = get_current_schema()
+        if schema is None:
+            # Not in a plugin context, allow write
+            return
+
+        if not is_write_allowed():
+            raise NamespaceWriteDenied(
+                f"Write operation denied: namespace '{schema}' is read-only. "
+                f"Plugin must declare 'read_write' access to perform write operations."
+            )
 
 
 class CustomModelMetaclass(ModelMetaclass):
@@ -308,4 +343,4 @@ class ValueSetTimeframeLookupQuerySet(TimeframeLookupQuerySetMixin, ValueSetLook
     pass
 
 
-__exports__ = ("CustomModel")
+__exports__ = ("CustomModel", "NamespaceWriteDenied")

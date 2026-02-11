@@ -1,9 +1,11 @@
+import hashlib
 import json
 import os
 import shutil
 import sys
 import tarfile
 import tempfile
+import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -33,6 +35,7 @@ from settings import (
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     CUSTOMER_IDENTIFIER,
+    MANIFEST_FILE_NAME,
     MEDIA_S3_BUCKET_NAME,
     PLUGIN_DIRECTORY,
     SECRETS_FILE_NAME,
@@ -167,7 +170,7 @@ from django.apps.config import AppConfig
 from django.conf import settings
 
 
-def register_plugin_as_django_app(plugin_name: str, plugin_path: str) -> None:
+def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
     """
     Dynamically register a plugin as a Django app.
     Must be called BEFORE any models from the plugin are imported.
@@ -238,38 +241,236 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: str) -> None:
     print(f"Registered plugin {plugin_name} as Django app with label {app_label}")
 
 
-def create_plugin_schema(plugin_name: str) -> None:
-    """Run database migrations for the given plugin."""
-    log.info(f"Running migrations for plugin '{plugin_name}'")
+# Reserved PostgreSQL schema names that cannot be used as namespaces
+RESERVED_SCHEMAS = frozenset(
+    {
+        "public",
+        "pg_catalog",
+        "pg_toast",
+        "information_schema",
+    }
+)
+
+RESERVED_SCHEMA_PREFIXES = ("pg_",)
+
+
+def is_valid_namespace_name(namespace: str) -> bool:
+    """Validate namespace name format and check against reserved names.
+
+    Valid namespaces must:
+    - Not be a reserved PostgreSQL schema name
+    - Not start with a reserved prefix (pg_)
+    - Follow the pattern: org__name (double underscore separator)
+    """
+    if namespace in RESERVED_SCHEMAS:
+        return False
+
+    if any(namespace.startswith(prefix) for prefix in RESERVED_SCHEMA_PREFIXES):
+        return False
+
+    # Require org__name format (validated by regex in manifest schema,
+    # but double-check here for safety)
+    if "__" not in namespace:
+        return False
+
+    return True
+
+
+def create_namespace_schema(namespace: str) -> dict[str, str] | None:
+    """Create a shared data namespace schema if it doesn't exist.
+
+    This initializes the namespace with:
+    - namespace_auth table for authentication (with auto-generated keys)
+    - custom_attribute and attribute_hub tables for data storage
+
+    Returns:
+        Dict with 'read_access_key' and 'read_write_access_key' if namespace was created,
+        None if namespace already existed.
+    """
+    if not is_valid_namespace_name(namespace):
+        raise ValueError(f"Invalid namespace name: {namespace}")
+
+    log.info(f"Creating namespace schema '{namespace}'")
 
     with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
-            "select count(*) as count from pg_catalog.pg_namespace where nspname = %s",
-            (plugin_name,),
+            "SELECT count(*) AS count FROM pg_catalog.pg_namespace WHERE nspname = %s",
+            (namespace,),
         )
         rows = cursor.fetchone()
+
+        generated_keys = None
+
         if rows["count"] == 0:
-            # Execute SQL file for plugin schema initialization
-            with open(Path(__file__).parent / "init_plugin_schema.sql") as f:
+            # Execute SQL file for namespace schema initialization
+            with open(Path(__file__).parent / "init_namespace_schema.sql") as f:
                 sql_content = f.read()
-                # Replace placeholder with actual plugin name
-                sql_content = sql_content.replace("{plugin_name}", plugin_name)
+                sql_content = sql_content.replace("{namespace}", namespace)
                 conn.cursor().execute(sql_content)
-        # Execute SQL file to populate content types and create partitions. Always run this
-        # to pick up any changes to available models
-        with open(Path(__file__).parent / "init_plugin_partitions.sql") as f:
+
+            # Generate UUID keys for read and read_write access
+            read_key = str(uuid.uuid4())
+            read_write_key = str(uuid.uuid4())
+
+            # Insert hashed keys into namespace_auth
+            read_key_hash = hashlib.sha256(read_key.encode()).hexdigest()
+            read_write_key_hash = hashlib.sha256(read_write_key.encode()).hexdigest()
+
+            cursor.execute(
+                f"""
+                INSERT INTO {namespace}.namespace_auth (key_hash, access_level, description)
+                VALUES (%s, %s, %s), (%s, %s, %s)
+                """,
+                (
+                    read_key_hash,
+                    "read",
+                    "Auto-generated read access key",
+                    read_write_key_hash,
+                    "read_write",
+                    "Auto-generated read_write access key",
+                ),
+            )
+
+            generated_keys = {
+                "read_access_key": read_key,
+                "read_write_access_key": read_write_key,
+            }
+
+            log.info(f"Created namespace schema '{namespace}' with auto-generated access keys")
+        else:
+            log.info(f"Namespace schema '{namespace}' already exists")
+
+        conn.commit()
+
+    return generated_keys
+
+
+def initialize_namespace_partitions(namespace: str) -> None:
+    """Populate content types and create partitions for the custom_attribute table.
+
+    This should be called every time a plugin with custom_data is installed,
+    to ensure all content types and partitions exist.
+
+    Args:
+        namespace: The namespace schema name.
+    """
+    log.info(f"Initializing partitions for namespace '{namespace}'")
+
+    with open_database_connection() as conn:
+        with open(Path(__file__).parent / "init_namespace_partitions.sql") as f:
             sql_content = f.read()
-            # Replace placeholder with actual plugin name
-            sql_content = sql_content.replace("{plugin_name}", plugin_name)
+            sql_content = sql_content.replace("{namespace}", namespace)
             conn.cursor().execute(sql_content)
         conn.commit()
+
+    log.info(f"Initialized partitions for namespace '{namespace}'")
+
+
+def verify_namespace_access(namespace: str, secret: str) -> str | None:
+    """Verify a plugin's secret against the namespace's auth table.
+
+    Args:
+        namespace: The namespace schema name
+        secret: The secret key value to verify
+
+    Returns:
+        The access level ('read' or 'read_write') if authorized, None if denied
+    """
+    key_hash = hashlib.sha256(secret.encode()).hexdigest()
+
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            f"SELECT access_level FROM {namespace}.namespace_auth WHERE key_hash = %s",
+            (key_hash,),
+        )
+        row = cursor.fetchone()
+
+    if row:
+        return row["access_level"]
+    return None
+
+
+def add_namespace_auth_key(
+    namespace: str, secret: str, access_level: str, description: str = ""
+) -> None:
+    """Add an authentication key to a namespace.
+
+    This is an administrative function for setting up namespace access.
+
+    Args:
+        namespace: The namespace schema name
+        secret: The secret key to hash and store
+        access_level: 'read' or 'read_write'
+        description: Optional description of who this key is for
+    """
+    if access_level not in ("read", "read_write"):
+        raise ValueError(f"Invalid access level: {access_level}")
+
+    key_hash = hashlib.sha256(secret.encode()).hexdigest()
+
+    with open_database_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                f"""
+                INSERT INTO {namespace}.namespace_auth (key_hash, access_level, description)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (key_hash) DO UPDATE SET access_level = %s, description = %s
+                """,
+                (key_hash, access_level, description, access_level, description),
+            )
+        conn.commit()
+    log.info(f"Added/updated auth key for namespace '{namespace}' with access '{access_level}'")
+
+
+def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str]) -> None:
+    """Store namespace access keys as plugin secrets.
+
+    This makes the auto-generated namespace keys visible in the UI so developers
+    can retrieve them and use them when setting up additional plugins.
+
+    Args:
+        plugin_name: The plugin that created the namespace
+        keys: Dict with 'read_access_key' and 'read_write_access_key'
+    """
+    with open_database_connection() as conn, conn.cursor() as cursor:
+        # Get the plugin's database ID
+        cursor.execute(
+            "SELECT id FROM plugin_io_plugin WHERE name = %s",
+            (plugin_name,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            log.warning(
+                f"Plugin '{plugin_name}' not found in database, cannot store namespace keys"
+            )
+            return
+
+        plugin_id = row[0]
+
+        # Insert the keys as plugin secrets
+        for key_name, key_value in keys.items():
+            cursor.execute(
+                """
+                INSERT INTO plugin_io_pluginsecret (plugin_id, key, value)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (plugin_id, key) DO UPDATE SET value = %s
+                """,
+                (plugin_id, key_name, key_value, key_value),
+            )
+
+        conn.commit()
+    log.info(f"Stored {len(keys)} namespace access keys for plugin '{plugin_name}'")
 
 
 SQL_STATEMENT_DELIMITER = "\n\n"
 
 
-def generate_create_table_sql(plugin_name: str, model_class) -> str:
+def generate_create_table_sql(schema_name: str, model_class) -> str:
     """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition.
+
+    Args:
+        schema_name: The PostgreSQL schema name (namespace or plugin name) where the table will be created.
+        model_class: The Django model class to generate SQL for.
 
     Automatically detects SQLite and generates compatible SQL without schema prefixes.
     """
@@ -278,11 +479,11 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
     # Detect if we're using SQLite
     is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
 
-    # For SQLite, don't use schema prefix; for PostgreSQL, use plugin_name.table_name
+    # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
     if is_sqlite:
         table_name = model_class._meta.db_table
     else:
-        table_name = f"{plugin_name}.{model_class._meta.db_table}"
+        table_name = f"{schema_name}.{model_class._meta.db_table}"
 
     # Separate primary key and regular fields
     pk_fields = []
@@ -331,7 +532,7 @@ def generate_create_table_sql(plugin_name: str, model_class) -> str:
     index_statements = []
     for index in model_class._meta.indexes:
         index_sql = generate_index_sql(
-            plugin_name, model_class._meta.db_table, index, is_sqlite=is_sqlite
+            schema_name, model_class._meta.db_table, index, is_sqlite=is_sqlite
         )
         index_statements.append(index_sql)
 
@@ -402,26 +603,26 @@ def generate_field_sql(field, is_sqlite: bool = False) -> str:
 
 
 def generate_index_sql(
-    plugin_name: str, table_name: str, index: Index, is_sqlite: bool = False
+    schema_name: str, table_name: str, index: Index, is_sqlite: bool = False
 ) -> str:
     """Generate CREATE INDEX SQL from Django Index object.
 
     Args:
-        plugin_name: Name of the plugin
-        table_name: Name of the table (without schema prefix)
-        index: Django Index object
-        is_sqlite: If True, generate SQLite-compatible SQL without schema prefix
+        schema_name: The PostgreSQL schema name (namespace or plugin name).
+        table_name: Name of the table (without schema prefix).
+        index: Django Index object.
+        is_sqlite: If True, generate SQLite-compatible SQL without schema prefix.
 
     Returns:
-        CREATE INDEX SQL statement
+        CREATE INDEX SQL statement.
     """
-    index_name = f"{plugin_name}_{index.name}"
+    index_name = f"{schema_name}_{index.name}"
 
-    # For SQLite, don't use schema prefix; for PostgreSQL, use plugin_name.table_name
+    # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
     if is_sqlite:
         table_full_name = table_name
     else:
-        table_full_name = f"{plugin_name}.{table_name}"
+        table_full_name = f"{schema_name}.{table_name}"
 
     field_parts = []
     for field in index.fields:
@@ -475,9 +676,20 @@ def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: lis
     print(f"Associated {model_classes} models with app {app_label}")
 
 
-def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> list[CustomModel]:
-    """Generate Django migrations for plugin models."""
-    log.info(f"Generating migrations for plugin '{plugin_name}'")
+def generate_plugin_migrations(
+    plugin_name: str, plugin_path: Path, schema_name: str
+) -> list[CustomModel]:
+    """Generate Django migrations for plugin models.
+
+    Args:
+        plugin_name: Name of the plugin (used for module namespace).
+        plugin_path: Path to the plugin directory.
+        schema_name: The PostgreSQL schema where tables will be created (namespace or plugin name).
+
+    Returns:
+        List of discovered model classes.
+    """
+    log.info(f"Generating migrations for plugin '{plugin_name}' in schema '{schema_name}'")
     discovered_models = []
     try:
         # Add plugin directory to Python path
@@ -506,10 +718,10 @@ def generate_plugin_migrations(plugin_name: str, plugin_path: Path) -> list[Cust
                             if value._meta.proxy:
                                 continue
                             db_table = value._meta.original_attrs["db_table"]
-                            if "." in db_table and not db_table.startswith(f"{plugin_name}"):
+                            if "." in db_table and not db_table.startswith(f"{schema_name}"):
                                 print(f"Skipping {db_table} because it references another schema")
                                 continue
-                            create_sql = generate_create_table_sql(plugin_name, value)
+                            create_sql = generate_create_table_sql(schema_name, value)
                             print(f"Generated SQL for {name}:")
                             print(create_sql)
 
@@ -554,12 +766,48 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         register_plugin_as_django_app(plugin_name, plugin_installation_path)
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
 
-        # if ENABLE_MIGRATIONS:
-        create_plugin_schema(plugin_name=plugin_name)
+        # Read the manifest to check for custom_data declaration
+        manifest_path = plugin_installation_path / MANIFEST_FILE_NAME
+        custom_data = None
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+                custom_data = manifest.get("custom_data")
 
-        # Generate and apply migrations for plugin models
-        discovered_models = generate_plugin_migrations(plugin_name, plugin_installation_path)
-        associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
+        # Initialize namespace schema and generate model migrations if custom_data is declared
+        if custom_data:
+            schema_name = custom_data["namespace"]
+
+            log.info(f"Plugin '{plugin_name}' uses namespace '{schema_name}'")
+            generated_keys = create_namespace_schema(namespace=schema_name)
+
+            # If namespace was newly created, store the generated keys in plugin secrets
+            if generated_keys:
+                store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
+                log.info(
+                    f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
+                    f"View them in the UI to share with other plugins."
+                )
+
+            # Populate content types and create partitions for custom_attribute table.
+            # This runs every time to pick up any changes to available models.
+            initialize_namespace_partitions(schema_name)
+
+            # Generate and apply migrations for plugin models in the namespace
+            # Only plugins with read_write access can create custom tables and indexes
+            declared_access = custom_data.get("access", "read")
+            if declared_access == "read_write":
+                discovered_models = generate_plugin_migrations(
+                    plugin_name, plugin_installation_path, schema_name
+                )
+                associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
+            else:
+                log.info(
+                    f"Plugin '{plugin_name}' has read-only access to namespace '{schema_name}' - "
+                    f"skipping custom model table creation"
+                )
+        else:
+            log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')

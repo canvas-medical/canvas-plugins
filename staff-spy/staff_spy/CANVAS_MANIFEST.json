@@ -15,7 +15,11 @@
         "effects": [],
         "views": []
     },
-    "secrets": [ "my-api-key" ],
+    "secrets": ["my-api-key", "read_access_key", "read_write_access_key"],
+    "custom_data": {
+        "namespace": "canvas_demo__shared_staff_plus",
+        "access": "read_write"
+    },
     "tags": {},
     "references": [],
     "license": "",
