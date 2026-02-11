@@ -212,49 +212,44 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
     def _get_patient(self) -> Patient | None:
         """Get patient from event context or by querying the database."""
+        target_id = self.event.target.id
+
+        # Condition events - get patient from condition
+        if self.event.type in [
+            EventType.CONDITION_CREATED,
+            EventType.CONDITION_UPDATED,
+            EventType.CONDITION_RESOLVED,
+        ]:
+            condition = Condition.objects.filter(id=target_id).select_related("patient").first()
+            if condition and condition.patient:
+                return condition.patient
+            log.warning(f"CMS138v14: Could not find patient for condition {target_id}")
+            return None
+
+        # Interview events - get patient from interview
+        if self.event.type in [EventType.INTERVIEW_CREATED, EventType.INTERVIEW_UPDATED]:
+            interview = Interview.objects.filter(id=target_id).select_related("patient").first()
+            if interview and interview.patient:
+                return interview.patient
+            log.warning(f"CMS138v14: Could not find patient for interview {target_id}")
+            return None
+
+        # Try to get patient_id from context
+        patient_id = self.event.context.get("patient", {}).get("id")
+        if patient_id:
+            return Patient.objects.filter(id=patient_id).first()
+
+        # Fallback: try patient_id_from_target for supported event types
         try:
-            target_id = self.event.target.id
-
-            # Condition events - get patient from condition
-            if self.event.type in [
-                EventType.CONDITION_CREATED,
-                EventType.CONDITION_UPDATED,
-                EventType.CONDITION_RESOLVED,
-            ]:
-                condition = Condition.objects.filter(id=target_id).select_related("patient").first()
-                if condition and condition.patient:
-                    return condition.patient
-                log.warning(f"CMS138v14: Could not find patient for condition {target_id}")
-                return None
-
-            # Interview events - get patient from interview
-            if self.event.type in [EventType.INTERVIEW_CREATED, EventType.INTERVIEW_UPDATED]:
-                interview = Interview.objects.filter(id=target_id).select_related("patient").first()
-                if interview and interview.patient:
-                    return interview.patient
-                log.warning(f"CMS138v14: Could not find patient for interview {target_id}")
-                return None
-
-            # Try to get patient_id from context
-            patient_id = self.event.context.get("patient", {}).get("id")
+            patient_id = self.patient_id_from_target()
             if patient_id:
                 return Patient.objects.filter(id=patient_id).first()
+        except ValueError:
+            log.debug(
+                f"CMS138v14: Event type {self.event.type} not supported by patient_id_from_target()"
+            )
 
-            # Fallback: try patient_id_from_target for supported event types
-            try:
-                patient_id = self.patient_id_from_target()
-                if patient_id:
-                    return Patient.objects.filter(id=patient_id).first()
-            except ValueError:
-                log.debug(
-                    f"CMS138v14: Event type {self.event.type} not supported by patient_id_from_target()"
-                )
-
-            return None
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error getting patient: {str(e)}")
-            return None
+        return None
 
     def compute(self) -> list[Effect]:
         """Main compute method for CMS138v14 Tobacco Screening measure."""
@@ -329,91 +324,81 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
     def _count_qualifying_visits(self, patient: Patient) -> int:
         """Count qualifying visits (need >= 2) during measurement period."""
-        try:
-            start_date = self.timeframe.start.datetime
-            end_date = self.timeframe.end.datetime
-            qualifying_note_ids: set[str] = set()
+        start_date = self.timeframe.start.datetime
+        end_date = self.timeframe.end.datetime
+        qualifying_note_ids: set[str] = set()
 
-            # Get SNOMED codes from qualifying visit value sets
-            qualifying_snomed_codes = self._get_value_set_codes(
-                self.QUALIFYING_VISIT_VALUE_SETS, "SNOMEDCT"
-            )
+        # Get SNOMED codes from qualifying visit value sets
+        qualifying_snomed_codes = self._get_value_set_codes(
+            self.QUALIFYING_VISIT_VALUE_SETS, "SNOMEDCT"
+        )
 
-            if qualifying_snomed_codes:
-                encounters = Encounter.objects.filter(
-                    note__patient=patient,
-                    note__note_type_version__code__in=qualifying_snomed_codes,
-                    state__in=["CON", "STA"],
-                    start_time__gte=start_date,
-                    start_time__lte=end_date,
-                ).values_list("note_id", flat=True)
-                qualifying_note_ids.update(str(nid) for nid in encounters if nid)
+        if qualifying_snomed_codes:
+            encounters = Encounter.objects.filter(
+                note__patient=patient,
+                note__note_type_version__code__in=qualifying_snomed_codes,
+                state__in=["CON", "STA"],
+                start_time__gte=start_date,
+                start_time__lte=end_date,
+            ).values_list("note_id", flat=True)
+            qualifying_note_ids.update(str(nid) for nid in encounters if nid)
 
-            # Get CPT codes from qualifying visit value sets + direct CPT codes
-            qualifying_cpt_codes = self._get_value_set_codes(
-                self.QUALIFYING_VISIT_VALUE_SETS, "CPT"
-            ) | {HEALTH_BEHAVIOR_ASSESSMENT_CPT, HEALTH_BEHAVIOR_INTERVENTION_CPT}
+        # Get CPT codes from qualifying visit value sets + direct CPT codes
+        qualifying_cpt_codes = self._get_value_set_codes(
+            self.QUALIFYING_VISIT_VALUE_SETS, "CPT"
+        ) | {HEALTH_BEHAVIOR_ASSESSMENT_CPT, HEALTH_BEHAVIOR_INTERVENTION_CPT}
 
-            if qualifying_cpt_codes:
-                claims = ClaimLineItem.objects.filter(
-                    claim__note__patient=patient,
-                    status="active",
-                    from_date__gte=self.timeframe.start.date().isoformat(),
-                    from_date__lte=self.timeframe.end.date().isoformat(),
-                    proc_code__in=qualifying_cpt_codes,
-                ).values_list("claim__note_id", flat=True)
-                qualifying_note_ids.update(str(nid) for nid in claims if nid)
+        if qualifying_cpt_codes:
+            claims = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=qualifying_cpt_codes,
+            ).values_list("claim__note_id", flat=True)
+            qualifying_note_ids.update(str(nid) for nid in claims if nid)
 
-            return len(qualifying_note_ids)
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error counting qualifying visits: {e}")
-            return 0
+        return len(qualifying_note_ids)
 
     def _count_preventive_visits(self, patient: Patient) -> int:
         """Count preventive visits (need >= 1) during measurement period."""
-        try:
-            start_date = self.timeframe.start.datetime
-            end_date = self.timeframe.end.datetime
-            preventive_note_ids: set[str] = set()
+        start_date = self.timeframe.start.datetime
+        end_date = self.timeframe.end.datetime
+        preventive_note_ids: set[str] = set()
 
-            # Get SNOMED codes from preventive visit value sets
-            preventive_snomed_codes = self._get_value_set_codes(
-                self.PREVENTIVE_VISIT_VALUE_SETS, "SNOMEDCT"
-            )
+        # Get SNOMED codes from preventive visit value sets
+        preventive_snomed_codes = self._get_value_set_codes(
+            self.PREVENTIVE_VISIT_VALUE_SETS, "SNOMEDCT"
+        )
 
-            if preventive_snomed_codes:
-                encounters = Encounter.objects.filter(
-                    note__patient=patient,
-                    note__note_type_version__code__in=preventive_snomed_codes,
-                    state__in=["CON", "STA"],
-                    start_time__gte=start_date,
-                    start_time__lte=end_date,
-                ).values_list("note_id", flat=True)
-                preventive_note_ids.update(str(nid) for nid in encounters if nid)
+        if preventive_snomed_codes:
+            encounters = Encounter.objects.filter(
+                note__patient=patient,
+                note__note_type_version__code__in=preventive_snomed_codes,
+                state__in=["CON", "STA"],
+                start_time__gte=start_date,
+                start_time__lte=end_date,
+            ).values_list("note_id", flat=True)
+            preventive_note_ids.update(str(nid) for nid in encounters if nid)
 
-            # Get CPT/HCPCS codes from preventive visit value sets + direct codes
-            preventive_cpt_codes = (
-                self._get_value_set_codes(self.PREVENTIVE_VISIT_VALUE_SETS, "CPT")
-                | self._get_value_set_codes(self.PREVENTIVE_VISIT_VALUE_SETS, "HCPCSLEVELII")
-                | {UNLISTED_PREVENTIVE_SERVICE_CPT, POSTOPERATIVE_FOLLOWUP_CPT}
-            )
+        # Get CPT/HCPCS codes from preventive visit value sets + direct codes
+        preventive_cpt_codes = (
+            self._get_value_set_codes(self.PREVENTIVE_VISIT_VALUE_SETS, "CPT")
+            | self._get_value_set_codes(self.PREVENTIVE_VISIT_VALUE_SETS, "HCPCSLEVELII")
+            | {UNLISTED_PREVENTIVE_SERVICE_CPT, POSTOPERATIVE_FOLLOWUP_CPT}
+        )
 
-            if preventive_cpt_codes:
-                claims = ClaimLineItem.objects.filter(
-                    claim__note__patient=patient,
-                    status="active",
-                    from_date__gte=self.timeframe.start.date().isoformat(),
-                    from_date__lte=self.timeframe.end.date().isoformat(),
-                    proc_code__in=preventive_cpt_codes,
-                ).values_list("claim__note_id", flat=True)
-                preventive_note_ids.update(str(nid) for nid in claims if nid)
+        if preventive_cpt_codes:
+            claims = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=preventive_cpt_codes,
+            ).values_list("claim__note_id", flat=True)
+            preventive_note_ids.update(str(nid) for nid in claims if nid)
 
-            return len(preventive_note_ids)
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error counting preventive visits: {e}")
-            return 0
+        return len(preventive_note_ids)
 
     def _build_period_overlap_query(self, start_date: datetime.date, end_date: datetime.date) -> Q:
         """Build query for conditions whose prevalencePeriod overlaps given period."""
@@ -424,149 +409,139 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
 
     def _has_hospice_care_in_period(self, patient: Patient) -> bool:
         """Check if patient is in hospice care during measurement period (exclusion)."""
-        try:
-            start_date = self.timeframe.start.datetime
-            end_date = self.timeframe.end.datetime
-            measurement_start = self.timeframe.start.date()
-            measurement_end = self.timeframe.end.date()
+        start_date = self.timeframe.start.datetime
+        end_date = self.timeframe.end.datetime
+        measurement_start = self.timeframe.start.date()
+        measurement_end = self.timeframe.end.date()
 
-            overlap_query = self._build_period_overlap_query(measurement_start, measurement_end)
+        overlap_query = self._build_period_overlap_query(measurement_start, measurement_end)
 
-            has_hospice_diagnosis = (
-                Condition.objects.for_patient(patient.id)
-                .find(HospiceDiagnosis)
-                .committed()
-                .filter(entered_in_error_id__isnull=True)
-                .filter(overlap_query)
-                .exists()
-            )
+        has_hospice_diagnosis = (
+            Condition.objects.for_patient(patient.id)
+            .find(HospiceDiagnosis)
+            .committed()
+            .filter(overlap_query)
+            .exists()
+        )
 
-            if has_hospice_diagnosis:
-                log.debug(f"CMS138v14: Found hospice diagnosis for patient {patient.id}")
+        if has_hospice_diagnosis:
+            log.debug(f"CMS138v14: Found hospice diagnosis for patient {patient.id}")
+            return True
+
+        hospice_encounter_codes = self._get_value_set_codes(HospiceEncounter, "SNOMEDCT", "ICD10CM")
+
+        if hospice_encounter_codes:
+            has_hospice_encounter = Encounter.objects.filter(
+                note__patient=patient,
+                note__note_type_version__code__in=hospice_encounter_codes,
+                state__in=["CON", "STA"],
+                start_time__gte=start_date,
+                start_time__lte=end_date,
+            ).exists()
+
+            if has_hospice_encounter:
+                log.debug(f"CMS138v14: Found hospice encounter for patient {patient.id}")
                 return True
 
-            hospice_encounter_codes = self._get_value_set_codes(
-                HospiceEncounter, "SNOMEDCT", "ICD10CM"
-            )
+        discharge_to_hospice_codes = {
+            DISCHARGE_TO_HOME_HOSPICE_SNOMED,
+            DISCHARGE_TO_FACILITY_HOSPICE_SNOMED,
+        }
 
-            if hospice_encounter_codes:
-                has_hospice_encounter = Encounter.objects.filter(
-                    note__patient=patient,
-                    note__note_type_version__code__in=hospice_encounter_codes,
-                    state__in=["CON", "STA"],
-                    start_time__gte=start_date,
-                    start_time__lte=end_date,
-                ).exists()
+        inpatient_codes = self._get_value_set_codes(
+            EncounterInpatient, "SNOMEDCT", "ICD10CM", "CPT"
+        )
 
-                if has_hospice_encounter:
-                    log.debug(f"CMS138v14: Found hospice encounter for patient {patient.id}")
-                    return True
+        if inpatient_codes:
+            inpatient_encounters = Encounter.objects.filter(
+                note__patient=patient,
+                note__note_type_version__code__in=inpatient_codes,
+                state__in=["CON", "STA"],
+                end_time__gte=start_date,
+                end_time__lte=end_date,
+            ).values_list("note_id", flat=True)
 
-            discharge_to_hospice_codes = {
-                DISCHARGE_TO_HOME_HOSPICE_SNOMED,
-                DISCHARGE_TO_FACILITY_HOSPICE_SNOMED,
-            }
-
-            inpatient_codes = self._get_value_set_codes(
-                EncounterInpatient, "SNOMEDCT", "ICD10CM", "CPT"
-            )
-
-            if inpatient_codes:
-                inpatient_encounters = Encounter.objects.filter(
-                    note__patient=patient,
-                    note__note_type_version__code__in=inpatient_codes,
-                    state__in=["CON", "STA"],
-                    end_time__gte=start_date,
-                    end_time__lte=end_date,
-                ).values_list("note_id", flat=True)
-
-                if inpatient_encounters:
-                    has_inpatient_discharge = (
-                        Observation.objects.for_patient(patient.id)
-                        .committed()
-                        .filter(
-                            note_id__in=inpatient_encounters,
-                            value_codings__code__in=discharge_to_hospice_codes,
-                        )
-                        .exists()
+            if inpatient_encounters:
+                has_inpatient_discharge = (
+                    Observation.objects.for_patient(patient.id)
+                    .committed()
+                    .filter(
+                        note_id__in=inpatient_encounters,
+                        value_codings__code__in=discharge_to_hospice_codes,
                     )
-
-                    if has_inpatient_discharge:
-                        log.debug(
-                            f"CMS138v14: Found inpatient discharge to hospice for patient "
-                            f"{patient.id}"
-                        )
-                        return True
-
-            has_discharge_to_hospice = (
-                Observation.objects.for_patient(patient.id)
-                .committed()
-                .filter(
-                    effective_datetime__gte=start_date,
-                    effective_datetime__lte=end_date,
-                    value_codings__code__in=discharge_to_hospice_codes,
+                    .exists()
                 )
-                .exists()
-            )
 
-            if has_discharge_to_hospice:
-                log.debug(f"CMS138v14: Found discharge to hospice for patient {patient.id}")
-                return True
-
-            has_hospice_assessment = (
-                Observation.objects.for_patient(patient.id)
-                .committed()
-                .filter(
-                    effective_datetime__gte=start_date,
-                    effective_datetime__lte=end_date,
-                    codings__code=HOSPICE_CARE_MDS_LOINC,
-                    value_codings__code=YES_QUALIFIER_SNOMED,
-                )
-                .exists()
-            )
-
-            if has_hospice_assessment:
-                log.debug(f"CMS138v14: Found hospice care assessment for patient {patient.id}")
-                return True
-
-            hospice_intervention_codes = self._get_value_set_codes(
-                HospiceCareAmbulatory, "CPT", "HCPCSLEVELII", "SNOMEDCT"
-            )
-
-            if hospice_intervention_codes:
-                has_hospice_claim = ClaimLineItem.objects.filter(
-                    claim__note__patient=patient,
-                    status="active",
-                    from_date__gte=self.timeframe.start.date().isoformat(),
-                    from_date__lte=self.timeframe.end.date().isoformat(),
-                    proc_code__in=hospice_intervention_codes,
-                ).exists()
-
-                if has_hospice_claim:
-                    log.debug(f"CMS138v14: Found hospice care claim for patient {patient.id}")
+                if has_inpatient_discharge:
+                    log.debug(
+                        f"CMS138v14: Found inpatient discharge to hospice for patient {patient.id}"
+                    )
                     return True
 
-            has_hospice_order = (
-                Instruction.objects.for_patient(patient.id)
-                .committed()
-                .find(HospiceCareAmbulatory)
-                .filter(
-                    entered_in_error__isnull=True,
-                    note__datetime_of_service__gte=start_date,
-                    note__datetime_of_service__lte=end_date,
-                )
-                .exists()
+        has_discharge_to_hospice = (
+            Observation.objects.for_patient(patient.id)
+            .committed()
+            .filter(
+                effective_datetime__gte=start_date,
+                effective_datetime__lte=end_date,
+                value_codings__code__in=discharge_to_hospice_codes,
             )
+            .exists()
+        )
 
-            if has_hospice_order:
-                log.debug(f"CMS138v14: Found hospice care order for patient {patient.id}")
+        if has_discharge_to_hospice:
+            log.debug(f"CMS138v14: Found discharge to hospice for patient {patient.id}")
+            return True
+
+        has_hospice_assessment = (
+            Observation.objects.for_patient(patient.id)
+            .committed()
+            .filter(
+                effective_datetime__gte=start_date,
+                effective_datetime__lte=end_date,
+                codings__code=HOSPICE_CARE_MDS_LOINC,
+                value_codings__code=YES_QUALIFIER_SNOMED,
+            )
+            .exists()
+        )
+
+        if has_hospice_assessment:
+            log.debug(f"CMS138v14: Found hospice care assessment for patient {patient.id}")
+            return True
+
+        hospice_intervention_codes = self._get_value_set_codes(
+            HospiceCareAmbulatory, "CPT", "HCPCSLEVELII", "SNOMEDCT"
+        )
+
+        if hospice_intervention_codes:
+            has_hospice_claim = ClaimLineItem.objects.filter(
+                claim__note__patient=patient,
+                status="active",
+                from_date__gte=self.timeframe.start.date().isoformat(),
+                from_date__lte=self.timeframe.end.date().isoformat(),
+                proc_code__in=hospice_intervention_codes,
+            ).exists()
+
+            if has_hospice_claim:
+                log.debug(f"CMS138v14: Found hospice care claim for patient {patient.id}")
                 return True
 
-            return False
+        has_hospice_order = (
+            Instruction.objects.for_patient(patient.id)
+            .committed()
+            .find(HospiceCareAmbulatory)
+            .filter(
+                note__datetime_of_service__gte=start_date,
+                note__datetime_of_service__lte=end_date,
+            )
+            .exists()
+        )
 
-        except Exception as e:
-            log.error(f"CMS138v14: Error checking hospice status: {e}")
-            return False
+        if has_hospice_order:
+            log.debug(f"CMS138v14: Found hospice care order for patient {patient.id}")
+            return True
+
+        return False
 
     def _get_screening_data(self, patient: Patient) -> ScreeningData:
         """Get tobacco screening and intervention data for the patient."""
@@ -619,43 +594,39 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         value sets. This matches legacy behavior which finds interviews by looking for responses
         with SNOMED codes, regardless of the question code (which may be INTERNAL).
         """
-        try:
-            all_response_codes = tobacco_user_codes | tobacco_non_user_codes
-            if not all_response_codes:
-                return
+        all_response_codes = tobacco_user_codes | tobacco_non_user_codes
+        if not all_response_codes:
+            return
 
-            most_recent_response = (
-                InterviewQuestionResponse.objects.filter(
-                    interview__patient=patient,
-                    interview__deleted=False,
-                    interview__entered_in_error__isnull=True,
-                    interview__committer_id__isnull=False,
-                    interview__created__gte=self.timeframe.start.datetime,
-                    interview__created__lte=self.timeframe.end.datetime,
-                    response_option__code__in=all_response_codes,
-                )
-                .select_related("interview", "response_option")
-                .order_by("-interview__created")
-                .first()
+        most_recent_response = (
+            InterviewQuestionResponse.objects.filter(
+                interview__patient=patient,
+                interview__deleted=False,
+                interview__entered_in_error__isnull=True,
+                interview__committer_id__isnull=False,
+                interview__created__gte=self.timeframe.start.datetime,
+                interview__created__lte=self.timeframe.end.datetime,
+                response_option__code__in=all_response_codes,
             )
+            .select_related("interview", "response_option")
+            .order_by("-interview__created")
+            .first()
+        )
 
-            if most_recent_response:
-                screening_date = arrow.get(most_recent_response.interview.created)
-                response_code = most_recent_response.response_option.code
+        if most_recent_response:
+            screening_date = arrow.get(most_recent_response.interview.created)
+            response_code = most_recent_response.response_option.code
 
-                if response_code in tobacco_user_codes:
-                    result.most_recent_user = screening_date
-                    log.debug(
-                        f"CMS138v14: Most recent screening indicates TOBACCO USER on {screening_date}"
-                    )
-                elif response_code in tobacco_non_user_codes:
-                    result.most_recent_non_user = screening_date
-                    log.debug(
-                        f"CMS138v14: Most recent screening indicates NON-USER on {screening_date}"
-                    )
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error checking interview responses: {e}")
+            if response_code in tobacco_user_codes:
+                result.most_recent_user = screening_date
+                log.debug(
+                    f"CMS138v14: Most recent screening indicates TOBACCO USER on {screening_date}"
+                )
+            elif response_code in tobacco_non_user_codes:
+                result.most_recent_non_user = screening_date
+                log.debug(
+                    f"CMS138v14: Most recent screening indicates NON-USER on {screening_date}"
+                )
 
     def _check_observation_screening(
         self,
@@ -666,95 +637,84 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         tobacco_non_user_codes: set[str],
     ) -> None:
         """Check Observation model for tobacco screening results (fallback)."""
-        try:
-            screening_obs = (
-                Observation.objects.for_patient(patient.id)
-                .committed()
-                .filter(
-                    effective_datetime__gte=self.timeframe.start.datetime,
-                    effective_datetime__lte=self.timeframe.end.datetime,
-                    codings__code__in=screening_codes,
-                )
-                .prefetch_related("value_codings")
-                .order_by("-effective_datetime")
-                .first()
+        screening_obs = (
+            Observation.objects.for_patient(patient.id)
+            .committed()
+            .filter(
+                effective_datetime__gte=self.timeframe.start.datetime,
+                effective_datetime__lte=self.timeframe.end.datetime,
+                codings__code__in=screening_codes,
             )
+            .prefetch_related("value_codings")
+            .order_by("-effective_datetime")
+            .first()
+        )
 
-            if screening_obs:
-                obs_date = arrow.get(screening_obs.effective_datetime)
+        if screening_obs:
+            obs_date = arrow.get(screening_obs.effective_datetime)
 
-                for coding in screening_obs.value_codings.all():
-                    if coding.code in tobacco_user_codes:
-                        result.most_recent_user = obs_date
-                        log.debug(f"CMS138v14: Found tobacco USER via observation on {obs_date}")
-                        return
-                    if coding.code in tobacco_non_user_codes:
-                        result.most_recent_non_user = obs_date
-                        log.debug(
-                            f"CMS138v14: Found tobacco NON-USER via observation on {obs_date}"
-                        )
-                        return
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error checking observation screening: {e}")
+            for coding in screening_obs.value_codings.all():
+                if coding.code in tobacco_user_codes:
+                    result.most_recent_user = obs_date
+                    log.debug(f"CMS138v14: Found tobacco USER via observation on {obs_date}")
+                    return
+                if coding.code in tobacco_non_user_codes:
+                    result.most_recent_non_user = obs_date
+                    log.debug(f"CMS138v14: Found tobacco NON-USER via observation on {obs_date}")
+                    return
 
     def _get_counseling_date(
         self, patient: Patient, start: "arrow.Arrow", end: "arrow.Arrow"
     ) -> "arrow.Arrow | None":
         """Get date of most recent tobacco cessation counseling."""
-        try:
-            most_recent = None
+        most_recent = None
 
-            most_recent = self._get_instruction_counseling_date(patient, start, end, most_recent)
+        most_recent = self._get_instruction_counseling_date(patient, start, end, most_recent)
 
-            counseling_cpt = self._get_value_set_codes(TobaccoUseCessationCounseling, "CPT")
+        counseling_cpt = self._get_value_set_codes(TobaccoUseCessationCounseling, "CPT")
 
-            if counseling_cpt:
-                claim = (
-                    ClaimLineItem.objects.filter(
-                        claim__note__patient=patient,
-                        status="active",
-                        from_date__gte=start.date().isoformat(),
-                        from_date__lte=end.date().isoformat(),
-                        proc_code__in=counseling_cpt,
-                    )
-                    .order_by("-from_date")
-                    .first()
+        if counseling_cpt:
+            claim = (
+                ClaimLineItem.objects.filter(
+                    claim__note__patient=patient,
+                    status="active",
+                    from_date__gte=start.date().isoformat(),
+                    from_date__lte=end.date().isoformat(),
+                    proc_code__in=counseling_cpt,
                 )
+                .order_by("-from_date")
+                .first()
+            )
 
-                if claim and claim.from_date:
-                    claim_date = arrow.get(claim.from_date)
-                    if most_recent is None or claim_date > most_recent:
-                        most_recent = claim_date
-                        log.debug(f"CMS138v14: Found counseling CPT claim on {most_recent}")
+            if claim and claim.from_date:
+                claim_date = arrow.get(claim.from_date)
+                if most_recent is None or claim_date > most_recent:
+                    most_recent = claim_date
+                    log.debug(f"CMS138v14: Found counseling CPT claim on {most_recent}")
 
-            counseling_snomed = self._get_value_set_codes(TobaccoUseCessationCounseling, "SNOMEDCT")
-            if counseling_snomed:
-                obs = (
-                    Observation.objects.for_patient(patient.id)
-                    .committed()
-                    .filter(
-                        effective_datetime__gte=start.datetime,
-                        effective_datetime__lte=end.datetime,
-                        codings__code__in=counseling_snomed,
-                    )
-                    .order_by("-effective_datetime")
-                    .first()
+        counseling_snomed = self._get_value_set_codes(TobaccoUseCessationCounseling, "SNOMEDCT")
+        if counseling_snomed:
+            obs = (
+                Observation.objects.for_patient(patient.id)
+                .committed()
+                .filter(
+                    effective_datetime__gte=start.datetime,
+                    effective_datetime__lte=end.datetime,
+                    codings__code__in=counseling_snomed,
                 )
+                .order_by("-effective_datetime")
+                .first()
+            )
 
-                if obs and obs.effective_datetime:
-                    obs_date = arrow.get(obs.effective_datetime)
-                    if most_recent is None or obs_date > most_recent:
-                        most_recent = obs_date
-                        log.debug(f"CMS138v14: Found counseling observation on {most_recent}")
+            if obs and obs.effective_datetime:
+                obs_date = arrow.get(obs.effective_datetime)
+                if most_recent is None or obs_date > most_recent:
+                    most_recent = obs_date
+                    log.debug(f"CMS138v14: Found counseling observation on {most_recent}")
 
-            most_recent = self._get_z71_6_counseling_date(patient, start, end, most_recent)
+        most_recent = self._get_z71_6_counseling_date(patient, start, end, most_recent)
 
-            return most_recent
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error getting counseling date: {e}")
-            return None
+        return most_recent
 
     def _get_z71_6_counseling_date(
         self,
@@ -766,36 +726,33 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         """Get counseling date from Z71.6 diagnosis (Tobacco abuse counseling)."""
         most_recent = current_most_recent
 
-        try:
-            log.debug(
-                f"CMS138v14: Checking Z71.6 for patient {patient.id}, "
-                f"codes={Z71_6_TOBACCO_COUNSELING_CODES}, start={start.date()}, end={end.date()}"
+        log.debug(
+            f"CMS138v14: Checking Z71.6 for patient {patient.id}, "
+            f"codes={Z71_6_TOBACCO_COUNSELING_CODES}, start={start.date()}, end={end.date()}"
+        )
+
+        z71_6_condition = (
+            Condition.objects.for_patient(patient.id)
+            .committed()
+            .filter(
+                codings__code__in=Z71_6_TOBACCO_COUNSELING_CODES,
+                onset_date__gte=start.date(),
+                onset_date__lte=end.date(),
             )
+            .order_by("-onset_date")
+            .first()
+        )
 
-            z71_6_condition = (
-                Condition.objects.for_patient(patient.id)
-                .committed()
-                .filter(
-                    entered_in_error_id__isnull=True,
-                    codings__code__in=Z71_6_TOBACCO_COUNSELING_CODES,
-                    onset_date__gte=start.date(),
-                    onset_date__lte=end.date(),
-                )
-                .order_by("-onset_date")
-                .first()
-            )
+        log.debug(
+            f"CMS138v14: Z71.6 condition result: {z71_6_condition.id if z71_6_condition else None}"
+        )
 
-            log.debug(f"CMS138v14: Z71.6 condition result: {z71_6_condition}")
+        if z71_6_condition and z71_6_condition.onset_date:
+            z71_date = arrow.get(z71_6_condition.onset_date)
 
-            if z71_6_condition and z71_6_condition.onset_date:
-                z71_date = arrow.get(z71_6_condition.onset_date)
-
-                if most_recent is None or z71_date > most_recent:
-                    most_recent = z71_date
-                    log.debug(f"CMS138v14: Found Z71.6 diagnosis on {most_recent}")
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error checking Z71.6 diagnosis: {e}")
+            if most_recent is None or z71_date > most_recent:
+                most_recent = z71_date
+                log.debug(f"CMS138v14: Found Z71.6 diagnosis on {most_recent}")
 
         return most_recent
 
@@ -809,28 +766,24 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         """Get counseling date from Instruction model."""
         most_recent = current_most_recent
 
-        try:
-            instruction = (
-                Instruction.objects.for_patient(patient.id)
-                .committed()
-                .find(TobaccoUseCessationCounseling)
-                .filter(
-                    note__datetime_of_service__gte=start.datetime,
-                    note__datetime_of_service__lte=end.datetime,
-                )
-                .select_related("note")
-                .order_by("-note__datetime_of_service")
-                .first()
+        instruction = (
+            Instruction.objects.for_patient(patient.id)
+            .committed()
+            .find(TobaccoUseCessationCounseling)
+            .filter(
+                note__datetime_of_service__gte=start.datetime,
+                note__datetime_of_service__lte=end.datetime,
             )
+            .select_related("note")
+            .order_by("-note__datetime_of_service")
+            .first()
+        )
 
-            if instruction and instruction.note and instruction.note.datetime_of_service:
-                instruction_date = arrow.get(instruction.note.datetime_of_service)
-                if most_recent is None or instruction_date > most_recent:
-                    most_recent = instruction_date
-                    log.debug(f"CMS138v14: Found counseling instruction on {most_recent}")
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error checking instruction counseling: {e}")
+        if instruction and instruction.note and instruction.note.datetime_of_service:
+            instruction_date = arrow.get(instruction.note.datetime_of_service)
+            if most_recent is None or instruction_date > most_recent:
+                most_recent = instruction_date
+                log.debug(f"CMS138v14: Found counseling instruction on {most_recent}")
 
         return most_recent
 
@@ -838,38 +791,32 @@ class CMS138v14TobaccoScreening(ClinicalQualityMeasure):
         self, patient: Patient, start: "arrow.Arrow", end: "arrow.Arrow"
     ) -> "arrow.Arrow | None":
         """Get date of most recent tobacco cessation pharmacotherapy."""
-        try:
-            start_datetime = start.datetime
-            end_datetime = end.datetime
+        start_datetime = start.datetime
+        end_datetime = end.datetime
 
-            med = (
-                Medication.objects.for_patient(patient.id)
-                .committed()
-                .find(TobaccoUseCessationPharmacotherapy)
-                .filter(entered_in_error__isnull=True)
-                .filter(
-                    Q(start_date__gte=start_datetime, start_date__lte=end_datetime)
-                    | Q(
-                        start_date__lte=end_datetime,
-                        end_date__gte=start_datetime,
-                        end_date__isnull=False,
-                    )
-                    | Q(start_date__lte=end_datetime, end_date__isnull=True)
+        med = (
+            Medication.objects.for_patient(patient.id)
+            .committed()
+            .find(TobaccoUseCessationPharmacotherapy)
+            .filter(
+                Q(start_date__gte=start_datetime, start_date__lte=end_datetime)
+                | Q(
+                    start_date__lte=end_datetime,
+                    end_date__gte=start_datetime,
+                    end_date__isnull=False,
                 )
-                .order_by("-start_date")
-                .first()
+                | Q(start_date__lte=end_datetime, end_date__isnull=True)
             )
+            .order_by("-start_date")
+            .first()
+        )
 
-            most_recent = None
-            if med and med.start_date:
-                most_recent = arrow.get(med.start_date)
-                log.debug(f"CMS138v14: Found pharmacotherapy on {most_recent}")
+        most_recent = None
+        if med and med.start_date:
+            most_recent = arrow.get(med.start_date)
+            log.debug(f"CMS138v14: Found pharmacotherapy on {most_recent}")
 
-            return most_recent
-
-        except Exception as e:
-            log.error(f"CMS138v14: Error getting pharmacotherapy date: {e}")
-            return None
+        return most_recent
 
     def _compute_populations(self, screening_data: ScreeningData) -> None:
         """Compute population membership for all three CMS138v14 performance rates."""

@@ -5,20 +5,18 @@ from django.db import models
 from canvas_sdk.v1.data.base import (
     AuditedModel,
     BaseModelManager,
-    BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
     IdentifiableModel,
-    ValueSetLookupQuerySetMixin,
+    ValueSetLookupQuerySet,
 )
 from canvas_sdk.v1.data.coding import Coding
 
 
 class InstructionQuerySet(
-    ValueSetLookupQuerySetMixin,
+    ValueSetLookupQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
-    BaseQuerySet,
 ):
     """QuerySet for Instruction model with CQM helper methods."""
 
@@ -62,7 +60,7 @@ class InstructionCoding(Coding):
     instruction = models.ForeignKey(
         Instruction,
         on_delete=models.CASCADE,
-        related_name="coding",
+        related_name="codings",
         null=True,
     )
 

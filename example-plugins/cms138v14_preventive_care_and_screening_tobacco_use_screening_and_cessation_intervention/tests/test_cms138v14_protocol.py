@@ -474,13 +474,14 @@ def test_has_hospice_diagnosis(
     mock_patient: Mock,
 ) -> None:
     """Test returns True when hospice diagnosis exists."""
-    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = True
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.exists.return_value = True
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
 
     assert result is True
 
 
+@patch("canvas_sdk.v1.data.instruction.Instruction.objects")
 @patch("canvas_sdk.v1.data.claim_line_item.ClaimLineItem.objects")
 @patch("canvas_sdk.v1.data.Observation.objects")
 @patch("canvas_sdk.v1.data.encounter.Encounter.objects")
@@ -490,15 +491,17 @@ def test_no_hospice_care(
     mock_encounter_objects: MagicMock,
     mock_observation_objects: MagicMock,
     mock_claim_objects: MagicMock,
+    mock_instruction_objects: MagicMock,
     protocol_instance: CMS138v14TobaccoScreening,
     mock_patient: Mock,
 ) -> None:
     """Test returns False when no hospice care indicators."""
-    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.filter.return_value.exists.return_value = False
+    mock_condition_objects.for_patient.return_value.find.return_value.committed.return_value.filter.return_value.exists.return_value = False
     mock_encounter_objects.filter.return_value.exists.return_value = False
     mock_encounter_objects.filter.return_value.values_list.return_value = []
     mock_observation_objects.for_patient.return_value.committed.return_value.filter.return_value.exists.return_value = False
     mock_claim_objects.filter.return_value.exists.return_value = False
+    mock_instruction_objects.for_patient.return_value.committed.return_value.find.return_value.filter.return_value.exists.return_value = False
 
     result = protocol_instance._has_hospice_care_in_period(mock_patient)
 
