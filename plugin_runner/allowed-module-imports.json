@@ -863,10 +863,6 @@
     "pharmacy_http",
     "science_http"
   ],
-  "canvas_sdk.v1.data.base": [
-    "CustomModel",
-    "Model"
-  ],
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
@@ -913,6 +909,7 @@
     "CustomAttribute",
     "CustomAttributeAwareManager",
     "CustomAttributeMixin",
+    "CustomModel",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
@@ -1060,6 +1057,10 @@
   ],
   "canvas_sdk.v1.data.banner_alert": [
     "BannerAlert"
+  ],
+  "canvas_sdk.v1.data.base": [
+    "CustomModel",
+    "NamespaceWriteDenied"
   ],
   "canvas_sdk.v1.data.billing": [
     "BillingLineItem",
@@ -1411,10 +1412,11 @@
     "CanvasUser"
   ],
   "canvas_sdk.v1.plugin_database_context": [
-    "clear_current_plugin",
+    "get_access_level",
     "get_current_plugin",
-    "plugin_context",
-    "set_current_plugin"
+    "get_current_schema",
+    "is_write_allowed",
+    "plugin_database_context"
   ],
   "canvas_sdk.value_set.custom": [
     "Antiarrhythmics",

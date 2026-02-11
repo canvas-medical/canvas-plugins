@@ -1,4 +1,4 @@
-insert into {plugin_name}.django_content_type (app_label, model) values
+insert into {namespace}.django_content_type (app_label, model) values
 ('v1', 'allergyintolerance'),
 ('v1', 'appointment'),
 ('v1', 'assessment'),
@@ -60,12 +60,12 @@ on conflict do nothing
   begin
       -- loop through content types and create partitions
       for content_type_record in
-          select id, app_label, model from {plugin_name}.django_content_type
+          select id, app_label, model from {namespace}.django_content_type
       loop
-          execute('set search_path to {plugin_name};');
-          partition_name := '{plugin_name}.custom_attribute_' ||  content_type_record.app_label || '_' || content_type_record.model;
+          execute('set search_path to {namespace};');
+          partition_name := '{namespace}.custom_attribute_' ||  content_type_record.app_label || '_' || content_type_record.model;
           execute format(
-              'create table if not exists %I partition of {plugin_name}.custom_attribute for values in (%L)',
+              'create table if not exists %I partition of {namespace}.custom_attribute for values in (%L)',
               partition_name,
               content_type_record.id
           );

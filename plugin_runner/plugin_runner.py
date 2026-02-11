@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from time import sleep
-from typing import Any, TypedDict, cast
+from typing import Any, NotRequired, TypedDict, cast
 
 import grpc
 import redis
@@ -47,7 +47,11 @@ from canvas_sdk.utils.metrics import measured
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
-from plugin_runner.exceptions import PluginInstallationError, PluginUninstallationError
+from plugin_runner.exceptions import (
+    NamespaceAccessError,
+    PluginInstallationError,
+    PluginUninstallationError,
+)
 from plugin_runner.installation import (
     enabled_plugins,
     install_plugin,
@@ -159,6 +163,13 @@ class Components(TypedDict):
     applications: list[ApplicationConfig]
 
 
+class CustomData(TypedDict):
+    """Configuration for custom data storage in a shared namespace."""
+
+    namespace: str  # The namespace schema name (e.g., "acme_org__shared")
+    access: str  # "read" or "read_write"
+
+
 class PluginManifest(TypedDict):
     """PluginManifest."""
 
@@ -173,6 +184,7 @@ class PluginManifest(TypedDict):
     license: str
     diagram: bool
     readme: str
+    custom_data: NotRequired[CustomData]
 
 
 class PluginRunner(PluginRunnerServicer):
@@ -243,6 +255,7 @@ class PluginRunner(PluginRunnerServicer):
                 plugin = LOADED_PLUGINS[plugin_name]
                 handler_class = plugin["class"]
                 base_plugin_name = plugin_name.split(":")[0]
+                namespace_config = plugin.get("namespace_config")
 
                 secrets = plugin.get("secrets", {})
 
@@ -263,6 +276,13 @@ class PluginRunner(PluginRunnerServicer):
                         else None
                     )
                     handler_name = metrics.get_qualified_name(handler.compute)
+
+                    # Determine namespace and access level for database context
+                    db_namespace = namespace_config["namespace"] if namespace_config else None
+                    db_access_level = (
+                        namespace_config["access_level"] if namespace_config else "read_write"
+                    )
+
                     with (
                         metrics.measure(
                             name=handler_name,
@@ -272,7 +292,11 @@ class PluginRunner(PluginRunnerServicer):
                                 "event": event_name,
                             },
                         ),
-                        plugin_database_context(base_plugin_name),
+                        plugin_database_context(
+                            base_plugin_name,
+                            namespace=db_namespace,
+                            access_level=db_access_level,
+                        ),
                     ):
                         _effects = handler.compute()
                         effects = [
@@ -593,6 +617,64 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             log.exception(f'Unable to load secrets for plugin "{name}"')
             sentry_sdk.capture_exception(e)
 
+    # Process custom_data configuration
+    namespace_config: dict | None = None
+    custom_data = manifest_json.get("custom_data")
+    if custom_data:
+        try:
+            from plugin_runner.installation import verify_namespace_access
+
+            namespace_name = custom_data["namespace"]
+            declared_access = custom_data["access"]
+
+            # Standardized secret names based on access level
+            secret_name = (
+                "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+            )
+
+            secret_value = secrets_json.get(secret_name)
+            if not secret_value:
+                raise NamespaceAccessError(
+                    f"Plugin '{name}' declares namespace '{namespace_name}' with '{declared_access}' access "
+                    f"but secret '{secret_name}' is not configured. "
+                    f"Ensure the secret is listed in the manifest's 'secrets' array and has a value set."
+                )
+
+            # Verify access against namespace's auth table
+            granted_access = verify_namespace_access(namespace_name, secret_value)
+            if granted_access is None:
+                raise NamespaceAccessError(
+                    f"Plugin '{name}' denied access to namespace '{namespace_name}': "
+                    f"the '{secret_name}' value is not a valid access key for this namespace. "
+                    f"Verify the key matches what was generated when the namespace was created."
+                )
+
+            # Check that declared access doesn't exceed granted access
+            if declared_access == "read_write" and granted_access == "read":
+                raise NamespaceAccessError(
+                    f"Plugin '{name}' requests 'read_write' access to namespace '{namespace_name}' "
+                    f"but the provided key only grants 'read' access. "
+                    f"Use the 'read_write_access_key' secret for write access."
+                )
+
+            namespace_config = {
+                "namespace": namespace_name,
+                "access_level": declared_access,
+            }
+            log.info(
+                f"Plugin '{name}' authorized for namespace '{namespace_name}' "
+                f"with '{declared_access}' access"
+            )
+        except NamespaceAccessError:
+            # Re-raise to be handled by caller - this will be logged and captured by Sentry
+            raise
+        except Exception as e:
+            log.exception(f"Failed to verify namespace access for plugin '{name}'")
+            sentry_sdk.capture_exception(e)
+            raise NamespaceAccessError(
+                f"Unexpected error verifying namespace access for plugin '{name}': {e}"
+            ) from e
+
     # TODO add existing schema validation from Michela here
     try:
         components = manifest_json["components"]
@@ -635,6 +717,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
                 LOADED_PLUGINS[name_and_class]["sandbox"] = result
                 LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
+                LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
             else:
                 log.info(f'Loading handler "{name_and_class}"')
 
@@ -644,6 +727,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                     "sandbox": result,
                     "handler": handler,
                     "secrets": secrets_json,
+                    "namespace_config": namespace_config,
                 }
         except Exception as e:
             log.exception(f"Error importing module '{name_and_class}'")
@@ -720,7 +804,14 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 
     # load or reload each plugin
     for plugin_path in plugin_paths:
-        load_or_reload_plugin(plugin_path)
+        try:
+            load_or_reload_plugin(plugin_path)
+        except NamespaceAccessError as e:
+            log.error(f"Namespace access error loading plugin from '{plugin_path}': {e}")
+            sentry_sdk.capture_exception(e)
+        except Exception as e:
+            log.exception(f"Unexpected error loading plugin from '{plugin_path}'")
+            sentry_sdk.capture_exception(e)
 
     # if a plugin has been uninstalled/disabled remove it from LOADED_PLUGINS
     for name, plugin in LOADED_PLUGINS.copy().items():
@@ -733,7 +824,14 @@ def load_plugins(specified_plugin_paths: list[str] | None = None) -> None:
 @measured
 def load_plugin(path: pathlib.Path) -> None:
     """Load a plugin from the specified path."""
-    load_or_reload_plugin(path)
+    try:
+        load_or_reload_plugin(path)
+    except NamespaceAccessError as e:
+        log.error(f"Namespace access error loading plugin from '{path}': {e}")
+        sentry_sdk.capture_exception(e)
+    except Exception as e:
+        log.exception(f"Unexpected error loading plugin from '{path}'")
+        sentry_sdk.capture_exception(e)
     refresh_event_type_map()
 
 
