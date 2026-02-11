@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "canvas_fhir_client",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "This plugin showcases how to use the SDK's FHIR client",
     "components": {
         "protocols": [
             {
