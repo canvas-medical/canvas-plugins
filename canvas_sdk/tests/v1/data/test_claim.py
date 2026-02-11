@@ -1,13 +1,13 @@
 import pytest
 
+from canvas_sdk.test_utils.factories.claim import ClaimCoverageFactory, ClaimFactory
+
 
 @pytest.mark.django_db
 def test_claim_get_coverage_by_payer_id_with_subscriber_number() -> None:
     """
     Checks that the correct coverage is chosen when subscriber_number is provided.
     """
-    from canvas_sdk.test_utils.factories.claim import ClaimCoverageFactory, ClaimFactory
-
     claim = ClaimFactory.create()
     assert claim.get_coverage_by_payer_id("PAYER1", "SUB1") is None
 
@@ -28,8 +28,6 @@ def test_claim_get_coverage_by_payer_id_without_subscriber_number() -> None:
     """
     Checks that the correct coverage is chosen when subscriber_number is not provided.
     """
-    from canvas_sdk.test_utils.factories.claim import ClaimCoverageFactory, ClaimFactory
-
     claim = ClaimFactory.create()
     assert claim.get_coverage_by_payer_id("PAYER1") is None
     assert claim.get_coverage_by_payer_id("PAYER2") is None

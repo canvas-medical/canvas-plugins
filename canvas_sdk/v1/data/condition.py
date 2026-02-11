@@ -25,10 +25,10 @@ class ClinicalStatus(TextChoices):
 
 
 class ConditionQuerySet(
-    BaseQuerySet,
-    ValueSetLookupQuerySetMixin,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    ValueSetLookupQuerySetMixin,
+    BaseQuerySet,
 ):
     """ConditionQuerySet."""
 

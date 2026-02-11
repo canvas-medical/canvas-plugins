@@ -1,11 +1,11 @@
 import pytest
 
+from canvas_sdk.caching.client import caches
+
 
 @pytest.fixture(autouse=True)
 def clear_caches() -> None:
     """Clear the cache before each test."""
-    from canvas_sdk.caching.client import caches
-
     cleared_drivers: set[str] = set()
     for (driver, _), cache in caches.items():
         # If we've already cleared the cache for the current driver, skip

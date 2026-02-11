@@ -1,4 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .application import Application
 from .appointment import (
     Appointment,
     AppointmentExternalIdentifier,
@@ -24,7 +25,7 @@ from .claim import (
     InstallmentPlan,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCode
-from .claim_line_item import ClaimLineItem
+from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
 from .command import Command
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
@@ -33,6 +34,7 @@ from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
 from .encounter import Encounter
+from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .goal import Goal
 from .imaging import ImagingOrder, ImagingReport, ImagingReview
@@ -55,6 +57,7 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
+from .letter import Language, Letter
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -124,11 +127,16 @@ from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
-from .task import Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
+from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
 from .team import Team, TeamContactPoint
+from .uncategorized_clinical_document import (
+    UncategorizedClinicalDocument,
+    UncategorizedClinicalDocumentReview,
+)
 from .user import CanvasUser
 
 __all__ = __exports__ = (
+    "Application",
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",
@@ -154,6 +162,7 @@ __all__ = __exports__ = (
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
@@ -172,6 +181,8 @@ __all__ = __exports__ = (
     "EligibilitySummary",
     "Encounter",
     "Event",
+    "ExternalEvent",
+    "ExternalVisit",
     "Facility",
     "Goal",
     "ImagingOrder",
@@ -196,6 +207,8 @@ __all__ = __exports__ = (
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "Language",
+    "Letter",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -211,6 +224,7 @@ __all__ = __exports__ = (
     "NewLineItemPayment",
     "Note",
     "NoteStateChangeEvent",
+    "NoteTask",
     "NoteType",
     "Observation",
     "ObservationCoding",
@@ -266,4 +280,6 @@ __all__ = __exports__ = (
     "Transactor",
     "TransactorAddress",
     "TransactorPhone",
+    "UncategorizedClinicalDocumentReview",
+    "UncategorizedClinicalDocument",
 )

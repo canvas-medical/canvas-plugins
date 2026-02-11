@@ -7,6 +7,7 @@ from typing import Any
 
 CANVAS_TOP_LEVEL_MODULES = (
     "canvas_sdk.caching",
+    "canvas_sdk.clients",
     "canvas_sdk.commands",
     "canvas_sdk.effects",
     "canvas_sdk.events",

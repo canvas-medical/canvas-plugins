@@ -82,23 +82,28 @@ def write_plugin(
     with chdir(integration_tests_plugins_dir):
         cli_runner.invoke(app, "init", input=plugin_name)
 
-    protocol_code = """
+    handler_code = """
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from logger import log
 
-class Protocol(BaseProtocol):
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-    NARRATIVE_STRING = "I was inserted from my plugin's protocol."
 
-    def compute(self):
-        log.info(self.NARRATIVE_STRING)
+class NewOfficeVisitNoteHandler(BaseHandler):
+    \"\"\"Handler for integration tests.\"\"\"
+
+    RESPONDS_TO = EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED)
+
+    def compute(self) -> list[Effect]:
+        \"\"\"This method gets called when an event of the type RESPONDS_TO is fired.\"\"\"
+        log.info("[NewOfficeVisitNoteHandler] Note state change event received")
         return []
 """
     plugin_dir = integration_tests_plugins_dir / plugin_name
+    handlers_dir = plugin_dir / plugin_name / "handlers"
 
-    with open(plugin_dir / plugin_name / "protocols" / "my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    with open(handlers_dir / "event_handlers.py", "w") as handler:
+        handler.write(handler_code)
 
     yield
 
@@ -145,22 +150,26 @@ def list_plugin_no_secrets(plugin_name: str) -> tuple[str, int, list[str], list[
 
 def reinstall_plugin(plugin_name: str) -> tuple[str, int, list[str], list[str]]:
     """Make a change and reinstall the plugin."""
-    protocol_code = """
+    handler_code = """
+from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from logger import log
 
-class Protocol(BaseProtocol):
-    RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)
-    NARRATIVE_STRING = "EDITED PROTOCOL: I was inserted from my plugin's protocol."
 
-    def compute(self):
-        log.info(self.NARRATIVE_STRING)
+class NewOfficeVisitNoteHandler(BaseHandler):
+    \"\"\"Edited handler for testing plugin reinstallation.\"\"\"
+
+    RESPONDS_TO = EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED)
+
+    def compute(self) -> list[Effect]:
+        \"\"\"This method gets called when an event of the type RESPONDS_TO is fired.\"\"\"
+        log.info("[NewOfficeVisitNoteHandler] EDITED: Note state change event received")
         return []
 """
 
-    with open(f"./{plugin_name}/protocols/my_protocol.py", "w") as protocol:
-        protocol.write(protocol_code)
+    with open(f"./{plugin_name}/handlers/event_handlers.py", "w") as handler_file:
+        handler_file.write(handler_code)
 
     return (
         f"install {plugin_name}",

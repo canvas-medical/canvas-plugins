@@ -30,7 +30,12 @@ class Referral(AuditedModel, IdentifiableModel):
         null=True,
         blank=True,
     )
-    assessments = models.ManyToManyField("v1.Assessment", related_name="referrals", blank=True)
+    assessments = models.ManyToManyField(
+        "v1.Assessment",
+        related_name="referrals",
+        blank=True,
+        db_table="canvas_sdk_data_api_referral_assessments_001",
+    )
     clinical_question = models.CharField(max_length=50)
     priority = models.CharField(max_length=255)
     include_visit_note = models.BooleanField()
@@ -63,7 +68,7 @@ class Referral(AuditedModel, IdentifiableModel):
         return f"Referral {self.id}"
 
 
-class ReferralReviewQuerySet(BaseQuerySet, CommittableQuerySetMixin, ForPatientQuerySetMixin):
+class ReferralReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for referral reviews."""
 
     pass

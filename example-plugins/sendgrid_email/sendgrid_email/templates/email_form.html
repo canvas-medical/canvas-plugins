@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Manager</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #e0e0e0;
+        background: #fafafa;
+      }
+
+      .tab {
+        padding: 16px 24px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: #666;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s;
+      }
+
+      .tab:hover {
+        background: #f0f0f0;
+      }
+
+      .tab.active {
+        color: #1976d2;
+        border-bottom-color: #1976d2;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 24px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #333;
+        font-size: 14px;
+      }
+
+      input[type="text"],
+      input[type="tel"],
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: #1976d2;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      button[type="submit"] {
+        background: #1976d2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button[type="submit"]:hover {
+        background: #1565c0;
+      }
+
+      button[type="submit"]:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .message {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .message.show {
+        display: block;
+      }
+
+      .email-list {
+        list-style: none;
+      }
+
+      .email-item {
+        padding: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        background: white;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .email-item:hover {
+        background: #f9f9f9;
+      }
+
+      .email-item-row {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .email-item-label {
+        font-weight: 500;
+        color: #666;
+        display: inline-block;
+        min-width: 120px;
+      }
+
+      .email-events {
+        display: none;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .email-events.show {
+        display: block;
+      }
+
+      .event-item {
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+
+      .event-type {
+        font-weight: 600;
+        color: #1976d2;
+        margin-right: 8px;
+      }
+
+      .event-datetime {
+        color: #666;
+        font-size: 12px;
+      }
+
+      .refresh-icon-btn {
+        background: #f0f0f0;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-top: 16px;
+      }
+
+      .refresh-icon-btn:hover {
+        background: #e0e0e0;
+      }
+
+      .refresh-icon-btn .material-icons {
+        font-size: 24px;
+        color: #666;
+      }
+
+      .status-list {
+        list-style: none;
+        margin-top: 16px;
+      }
+
+      .status-card {
+        padding: 12px 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        background: white;
+      }
+
+      .status-email {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 4px;
+      }
+
+      .status-event {
+        color: #1976d2;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+
+      .status-timestamp {
+        color: #999;
+        font-size: 12px;
+      }
+
+      .inbound-email-list {
+        list-style: none;
+        margin-top: 16px;
+      }
+
+      .inbound-email-card {
+        padding: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        background: white;
+      }
+
+      .inbound-email-row {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .inbound-email-label {
+        font-weight: 500;
+        color: #666;
+        display: inline-block;
+        min-width: 120px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #1976d2;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+
+      input[type="email"],
+      input[type="date"],
+      input[type="number"] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.3s;
+      }
+
+      input[type="url"] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.3s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="tabs">
+        <button class="tab active" data-tab="send">Send</button>
+        <button class="tab" data-tab="log">Log</button>
+        <button class="tab" data-tab="outbound">Outbound</button>
+        <button class="tab" data-tab="inbound">Inbound</button>
+      </div>
+
+      <div id="send-tab" class="tab-content active">
+        <div id="send-message" class="message"></div>
+
+        <form id="email-form">
+          <div class="form-group">
+            <input type="email" id="emailFrom" name="emailFrom" required placeholder="From Email *">
+          </div>
+
+          <div class="form-group">
+            <input type="email" id="emailTo" name="emailTo" required placeholder="To Email *">
+          </div>
+
+          <div class="form-group">
+            <input type="email" id="emailCc" name="emailCc" placeholder="CC Email">
+          </div>
+
+          <div class="form-group">
+            <input type="text" id="subject" name="subject" required minlength="3" maxlength="20" placeholder="Subject * (3-20 characters)">
+          </div>
+
+          <div class="form-group">
+            <textarea id="body" name="body" required placeholder="Body *">Hello!</textarea>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="enableInlineUrl" name="enableInlineUrl" style="width: auto;">
+              <label for="inlineUrl" style="margin-bottom: 0;">Inline Image URL</label>
+            </div>
+            <input type="url" id="inlineUrl" name="inlineUrl" placeholder="https://example.com/image.png" value="https://marketplace.canva.com/QRaHw/MAFTDTQRaHw/1/s2/canva-untitled-MAFTDTQRaHw.png" disabled>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="enableAttachmentUrl" name="enableAttachmentUrl" style="width: auto;">
+              <label for="attachmentUrl" style="margin-bottom: 0;">Attachment URL</label>
+            </div>
+            <input type="url" id="attachmentUrl" name="attachmentUrl" placeholder="https://example.com/file.pdf" value="https://marketplace.canva.com/Cp544/MAFTDXCp544/1/s2/canva-untitled-MAFTDXCp544.png" disabled>
+          </div>
+
+          <button type="submit" id="submit-btn">Send Email</button>
+        </form>
+      </div>
+
+      <div id="log-tab" class="tab-content">
+        <div id="log-message" class="message"></div>
+
+        <form id="log-form">
+          <div class="form-group">
+            <input type="email" id="filterEmailTo" name="emailTo" placeholder="Filter by To Email">
+          </div>
+
+          <div class="form-group">
+            <input type="date" id="filterOnDay" name="onDay" placeholder="Filter by Date">
+          </div>
+
+          <div class="form-group">
+            <input type="number" id="maxLogs" name="maxLogs" min="1" max="1000" placeholder="Max logs (1-1000)" value="3">
+          </div>
+
+          <button type="submit" id="log-submit-btn">Load Logs</button>
+        </form>
+
+        <div id="email-list-container" style="margin-top: 24px;">
+        </div>
+      </div>
+
+      <div id="outbound-tab" class="tab-content">
+        <div id="outbound-message" class="message"></div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="checkbox" id="outboundEnabled" name="outboundEnabled" style="width: auto; cursor: pointer;">
+            <label for="outboundEnabled" style="margin-bottom: 0; cursor: pointer;">Enable Outbound Webhook</label>
+          </div>
+        </div>
+
+        <button class="refresh-icon-btn" onclick="loadOutboundStatuses()" title="Refresh statuses">
+          <span class="material-icons">refresh</span>
+        </button>
+
+        <div id="outbound-loading" class="loading" style="display: none;">
+          <div class="spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+          <div style="font-size: 13px;">Loading...</div>
+        </div>
+
+        <div id="status-container"></div>
+      </div>
+
+      <div id="inbound-tab" class="tab-content">
+        <div id="inbound-message" class="message"></div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="checkbox" id="inboundEnabled" name="inboundEnabled" style="width: auto; cursor: pointer;">
+            <label for="inboundEnabled" style="margin-bottom: 0; cursor: pointer;">Enable Inbound Webhook</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <input type="text" id="inboundHostname" name="hostname" placeholder="Hostname *">
+        </div>
+
+        <button class="refresh-icon-btn" onclick="loadInboundEmails()" title="Refresh inbound emails">
+          <span class="material-icons">refresh</span>
+        </button>
+
+        <div id="inbound-loading" class="loading" style="display: none;">
+          <div class="spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+          <div style="font-size: 13px;">Loading...</div>
+        </div>
+
+        <div id="inbound-email-container"></div>
+      </div>
+    </div>
+
+    <script>
+      const sendEmailURL = "{{sendEmailURL | safe}}";
+      const emailsSentURL = "{{emailsSentURL | safe}}";
+      const emailEventsURL = "{{emailEventsURL | safe}}";
+      const outboundWebhookURL = "{{outboundWebhookURL | safe}}";
+      const outboundStatusesURL = "{{outboundStatusesURL | safe}}";
+      const inboundWebhookURL = "{{inboundWebhookURL | safe}}";
+      const inboundEmailURL = "{{inboundEmailURL | safe}}";
+
+        // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab');
+
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+          tab.classList.add('active');
+          document.getElementById(`${tabName}-tab`).classList.add('active');
+
+                // Load outbound webhook state when switching to Outbound tab
+          if (tabName === 'outbound') {
+            loadOutboundWebhookState();
+          }
+
+                // Load inbound webhook state when switching to Inbound tab
+          if (tabName === 'inbound') {
+            loadInboundWebhookState();
+          }
+        });
+      });
+
+        // Handle inline URL checkbox
+      document.getElementById('enableInlineUrl').addEventListener('change', (e) => {
+        const inlineUrlInput = document.getElementById('inlineUrl');
+        inlineUrlInput.disabled = !e.target.checked;
+      });
+
+        // Handle attachment URL checkbox
+      document.getElementById('enableAttachmentUrl').addEventListener('change', (e) => {
+        const attachmentUrlInput = document.getElementById('attachmentUrl');
+        attachmentUrlInput.disabled = !e.target.checked;
+      });
+
+        // Hide send-message div when clicked
+      document.getElementById('send-message').addEventListener('click', (e) => {
+        e.target.classList.remove('show');
+      });
+
+        // Send Email form
+      document.getElementById('email-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submit-btn');
+        const messageEl = document.getElementById('send-message');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        messageEl.classList.remove('show', 'success', 'error');
+
+        const enableInlineUrl = document.getElementById('enableInlineUrl').checked;
+        const enableAttachmentUrl = document.getElementById('enableAttachmentUrl').checked;
+
+        const formData = {
+          emailFrom: document.getElementById('emailFrom').value,
+          emailTo: document.getElementById('emailTo').value,
+          emailCc: document.getElementById('emailCc').value || undefined,
+          subject: document.getElementById('subject').value,
+          body: document.getElementById('body').value,
+          inlineUrl: enableInlineUrl ? document.getElementById('inlineUrl').value : '',
+          attachmentUrl: enableAttachmentUrl ? document.getElementById('attachmentUrl').value : ''
+        };
+
+        try {
+          const response = await fetch(sendEmailURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to send email');
+          }
+
+          const result = await response.json();
+
+          if (result.successful) {
+            messageEl.textContent = 'Email sent successfully!';
+            messageEl.classList.add('success', 'show');
+            document.getElementById('email-form').reset();
+                    // Reset to default values
+            document.getElementById('body').value = 'Hello!';
+            document.getElementById('inlineUrl').value = 'https://marketplace.canva.com/QRaHw/MAFTDTQRaHw/1/s2/canva-untitled-MAFTDTQRaHw.png';
+            document.getElementById('attachmentUrl').value = 'https://marketplace.canva.com/Cp544/MAFTDXCp544/1/s2/canva-untitled-MAFTDXCp544.png';
+                    // Uncheck and disable URL fields
+            document.getElementById('enableInlineUrl').checked = false;
+            document.getElementById('enableAttachmentUrl').checked = false;
+            document.getElementById('inlineUrl').disabled = true;
+            document.getElementById('attachmentUrl').disabled = true;
+          } else {
+            messageEl.textContent = 'Email sending failed!';
+            messageEl.classList.add('error', 'show');
+          }
+        } catch (error) {
+          messageEl.textContent = `Error: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send Email';
+        }
+      });
+
+        // Load Email Logs form
+      document.getElementById('log-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('log-submit-btn');
+        const messageEl = document.getElementById('log-message');
+        const container = document.getElementById('email-list-container');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Loading...';
+        messageEl.classList.remove('show', 'success', 'error');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading email logs...</div></div>';
+
+        const maxLogs = parseInt(document.getElementById('maxLogs').value) || 3;
+        const formData = {
+          emailTo: document.getElementById('filterEmailTo').value || undefined,
+          onDay: document.getElementById('filterOnDay').value || undefined,
+          maxLogs: Math.max(1, Math.min(1000, maxLogs))
+        };
+
+        try {
+          const response = await fetch(emailsSentURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to load email logs');
+          }
+
+          const result = await response.json();
+          displayEmailList(result);
+        } catch (error) {
+          messageEl.textContent = `Error: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+          container.innerHTML = '';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Load Logs';
+        }
+      });
+
+      function displayEmailList(emails) {
+        const container = document.getElementById('email-list-container');
+
+        if (!emails || emails.length === 0) {
+          container.innerHTML = '<div class="empty-state">No email logs found</div>';
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'email-list';
+
+        emails.forEach(email => {
+          const item = document.createElement('li');
+          item.className = 'email-item';
+
+          const fields = [
+            { label: 'From', value: email.from_email || 'N/A' },
+            { label: 'To', value: email.to_email || 'N/A' },
+            { label: 'Subject', value: email.subject || 'N/A' },
+            { label: 'Status', value: email.status || 'N/A' },
+            { label: 'Created At', value: email.created_at ? new Date(email.created_at).toLocaleString() : 'N/A' }
+          ];
+
+          let html = '';
+          fields.forEach(field => {
+            html += `
+                        <div class="email-item-row">
+                            <span class="email-item-label">${field.label}:</span>
+                            <span>${field.value}</span>
+                        </div>
+                    `;
+          });
+
+          html += `
+                    <div class="email-events" id="events-${email.message_id}">
+                        <div class="loading">
+                            <div class="spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+                            <div style="font-size: 13px;">Loading events...</div>
+                        </div>
+                    </div>
+                `;
+
+          item.innerHTML = html;
+          item.addEventListener('click', () => toggleEmailEvents(email.message_id));
+          list.appendChild(item);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+      }
+
+      async function toggleEmailEvents(messageId) {
+        const eventsEl = document.getElementById(`events-${messageId}`);
+
+        if (eventsEl.classList.contains('show')) {
+          eventsEl.classList.remove('show');
+          return;
+        }
+
+        eventsEl.classList.add('show');
+
+        if (eventsEl.dataset.loaded) return;
+
+        try {
+          const response = await fetch(`${emailEventsURL}/${messageId}`);
+          if (!response.ok) throw new Error('Failed to fetch email events');
+
+          const data = await response.json();
+          displayEmailEvents(eventsEl, data.events || []);
+          eventsEl.dataset.loaded = 'true';
+        } catch (error) {
+          eventsEl.innerHTML = `<div style="color: #d32f2f; font-size: 13px;">Error loading events: ${error.message}</div>`;
+        }
+      }
+
+      function displayEmailEvents(container, events) {
+        if (!events || events.length === 0) {
+          container.innerHTML = '<div style="color: #999; font-size: 13px;">No events found</div>';
+          return;
+        }
+
+        let html = '<div style="font-weight: 500; margin-bottom: 8px; font-size: 14px;">Events:</div>';
+        events.forEach(event => {
+          const datetime = event.datetime ? new Date(event.datetime).toLocaleString() : 'N/A';
+          html += `
+                    <div class="event-item">
+                        <span class="event-type">${event.event || 'Unknown'}</span>
+                        <span class="event-datetime">${datetime}</span>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = html;
+      }
+
+        // Load outbound webhook state
+      async function loadOutboundWebhookState() {
+        const checkbox = document.getElementById('outboundEnabled');
+        const messageEl = document.getElementById('outbound-message');
+        const loadingEl = document.getElementById('outbound-loading');
+
+            // Don't reload if already loaded
+        if (checkbox.dataset.loaded) return;
+
+        loadingEl.style.display = 'block';
+        messageEl.classList.remove('show', 'success', 'error');
+
+        try {
+          const response = await fetch(outboundWebhookURL);
+          if (!response.ok) throw new Error('Failed to load outbound webhook state');
+
+          const data = await response.json();
+          checkbox.checked = data.enabled || false;
+          checkbox.dataset.loaded = 'true';
+        } catch (error) {
+          messageEl.textContent = `Error loading webhook state: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          loadingEl.style.display = 'none';
+        }
+      }
+
+        // Handle outbound webhook checkbox change
+      document.getElementById('outboundEnabled').addEventListener('change', async (e) => {
+        const messageEl = document.getElementById('outbound-message');
+        const checkbox = e.target;
+        const enabled = checkbox.checked;
+
+        messageEl.classList.remove('show', 'success', 'error');
+
+        try {
+          const response = await fetch(outboundWebhookURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled })
+          });
+
+          if (!response.ok) throw new Error('Failed to update outbound webhook');
+
+          messageEl.textContent = `Outbound webhook ${enabled ? 'enabled' : 'disabled'} successfully!`;
+          messageEl.classList.add('success', 'show');
+
+                // Auto-hide success message after 3 seconds
+          setTimeout(() => {
+            messageEl.classList.remove('show');
+          }, 3000);
+        } catch (error) {
+          messageEl.textContent = `Error: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+                // Revert checkbox state on error
+          checkbox.checked = !enabled;
+        }
+      });
+
+        // Hide outbound-message div when clicked
+      document.getElementById('outbound-message').addEventListener('click', (e) => {
+        e.target.classList.remove('show');
+      });
+
+        // Load outbound statuses
+      async function loadOutboundStatuses() {
+        const container = document.getElementById('status-container');
+        const messageEl = document.getElementById('outbound-message');
+        const loadingEl = document.getElementById('outbound-loading');
+
+        loadingEl.style.display = 'block';
+        messageEl.classList.remove('show', 'success', 'error');
+        container.innerHTML = '';
+
+        try {
+          const response = await fetch(outboundStatusesURL);
+          if (!response.ok) throw new Error('Failed to load outbound statuses');
+
+          const statuses = await response.json();
+          displayOutboundStatuses(statuses);
+        } catch (error) {
+          messageEl.textContent = `Error loading statuses: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          loadingEl.style.display = 'none';
+        }
+      }
+
+      function displayOutboundStatuses(statuses) {
+        const container = document.getElementById('status-container');
+
+        if (!statuses || statuses.length === 0) {
+          container.innerHTML = '<div class="empty-state">No outbound statuses found</div>';
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'status-list';
+
+        statuses.forEach(status => {
+          const item = document.createElement('li');
+          item.className = 'status-card';
+          item.innerHTML = `
+                    <div class="status-email">${status.email || 'N/A'}</div>
+                    <div class="status-event">${status.event || 'N/A'}</div>
+                    <div class="status-timestamp">${status.datetime || 'N/A'}</div>
+                `;
+
+          list.appendChild(item);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+      }
+
+        // Load inbound webhook state
+      async function loadInboundWebhookState() {
+        const checkbox = document.getElementById('inboundEnabled');
+        const hostnameInput = document.getElementById('inboundHostname');
+        const messageEl = document.getElementById('inbound-message');
+        const loadingEl = document.getElementById('inbound-loading');
+
+            // Don't reload if already loaded
+        if (checkbox.dataset.loaded) return;
+
+        loadingEl.style.display = 'block';
+        messageEl.classList.remove('show', 'success', 'error');
+
+        try {
+          const response = await fetch(inboundWebhookURL);
+          if (!response.ok) throw new Error('Failed to load inbound webhook state');
+
+          const data = await response.json();
+          checkbox.checked = data.enabled || false;
+          hostnameInput.value = data.hostname || '';
+          checkbox.dataset.loaded = 'true';
+        } catch (error) {
+          messageEl.textContent = `Error loading webhook state: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          loadingEl.style.display = 'none';
+        }
+      }
+
+        // Handle inbound webhook checkbox change
+      document.getElementById('inboundEnabled').addEventListener('change', async (e) => {
+        const messageEl = document.getElementById('inbound-message');
+        const checkbox = e.target;
+        const hostnameInput = document.getElementById('inboundHostname');
+        const enabled = checkbox.checked;
+
+        messageEl.classList.remove('show', 'success', 'error');
+
+            // Validate: if enabling, hostname must not be empty
+        if (enabled && !hostnameInput.value.trim()) {
+          messageEl.textContent = 'Error: Hostname is required when enabling inbound webhook';
+          messageEl.classList.add('error', 'show');
+                // Revert checkbox state
+          checkbox.checked = false;
+          return;
+        }
+
+        const formData = {
+          enabled: enabled,
+          hostname: hostnameInput.value.trim()
+        };
+
+        try {
+          const response = await fetch(inboundWebhookURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+
+          if (!response.ok) throw new Error('Failed to update inbound webhook');
+
+          messageEl.textContent = `Inbound webhook ${enabled ? 'enabled' : 'disabled'} successfully!`;
+          messageEl.classList.add('success', 'show');
+
+                // Auto-hide success message after 3 seconds
+          setTimeout(() => {
+            messageEl.classList.remove('show');
+          }, 3000);
+        } catch (error) {
+          messageEl.textContent = `Error: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+                // Revert checkbox state on error
+          checkbox.checked = !enabled;
+        }
+      });
+
+        // Hide inbound-message div when clicked
+      document.getElementById('inbound-message').addEventListener('click', (e) => {
+        e.target.classList.remove('show');
+      });
+
+        // Load inbound emails
+      async function loadInboundEmails() {
+        const container = document.getElementById('inbound-email-container');
+        const messageEl = document.getElementById('inbound-message');
+        const loadingEl = document.getElementById('inbound-loading');
+
+        loadingEl.style.display = 'block';
+        messageEl.classList.remove('show', 'success', 'error');
+        container.innerHTML = '';
+
+        try {
+          const response = await fetch(inboundEmailURL);
+          if (!response.ok) throw new Error('Failed to load inbound emails');
+
+          const emails = await response.json();
+          displayInboundEmails(emails);
+        } catch (error) {
+          messageEl.textContent = `Error loading inbound emails: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          loadingEl.style.display = 'none';
+        }
+      }
+
+      function displayInboundEmails(emails) {
+        const container = document.getElementById('inbound-email-container');
+
+        if (!emails || emails.length === 0) {
+          container.innerHTML = '<div class="empty-state">No inbound emails found</div>';
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'inbound-email-list';
+
+        emails.forEach(email => {
+          const item = document.createElement('li');
+          item.className = 'inbound-email-card';
+
+          const fields = [
+            { label: 'From', value: email.emailFrom || 'N/A' },
+            { label: 'To', value: email.emailTo || 'N/A' },
+            { label: 'Subject', value: email.subject || 'N/A' },
+            { label: 'Text', value: email.text || 'N/A' },
+            { label: 'SPF', value: email.spf || 'N/A' },
+            { label: 'Spam Score', value: email.spamScore !== undefined ? email.spamScore : 'N/A' },
+            { label: 'Attachments', value: email.attachments || 'N/A' }
+          ];
+
+          let html = '';
+          fields.forEach(field => {
+            html += `
+                        <div class="inbound-email-row">
+                            <span class="inbound-email-label">${field.label}:</span>
+                            <span>${field.value}</span>
+                        </div>
+                    `;
+          });
+
+          item.innerHTML = html;
+          list.appendChild(item);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+      }
+    </script>
+  </body>
+</html>
