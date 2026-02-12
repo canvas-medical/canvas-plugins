@@ -539,6 +539,12 @@
   "canvas_sdk.effects.note.note": [
     "Note"
   ],
+  "canvas_sdk.effects.note_metadata": [
+    "NoteMetadata"
+  ],
+  "canvas_sdk.effects.note_metadata.base": [
+    "NoteMetadata"
+  ],
   "canvas_sdk.effects.observation": [
     "CodingData",
     "Observation",
