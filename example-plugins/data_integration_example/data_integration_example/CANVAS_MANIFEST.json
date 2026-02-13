@@ -21,6 +21,7 @@
                     ]
                 },
                 "meta": {
+                    "title": "Data Integration Handler",
                     "RESPONDS_TO": [
                         "DOCUMENT_RECEIVED",
                         "DOCUMENT_LINKED_TO_PATIENT",
