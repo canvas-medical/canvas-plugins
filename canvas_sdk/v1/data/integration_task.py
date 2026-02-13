@@ -129,6 +129,7 @@ class IntegrationTask(TimestampedModel, IdentifiableModel):
     )
     type = models.CharField(max_length=125, blank=True, default="")
     title = models.CharField(max_length=256, blank=True, default="")
+    document = models.FileField(max_length=255)
     channel = models.CharField(max_length=50, choices=IntegrationTaskChannel.choices, db_index=True)
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.DO_NOTHING, null=True, related_name="integration_tasks"
@@ -174,6 +175,7 @@ class IntegrationTaskReview(TimestampedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_integrationtaskreview_001"
+        ordering = ("id",)
 
     objects = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)()
 
