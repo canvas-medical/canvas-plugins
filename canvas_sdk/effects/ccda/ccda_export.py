@@ -33,7 +33,7 @@ class CreateCCDAExport(_BaseEffect):
 
     patient_id: str = Field(min_length=1)
     content: str = Field(min_length=1)
-    document_type: DocumentType = Field(default=DocumentType.CCD)
+    document_type: DocumentType = Field(default=DocumentType.CCD, strict=False)
 
     @property
     def values(self) -> dict[str, Any]:
