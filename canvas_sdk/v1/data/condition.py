@@ -59,7 +59,7 @@ class Condition(IdentifiableModel):
         "v1.Patient", on_delete=models.DO_NOTHING, related_name="conditions", null=True
     )
     onset_date = models.DateField()
-    resolution_date = models.DateField()
+    resolution_date = models.DateField(null=True, default=None)
     clinical_status = models.CharField(choices=ClinicalStatus.choices, max_length=20)
     surgical = models.BooleanField()
 
