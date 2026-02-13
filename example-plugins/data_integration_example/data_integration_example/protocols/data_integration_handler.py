@@ -16,6 +16,7 @@ from canvas_sdk.effects.data_integration.types import (
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.v1.data import Patient, Staff, Team
+from data_integration_example.templates import PREFILL_TEMPLATES
 from logger import log
 
 
@@ -388,95 +389,16 @@ class DataIntegrationHandler(BaseProtocol):
             return None
 
     def _create_prefill_document_fields_effect(self, document_id: str) -> Effect | None:
-        """Create a PrefillDocumentFields effect with sample data."""
+        """Create a PrefillDocumentFields effect with multiple template suggestions."""
         try:
-            templates = [
-                {
-                    "template_id": 620,
-                    "template_name": "Thyroid Profile With Tsh",
-                    "fields": {
-                        # Thyroid Stimulating Hormone (LOINC: 11580-8)
-                        "11580-8": {
-                            "value": "2.35",
-                            "unit": "uIU/mL",
-                            "reference_range": "0.45 - 4.50 uIU/mL",
-                            "annotations": [AnnotationItem(text="AI 92%", color="#4CAF50")],
-                        },
-                        # Also store by label for fallback matching
-                        "Thyroid Stimulating Hormone": {
-                            "value": "2.35",
-                            "unit": "uIU/mL",
-                            "reference_range": "0.45 - 4.50 uIU/mL",
-                            "annotations": [AnnotationItem(text="AI 92%", color="#4CAF50")],
-                        },
-                        # Thyroxine T4 (LOINC: 3026-2)
-                        "3026-2": {
-                            "value": "13.5",
-                            "unit": "ug/dL",
-                            "reference_range": "4.5 - 12.0 ug/dL",
-                            "abnormal": True,
-                            "annotations": [
-                                AnnotationItem(text="AI 89%", color="#4CAF50"),
-                                AnnotationItem(text="High", color="#F44336"),
-                            ],
-                        },
-                        "Thyroxine (T4)": {
-                            "value": "13.5",
-                            "unit": "ug/dL",
-                            "reference_range": "4.5 - 12.0 ug/dL",
-                            "abnormal": True,
-                            "annotations": [
-                                AnnotationItem(text="AI 89%", color="#4CAF50"),
-                                AnnotationItem(text="High", color="#F44336"),
-                            ],
-                        },
-                        # T3 Uptake (LOINC: 3050-2)
-                        "3050-2": {
-                            "value": "32",
-                            "unit": "%",
-                            "reference_range": "24 - 39 %",
-                            "annotations": [
-                                AnnotationItem(text="AI 87%", color="#4CAF50"),
-                                AnnotationItem(text="Verify", color="#FF9800"),
-                            ],
-                        },
-                        "T3 Uptake": {
-                            "value": "32",
-                            "unit": "%",
-                            "reference_range": "24 - 39 %",
-                            "annotations": [
-                                AnnotationItem(text="AI 87%", color="#4CAF50"),
-                                AnnotationItem(text="Verify", color="#FF9800"),
-                            ],
-                        },
-                        # Free Thyroxine Index (LOINC: 32215-6)
-                        "32215-6": {
-                            "value": "2.5",
-                            "reference_range": "1.2 - 4.9",
-                            "annotations": [
-                                AnnotationItem(text="AI 78%", color="#FFC107"),
-                                AnnotationItem(text="Low confidence", color="#F44336"),
-                            ],
-                        },
-                        "Free Thyroxine Index": {
-                            "value": "2.5",
-                            "reference_range": "1.2 - 4.9",
-                            "annotations": [
-                                AnnotationItem(text="AI 78%", color="#FFC107"),
-                                AnnotationItem(text="Low confidence", color="#F44336"),
-                            ],
-                        },
-                    },
-                }
-            ]
             annotations: list[AnnotationItem] = [
                 AnnotationItem(text="Prefilled via AI", color="#FF9800"),
-                AnnotationItem(text="Data integration", color="#2196F3"),
+                AnnotationItem(text=f"{len(PREFILL_TEMPLATES)} templates matched", color="#2196F3"),
             ]
 
             effect = PrefillDocumentFields(
                 document_id=str(document_id),
-                templates=templates,
+                templates=PREFILL_TEMPLATES,
                 annotations=annotations,
                 source_protocol="data_integration_example",
             )

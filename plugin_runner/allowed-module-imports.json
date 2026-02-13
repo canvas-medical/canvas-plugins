@@ -502,16 +502,12 @@
     "Priority",
     "RemoveDocumentFromPatient",
     "ReviewMode",
-    "TemplateFields",
-    "_BaseDocumentEffect"
+    "TemplateFields"
   ],
   "canvas_sdk.effects.data_integration.assign_document_reviewer": [
     "AssignDocumentReviewer",
     "Priority",
     "ReviewMode"
-  ],
-  "canvas_sdk.effects.data_integration.base": [
-    "_BaseDocumentEffect"
   ],
   "canvas_sdk.effects.data_integration.categorize_document": [
     "CategorizeDocument"
