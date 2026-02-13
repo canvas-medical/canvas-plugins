@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.98.0 (2026-02-13)
+
+### Features
+
+- Allow multiple commands insertion in protocol recommendations
+  ([#1438](https://github.com/canvas-medical/canvas-plugins/pull/1438),
+  [`bb8e698`](https://github.com/canvas-medical/canvas-plugins/commit/bb8e698d2d213009201fc7c0bd2e6bcce454d661))
+
+- Patient timeline configuration effect
+  ([#1497](https://github.com/canvas-medical/canvas-plugins/pull/1497),
+  [`28dcd2b`](https://github.com/canvas-medical/canvas-plugins/commit/28dcd2b0ec48e8e82496e8b90433c8c09ce2cae4))
+
+
 ## v0.97.0 (2026-02-10)
 
 ### Features
