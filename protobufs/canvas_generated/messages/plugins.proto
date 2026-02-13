@@ -22,3 +22,9 @@ message UnloadPluginRequest {
 message UnloadPluginResponse {
   bool success = 1;
 }
+
+message GetRegisteredEventTypesRequest {}
+
+message GetRegisteredEventTypesResponse {
+  repeated string event_types = 1;
+}

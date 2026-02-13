@@ -13,4 +13,6 @@ service PluginRunner {
   rpc ReloadPlugin (ReloadPluginRequest) returns (stream ReloadPluginResponse);
 
   rpc UnloadPlugin (UnloadPluginRequest) returns (stream UnloadPluginResponse);
+
+  rpc GetRegisteredEventTypes (GetRegisteredEventTypesRequest) returns (GetRegisteredEventTypesResponse);
 }
