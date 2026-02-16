@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -9,7 +9,7 @@ from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim
 
 
-class BannerAlertIntent(Enum):
+class BannerAlertIntent(StrEnum):
     """BannerAlertIntent."""
 
     INFO = "info"
@@ -26,7 +26,7 @@ class _AddClaimBannerAlert(_BaseEffect):
     claim_id: UUID | str
     key: str
     narrative: str = Field(max_length=90)
-    intent: BannerAlertIntent
+    intent: BannerAlertIntent = Field(strict=False)
     href: str | None = None
 
     @property
