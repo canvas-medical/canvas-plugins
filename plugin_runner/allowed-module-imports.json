@@ -492,6 +492,9 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.default_homepage": [
+    "DefaultHomepageEffect"
+  ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
   ],
@@ -574,6 +577,9 @@
   ],
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
+  ],
+  "canvas_sdk.effects.patient.timeline": [
+    "PatientTimelineEffect"
   ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
@@ -728,7 +734,8 @@
     "SHOW_BUTTON_REGEX"
   ],
   "canvas_sdk.handlers.application": [
-    "Application"
+    "Application",
+    "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
     "BaseHandler",
@@ -859,6 +866,7 @@
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "Application",
     "Appointment",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
@@ -1009,6 +1017,9 @@
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding"
+  ],
+  "canvas_sdk.v1.data.application": [
+    "Application"
   ],
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
