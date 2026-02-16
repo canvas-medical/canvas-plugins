@@ -67,5 +67,17 @@ class _RemoveClaimBannerAlert(_BaseEffect):
         """The values for removing the claim banner alert."""
         return {"claim_id": str(self.claim_id), "key": self.key}
 
+    def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
+        errors = super()._get_error_details(method)
+        if not Claim.objects.filter(id=self.claim_id).exists():
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    f"Claim with id {self.claim_id} does not exist.",
+                    self.claim_id,
+                )
+            )
+        return errors
+
 
 __exports__ = ()
