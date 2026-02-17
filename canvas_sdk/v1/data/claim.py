@@ -409,6 +409,7 @@ class ClaimMetadata(IdentifiableModel, TimestampedModel):
 
     class Meta:
         db_table = "canvas_sdk_data_quality_and_revenue_claimmetadata_001"
+        unique_together = ("claim", "key")
 
     claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="metadata")
     key = models.CharField(max_length=32)
