@@ -13,6 +13,7 @@ manifest_schema = {
             "properties": {
                 "commands": {"$ref": "#/$defs/commands"},
                 "protocols": {"$ref": "#/$defs/component"},
+                "handlers": {"$ref": "#/$defs/component"},
                 "content": {"$ref": "#/$defs/component"},
                 "effects": {"$ref": "#/$defs/component"},
                 "views": {"$ref": "#/$defs/component"},
@@ -128,6 +129,7 @@ manifest_schema = {
                             "provider_menu_item",
                             "portal_menu_item",
                             "provider_companion",
+                            "full_chart",
                         ],
                     },
                     "menu_position": {

@@ -1,0 +1,39 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "custom_homepage",
+    "description": "An example plugin that sets a custom homepage application or an alternative provider application page",
+    "url_permissions": [
+        {
+            "url": "https://www.canvasmedical.com/extensions",
+            "permissions": []
+        }
+    ],
+    "components": {
+        "applications": [
+            {
+                "class": "custom_homepage.applications.my_application:MyApplication",
+                "name": "custom_homepage",
+                "description": "An application that loads the canvas website",
+                "scope": "global",
+                "icon": "assets/python-logo.png"
+            }
+        ],
+        "handlers": [
+            {
+                "class": "custom_homepage.handlers.event_handlers:Homepage",
+                "description": ""
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

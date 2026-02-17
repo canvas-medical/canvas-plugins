@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Manager</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #e0e0e0;
+        background: #fafafa;
+      }
+
+      .tab {
+        padding: 16px 24px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: #666;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s;
+      }
+
+      .tab:hover {
+        background: #f0f0f0;
+      }
+
+      .tab.active {
+        color: #1976d2;
+        border-bottom-color: #1976d2;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 24px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #333;
+        font-size: 14px;
+      }
+
+      input[type="text"],
+      input[type="tel"],
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: #1976d2;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      button[type="submit"] {
+        background: #1976d2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button[type="submit"]:hover {
+        background: #1565c0;
+      }
+
+      button[type="submit"]:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .message {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .message.show {
+        display: block;
+      }
+
+      .sms-list {
+        list-style: none;
+      }
+
+      .sms-item {
+        padding: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .sms-item:hover {
+        background: #f9f9f9;
+      }
+
+      .sms-item.has-media {
+        background: #31596f;
+        border-color: #31596f;
+      }
+
+      .sms-item.has-media:hover {
+        background: #2a4d60;
+      }
+
+      .sms-item.has-media .sms-date,
+      .sms-item.has-media .sms-sid {
+        color: #e0e0e0;
+      }
+
+      .sms-item.has-media .sms-details-label,
+      .sms-item.has-media .sms-details-row {
+        color: #f5f5f5;
+      }
+
+      .sms-item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .sms-sid {
+        font-family: monospace;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .sms-date {
+        font-size: 12px;
+        color: #999;
+      }
+
+      .sms-details {
+        display: none;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .sms-details.show {
+        display: block;
+      }
+
+      .sms-details-row {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .sms-details-label {
+        font-weight: 500;
+        color: #666;
+        display: inline-block;
+        width: 100px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #1976d2;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+
+      .refresh-btn {
+        background: #f0f0f0;
+        color: #666;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 18px;
+        cursor: pointer;
+        margin-bottom: 16px;
+        transition: background 0.3s;
+        line-height: 1;
+      }
+
+      .refresh-btn:hover {
+        background: #e0e0e0;
+      }
+
+      .phone-list {
+        list-style: none;
+      }
+
+      .phone-item {
+        padding: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        background: white;
+      }
+
+      .phone-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .phone-number {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        font-family: monospace;
+      }
+
+      .phone-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 4px;
+      }
+
+      .phone-status {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .phone-status.active {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .phone-status.inactive {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .phone-capabilities {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      .capability-badge {
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .capability-badge.enabled {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .capability-badge.disabled {
+        background: #f5f5f5;
+        color: #999;
+      }
+
+      .phone-sid {
+        font-family: monospace;
+        font-size: 11px;
+        color: #999;
+        margin-top: 8px;
+      }
+
+      .phone-callback {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+        word-break: break-all;
+      }
+
+      .sms-media {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .sms-item.has-media .sms-media {
+        border-top-color: #5a7d94;
+      }
+
+      .sms-media-title {
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: #666;
+      }
+
+      .sms-item.has-media .sms-media-title {
+        color: #e0e0e0;
+      }
+
+      .sms-media-item {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        background: white;
+        max-width: 500px;
+      }
+
+      .sms-media-item img {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        display: block;
+        background: #000;
+      }
+
+      .sms-media-item-info {
+        padding: 8px;
+        font-size: 11px;
+        color: #666;
+        background: #f9f9f9;
+      }
+
+      .delete-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        color: #999;
+        font-size: 16px;
+        transition: color 0.2s;
+      }
+
+      .delete-btn:hover {
+        color: #d32f2f;
+      }
+
+      .sms-item.has-media .delete-btn {
+        color: #ccc;
+      }
+
+      .sms-item.has-media .delete-btn:hover {
+        color: #ff6b6b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="tabs">
+        <button class="tab active" data-tab="list">Log</button>
+        <button class="tab" data-tab="send">Send</button>
+        <button class="tab" data-tab="phones">Phones</button>
+      </div>
+
+      <div id="list-tab" class="tab-content active">
+        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+          <button class="refresh-btn" onclick="loadSMSList()" title="Refresh" style="margin-bottom: 0;">↻</button>
+          <select id="filter-phone" style="flex: 1; max-width: 300px;">
+            <option value="">Loading phones...</option>
+          </select>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Call Made">
+            <input type="radio" name="direction" value="from" checked onchange="loadSMSList()">
+            <span style="font-size: 18px;">↗</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Call Received">
+            <input type="radio" name="direction" value="to" onchange="loadSMSList()">
+            <span style="font-size: 18px;">↙</span>
+          </label>
+        </div>
+        <div id="sms-list-container">
+          <div class="loading">
+            <div class="spinner"></div>
+            <div>Loading SMS messages...</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="send-tab" class="tab-content">
+        <div id="send-message" class="message"></div>
+
+        <form id="sms-form">
+          <div class="form-group">
+            <label for="numberFrom">From Number *</label>
+            <select id="numberFrom" name="numberFrom" required>
+              <option value="">Loading phones...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="numberTo">To Number *</label>
+            <input type="tel" id="numberTo" name="numberTo" required placeholder="+1234567890" value="+18777804236">
+          </div>
+
+          <div class="form-group">
+            <label for="callbackUrl">Callback URL</label>
+            <input type="text" id="callbackUrl" name="callbackUrl" placeholder="https://example.com/callback" value="{{defaultCallbackURL | safe}}">
+          </div>
+
+          <div class="form-group">
+            <label for="text">Message *</label>
+            <textarea id="text" name="text" required placeholder="Enter your message here..."></textarea>
+          </div>
+
+          <button type="submit" id="submit-btn">Send SMS</button>
+        </form>
+      </div>
+
+      <div id="phones-tab" class="tab-content">
+        <button class="refresh-btn" onclick="loadPhoneList()" title="Refresh">↻</button>
+        <div id="phone-list-container">
+          <div class="loading">
+            <div class="spinner"></div>
+            <div>Loading phone numbers...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const messageListURL = "{{messageListURL | safe}}";
+      const messageURL = "{{messageURL | safe}}";
+      const smsSendURL = "{{smsSendURL | safe}}";
+      const phoneListURL = "{{phoneListURL | safe}}";
+      const mediaURL = "{{mediaURL | safe}}";
+      const deleteMessageURL = "{{deleteMessageURL | safe}}";
+      const setInboundWebhookURL = "{{setInboundWebhookURL | safe}}";
+
+        // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab');
+
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+          tab.classList.add('active');
+          document.getElementById(`${tabName}-tab`).classList.add('active');
+
+          if (tabName === 'list') {
+            loadSMSList();
+          } else if (tabName === 'phones') {
+            loadPhoneList();
+          } else if (tabName === 'send') {
+            loadPhoneDropdown();
+          }
+        });
+      });
+
+        // Load SMS list
+      async function loadSMSList() {
+        const container = document.getElementById('sms-list-container');
+        const filterPhone = document.getElementById('filter-phone');
+        const numberFrom = filterPhone.value;
+        const direction = document.querySelector('input[name="direction"]:checked').value;
+
+        if (!numberFrom) {
+          container.innerHTML = '<div class="empty-state">Please select a phone number to view SMS messages</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading SMS messages...</div></div>';
+
+        try {
+          const response = await fetch(`${messageListURL}/${numberFrom}/${direction}`);
+          if (!response.ok) throw new Error('Failed to fetch SMS list');
+
+          const data = await response.json();
+          displaySMSList(data);
+        } catch (error) {
+          container.innerHTML = `<div class="message error show">Error loading SMS list: ${error.message}</div>`;
+        }
+      }
+
+      function displaySMSList(messages) {
+        const container = document.getElementById('sms-list-container');
+
+        if (!messages || messages.length === 0) {
+          container.innerHTML = '<div class="empty-state">No SMS messages found</div>';
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'sms-list';
+
+        messages.forEach(msg => {
+          const item = document.createElement('li');
+          item.className = 'sms-item';
+
+          const sentDate = msg.sent ? new Date(msg.sent).toLocaleString() : 'N/A';
+          const status = msg.status || 'N/A';
+
+                // Add has-media class if mediaCount > 0
+          const mediaCount = parseInt(msg.mediaCount || 0, 10);
+          if (!isNaN(mediaCount) && mediaCount > 0) {
+            item.classList.add('has-media');
+          }
+
+          item.innerHTML = `
+                    <div class="sms-item-header">
+                        <span class="sms-date">Sent: ${sentDate}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="sms-sid">Status: ${status}</span>
+                            <button class="delete-btn" data-sid="${msg.sid}" title="Delete message">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="sms-details" id="details-${msg.sid}" data-media-count="${mediaCount}">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>Loading details...</div>
+                        </div>
+                    </div>
+                `;
+
+          item.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('delete-btn')) {
+              toggleSMSDetails(msg.sid, mediaCount);
+            }
+          });
+
+          const deleteBtn = item.querySelector('.delete-btn');
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteSMS(msg.sid);
+          });
+
+          list.appendChild(item);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+      }
+
+      async function toggleSMSDetails(messageSid, mediaCount) {
+        const detailsEl = document.getElementById(`details-${messageSid}`);
+
+        if (detailsEl.classList.contains('show')) {
+          detailsEl.classList.remove('show');
+          return;
+        }
+
+        detailsEl.classList.add('show');
+
+        if (detailsEl.dataset.loaded) return;
+
+        try {
+          const response = await fetch(`${messageURL}/${messageSid}`);
+          if (!response.ok) throw new Error('Failed to fetch SMS details');
+
+          const details = await response.json();
+          await displaySMSDetails(detailsEl, details, messageSid, mediaCount);
+          detailsEl.dataset.loaded = 'true';
+        } catch (error) {
+          detailsEl.innerHTML = `<div class="message error show">Error loading details: ${error.message}</div>`;
+        }
+      }
+
+      async function displaySMSDetails(container, details, messageSid, mediaCount) {
+        const fields = [
+          { label: 'From', key: 'from' },
+          { label: 'To', key: 'to' },
+          { label: 'Sent', key: 'sent', formatter: (val) => new Date(val).toLocaleString() },
+          { label: 'Status', key: 'status' },
+          { label: 'Body', key: 'body' }
+        ];
+
+        let html = '';
+        fields.forEach(field => {
+          if (details[field.key]) {
+            const value = field.formatter ? field.formatter(details[field.key]) : details[field.key];
+            html += `
+                        <div class="sms-details-row">
+                            <span class="sms-details-label">${field.label}:</span>
+                            <span>${value}</span>
+                        </div>
+                    `;
+          }
+        });
+
+            // Fetch and display media if present
+        if (mediaCount === 1) {
+          html += '<div class="sms-media"><div class="sms-media-title">Media</div><div id="media-' + messageSid + '"><div class="spinner" style="width: 30px; height: 30px;"></div></div></div>';
+          container.innerHTML = html;
+
+          try {
+            const mediaResponse = await fetch(`${mediaURL}/${messageSid}`);
+            if (!mediaResponse.ok) throw new Error('Failed to fetch media');
+
+            const contentType = mediaResponse.headers.get('Content-Type');
+            const blob = await mediaResponse.blob();
+            displayMedia(messageSid, blob, contentType);
+          } catch (error) {
+            document.getElementById('media-' + messageSid).innerHTML = `<div style="color: #999; font-size: 12px;">Error loading media: ${error.message}</div>`;
+          }
+        } else {
+          container.innerHTML = html || '<div>No details available</div>';
+        }
+      }
+
+      function displayMedia(messageSid, blob, contentType) {
+        const mediaContainer = document.getElementById('media-' + messageSid);
+
+        if (!blob) {
+          mediaContainer.innerHTML = '<div style="color: #999; font-size: 12px;">No media found</div>';
+          return;
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const mediaItem = document.createElement('div');
+        mediaItem.className = 'sms-media-item';
+
+            // Check if it's an image
+        if (contentType && contentType.startsWith('image/')) {
+          mediaItem.innerHTML = `
+                    <img src="${blobUrl}" alt="MMS Image" onerror="this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; background: #f5f5f5;\\'><div style=\\'color: #999; font-size: 12px;\\'>Unable to display image</div></div>'">
+                    <div class="sms-media-item-info">${contentType}</div>
+                `;
+        } else if (contentType && contentType.startsWith('video/')) {
+          mediaItem.innerHTML = `
+                    <video src="${blobUrl}" controls style="width: 100%; max-height: 300px;">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="sms-media-item-info">${contentType}</div>
+                `;
+        } else if (contentType && contentType.startsWith('audio/')) {
+          mediaItem.innerHTML = `
+                    <div style="padding: 20px; text-align: center; background: #f5f5f5;">
+                        <audio src="${blobUrl}" controls style="width: 100%;">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </div>
+                    <div class="sms-media-item-info">${contentType}</div>
+                `;
+        } else {
+                // Unknown media type - provide download link
+          mediaItem.innerHTML = `
+                    <div style="padding: 20px; text-align: center; background: #f5f5f5;">
+                        <a href="${blobUrl}" download="media" style="color: #1976d2; text-decoration: none;">Download Media</a>
+                    </div>
+                    <div class="sms-media-item-info">${contentType || 'Unknown type'}</div>
+                `;
+        }
+
+        mediaContainer.innerHTML = '';
+        mediaContainer.appendChild(mediaItem);
+      }
+
+        // Load Phone List
+      async function loadPhoneList() {
+        const container = document.getElementById('phone-list-container');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div><div>Loading phone numbers...</div></div>';
+
+        try {
+          const response = await fetch(phoneListURL);
+          if (!response.ok) throw new Error('Failed to fetch phone list');
+
+          const data = await response.json();
+          displayPhoneList(data);
+        } catch (error) {
+          container.innerHTML = `<div class="message error show">Error loading phone list: ${error.message}</div>`;
+        }
+      }
+
+      function displayPhoneList(phones) {
+        const container = document.getElementById('phone-list-container');
+
+        if (!phones || phones.length === 0) {
+          container.innerHTML = '<div class="empty-state">No phone numbers found</div>';
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'phone-list';
+
+        phones.forEach(phone => {
+          const item = document.createElement('li');
+          item.className = 'phone-item';
+
+          const statusClass = phone.status === 'active' ? 'active' : 'inactive';
+          const capabilities = phone.capabilities || {};
+
+          const capabilitiesHTML = Object.entries(capabilities)
+            .map(([key, enabled]) => {
+              const badgeClass = enabled ? 'enabled' : 'disabled';
+              return `<span class="capability-badge ${badgeClass}">${key}</span>`;
+            })
+            .join('');
+
+          const inboundWebhook = phone.inboundWebhook || {};
+          const webhookUrl = inboundWebhook.url || '';
+          const webhookMethod = inboundWebhook.method || 'POST';
+
+          item.innerHTML = `
+                    <div class="phone-item-header">
+                        <div>
+                            <div class="phone-number">${phone.phoneNumber || 'N/A'}</div>
+                            ${phone.label ? `<div class="phone-label">${phone.label}</div>` : ''}
+                        </div>
+                        <span class="phone-status ${statusClass}">${phone.status || 'Unknown'}</span>
+                    </div>
+                    <div class="phone-capabilities">
+                        ${capabilitiesHTML}
+                    </div>
+                    ${phone.statusCallback ? `<div class="phone-callback">Callback: ${phone.statusCallback}</div>` : ''}
+                    <div class="phone-sid">SID: ${phone.sid || 'N/A'}</div>
+                    <form class="webhook-form" data-phone-sid="${phone.sid}" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+                        <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px; color: #333;">Inbound Webhook</div>
+                        <div style="margin-bottom: 12px;">
+                            <input type="text" name="url" value="${webhookUrl}" placeholder="https://example.com/webhook" style="width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select name="method" style="flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                                <option value="GET" ${webhookMethod === 'GET' ? 'selected' : ''}>GET</option>
+                                <option value="POST" ${webhookMethod === 'POST' ? 'selected' : ''}>POST</option>
+                            </select>
+                            <button type="submit" style="background: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 500;">Save</button>
+                        </div>
+                    </form>
+                `;
+
+          list.appendChild(item);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+
+            // Add event listeners to webhook forms
+        document.querySelectorAll('.webhook-form').forEach(form => {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const phoneSid = form.dataset.phoneSid;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            const formData = {
+              url: form.querySelector('input[name="url"]').value,
+              method: form.querySelector('select[name="method"]').value
+            };
+
+            try {
+              const response = await fetch(`${setInboundWebhookURL}/${phoneSid}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to update webhook');
+              }
+
+              submitBtn.textContent = 'Updated!';
+              setTimeout(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+              }, 2000);
+            } catch (error) {
+              alert(`Error updating webhook: ${error.message}`);
+              submitBtn.textContent = originalText;
+              submitBtn.disabled = false;
+            }
+          });
+        });
+      }
+
+        // Load phone filter dropdown for Log tab
+      async function loadPhoneFilter() {
+        const select = document.getElementById('filter-phone');
+
+            // Only load if not already loaded
+        if (select.options.length > 1 || (select.options.length === 1 && select.options[0].value !== '')) {
+          return;
+        }
+
+        try {
+          const response = await fetch(phoneListURL);
+          if (!response.ok) throw new Error('Failed to fetch phone list');
+
+          const phones = await response.json();
+
+          select.innerHTML = '<option value="">Select a from number</option>';
+
+          phones.forEach(phone => {
+            const option = document.createElement('option');
+            option.value = phone.phoneNumber;
+            option.textContent = phone.label || phone.phoneNumber;
+            select.appendChild(option);
+          });
+
+                // Auto-select first phone if available
+          if (phones.length > 0) {
+            select.selectedIndex = 1;
+            loadSMSList();
+          }
+        } catch (error) {
+          select.innerHTML = '<option value="">Error loading phones</option>';
+          console.error('Error loading phone filter:', error);
+        }
+      }
+
+        // Add event listener for filter phone change
+      document.getElementById('filter-phone').addEventListener('change', loadSMSList);
+
+        // Load phone dropdown for Send form
+      async function loadPhoneDropdown() {
+        const select = document.getElementById('numberFrom');
+
+            // Only load if not already loaded
+        if (select.options.length > 1 || (select.options.length === 1 && select.options[0].value !== '')) {
+          return;
+        }
+
+        try {
+          const response = await fetch(phoneListURL);
+          if (!response.ok) throw new Error('Failed to fetch phone list');
+
+          const phones = await response.json();
+
+          select.innerHTML = '<option value="">Select a phone number</option>';
+
+          phones.forEach(phone => {
+            const option = document.createElement('option');
+            option.value = phone.phoneNumber;
+            option.textContent = phone.label || phone.phoneNumber;
+            option.dataset.sid = phone.sid;
+            select.appendChild(option);
+          });
+        } catch (error) {
+          select.innerHTML = '<option value="">Error loading phones</option>';
+          console.error('Error loading phone dropdown:', error);
+        }
+      }
+
+        // Delete SMS
+      async function deleteSMS(messageSid) {
+        try {
+          const response = await fetch(`${deleteMessageURL}/${messageSid}`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) throw new Error('Failed to delete message');
+
+          const result = await response.json();
+
+          if (result.deleted === true) {
+            loadSMSList();
+          } else {
+            throw new Error(`Failed to delete message ${result.sid}`);
+          }
+        } catch (error) {
+          alert(`Error deleting message: ${error.message}`);
+        }
+      }
+
+        // Send SMS form
+      document.getElementById('sms-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submit-btn');
+        const messageEl = document.getElementById('send-message');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        messageEl.classList.remove('show', 'success', 'error');
+
+        const numberFromSelect = document.getElementById('numberFrom');
+        const selectedOption = numberFromSelect.options[numberFromSelect.selectedIndex];
+
+        const formData = {
+          numberFrom: numberFromSelect.value,
+          numberFromSid: selectedOption.dataset.sid,
+          numberTo: document.getElementById('numberTo').value,
+          callbackUrl: document.getElementById('callbackUrl').value,
+          text: document.getElementById('text').value
+        };
+
+        try {
+          const response = await fetch(smsSendURL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to send SMS');
+          }
+
+          const result = await response.json();
+
+          messageEl.textContent = `SMS sent successfully! Message SID: ${result.messageSid || 'N/A'}`;
+          messageEl.classList.add('success', 'show');
+
+          document.getElementById('sms-form').reset();
+        } catch (error) {
+          messageEl.textContent = `Error: ${error.message}`;
+          messageEl.classList.add('error', 'show');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send SMS';
+        }
+      });
+
+        // Load phone filter and phone dropdown on page load
+      loadPhoneFilter();
+      loadPhoneDropdown();
+    </script>
+  </body>
+</html>

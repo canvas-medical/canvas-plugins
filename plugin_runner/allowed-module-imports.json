@@ -6,6 +6,67 @@
   "canvas_sdk.caching.plugins": [
     "get_cache"
   ],
+  "canvas_sdk.clients.aws": [
+    "Credentials",
+    "S3",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.constants": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.libraries": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.libraries.s3": [
+    "S3"
+  ],
+  "canvas_sdk.clients.aws.structures": [
+    "Credentials",
+    "S3Item"
+  ],
+  "canvas_sdk.clients.aws.structures.credentials": [
+    "Credentials"
+  ],
+  "canvas_sdk.clients.aws.structures.s3_item": [
+    "S3Item"
+  ],
+  "canvas_sdk.clients.extend_ai.constants": [
+    "BaseProcessor",
+    "ParserChunking",
+    "ParserTarget",
+    "ProcessorType",
+    "RunStatus",
+    "SplitMethod",
+    "VersionName"
+  ],
+  "canvas_sdk.clients.extend_ai.libraries": [
+    "Client"
+  ],
+  "canvas_sdk.clients.extend_ai.structures": [
+    "Classification",
+    "ProcessorMeta",
+    "ProcessorRun",
+    "ProcessorVersion",
+    "RequestFailed",
+    "StoredFile"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.config": [
+    "AdvancedOptionsClassification",
+    "AdvancedOptionsExtraction",
+    "AdvancedOptionsSplitter",
+    "ConfigClassification",
+    "ConfigExtraction",
+    "ConfigSplitter",
+    "Parser",
+    "PartRange"
+  ],
+  "canvas_sdk.clients.extend_ai.structures.processor_result": [
+    "Insight",
+    "ResultClassification",
+    "ResultExtraction",
+    "ResultSplitter",
+    "Split"
+  ],
   "canvas_sdk.clients.llms": [
     "LlmAnthropic",
     "LlmGoogle",
@@ -14,6 +75,9 @@
     "LlmSettings",
     "LlmTokens",
     "LlmTurn"
+  ],
+  "canvas_sdk.clients.llms.constants": [
+    "FileType"
   ],
   "canvas_sdk.clients.llms.libraries": [
     "LlmAnthropic",
@@ -34,6 +98,9 @@
     "LlmOpenai"
   ],
   "canvas_sdk.clients.llms.structures": [
+    "BaseModelLlmJson",
+    "FileContent",
+    "LlmFileUrl",
     "LlmResponse",
     "LlmTokens",
     "LlmTurn"
@@ -69,8 +136,62 @@
   "canvas_sdk.clients.llms.structures.settings.llm_settings_gpt5": [
     "LlmSettingsGpt5"
   ],
+  "canvas_sdk.clients.sendgrid.constants": [
+    "AttachmentDisposition",
+    "Constants",
+    "CriterionOperation",
+    "EventEmail",
+    "RecipientType",
+    "StatusEmail"
+  ],
+  "canvas_sdk.clients.sendgrid.libraries": [
+    "EmailClient"
+  ],
+  "canvas_sdk.clients.sendgrid.structures": [
+    "Address",
+    "Attachment",
+    "BodyContent",
+    "CriterionDatetime",
+    "Email",
+    "EmailEvent",
+    "EventWebhook",
+    "EventWebhookRecord",
+    "LoggedEmailCriteria",
+    "ParseSetting",
+    "ParsedAttachment",
+    "ParsedEmail",
+    "ParsedEnvelope",
+    "ParsedHeader",
+    "Recipient",
+    "RequestFailed",
+    "SentEmail",
+    "SentEmailDetail",
+    "Settings"
+  ],
   "canvas_sdk.clients.third_party": [
     "StripeClient"
+  ],
+  "canvas_sdk.clients.twilio.constants": [
+    "Constants",
+    "DateOperation",
+    "HttpMethod",
+    "MessageDirection",
+    "MessageStatus"
+  ],
+  "canvas_sdk.clients.twilio.libraries": [
+    "SmsClient"
+  ],
+  "canvas_sdk.clients.twilio.structures": [
+    "Capabilities",
+    "Media",
+    "Message",
+    "Phone",
+    "RequestFailed",
+    "Settings",
+    "SmsMms",
+    "StatusInbound",
+    "StatusOutboundApi",
+    "TwiMlMessage"
   ],
   "canvas_sdk.commands": [
     "*",
@@ -334,8 +455,26 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.claim": [
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
+  "canvas_sdk.effects.claim.claim": [
+    "ClaimEffect",
+    "ColorEnum",
+    "Label",
+    "LineItemTransaction",
+    "PaymentMethod"
+  ],
+  "canvas_sdk.effects.claim_comment": [
+    "AddClaimComment"
+  ],
   "canvas_sdk.effects.claim_label": [
     "AddClaimLabel",
+    "ColorEnum",
     "Label",
     "RemoveClaimLabel"
   ],
@@ -350,6 +489,9 @@
   ],
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
+  ],
+  "canvas_sdk.effects.default_homepage": [
+    "DefaultHomepageEffect"
   ],
   "canvas_sdk.effects.external_event": [
     "ExternalEvent"
@@ -433,6 +575,9 @@
   ],
   "canvas_sdk.effects.patient.create_patient_preferred_pharmacies": [
     "CreatePatientPreferredPharmacies"
+  ],
+  "canvas_sdk.effects.patient.timeline": [
+    "PatientTimelineEffect"
   ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
@@ -554,10 +699,14 @@
     "UpdateUserEffect"
   ],
   "canvas_sdk.effects.validation": [
+    "EventValidationError",
     "ValidationError"
   ],
   "canvas_sdk.effects.validation.base": [
     "ValidationError"
+  ],
+  "canvas_sdk.effects.validation.event_validation_error": [
+    "EventValidationError"
   ],
   "canvas_sdk.effects.widgets": [
     "PortalWidget"
@@ -583,7 +732,8 @@
     "SHOW_BUTTON_REGEX"
   ],
   "canvas_sdk.handlers.application": [
-    "Application"
+    "Application",
+    "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
     "BaseHandler",
@@ -714,6 +864,7 @@
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
+    "Application",
     "Appointment",
     "AppointmentExternalIdentifier",
     "AppointmentLabel",
@@ -737,6 +888,7 @@
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimMetadata",
     "ClaimPatient",
     "ClaimProvider",
@@ -782,6 +934,8 @@
     "LabTest",
     "LabValue",
     "LabValueCoding",
+    "Language",
+    "Letter",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -797,6 +951,7 @@
     "NewLineItemPayment",
     "Note",
     "NoteStateChangeEvent",
+    "NoteTask",
     "NoteType",
     "Observation",
     "ObservationCoding",
@@ -859,6 +1014,9 @@
     "AllergyIntolerance",
     "AllergyIntoleranceCoding"
   ],
+  "canvas_sdk.v1.data.application": [
+    "Application"
+  ],
   "canvas_sdk.v1.data.appointment": [
     "Appointment",
     "AppointmentExternalIdentifier",
@@ -916,6 +1074,7 @@
   ],
   "canvas_sdk.v1.data.claim_line_item": [
     "ClaimLineItem",
+    "ClaimLineItemDiagnosisCode",
     "ClaimLineItemStatus",
     "FamilyPlanningOptions",
     "LineItemCodes"
@@ -1021,6 +1180,10 @@
     "LabValue",
     "LabValueCoding",
     "TransmissionType"
+  ],
+  "canvas_sdk.v1.data.letter": [
+    "Language",
+    "Letter"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",
@@ -1155,6 +1318,7 @@
   ],
   "canvas_sdk.v1.data.task": [
     "EventType",
+    "NoteTask",
     "Task",
     "TaskComment",
     "TaskLabel",

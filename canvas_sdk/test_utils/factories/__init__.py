@@ -10,6 +10,7 @@ from .claim import (
     ClaimSubmissionFactory,
 )
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
+from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
@@ -26,6 +27,7 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
 )
+from .letter import LanguageFactory, LetterFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
@@ -55,6 +57,7 @@ from .staff import (
     StaffRoleFactory,
 )
 from .task import (
+    NoteTaskFactory,
     TaskCommentFactory,
     TaskFactory,
     TaskLabelFactory,
@@ -76,6 +79,8 @@ __all__ = (
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
     "ClaimMetadataFactory",
+    "ClaimLineItemFactory",
+    "ClaimLineItemDiagnosisCodeFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
@@ -97,6 +102,8 @@ __all__ = (
     "LabTestFactory",
     "LabValueCodingFactory",
     "LabValueFactory",
+    "LanguageFactory",
+    "LetterFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
@@ -123,6 +130,7 @@ __all__ = (
     "StaffLicenseFactory",
     "StaffContactPointFactory",
     "StaffAddressFactory",
+    "NoteTaskFactory",
     "TaskCommentFactory",
     "TaskFactory",
     "TaskLabelFactory",
