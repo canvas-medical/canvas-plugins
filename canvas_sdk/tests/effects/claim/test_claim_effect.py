@@ -24,6 +24,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     with (
         patch("canvas_sdk.effects.claim.claim_comment.Claim") as mock_claim_comment,
         patch("canvas_sdk.effects.claim.claim_label.Claim") as mock_claim_label,
+        patch("canvas_sdk.effects.claim.claim_metadata.Claim") as mock_claim_metadata,
         patch("canvas_sdk.effects.claim.claim_queue.Claim") as mock_claim_queue,
         patch("canvas_sdk.effects.claim.claim_queue.ClaimQueue") as mock_queue,
         patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
@@ -33,6 +34,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         # Setup default behaviors - objects exist
         mock_claim_comment.objects.filter.return_value.exists.return_value = True
         mock_claim_label.objects.filter.return_value.exists.return_value = True
+        mock_claim_metadata.objects.filter.return_value.exists.return_value = True
         mock_claim_queue.objects.filter.return_value.exists.return_value = True
         mock_queue.objects.filter.return_value.exists.return_value = True
 
@@ -66,6 +68,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         yield {
             "claim_comment": mock_claim_comment,
             "claim_label": mock_claim_label,
+            "claim_metadata": mock_claim_metadata,
             "claim_queue": mock_claim_queue,
             "queue": mock_queue,
             "payment_claim": mock_payment_claim,
@@ -479,6 +482,32 @@ def test_claim_effect_post_payment_requires_adjustment_code(
 
     err_msg = repr(e.value)
     assert "Specify an adjustment code for the adjustment amount" in err_msg
+
+
+def test_claim_effect_upsert_metadata(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that upsert_metadata returns the correct effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.upsert_metadata(key="billing_code", value="99213")
+
+    assert effect.type == EffectType.UPSERT_CLAIM_METADATA
+    payload = json.loads(effect.payload)["data"]
+    assert payload["claim_id"] == "claim-id"
+    assert payload["key"] == "billing_code"
+    assert payload["value"] == "99213"
+
+
+def test_claim_effect_upsert_metadata_requires_existing_claim(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that upsert_metadata validates the claim exists."""
+    mock_db_queries["claim_metadata"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="invalid-claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.upsert_metadata(key="billing_code", value="99213")
+
+    err_msg = repr(e.value)
+    assert "Claim with id: invalid-claim-id does not exist." in err_msg
 
 
 def test_line_item_transaction_is_first_transaction_not_in_list() -> None:
