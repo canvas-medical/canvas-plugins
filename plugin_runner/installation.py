@@ -178,7 +178,10 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
 
     # Check if already registered
     if apps.is_installed(app_label):
-        print(f"Plugin {plugin_name} already registered as Django app")
+        log.info(f"Plugin {plugin_name} already registered as Django app")
+        # Clear stale models so sandbox re-registration doesn't trigger
+        # Django's "Model was already registered" warning
+        apps.all_models[app_label] = {}
         return
 
     # Create a minimal mock module for Django's app registry
@@ -235,8 +238,6 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
 
     # Clear the models cache to ensure fresh registration
     apps.all_models[app_label] = {}
-
-    print(f"Registered plugin {plugin_name} as Django app with label {app_label}")
 
 
 # Reserved PostgreSQL schema names that cannot be used as namespaces
@@ -704,11 +705,9 @@ def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: lis
 
         # Ensure the model knows its app
         if model_class._meta.app_label != app_label:
-            print(
+            log.warning(
                 f"Warning: Model {model_class} has app_label {model_class._meta.app_label}, expected {app_label}"
             )
-
-    print(f"Associated {model_classes} models with app {app_label}")
 
 
 def generate_plugin_migrations(
