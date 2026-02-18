@@ -177,7 +177,7 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
     app_label = plugin_name.replace("-", "_")
 
     # Check if already registered
-    if apps.is_installed(app_label):
+    if apps.is_installed(plugin_name):
         log.info(f"Plugin {plugin_name} already registered as Django app")
         # Clear stale models so sandbox re-registration doesn't trigger
         # Django's "Model was already registered" warning
