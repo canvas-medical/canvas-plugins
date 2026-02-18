@@ -1,0 +1,36 @@
+{
+  "sdk_version": "0.81.0",
+  "plugin_version": "0.0.1",
+  "name": "pdf_manip",
+  "description": "use extent.ai to extract information from a PDF document",
+  "components": {
+    "protocols": [
+      {
+        "class": "pdf_manip.handlers.pdf_manip:PdfManip",
+        "description": "PDF extractor based on extent.ai"
+      }
+    ],
+    "applications": [
+      {
+        "class": "pdf_manip.handlers.pdf_form_app:PdfFormApp",
+        "name": "PDF Upload",
+        "description": "Extend.ai manip",
+        "icon": "static/pdf_manip.png",
+        "scope": "patient_specific",
+        "show_in_panel": false
+      }
+    ],
+    "commands": [],
+    "content": [],
+    "effects": [],
+    "views": []
+  },
+  "secrets": [
+    "ExtendAiKey"
+  ],
+  "tags": {},
+  "references": [],
+  "license": "",
+  "diagram": false,
+  "readme": "./README.md"
+}

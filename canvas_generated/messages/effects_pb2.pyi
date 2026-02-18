@@ -309,6 +309,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPSERT_APPOINTMENT_METADATA: _ClassVar[EffectType]
     APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
+    PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
     EVENT_VALIDATION_ERROR: _ClassVar[EffectType]
     REVENUE__PAYMENT_PROCESSOR__METADATA: _ClassVar[EffectType]
@@ -329,6 +330,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     UPDATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     DELETE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
+    HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
 ADD_PLAN_COMMAND: EffectType
@@ -631,6 +633,7 @@ APPOINTMENT__FORM__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_APPOINTMENT_METADATA: EffectType
 APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: EffectType
 SHOW_PANEL_SECTIONS: EffectType
+PATIENT_TIMELINE__CONFIGURATION: EffectType
 REDIRECT_CONTEXT: EffectType
 EVENT_VALIDATION_ERROR: EffectType
 REVENUE__PAYMENT_PROCESSOR__METADATA: EffectType
@@ -651,6 +654,7 @@ UPDATE_EXTERNAL_EVENT: EffectType
 CREATE_PATIENT_FACILITY_ADDRESS: EffectType
 UPDATE_PATIENT_FACILITY_ADDRESS: EffectType
 DELETE_PATIENT_FACILITY_ADDRESS: EffectType
+HOMEPAGE_CONFIGURATION: EffectType
 
 class Effect(_message.Message):
     __slots__ = ("type", "payload", "plugin_name", "classname", "handler_name", "actor", "source")

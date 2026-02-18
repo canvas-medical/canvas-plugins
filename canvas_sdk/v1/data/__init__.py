@@ -1,4 +1,5 @@
 from .allergy_intolerance import AllergyIntolerance, AllergyIntoleranceCoding
+from .application import Application
 from .appointment import (
     Appointment,
     AppointmentExternalIdentifier,
@@ -135,6 +136,7 @@ from .uncategorized_clinical_document import (
 from .user import CanvasUser
 
 __all__ = __exports__ = (
+    "Application",
     "Appointment",
     "AppointmentMetadata",
     "AppointmentExternalIdentifier",

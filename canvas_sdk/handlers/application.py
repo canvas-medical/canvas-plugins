@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from canvas_sdk.effects import Effect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
+from canvas_sdk.handlers.action_button import ActionButton
 from canvas_sdk.handlers.utils import normalize_effects
 
 
@@ -41,4 +42,34 @@ class Application(BaseHandler, ABC):
         return f"{self.__class__.__module__}:{self.__class__.__qualname__}"
 
 
-__exports__ = ("Application",)
+class NoteApplication(ActionButton):
+    """An Application that can be shown in a note."""
+
+    NAME: str = ""
+    IDENTIFIER: str = ""
+
+    @property
+    def BUTTON_TITLE(self) -> str:  # type: ignore[override]
+        """Return NAME as the button title."""
+        return self.NAME
+
+    @property
+    def BUTTON_KEY(self) -> str:  # type: ignore[override]
+        """Return IDENTIFIER as the button key."""
+        return self.IDENTIFIER
+
+    @property
+    def BUTTON_LOCATION(self) -> ActionButton.ButtonLocation:  # type: ignore[override]
+        """Return the note body as the button location."""
+        return ActionButton.ButtonLocation.NOTE_BODY
+
+    @abstractmethod
+    def handle(self) -> list[Effect]:
+        """Method to handle button click."""
+        raise NotImplementedError("Implement to handle button click")
+
+
+__exports__ = (
+    "Application",
+    "NoteApplication",
+)
