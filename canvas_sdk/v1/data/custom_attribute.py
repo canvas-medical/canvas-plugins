@@ -34,7 +34,7 @@ class CustomAttribute(Model):
 
     # Value storage fields - only one should be populated per attribute
     text_value = models.TextField(null=True, blank=True)
-    date_value = models.DateTimeField(null=True, blank=True)
+    date_value = models.DateField(null=True, blank=True)
     timestamp_value = models.DateTimeField(null=True, blank=True)
     int_value = models.IntegerField(null=True, blank=True)
     decimal_value = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
