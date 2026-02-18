@@ -30,12 +30,12 @@ class MockModel(Model):
 class TestNamespaceWriteDenied:
     """Tests for the NamespaceWriteDenied exception."""
 
-    def test_exception_is_raised(self):
+    def test_exception_is_raised(self) -> None:
         """NamespaceWriteDenied can be raised and caught."""
         with pytest.raises(NamespaceWriteDenied):
             raise NamespaceWriteDenied("Test error")
 
-    def test_exception_message(self):
+    def test_exception_message(self) -> None:
         """NamespaceWriteDenied should contain the error message."""
         try:
             raise NamespaceWriteDenied("Custom error message")
@@ -46,20 +46,20 @@ class TestNamespaceWriteDenied:
 class TestModelWritePermissionCheck:
     """Tests for Model._check_write_permission method."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear any existing plugin context before each test."""
         clear_current_plugin()
         for attr in ("schema", "access_level"):
             if hasattr(_plugin_context, attr):
                 delattr(_plugin_context, attr)
 
-    def test_check_write_permission_allows_when_no_context(self):
+    def test_check_write_permission_allows_when_no_context(self) -> None:
         """Write operations should be allowed when not in a plugin context."""
         model = MockModel()
         # Should not raise
         model._check_write_permission()
 
-    def test_check_write_permission_allows_when_read_write_access(self):
+    def test_check_write_permission_allows_when_read_write_access(self) -> None:
         """Write operations should be allowed when access level is read_write."""
         _plugin_context.schema = "my_namespace"
         _plugin_context.access_level = "read_write"
@@ -68,7 +68,7 @@ class TestModelWritePermissionCheck:
         # Should not raise
         model._check_write_permission()
 
-    def test_check_write_permission_denies_when_read_only_access(self):
+    def test_check_write_permission_denies_when_read_only_access(self) -> None:
         """Write operations should be denied when access level is read."""
         _plugin_context.schema = "my_namespace"
         _plugin_context.access_level = "read"
@@ -81,7 +81,7 @@ class TestModelWritePermissionCheck:
         assert "read-only" in str(exc_info.value)
         assert "read_write" in str(exc_info.value)
 
-    def test_check_write_permission_denies_with_default_access_level(self):
+    def test_check_write_permission_denies_with_default_access_level(self) -> None:
         """Write operations should be denied when access level defaults to read."""
         _plugin_context.schema = "my_namespace"
         # Don't set access_level - it should default to "read"
@@ -94,14 +94,14 @@ class TestModelWritePermissionCheck:
 class TestModelSaveWritePermission:
     """Tests for write permission enforcement in Model.save()."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear any existing plugin context before each test."""
         clear_current_plugin()
         for attr in ("schema", "access_level"):
             if hasattr(_plugin_context, attr):
                 delattr(_plugin_context, attr)
 
-    def test_save_raises_when_read_only(self):
+    def test_save_raises_when_read_only(self) -> None:
         """Model.save() should raise NamespaceWriteDenied when access is read-only."""
         _plugin_context.schema = "test_namespace"
         _plugin_context.access_level = "read"
@@ -112,7 +112,7 @@ class TestModelSaveWritePermission:
 
         assert "test_namespace" in str(exc_info.value)
 
-    def test_save_calls_parent_when_write_allowed(self):
+    def test_save_calls_parent_when_write_allowed(self) -> None:
         """Model.save() should call parent save when write is allowed."""
         _plugin_context.schema = "test_namespace"
         _plugin_context.access_level = "read_write"
@@ -124,7 +124,7 @@ class TestModelSaveWritePermission:
             model.save()
             mock_save.assert_called_once()
 
-    def test_save_succeeds_without_context(self):
+    def test_save_succeeds_without_context(self) -> None:
         """Model.save() should succeed when not in a plugin context."""
         model = MockModel()
 
@@ -137,14 +137,14 @@ class TestModelSaveWritePermission:
 class TestModelDeleteWritePermission:
     """Tests for write permission enforcement in Model.delete()."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear any existing plugin context before each test."""
         clear_current_plugin()
         for attr in ("schema", "access_level"):
             if hasattr(_plugin_context, attr):
                 delattr(_plugin_context, attr)
 
-    def test_delete_raises_when_read_only(self):
+    def test_delete_raises_when_read_only(self) -> None:
         """Model.delete() should raise NamespaceWriteDenied when access is read-only."""
         _plugin_context.schema = "test_namespace"
         _plugin_context.access_level = "read"
@@ -155,7 +155,7 @@ class TestModelDeleteWritePermission:
 
         assert "test_namespace" in str(exc_info.value)
 
-    def test_delete_calls_parent_when_write_allowed(self):
+    def test_delete_calls_parent_when_write_allowed(self) -> None:
         """Model.delete() should call parent delete when write is allowed."""
         _plugin_context.schema = "test_namespace"
         _plugin_context.access_level = "read_write"
@@ -170,7 +170,7 @@ class TestModelDeleteWritePermission:
             mock_delete.assert_called_once()
             assert result == (1, {"test.MockModel": 1})
 
-    def test_delete_succeeds_without_context(self):
+    def test_delete_succeeds_without_context(self) -> None:
         """Model.delete() should succeed when not in a plugin context."""
         model = MockModel()
 
@@ -185,7 +185,7 @@ class TestModelDeleteWritePermission:
 class TestWritePermissionWithContextManager:
     """Tests for write permission with plugin_database_context."""
 
-    def test_write_denied_in_read_only_context(self):
+    def test_write_denied_in_read_only_context(self) -> None:
         """Write operations should be denied in a read-only context."""
         from canvas_sdk.v1.plugin_database_context import plugin_database_context
 
@@ -199,7 +199,7 @@ class TestWritePermissionWithContextManager:
                 with pytest.raises(NamespaceWriteDenied):
                     model.save()
 
-    def test_write_allowed_in_read_write_context(self):
+    def test_write_allowed_in_read_write_context(self) -> None:
         """Write operations should be allowed in a read_write context."""
         from canvas_sdk.v1.plugin_database_context import plugin_database_context
 
