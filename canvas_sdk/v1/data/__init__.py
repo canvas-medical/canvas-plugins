@@ -60,23 +60,21 @@ from .integration_task import (
 )
 from .invoice import Invoice
 from .lab import (
+    FieldType,
     LabOrder,
     LabOrderReason,
     LabOrderReasonCondition,
     LabPartner,
     LabPartnerTest,
     LabReport,
-    LabReview,
-    LabTest,
-    LabValue,
-    LabValueCoding,
-)
-from .lab_report_template import (
-    FieldType,
     LabReportTemplate,
     LabReportTemplateField,
     LabReportTemplateFieldOption,
     LabReportTemplateQuerySet,
+    LabReview,
+    LabTest,
+    LabValue,
+    LabValueCoding,
 )
 from .letter import Language, Letter
 from .line_item_transaction import (

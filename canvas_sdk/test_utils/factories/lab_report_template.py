@@ -5,7 +5,7 @@ from canvas_sdk.v1.data import (
     LabReportTemplateField,
     LabReportTemplateFieldOption,
 )
-from canvas_sdk.v1.data.lab_report_template import FieldType
+from canvas_sdk.v1.data.lab import FieldType
 
 
 class LabReportTemplateFactory(factory.django.DjangoModelFactory[LabReportTemplate]):
@@ -35,7 +35,7 @@ class LabReportTemplateFieldFactory(factory.django.DjangoModelFactory[LabReportT
     code_system = "http://loinc.org"
     label = factory.Faker("sentence", nb_words=2)
     units = factory.Faker("random_element", elements=["mg/dL", "g/L", "%", "mmol/L", None])
-    field_type = FieldType.FLOAT
+    type = FieldType.FLOAT
     required = False
 
 

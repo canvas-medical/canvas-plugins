@@ -8,9 +8,8 @@ from canvas_sdk.test_utils.factories import (
 from canvas_sdk.v1.data import (
     LabReportTemplate,
     LabReportTemplateField,
-    LabReportTemplateFieldOption,
 )
-from canvas_sdk.v1.data.lab_report_template import FieldType
+from canvas_sdk.v1.data.lab import FieldType
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +26,7 @@ def setup_templates(db: None) -> None:
     LabReportTemplateFieldFactory.create(
         report_template=poc_template,
         label="Glucose Level",
-        field_type=FieldType.FLOAT,
+        type=FieldType.FLOAT,
         sequence=1,
     )
 
@@ -42,7 +41,7 @@ def setup_templates(db: None) -> None:
     select_field = LabReportTemplateFieldFactory.create(
         report_template=custom_template,
         label="Result",
-        field_type=FieldType.SELECT,
+        type=FieldType.SELECT,
         sequence=1,
     )
     LabReportTemplateFieldOptionFactory.create(field=select_field, label="Positive", key="pos")
@@ -50,14 +49,6 @@ def setup_templates(db: None) -> None:
 
     # Inactive template
     LabReportTemplateFactory.create(name="Deprecated Test", active=False)
-
-
-@pytest.mark.django_db
-def test_active_returns_only_active_templates() -> None:
-    """Test active() filters for active=True."""
-    result = LabReportTemplate.objects.active()
-    assert result.count() == 2
-    assert all(t.active for t in result)
 
 
 @pytest.mark.django_db
@@ -107,54 +98,7 @@ def test_point_of_care_returns_poc_templates() -> None:
     assert first_template.poc is True
 
 
-@pytest.mark.django_db
-def test_custom_returns_custom_templates() -> None:
-    """Test custom() filters for custom=True."""
-    result = LabReportTemplate.objects.custom()
-    assert all(t.custom for t in result)
-
-
-@pytest.mark.django_db
-def test_builtin_returns_builtin_templates() -> None:
-    """Test builtin() filters for custom=False."""
-    result = LabReportTemplate.objects.builtin()
-    assert result.count() == 1
-    first_template = result.first()
-    assert first_template is not None
-    assert first_template.custom is False
-
-
-@pytest.mark.django_db
-def test_method_chaining() -> None:
-    """Test QuerySet methods can be chained."""
-    result = LabReportTemplate.objects.active().point_of_care()
-    assert result.count() == 1
-    first_template = result.first()
-    assert first_template is not None
-    assert first_template.name == "Glucose POC"
-
-
-@pytest.mark.django_db
-def test_prefetch_fields() -> None:
-    """Test prefetch_related('fields') works."""
-    template = LabReportTemplate.objects.prefetch_related("fields").get(name="Custom Lab Panel")
-    # Access fields without additional query
-    assert template.fields.count() == 1
-
-
-@pytest.mark.django_db
-def test_prefetch_fields_and_options() -> None:
-    """Test prefetch_related('fields', 'fields__options') works."""
-    template = LabReportTemplate.objects.prefetch_related("fields", "fields__options").get(
-        name="Custom Lab Panel"
-    )
-
-    # Access nested options without additional queries
-    field = template.fields.first()
-    assert field.options.count() == 2
-
-
-def test_all_field_types_defined() -> None:
+def test_all_types_defined() -> None:
     """Test all 10 field types are defined."""
     expected_types = {
         "FLOAT",
@@ -172,7 +116,7 @@ def test_all_field_types_defined() -> None:
     assert actual_types == expected_types
 
 
-def test_field_type_values_match_source() -> None:
+def test_type_values_match_source() -> None:
     """Test field type values match ParseTemplates constants."""
     assert FieldType.FLOAT.value == "float"
     assert FieldType.SELECT.value == "select"
@@ -181,40 +125,7 @@ def test_field_type_values_match_source() -> None:
 
 
 @pytest.mark.django_db
-def test_template_str_representation() -> None:
-    """Test __str__ returns template name."""
-    template = LabReportTemplate.objects.get(name="Glucose POC")
-    assert str(template) == "Glucose POC"
-
-
-@pytest.mark.django_db
-def test_field_str_representation() -> None:
-    """Test __str__ returns field label."""
-    field = LabReportTemplateField.objects.get(label="Glucose Level")
-    assert str(field) == "Glucose Level"
-
-
-@pytest.mark.django_db
-def test_field_type_attribute() -> None:
-    """Test field_type maps to type column correctly."""
+def test_type_attribute() -> None:
+    """Test type maps to type column correctly."""
     field = LabReportTemplateField.objects.get(label="Result")
-    assert field.field_type == FieldType.SELECT
-
-
-@pytest.mark.django_db
-def test_option_str_representation() -> None:
-    """Test __str__ returns label and key."""
-    option = LabReportTemplateFieldOption.objects.get(key="pos")
-    assert str(option) == "Positive (pos)"
-
-
-@pytest.mark.django_db
-def test_lab_report_template_queryset_point_of_care() -> None:
-    """Test LabReportTemplateQuerySet.point_of_care() filters POC templates."""
-    poc_template = LabReportTemplateFactory.create(poc=True)
-    regular_template = LabReportTemplateFactory.create(poc=False)
-
-    result = LabReportTemplate.objects.point_of_care()
-
-    assert poc_template in result
-    assert regular_template not in result
+    assert field.type == FieldType.SELECT

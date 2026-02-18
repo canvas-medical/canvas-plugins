@@ -5,9 +5,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import (
     AuditedModel,
-    BaseQuerySet,
     IdentifiableModel,
-    Model,
     TimestampedModel,
 )
 from canvas_sdk.v1.data.common import (
@@ -15,6 +13,12 @@ from canvas_sdk.v1.data.common import (
     OrderStatus,
     ReviewPatientCommunicationMethod,
     ReviewStatus,
+)
+from canvas_sdk.v1.data.report_template_base import (
+    BaseReportTemplate,
+    BaseReportTemplateField,
+    BaseReportTemplateFieldOption,
+    BaseReportTemplateQuerySet,
 )
 from canvas_sdk.v1.data.task import Task
 
@@ -115,27 +119,15 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
-class ImagingReportTemplateQuerySet(BaseQuerySet):
+class ImagingReportTemplateQuerySet(BaseReportTemplateQuerySet):
     """QuerySet for ImagingReportTemplate with filtering methods."""
-
-    def active(self) -> Self:
-        """Filter to active templates only."""
-        return self.filter(active=True)
 
     def search(self, query: str) -> Self:
         """Search templates by keywords."""
         return self.filter(search_keywords__icontains=query)
 
-    def custom(self) -> Self:
-        """Filter to custom (user-created) templates."""
-        return self.filter(custom=True)
 
-    def builtin(self) -> Self:
-        """Filter to built-in templates."""
-        return self.filter(custom=False)
-
-
-class ImagingReportTemplate(IdentifiableModel):
+class ImagingReportTemplate(BaseReportTemplate):
     """Model to read ImagingReportTemplate data for LLM-powered imaging report parsing."""
 
     class Meta:
@@ -143,17 +135,11 @@ class ImagingReportTemplate(IdentifiableModel):
 
     objects = models.Manager.from_queryset(ImagingReportTemplateQuerySet)()
 
-    name = models.CharField(max_length=250)
     long_name = models.CharField(max_length=1000)
-    code = models.CharField(max_length=50, blank=True, default="")
-    code_system = models.CharField(max_length=50, blank=True, default="")
-    search_keywords = models.CharField(max_length=500, blank=True, default="")
-    active = models.BooleanField(default=True)
-    custom = models.BooleanField(default=True)
     rank = models.IntegerField(default=0)
 
 
-class ImagingReportTemplateField(Model):
+class ImagingReportTemplateField(BaseReportTemplateField):
     """Model to read ImagingReportTemplateField data."""
 
     class Meta:
@@ -162,16 +148,9 @@ class ImagingReportTemplateField(Model):
     report_template = models.ForeignKey(
         ImagingReportTemplate, on_delete=models.DO_NOTHING, related_name="fields"
     )
-    sequence = models.IntegerField(default=1)
-    code = models.CharField(max_length=50, blank=True, null=True)
-    code_system = models.CharField(max_length=50, blank=True, default="")
-    label = models.CharField(max_length=250)
-    units = models.CharField(max_length=50, blank=True, null=True)
-    type = models.CharField(max_length=250)
-    required = models.BooleanField(default=False)
 
 
-class ImagingReportTemplateFieldOption(Model):
+class ImagingReportTemplateFieldOption(BaseReportTemplateFieldOption):
     """Model to read ImagingReportTemplateFieldOption data."""
 
     class Meta:
@@ -180,8 +159,6 @@ class ImagingReportTemplateFieldOption(Model):
     field = models.ForeignKey(
         ImagingReportTemplateField, on_delete=models.DO_NOTHING, related_name="options"
     )
-    label = models.CharField(max_length=250)
-    key = models.CharField(max_length=250)
 
 
 __exports__ = (

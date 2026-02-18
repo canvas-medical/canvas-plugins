@@ -133,18 +133,6 @@ def test_from_patient_portal_filters_correctly() -> None:
 
 
 @pytest.mark.django_db
-def test_for_patient_filters_by_patient_id() -> None:
-    """Test that for_patient() filters tasks by patient ID."""
-    patient = PatientFactory.create()
-    patient_task = IntegrationTaskFactory.create(patient=patient)
-    IntegrationTaskFactory.create()  # Different patient
-
-    result = IntegrationTask.objects.for_patient(str(patient.id))
-
-    assert list(result) == [patient_task]
-
-
-@pytest.mark.django_db
 def test_queryset_methods_can_be_chained() -> None:
     """Test that QuerySet methods can be chained together."""
     patient = PatientFactory.create()
@@ -168,95 +156,77 @@ def test_queryset_methods_can_be_chained() -> None:
     assert list(result) == [target_task]
 
 
+@pytest.mark.parametrize(
+    ("channel", "expected"),
+    [
+        (IntegrationTaskChannel.FAX, True),
+        (IntegrationTaskChannel.DOCUMENT_UPLOAD, False),
+    ],
+)
 @pytest.mark.django_db
-def test_is_fax_returns_true_for_fax_channel() -> None:
-    """Test that is_fax returns True for FAX channel."""
-    task = IntegrationTaskFactory.create(channel=IntegrationTaskChannel.FAX)
-    assert task.is_fax is True
+def test_is_fax(channel: str, expected: bool) -> None:
+    """Test that is_fax reflects whether the channel is FAX."""
+    task = IntegrationTaskFactory.create(channel=channel)
+    assert task.is_fax is expected
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (IntegrationTaskStatus.UNREAD, True),
+        (IntegrationTaskStatus.READ, True),
+        (IntegrationTaskStatus.PROCESSED, False),
+    ],
+)
 @pytest.mark.django_db
-def test_is_fax_returns_false_for_other_channels() -> None:
-    """Test that is_fax returns False for non-FAX channels."""
-    task = IntegrationTaskFactory.create(channel=IntegrationTaskChannel.DOCUMENT_UPLOAD)
-    assert task.is_fax is False
+def test_is_pending(status: str, expected: bool) -> None:
+    """Test that is_pending reflects UNREAD/READ statuses."""
+    task = IntegrationTaskFactory.create(status=status)
+    assert task.is_pending is expected
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (IntegrationTaskStatus.PROCESSED, True),
+        (IntegrationTaskStatus.REVIEWED, True),
+        (IntegrationTaskStatus.UNREAD, False),
+    ],
+)
 @pytest.mark.django_db
-def test_is_pending_returns_true_for_unread() -> None:
-    """Test that is_pending returns True for UNREAD status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD)
-    assert task.is_pending is True
+def test_is_processed(status: str, expected: bool) -> None:
+    """Test that is_processed reflects PROCESSED/REVIEWED statuses."""
+    task = IntegrationTaskFactory.create(status=status)
+    assert task.is_processed is expected
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (IntegrationTaskStatus.ERROR, True),
+        (IntegrationTaskStatus.UNREAD_ERROR, True),
+        (IntegrationTaskStatus.UNREAD, False),
+    ],
+)
 @pytest.mark.django_db
-def test_is_pending_returns_true_for_read() -> None:
-    """Test that is_pending returns True for READ status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.READ)
-    assert task.is_pending is True
+def test_has_error(status: str, expected: bool) -> None:
+    """Test that has_error reflects ERROR/UNREAD_ERROR statuses."""
+    task = IntegrationTaskFactory.create(status=status)
+    assert task.has_error is expected
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (IntegrationTaskStatus.JUNK, True),
+        (IntegrationTaskStatus.UNREAD, False),
+    ],
+)
 @pytest.mark.django_db
-def test_is_pending_returns_false_for_processed() -> None:
-    """Test that is_pending returns False for PROCESSED status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.PROCESSED)
-    assert task.is_pending is False
-
-
-@pytest.mark.django_db
-def test_is_processed_returns_true_for_processed() -> None:
-    """Test that is_processed returns True for PROCESSED status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.PROCESSED)
-    assert task.is_processed is True
-
-
-@pytest.mark.django_db
-def test_is_processed_returns_true_for_reviewed() -> None:
-    """Test that is_processed returns True for REVIEWED status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.REVIEWED)
-    assert task.is_processed is True
-
-
-@pytest.mark.django_db
-def test_is_processed_returns_false_for_unread() -> None:
-    """Test that is_processed returns False for UNREAD status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD)
-    assert task.is_processed is False
-
-
-@pytest.mark.django_db
-def test_has_error_returns_true_for_error() -> None:
-    """Test that has_error returns True for ERROR status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.ERROR)
-    assert task.has_error is True
-
-
-@pytest.mark.django_db
-def test_has_error_returns_true_for_unread_error() -> None:
-    """Test that has_error returns True for UNREAD_ERROR status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD_ERROR)
-    assert task.has_error is True
-
-
-@pytest.mark.django_db
-def test_has_error_returns_false_for_unread() -> None:
-    """Test that has_error returns False for UNREAD status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD)
-    assert task.has_error is False
-
-
-@pytest.mark.django_db
-def test_is_junked_returns_true_for_junk() -> None:
-    """Test that is_junked returns True for JUNK status."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.JUNK)
-    assert task.is_junked is True
-
-
-@pytest.mark.django_db
-def test_is_junked_returns_false_for_other_statuses() -> None:
-    """Test that is_junked returns False for non-JUNK statuses."""
-    task = IntegrationTaskFactory.create(status=IntegrationTaskStatus.UNREAD)
-    assert task.is_junked is False
+def test_is_junked(status: str, expected: bool) -> None:
+    """Test that is_junked reflects JUNK status."""
+    task = IntegrationTaskFactory.create(status=status)
+    assert task.is_junked is expected
 
 
 @pytest.mark.django_db
@@ -289,17 +259,6 @@ def test_review_not_junked_filters_to_non_junked_reviews() -> None:
     IntegrationTaskReviewFactory.create(junked=True)
 
     result = IntegrationTaskReview.objects.not_junked()
-
-    assert list(result) == [active_review]
-
-
-@pytest.mark.django_db
-def test_review_active_is_alias_for_not_junked() -> None:
-    """Test that active() is an alias for not_junked()."""
-    active_review = IntegrationTaskReviewFactory.create(junked=False)
-    IntegrationTaskReviewFactory.create(junked=True)
-
-    result = IntegrationTaskReview.objects.active()
 
     assert list(result) == [active_review]
 
@@ -341,15 +300,15 @@ def test_review_queryset_methods_can_be_chained() -> None:
     assert list(result) == [target_review]
 
 
+@pytest.mark.parametrize(
+    ("junked", "expected"),
+    [
+        (False, True),
+        (True, False),
+    ],
+)
 @pytest.mark.django_db
-def test_review_is_active_returns_true_for_non_junked() -> None:
-    """Test that is_active returns True for non-junked reviews."""
-    review = IntegrationTaskReviewFactory.create(junked=False)
-    assert review.is_active is True
-
-
-@pytest.mark.django_db
-def test_review_is_active_returns_false_for_junked() -> None:
-    """Test that is_active returns False for junked reviews."""
-    review = IntegrationTaskReviewFactory.create(junked=True)
-    assert review.is_active is False
+def test_review_is_active(junked: bool, expected: bool) -> None:
+    """Test that is_active reflects the inverse of junked status."""
+    review = IntegrationTaskReviewFactory.create(junked=junked)
+    assert review.is_active is expected

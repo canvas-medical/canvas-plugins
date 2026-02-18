@@ -1194,25 +1194,23 @@
     "InvoiceWorkflow"
   ],
   "canvas_sdk.v1.data.lab": [
+    "FieldType",
     "LabOrder",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LabReview",
     "LabReviewQuerySet",
     "LabTest",
     "LabValue",
     "LabValueCoding",
     "TransmissionType"
-  ],
-  "canvas_sdk.v1.data.lab_report_template": [
-    "FieldType",
-    "LabReportTemplate",
-    "LabReportTemplateField",
-    "LabReportTemplateFieldOption",
-    "LabReportTemplateQuerySet"
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
@@ -1334,6 +1332,12 @@
   "canvas_sdk.v1.data.referral": [
     "Referral",
     "ReferralReport"
+  ],
+  "canvas_sdk.v1.data.report_template_base": [
+    "BaseReportTemplate",
+    "BaseReportTemplateField",
+    "BaseReportTemplateFieldOption",
+    "BaseReportTemplateQuerySet"
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"

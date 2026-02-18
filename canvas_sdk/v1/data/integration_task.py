@@ -175,7 +175,6 @@ class IntegrationTaskReview(TimestampedModel, IdentifiableModel):
 
     class Meta:
         db_table = "canvas_sdk_data_data_integration_integrationtaskreview_001"
-        ordering = ("id",)
 
     objects = models.Manager.from_queryset(IntegrationTaskReviewQuerySet)()
 
