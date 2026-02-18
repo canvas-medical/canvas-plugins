@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.99.0 (2026-02-18)
+
+### Bug Fixes
+
+- Allow hyphens in websocket channel names
+  ([#1483](https://github.com/canvas-medical/canvas-plugins/pull/1483),
+  [`ff544b6`](https://github.com/canvas-medical/canvas-plugins/commit/ff544b68963ba1904b94fc097c9200a5e2299673))
+
+### Features
+
+- Add ability to set note related_data via existing note effects
+  ([#1051](https://github.com/canvas-medical/canvas-plugins/pull/1051),
+  [`ac10e3d`](https://github.com/canvas-medical/canvas-plugins/commit/ac10e3d2409acfc8b6759f374506f8033f020d79))
+
+
 ## v0.98.0 (2026-02-13)
 
 ### Features
