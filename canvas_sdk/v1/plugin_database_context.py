@@ -81,7 +81,7 @@ def _reset_search_path() -> None:
 def plugin_database_context(
     plugin_name: str,
     namespace: str | None = None,
-    access_level: str = "read_write",
+    access_level: str = "read",
 ) -> Generator[None, None, None]:
     """
     Thread-safe context manager for plugin operations.

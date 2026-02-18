@@ -17,25 +17,25 @@ from plugin_runner.exceptions import NamespaceAccessError
 class TestNamespaceAccessError:
     """Tests for the NamespaceAccessError exception."""
 
-    def test_exception_is_raised(self):
+    def test_exception_is_raised(self) -> None:
         """NamespaceAccessError can be raised and caught."""
         with pytest.raises(NamespaceAccessError):
             raise NamespaceAccessError("Test error")
 
-    def test_exception_inherits_from_plugin_error(self):
+    def test_exception_inherits_from_plugin_error(self) -> None:
         """NamespaceAccessError should inherit from PluginError."""
         from plugin_runner.exceptions import PluginError
 
         exc = NamespaceAccessError("Test")
         assert isinstance(exc, PluginError)
 
-    def test_exception_message_preserved(self):
+    def test_exception_message_preserved(self) -> None:
         """NamespaceAccessError should preserve the error message."""
         message = "Plugin 'test' denied access to namespace 'ns'"
         exc = NamespaceAccessError(message)
         assert message in str(exc)
 
-    def test_exception_with_missing_secret_message(self):
+    def test_exception_with_missing_secret_message(self) -> None:
         """Error message should include helpful information about missing secrets."""
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' declares namespace 'org__data' with 'read' access "
@@ -47,7 +47,7 @@ class TestNamespaceAccessError:
         assert "read_access_key" in str(exc)
         assert "manifest" in str(exc)
 
-    def test_exception_with_invalid_key_message(self):
+    def test_exception_with_invalid_key_message(self) -> None:
         """Error message should include helpful information about invalid keys."""
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' denied access to namespace 'org__data': "
@@ -56,7 +56,7 @@ class TestNamespaceAccessError:
         assert "denied access" in str(exc)
         assert "not a valid access key" in str(exc)
 
-    def test_exception_with_insufficient_access_message(self):
+    def test_exception_with_insufficient_access_message(self) -> None:
         """Error message should explain when write access is needed but only read granted."""
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' requests 'read_write' access to namespace 'org__data' "
@@ -71,7 +71,7 @@ class TestVerifyNamespaceAccessFunction:
     """Tests for the verify_namespace_access function in installation.py."""
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_returns_access_level_when_key_found(self, mock_open_conn):
+    def test_returns_access_level_when_key_found(self, mock_open_conn: MagicMock) -> None:
         """Should return access level when key hash matches."""
         from plugin_runner.installation import verify_namespace_access
 
@@ -93,7 +93,7 @@ class TestVerifyNamespaceAccessFunction:
         assert result == "read_write"
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_returns_read_access_level(self, mock_open_conn):
+    def test_returns_read_access_level(self, mock_open_conn: MagicMock) -> None:
         """Should return 'read' when key has read-only access."""
         from plugin_runner.installation import verify_namespace_access
 
@@ -114,7 +114,7 @@ class TestVerifyNamespaceAccessFunction:
         assert result == "read"
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_returns_none_when_key_not_found(self, mock_open_conn):
+    def test_returns_none_when_key_not_found(self, mock_open_conn: MagicMock) -> None:
         """Should return None when key hash not found in auth table."""
         from plugin_runner.installation import verify_namespace_access
 
@@ -136,7 +136,7 @@ class TestVerifyNamespaceAccessFunction:
         assert result is None
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_queries_correct_namespace_schema(self, mock_open_conn):
+    def test_queries_correct_namespace_schema(self, mock_open_conn: MagicMock) -> None:
         """Should query the namespace's auth table with correct schema."""
         from plugin_runner.installation import verify_namespace_access
 
@@ -159,7 +159,7 @@ class TestVerifyNamespaceAccessFunction:
         sql = call_args[0][0]
         assert "org__shared_data.namespace_auth" in sql
 
-    def test_key_hash_is_consistent(self):
+    def test_key_hash_is_consistent(self) -> None:
         """Same secret should always produce the same hash."""
         secret = "test_secret_key"
         expected_hash = hashlib.sha256(secret.encode()).hexdigest()
@@ -170,7 +170,7 @@ class TestVerifyNamespaceAccessFunction:
 
         assert hash1 == hash2 == expected_hash
 
-    def test_different_secrets_produce_different_hashes(self):
+    def test_different_secrets_produce_different_hashes(self) -> None:
         """Different secrets should produce different hashes."""
         secret1 = "key_abc_123"
         secret2 = "key_xyz_789"
@@ -184,7 +184,7 @@ class TestVerifyNamespaceAccessFunction:
 class TestSecretNameDetermination:
     """Tests for determining the correct secret name based on access level."""
 
-    def test_read_access_uses_read_access_key(self):
+    def test_read_access_uses_read_access_key(self) -> None:
         """Read access should use 'read_access_key' secret."""
         # This tests the inline logic: secret_name = "read_write_access_key" if declared_access == "read_write" else "read_access_key"
         declared_access = "read"
@@ -193,7 +193,7 @@ class TestSecretNameDetermination:
         )
         assert secret_name == "read_access_key"
 
-    def test_read_write_access_uses_read_write_access_key(self):
+    def test_read_write_access_uses_read_write_access_key(self) -> None:
         """Read-write access should use 'read_write_access_key' secret."""
         declared_access = "read_write"
         secret_name = (
@@ -209,8 +209,8 @@ class TestLoadPluginsHandlesNamespaceErrors:
     @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
     def test_load_plugins_catches_namespace_access_error(
-        self, mock_sentry, mock_load, mock_refresh
-    ):
+        self, mock_sentry: MagicMock, mock_load: MagicMock, mock_refresh: MagicMock
+    ) -> None:
         """load_plugins should catch NamespaceAccessError and continue."""
         import os
         import tempfile
@@ -243,8 +243,8 @@ class TestLoadPluginsHandlesNamespaceErrors:
     @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
     def test_load_plugins_continues_after_namespace_error(
-        self, mock_sentry, mock_load, mock_refresh
-    ):
+        self, mock_sentry: MagicMock, mock_load: MagicMock, mock_refresh: MagicMock
+    ) -> None:
         """load_plugins should continue loading other plugins after NamespaceAccessError."""
         import os
         import tempfile
@@ -273,7 +273,9 @@ class TestLoadPluginsHandlesNamespaceErrors:
 
     @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugin_catches_namespace_access_error(self, mock_sentry, mock_load):
+    def test_load_plugin_catches_namespace_access_error(
+        self, mock_sentry: MagicMock, mock_load: MagicMock
+    ) -> None:
         """load_plugin should catch NamespaceAccessError and not raise."""
         import pathlib
 
@@ -289,7 +291,9 @@ class TestLoadPluginsHandlesNamespaceErrors:
 
     @patch("plugin_runner.plugin_runner.load_or_reload_plugin")
     @patch("plugin_runner.plugin_runner.sentry_sdk")
-    def test_load_plugin_logs_namespace_access_error(self, mock_sentry, mock_load):
+    def test_load_plugin_logs_namespace_access_error(
+        self, mock_sentry: MagicMock, mock_load: MagicMock
+    ) -> None:
         """load_plugin should log NamespaceAccessError with context."""
         import pathlib
 
@@ -310,7 +314,7 @@ class TestLoadPluginsHandlesNamespaceErrors:
 class TestAccessLevelComparison:
     """Tests for comparing declared vs granted access levels."""
 
-    def test_read_access_satisfied_by_read(self):
+    def test_read_access_satisfied_by_read(self) -> None:
         """Requesting read should succeed with read access."""
         declared = "read"
         granted = "read"
@@ -318,21 +322,21 @@ class TestAccessLevelComparison:
         is_denied = declared == "read_write" and granted == "read"
         assert is_denied is False
 
-    def test_read_access_satisfied_by_read_write(self):
+    def test_read_access_satisfied_by_read_write(self) -> None:
         """Requesting read should succeed with read_write access."""
         declared = "read"
         granted = "read_write"
         is_denied = declared == "read_write" and granted == "read"
         assert is_denied is False
 
-    def test_read_write_denied_with_only_read(self):
+    def test_read_write_denied_with_only_read(self) -> None:
         """Requesting read_write should fail with only read access."""
         declared = "read_write"
         granted = "read"
         is_denied = declared == "read_write" and granted == "read"
         assert is_denied is True
 
-    def test_read_write_satisfied_by_read_write(self):
+    def test_read_write_satisfied_by_read_write(self) -> None:
         """Requesting read_write should succeed with read_write access."""
         declared = "read_write"
         granted = "read_write"

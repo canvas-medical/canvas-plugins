@@ -33,7 +33,7 @@ IS_SQLITE = connection.vendor == "sqlite"
 class TestPluginContextThreadLocal:
     """Tests for thread-local plugin context storage."""
 
-    def test_set_and_get_current_plugin(self):
+    def test_set_and_get_current_plugin(self) -> None:
         """Basic set/get should work in single thread."""
         clear_current_plugin()
 
@@ -43,7 +43,7 @@ class TestPluginContextThreadLocal:
         clear_current_plugin()
         assert get_current_plugin() is None
 
-    def test_clear_current_plugin(self):
+    def test_clear_current_plugin(self) -> None:
         """Clear should remove the plugin name."""
         set_current_plugin("test_plugin")
         assert get_current_plugin() == "test_plugin"
@@ -51,12 +51,12 @@ class TestPluginContextThreadLocal:
         clear_current_plugin()
         assert get_current_plugin() is None
 
-    def test_get_returns_none_when_not_set(self):
+    def test_get_returns_none_when_not_set(self) -> None:
         """get_current_plugin should return None when no plugin is set."""
         clear_current_plugin()
         assert get_current_plugin() is None
 
-    def test_overwrite_plugin_name(self):
+    def test_overwrite_plugin_name(self) -> None:
         """Setting a new plugin name should overwrite the old one."""
         set_current_plugin("plugin_a")
         assert get_current_plugin() == "plugin_a"
@@ -70,12 +70,12 @@ class TestPluginContextThreadLocal:
 class TestPluginContextThreadIsolation:
     """Tests for thread isolation of plugin context."""
 
-    def test_threads_have_isolated_contexts(self):
+    def test_threads_have_isolated_contexts(self) -> None:
         """Each thread should have its own plugin context."""
         results = {}
         errors = []
 
-        def thread_func(plugin_name, thread_id):
+        def thread_func(plugin_name: str, thread_id: int) -> None:
             try:
                 set_current_plugin(plugin_name)
                 # Small delay to allow other threads to run
@@ -114,12 +114,12 @@ class TestPluginContextThreadIsolation:
                 f"Thread {thread_id}: expected {result['expected']}, got {result['actual']}"
             )
 
-    def test_concurrent_threads_with_executor(self):
+    def test_concurrent_threads_with_executor(self) -> None:
         """Test with ThreadPoolExecutor for more realistic concurrency."""
         num_threads = 20
         results = {}
 
-        def worker(plugin_name):
+        def worker(plugin_name: str) -> tuple[str, str | None]:
             set_current_plugin(plugin_name)
             time.sleep(0.005)  # Simulate some work
             result = get_current_plugin()
@@ -137,13 +137,13 @@ class TestPluginContextThreadIsolation:
         for expected, actual in results.items():
             assert actual == expected, f"Expected {expected}, got {actual}"
 
-    def test_rapid_context_switching(self):
+    def test_rapid_context_switching(self) -> None:
         """Test rapid setting and clearing of plugin context."""
         num_threads = 10
         iterations = 100
         errors = []
 
-        def worker(thread_id):
+        def worker(thread_id: int) -> None:
             for i in range(iterations):
                 plugin_name = f"rapid_{thread_id}_{i}"
                 set_current_plugin(plugin_name)
@@ -170,7 +170,7 @@ class TestPluginDatabaseContextManagerMocked:
     These tests verify the context manager's logic without requiring PostgreSQL.
     """
 
-    def test_context_sets_and_clears_plugin_name(self):
+    def test_context_sets_and_clears_plugin_name(self) -> None:
         """Context manager should set and clear the plugin name."""
         clear_current_plugin()
         assert get_current_plugin() is None
@@ -187,7 +187,7 @@ class TestPluginDatabaseContextManagerMocked:
         # After context, should be cleared
         assert get_current_plugin() is None
 
-    def test_context_restores_previous_plugin(self):
+    def test_context_restores_previous_plugin(self) -> None:
         """Nested contexts should restore the previous plugin."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -205,7 +205,7 @@ class TestPluginDatabaseContextManagerMocked:
 
         assert get_current_plugin() is None
 
-    def test_context_clears_on_exception(self):
+    def test_context_clears_on_exception(self) -> None:
         """Context should clean up even if exception is raised."""
         clear_current_plugin()
 
@@ -224,8 +224,28 @@ class TestPluginDatabaseContextManagerMocked:
         # Should still be cleared after exception
         assert get_current_plugin() is None
 
-    def test_search_path_sql_is_executed(self):
-        """Verify that SET search_path SQL is executed."""
+    @patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
+    def test_search_path_sql_is_executed_with_namespace(self, mock_is_pg: MagicMock) -> None:
+        """Verify that SET search_path SQL is executed when namespace is provided."""
+        with patch("django.db.connection") as mock_conn:
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+            with plugin_database_context("my_plugin", namespace="org__shared"):
+                pass
+
+            # Check that execute was called with SET search_path
+            calls = mock_cursor.execute.call_args_list
+            assert len(calls) >= 1
+
+            # First call should set search_path to the namespace
+            first_call = calls[0]
+            assert "SET search_path" in first_call[0][0]
+            assert "org__shared" in first_call[0][1]
+
+    def test_search_path_not_changed_without_namespace(self) -> None:
+        """Verify that search_path is not changed when no namespace is provided."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -234,23 +254,19 @@ class TestPluginDatabaseContextManagerMocked:
             with plugin_database_context("my_plugin"):
                 pass
 
-            # Check that execute was called with SET search_path
+            # No SQL should be executed
             calls = mock_cursor.execute.call_args_list
-            assert len(calls) >= 1
+            assert len(calls) == 0
 
-            # First call should set search_path to the plugin
-            first_call = calls[0]
-            assert "SET search_path" in first_call[0][0]
-            assert "my_plugin" in first_call[0][1]
-
-    def test_search_path_restored_to_public(self):
+    @patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
+    def test_search_path_restored_to_public(self, mock_is_pg: MagicMock) -> None:
         """Verify search_path is restored to public after context."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
-            with plugin_database_context("temp_plugin"):
+            with plugin_database_context("temp_plugin", namespace="org__shared"):
                 pass
 
             # Last call should reset to public
@@ -267,14 +283,14 @@ class TestPluginDatabaseContextThreadSafetyMocked:
     plugin_database_context and each thread maintains its own plugin state.
     """
 
-    def test_parallel_threads_have_correct_plugin_context(self):
+    def test_parallel_threads_have_correct_plugin_context(self) -> None:
         """Multiple threads should each have their own plugin context."""
         num_threads = 10
         results = {}
         errors = []
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id, plugin_name):
+        def worker(thread_id: int, plugin_name: str) -> None:
             try:
                 barrier.wait()
 
@@ -315,7 +331,7 @@ class TestPluginDatabaseContextThreadSafetyMocked:
                 f"got {result['actual_plugin']}"
             )
 
-    def test_high_concurrency_stress_test(self):
+    def test_high_concurrency_stress_test(self) -> None:
         """Stress test with many threads and iterations."""
         num_threads = 20
         iterations_per_thread = 10
@@ -323,7 +339,7 @@ class TestPluginDatabaseContextThreadSafetyMocked:
         errors = []
         lock = threading.Lock()
 
-        def worker(thread_id):
+        def worker(thread_id: int) -> None:
             for iteration in range(iterations_per_thread):
                 plugin_name = f"stress_plugin_{thread_id}_{iteration}"
                 try:
@@ -376,14 +392,14 @@ class TestPluginDatabaseContextThreadSafetyMocked:
         assert len(errors) == 0, f"Errors encountered: {errors[:10]}..."
         assert successful == total_ops, f"Only {successful}/{total_ops} operations succeeded"
 
-    def test_nested_contexts_in_parallel_threads(self):
+    def test_nested_contexts_in_parallel_threads(self) -> None:
         """Test nested contexts work correctly in parallel."""
         num_threads = 5
         results = {}
         errors = []
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id):
+        def worker(thread_id: int) -> None:
             outer_plugin = f"outer_{thread_id}"
             inner_plugin = f"inner_{thread_id}"
 
@@ -450,12 +466,12 @@ class TestConfigurableThreadCount:
     """Tests with configurable thread counts for flexibility."""
 
     @pytest.mark.parametrize("num_threads", [1, 5, 10, 25, 50])
-    def test_variable_thread_count(self, num_threads):
+    def test_variable_thread_count(self, num_threads: int) -> None:
         """Test thread isolation with various thread counts."""
         results = {}
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id, plugin_name):
+        def worker(thread_id: int, plugin_name: str) -> tuple[int, str, str | None]:
             barrier.wait()
             set_current_plugin(plugin_name)
             time.sleep(0.005)
@@ -465,7 +481,7 @@ class TestConfigurableThreadCount:
 
         threads = []
 
-        def run_and_store(thread_id, plugin_name):
+        def run_and_store(thread_id: int, plugin_name: str) -> None:
             tid, expected, actual = worker(thread_id, plugin_name)
             results[tid] = (expected, actual)
 
@@ -485,13 +501,13 @@ class TestConfigurableThreadCount:
             assert actual == expected, f"Thread {thread_id}: expected {expected}, got {actual}"
 
     @pytest.mark.parametrize("num_threads", [2, 5, 10])
-    def test_variable_thread_count_with_context_manager(self, num_threads):
+    def test_variable_thread_count_with_context_manager(self, num_threads: int) -> None:
         """Test context manager with various thread counts (mocked)."""
         results = {}
         errors = []
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id, plugin_name):
+        def worker(thread_id: int, plugin_name: str) -> None:
             try:
                 barrier.wait()
                 with patch("django.db.connection") as mock_conn:
@@ -530,7 +546,7 @@ class TestConfigurableThreadCount:
 class TestPluginDatabaseContextPostgres:
     """Tests that require PostgreSQL for search_path verification."""
 
-    def test_search_path_is_set(self):
+    def test_search_path_is_set(self) -> None:
         """Context manager should set the database search_path."""
         with plugin_database_context("my_test_plugin"):
             with connection.cursor() as cursor:
@@ -539,7 +555,7 @@ class TestPluginDatabaseContextPostgres:
 
             assert "my_test_plugin" in search_path
 
-    def test_search_path_restored_after_context(self):
+    def test_search_path_restored_after_context(self) -> None:
         """search_path should be restored to public after context exits."""
         with plugin_database_context("temp_plugin"):
             pass
@@ -550,14 +566,14 @@ class TestPluginDatabaseContextPostgres:
 
         assert "temp_plugin" not in search_path
 
-    def test_parallel_threads_with_search_path_verification(self):
+    def test_parallel_threads_with_search_path_verification(self) -> None:
         """Verify search_path is correctly set per thread on PostgreSQL."""
         num_threads = 5
         results = {}
         errors = []
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id, plugin_name):
+        def worker(thread_id: int, plugin_name: str) -> None:
             try:
                 barrier.wait()
 
@@ -606,18 +622,18 @@ class TestPluginDatabaseContextPostgres:
 class TestAccessLevel:
     """Tests for access level functionality."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear any existing plugin context before each test."""
         clear_current_plugin()
         for attr in ("schema", "access_level"):
             if hasattr(_plugin_context, attr):
                 delattr(_plugin_context, attr)
 
-    def test_get_access_level_defaults_to_read(self):
+    def test_get_access_level_defaults_to_read(self) -> None:
         """get_access_level should default to 'read' when not set (principle of least privilege)."""
         assert get_access_level() == "read"
 
-    def test_get_access_level_returns_set_value(self):
+    def test_get_access_level_returns_set_value(self) -> None:
         """get_access_level should return the value that was set."""
         _plugin_context.access_level = "read_write"
         assert get_access_level() == "read_write"
@@ -625,25 +641,25 @@ class TestAccessLevel:
         _plugin_context.access_level = "read"
         assert get_access_level() == "read"
 
-    def test_is_write_allowed_returns_false_by_default(self):
+    def test_is_write_allowed_returns_false_by_default(self) -> None:
         """is_write_allowed should return False when access_level is not set."""
         assert is_write_allowed() is False
 
-    def test_is_write_allowed_returns_true_for_read_write(self):
+    def test_is_write_allowed_returns_true_for_read_write(self) -> None:
         """is_write_allowed should return True only when access_level is 'read_write'."""
         _plugin_context.access_level = "read_write"
         assert is_write_allowed() is True
 
-    def test_is_write_allowed_returns_false_for_read(self):
+    def test_is_write_allowed_returns_false_for_read(self) -> None:
         """is_write_allowed should return False when access_level is 'read'."""
         _plugin_context.access_level = "read"
         assert is_write_allowed() is False
 
-    def test_get_current_schema_returns_none_when_not_set(self):
+    def test_get_current_schema_returns_none_when_not_set(self) -> None:
         """get_current_schema should return None when not in a plugin context."""
         assert get_current_schema() is None
 
-    def test_get_current_schema_returns_set_value(self):
+    def test_get_current_schema_returns_set_value(self) -> None:
         """get_current_schema should return the schema that was set."""
         _plugin_context.schema = "my_namespace"
         assert get_current_schema() == "my_namespace"
@@ -652,14 +668,14 @@ class TestAccessLevel:
 class TestAccessLevelInContextManager:
     """Tests for access level handling in the context manager."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear any existing plugin context before each test."""
         clear_current_plugin()
         for attr in ("schema", "access_level"):
             if hasattr(_plugin_context, attr):
                 delattr(_plugin_context, attr)
 
-    def test_context_sets_access_level(self):
+    def test_context_sets_access_level(self) -> None:
         """Context manager should set the access level."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -669,17 +685,17 @@ class TestAccessLevelInContextManager:
             with plugin_database_context("test_plugin", access_level="read_write"):
                 assert get_access_level() == "read_write"
 
-    def test_context_defaults_to_read_write_access(self):
-        """Context manager should default to read_write access level."""
+    def test_context_defaults_to_read_access(self) -> None:
+        """Context manager should default to read access level."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
             with plugin_database_context("test_plugin"):
-                assert get_access_level() == "read_write"
+                assert get_access_level() == "read"
 
-    def test_context_with_read_only_access(self):
+    def test_context_with_read_only_access(self) -> None:
         """Context manager should allow read-only access level."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -690,7 +706,7 @@ class TestAccessLevelInContextManager:
                 assert get_access_level() == "read"
                 assert is_write_allowed() is False
 
-    def test_context_clears_access_level_on_exit(self):
+    def test_context_clears_access_level_on_exit(self) -> None:
         """Context manager should clear access level when exiting."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -703,7 +719,7 @@ class TestAccessLevelInContextManager:
         # After context, access_level should be cleared (returning default "read")
         assert get_access_level() == "read"
 
-    def test_nested_contexts_restore_access_level(self):
+    def test_nested_contexts_restore_access_level(self) -> None:
         """Nested contexts should restore the outer access level."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -719,7 +735,7 @@ class TestAccessLevelInContextManager:
                 # Should be restored to outer access level
                 assert get_access_level() == "read"
 
-    def test_context_sets_schema_for_namespace(self):
+    def test_context_sets_schema_for_namespace(self) -> None:
         """Context manager should set schema when namespace is provided."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
@@ -730,8 +746,8 @@ class TestAccessLevelInContextManager:
                 assert get_current_plugin() == "my_plugin"
                 assert get_current_schema() == "shared_namespace"
 
-    def test_context_uses_plugin_name_as_schema_when_no_namespace(self):
-        """Context manager should use plugin name as schema when no namespace provided."""
+    def test_context_schema_is_none_when_no_namespace(self) -> None:
+        """Context manager should set schema to None when no namespace provided."""
         with patch("django.db.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -739,19 +755,19 @@ class TestAccessLevelInContextManager:
 
             with plugin_database_context("my_plugin"):
                 assert get_current_plugin() == "my_plugin"
-                assert get_current_schema() == "my_plugin"
+                assert get_current_schema() is None
 
 
 class TestAccessLevelThreadIsolation:
     """Tests for thread isolation of access level."""
 
-    def test_threads_have_isolated_access_levels(self):
+    def test_threads_have_isolated_access_levels(self) -> None:
         """Each thread should have its own access level."""
         results = {}
         errors = []
         barrier = threading.Barrier(2)
 
-        def worker_read():
+        def worker_read() -> None:
             try:
                 barrier.wait()
                 with patch("django.db.connection") as mock_conn:
@@ -768,7 +784,7 @@ class TestAccessLevelThreadIsolation:
             except Exception as e:
                 errors.append(("read", str(e)))
 
-        def worker_write():
+        def worker_write() -> None:
             try:
                 barrier.wait()
                 with patch("django.db.connection") as mock_conn:
