@@ -6,6 +6,7 @@ from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
+from canvas_sdk.effects.claim.claim_metadata import _ClaimMetadata
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
 from canvas_sdk.effects.claim.payment.base import (
     ClaimAllocation,
@@ -24,6 +25,19 @@ class ClaimEffect(Model):
     """
 
     claim_id: UUID | str
+
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """
+        Upserts a metadata record to the claim.
+
+        Args:
+            key (str): The key of the metadata.
+            value (str): The value of the metadata.
+
+        Returns:
+            Effect: An effect that upserts the metadata record to the claim.
+        """
+        return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(value=value)
 
     def add_comment(self, comment: str) -> Effect:
         """
