@@ -20,7 +20,7 @@ from django.apps import apps
 from django.apps.config import AppConfig
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
-from django.db.models import DateField, Index
+from django.db.models import DateField, Field, Index
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -185,7 +185,7 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
     mock_module = ModuleType(plugin_name)
     mock_module.__name__ = plugin_name
     mock_module.__package__ = plugin_name
-    mock_module.__path__ = [plugin_path]  # Point to actual plugin directory
+    mock_module.__path__ = [str(plugin_path)]  # Point to actual plugin directory
     mock_module.__file__ = f"{plugin_path}/__init__.py"
 
     # Create mock models submodule
@@ -208,7 +208,7 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
         settings.INSTALLED_APPS = list(settings.INSTALLED_APPS) + [plugin_name]
 
     class Apps:
-        def check_models_ready(self):
+        def check_models_ready(self) -> bool:
             return True
 
     # Create a dynamic AppConfig
@@ -216,16 +216,16 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
         name = plugin_name
         label = app_label
         verbose_name = plugin_name
-        path = None  # Will be set by Django if module can be imported
+        path: str | None = None  # Will be set by Django if module can be imported
 
-        def __init__(self, app_name, app_module):
+        def __init__(self, app_name: str, app_module: ModuleType | None) -> None:
             # Override to prevent Django from doing too much introspection
-            self.apps = Apps()
+            self.apps = Apps()  # type: ignore[assignment]
             self.name = app_name
             self.module = app_module
             self.label = app_label
             self.verbose_name = plugin_name + "_verbose"
-            self.path = plugin_path
+            self.path = str(plugin_path)
             self.models_module = None  # Will be populated when sandbox loads models
             self.models = {}
 
@@ -289,7 +289,7 @@ def namespace_exists(namespace: str) -> bool:
             (namespace,),
         )
         row = cursor.fetchone()
-        return row["count"] > 0
+        return row is not None and row["count"] > 0
 
 
 def create_namespace_schema(namespace: str) -> dict[str, str] | None:
@@ -313,11 +313,11 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
             "SELECT count(*) AS count FROM pg_catalog.pg_namespace WHERE nspname = %s",
             (namespace,),
         )
-        rows = cursor.fetchone()
+        row = cursor.fetchone()
 
         generated_keys = None
 
-        if rows["count"] == 0:
+        if row is None or row["count"] == 0:
             # Execute SQL file for namespace schema initialization
             with open(Path(__file__).parent / "init_namespace_schema.sql") as f:
                 sql_content = f.read()
@@ -500,7 +500,7 @@ def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str
 SQL_STATEMENT_DELIMITER = "\n\n"
 
 
-def generate_create_table_sql(schema_name: str, model_class) -> str:
+def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) -> str:
     """Generate CREATE TABLE SQL from Django model metadata with dynamic column addition.
 
     Args:
@@ -581,7 +581,7 @@ def generate_create_table_sql(schema_name: str, model_class) -> str:
     return SQL_STATEMENT_DELIMITER.join(all_statements)
 
 
-def generate_field_sql(field, is_sqlite: bool = False) -> str:
+def generate_field_sql(field: Field, is_sqlite: bool = False) -> str:
     """Convert Django field to database-specific column definition.
 
     Args:
@@ -739,7 +739,6 @@ def generate_plugin_migrations(
                 if model_file.name == "__init__.py":
                     continue
                 module_name = f"{plugin_name}.models.{model_file.stem}"
-                print(f"Loading module {module_name} from {model_file}")
                 s = Sandbox(model_file, namespace=module_name)
                 cls = s.execute()
 
@@ -754,11 +753,13 @@ def generate_plugin_migrations(
                                 continue
                             db_table = value._meta.original_attrs["db_table"]
                             if "." in db_table and not db_table.startswith(f"{schema_name}"):
-                                print(f"Skipping {db_table} because it references another schema")
+                                log.warning(
+                                    f"Skipping {db_table} because it references another schema"
+                                )
                                 continue
                             create_sql = generate_create_table_sql(schema_name, value)
-                            print(f"Generated SQL for {name}:")
-                            print(create_sql)
+                            log.info(f"Generated SQL for {name}:")
+                            log.info(create_sql)
 
                             # Execute the CREATE TABLE statements
                             # SQLite requires executing one statement at a time
@@ -784,6 +785,76 @@ def generate_plugin_migrations(
     return discovered_models
 
 
+def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict[str, str]) -> bool:
+    """Set up namespace for a plugin with read_write access.
+
+    Creates the namespace if it doesn't exist, or verifies the access key
+    if it already exists.
+
+    Returns:
+        True if the plugin can create tables in the namespace.
+
+    Raises:
+        PluginInstallationError: If the access key is missing or invalid.
+    """
+    generated_keys = create_namespace_schema(namespace=schema_name)
+
+    if generated_keys:
+        # This plugin just created the namespace - it's inherently trusted
+        store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
+        log.info(
+            f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
+            f"View them in the UI to share with other plugins."
+        )
+        return True
+
+    # Namespace already exists - must verify the key grants read_write access
+    secret_value = secrets.get("read_write_access_key")
+    if not secret_value:
+        raise PluginInstallationError(
+            f"Plugin '{plugin_name}' declares read_write access to namespace "
+            f"'{schema_name}' but 'read_write_access_key' secret is not configured."
+        )
+    granted_access = verify_namespace_access(schema_name, secret_value)
+    if granted_access != "read_write":
+        raise PluginInstallationError(
+            f"Plugin '{plugin_name}' has invalid or insufficient access key "
+            f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
+            f"contains a valid key from the namespace owner."
+        )
+    return True
+
+
+def verify_read_namespace_access(
+    plugin_name: str, schema_name: str, secrets: dict[str, str]
+) -> None:
+    """Verify a plugin has valid read access to an existing namespace.
+
+    Raises:
+        PluginInstallationError: If the namespace doesn't exist or the access key
+            is missing or invalid.
+    """
+    if not namespace_exists(schema_name):
+        raise PluginInstallationError(
+            f"Plugin '{plugin_name}' declares read access to namespace "
+            f"'{schema_name}', but the namespace does not exist. "
+            f"A plugin with 'read_write' access must create the namespace first."
+        )
+    secret_value = secrets.get("read_access_key")
+    if not secret_value:
+        raise PluginInstallationError(
+            f"Plugin '{plugin_name}' declares read access to namespace "
+            f"'{schema_name}' but 'read_access_key' secret is not configured."
+        )
+    granted_access = verify_namespace_access(schema_name, secret_value)
+    if not granted_access:
+        raise PluginInstallationError(
+            f"Plugin '{plugin_name}' has invalid access key for namespace "
+            f"'{schema_name}'. Ensure 'read_access_key' contains a valid key "
+            f"from the namespace owner."
+        )
+
+
 def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
     """Install the given Plugin's package into the runtime."""
     try:
@@ -798,7 +869,6 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         with download_plugin(attributes["package"]) as plugin_file_path:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
-        register_plugin_as_django_app(plugin_name, plugin_installation_path)
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
 
         # Read the manifest to check for custom_data declaration
@@ -811,85 +881,30 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         # Initialize namespace schema and generate model migrations if custom_data is declared
         if custom_data:
+            register_plugin_as_django_app(plugin_name, plugin_installation_path)
             schema_name = custom_data["namespace"]
             declared_access = custom_data.get("access", "read")
+            secrets = attributes["secrets"]
 
             log.info(f"Plugin '{plugin_name}' uses namespace '{schema_name}'")
 
-            # Determine if this plugin can create tables in the namespace
-            can_create_tables = False
-
             if declared_access == "read_write":
-                # Only read_write plugins can create namespaces
-                generated_keys = create_namespace_schema(namespace=schema_name)
-
-                if generated_keys:
-                    # This plugin just created the namespace - it's inherently trusted
-                    store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
-                    log.info(
-                        f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
-                        f"View them in the UI to share with other plugins."
-                    )
-                    can_create_tables = True
-                else:
-                    # Namespace already exists - must verify the key grants read_write access
-                    secret_value = attributes["secrets"].get("read_write_access_key")
-                    if not secret_value:
-                        raise PluginInstallationError(
-                            f"Plugin '{plugin_name}' declares read_write access to namespace "
-                            f"'{schema_name}' but 'read_write_access_key' secret is not configured."
-                        )
-                    granted_access = verify_namespace_access(schema_name, secret_value)
-                    if granted_access == "read_write":
-                        can_create_tables = True
-                    else:
-                        raise PluginInstallationError(
-                            f"Plugin '{plugin_name}' has invalid or insufficient access key "
-                            f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
-                            f"contains a valid key from the namespace owner."
-                        )
+                can_create_tables = setup_read_write_namespace(plugin_name, schema_name, secrets)
             else:
-                # Read-only access - namespace must already exist
-                if not namespace_exists(schema_name):
-                    raise PluginInstallationError(
-                        f"Plugin '{plugin_name}' declares read access to namespace "
-                        f"'{schema_name}', but the namespace does not exist. "
-                        f"A plugin with 'read_write' access must create the namespace first."
-                    )
-                # Verify the read access key
-                secret_value = attributes["secrets"].get("read_access_key")
-                if not secret_value:
-                    raise PluginInstallationError(
-                        f"Plugin '{plugin_name}' declares read access to namespace "
-                        f"'{schema_name}' but 'read_access_key' secret is not configured."
-                    )
-                granted_access = verify_namespace_access(schema_name, secret_value)
-                if not granted_access:
-                    raise PluginInstallationError(
-                        f"Plugin '{plugin_name}' has invalid access key for namespace "
-                        f"'{schema_name}'. Ensure 'read_access_key' contains a valid key "
-                        f"from the namespace owner."
-                    )
+                verify_read_namespace_access(plugin_name, schema_name, secrets)
+                can_create_tables = False
 
-            # Populate content types and create partitions for custom_attribute table.
-            # This runs every time to pick up any changes to available models.
             initialize_namespace_partitions(schema_name)
 
-            # Generate and apply migrations for plugin models in the namespace
             if can_create_tables:
                 discovered_models = generate_plugin_migrations(
                     plugin_name, plugin_installation_path, schema_name
                 )
                 associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
-            elif declared_access == "read_write":
-                log.info(
-                    f"Plugin '{plugin_name}' cannot create tables in namespace '{schema_name}' - "
-                    f"access key verification failed"
-                )
             else:
                 log.info(
-                    f"Plugin '{plugin_name}' has read-only access to namespace '{schema_name}' - "
-                    f"skipping custom model table creation"
+                    f"Plugin '{plugin_name}' has read-only access to namespace "
+                    f"'{schema_name}' - skipping custom model table creation"
                 )
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
