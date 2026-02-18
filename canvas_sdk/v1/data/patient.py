@@ -286,7 +286,7 @@ class PatientMetadata(IdentifiableModel):
         "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
     key = models.CharField(max_length=32)
-    value = models.CharField(max_length=256)
+    value = models.TextField()
 
 
 class PatientFacilityAddress(PatientAddress):
