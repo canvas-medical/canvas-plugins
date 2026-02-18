@@ -5,6 +5,7 @@ Supports both plugin-specific schemas and shared data namespaces.
 """
 
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 
 # Thread-local storage for plugin context
@@ -47,12 +48,41 @@ def is_write_allowed() -> bool:
     return get_access_level() == "read_write"
 
 
+def _is_postgres() -> bool:
+    """Check if we're running on PostgreSQL (vs SQLite for tests)."""
+    from django.conf import settings
+
+    return "postgresql" in settings.DATABASES["default"]["ENGINE"]
+
+
+def _set_search_path(schema: str) -> None:
+    """Set PostgreSQL search_path. No-op on SQLite."""
+    if not _is_postgres():
+        return
+
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SET search_path = %s, public", [schema])
+
+
+def _reset_search_path() -> None:
+    """Reset PostgreSQL search_path to default. No-op on SQLite."""
+    if not _is_postgres():
+        return
+
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SET search_path = public")
+
+
 @contextmanager
 def plugin_database_context(
     plugin_name: str,
     namespace: str | None = None,
     access_level: str = "read_write",
-):
+) -> Generator[None, None, None]:
     """
     Thread-safe context manager for plugin operations.
 
@@ -78,11 +108,8 @@ def plugin_database_context(
     _plugin_context.schema = schema
     _plugin_context.access_level = access_level
 
-    # Set search_path on the current connection for this context
-    from django.db import connection
-
-    with connection.cursor() as cursor:
-        cursor.execute("SET search_path = %s, public", [schema])
+    # Set search_path on the current connection for this context (PostgreSQL only)
+    _set_search_path(schema)
 
     try:
         yield
@@ -92,16 +119,14 @@ def plugin_database_context(
             _plugin_context.plugin_name = old_plugin
             _plugin_context.schema = old_schema
             _plugin_context.access_level = old_access_level
-            with connection.cursor() as cursor:
-                cursor.execute("SET search_path = %s, public", [old_schema or old_plugin])
+            _set_search_path(old_schema or old_plugin)
         else:
             # Clear context entirely
             for attr in ("plugin_name", "schema", "access_level"):
                 if hasattr(_plugin_context, attr):
                     delattr(_plugin_context, attr)
             # Reset to default search_path
-            with connection.cursor() as cursor:
-                cursor.execute("SET search_path = public")
+            _reset_search_path()
 
 
 __exports__ = (
