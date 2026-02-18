@@ -6,9 +6,6 @@ import sys
 import tarfile
 import tempfile
 import uuid
-from django.apps import apps
-from django.apps.config import AppConfig
-from django.conf import settings
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -19,6 +16,9 @@ from urllib import parse
 import psycopg
 import requests
 import sentry_sdk
+from django.apps import apps
+from django.apps.config import AppConfig
+from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db.models import DateField, Index
 from psycopg import Connection
@@ -272,6 +272,24 @@ def is_valid_namespace_name(namespace: str) -> bool:
         return False
 
     return True
+
+
+def namespace_exists(namespace: str) -> bool:
+    """Check if a namespace schema exists in the database.
+
+    Args:
+        namespace: The namespace schema name to check.
+
+    Returns:
+        True if the namespace exists, False otherwise.
+    """
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            "SELECT count(*) AS count FROM pg_catalog.pg_namespace WHERE nspname = %s",
+            (namespace,),
+        )
+        row = cursor.fetchone()
+        return row["count"] > 0
 
 
 def create_namespace_schema(namespace: str) -> dict[str, str] | None:
@@ -797,39 +815,61 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             declared_access = custom_data.get("access", "read")
 
             log.info(f"Plugin '{plugin_name}' uses namespace '{schema_name}'")
-            generated_keys = create_namespace_schema(namespace=schema_name)
 
             # Determine if this plugin can create tables in the namespace
             can_create_tables = False
 
-            if generated_keys:
-                # This plugin just created the namespace - it's inherently trusted
-                # Store the generated keys as plugin secrets
-                store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
-                log.info(
-                    f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
-                    f"View them in the UI to share with other plugins."
-                )
-                # Creator can create tables if they declared read_write access
-                can_create_tables = declared_access == "read_write"
-            else:
-                # Namespace already exists - must verify the key grants read_write access
-                if declared_access == "read_write":
+            if declared_access == "read_write":
+                # Only read_write plugins can create namespaces
+                generated_keys = create_namespace_schema(namespace=schema_name)
+
+                if generated_keys:
+                    # This plugin just created the namespace - it's inherently trusted
+                    store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
+                    log.info(
+                        f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
+                        f"View them in the UI to share with other plugins."
+                    )
+                    can_create_tables = True
+                else:
+                    # Namespace already exists - must verify the key grants read_write access
                     secret_value = attributes["secrets"].get("read_write_access_key")
-                    if secret_value:
-                        granted_access = verify_namespace_access(schema_name, secret_value)
-                        if granted_access == "read_write":
-                            can_create_tables = True
-                        else:
-                            log.warning(
-                                f"Plugin '{plugin_name}' has invalid or insufficient access key "
-                                f"for namespace '{schema_name}' - cannot create tables"
-                            )
-                    else:
-                        log.warning(
+                    if not secret_value:
+                        raise PluginInstallationError(
                             f"Plugin '{plugin_name}' declares read_write access to namespace "
-                            f"'{schema_name}' but 'read_write_access_key' secret is not configured"
+                            f"'{schema_name}' but 'read_write_access_key' secret is not configured."
                         )
+                    granted_access = verify_namespace_access(schema_name, secret_value)
+                    if granted_access == "read_write":
+                        can_create_tables = True
+                    else:
+                        raise PluginInstallationError(
+                            f"Plugin '{plugin_name}' has invalid or insufficient access key "
+                            f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
+                            f"contains a valid key from the namespace owner."
+                        )
+            else:
+                # Read-only access - namespace must already exist
+                if not namespace_exists(schema_name):
+                    raise PluginInstallationError(
+                        f"Plugin '{plugin_name}' declares read access to namespace "
+                        f"'{schema_name}', but the namespace does not exist. "
+                        f"A plugin with 'read_write' access must create the namespace first."
+                    )
+                # Verify the read access key
+                secret_value = attributes["secrets"].get("read_access_key")
+                if not secret_value:
+                    raise PluginInstallationError(
+                        f"Plugin '{plugin_name}' declares read access to namespace "
+                        f"'{schema_name}' but 'read_access_key' secret is not configured."
+                    )
+                granted_access = verify_namespace_access(schema_name, secret_value)
+                if not granted_access:
+                    raise PluginInstallationError(
+                        f"Plugin '{plugin_name}' has invalid access key for namespace "
+                        f"'{schema_name}'. Ensure 'read_access_key' contains a valid key "
+                        f"from the namespace owner."
+                    )
 
             # Populate content types and create partitions for custom_attribute table.
             # This runs every time to pick up any changes to available models.

@@ -254,6 +254,202 @@ class TestReadOnlyAccessSkipsModelCreation:
         assert should_generate is False
 
 
+class TestNamespaceExists:
+    """Tests for namespace_exists function."""
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_true_when_schema_exists(self, mock_open_conn):
+        """Should return True if namespace schema exists."""
+        from plugin_runner.installation import namespace_exists
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 1}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        result = namespace_exists("org__namespace")
+
+        assert result is True
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_false_when_schema_not_exists(self, mock_open_conn):
+        """Should return False if namespace schema doesn't exist."""
+        from plugin_runner.installation import namespace_exists
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        result = namespace_exists("org__nonexistent")
+
+        assert result is False
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_queries_pg_namespace_catalog(self, mock_open_conn):
+        """Should query pg_catalog.pg_namespace for schema existence."""
+        from plugin_runner.installation import namespace_exists
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        namespace_exists("acme__data")
+
+        # Verify the correct query was made
+        call_args = mock_cursor.execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "pg_catalog.pg_namespace" in sql
+        assert "acme__data" in params
+
+
+class TestNamespaceAccessValidation:
+    """Tests for namespace access validation during installation.
+
+    These tests verify the validation logic by testing the actual functions
+    that would be called during plugin installation.
+    """
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_namespace_exists_returns_false_for_missing_schema(self, mock_open_conn):
+        """namespace_exists should return False when schema doesn't exist."""
+        from plugin_runner.installation import namespace_exists
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        # This is what would trigger a PluginInstallationError for read access
+        result = namespace_exists("org__nonexistent")
+        assert result is False
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_verify_namespace_access_returns_none_for_invalid_key(self, mock_open_conn):
+        """verify_namespace_access should return None for invalid keys."""
+        from plugin_runner.installation import verify_namespace_access
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None  # No matching key found
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        # This is what would trigger a PluginInstallationError
+        result = verify_namespace_access("org__data", "invalid-key")
+        assert result is None
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_verify_namespace_access_returns_access_level_for_valid_key(self, mock_open_conn):
+        """verify_namespace_access should return access level for valid keys."""
+        from plugin_runner.installation import verify_namespace_access
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"access_level": "read_write"}
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        result = verify_namespace_access("org__data", "valid-key")
+        assert result == "read_write"
+
+    @patch("plugin_runner.installation.uuid")
+    @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_create_namespace_schema_returns_keys_for_new_namespace(
+        self, mock_open_conn, mock_file, mock_uuid
+    ):
+        """create_namespace_schema should return generated keys for new namespaces."""
+        from plugin_runner.installation import create_namespace_schema
+
+        mock_uuid.uuid4.side_effect = [
+            MagicMock(__str__=lambda self: "read-key"),
+            MagicMock(__str__=lambda self: "write-key"),
+        ]
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}  # Namespace doesn't exist
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        # read_write plugins creating new namespaces get keys returned
+        result = create_namespace_schema("org__new_namespace")
+        assert result is not None
+        assert "read_access_key" in result
+        assert "read_write_access_key" in result
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_create_namespace_schema_returns_none_for_existing_namespace(self, mock_open_conn):
+        """create_namespace_schema should return None for existing namespaces."""
+        from plugin_runner.installation import create_namespace_schema
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 1}  # Namespace exists
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        # Existing namespace returns None - plugin must verify key
+        result = create_namespace_schema("org__existing")
+        assert result is None
+
+
 class TestAddNamespaceAuthKey:
     """Tests for add_namespace_auth_key function."""
 
