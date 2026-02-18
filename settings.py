@@ -63,8 +63,8 @@ SECRET_KEY = os.getenv(
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CANVAS_SDK_DB_NAME = os.getenv("CANVAS_SDK_DB_NAME", "home-app")
-CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "app")
-CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
+CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "canvas_sdk_read_only")
+CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "canvas_sdk_read_only")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
 CANVAS_SDK_DB_URL = os.getenv("DATABASE_URL")

@@ -6,6 +6,9 @@ import sys
 import tarfile
 import tempfile
 import uuid
+from django.apps import apps
+from django.apps.config import AppConfig
+from django.conf import settings
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -163,11 +166,6 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
             download_file.write(response.content)
 
         yield download_path
-
-
-from django.apps import apps
-from django.apps.config import AppConfig
-from django.conf import settings
 
 
 def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
@@ -428,10 +426,15 @@ def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str
     This makes the auto-generated namespace keys visible in the UI so developers
     can retrieve them and use them when setting up additional plugins.
 
+    The keys are stored in two places:
+    1. The database (plugin_io_pluginsecret table) - for UI visibility
+    2. The secrets.json file on disk - so the plugin can load immediately
+
     Args:
         plugin_name: The plugin that created the namespace
         keys: Dict with 'read_access_key' and 'read_write_access_key'
     """
+    # Store in database for UI visibility
     with open_database_connection() as conn, conn.cursor() as cursor:
         # Get the plugin's database ID
         cursor.execute(
@@ -459,6 +462,20 @@ def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str
             )
 
         conn.commit()
+
+    # Also update the secrets.json file on disk so the plugin can load immediately
+    secrets_path = Path(PLUGIN_DIRECTORY) / plugin_name / SECRETS_FILE_NAME
+    existing_secrets = {}
+    if secrets_path.exists():
+        with open(secrets_path) as f:
+            existing_secrets = json.load(f)
+
+    # Merge in the new keys
+    existing_secrets.update(keys)
+
+    with open(secrets_path, "w") as f:
+        json.dump(existing_secrets, f)
+
     log.info(f"Stored {len(keys)} namespace access keys for plugin '{plugin_name}'")
 
 
@@ -777,30 +794,58 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
         # Initialize namespace schema and generate model migrations if custom_data is declared
         if custom_data:
             schema_name = custom_data["namespace"]
+            declared_access = custom_data.get("access", "read")
 
             log.info(f"Plugin '{plugin_name}' uses namespace '{schema_name}'")
             generated_keys = create_namespace_schema(namespace=schema_name)
 
-            # If namespace was newly created, store the generated keys in plugin secrets
+            # Determine if this plugin can create tables in the namespace
+            can_create_tables = False
+
             if generated_keys:
+                # This plugin just created the namespace - it's inherently trusted
+                # Store the generated keys as plugin secrets
                 store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
                 log.info(
                     f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
                     f"View them in the UI to share with other plugins."
                 )
+                # Creator can create tables if they declared read_write access
+                can_create_tables = declared_access == "read_write"
+            else:
+                # Namespace already exists - must verify the key grants read_write access
+                if declared_access == "read_write":
+                    secret_value = attributes["secrets"].get("read_write_access_key")
+                    if secret_value:
+                        granted_access = verify_namespace_access(schema_name, secret_value)
+                        if granted_access == "read_write":
+                            can_create_tables = True
+                        else:
+                            log.warning(
+                                f"Plugin '{plugin_name}' has invalid or insufficient access key "
+                                f"for namespace '{schema_name}' - cannot create tables"
+                            )
+                    else:
+                        log.warning(
+                            f"Plugin '{plugin_name}' declares read_write access to namespace "
+                            f"'{schema_name}' but 'read_write_access_key' secret is not configured"
+                        )
 
             # Populate content types and create partitions for custom_attribute table.
             # This runs every time to pick up any changes to available models.
             initialize_namespace_partitions(schema_name)
 
             # Generate and apply migrations for plugin models in the namespace
-            # Only plugins with read_write access can create custom tables and indexes
-            declared_access = custom_data.get("access", "read")
-            if declared_access == "read_write":
+            if can_create_tables:
                 discovered_models = generate_plugin_migrations(
                     plugin_name, plugin_installation_path, schema_name
                 )
                 associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
+            elif declared_access == "read_write":
+                log.info(
+                    f"Plugin '{plugin_name}' cannot create tables in namespace '{schema_name}' - "
+                    f"access key verification failed"
+                )
             else:
                 log.info(
                     f"Plugin '{plugin_name}' has read-only access to namespace '{schema_name}' - "

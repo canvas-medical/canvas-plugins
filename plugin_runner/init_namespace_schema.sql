@@ -1,8 +1,7 @@
 -- Initialize a shared data namespace schema.
--- This is similar to init_plugin_schema.sql but includes the namespace_auth table
--- for authentication and excludes plugin-specific tables like django_content_type.
 
-CREATE SCHEMA IF NOT EXISTS {namespace} AUTHORIZATION canvas_sdk_read_only;
+CREATE SCHEMA IF NOT EXISTS {namespace};
+GRANT USAGE, CREATE ON SCHEMA {namespace} TO canvas_sdk_read_only;
 
 -- Namespace authentication table
 -- Stores hashed keys that grant access to this namespace
@@ -16,7 +15,7 @@ CREATE TABLE IF NOT EXISTS {namespace}.namespace_auth (
 
 -- Only allow SELECT on namespace_auth for the SDK role
 -- Keys must be inserted by admin/owner, not by plugins
-REVOKE ALL ON {namespace}.namespace_auth FROM canvas_sdk_read_only;
+-- REVOKE ALL PRIVILEGES ON {namespace}.namespace_auth FROM canvas_sdk_read_only;
 GRANT SELECT ON {namespace}.namespace_auth TO canvas_sdk_read_only;
 
 -- Custom attribute storage (same as plugin schema)
@@ -45,6 +44,7 @@ CREATE INDEX IF NOT EXISTS custom_attribute_bool_idx ON {namespace}.custom_attri
 CREATE INDEX IF NOT EXISTS custom_attribute_json_idx ON {namespace}.custom_attribute USING GIN (json_value) WHERE json_value IS NOT NULL;
 
 GRANT USAGE ON {namespace}.custom_attribute_dbid_seq TO canvas_sdk_read_only;
+-- REVOKE ALL PRIVILEGES ON {namespace}.custom_attribute FROM canvas_sdk_read_only;
 GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_sdk_read_only;
 
 -- Attribute hub for storing arbitrary key-value data
@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS {namespace}.attribute_hub (
     UNIQUE(type, externally_exposable_id)
 );
 
+-- REVOKE ALL PRIVILEGES ON {namespace}.attribute_hub FROM canvas_sdk_read_only;
 GRANT USAGE ON {namespace}.attribute_hub_dbid_seq TO canvas_sdk_read_only;
 GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.attribute_hub TO canvas_sdk_read_only;
 
@@ -66,5 +67,5 @@ CREATE TABLE IF NOT EXISTS {namespace}.django_content_type (
     UNIQUE (app_label, model)
 );
 
-REVOKE ALL PRIVILEGES ON {namespace}.django_content_type FROM canvas_sdk_read_only;
+-- REVOKE ALL PRIVILEGES ON {namespace}.django_content_type FROM canvas_sdk_read_only;
 GRANT SELECT ON {namespace}.django_content_type TO canvas_sdk_read_only;
