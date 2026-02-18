@@ -86,18 +86,14 @@ def plugin_database_context(
     """
     Thread-safe context manager for plugin operations.
 
-    All Django ORM operations within this context will use either:
-    - The plugin's own schema (if namespace is None)
-    - The specified namespace schema (if namespace is provided)
+    All Django ORM operations within this context will use the specified namespace
+    schema in addition to the public schema
 
     Args:
-        plugin_name: The plugin's name (for tracking purposes)
-        namespace: Optional namespace schema to use instead of plugin schema
+        plugin_name: The plugin's name
+        namespace: Optional namespace schema to use for custom data
         access_level: 'read' or 'read_write' (only applies to namespaces)
     """
-    # Determine which schema to use
-    schema = namespace if namespace else plugin_name
-
     # Save old context
     old_plugin = getattr(_plugin_context, "plugin_name", None)
     old_schema = getattr(_plugin_context, "schema", None)
@@ -105,11 +101,12 @@ def plugin_database_context(
 
     # Set new context
     _plugin_context.plugin_name = plugin_name
-    _plugin_context.schema = schema
+    _plugin_context.schema = namespace
     _plugin_context.access_level = access_level
 
-    # Set search_path on the current connection for this context (PostgreSQL only)
-    _set_search_path(schema)
+    # Only change search_path if a namespace is declared
+    if namespace:
+        _set_search_path(namespace)
 
     try:
         yield
@@ -119,14 +116,17 @@ def plugin_database_context(
             _plugin_context.plugin_name = old_plugin
             _plugin_context.schema = old_schema
             _plugin_context.access_level = old_access_level
-            _set_search_path(old_schema or old_plugin)
+            if old_schema:
+                _set_search_path(old_schema)
+            elif namespace:
+                _reset_search_path()
         else:
             # Clear context entirely
             for attr in ("plugin_name", "schema", "access_level"):
                 if hasattr(_plugin_context, attr):
                     delattr(_plugin_context, attr)
-            # Reset to default search_path
-            _reset_search_path()
+            if namespace:
+                _reset_search_path()
 
 
 __exports__ = (
