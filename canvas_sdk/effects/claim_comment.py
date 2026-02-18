@@ -11,10 +11,10 @@ version = importlib.metadata.version("canvas")
     deprecated_in="0.95.0",
     removed_in="1.0.0",
     current_version=version,
-    details="Use canvas_sdk.effects.claim.Claim::add_comment instead",
+    details="Use canvas_sdk.effects.claim.ClaimEffect::add_comment instead",
 )
 class AddClaimComment(_AddClaimComment):
-    """Deprecated. Instead, use canvas_sdk.effects.claim.Claim::add_comment."""
+    """Deprecated. Instead, use canvas_sdk.effects.claim.ClaimEffect::add_comment."""
 
     pass
 
