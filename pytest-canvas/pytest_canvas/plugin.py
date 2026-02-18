@@ -65,4 +65,4 @@ def create_plugin_custom_model_tables(
     with django_db_blocker.unblock():
         # Generate and execute CREATE TABLE statements for custom models
         # This will detect SQLite and generate SQLite-compatible SQL
-        generate_plugin_migrations(plugin_name, plugin_path)
+        generate_plugin_migrations(plugin_name, plugin_path, schema_name=None)
