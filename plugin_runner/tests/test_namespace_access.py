@@ -2,7 +2,7 @@
 
 Tests verify that:
 1. NamespaceAccessError is raised appropriately
-2. verify_namespace_access function works correctly
+2. check_namespace_auth_key function works correctly
 3. Error handling in load_plugins catches NamespaceAccessError
 """
 
@@ -68,12 +68,12 @@ class TestNamespaceAccessError:
 
 
 class TestVerifyNamespaceAccessFunction:
-    """Tests for the verify_namespace_access function in installation.py."""
+    """Tests for the check_namespace_auth_key function in installation.py."""
 
     @patch("plugin_runner.installation.open_database_connection")
     def test_returns_access_level_when_key_found(self, mock_open_conn: MagicMock) -> None:
         """Should return access level when key hash matches."""
-        from plugin_runner.installation import verify_namespace_access
+        from plugin_runner.installation import check_namespace_auth_key
 
         # Mock the database cursor
         mock_cursor = MagicMock()
@@ -88,14 +88,14 @@ class TestVerifyNamespaceAccessFunction:
 
         mock_open_conn.return_value = mock_conn
 
-        result = verify_namespace_access("my__namespace", "secret_key")
+        result = check_namespace_auth_key("my__namespace", "secret_key")
 
         assert result == "read_write"
 
     @patch("plugin_runner.installation.open_database_connection")
     def test_returns_read_access_level(self, mock_open_conn: MagicMock) -> None:
         """Should return 'read' when key has read-only access."""
-        from plugin_runner.installation import verify_namespace_access
+        from plugin_runner.installation import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"access_level": "read"}
@@ -109,14 +109,14 @@ class TestVerifyNamespaceAccessFunction:
 
         mock_open_conn.return_value = mock_conn
 
-        result = verify_namespace_access("my__namespace", "read_only_key")
+        result = check_namespace_auth_key("my__namespace", "read_only_key")
 
         assert result == "read"
 
     @patch("plugin_runner.installation.open_database_connection")
     def test_returns_none_when_key_not_found(self, mock_open_conn: MagicMock) -> None:
         """Should return None when key hash not found in auth table."""
-        from plugin_runner.installation import verify_namespace_access
+        from plugin_runner.installation import check_namespace_auth_key
 
         # Mock the database cursor to return no row
         mock_cursor = MagicMock()
@@ -131,14 +131,14 @@ class TestVerifyNamespaceAccessFunction:
 
         mock_open_conn.return_value = mock_conn
 
-        result = verify_namespace_access("my__namespace", "invalid_key")
+        result = check_namespace_auth_key("my__namespace", "invalid_key")
 
         assert result is None
 
     @patch("plugin_runner.installation.open_database_connection")
     def test_queries_correct_namespace_schema(self, mock_open_conn: MagicMock) -> None:
         """Should query the namespace's auth table with correct schema."""
-        from plugin_runner.installation import verify_namespace_access
+        from plugin_runner.installation import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"access_level": "read"}
@@ -152,7 +152,7 @@ class TestVerifyNamespaceAccessFunction:
 
         mock_open_conn.return_value = mock_conn
 
-        verify_namespace_access("org__shared_data", "some_key")
+        check_namespace_auth_key("org__shared_data", "some_key")
 
         # Check that the SQL includes the correct namespace schema
         call_args = mock_cursor.execute.call_args

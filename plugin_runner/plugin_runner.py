@@ -582,6 +582,86 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     return client, pubsub
 
 
+def resolve_namespace_secret(
+    plugin_name: str,
+    namespace_name: str,
+    declared_access: str,
+    secrets_json: dict[str, Any],
+) -> str:
+    """Determine and retrieve the access key secret for namespace verification.
+
+    Maps declared_access to the appropriate secret name and retrieves it from
+    secrets_json. Raises NamespaceAccessError if the secret is not configured.
+
+    Returns the secret value.
+    """
+    secret_name = "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+
+    secret_value = secrets_json.get(secret_name)
+    if not secret_value:
+        raise NamespaceAccessError(
+            f"Plugin '{plugin_name}' declares namespace '{namespace_name}' with '{declared_access}' access "
+            f"but secret '{secret_name}' is not configured. "
+            f"Ensure the secret is listed in the manifest's 'secrets' array and has a value set."
+        )
+
+    return secret_value
+
+
+def verify_plugin_namespace_access(
+    plugin_name: str,
+    custom_data: CustomData,
+    secrets_json: dict[str, Any],
+) -> dict[str, str]:
+    """Verify a plugin's namespace access and return the namespace config.
+
+    Parses namespace declaration from custom_data, resolves the access key secret,
+    verifies it against the namespace's auth table, and checks access level sufficiency.
+
+    Returns {"namespace": ..., "access_level": ...} on success.
+    Raises NamespaceAccessError on any verification failure.
+    """
+    from plugin_runner.installation import check_namespace_auth_key
+
+    namespace_name = custom_data["namespace"]
+    declared_access = custom_data["access"]
+
+    try:
+        secret_value = resolve_namespace_secret(
+            plugin_name, namespace_name, declared_access, secrets_json
+        )
+
+        # Verify access against namespace's auth table
+        granted_access = check_namespace_auth_key(namespace_name, secret_value)
+        if granted_access is None:
+            raise NamespaceAccessError(
+                f"Plugin '{plugin_name}' denied access to namespace '{namespace_name}': "
+                f"the secret value is not a valid access key for this namespace. "
+                f"Verify the key matches what was generated when the namespace was created."
+            )
+
+        # Check that declared access doesn't exceed granted access
+        if declared_access == "read_write" and granted_access == "read":
+            raise NamespaceAccessError(
+                f"Plugin '{plugin_name}' requests 'read_write' access to namespace '{namespace_name}' "
+                f"but the provided key only grants 'read' access. "
+                f"Use the 'read_write_access_key' secret for write access."
+            )
+    except NamespaceAccessError:
+        raise
+    except Exception as e:
+        log.exception(f"Failed to verify namespace access for plugin '{plugin_name}'")
+        sentry_sdk.capture_exception(e)
+        raise NamespaceAccessError(
+            f"Unexpected error verifying namespace access for plugin '{plugin_name}': {e}"
+        ) from e
+
+    return {
+        "namespace": namespace_name,
+        "access_level": declared_access,
+    }
+
+
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
@@ -622,59 +702,11 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     namespace_config: dict | None = None
     custom_data = manifest_json.get("custom_data")
     if custom_data:
-        try:
-            from plugin_runner.installation import verify_namespace_access
-
-            namespace_name = custom_data["namespace"]
-            declared_access = custom_data["access"]
-
-            # Standardized secret names based on access level
-            secret_name = (
-                "read_write_access_key" if declared_access == "read_write" else "read_access_key"
-            )
-
-            secret_value = secrets_json.get(secret_name)
-            if not secret_value:
-                raise NamespaceAccessError(
-                    f"Plugin '{name}' declares namespace '{namespace_name}' with '{declared_access}' access "
-                    f"but secret '{secret_name}' is not configured. "
-                    f"Ensure the secret is listed in the manifest's 'secrets' array and has a value set."
-                )
-
-            # Verify access against namespace's auth table
-            granted_access = verify_namespace_access(namespace_name, secret_value)
-            if granted_access is None:
-                raise NamespaceAccessError(
-                    f"Plugin '{name}' denied access to namespace '{namespace_name}': "
-                    f"the '{secret_name}' value is not a valid access key for this namespace. "
-                    f"Verify the key matches what was generated when the namespace was created."
-                )
-
-            # Check that declared access doesn't exceed granted access
-            if declared_access == "read_write" and granted_access == "read":
-                raise NamespaceAccessError(
-                    f"Plugin '{name}' requests 'read_write' access to namespace '{namespace_name}' "
-                    f"but the provided key only grants 'read' access. "
-                    f"Use the 'read_write_access_key' secret for write access."
-                )
-
-            namespace_config = {
-                "namespace": namespace_name,
-                "access_level": declared_access,
-            }
-            log.info(
-                f"Plugin '{name}' authorized for namespace '{namespace_name}' "
-                f"with '{declared_access}' access"
-            )
-        except NamespaceAccessError:
-            # Re-raise to be handled by caller - this will be logged and captured by Sentry
-            raise
-        except Exception as e:
-            log.exception(f"Failed to verify namespace access for plugin '{name}'")
-            sentry_sdk.capture_exception(e)
-            raise NamespaceAccessError(
-                f"Unexpected error verifying namespace access for plugin '{name}': {e}"
-            ) from e
+        namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
+        log.info(
+            f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
+            f"with '{namespace_config['access_level']}' access"
+        )
 
     # TODO add existing schema validation from Michela here
     try:
