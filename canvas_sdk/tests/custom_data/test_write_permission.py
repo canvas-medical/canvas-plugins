@@ -178,7 +178,7 @@ class TestModelDeleteWritePermission:
         with patch.object(
             Model.__bases__[0], "delete", return_value=(1, {"test.MockModel": 1})
         ) as mock_delete:
-            result = model.delete()
+            model.delete()
             mock_delete.assert_called_once()
 
 

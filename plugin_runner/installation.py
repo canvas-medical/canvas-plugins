@@ -269,10 +269,7 @@ def is_valid_namespace_name(namespace: str) -> bool:
 
     # Require org__name format (validated by regex in manifest schema,
     # but double-check here for safety)
-    if "__" not in namespace:
-        return False
-
-    return True
+    return "__" in namespace
 
 
 def namespace_exists(namespace: str) -> bool:
@@ -655,10 +652,7 @@ def generate_index_sql(
     index_name = f"{schema_name}_{index.name}"
 
     # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
-    if is_sqlite:
-        table_full_name = table_name
-    else:
-        table_full_name = f"{schema_name}.{table_name}"
+    table_full_name = table_name if is_sqlite else f"{schema_name}.{table_name}"
 
     field_parts = []
     for field in index.fields:

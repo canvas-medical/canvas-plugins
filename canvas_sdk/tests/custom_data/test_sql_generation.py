@@ -73,7 +73,7 @@ class ChildWithForeignKey(CustomModel):
     class Meta:
         app_label = "test_plugin"
 
-    parent = models.ForeignKey(ParentModel, on_delete=models.CASCADE)
+    parent = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING)
     description = models.TextField()
 
 
@@ -83,7 +83,7 @@ class ChildWithOneToOne(CustomModel):
     class Meta:
         app_label = "test_plugin"
 
-    parent = models.OneToOneField(ParentModel, on_delete=models.CASCADE)
+    parent = models.OneToOneField(ParentModel, on_delete=models.DO_NOTHING)
     extra_data = models.TextField()
 
 
@@ -94,10 +94,10 @@ class MultipleForeignKeysModel(CustomModel):
         app_label = "test_plugin"
 
     parent_one = models.ForeignKey(
-        ParentModel, on_delete=models.CASCADE, related_name="children_one"
+        ParentModel, on_delete=models.DO_NOTHING, related_name="children_one"
     )
     parent_two = models.ForeignKey(
-        ParentModel, on_delete=models.CASCADE, related_name="children_two"
+        ParentModel, on_delete=models.DO_NOTHING, related_name="children_two"
     )
     value = models.IntegerField()
 
@@ -188,56 +188,69 @@ class MixedIndexesModel(CustomModel):
 class TestGenerateFieldSqlPostgres:
     """Tests for PostgreSQL field SQL generation."""
 
-    def test_bigautofield_primary_key(self):
-        field = models.BigAutoField(primary_key=True)
+    def test_bigautofield_primary_key(self) -> None:
+        """BigAutoField with primary_key should generate SERIAL PRIMARY KEY."""
+        field: models.Field = models.BigAutoField(primary_key=True)
         assert generate_field_sql(field, is_sqlite=False) == "SERIAL PRIMARY KEY"
 
-    def test_charfield(self):
-        field = models.CharField(max_length=100)
+    def test_charfield(self) -> None:
+        """CharField should generate TEXT for PostgreSQL."""
+        field: models.Field = models.CharField(max_length=100)
         assert generate_field_sql(field, is_sqlite=False) == "TEXT"
 
-    def test_textfield(self):
-        field = models.TextField()
+    def test_textfield(self) -> None:
+        """TextField should generate TEXT for PostgreSQL."""
+        field: models.Field = models.TextField()
         assert generate_field_sql(field, is_sqlite=False) == "TEXT"
 
-    def test_integerfield(self):
-        field = models.IntegerField()
+    def test_integerfield(self) -> None:
+        """IntegerField should generate INTEGER for PostgreSQL."""
+        field: models.Field = models.IntegerField()
         assert generate_field_sql(field, is_sqlite=False) == "INTEGER"
 
-    def test_datefield(self):
-        field = models.DateField()
+    def test_datefield(self) -> None:
+        """DateField should generate DATE for PostgreSQL."""
+        field: models.Field = models.DateField()
         assert generate_field_sql(field, is_sqlite=False) == "DATE"
 
-    def test_datetimefield(self):
-        field = models.DateTimeField()
+    def test_datetimefield(self) -> None:
+        """DateTimeField should generate TIMESTAMP WITH TIME ZONE for PostgreSQL."""
+        field: models.Field = models.DateTimeField()
         assert generate_field_sql(field, is_sqlite=False) == "TIMESTAMP WITH TIME ZONE"
 
-    def test_booleanfield(self):
-        field = models.BooleanField()
+    def test_booleanfield(self) -> None:
+        """BooleanField should generate BOOLEAN for PostgreSQL."""
+        field: models.Field = models.BooleanField()
         assert generate_field_sql(field, is_sqlite=False) == "BOOLEAN"
 
-    def test_foreignkey(self):
-        field = models.ForeignKey(ParentModel, on_delete=models.CASCADE)
+    def test_foreignkey(self) -> None:
+        """ForeignKey should generate INTEGER for PostgreSQL."""
+        field: models.Field = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING)
         assert generate_field_sql(field, is_sqlite=False) == "INTEGER"
 
-    def test_onetoonefield(self):
-        field = models.OneToOneField(ParentModel, on_delete=models.CASCADE)
+    def test_onetoonefield(self) -> None:
+        """OneToOneField should generate INTEGER for PostgreSQL."""
+        field: models.Field = models.OneToOneField(ParentModel, on_delete=models.DO_NOTHING)
         assert generate_field_sql(field, is_sqlite=False) == "INTEGER"
 
-    def test_decimalfield_with_precision(self):
-        field = models.DecimalField(max_digits=10, decimal_places=2)
+    def test_decimalfield_with_precision(self) -> None:
+        """DecimalField with explicit precision should generate NUMERIC(m,d)."""
+        field: models.Field = models.DecimalField(max_digits=10, decimal_places=2)
         assert generate_field_sql(field, is_sqlite=False) == "NUMERIC(10,2)"
 
-    def test_decimalfield_default_precision(self):
-        field = models.DecimalField()
+    def test_decimalfield_default_precision(self) -> None:
+        """DecimalField without precision should default to NUMERIC(20,10)."""
+        field: models.Field = models.DecimalField()
         assert generate_field_sql(field, is_sqlite=False) == "NUMERIC(20,10)"
 
-    def test_decimalfield_custom_large_precision(self):
-        field = models.DecimalField(max_digits=30, decimal_places=15)
+    def test_decimalfield_custom_large_precision(self) -> None:
+        """DecimalField with large precision should generate matching NUMERIC."""
+        field: models.Field = models.DecimalField(max_digits=30, decimal_places=15)
         assert generate_field_sql(field, is_sqlite=False) == "NUMERIC(30,15)"
 
-    def test_jsonfield(self):
-        field = models.JSONField()
+    def test_jsonfield(self) -> None:
+        """JSONField should generate JSONB for PostgreSQL."""
+        field: models.Field = models.JSONField()
         assert generate_field_sql(field, is_sqlite=False) == "JSONB"
 
 
@@ -249,48 +262,59 @@ class TestGenerateFieldSqlPostgres:
 class TestGenerateFieldSqlSqlite:
     """Tests for SQLite field SQL generation."""
 
-    def test_bigautofield_primary_key(self):
-        field = models.BigAutoField(primary_key=True)
+    def test_bigautofield_primary_key(self) -> None:
+        """BigAutoField with primary_key should generate INTEGER PRIMARY KEY AUTOINCREMENT."""
+        field: models.Field = models.BigAutoField(primary_key=True)
         assert generate_field_sql(field, is_sqlite=True) == "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-    def test_charfield(self):
-        field = models.CharField(max_length=100)
+    def test_charfield(self) -> None:
+        """CharField should generate TEXT for SQLite."""
+        field: models.Field = models.CharField(max_length=100)
         assert generate_field_sql(field, is_sqlite=True) == "TEXT"
 
-    def test_textfield(self):
-        field = models.TextField()
+    def test_textfield(self) -> None:
+        """TextField should generate TEXT for SQLite."""
+        field: models.Field = models.TextField()
         assert generate_field_sql(field, is_sqlite=True) == "TEXT"
 
-    def test_integerfield(self):
-        field = models.IntegerField()
+    def test_integerfield(self) -> None:
+        """IntegerField should generate INTEGER for SQLite."""
+        field: models.Field = models.IntegerField()
         assert generate_field_sql(field, is_sqlite=True) == "INTEGER"
 
-    def test_datefield(self):
-        field = models.DateField()
+    def test_datefield(self) -> None:
+        """DateField should generate TEXT for SQLite."""
+        field: models.Field = models.DateField()
         assert generate_field_sql(field, is_sqlite=True) == "TEXT"
 
-    def test_datetimefield(self):
-        field = models.DateTimeField()
+    def test_datetimefield(self) -> None:
+        """DateTimeField should generate TEXT for SQLite."""
+        field: models.Field = models.DateTimeField()
         assert generate_field_sql(field, is_sqlite=True) == "TEXT"
 
-    def test_booleanfield(self):
-        field = models.BooleanField()
+    def test_booleanfield(self) -> None:
+        """BooleanField should generate INTEGER for SQLite."""
+        field: models.Field = models.BooleanField()
         assert generate_field_sql(field, is_sqlite=True) == "INTEGER"
 
-    def test_foreignkey(self):
-        field = models.ForeignKey(ParentModel, on_delete=models.CASCADE)
+    def test_foreignkey(self) -> None:
+        """ForeignKey should generate INTEGER for SQLite."""
+        field: models.Field = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING)
         assert generate_field_sql(field, is_sqlite=True) == "INTEGER"
 
-    def test_onetoonefield(self):
-        field = models.OneToOneField(ParentModel, on_delete=models.CASCADE)
+    def test_onetoonefield(self) -> None:
+        """OneToOneField should generate INTEGER for SQLite."""
+        field: models.Field = models.OneToOneField(ParentModel, on_delete=models.DO_NOTHING)
         assert generate_field_sql(field, is_sqlite=True) == "INTEGER"
 
-    def test_decimalfield(self):
-        field = models.DecimalField(max_digits=10, decimal_places=2)
+    def test_decimalfield(self) -> None:
+        """DecimalField should generate REAL for SQLite."""
+        field: models.Field = models.DecimalField(max_digits=10, decimal_places=2)
         assert generate_field_sql(field, is_sqlite=True) == "REAL"
 
-    def test_jsonfield(self):
-        field = models.JSONField()
+    def test_jsonfield(self) -> None:
+        """JSONField should generate TEXT for SQLite."""
+        field: models.Field = models.JSONField()
         assert generate_field_sql(field, is_sqlite=True) == "TEXT"
 
 
@@ -302,14 +326,16 @@ class TestGenerateFieldSqlSqlite:
 class TestGenerateIndexSqlPostgres:
     """Tests for PostgreSQL index SQL generation."""
 
-    def test_single_column_index(self):
+    def test_single_column_index(self) -> None:
+        """Single column index should reference schema-qualified table."""
         index = models.Index(fields=["name"], name="idx_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql == "CREATE INDEX IF NOT EXISTS test_plugin_idx_name ON test_plugin.my_table (name);"
         )
 
-    def test_multi_column_index(self):
+    def test_multi_column_index(self) -> None:
+        """Multi-column index should list all columns."""
         index = models.Index(fields=["first_name", "last_name"], name="idx_full_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
@@ -317,7 +343,8 @@ class TestGenerateIndexSqlPostgres:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_full_name ON test_plugin.my_table (first_name, last_name);"
         )
 
-    def test_descending_single_column_index(self):
+    def test_descending_single_column_index(self) -> None:
+        """Descending index should append DESC to the column."""
         index = models.Index(fields=["-created_at"], name="idx_created_desc")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
@@ -325,7 +352,8 @@ class TestGenerateIndexSqlPostgres:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_created_desc ON test_plugin.my_table (created_at DESC);"
         )
 
-    def test_descending_mixed_index(self):
+    def test_descending_mixed_index(self) -> None:
+        """Mixed ascending/descending index should only append DESC where needed."""
         index = models.Index(fields=["category", "-priority"], name="idx_cat_pri")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
@@ -333,7 +361,8 @@ class TestGenerateIndexSqlPostgres:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_cat_pri ON test_plugin.my_table (category, priority DESC);"
         )
 
-    def test_gin_index(self):
+    def test_gin_index(self) -> None:
+        """GIN index should use USING GIN syntax."""
         index = GinIndex(fields=["metadata"], name="idx_metadata_gin")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
@@ -341,7 +370,8 @@ class TestGenerateIndexSqlPostgres:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_metadata_gin ON test_plugin.my_table USING GIN(metadata);"
         )
 
-    def test_gin_index_multiple_fields(self):
+    def test_gin_index_multiple_fields(self) -> None:
+        """GIN index with multiple fields should list all columns."""
         index = GinIndex(fields=["data", "tags"], name="idx_multi_gin")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
@@ -358,12 +388,14 @@ class TestGenerateIndexSqlPostgres:
 class TestGenerateIndexSqlSqlite:
     """Tests for SQLite index SQL generation."""
 
-    def test_single_column_index(self):
+    def test_single_column_index(self) -> None:
+        """Single column index should not use schema-qualified table name."""
         index = models.Index(fields=["name"], name="idx_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert sql == "CREATE INDEX IF NOT EXISTS test_plugin_idx_name ON my_table (name);"
 
-    def test_multi_column_index(self):
+    def test_multi_column_index(self) -> None:
+        """Multi-column index should list all columns without schema prefix."""
         index = models.Index(fields=["first_name", "last_name"], name="idx_full_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
@@ -371,7 +403,8 @@ class TestGenerateIndexSqlSqlite:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_full_name ON my_table (first_name, last_name);"
         )
 
-    def test_descending_index(self):
+    def test_descending_index(self) -> None:
+        """Descending index should append DESC to the column on SQLite."""
         index = models.Index(fields=["-created_at"], name="idx_created_desc")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
@@ -379,7 +412,7 @@ class TestGenerateIndexSqlSqlite:
             == "CREATE INDEX IF NOT EXISTS test_plugin_idx_created_desc ON my_table (created_at DESC);"
         )
 
-    def test_gin_index_falls_back_to_btree(self):
+    def test_gin_index_falls_back_to_btree(self) -> None:
         """SQLite doesn't support GIN indexes, so it should fall back to regular index."""
         index = GinIndex(fields=["metadata"], name="idx_metadata_gin")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
@@ -401,7 +434,7 @@ class TestGenerateCreateTableSqlSqlite:
     database configuration.
     """
 
-    def test_all_data_types_creates_single_table_statement(self):
+    def test_all_data_types_creates_single_table_statement(self) -> None:
         """SQLite should have all fields in CREATE TABLE, no ALTER statements."""
         sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
         statements = sql.split(SQL_STATEMENT_DELIMITER)
@@ -426,19 +459,22 @@ class TestGenerateCreateTableSqlSqlite:
         alter_stmts = [s for s in statements if "ALTER TABLE" in s]
         assert len(alter_stmts) == 0
 
-    def test_no_schema_prefix_in_table_name(self):
+    def test_no_schema_prefix_in_table_name(self) -> None:
+        """SQLite table names should not have a schema prefix."""
         sql = generate_create_table_sql("test_plugin", ParentModel)
 
         assert "CREATE TABLE IF NOT EXISTS parentmodel" in sql
         assert "test_plugin.parentmodel" not in sql
 
-    def test_no_schema_prefix_in_indexes(self):
+    def test_no_schema_prefix_in_indexes(self) -> None:
+        """SQLite index definitions should not use schema-qualified table names."""
         sql = generate_create_table_sql("test_plugin", SingleColumnIndexModel)
 
         assert "ON singlecolumnindexmodel" in sql
         assert "ON test_plugin.singlecolumnindexmodel" not in sql
 
-    def test_gin_index_falls_back_to_btree(self):
+    def test_gin_index_falls_back_to_btree(self) -> None:
+        """GIN indexes should fall back to regular indexes on SQLite."""
         sql = generate_create_table_sql("test_plugin", GinIndexModel)
 
         assert "USING GIN" not in sql
@@ -447,26 +483,30 @@ class TestGenerateCreateTableSqlSqlite:
             in sql
         )
 
-    def test_foreign_key_creates_index(self):
+    def test_foreign_key_creates_index(self) -> None:
+        """ForeignKey columns should have an auto-generated index."""
         sql = generate_create_table_sql("test_plugin", ChildWithForeignKey)
 
         assert "CREATE INDEX IF NOT EXISTS" in sql
         assert "parent_id" in sql
 
-    def test_one_to_one_creates_index(self):
+    def test_one_to_one_creates_index(self) -> None:
+        """OneToOneField columns should have an auto-generated index."""
         sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
 
         assert "CREATE INDEX IF NOT EXISTS" in sql
         assert "parent_id" in sql
 
-    def test_multiple_foreign_keys_create_multiple_indexes(self):
+    def test_multiple_foreign_keys_create_multiple_indexes(self) -> None:
+        """Each ForeignKey column should have its own auto-generated index."""
         sql = generate_create_table_sql("test_plugin", MultipleForeignKeysModel)
 
         assert sql.count("CREATE INDEX IF NOT EXISTS") >= 2
         assert "parent_one_id" in sql
         assert "parent_two_id" in sql
 
-    def test_single_column_index(self):
+    def test_single_column_index(self) -> None:
+        """Single column index should appear in generated SQL."""
         sql = generate_create_table_sql("test_plugin", SingleColumnIndexModel)
 
         assert (
@@ -474,7 +514,8 @@ class TestGenerateCreateTableSqlSqlite:
             in sql
         )
 
-    def test_multi_column_index(self):
+    def test_multi_column_index(self) -> None:
+        """Multi-column index should list all columns in generated SQL."""
         sql = generate_create_table_sql("test_plugin", MultiColumnIndexModel)
 
         assert (
@@ -482,13 +523,14 @@ class TestGenerateCreateTableSqlSqlite:
             in sql
         )
 
-    def test_descending_index(self):
+    def test_descending_index(self) -> None:
+        """Descending indexes should include DESC in generated SQL."""
         sql = generate_create_table_sql("test_plugin", DescendingIndexModel)
 
         assert "created_at DESC" in sql
         assert "category, priority DESC" in sql
 
-    def test_mixed_indexes_without_gin(self):
+    def test_mixed_indexes_without_gin(self) -> None:
         """Test that mixed indexes work, with GIN falling back to regular index."""
         sql = generate_create_table_sql("test_plugin", MixedIndexesModel)
 
@@ -512,13 +554,13 @@ class TestGenerateCreateTableSqlPostgres:
     """
 
     @pytest.fixture
-    def postgres_settings(self):
+    def postgres_settings(self) -> MagicMock:
         """Create a mock settings object for PostgreSQL."""
         mock_settings = MagicMock()
         mock_settings.DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql"}}
         return mock_settings
 
-    def test_postgres_uses_schema_prefix(self, postgres_settings):
+    def test_postgres_uses_schema_prefix(self, postgres_settings: MagicMock) -> None:
         """PostgreSQL should use schema prefix in table names."""
         with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
             # Re-import to get the patched version
@@ -535,7 +577,7 @@ class TestGenerateCreateTableSqlPostgres:
             # Restore original module
             importlib.reload(installation)
 
-    def test_postgres_uses_alter_table_for_columns(self, postgres_settings):
+    def test_postgres_uses_alter_table_for_columns(self, postgres_settings: MagicMock) -> None:
         """PostgreSQL should use ALTER TABLE for adding columns."""
         with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
             import importlib
@@ -552,7 +594,7 @@ class TestGenerateCreateTableSqlPostgres:
 
             importlib.reload(installation)
 
-    def test_postgres_gin_index(self, postgres_settings):
+    def test_postgres_gin_index(self, postgres_settings: MagicMock) -> None:
         """PostgreSQL should use USING GIN for GIN indexes."""
         with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
             import importlib
@@ -576,21 +618,21 @@ class TestGenerateCreateTableSqlPostgres:
 class TestCustomModelMetaclassIndexing:
     """Tests that CustomModelMetaclass automatically creates indexes for foreign keys."""
 
-    def test_foreign_key_auto_indexed(self):
+    def test_foreign_key_auto_indexed(self) -> None:
         """Foreign keys should automatically get indexes via metaclass."""
         indexes = ChildWithForeignKey._meta.indexes
         index_fields = [idx.fields for idx in indexes]
 
         assert any("parent_id" in fields for fields in index_fields)
 
-    def test_one_to_one_auto_indexed(self):
+    def test_one_to_one_auto_indexed(self) -> None:
         """OneToOneField should automatically get indexes via metaclass."""
         indexes = ChildWithOneToOne._meta.indexes
         index_fields = [idx.fields for idx in indexes]
 
         assert any("parent_id" in fields for fields in index_fields)
 
-    def test_multiple_foreign_keys_all_indexed(self):
+    def test_multiple_foreign_keys_all_indexed(self) -> None:
         """Multiple foreign keys should all get indexes."""
         indexes = MultipleForeignKeysModel._meta.indexes
         index_fields = [idx.fields for idx in indexes]
@@ -598,7 +640,7 @@ class TestCustomModelMetaclassIndexing:
         assert any("parent_one_id" in fields for fields in index_fields)
         assert any("parent_two_id" in fields for fields in index_fields)
 
-    def test_explicit_indexes_preserved(self):
+    def test_explicit_indexes_preserved(self) -> None:
         """Explicitly defined indexes should be preserved alongside auto-generated ones."""
         indexes = MixedIndexesModel._meta.indexes
         index_names = [idx.name for idx in indexes]
@@ -608,7 +650,7 @@ class TestCustomModelMetaclassIndexing:
         assert "idx_updated_desc" in index_names
         assert "idx_tags_gin" in index_names
 
-    def test_auto_generated_index_exists_for_fk(self):
+    def test_auto_generated_index_exists_for_fk(self) -> None:
         """Auto-generated indexes for FKs should exist."""
         indexes = ChildWithForeignKey._meta.indexes
         fk_indexes = [idx for idx in indexes if "parent_id" in idx.fields]
@@ -626,13 +668,13 @@ class TestCustomModelMetaclassIndexing:
 class TestCustomModelDbTableNaming:
     """Tests that CustomModelMetaclass correctly sets db_table."""
 
-    def test_db_table_is_lowercased_class_name(self):
+    def test_db_table_is_lowercased_class_name(self) -> None:
         """db_table should be the lowercased class name."""
         assert AllDataTypesModel._meta.db_table == "alldatatypesmodel"
         assert ParentModel._meta.db_table == "parentmodel"
         assert ChildWithForeignKey._meta.db_table == "childwithforeignkey"
 
-    def test_db_table_used_in_sql_generation(self):
+    def test_db_table_used_in_sql_generation(self) -> None:
         """Generated SQL should use the db_table value."""
         sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
