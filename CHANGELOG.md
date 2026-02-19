@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.99.1 (2026-02-19)
+
+### Bug Fixes
+
+- Allow float values for temperature in VitalsCommand and add related tests
+  ([#1499](https://github.com/canvas-medical/canvas-plugins/pull/1499),
+  [`dbcff10`](https://github.com/canvas-medical/canvas-plugins/commit/dbcff10d006dd87e92ec7cb65e2543c8b3d4e137))
+
+- Change the PatientMetadata.value attribute type
+  ([#1515](https://github.com/canvas-medical/canvas-plugins/pull/1515),
+  [`99b1638`](https://github.com/canvas-medical/canvas-plugins/commit/99b1638ce8b9212fe99e84de4d2ad557337eec99))
+
+
 ## v0.99.0 (2026-02-18)
 
 ### Bug Fixes
