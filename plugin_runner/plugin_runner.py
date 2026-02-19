@@ -109,6 +109,7 @@ Plugin = TypedDict(
         "sandbox": Any,
         "handler": Any,
         "secrets": dict[str, str],
+        "namespace_config": NotRequired[dict[str, str] | None],
     },
 )
 
