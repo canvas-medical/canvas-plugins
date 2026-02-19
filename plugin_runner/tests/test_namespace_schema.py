@@ -366,11 +366,11 @@ class TestNamespaceAccessValidation:
         assert result is False
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_verify_namespace_access_returns_none_for_invalid_key(
+    def test_check_namespace_auth_key_returns_none_for_invalid_key(
         self, mock_open_conn: MagicMock
     ) -> None:
-        """verify_namespace_access should return None for invalid keys."""
-        from plugin_runner.installation import verify_namespace_access
+        """check_namespace_auth_key should return None for invalid keys."""
+        from plugin_runner.installation import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None  # No matching key found
@@ -385,15 +385,15 @@ class TestNamespaceAccessValidation:
         mock_open_conn.return_value = mock_conn
 
         # This is what would trigger a PluginInstallationError
-        result = verify_namespace_access("org__data", "invalid-key")
+        result = check_namespace_auth_key("org__data", "invalid-key")
         assert result is None
 
     @patch("plugin_runner.installation.open_database_connection")
-    def test_verify_namespace_access_returns_access_level_for_valid_key(
+    def test_check_namespace_auth_key_returns_access_level_for_valid_key(
         self, mock_open_conn: MagicMock
     ) -> None:
-        """verify_namespace_access should return access level for valid keys."""
-        from plugin_runner.installation import verify_namespace_access
+        """check_namespace_auth_key should return access level for valid keys."""
+        from plugin_runner.installation import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"access_level": "read_write"}
@@ -407,7 +407,7 @@ class TestNamespaceAccessValidation:
 
         mock_open_conn.return_value = mock_conn
 
-        result = verify_namespace_access("org__data", "valid-key")
+        result = check_namespace_auth_key("org__data", "valid-key")
         assert result == "read_write"
 
     @patch("plugin_runner.installation.uuid")

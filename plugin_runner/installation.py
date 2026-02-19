@@ -380,7 +380,7 @@ def initialize_namespace_partitions(namespace: str) -> None:
     log.info(f"Initialized partitions for namespace '{namespace}'")
 
 
-def verify_namespace_access(namespace: str, secret: str) -> str | None:
+def check_namespace_auth_key(namespace: str, secret: str) -> str | None:
     """Verify a plugin's secret against the namespace's auth table.
 
     Args:
@@ -860,7 +860,7 @@ def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict
             f"Plugin '{plugin_name}' declares read_write access to namespace "
             f"'{schema_name}' but 'read_write_access_key' secret is not configured."
         )
-    granted_access = verify_namespace_access(schema_name, secret_value)
+    granted_access = check_namespace_auth_key(schema_name, secret_value)
     if granted_access != "read_write":
         raise PluginInstallationError(
             f"Plugin '{plugin_name}' has invalid or insufficient access key "
@@ -891,7 +891,7 @@ def verify_read_namespace_access(
             f"Plugin '{plugin_name}' declares read access to namespace "
             f"'{schema_name}' but 'read_access_key' secret is not configured."
         )
-    granted_access = verify_namespace_access(schema_name, secret_value)
+    granted_access = check_namespace_auth_key(schema_name, secret_value)
     if not granted_access:
         raise PluginInstallationError(
             f"Plugin '{plugin_name}' has invalid access key for namespace "
