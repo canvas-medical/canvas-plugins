@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class Language(TimestampedModel):
@@ -30,14 +30,29 @@ class Letter(TimestampedModel, IdentifiableModel):
     )
 
 
-class LetterActionEvent(Model):
+class EventTypeChoices(models.TextChoices):
+    """Choices for types of events that can occur on a letter."""
+
+    PRINTED = "PRINTED", "Printed"
+    FAXED = "FAXED", "Faxed"
+
+
+class LetterActionEvent(TimestampedModel, IdentifiableModel):
     """Event representing an action taken on a letter."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_letteractionevent_001"
 
+    event_type = models.CharField(max_length=10, choices=EventTypeChoices.choices)
+    send_fax_id = models.CharField(max_length=64, blank=True)
+    received_by_fax = models.BooleanField(null=True)
+    delivered_by_fax = models.BooleanField(null=True)
+    fax_result_msg = models.TextField(blank=True)
+    originator = models.ForeignKey(
+        "v1.CanvasUser", null=True, blank=True, on_delete=models.SET_NULL
+    )
     letter = models.ForeignKey(
-        Letter, on_delete=models.CASCADE, related_name="letter_action_events"
+        "v1.Letter", on_delete=models.CASCADE, related_name="letter_action_events"
     )
 
 
