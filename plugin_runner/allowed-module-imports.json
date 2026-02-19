@@ -935,6 +935,7 @@
     "LabValueCoding",
     "Language",
     "Letter",
+    "LetterActionEvent",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
