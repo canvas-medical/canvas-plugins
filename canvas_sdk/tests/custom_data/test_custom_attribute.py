@@ -204,7 +204,7 @@ class TestCustomAttributeValueSetter:
         attr.value = None
 
         assert attr.text_value is None
-        assert attr.int_value is None
+        assert attr.int_value is None  # type: ignore[unreachable]
         assert attr.bool_value is None
         assert attr.decimal_value is None
         assert attr.timestamp_value is None
@@ -266,7 +266,7 @@ class TestCustomAttributeValueSetter:
         assert attr.int_value == 123
         assert attr.text_value is None
 
-        attr.value = True
+        attr.value = True  # type: ignore[unreachable]
         assert attr.bool_value is True
         assert attr.int_value is None
         attr.value = {"json": True}
