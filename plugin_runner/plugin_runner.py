@@ -281,7 +281,7 @@ class PluginRunner(PluginRunnerServicer):
                     # Determine namespace and access level for database context
                     db_namespace = namespace_config["namespace"] if namespace_config else None
                     db_access_level = (
-                        namespace_config["access_level"] if namespace_config else "read_write"
+                        namespace_config["access_level"] if namespace_config else "read"
                     )
 
                     with (

@@ -227,13 +227,9 @@ THIRD_PARTY_MODULES = {
         "F",
         "ForeignKey",
         "Index",
-        "Case",
-        "Count",
         "Exists",
-        "F",
         "IntegerField",
         "JSONField",
-        "ManyToManyField",
         "Max",
         "Min",
         "Model",  # remove when hyperscribe no longer needs it

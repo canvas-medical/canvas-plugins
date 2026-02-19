@@ -706,18 +706,20 @@ def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: lis
 
 
 def generate_plugin_migrations(
-    plugin_name: str, plugin_path: Path, schema_name: str
+    plugin_name: str, plugin_path: Path, schema_name: str | None = None
 ) -> list[CustomModel]:
     """Generate Django migrations for plugin models.
 
     Args:
         plugin_name: Name of the plugin (used for module namespace).
         plugin_path: Path to the plugin directory.
-        schema_name: The PostgreSQL schema where tables will be created (namespace or plugin name).
+        schema_name: The PostgreSQL schema where tables will be created. Defaults to plugin_name.
 
     Returns:
         List of discovered model classes.
     """
+    if schema_name is None:
+        schema_name = plugin_name
     log.info(f"Generating migrations for plugin '{plugin_name}' in schema '{schema_name}'")
     discovered_models = []
     try:
