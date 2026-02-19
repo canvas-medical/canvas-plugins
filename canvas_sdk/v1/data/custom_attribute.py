@@ -42,10 +42,11 @@ class CustomAttribute(Model):
     json_value = models.JSONField(null=True, blank=True)
 
     def __str__(self) -> str:
+        """Return a human-readable representation of the attribute."""
         return f"{self.content_object} - {self.name}: {self.value}"
 
     @property
-    def value(self) -> str | int | float | bool | dict | Any | None:
+    def value(self) -> Any | None:
         """Return the actual value regardless of which field it's stored in."""
         if self.text_value is not None:
             return self.text_value
@@ -97,15 +98,21 @@ class CustomAttribute(Model):
 
 
 class CustomAttributeAwareManager(models.Manager):
-    def get_queryset(self):
+    """Manager that automatically prefetches custom attributes."""
+
+    def get_queryset(self) -> models.QuerySet:
         """Prefetch all custom attributes for the queryset."""
         return super().get_queryset().prefetch_related("custom_attributes")
 
-    def with_only(self, attribute_names=None):
+    def with_only(self, attribute_names: str | list[str] | None = None) -> models.QuerySet:
+        """Prefetch only specific custom attributes by name.
+
+        attribute_names may be a single string or list of strings.
+        If None, prefetches all attributes.
+        """
         if attribute_names is None:
             return self.get_queryset()
 
-        """Prefetch only specific custom attributes by name. May be a single string or list of strings"""
         if isinstance(attribute_names, str):
             attribute_names = [attribute_names]
 
@@ -123,8 +130,11 @@ class CustomAttributeAwareManager(models.Manager):
 
 
 class CustomAttributeMixinMetaClass(ModelMetaclass):
-    def __new__(cls, name, bases, attrs, **kwargs):
-        meta = attrs.get("Meta")
+    """Metaclass that sets app_label for plugin proxy models."""
+
+    def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
+        """Create a new class, setting app_label from the module name for plugins."""
+        meta: Any = attrs.get("Meta")
         if meta is None:
             attrs["Meta"] = type("Meta", (), {})
 
@@ -152,9 +162,9 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
     class Meta:
         abstract = True
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Add a GenericRelation to custom_attributes on each subclass."""
         super().__init_subclass__(**kwargs)
-        # Add GenericRelation to any class that inherits this mixin
 
         cls.add_to_class(
             "custom_attributes",
@@ -168,6 +178,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
         """Cache the content type ID lookup for this model instance."""
         # For proxy models, use the content type of the base model
         base_model = self._meta.concrete_model
+        assert base_model is not None
         app_label = base_model._meta.app_label
         model_name = base_model._meta.model_name
 
@@ -182,21 +193,6 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
             if not row:
                 raise ValueError(f"ContentType not found for {app_label}.{model_name}")
             return row[0]
-
-    """
-    Mixin to add custom attributes support to any SDK model.
-
-    Usage:
-        class MyModel(Model, CustomAttributeMixin):
-            # ... your model fields ...
-
-            # Add the GenericRelation
-            custom_attributes = GenericRelation(
-                CustomAttribute,
-                content_type_field="content_type",
-                object_id_field="object_id"
-            )
-    """
 
     def get_attribute(self, name: str) -> Any:
         """Get a custom attribute value by name."""
@@ -247,7 +243,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
             )
 
         # Get existing attributes from prefetched data or database
-        existing_attrs = {}
+        existing_attrs: dict[str, CustomAttribute] = {}
         if (
             hasattr(self, "_prefetched_objects_cache")
             and "custom_attributes" in self._prefetched_objects_cache
@@ -263,8 +259,8 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
                 existing_attrs[attr.name] = attr
 
         # Separate attributes to create vs update
-        to_create = []
-        to_update = []
+        to_create: list[CustomAttribute] = []
+        to_update: list[CustomAttribute] = []
 
         for name, value in attributes.items():
             if name in existing_attrs:
@@ -281,7 +277,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
                 to_create.append(attr)
 
         # Perform bulk operations
-        created_attrs = []
+        created_attrs: list[CustomAttribute] = []
         if to_create:
             created_attrs = CustomAttribute.objects.bulk_create(to_create)
 
@@ -330,6 +326,7 @@ class AttributeHub(Model, CustomAttributeMixin):
     externally_exposable_id = models.CharField(max_length=100)
 
     def __str__(self) -> str:
+        """Return a human-readable representation of the hub."""
         return f"AttributeHub({self.type}): {self.externally_exposable_id}"
 
 

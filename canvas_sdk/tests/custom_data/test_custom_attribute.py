@@ -9,10 +9,12 @@ Tests verify that:
 
 import datetime
 import decimal
+from typing import Any
 
 import pytest
 
 from canvas_sdk.v1.data.custom_attribute import (
+    AttributeHub,
     CustomAttribute,
     CustomAttributeMixin,
     CustomAttributeMixinMetaClass,
@@ -23,7 +25,7 @@ class TestCustomAttributeValueSetter:
     """Tests for the CustomAttribute.value setter."""
 
     @pytest.fixture
-    def attr(self):
+    def attr(self) -> CustomAttribute:
         """Create a fresh CustomAttribute instance for each test."""
         return CustomAttribute(name="test_attr")
 
@@ -31,7 +33,8 @@ class TestCustomAttributeValueSetter:
     # String values
     # -------------------------------------------------------------------------
 
-    def test_string_value_stored_in_text_value(self, attr):
+    def test_string_value_stored_in_text_value(self, attr: CustomAttribute) -> None:
+        """String values should be stored in text_value field."""
         attr.value = "hello world"
 
         assert attr.text_value == "hello world"
@@ -42,12 +45,14 @@ class TestCustomAttributeValueSetter:
         assert attr.date_value is None
         assert attr.json_value is None
 
-    def test_empty_string_stored_in_text_value(self, attr):
+    def test_empty_string_stored_in_text_value(self, attr: CustomAttribute) -> None:
+        """Empty strings should be stored in text_value field."""
         attr.value = ""
 
         assert attr.text_value == ""
 
-    def test_unicode_string_stored_in_text_value(self, attr):
+    def test_unicode_string_stored_in_text_value(self, attr: CustomAttribute) -> None:
+        """Unicode strings should be stored in text_value field."""
         attr.value = "こんにちは世界 🌍"
 
         assert attr.text_value == "こんにちは世界 🌍"
@@ -56,7 +61,8 @@ class TestCustomAttributeValueSetter:
     # Integer values
     # -------------------------------------------------------------------------
 
-    def test_positive_int_stored_in_int_value(self, attr):
+    def test_positive_int_stored_in_int_value(self, attr: CustomAttribute) -> None:
+        """Positive integers should be stored in int_value field."""
         attr.value = 42
 
         assert attr.int_value == 42
@@ -67,17 +73,20 @@ class TestCustomAttributeValueSetter:
         assert attr.date_value is None
         assert attr.json_value is None
 
-    def test_negative_int_stored_in_int_value(self, attr):
+    def test_negative_int_stored_in_int_value(self, attr: CustomAttribute) -> None:
+        """Negative integers should be stored in int_value field."""
         attr.value = -100
 
         assert attr.int_value == -100
 
-    def test_zero_stored_in_int_value(self, attr):
+    def test_zero_stored_in_int_value(self, attr: CustomAttribute) -> None:
+        """Zero should be stored in int_value field."""
         attr.value = 0
 
         assert attr.int_value == 0
 
-    def test_large_int_stored_in_int_value(self, attr):
+    def test_large_int_stored_in_int_value(self, attr: CustomAttribute) -> None:
+        """Large integers should be stored in int_value field."""
         attr.value = 2**31 - 1  # Max 32-bit signed int
 
         assert attr.int_value == 2**31 - 1
@@ -86,14 +95,14 @@ class TestCustomAttributeValueSetter:
     # Boolean values - CRITICAL: bool is subclass of int in Python
     # -------------------------------------------------------------------------
 
-    def test_true_stored_in_bool_value_not_int(self, attr):
+    def test_true_stored_in_bool_value_not_int(self, attr: CustomAttribute) -> None:
         """True should go to bool_value, not int_value (even though bool is subclass of int)."""
         attr.value = True
 
         assert attr.bool_value is True
         assert attr.int_value is None  # NOT 1
 
-    def test_false_stored_in_bool_value_not_int(self, attr):
+    def test_false_stored_in_bool_value_not_int(self, attr: CustomAttribute) -> None:
         """False should go to bool_value, not int_value (even though bool is subclass of int)."""
         attr.value = False
 
@@ -104,19 +113,22 @@ class TestCustomAttributeValueSetter:
     # Float values
     # -------------------------------------------------------------------------
 
-    def test_float_stored_in_decimal_value(self, attr):
+    def test_float_stored_in_decimal_value(self, attr: CustomAttribute) -> None:
+        """Float values should be stored in decimal_value field."""
         attr.value = 3.14159
 
         assert attr.decimal_value == 3.14159
         assert attr.int_value is None
         assert attr.text_value is None
 
-    def test_negative_float_stored_in_decimal_value(self, attr):
+    def test_negative_float_stored_in_decimal_value(self, attr: CustomAttribute) -> None:
+        """Negative floats should be stored in decimal_value field."""
         attr.value = -273.15
 
         assert attr.decimal_value == -273.15
 
-    def test_float_zero_stored_in_decimal_value(self, attr):
+    def test_float_zero_stored_in_decimal_value(self, attr: CustomAttribute) -> None:
+        """Float zero should be stored in decimal_value field."""
         attr.value = 0.0
 
         assert attr.decimal_value == 0.0
@@ -125,12 +137,14 @@ class TestCustomAttributeValueSetter:
     # Decimal values
     # -------------------------------------------------------------------------
 
-    def test_decimal_stored_in_decimal_value(self, attr):
+    def test_decimal_stored_in_decimal_value(self, attr: CustomAttribute) -> None:
+        """Decimal values should be stored in decimal_value field."""
         attr.value = decimal.Decimal("123.456789")
 
         assert attr.decimal_value == decimal.Decimal("123.456789")
 
-    def test_decimal_high_precision_stored_in_decimal_value(self, attr):
+    def test_decimal_high_precision_stored_in_decimal_value(self, attr: CustomAttribute) -> None:
+        """High-precision Decimal values should be stored in decimal_value field."""
         attr.value = decimal.Decimal("0.0000000001")
 
         assert attr.decimal_value == decimal.Decimal("0.0000000001")
@@ -139,7 +153,7 @@ class TestCustomAttributeValueSetter:
     # Datetime values - CRITICAL: datetime is subclass of date in Python
     # -------------------------------------------------------------------------
 
-    def test_datetime_stored_in_timestamp_value_not_date(self, attr):
+    def test_datetime_stored_in_timestamp_value_not_date(self, attr: CustomAttribute) -> None:
         """Datetime should go to timestamp_value, not date_value."""
         dt = datetime.datetime(2024, 1, 15, 10, 30, 45)
         attr.value = dt
@@ -147,13 +161,17 @@ class TestCustomAttributeValueSetter:
         assert attr.timestamp_value == dt
         assert attr.date_value is None  # NOT the date part
 
-    def test_datetime_with_timezone_stored_in_timestamp_value(self, attr):
+    def test_datetime_with_timezone_stored_in_timestamp_value(self, attr: CustomAttribute) -> None:
+        """Timezone-aware datetimes should be stored in timestamp_value field."""
         dt = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.UTC)
         attr.value = dt
 
         assert attr.timestamp_value == dt
 
-    def test_datetime_with_microseconds_stored_in_timestamp_value(self, attr):
+    def test_datetime_with_microseconds_stored_in_timestamp_value(
+        self, attr: CustomAttribute
+    ) -> None:
+        """Datetimes with microseconds should be stored in timestamp_value field."""
         dt = datetime.datetime(2024, 1, 15, 10, 30, 45, 123456)
         attr.value = dt
 
@@ -163,7 +181,8 @@ class TestCustomAttributeValueSetter:
     # Date values
     # -------------------------------------------------------------------------
 
-    def test_date_stored_in_date_value(self, attr):
+    def test_date_stored_in_date_value(self, attr: CustomAttribute) -> None:
+        """Date values should be stored in date_value field."""
         d = datetime.date(2024, 1, 15)
         attr.value = d
 
@@ -174,12 +193,14 @@ class TestCustomAttributeValueSetter:
     # None value
     # -------------------------------------------------------------------------
 
-    def test_none_clears_all_fields(self, attr):
+    def test_none_clears_all_fields(self, attr: CustomAttribute) -> None:
+        """Setting value to None should clear all typed fields."""
         # First set a value
         attr.value = "test"
         assert attr.text_value == "test"
 
-        # Then set to None
+        # Then set to None (the property setter mutates internal fields,
+        # which mypy cannot track — hence the type: ignore below)
         attr.value = None
 
         assert attr.text_value is None
@@ -194,25 +215,29 @@ class TestCustomAttributeValueSetter:
     # JSON/complex values
     # -------------------------------------------------------------------------
 
-    def test_dict_stored_in_json_value(self, attr):
+    def test_dict_stored_in_json_value(self, attr: CustomAttribute) -> None:
+        """Dict values should be stored in json_value field."""
         data = {"key": "value", "nested": {"a": 1}}
         attr.value = data
 
         assert attr.json_value == data
         assert attr.text_value is None
 
-    def test_list_stored_in_json_value(self, attr):
+    def test_list_stored_in_json_value(self, attr: CustomAttribute) -> None:
+        """List values should be stored in json_value field."""
         data = [1, 2, 3, "four", {"five": 5}]
         attr.value = data
 
         assert attr.json_value == data
 
-    def test_empty_dict_stored_in_json_value(self, attr):
+    def test_empty_dict_stored_in_json_value(self, attr: CustomAttribute) -> None:
+        """Empty dicts should be stored in json_value field."""
         attr.value = {}
 
         assert attr.json_value == {}
 
-    def test_empty_list_stored_in_json_value(self, attr):
+    def test_empty_list_stored_in_json_value(self, attr: CustomAttribute) -> None:
+        """Empty lists should be stored in json_value field."""
         attr.value = []
 
         assert attr.json_value == []
@@ -221,20 +246,22 @@ class TestCustomAttributeValueSetter:
     # Value replacement clears previous field
     # -------------------------------------------------------------------------
 
-    def test_changing_type_clears_previous_field(self, attr):
+    def test_changing_type_clears_previous_field(self, attr: CustomAttribute) -> None:
         """Setting a new value type should clear the old field."""
         attr.value = "string"
         assert attr.text_value == "string"
 
+        # Property setter mutates fields mypy can't track
         attr.value = 42
         assert attr.int_value == 42
-        assert attr.text_value is None  # Should be cleared
+        assert attr.text_value is None
 
-    def test_multiple_type_changes(self, attr):
+    def test_multiple_type_changes(self, attr: CustomAttribute) -> None:
         """Test cycling through multiple types."""
         attr.value = "text"
         assert attr.text_value == "text"
 
+        # Property setter mutates fields mypy can't track
         attr.value = 123
         assert attr.int_value == 123
         assert attr.text_value is None
@@ -242,7 +269,6 @@ class TestCustomAttributeValueSetter:
         attr.value = True
         assert attr.bool_value is True
         assert attr.int_value is None
-
         attr.value = {"json": True}
         assert attr.json_value == {"json": True}
         assert attr.bool_value is None
@@ -252,7 +278,7 @@ class TestCustomAttributeValueGetter:
     """Tests for the CustomAttribute.value getter."""
 
     @pytest.fixture
-    def attr(self):
+    def attr(self) -> CustomAttribute:
         """Create a fresh CustomAttribute instance for each test."""
         return CustomAttribute(name="test_attr")
 
@@ -260,49 +286,58 @@ class TestCustomAttributeValueGetter:
     # Get values from each field type
     # -------------------------------------------------------------------------
 
-    def test_get_text_value(self, attr):
+    def test_get_text_value(self, attr: CustomAttribute) -> None:
+        """Getter should return text_value when it is set."""
         attr.text_value = "hello"
 
         assert attr.value == "hello"
 
-    def test_get_int_value(self, attr):
+    def test_get_int_value(self, attr: CustomAttribute) -> None:
+        """Getter should return int_value when it is set."""
         attr.int_value = 42
 
         assert attr.value == 42
 
-    def test_get_bool_value_true(self, attr):
+    def test_get_bool_value_true(self, attr: CustomAttribute) -> None:
+        """Getter should return True from bool_value."""
         attr.bool_value = True
 
         assert attr.value is True
 
-    def test_get_bool_value_false(self, attr):
+    def test_get_bool_value_false(self, attr: CustomAttribute) -> None:
+        """Getter should return False from bool_value."""
         attr.bool_value = False
 
         assert attr.value is False
 
-    def test_get_decimal_value(self, attr):
+    def test_get_decimal_value(self, attr: CustomAttribute) -> None:
+        """Getter should return decimal_value when it is set."""
         attr.decimal_value = decimal.Decimal("3.14")
 
         assert attr.value == decimal.Decimal("3.14")
 
-    def test_get_timestamp_value(self, attr):
+    def test_get_timestamp_value(self, attr: CustomAttribute) -> None:
+        """Getter should return timestamp_value when it is set."""
         dt = datetime.datetime(2024, 1, 15, 10, 30, 45)
         attr.timestamp_value = dt
 
         assert attr.value == dt
 
-    def test_get_date_value(self, attr):
+    def test_get_date_value(self, attr: CustomAttribute) -> None:
+        """Getter should return date_value when it is set."""
         d = datetime.date(2024, 1, 15)
         attr.date_value = d
 
         assert attr.value == d
 
-    def test_get_json_value_dict(self, attr):
+    def test_get_json_value_dict(self, attr: CustomAttribute) -> None:
+        """Getter should return dict from json_value."""
         attr.json_value = {"key": "value"}
 
         assert attr.value == {"key": "value"}
 
-    def test_get_json_value_list(self, attr):
+    def test_get_json_value_list(self, attr: CustomAttribute) -> None:
+        """Getter should return list from json_value."""
         attr.json_value = [1, 2, 3]
 
         assert attr.value == [1, 2, 3]
@@ -311,58 +346,70 @@ class TestCustomAttributeValueGetter:
     # Get None when no value is set
     # -------------------------------------------------------------------------
 
-    def test_get_returns_none_when_all_fields_empty(self, attr):
+    def test_get_returns_none_when_all_fields_empty(self, attr: CustomAttribute) -> None:
+        """Getter should return None when no typed field is set."""
         assert attr.value is None
 
     # -------------------------------------------------------------------------
     # Round-trip tests (set then get)
     # -------------------------------------------------------------------------
 
-    def test_roundtrip_string(self, attr):
+    def test_roundtrip_string(self, attr: CustomAttribute) -> None:
+        """String value should survive a set/get round-trip."""
         attr.value = "test string"
         assert attr.value == "test string"
 
-    def test_roundtrip_int(self, attr):
+    def test_roundtrip_int(self, attr: CustomAttribute) -> None:
+        """Integer value should survive a set/get round-trip."""
         attr.value = 12345
         assert attr.value == 12345
 
-    def test_roundtrip_bool_true(self, attr):
+    def test_roundtrip_bool_true(self, attr: CustomAttribute) -> None:
+        """True should survive a set/get round-trip."""
         attr.value = True
         assert attr.value is True
 
-    def test_roundtrip_bool_false(self, attr):
+    def test_roundtrip_bool_false(self, attr: CustomAttribute) -> None:
+        """False should survive a set/get round-trip."""
         attr.value = False
         assert attr.value is False
 
-    def test_roundtrip_float(self, attr):
+    def test_roundtrip_float(self, attr: CustomAttribute) -> None:
+        """Float value should survive a set/get round-trip."""
         attr.value = 3.14159
         assert attr.value == 3.14159
 
-    def test_roundtrip_decimal(self, attr):
+    def test_roundtrip_decimal(self, attr: CustomAttribute) -> None:
+        """Decimal value should survive a set/get round-trip."""
         attr.value = decimal.Decimal("999.99")
         assert attr.value == decimal.Decimal("999.99")
 
-    def test_roundtrip_datetime(self, attr):
+    def test_roundtrip_datetime(self, attr: CustomAttribute) -> None:
+        """Datetime value should survive a set/get round-trip."""
         dt = datetime.datetime(2024, 6, 15, 14, 30, 0)
         attr.value = dt
         assert attr.value == dt
 
-    def test_roundtrip_date(self, attr):
+    def test_roundtrip_date(self, attr: CustomAttribute) -> None:
+        """Date value should survive a set/get round-trip."""
         d = datetime.date(2024, 6, 15)
         attr.value = d
         assert attr.value == d
 
-    def test_roundtrip_dict(self, attr):
+    def test_roundtrip_dict(self, attr: CustomAttribute) -> None:
+        """Dict value should survive a set/get round-trip."""
         data = {"nested": {"data": [1, 2, 3]}}
         attr.value = data
         assert attr.value == data
 
-    def test_roundtrip_list(self, attr):
+    def test_roundtrip_list(self, attr: CustomAttribute) -> None:
+        """List value should survive a set/get round-trip."""
         data = ["a", "b", "c"]
         attr.value = data
         assert attr.value == data
 
-    def test_roundtrip_none(self, attr):
+    def test_roundtrip_none(self, attr: CustomAttribute) -> None:
+        """Setting None after a value should clear it."""
         attr.value = "something"
         attr.value = None
         assert attr.value is None
@@ -380,10 +427,11 @@ class TestCustomAttributeValueTypeDiscrimination:
     """
 
     @pytest.fixture
-    def attr(self):
+    def attr(self) -> CustomAttribute:
+        """Create a fresh CustomAttribute instance for each test."""
         return CustomAttribute(name="test_attr")
 
-    def test_bool_true_is_not_stored_as_int_1(self, attr):
+    def test_bool_true_is_not_stored_as_int_1(self, attr: CustomAttribute) -> None:
         """Verify True goes to bool_value, not int_value as 1."""
         attr.value = True
 
@@ -397,7 +445,7 @@ class TestCustomAttributeValueTypeDiscrimination:
         assert retrieved is True
         assert type(retrieved) is bool
 
-    def test_bool_false_is_not_stored_as_int_0(self, attr):
+    def test_bool_false_is_not_stored_as_int_0(self, attr: CustomAttribute) -> None:
         """Verify False goes to bool_value, not int_value as 0."""
         attr.value = False
 
@@ -408,7 +456,7 @@ class TestCustomAttributeValueTypeDiscrimination:
         assert retrieved is False
         assert type(retrieved) is bool
 
-    def test_int_1_is_not_stored_as_bool_true(self, attr):
+    def test_int_1_is_not_stored_as_bool_true(self, attr: CustomAttribute) -> None:
         """Verify 1 goes to int_value, not bool_value as True."""
         attr.value = 1
 
@@ -419,7 +467,7 @@ class TestCustomAttributeValueTypeDiscrimination:
         assert retrieved == 1
         assert type(retrieved) is int
 
-    def test_int_0_is_not_stored_as_bool_false(self, attr):
+    def test_int_0_is_not_stored_as_bool_false(self, attr: CustomAttribute) -> None:
         """Verify 0 goes to int_value, not bool_value as False."""
         attr.value = 0
 
@@ -430,7 +478,7 @@ class TestCustomAttributeValueTypeDiscrimination:
         assert retrieved == 0
         assert type(retrieved) is int
 
-    def test_datetime_is_not_stored_as_date(self, attr):
+    def test_datetime_is_not_stored_as_date(self, attr: CustomAttribute) -> None:
         """Verify datetime goes to timestamp_value, not date_value."""
         dt = datetime.datetime(2024, 1, 15, 10, 30, 45)
         attr.value = dt
@@ -442,7 +490,7 @@ class TestCustomAttributeValueTypeDiscrimination:
         assert retrieved == dt
         assert type(retrieved) is datetime.datetime
 
-    def test_date_is_stored_as_date_not_datetime(self, attr):
+    def test_date_is_stored_as_date_not_datetime(self, attr: CustomAttribute) -> None:
         """Verify date goes to date_value, not timestamp_value."""
         d = datetime.date(2024, 1, 15)
         attr.value = d
@@ -454,14 +502,14 @@ class TestCustomAttributeValueTypeDiscrimination:
         retrieved = attr.value
         assert retrieved == d
 
-    def test_float_is_not_confused_with_int(self, attr):
+    def test_float_is_not_confused_with_int(self, attr: CustomAttribute) -> None:
         """Verify float goes to decimal_value, not int_value."""
         attr.value = 1.0  # This is a float, even though it equals int 1
 
         assert attr.decimal_value == 1.0
         assert attr.int_value is None
 
-    def test_decimal_is_not_confused_with_float(self, attr):
+    def test_decimal_is_not_confused_with_float(self, attr: CustomAttribute) -> None:
         """Verify Decimal goes to decimal_value alongside float."""
         attr.value = decimal.Decimal("1.0")
 
@@ -478,24 +526,25 @@ class TestCustomAttributeValueGetterPriority:
     """
 
     @pytest.fixture
-    def attr(self):
+    def attr(self) -> CustomAttribute:
+        """Create a fresh CustomAttribute instance for each test."""
         return CustomAttribute(name="test_attr")
 
-    def test_text_value_has_priority(self, attr):
+    def test_text_value_has_priority(self, attr: CustomAttribute) -> None:
         """text_value is checked first in the getter."""
         attr.text_value = "text"
         attr.int_value = 42
 
         assert attr.value == "text"
 
-    def test_date_value_before_timestamp_value(self, attr):
+    def test_date_value_before_timestamp_value(self, attr: CustomAttribute) -> None:
         """date_value is checked before timestamp_value."""
         attr.date_value = datetime.date(2024, 1, 1)
         attr.timestamp_value = datetime.datetime(2024, 6, 15, 10, 0, 0)
 
         assert attr.value == datetime.date(2024, 1, 1)
 
-    def test_int_value_before_decimal_value(self, attr):
+    def test_int_value_before_decimal_value(self, attr: CustomAttribute) -> None:
         """int_value is checked before decimal_value."""
         attr.int_value = 42
         attr.decimal_value = decimal.Decimal("3.14")
@@ -517,7 +566,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
       app_label is set to the first part of the module name
     """
 
-    def test_plugin_module_gets_app_label_from_module_name(self):
+    def test_plugin_module_gets_app_label_from_module_name(self) -> None:
         """Classes in plugin modules should get app_label from first module part."""
         # Simulate a class defined in "my_plugin.models.custom"
         attrs = {
@@ -527,7 +576,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         # The metaclass should set app_label to "my_plugin"
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "MyPluginModel",
@@ -537,7 +586,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         assert meta.app_label == "my_plugin"
 
-    def test_deeply_nested_plugin_module_gets_first_part(self):
+    def test_deeply_nested_plugin_module_gets_first_part(self) -> None:
         """Deeply nested modules should still get first part as app_label."""
         attrs = {
             "__module__": "awesome_plugin.sub.models.deeply.nested",
@@ -545,7 +594,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "DeepModel",
@@ -555,7 +604,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         assert meta.app_label == "awesome_plugin"
 
-    def test_canvas_sdk_module_does_not_override_app_label(self):
+    def test_canvas_sdk_module_does_not_override_app_label(self) -> None:
         """Classes in canvas_sdk modules should NOT have app_label set by metaclass."""
         attrs = {
             "__module__": "canvas_sdk.v1.data.custom_attribute",
@@ -563,7 +612,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         # Ensure app_label is not set initially
         assert not hasattr(meta, "app_label")
 
@@ -577,7 +626,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         # app_label should NOT be set by the metaclass for canvas_sdk modules
         assert not hasattr(meta, "app_label")
 
-    def test_canvas_sdk_submodule_does_not_override_app_label(self):
+    def test_canvas_sdk_submodule_does_not_override_app_label(self) -> None:
         """Any canvas_sdk.* module should not have app_label overridden."""
         attrs = {
             "__module__": "canvas_sdk.effects.something",
@@ -585,7 +634,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "EffectModel",
@@ -595,7 +644,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         assert not hasattr(meta, "app_label")
 
-    def test_single_word_module_name(self):
+    def test_single_word_module_name(self) -> None:
         """Single word module names should work (edge case)."""
         attrs = {
             "__module__": "myplugin",
@@ -603,7 +652,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "SimpleModel",
@@ -613,7 +662,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         assert meta.app_label == "myplugin"
 
-    def test_meta_class_created_if_not_provided(self):
+    def test_meta_class_created_if_not_provided(self) -> None:
         """If Meta is not provided, it should be created and app_label set."""
         attrs = {
             "__module__": "test_plugin.models",
@@ -621,7 +670,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             # No Meta class provided
         }
 
-        new_class = CustomAttributeMixinMetaClass.__new__(
+        new_class: Any = CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "NoMetaModel",
             (CustomAttributeMixin,),
@@ -631,7 +680,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         # The created class should have app_label set correctly
         assert new_class._meta.app_label == "test_plugin"
 
-    def test_existing_app_label_overwritten_for_plugins(self):
+    def test_existing_app_label_overwritten_for_plugins(self) -> None:
         """Existing app_label should be overwritten for plugin modules."""
         attrs = {
             "__module__": "new_plugin.models",
@@ -639,7 +688,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True, "app_label": "old_label"}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         assert meta.app_label == "old_label"
 
         CustomAttributeMixinMetaClass.__new__(
@@ -652,7 +701,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         # Should be overwritten to match module
         assert meta.app_label == "new_plugin"
 
-    def test_hyphenated_plugin_name(self):
+    def test_hyphenated_plugin_name(self) -> None:
         """Plugin names with hyphens should work."""
         attrs = {
             "__module__": "my-cool-plugin.models",
@@ -660,7 +709,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "HyphenModel",
@@ -670,7 +719,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         assert meta.app_label == "my-cool-plugin"
 
-    def test_underscored_plugin_name(self):
+    def test_underscored_plugin_name(self) -> None:
         """Plugin names with underscores should work."""
         attrs = {
             "__module__": "my_cool_plugin.models.data",
@@ -678,7 +727,7 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             "Meta": type("Meta", (), {"abstract": True}),
         }
 
-        meta = attrs["Meta"]
+        meta: Any = attrs["Meta"]
         CustomAttributeMixinMetaClass.__new__(
             CustomAttributeMixinMetaClass,
             "UnderscoreModel",
@@ -705,10 +754,8 @@ class TestSetAttributesBulkOperations:
     """
 
     @pytest.fixture
-    def hub(self, db):
+    def hub(self, db: None) -> AttributeHub:
         """Create an AttributeHub instance for testing."""
-        from canvas_sdk.v1.data.custom_attribute import AttributeHub
-
         hub = AttributeHub(type="test", externally_exposable_id="test-123")
         hub.save()
         return hub
@@ -717,7 +764,7 @@ class TestSetAttributesBulkOperations:
     # Scenario 1: All new attributes
     # -------------------------------------------------------------------------
 
-    def test_all_new_attributes_creates_all(self, hub):
+    def test_all_new_attributes_creates_all(self, hub: AttributeHub) -> None:
         """When no attributes exist, all should be created."""
         result = hub.set_attributes(
             {
@@ -737,7 +784,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("count") == 42
         assert hub.get_attribute("active") is True
 
-    def test_all_new_with_various_types(self, hub):
+    def test_all_new_with_various_types(self, hub: AttributeHub) -> None:
         """New attributes with various data types should all be created."""
         test_data = {
             "string_val": "hello",
@@ -761,7 +808,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("json_val") == {"nested": "data"}
         assert hub.get_attribute("list_val") == [1, 2, 3]
 
-    def test_empty_dict_creates_nothing(self, hub):
+    def test_empty_dict_creates_nothing(self, hub: AttributeHub) -> None:
         """Empty dict should create no attributes."""
         result = hub.set_attributes({})
 
@@ -772,7 +819,7 @@ class TestSetAttributesBulkOperations:
     # Scenario 2: All existing attributes to update
     # -------------------------------------------------------------------------
 
-    def test_all_existing_attributes_updates_all(self, hub):
+    def test_all_existing_attributes_updates_all(self, hub: AttributeHub) -> None:
         """When all attributes exist, all should be updated."""
         # First create the attributes
         hub.set_attributes(
@@ -802,7 +849,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("count") == 99
         assert hub.get_attribute("active") is True
 
-    def test_update_changes_value_type(self, hub):
+    def test_update_changes_value_type(self, hub: AttributeHub) -> None:
         """Updating can change the value type."""
         # Create with string
         hub.set_attributes({"flexible": "a string"})
@@ -819,7 +866,7 @@ class TestSetAttributesBulkOperations:
         # Should still be only one attribute
         assert CustomAttribute.objects.filter(object_id=hub.pk, name="flexible").count() == 1
 
-    def test_update_to_same_value(self, hub):
+    def test_update_to_same_value(self, hub: AttributeHub) -> None:
         """Updating to the same value should work."""
         hub.set_attributes({"unchanged": "value"})
 
@@ -832,7 +879,7 @@ class TestSetAttributesBulkOperations:
     # Scenario 3: Mixed old and new attributes
     # -------------------------------------------------------------------------
 
-    def test_mixed_creates_and_updates(self, hub):
+    def test_mixed_creates_and_updates(self, hub: AttributeHub) -> None:
         """Mix of new and existing attributes should handle both."""
         # Create initial attributes
         hub.set_attributes(
@@ -865,7 +912,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("new1") == "brand new"
         assert hub.get_attribute("new2") is True
 
-    def test_mixed_with_partial_overlap(self, hub):
+    def test_mixed_with_partial_overlap(self, hub: AttributeHub) -> None:
         """Some attributes exist, some are new."""
         # Create initial set
         hub.set_attributes(
@@ -897,7 +944,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("d") == 4  # New
         assert hub.get_attribute("e") == 5  # New
 
-    def test_mixed_single_update_multiple_creates(self, hub):
+    def test_mixed_single_update_multiple_creates(self, hub: AttributeHub) -> None:
         """One existing attribute updated, multiple new created."""
         hub.set_attributes({"solo": "original"})
 
@@ -918,7 +965,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("new2") == "b"
         assert hub.get_attribute("new3") == "c"
 
-    def test_mixed_multiple_updates_single_create(self, hub):
+    def test_mixed_multiple_updates_single_create(self, hub: AttributeHub) -> None:
         """Multiple existing attributes updated, one new created."""
         hub.set_attributes(
             {
@@ -949,7 +996,7 @@ class TestSetAttributesBulkOperations:
     # Edge cases and return value verification
     # -------------------------------------------------------------------------
 
-    def test_returns_list_of_custom_attributes(self, hub):
+    def test_returns_list_of_custom_attributes(self, hub: AttributeHub) -> None:
         """Return value should be list of CustomAttribute instances."""
         result = hub.set_attributes(
             {
@@ -961,7 +1008,7 @@ class TestSetAttributesBulkOperations:
         assert isinstance(result, list)
         assert all(isinstance(attr, CustomAttribute) for attr in result)
 
-    def test_returned_attributes_have_correct_values(self, hub):
+    def test_returned_attributes_have_correct_values(self, hub: AttributeHub) -> None:
         """Returned attributes should have the values that were set."""
         result = hub.set_attributes(
             {
@@ -975,7 +1022,7 @@ class TestSetAttributesBulkOperations:
         assert result_dict["name"] == "test"
         assert result_dict["count"] == 5
 
-    def test_multiple_calls_accumulate_attributes(self, hub):
+    def test_multiple_calls_accumulate_attributes(self, hub: AttributeHub) -> None:
         """Multiple set_attributes calls should accumulate (not replace all)."""
         hub.set_attributes({"batch1_a": 1, "batch1_b": 2})
         hub.set_attributes({"batch2_a": 3, "batch2_b": 4})

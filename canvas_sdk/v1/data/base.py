@@ -20,7 +20,7 @@ class ModelMetaclass(ModelBase):
 
     def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
         """Create a new model class."""
-        meta = attrs.get("Meta")
+        meta: Any = attrs.get("Meta")
 
         for field_name, field in list(attrs.items()):
             if isinstance(field, ArrayField) and IS_SQLITE:
@@ -83,8 +83,9 @@ class Model(models.Model, metaclass=ModelMetaclass):
 class CustomModelMetaclass(ModelMetaclass):
     """A metaclass for configuring data models."""
 
-    def __new__(cls, name, bases, attrs, **kwargs):
-        meta = attrs.get("Meta")
+    def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
+        """Initialize the Meta class for the CustomModel to set critical info like app_label and db_table."""
+        meta: Any = attrs.get("Meta")
         if meta is None:
             attrs["Meta"] = type("Meta", (), {})
 
@@ -99,7 +100,7 @@ class CustomModelMetaclass(ModelMetaclass):
 
         # Look for foreign keys and one to one fields. Index them.
         for key, value in attrs.items():
-            if isinstance(value, ForeignKey) or isinstance(value, OneToOneField):
+            if isinstance(value, (ForeignKey, OneToOneField)):
                 if not hasattr(meta, "indexes"):
                     meta.indexes = []
                 idx = models.Index(fields=[f"{key}_id"])
@@ -112,6 +113,8 @@ class CustomModelMetaclass(ModelMetaclass):
 
 
 class CustomModel(Model, metaclass=CustomModelMetaclass):
+    """A base model for custom normalized tables."""
+
     class Meta:
         abstract = True
 
