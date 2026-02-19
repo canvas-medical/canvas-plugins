@@ -405,8 +405,6 @@ def test_end_to_end(tmp_path: Path) -> None:
 
     Verifies the model appears in the return list and the table exists in the database.
     """
-    from plugin_runner.installation import register_plugin_as_django_app
-
     plugin_name = "integ_test_plugin"
     plugin_dir = tmp_path / plugin_name
     plugin_dir.mkdir()
@@ -424,8 +422,6 @@ def test_end_to_end(tmp_path: Path) -> None:
             label = TextField()
         """)
     )
-
-    register_plugin_as_django_app(plugin_name, plugin_dir)
 
     result = generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
 
