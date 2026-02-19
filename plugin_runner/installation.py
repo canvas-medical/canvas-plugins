@@ -705,9 +705,92 @@ def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: lis
             )
 
 
+def discover_model_files(plugin_path: Path) -> list[Path]:
+    """Discover Python model files in a plugin's models/ directory.
+
+    Args:
+        plugin_path: Path to the plugin directory.
+
+    Returns:
+        Sorted list of .py file paths, excluding __init__.py.
+        Empty list if models/ doesn't exist.
+    """
+    models_path = plugin_path / "models"
+    if not models_path.exists():
+        return []
+    return sorted(f for f in models_path.glob("*.py") if f.name != "__init__.py")
+
+
+def extract_models_from_module(plugin_name: str, model_file: Path) -> list[type[CustomModel]]:
+    """Execute a model file in a sandbox and return discovered model classes.
+
+    Args:
+        plugin_name: Name of the plugin (used for module namespace).
+        model_file: Path to a single .py model file.
+
+    Returns:
+        List of model classes whose __module__ starts with '{plugin_name}.models'.
+    """
+    module_name = f"{plugin_name}.models.{model_file.stem}"
+    s = Sandbox(model_file, namespace=module_name)
+    scope = s.execute()
+    return [
+        value
+        for value in scope.values()
+        if hasattr(value, "__module__") and value.__module__.startswith(f"{plugin_name}.models")
+    ]
+
+
+def should_create_table(model_class: type, schema_name: str) -> bool:
+    """Determine whether a table should be created for the given model.
+
+    Returns False for:
+    - Objects without _meta (not Django models)
+    - Proxy models
+    - Models whose db_table references a different schema
+
+    Args:
+        model_class: A model class discovered from a plugin.
+        schema_name: The target schema name.
+
+    Returns:
+        True if a CREATE TABLE statement should be generated.
+    """
+    if not hasattr(model_class, "_meta"):
+        return False
+    if model_class._meta.proxy:
+        return False
+    db_table = model_class._meta.original_attrs["db_table"]
+    return "." not in db_table or db_table.startswith(f"{schema_name}")
+
+
+def execute_create_table_sql(create_sql: str) -> None:
+    """Execute CREATE TABLE SQL, handling SQLite vs PostgreSQL differences.
+
+    SQLite requires executing one statement at a time; PostgreSQL can handle
+    multiple statements in a single call.
+
+    Args:
+        create_sql: The SQL string (possibly multi-statement) to execute.
+    """
+    from django.conf import settings
+    from django.db import connection
+
+    is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
+
+    with connection.cursor() as cursor:
+        if is_sqlite:
+            for statement in create_sql.split(SQL_STATEMENT_DELIMITER):
+                statement = statement.strip()
+                if statement:
+                    cursor.execute(statement)
+        else:
+            cursor.execute(create_sql)
+
+
 def generate_plugin_migrations(
     plugin_name: str, plugin_path: Path, schema_name: str | None = None
-) -> list[CustomModel]:
+) -> list[type[CustomModel]]:
     """Generate Django migrations for plugin models.
 
     Args:
@@ -721,59 +804,25 @@ def generate_plugin_migrations(
     if schema_name is None:
         schema_name = plugin_name
     log.info(f"Generating migrations for plugin '{plugin_name}' in schema '{schema_name}'")
-    discovered_models = []
+    discovered_models: list[type[CustomModel]] = []
     try:
-        # Add plugin directory to Python path
         if str(plugin_path) not in sys.path:
             sys.path.insert(0, str(plugin_path))
 
-        # Dynamically load plugin models
-        models_path = plugin_path / "models"
-        if models_path.exists():
-            # Load all model files in the plugin
-            for model_file in models_path.glob("*.py"):
-                if model_file.name == "__init__.py":
-                    continue
-                module_name = f"{plugin_name}.models.{model_file.stem}"
-                s = Sandbox(model_file, namespace=module_name)
-                cls = s.execute()
-
-                # Generate CREATE TABLE SQL for each model
-                for name, value in cls.items():
-                    if hasattr(value, "__module__") and value.__module__.startswith(
-                        f"{plugin_name}.models"
-                    ):
-                        discovered_models.append(value)
-                        if hasattr(value, "_meta"):
-                            if value._meta.proxy:
-                                continue
-                            db_table = value._meta.original_attrs["db_table"]
-                            if "." in db_table and not db_table.startswith(f"{schema_name}"):
-                                log.warning(
-                                    f"Skipping {db_table} because it references another schema"
-                                )
-                                continue
-                            create_sql = generate_create_table_sql(schema_name, value)
-                            log.info(f"Generated SQL for {name}:")
-                            log.info(create_sql)
-
-                            # Execute the CREATE TABLE statements
-                            # SQLite requires executing one statement at a time
-                            from django.conf import settings
-                            from django.db import connection
-
-                            is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
-
-                            with connection.cursor() as cursor:
-                                if is_sqlite:
-                                    # Split by double newline and execute each statement separately
-                                    for statement in create_sql.split(SQL_STATEMENT_DELIMITER):
-                                        statement = statement.strip()
-                                        if statement:
-                                            cursor.execute(statement)
-                                else:
-                                    # PostgreSQL can handle multiple statements
-                                    cursor.execute(create_sql)
+        for model_file in discover_model_files(plugin_path):
+            models = extract_models_from_module(plugin_name, model_file)
+            for model_class in models:
+                discovered_models.append(model_class)
+                if should_create_table(model_class, schema_name):
+                    create_sql = generate_create_table_sql(schema_name, model_class)
+                    log.info(f"Generated SQL for {model_class.__name__}:")
+                    log.info(create_sql)
+                    execute_create_table_sql(create_sql)
+                elif hasattr(model_class, "_meta") and model_class._meta.proxy:
+                    log.info(f"Skipping proxy model {model_class.__name__}")
+                elif hasattr(model_class, "_meta"):
+                    db_table = model_class._meta.original_attrs["db_table"]
+                    log.warning(f"Skipping {db_table} because it references another schema")
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
