@@ -1181,7 +1181,8 @@
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
-    "Letter"
+    "Letter",
+    "LetterActionEvent"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",

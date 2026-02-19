@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 
 
 class Language(TimestampedModel):
@@ -30,7 +30,19 @@ class Letter(TimestampedModel, IdentifiableModel):
     )
 
 
+class LetterActionEvent(Model):
+    """Event representing an action taken on a letter."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_letteractionevent_001"
+
+    letter = models.ForeignKey(
+        Letter, on_delete=models.CASCADE, related_name="letter_action_events"
+    )
+
+
 __exports__ = (
     "Language",
     "Letter",
+    "LetterActionEvent",
 )
