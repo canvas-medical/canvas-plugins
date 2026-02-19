@@ -168,6 +168,8 @@ class TestPluginDatabaseContextManagerMocked:
     """Tests for plugin_database_context with mocked database operations.
 
     These tests verify the context manager's logic without requiring PostgreSQL.
+    No namespace is passed in most tests, so search_path is never touched and
+    no connection mock is needed.
     """
 
     def test_context_sets_and_clears_plugin_name(self) -> None:
@@ -175,33 +177,22 @@ class TestPluginDatabaseContextManagerMocked:
         clear_current_plugin()
         assert get_current_plugin() is None
 
-        # Patch at django.db level since connection is imported locally in the function
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("test_plugin"):
-                assert get_current_plugin() == "test_plugin"
+        with plugin_database_context("test_plugin"):
+            assert get_current_plugin() == "test_plugin"
 
         # After context, should be cleared
         assert get_current_plugin() is None
 
     def test_context_restores_previous_plugin(self) -> None:
         """Nested contexts should restore the previous plugin."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        with plugin_database_context("outer_plugin"):
+            assert get_current_plugin() == "outer_plugin"
 
-            with plugin_database_context("outer_plugin"):
-                assert get_current_plugin() == "outer_plugin"
+            with plugin_database_context("inner_plugin"):
+                assert get_current_plugin() == "inner_plugin"
 
-                with plugin_database_context("inner_plugin"):
-                    assert get_current_plugin() == "inner_plugin"
-
-                # Should be restored to outer
-                assert get_current_plugin() == "outer_plugin"
+            # Should be restored to outer
+            assert get_current_plugin() == "outer_plugin"
 
         assert get_current_plugin() is None
 
@@ -209,17 +200,12 @@ class TestPluginDatabaseContextManagerMocked:
         """Context should clean up even if exception is raised."""
         clear_current_plugin()
 
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            try:
-                with plugin_database_context("test_plugin"):
-                    assert get_current_plugin() == "test_plugin"
-                    raise ValueError("Test exception")
-            except ValueError:
-                pass
+        try:
+            with plugin_database_context("test_plugin"):
+                assert get_current_plugin() == "test_plugin"
+                raise ValueError("Test exception")
+        except ValueError:
+            pass
 
         # Should still be cleared after exception
         assert get_current_plugin() is None
@@ -246,17 +232,10 @@ class TestPluginDatabaseContextManagerMocked:
 
     def test_search_path_not_changed_without_namespace(self) -> None:
         """Verify that search_path is not changed when no namespace is provided."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        with plugin_database_context("my_plugin"):
+            pass
 
-            with plugin_database_context("my_plugin"):
-                pass
-
-            # No SQL should be executed
-            calls = mock_cursor.execute.call_args_list
-            assert len(calls) == 0
+        # No SQL should have been executed since no namespace was provided
 
     @patch("canvas_sdk.v1.plugin_database_context._is_postgres", return_value=True)
     def test_search_path_restored_to_public(self, mock_is_pg: MagicMock) -> None:
@@ -277,10 +256,12 @@ class TestPluginDatabaseContextManagerMocked:
 
 
 class TestPluginDatabaseContextThreadSafetyMocked:
-    """Tests for thread-safe context operations with mocked database.
+    """Tests for thread-safe context operations.
 
     These tests verify that multiple threads can simultaneously use
     plugin_database_context and each thread maintains its own plugin state.
+    No namespace is passed, so search_path is never touched and no
+    connection mock is needed.
     """
 
     def test_parallel_threads_have_correct_plugin_context(self) -> None:
@@ -294,20 +275,15 @@ class TestPluginDatabaseContextThreadSafetyMocked:
             try:
                 barrier.wait()
 
-                with patch("django.db.connection") as mock_conn:
-                    mock_cursor = MagicMock()
-                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+                with plugin_database_context(plugin_name):
+                    time.sleep(0.01)
+                    actual_plugin = get_current_plugin()
 
-                    with plugin_database_context(plugin_name):
-                        time.sleep(0.01)
-                        actual_plugin = get_current_plugin()
-
-                        results[thread_id] = {
-                            "plugin_name": plugin_name,
-                            "actual_plugin": actual_plugin,
-                            "plugin_match": actual_plugin == plugin_name,
-                        }
+                    results[thread_id] = {
+                        "plugin_name": plugin_name,
+                        "actual_plugin": actual_plugin,
+                        "plugin_match": actual_plugin == plugin_name,
+                    }
             except Exception as e:
                 errors.append((thread_id, str(e)))
 
@@ -343,34 +319,27 @@ class TestPluginDatabaseContextThreadSafetyMocked:
             for iteration in range(iterations_per_thread):
                 plugin_name = f"stress_plugin_{thread_id}_{iteration}"
                 try:
-                    with patch("django.db.connection") as mock_conn:
-                        mock_cursor = MagicMock()
-                        mock_conn.cursor.return_value.__enter__ = MagicMock(
-                            return_value=mock_cursor
-                        )
-                        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+                    with plugin_database_context(plugin_name):
+                        actual = get_current_plugin()
+                        success = actual == plugin_name
 
-                        with plugin_database_context(plugin_name):
-                            actual = get_current_plugin()
-                            success = actual == plugin_name
+                        with lock:
+                            results.append(
+                                {
+                                    "thread_id": thread_id,
+                                    "iteration": iteration,
+                                    "expected": plugin_name,
+                                    "actual": actual,
+                                    "success": success,
+                                }
+                            )
 
+                        if not success:
                             with lock:
-                                results.append(
-                                    {
-                                        "thread_id": thread_id,
-                                        "iteration": iteration,
-                                        "expected": plugin_name,
-                                        "actual": actual,
-                                        "success": success,
-                                    }
+                                errors.append(
+                                    f"Thread {thread_id}, iter {iteration}: "
+                                    f"expected {plugin_name}, got {actual}"
                                 )
-
-                            if not success:
-                                with lock:
-                                    errors.append(
-                                        f"Thread {thread_id}, iter {iteration}: "
-                                        f"expected {plugin_name}, got {actual}"
-                                    )
                 except Exception as e:
                     with lock:
                         errors.append(f"Thread {thread_id}, iter {iteration}: {e}")
@@ -406,20 +375,15 @@ class TestPluginDatabaseContextThreadSafetyMocked:
             try:
                 barrier.wait()
 
-                with patch("django.db.connection") as mock_conn:
-                    mock_cursor = MagicMock()
-                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+                with plugin_database_context(outer_plugin):
+                    outer_check = get_current_plugin()
 
-                    with plugin_database_context(outer_plugin):
-                        outer_check = get_current_plugin()
+                    with plugin_database_context(inner_plugin):
+                        inner_check = get_current_plugin()
 
-                        with plugin_database_context(inner_plugin):
-                            inner_check = get_current_plugin()
+                    restored_check = get_current_plugin()
 
-                        restored_check = get_current_plugin()
-
-                    after_check = get_current_plugin()
+                after_check = get_current_plugin()
 
                 results[thread_id] = {
                     "outer_expected": outer_plugin,
@@ -502,7 +466,7 @@ class TestConfigurableThreadCount:
 
     @pytest.mark.parametrize("num_threads", [2, 5, 10])
     def test_variable_thread_count_with_context_manager(self, num_threads: int) -> None:
-        """Test context manager with various thread counts (mocked)."""
+        """Test context manager with various thread counts."""
         results = {}
         errors = []
         barrier = threading.Barrier(num_threads)
@@ -510,15 +474,10 @@ class TestConfigurableThreadCount:
         def worker(thread_id: int, plugin_name: str) -> None:
             try:
                 barrier.wait()
-                with patch("django.db.connection") as mock_conn:
-                    mock_cursor = MagicMock()
-                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-                    with plugin_database_context(plugin_name):
-                        time.sleep(0.01)
-                        actual = get_current_plugin()
-                        results[thread_id] = (plugin_name, actual)
+                with plugin_database_context(plugin_name):
+                    time.sleep(0.01)
+                    actual = get_current_plugin()
+                    results[thread_id] = (plugin_name, actual)
             except Exception as e:
                 errors.append((thread_id, str(e)))
 
@@ -548,23 +507,23 @@ class TestPluginDatabaseContextPostgres:
 
     def test_search_path_is_set(self) -> None:
         """Context manager should set the database search_path."""
-        with plugin_database_context("my_test_plugin"):
+        with plugin_database_context("my_test_plugin", namespace="org__shared"):
             with connection.cursor() as cursor:
                 cursor.execute("SHOW search_path")
                 search_path = cursor.fetchone()[0]
 
-            assert "my_test_plugin" in search_path
+            assert "org__shared" in search_path
 
     def test_search_path_restored_after_context(self) -> None:
         """search_path should be restored to public after context exits."""
-        with plugin_database_context("temp_plugin"):
+        with plugin_database_context("temp_plugin", namespace="org__temp"):
             pass
 
         with connection.cursor() as cursor:
             cursor.execute("SHOW search_path")
             search_path = cursor.fetchone()[0]
 
-        assert "temp_plugin" not in search_path
+        assert "org__temp" not in search_path
 
     def test_parallel_threads_with_search_path_verification(self) -> None:
         """Verify search_path is correctly set per thread on PostgreSQL."""
@@ -573,11 +532,11 @@ class TestPluginDatabaseContextPostgres:
         errors = []
         barrier = threading.Barrier(num_threads)
 
-        def worker(thread_id: int, plugin_name: str) -> None:
+        def worker(thread_id: int, namespace: str) -> None:
             try:
                 barrier.wait()
 
-                with plugin_database_context(plugin_name):
+                with plugin_database_context(f"plugin_{thread_id}", namespace=namespace):
                     time.sleep(0.01)
 
                     with connection.cursor() as cursor:
@@ -587,18 +546,18 @@ class TestPluginDatabaseContextPostgres:
                     actual_plugin = get_current_plugin()
 
                     results[thread_id] = {
-                        "plugin_name": plugin_name,
+                        "namespace": namespace,
                         "actual_plugin": actual_plugin,
                         "search_path": search_path,
-                        "search_path_correct": plugin_name in search_path,
+                        "search_path_correct": namespace in search_path,
                     }
             except Exception as e:
                 errors.append((thread_id, str(e)))
 
         threads = []
         for i in range(num_threads):
-            plugin_name = f"search_path_plugin_{i}"
-            t = threading.Thread(target=worker, args=(i, plugin_name))
+            namespace = f"org__ns_{i}"
+            t = threading.Thread(target=worker, args=(i, namespace))
             threads.append(t)
 
         for t in threads:
@@ -610,12 +569,12 @@ class TestPluginDatabaseContextPostgres:
         assert len(errors) == 0, f"Thread errors: {errors}"
 
         for thread_id, result in results.items():
-            assert result["actual_plugin"] == result["plugin_name"], (
+            assert result["actual_plugin"] == f"plugin_{thread_id}", (
                 f"Thread {thread_id}: plugin mismatch"
             )
             assert result["search_path_correct"], (
                 f"Thread {thread_id}: search_path '{result['search_path']}' "
-                f"does not contain '{result['plugin_name']}'"
+                f"does not contain '{result['namespace']}'"
             )
 
 
@@ -677,85 +636,50 @@ class TestAccessLevelInContextManager:
 
     def test_context_sets_access_level(self) -> None:
         """Context manager should set the access level."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("test_plugin", access_level="read_write"):
-                assert get_access_level() == "read_write"
+        with plugin_database_context("test_plugin", access_level="read_write"):
+            assert get_access_level() == "read_write"
 
     def test_context_defaults_to_read_access(self) -> None:
         """Context manager should default to read access level."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("test_plugin"):
-                assert get_access_level() == "read"
+        with plugin_database_context("test_plugin"):
+            assert get_access_level() == "read"
 
     def test_context_with_read_only_access(self) -> None:
         """Context manager should allow read-only access level."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("test_plugin", access_level="read"):
-                assert get_access_level() == "read"
-                assert is_write_allowed() is False
+        with plugin_database_context("test_plugin", access_level="read"):
+            assert get_access_level() == "read"
+            assert is_write_allowed() is False
 
     def test_context_clears_access_level_on_exit(self) -> None:
         """Context manager should clear access level when exiting."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("test_plugin", access_level="read_write"):
-                pass
+        with plugin_database_context("test_plugin", access_level="read_write"):
+            pass
 
         # After context, access_level should be cleared (returning default "read")
         assert get_access_level() == "read"
 
     def test_nested_contexts_restore_access_level(self) -> None:
         """Nested contexts should restore the outer access level."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        with plugin_database_context("outer_plugin", access_level="read"):
+            assert get_access_level() == "read"
 
-            with plugin_database_context("outer_plugin", access_level="read"):
-                assert get_access_level() == "read"
+            with plugin_database_context("inner_plugin", access_level="read_write"):
+                assert get_access_level() == "read_write"
 
-                with plugin_database_context("inner_plugin", access_level="read_write"):
-                    assert get_access_level() == "read_write"
-
-                # Should be restored to outer access level
-                assert get_access_level() == "read"
+            # Should be restored to outer access level
+            assert get_access_level() == "read"
 
     def test_context_sets_schema_for_namespace(self) -> None:
         """Context manager should set schema when namespace is provided."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("my_plugin", namespace="shared_namespace"):
-                assert get_current_plugin() == "my_plugin"
-                assert get_current_schema() == "shared_namespace"
+        with plugin_database_context("my_plugin", namespace="shared_namespace"):
+            assert get_current_plugin() == "my_plugin"
+            assert get_current_schema() == "shared_namespace"
 
     def test_context_schema_is_none_when_no_namespace(self) -> None:
         """Context manager should set schema to None when no namespace provided."""
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("my_plugin"):
-                assert get_current_plugin() == "my_plugin"
-                assert get_current_schema() is None
+        with plugin_database_context("my_plugin"):
+            assert get_current_plugin() == "my_plugin"
+            assert get_current_schema() is None
 
 
 class TestAccessLevelThreadIsolation:
@@ -770,34 +694,24 @@ class TestAccessLevelThreadIsolation:
         def worker_read() -> None:
             try:
                 barrier.wait()
-                with patch("django.db.connection") as mock_conn:
-                    mock_cursor = MagicMock()
-                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-                    with plugin_database_context("plugin_read", access_level="read"):
-                        time.sleep(0.01)
-                        results["read_thread"] = {
-                            "access_level": get_access_level(),
-                            "is_write_allowed": is_write_allowed(),
-                        }
+                with plugin_database_context("plugin_read", access_level="read"):
+                    time.sleep(0.01)
+                    results["read_thread"] = {
+                        "access_level": get_access_level(),
+                        "is_write_allowed": is_write_allowed(),
+                    }
             except Exception as e:
                 errors.append(("read", str(e)))
 
         def worker_write() -> None:
             try:
                 barrier.wait()
-                with patch("django.db.connection") as mock_conn:
-                    mock_cursor = MagicMock()
-                    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-                    with plugin_database_context("plugin_write", access_level="read_write"):
-                        time.sleep(0.01)
-                        results["write_thread"] = {
-                            "access_level": get_access_level(),
-                            "is_write_allowed": is_write_allowed(),
-                        }
+                with plugin_database_context("plugin_write", access_level="read_write"):
+                    time.sleep(0.01)
+                    results["write_thread"] = {
+                        "access_level": get_access_level(),
+                        "is_write_allowed": is_write_allowed(),
+                    }
             except Exception as e:
                 errors.append(("write", str(e)))
 

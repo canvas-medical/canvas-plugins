@@ -7,7 +7,7 @@ Tests verify that:
 4. Operations succeed when not in a plugin context
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -189,29 +189,17 @@ class TestWritePermissionWithContextManager:
         """Write operations should be denied in a read-only context."""
         from canvas_sdk.v1.plugin_database_context import plugin_database_context
 
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context("my_plugin", namespace="shared_ns", access_level="read"):
-                model = MockModel()
-                with pytest.raises(NamespaceWriteDenied):
-                    model.save()
+        with plugin_database_context("my_plugin", namespace="shared_ns", access_level="read"):
+            model = MockModel()
+            with pytest.raises(NamespaceWriteDenied):
+                model.save()
 
     def test_write_allowed_in_read_write_context(self) -> None:
         """Write operations should be allowed in a read_write context."""
         from canvas_sdk.v1.plugin_database_context import plugin_database_context
 
-        with patch("django.db.connection") as mock_conn:
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-            mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-            with plugin_database_context(
-                "my_plugin", namespace="shared_ns", access_level="read_write"
-            ):
-                model = MockModel()
-                # Mock parent save to avoid database operations
-                with patch.object(Model.__bases__[0], "save", return_value=None):
-                    model.save()  # Should not raise
+        with plugin_database_context("my_plugin", namespace="shared_ns", access_level="read_write"):
+            model = MockModel()
+            # Mock parent save to avoid database operations
+            with patch.object(Model.__bases__[0], "save", return_value=None):
+                model.save()  # Should not raise
