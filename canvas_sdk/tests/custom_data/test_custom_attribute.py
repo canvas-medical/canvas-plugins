@@ -866,6 +866,53 @@ class TestSetAttributesBulkOperations:
         # Should still be only one attribute
         assert CustomAttribute.objects.filter(object_id=hub.pk, name="flexible").count() == 1
 
+    def test_update_date_value(self, hub: AttributeHub) -> None:
+        """Updating a date attribute via bulk update should persist the new value."""
+        original_date = datetime.date(2024, 1, 1)
+        hub.set_attributes({"birthday": original_date})
+        assert hub.get_attribute("birthday") == original_date
+
+        # Update the date — this exercises the bulk_update path with date_value
+        updated_date = datetime.date(2025, 6, 15)
+        hub.set_attributes({"birthday": updated_date})
+
+        # Re-fetch from database to confirm persistence
+        attr = CustomAttribute.objects.get(object_id=hub.pk, name="birthday")
+        assert attr.date_value == updated_date
+        assert attr.value == updated_date
+
+    def test_update_all_value_types(self, hub: AttributeHub) -> None:
+        """Updating all value types via bulk update should persist every field."""
+        initial = {
+            "text_attr": "original",
+            "date_attr": datetime.date(2024, 1, 1),
+            "datetime_attr": datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC),
+            "int_attr": 1,
+            "decimal_attr": decimal.Decimal("1.5"),
+            "bool_attr": False,
+            "json_attr": {"key": "old"},
+        }
+        hub.set_attributes(initial)
+
+        updated = {
+            "text_attr": "updated",
+            "date_attr": datetime.date(2025, 6, 15),
+            "datetime_attr": datetime.datetime(2025, 6, 15, 18, 30, 0, tzinfo=datetime.UTC),
+            "int_attr": 99,
+            "decimal_attr": decimal.Decimal("99.99"),
+            "bool_attr": True,
+            "json_attr": {"key": "new"},
+        }
+        hub.set_attributes(updated)
+
+        # Verify total count unchanged (all updates, no creates)
+        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 7
+
+        # Re-fetch from database to confirm persistence
+        for name, expected in updated.items():
+            attr = CustomAttribute.objects.get(object_id=hub.pk, name=name)
+            assert attr.value == expected, f"{name}: expected {expected!r}, got {attr.value!r}"
+
     def test_update_to_same_value(self, hub: AttributeHub) -> None:
         """Updating to the same value should work."""
         hub.set_attributes({"unchanged": "value"})

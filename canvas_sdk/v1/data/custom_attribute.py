@@ -286,6 +286,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
                 to_update,
                 [
                     "text_value",
+                    "date_value",
                     "timestamp_value",
                     "int_value",
                     "decimal_value",
