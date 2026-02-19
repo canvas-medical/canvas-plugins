@@ -490,6 +490,49 @@
   "canvas_sdk.effects.compound_medications.compound_medication": [
     "CompoundMedication"
   ],
+  "canvas_sdk.effects.data_integration": [
+    "AnnotationItem",
+    "AssignDocumentReviewer",
+    "CategorizeDocument",
+    "DocumentType",
+    "JunkDocument",
+    "LinkDocumentToPatient",
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields",
+    "Priority",
+    "RemoveDocumentFromPatient",
+    "ReviewMode",
+    "TemplateFields"
+  ],
+  "canvas_sdk.effects.data_integration.assign_document_reviewer": [
+    "AssignDocumentReviewer",
+    "Priority",
+    "ReviewMode"
+  ],
+  "canvas_sdk.effects.data_integration.categorize_document": [
+    "CategorizeDocument"
+  ],
+  "canvas_sdk.effects.data_integration.constants": [
+    "VALID_REPORT_TYPES",
+    "VALID_TEMPLATE_TYPES"
+  ],
+  "canvas_sdk.effects.data_integration.junk_document": [
+    "JunkDocument"
+  ],
+  "canvas_sdk.effects.data_integration.link_document_to_patient": [
+    "LinkDocumentToPatient"
+  ],
+  "canvas_sdk.effects.data_integration.prefill_document_fields": [
+    "PrefillDocumentFieldData",
+    "PrefillDocumentFields"
+  ],
+  "canvas_sdk.effects.data_integration.remove_document_from_patient": [
+    "RemoveDocumentFromPatient"
+  ],
+  "canvas_sdk.effects.data_integration.types": [
+    "AnnotationItem",
+    "DocumentType"
+  ],
   "canvas_sdk.effects.default_homepage": [
     "DefaultHomepageEffect"
   ],
