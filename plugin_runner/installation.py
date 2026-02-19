@@ -9,15 +9,12 @@ import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from types import ModuleType
 from typing import TypedDict, cast
 from urllib import parse
 
 import psycopg
 import requests
 import sentry_sdk
-from django.apps import apps
-from django.apps.config import AppConfig
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db.models import DateField, Field, Index
@@ -166,78 +163,6 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
             download_file.write(response.content)
 
         yield download_path
-
-
-def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
-    """
-    Dynamically register a plugin as a Django app.
-    Must be called BEFORE any models from the plugin are imported.
-    """
-    # Normalize plugin name for use as app label (no hyphens)
-    app_label = plugin_name.replace("-", "_")
-
-    # Check if already registered
-    if apps.is_installed(plugin_name):
-        log.info(f"Plugin {plugin_name} already registered as Django app")
-        # Clear stale models so sandbox re-registration doesn't trigger
-        # Django's "Model was already registered" warning
-        apps.all_models[app_label] = {}
-        return
-
-    # Create a minimal mock module for Django's app registry
-    mock_module = ModuleType(plugin_name)
-    mock_module.__name__ = plugin_name
-    mock_module.__package__ = plugin_name
-    mock_module.__path__ = [str(plugin_path)]  # Point to actual plugin directory
-    mock_module.__file__ = f"{plugin_path}/__init__.py"
-
-    # Create mock models submodule
-    models_module_name = f"{plugin_name}.models"
-    mock_models = ModuleType(models_module_name)
-    mock_models.__name__ = models_module_name
-    mock_models.__package__ = plugin_name
-    mock_models.__path__ = [f"{plugin_path}/models"]
-    mock_models.__file__ = f"{plugin_path}/models/__init__.py"
-
-    # Register both in sys.modules
-    sys.modules[plugin_name] = mock_module
-    sys.modules[models_module_name] = mock_models
-
-    # Link models module to parent
-    setattr(mock_module, "models", mock_models)  # noqa: B010
-
-    # Add to INSTALLED_APPS if not present
-    if plugin_name not in settings.INSTALLED_APPS:
-        settings.INSTALLED_APPS = list(settings.INSTALLED_APPS) + [plugin_name]
-
-    class Apps:
-        def check_models_ready(self) -> bool:
-            return True
-
-    # Create a dynamic AppConfig
-    class DynamicPluginAppConfig(AppConfig):
-        name = plugin_name
-        label = app_label
-        verbose_name = plugin_name
-        path = ""  # Overridden in __init__ with actual plugin_path
-
-        def __init__(self, app_name: str, app_module: ModuleType | None) -> None:
-            # Override to prevent Django from doing too much introspection
-            self.apps = Apps()  # type: ignore[assignment]
-            self.name = app_name
-            self.module = app_module
-            self.label = app_label
-            self.verbose_name = plugin_name + "_verbose"
-            self.path = str(plugin_path)
-            self.models_module = None  # Will be populated when sandbox loads models
-            self.models = {}
-
-    # Register with Django's app registry
-    app_config = DynamicPluginAppConfig(plugin_name, None)
-    apps.app_configs[app_label] = app_config
-
-    # Clear the models cache to ensure fresh registration
-    apps.all_models[app_label] = {}
 
 
 # Reserved PostgreSQL schema names that cannot be used as namespaces
@@ -507,8 +432,6 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
 
     Automatically detects SQLite and generates compatible SQL without schema prefixes.
     """
-    from django.conf import settings
-
     # Detect if we're using SQLite
     is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
 
@@ -674,37 +597,6 @@ def generate_index_sql(
         return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
 
 
-def associate_plugin_models_with_plugin_app(plugin_name: str, model_classes: list) -> None:
-    """
-    After models are loaded in the sandbox, associate them with the registered app.
-
-    Args:
-        plugin_name: Name of the plugin
-        model_classes: List of CustomModel classes from the sandbox
-    """
-    app_label = plugin_name.replace("-", "_")
-
-    if not apps.is_installed(app_label):
-        raise RuntimeError(
-            f"App {app_label} not registered. Call register_plugin_as_django_app first."
-        )
-
-    # Get the AppConfig we created
-    app_config = apps.app_configs[app_label]
-
-    # Register each model with the app
-    for model_class in model_classes:
-        model_name = model_class._meta.model_name
-        # apps.all_models[app_label][model_name] = model_class
-        app_config.models[model_name] = model_class
-
-        # Ensure the model knows its app
-        if model_class._meta.app_label != app_label:
-            log.warning(
-                f"Warning: Model {model_class} has app_label {model_class._meta.app_label}, expected {app_label}"
-            )
-
-
 def discover_model_files(plugin_path: Path) -> list[Path]:
     """Discover Python model files in a plugin's models/ directory.
 
@@ -773,7 +665,6 @@ def execute_create_table_sql(create_sql: str) -> None:
     Args:
         create_sql: The SQL string (possibly multi-statement) to execute.
     """
-    from django.conf import settings
     from django.db import connection
 
     is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
@@ -926,7 +817,6 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         # Initialize namespace schema and generate model migrations if custom_data is declared
         if custom_data:
-            register_plugin_as_django_app(plugin_name, plugin_installation_path)
             schema_name = custom_data["namespace"]
             declared_access = custom_data.get("access", "read")
             secrets = attributes["secrets"]
@@ -942,10 +832,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             initialize_namespace_partitions(schema_name)
 
             if can_create_tables:
-                discovered_models = generate_plugin_migrations(
-                    plugin_name, plugin_installation_path, schema_name
-                )
-                associate_plugin_models_with_plugin_app(plugin_name, discovered_models)
+                generate_plugin_migrations(plugin_name, plugin_installation_path, schema_name)
             else:
                 log.info(
                     f"Plugin '{plugin_name}' has read-only access to namespace "
