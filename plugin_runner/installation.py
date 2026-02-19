@@ -204,7 +204,7 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
     sys.modules[models_module_name] = mock_models
 
     # Link models module to parent
-    mock_module.models = mock_models
+    setattr(mock_module, "models", mock_models)  # noqa: B010
 
     # Add to INSTALLED_APPS if not present
     if plugin_name not in settings.INSTALLED_APPS:
@@ -219,7 +219,7 @@ def register_plugin_as_django_app(plugin_name: str, plugin_path: Path) -> None:
         name = plugin_name
         label = app_label
         verbose_name = plugin_name
-        path: str | None = None  # Will be set by Django if module can be imported
+        path = ""  # Overridden in __init__ with actual plugin_path
 
         def __init__(self, app_name: str, app_module: ModuleType | None) -> None:
             # Override to prevent Django from doing too much introspection
@@ -625,6 +625,7 @@ def generate_field_sql(field: Field, is_sqlite: bool = False) -> str:
         if is_sqlite:
             return "REAL"
         else:
+            assert isinstance(field, DecimalField)
             max_digits = field.max_digits or 20
             decimal_places = field.decimal_places or 10
             return f"NUMERIC({max_digits},{decimal_places})"
