@@ -3,6 +3,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from pytest_django.plugin import DjangoDbBlocker
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -23,7 +24,7 @@ def transaction(db: None) -> Generator[None, None, None]:
 
 @pytest.fixture(scope="session", autouse=True)
 def create_plugin_custom_model_tables(
-    django_db_setup, django_db_blocker, request: pytest.FixtureRequest
+    django_db_setup: None, django_db_blocker: DjangoDbBlocker, request: pytest.FixtureRequest
 ) -> None:
     """Create tables for plugin custom models in the SQLite test database.
 
@@ -45,7 +46,7 @@ def create_plugin_custom_model_tables(
 
     # Detect plugin name and path from the test directory structure
     # Expected structure: /path/to/plugin_name/tests/...
-    test_dir = Path(request.config.rootdir)
+    test_dir = Path(request.config.rootpath)
     plugin_name = test_dir.name.replace("-", "_")  # Convert plugin-name to plugin_name
     plugin_path = test_dir / plugin_name
 
