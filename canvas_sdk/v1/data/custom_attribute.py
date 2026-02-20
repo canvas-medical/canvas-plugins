@@ -136,10 +136,6 @@ class CustomAttributeMixinMetaClass(ModelMetaclass):
         """Create a new class, setting app_label from the module name for plugins."""
         meta: Any = attrs.get("Meta")
         if meta is None:
-            attrs["Meta"] = type("Meta", (), {})
-
-        # Create Meta class if it doesn't exist
-        if meta is None:
             meta = type("Meta", (), {})
             attrs["Meta"] = meta
 
