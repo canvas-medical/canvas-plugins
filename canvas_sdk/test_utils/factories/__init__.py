@@ -26,7 +26,7 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
 )
-from .letter import LanguageFactory, LetterFactory
+from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
@@ -102,6 +102,7 @@ __all__ = (
     "LabValueFactory",
     "LanguageFactory",
     "LetterFactory",
+    "LetterActionEventFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
