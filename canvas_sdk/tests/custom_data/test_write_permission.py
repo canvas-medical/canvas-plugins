@@ -11,14 +11,14 @@ from unittest.mock import patch
 
 import pytest
 
-from canvas_sdk.v1.data.base import Model, NamespaceWriteDenied
+from canvas_sdk.v1.data.base import CustomModel, Model, NamespaceWriteDenied
 from canvas_sdk.v1.plugin_database_context import (
     _plugin_context,
     clear_current_plugin,
 )
 
 
-class MockModel(Model):
+class MockModel(CustomModel):
     """A mock model for testing write permission enforcement."""
 
     class Meta:
@@ -125,7 +125,7 @@ class TestModelSaveWritePermission:
             mock_save.assert_called_once()
 
     def test_save_succeeds_without_context(self) -> None:
-        """Model.save() should succeed when not in a plugin context."""
+        """CustomModel.save() should succeed when not in a plugin context."""
         model = MockModel()
 
         # Mock the parent save to avoid database operations

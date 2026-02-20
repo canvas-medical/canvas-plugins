@@ -10,12 +10,11 @@ CREATE TABLE IF NOT EXISTS {namespace}.namespace_auth (
     key_hash VARCHAR(64) NOT NULL UNIQUE,  -- SHA-256 hash of the secret key
     access_level VARCHAR(10) NOT NULL CHECK (access_level IN ('read', 'read_write')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    description TEXT  -- Optional description (e.g., "Plugin X read access")
+    description TEXT
 );
 
 -- Only allow SELECT on namespace_auth for the SDK role
 -- Keys must be inserted by admin/owner, not by plugins
--- REVOKE ALL PRIVILEGES ON {namespace}.namespace_auth FROM canvas_sdk_read_only;
 GRANT SELECT ON {namespace}.namespace_auth TO canvas_sdk_read_only;
 
 -- Custom attribute storage (same as plugin schema)
