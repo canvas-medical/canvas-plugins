@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "abnormal_lab_task_notification.protocols.abnormal_lab_protocol:AbnormalLabHandler",
+                "class": "abnormal_lab_task_notification.handlers.abnormal_lab_handler:AbnormalLabHandler",
                 "description": "Monitors lab reports and creates tasks for abnormal values",
                 "data_access": {
                     "event": "LAB_REPORT_CREATED",

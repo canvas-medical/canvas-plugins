@@ -6,8 +6,8 @@
     "components": {
         "protocols": [
             {
-                "class": "upsert_patient_metadata.protocols.my_protocol:MyHandler",
-                "description": "A protocol that does xyz..."
+                "class": "upsert_patient_metadata.handlers.my_handler:MyHandler",
+                "description": "A handler that does xyz..."
             }
         ],
         "commands": [],
