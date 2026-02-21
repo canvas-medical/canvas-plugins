@@ -7,7 +7,7 @@ from canvas_sdk.handlers import BaseHandler
 from logger import log
 
 
-class Protocol(BaseHandler):
+class MyHandler(BaseHandler):
     """
     Extracts key-value pairs from plan update narratives and stores them as patient metadata.
 
