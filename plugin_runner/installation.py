@@ -733,30 +733,30 @@ def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict
     Raises:
         PluginInstallationError: If the access key is missing or invalid.
     """
-    generated_keys = create_namespace_schema(namespace=schema_name)
+    if namespace_exists(schema_name):
+        # Namespace already exists - must verify the key grants read_write access
+        secret_value = secrets.get("read_write_access_key")
+        if not secret_value:
+            raise PluginInstallationError(
+                f"Plugin '{plugin_name}' declares read_write access to namespace "
+                f"'{schema_name}' but 'read_write_access_key' secret is not configured."
+            )
+        granted_access = check_namespace_auth_key(schema_name, secret_value)
+        if granted_access != "read_write":
+            raise PluginInstallationError(
+                f"Plugin '{plugin_name}' has invalid or insufficient access key "
+                f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
+                f"contains a valid key from the namespace owner."
+            )
+        return True
 
+    # Namespace doesn't exist - create it
+    generated_keys = create_namespace_schema(namespace=schema_name)
     if generated_keys:
-        # This plugin just created the namespace - it's inherently trusted
         store_namespace_keys_as_plugin_secrets(plugin_name, generated_keys)
         log.info(
             f"Stored namespace access keys for '{schema_name}' in plugin secrets. "
             f"View them in the UI to share with other plugins."
-        )
-        return True
-
-    # Namespace already exists - must verify the key grants read_write access
-    secret_value = secrets.get("read_write_access_key")
-    if not secret_value:
-        raise PluginInstallationError(
-            f"Plugin '{plugin_name}' declares read_write access to namespace "
-            f"'{schema_name}' but 'read_write_access_key' secret is not configured."
-        )
-    granted_access = check_namespace_auth_key(schema_name, secret_value)
-    if granted_access != "read_write":
-        raise PluginInstallationError(
-            f"Plugin '{plugin_name}' has invalid or insufficient access key "
-            f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
-            f"contains a valid key from the namespace owner."
         )
     return True
 
