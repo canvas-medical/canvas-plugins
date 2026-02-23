@@ -1,0 +1,18 @@
+name: Hospice & Palliative Care
+form_type: QUES
+code_system: INTERNAL
+code: QQ_006
+can_originate_in_charting: true
+questions:
+  - content: "Is the patient currently receiving palliative or hospice care?"
+    code_system: LOINC
+    code: 8648-8
+    responses_code_system: SNOMED
+    responses_type: MULT
+    responses:
+      - name: "Receiving hospice care"
+        code: "385765002"
+        value: "1"
+      - name: "Receiving palliative care"
+        code: "305284002"
+        value: "1"

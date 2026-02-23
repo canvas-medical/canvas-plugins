@@ -1,0 +1,66 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "1.0.0",
+    "name": "cms138v14_preventive_care_and_screening_tobacco_use_screening_and_cessation_intervention",
+    "description": "CMS138v14 - Preventive Care and Screening: Tobacco Use Screening and Cessation Intervention. Tracks tobacco use screening for patients 12+ and cessation interventions for identified tobacco users.",
+    "components": {
+        "protocols": [
+            {
+                "class": "cms138v14_preventive_care_and_screening_tobacco_use_screening_and_cessation_intervention.protocols.cms138v14_protocol:CMS138v14TobaccoScreening",
+                "description": "CMS138v14 Clinical Quality Measure - Percentage of patients aged 12 years and older who were screened for tobacco use one or more times during the measurement period AND who received tobacco cessation intervention if identified as a tobacco user.",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                },
+                "meta": {
+                    "title": "Preventive Care and Screening: Tobacco Use: Screening and Cessation Intervention",
+                    "description": "Percentage of patients aged 12 years and older who were screened for tobacco use and who received tobacco cessation intervention if identified as a tobacco user.",
+                    "version": "v14.0.0",
+                    "information": "https://ecqi.healthit.gov/ecqm/ec/2026/cms0138v14",
+                    "identifiers": [
+                        "CMS138v14"
+                    ],
+                    "types": [
+                        "CQM"
+                    ],
+                    "authors": [
+                        "National Committee for Quality Assurance"
+                    ],
+                    "references": [
+                        "US Department of Health and Human Services. (2008). 6, Evidence and Recommendations. Treating Tobacco Use and Dependence: 2008 Update. Retrieved from https://www.ncbi.nlm.nih.gov/books/NBK63943/",
+                        "US Preventive Services Task Force. (2021). Interventions for Tobacco Smoking Cessation in Adults, Including Pregnant Persons. US Preventive Services Task Force Recommendation Statement. JAMA, 325(3), 265-279. doi:10.1001/jama.2020.25019",
+                        "US Preventive Services Task Force. (2020). Primary Care Interventions for Prevention and Cessation of Tobacco Use in Children and Adolescents. US Preventive Services Task Force Recommendation Statement. JAMA, 2020;323(16):1590-1598. doi:10.1001/jama.2020.4679"
+                    ]
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": [],
+        "questionnaires": [
+            {
+            "template": "questionnaires/hospice_and_frailty.yml"
+            },
+            {
+            "template": "questionnaires/hospice_and_palliative.yml"
+            }
+        ]
+    },
+    "secrets": [],
+    "tags": {
+        "measure_type": "CQM",
+        "measure_id": "CMS138v14",
+        "category": "Preventive Care",
+        "population": "12+"
+    },
+    "references": [
+        "US Department of Health and Human Services. (2008). 6, Evidence and Recommendations. Treating Tobacco Use and Dependence: 2008 Update. Retrieved from https://www.ncbi.nlm.nih.gov/books/NBK63943/",
+        "US Preventive Services Task Force. (2021). Interventions for Tobacco Smoking Cessation in Adults, Including Pregnant Persons. US Preventive Services Task Force Recommendation Statement. JAMA, 325(3), 265-279. doi:10.1001/jama.2020.25019",
+        "US Preventive Services Task Force. (2020). Primary Care Interventions for Prevention and Cessation of Tobacco Use in Children and Adolescents. US Preventive Services Task Force Recommendation Statement. JAMA, 2020;323(16):1590-1598. doi:10.1001/jama.2020.4679"
+    ],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

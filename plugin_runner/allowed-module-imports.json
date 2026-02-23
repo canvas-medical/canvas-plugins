@@ -919,6 +919,8 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "Instruction",
+    "InstructionCoding",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
@@ -1158,6 +1160,10 @@
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
+  ],
+  "canvas_sdk.v1.data.instruction": [
+    "Instruction",
+    "InstructionCoding"
   ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
