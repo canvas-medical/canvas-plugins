@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.102.0 (2026-02-23)
+
+### Features
+
+- Note metadata effects ([#1506](https://github.com/canvas-medical/canvas-plugins/pull/1506),
+  [`a3ad199`](https://github.com/canvas-medical/canvas-plugins/commit/a3ad1991dfc6d4e0f60b755dd8365e40ccacbf78))
+
+
 ## v0.101.0 (2026-02-23)
 
 ### Features
