@@ -910,15 +910,24 @@
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionResponse",
     "InterviewQuestionnaireMap",
@@ -929,6 +938,10 @@
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LabReview",
     "LabTest",
     "LabValue",
@@ -991,6 +1004,9 @@
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffContactPoint",
@@ -1150,6 +1166,10 @@
   "canvas_sdk.v1.data.imaging": [
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview"
   ],
   "canvas_sdk.v1.data.immunization": [
@@ -1160,6 +1180,14 @@
     "ImmunizationStatementCoding",
     "ImmunizationStatus"
   ],
+  "canvas_sdk.v1.data.integration_task": [
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskQuerySet",
+    "IntegrationTaskReview",
+    "IntegrationTaskReviewQuerySet",
+    "IntegrationTaskStatus"
+  ],
   "canvas_sdk.v1.data.invoice": [
     "Invoice",
     "InvoiceRecipients",
@@ -1168,12 +1196,17 @@
     "InvoiceWorkflow"
   ],
   "canvas_sdk.v1.data.lab": [
+    "FieldType",
     "LabOrder",
     "LabOrderReason",
     "LabOrderReasonCondition",
     "LabPartner",
     "LabPartnerTest",
     "LabReport",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
     "LabReview",
     "LabReviewQuerySet",
     "LabTest",
@@ -1304,8 +1337,19 @@
     "Referral",
     "ReferralReport"
   ],
+  "canvas_sdk.v1.data.report_template_base": [
+    "BaseReportTemplate",
+    "BaseReportTemplateField",
+    "BaseReportTemplateFieldOption",
+    "BaseReportTemplateQuerySet"
+  ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.v1.data.specialty_report_template": [
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption"
   ],
   "canvas_sdk.v1.data.staff": [
     "Staff",
