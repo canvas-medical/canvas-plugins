@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.101.0 (2026-02-23)
+
+### Features
+
+- Implement note metadata data model and events
+  ([#1502](https://github.com/canvas-medical/canvas-plugins/pull/1502),
+  [`563f789`](https://github.com/canvas-medical/canvas-plugins/commit/563f789fb4cdfca0602be521c162724f00903792))
+
+
 ## v0.100.0 (2026-02-23)
 
 ### Features
