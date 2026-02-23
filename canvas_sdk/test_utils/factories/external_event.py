@@ -1,3 +1,5 @@
+import datetime
+
 import factory
 
 from canvas_sdk.test_utils.factories.patient import PatientFactory
@@ -25,8 +27,8 @@ class ExternalEventFactory(factory.django.DjangoModelFactory[ExternalEvent]):
     external_visit = factory.SubFactory(ExternalVisitFactory)
     patient = factory.LazyAttribute(lambda obj: obj.external_visit.patient)
     message_control_id = factory.Sequence(lambda n: f"msg-{n}")
-    message_datetime = factory.Faker("date_time_this_year")
+    message_datetime = factory.Faker("date_time_this_year", tzinfo=datetime.UTC)
     event_type = "ADT^A01"
-    event_datetime = factory.Faker("date_time_this_year")
+    event_datetime = factory.Faker("date_time_this_year", tzinfo=datetime.UTC)
     event_cancelation_datetime = None
     raw_message = factory.Faker("text", max_nb_chars=200)

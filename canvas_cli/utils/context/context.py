@@ -113,7 +113,8 @@ class CLIContext:
             file: Path to the JSON config file
         """
         try:
-            self._config_file = json.load(file.open("rb"))
+            with file.open("rb") as f:
+                self._config_file = json.load(f)
         except json.JSONDecodeError:
             print.json(
                 "There was a problem loading the config file, please ensure it's valid JSON",

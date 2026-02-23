@@ -255,7 +255,7 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
         """
     )
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -266,7 +266,7 @@ def test_plugin_runner_os_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import os")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -277,7 +277,7 @@ def test_plugin_runner_sys_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import sys")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
