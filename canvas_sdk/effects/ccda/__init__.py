@@ -1,3 +1,3 @@
-from .ccda_export import CreateCCDAExport, DocumentType
+from .ccda_export import CreateCCDA, DocumentType
 
-__all__ = __exports__ = ("CreateCCDAExport", "DocumentType")
+__all__ = __exports__ = ("CreateCCDA", "DocumentType")

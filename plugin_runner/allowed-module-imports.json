@@ -456,11 +456,11 @@
     "EventRecurrence"
   ],
   "canvas_sdk.effects.ccda": [
-    "CreateCCDAExport",
+    "CreateCCDA",
     "DocumentType"
   ],
   "canvas_sdk.effects.ccda.ccda_export": [
-    "CreateCCDAExport",
+    "CreateCCDA",
     "DocumentType"
   ],
   "canvas_sdk.effects.claim": [
