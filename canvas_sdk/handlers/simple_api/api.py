@@ -264,6 +264,9 @@ class SimpleAPIBase(BaseHandler, ABC):
         EventType.Name(EventType.SIMPLE_API_REQUEST),
     ]
 
+    CORS_ALLOWED_ORIGINS: ClassVar[list[str]] = []
+    CORS_MAX_AGE: ClassVar[int] = 86400
+
     _ROUTES: ClassVar[dict[str, list[tuple[re.Pattern, RouteHandler]]]]
     _PATH_PARAM_REGEX = re.compile("<([a-zA-Z_][a-zA-Z0-9_]*)>")
 
@@ -294,14 +297,33 @@ class SimpleAPIBase(BaseHandler, ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
+        method = self.event.context["method"]
+        path = self.event.context["path"]
+
         # Determine the first handler that matches the path based on the path pattern
         self._path_pattern = None
         self._handler = None
-        for path_pattern, handler in self._ROUTES.get(self.event.context["method"], ()):
-            if path_pattern.fullmatch(self.event.context["path"]):
-                self._path_pattern = path_pattern
-                self._handler = handler
-                break
+
+        if method == "OPTIONS" and self.CORS_ALLOWED_ORIGINS:
+            # For OPTIONS preflight, match using the requested method or any registered method
+            request_method = self.event.context.get("headers", {}).get(
+                "Access-Control-Request-Method"
+            )
+            methods_to_check = [request_method] if request_method else list(self._ROUTES.keys())
+            for check_method in methods_to_check:
+                for path_pattern, handler in self._ROUTES.get(check_method, ()):
+                    if path_pattern.fullmatch(path):
+                        self._path_pattern = path_pattern
+                        self._handler = handler
+                        break
+                if self._handler:
+                    break
+        else:
+            for path_pattern, handler in self._ROUTES.get(method, ()):
+                if path_pattern.fullmatch(path):
+                    self._path_pattern = path_pattern
+                    self._handler = handler
+                    break
 
     @classmethod
     def _path_prefix(cls) -> str:
@@ -312,13 +334,62 @@ class SimpleAPIBase(BaseHandler, ABC):
         """Return the request object from the event."""
         return Request(self.event, cast(re.Pattern, self._path_pattern))
 
+    def _cors_origin_allowed(self, origin: str) -> bool:
+        """Check if the given origin is allowed by CORS_ALLOWED_ORIGINS."""
+        return "*" in self.CORS_ALLOWED_ORIGINS or origin in self.CORS_ALLOWED_ORIGINS
+
+    def _cors_allowed_methods(self) -> str:
+        """Return a comma-separated string of allowed HTTP methods."""
+        return ", ".join(sorted(self._ROUTES.keys()))
+
+    def _preflight_response(self, origin: str) -> list[Effect]:
+        """Build a 204 preflight response with CORS headers."""
+        allow_origin = "*" if "*" in self.CORS_ALLOWED_ORIGINS else origin
+        headers: dict[str, str] = {
+            "Access-Control-Allow-Origin": allow_origin,
+            "Access-Control-Allow-Methods": self._cors_allowed_methods(),
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Max-Age": str(self.CORS_MAX_AGE),
+        }
+        if allow_origin != "*":
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Vary"] = "Origin"
+        return [Response(status_code=HTTPStatus.NO_CONTENT, headers=headers).apply()]
+
+    def _inject_cors_headers(self, effects: list[Effect], origin: str) -> list[Effect]:
+        """Add CORS headers to the SIMPLE_API_RESPONSE effect."""
+        allow_origin = "*" if "*" in self.CORS_ALLOWED_ORIGINS else origin
+        for effect in effects:
+            if effect.type == EffectType.SIMPLE_API_RESPONSE:
+                payload = json.loads(effect.payload)
+                payload["headers"]["Access-Control-Allow-Origin"] = allow_origin
+                if allow_origin != "*":
+                    payload["headers"]["Access-Control-Allow-Credentials"] = "true"
+                    payload["headers"]["Vary"] = "Origin"
+                effect.payload = json.dumps(payload)
+                break
+        return effects
+
     def compute(self) -> list[Effect]:
         """Handle the authenticate or request event."""
         try:
             if self.event.type == EventType.SIMPLE_API_AUTHENTICATE:
                 return self._authenticate()
             elif self.event.type == EventType.SIMPLE_API_REQUEST:
-                return self._handle_request()
+                method = self.event.context["method"]
+                origin = self.event.context.get("headers", {}).get("Origin", "")
+
+                if method == "OPTIONS":
+                    if self.CORS_ALLOWED_ORIGINS and origin and self._cors_origin_allowed(origin):
+                        return self._preflight_response(origin)
+                    return [Response(status_code=HTTPStatus.NO_CONTENT).apply()]
+
+                effects = self._handle_request()
+
+                if self.CORS_ALLOWED_ORIGINS and origin and self._cors_origin_allowed(origin):
+                    self._inject_cors_headers(effects, origin)
+
+                return effects
             else:
                 raise AssertionError(f"Cannot handle event type {EventType.Name(self.event.type)}")
         except Exception as exception:

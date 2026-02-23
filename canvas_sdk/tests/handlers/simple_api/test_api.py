@@ -1093,3 +1093,240 @@ def test_authentication_mixins(
 
     effects = handle_request(Route, method="GET", path="/route", headers=headers)
     assert effects == expected_effects
+
+
+# ── CORS Tests ──────────────────────────────────────────────────────────────────
+
+
+def response_payload(effects: Iterable[Effect]) -> dict[str, Any]:
+    """Given a list of effects, find the response effect and return the parsed payload."""
+    for effect in effects:
+        if effect.type == EffectType.SIMPLE_API_RESPONSE:
+            return json.loads(effect.payload)
+    pytest.fail("No response effect was found in the list of effects")
+
+
+def response_headers(effects: Iterable[Effect]) -> dict[str, Any]:
+    """Given a list of effects, find the response effect and return its headers."""
+    return response_payload(effects)["headers"]
+
+
+def response_status(effects: Iterable[Effect]) -> int:
+    """Given a list of effects, find the response effect and return its status code."""
+    return response_payload(effects)["status_code"]
+
+
+class CORSRoute(NoAuthMixin, SimpleAPIRoute):
+    """Route with CORS configured for testing."""
+
+    PATH = "/cors"
+    CORS_ALLOWED_ORIGINS = ["https://allowed.example.com", "https://also-allowed.example.com"]
+
+    def get(self) -> list[Response | Effect]:
+        return [JSONResponse({"status": "ok"})]
+
+    def post(self) -> list[Response | Effect]:
+        return [JSONResponse({"created": True})]
+
+
+class CORSWildcardRoute(NoAuthMixin, SimpleAPIRoute):
+    """Route with wildcard CORS for testing."""
+
+    PATH = "/wildcard"
+    CORS_ALLOWED_ORIGINS = ["*"]
+
+    def get(self) -> list[Response | Effect]:
+        return [JSONResponse({"status": "ok"})]
+
+
+class CORSCustomMaxAgeRoute(NoAuthMixin, SimpleAPIRoute):
+    """Route with custom CORS_MAX_AGE for testing."""
+
+    PATH = "/custom-max-age"
+    CORS_ALLOWED_ORIGINS = ["https://allowed.example.com"]
+    CORS_MAX_AGE = 3600
+
+    def get(self) -> list[Response | Effect]:
+        return [JSONResponse({"status": "ok"})]
+
+
+class NoCORSRoute(NoAuthMixin, SimpleAPIRoute):
+    """Route without CORS configured."""
+
+    PATH = "/no-cors"
+
+    def get(self) -> list[Response | Effect]:
+        return [JSONResponse({"status": "ok"})]
+
+
+def test_cors_preflight_matching_origin() -> None:
+    """OPTIONS preflight with a matching origin returns 204 with CORS headers."""
+    handler = CORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/cors",
+            headers={
+                "Origin": "https://allowed.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    assert handler.accept_event() is True
+    effects = handler.compute()
+
+    assert response_status(effects) == HTTPStatus.NO_CONTENT
+    headers = response_headers(effects)
+    assert headers["Access-Control-Allow-Origin"] == "https://allowed.example.com"
+    assert "GET" in headers["Access-Control-Allow-Methods"]
+    assert "POST" in headers["Access-Control-Allow-Methods"]
+    assert headers["Access-Control-Allow-Headers"] == "Authorization, Content-Type"
+    assert headers["Access-Control-Max-Age"] == "86400"
+    assert headers["Access-Control-Allow-Credentials"] == "true"
+    assert headers["Vary"] == "Origin"
+
+
+def test_cors_preflight_non_matching_origin() -> None:
+    """OPTIONS preflight with a non-matching origin returns 204 without CORS headers."""
+    handler = CORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/cors",
+            headers={
+                "Origin": "https://evil.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    effects = handler.compute()
+
+    assert response_status(effects) == HTTPStatus.NO_CONTENT
+    headers = response_headers(effects)
+    assert "Access-Control-Allow-Origin" not in headers
+
+
+def test_cors_preflight_wildcard() -> None:
+    """OPTIONS preflight with wildcard CORS returns '*' and no credentials header."""
+    handler = CORSWildcardRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/wildcard",
+            headers={
+                "Origin": "https://any-origin.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    effects = handler.compute()
+
+    headers = response_headers(effects)
+    assert headers["Access-Control-Allow-Origin"] == "*"
+    assert "Access-Control-Allow-Credentials" not in headers
+    assert "Vary" not in headers
+
+
+def test_cors_regular_get_with_matching_origin() -> None:
+    """Regular GET with a matching origin includes CORS headers on the response."""
+    handler = CORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="GET",
+            path="/cors",
+            headers={"Origin": "https://allowed.example.com"},
+        )
+    )
+    effects = handler.compute()
+
+    headers = response_headers(effects)
+    assert headers["Access-Control-Allow-Origin"] == "https://allowed.example.com"
+    assert headers["Access-Control-Allow-Credentials"] == "true"
+    assert headers["Vary"] == "Origin"
+
+
+def test_cors_regular_get_without_cors_config() -> None:
+    """Regular GET on a route without CORS config has no CORS headers."""
+    handler = NoCORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="GET",
+            path="/no-cors",
+            headers={"Origin": "https://some-origin.example.com"},
+        )
+    )
+    effects = handler.compute()
+
+    headers = response_headers(effects)
+    assert "Access-Control-Allow-Origin" not in headers
+
+
+def test_cors_allowed_methods_reflects_routes() -> None:
+    """Access-Control-Allow-Methods lists all registered HTTP methods."""
+    handler = CORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/cors",
+            headers={
+                "Origin": "https://allowed.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    effects = handler.compute()
+
+    methods = response_headers(effects)["Access-Control-Allow-Methods"]
+    assert "GET" in methods
+    assert "POST" in methods
+
+
+def test_cors_custom_max_age() -> None:
+    """Custom CORS_MAX_AGE value is reflected in the preflight response."""
+    handler = CORSCustomMaxAgeRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/custom-max-age",
+            headers={
+                "Origin": "https://allowed.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    effects = handler.compute()
+
+    assert response_headers(effects)["Access-Control-Max-Age"] == "3600"
+
+
+def test_cors_options_no_cors_config_not_accepted() -> None:
+    """OPTIONS on a route without CORS config is not accepted."""
+    handler = NoCORSRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="OPTIONS",
+            path="/no-cors",
+            headers={
+                "Origin": "https://some-origin.example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    )
+    assert handler.accept_event() is False
+
+
+def test_cors_wildcard_regular_get() -> None:
+    """Regular GET with wildcard CORS returns '*' and no credentials header."""
+    handler = CORSWildcardRoute(
+        make_event(
+            EventType.SIMPLE_API_REQUEST,
+            method="GET",
+            path="/wildcard",
+            headers={"Origin": "https://any-origin.example.com"},
+        )
+    )
+    effects = handler.compute()
+
+    headers = response_headers(effects)
+    assert headers["Access-Control-Allow-Origin"] == "*"
+    assert "Access-Control-Allow-Credentials" not in headers
