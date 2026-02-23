@@ -91,7 +91,7 @@ from .medication_history import (
 )
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
+from .note import CurrentNoteStateEvent, Note, NoteMetadata, NoteStateChangeEvent, NoteType
 from .observation import (
     Observation,
     ObservationCoding,
@@ -261,6 +261,7 @@ __all__ = __exports__ = (
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
     "NoteType",
