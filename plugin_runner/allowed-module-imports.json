@@ -950,6 +950,7 @@
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
     "NoteType",
@@ -1213,6 +1214,7 @@
   "canvas_sdk.v1.data.note": [
     "CurrentNoteStateEvent",
     "Note",
+    "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteStates",
     "NoteType",
