@@ -13,7 +13,15 @@ from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFac
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
-from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .imaging import (
+    ImagingOrderFactory,
+    ImagingReportFactory,
+    ImagingReportTemplateFactory,
+    ImagingReportTemplateFieldFactory,
+    ImagingReportTemplateFieldOptionFactory,
+    ImagingReviewFactory,
+)
+from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
@@ -26,13 +34,18 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
 )
-from .letter import LanguageFactory, LetterFactory
+from .lab_report_template import (
+    LabReportTemplateFactory,
+    LabReportTemplateFieldFactory,
+    LabReportTemplateFieldOptionFactory,
+)
+from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
-from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .note import NoteFactory, NoteMetadataFactory, NoteStateChangeEventFactory, NoteTypeFactory
 from .organization import (
     OrganizationAddressFactory,
     OrganizationContactPointFactory,
@@ -47,6 +60,7 @@ from .practicelocation import (
 )
 from .protocol_current import ProtocolCurrentFactory
 from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
+from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -89,7 +103,12 @@ __all__ = (
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
+    "ImagingReportTemplateFactory",
+    "ImagingReportTemplateFieldFactory",
+    "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
+    "IntegrationTaskFactory",
+    "IntegrationTaskReviewFactory",
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",
@@ -102,10 +121,15 @@ __all__ = (
     "LabValueFactory",
     "LanguageFactory",
     "LetterFactory",
+    "LabReportTemplateFactory",
+    "LabReportTemplateFieldFactory",
+    "LabReportTemplateFieldOptionFactory",
+    "LetterActionEventFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
+    "NoteMetadataFactory",
     "NoteStateChangeEventFactory",
     "NoteTypeFactory",
     "OrganizationAddressFactory",
@@ -122,6 +146,7 @@ __all__ = (
     "ReferralFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",

@@ -5,7 +5,14 @@ import factory
 from django.utils import timezone
 from factory.fuzzy import FuzzyDate
 
-from canvas_sdk.v1.data import ImagingOrder, ImagingReport, ImagingReview
+from canvas_sdk.v1.data import (
+    ImagingOrder,
+    ImagingReport,
+    ImagingReportTemplate,
+    ImagingReportTemplateField,
+    ImagingReportTemplateFieldOption,
+    ImagingReview,
+)
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
@@ -72,3 +79,50 @@ class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
         end_date=datetime.date.today(),
     )
     review = None  # Optional field
+
+
+class ImagingReportTemplateFactory(factory.django.DjangoModelFactory[ImagingReportTemplate]):
+    """Factory for creating an ImagingReportTemplate."""
+
+    class Meta:
+        model = ImagingReportTemplate
+
+    name = factory.Faker("text", max_nb_chars=250)
+    long_name = factory.Faker("text", max_nb_chars=500)
+    code = factory.Faker("bothify", text="?????")
+    code_system = factory.Faker("random_element", elements=["CPT", "LOINC", "SNOMED"])
+    search_keywords = factory.Faker("text", max_nb_chars=200)
+    active = True
+    custom = False
+    rank = factory.Faker("random_int", min=1, max=100)
+
+
+class ImagingReportTemplateFieldFactory(
+    factory.django.DjangoModelFactory[ImagingReportTemplateField]
+):
+    """Factory for creating an ImagingReportTemplateField."""
+
+    class Meta:
+        model = ImagingReportTemplateField
+
+    report_template = factory.SubFactory(ImagingReportTemplateFactory)
+    sequence = factory.Sequence(lambda n: n + 1)
+    code = factory.Faker("bothify", text="?????")
+    code_system = factory.Faker("random_element", elements=["LOINC", "SNOMED"])
+    label = factory.Faker("text", max_nb_chars=100)
+    units = factory.Faker("random_element", elements=["mg", "mL", "cm", None])
+    type = factory.Faker("random_element", elements=["text", "float", "select", "integer"])
+    required = factory.Faker("boolean")
+
+
+class ImagingReportTemplateFieldOptionFactory(
+    factory.django.DjangoModelFactory[ImagingReportTemplateFieldOption]
+):
+    """Factory for creating an ImagingReportTemplateFieldOption."""
+
+    class Meta:
+        model = ImagingReportTemplateFieldOption
+
+    field = factory.SubFactory(ImagingReportTemplateFieldFactory)
+    label = factory.Faker("text", max_nb_chars=100)
+    key = factory.Faker("slug")

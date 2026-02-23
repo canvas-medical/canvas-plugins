@@ -1,6 +1,55 @@
 # CHANGELOG
 
 
+## v0.103.1 (2026-02-23)
+
+### Bug Fixes
+
+- Remove FileField unsupported property
+  ([#1523](https://github.com/canvas-medical/canvas-plugins/pull/1523),
+  [`ab9ce10`](https://github.com/canvas-medical/canvas-plugins/commit/ab9ce10972d34e0ff3189087c673d9a0e8afd61f))
+
+### Chores
+
+- Fix 'canavs' typo ([#1522](https://github.com/canvas-medical/canvas-plugins/pull/1522),
+  [`9b425c8`](https://github.com/canvas-medical/canvas-plugins/commit/9b425c80de3a6d50ced4246e56f4b0a743f7e2c2))
+
+
+## v0.103.0 (2026-02-23)
+
+### Features
+
+- Add data models for IntegrationTask, and report templates
+  ([#1510](https://github.com/canvas-medical/canvas-plugins/pull/1510),
+  [`c215ce6`](https://github.com/canvas-medical/canvas-plugins/commit/c215ce6cba8b33e02f42a22fa67c2de30ca30cb5))
+
+
+## v0.102.0 (2026-02-23)
+
+### Features
+
+- Note metadata effects ([#1506](https://github.com/canvas-medical/canvas-plugins/pull/1506),
+  [`a3ad199`](https://github.com/canvas-medical/canvas-plugins/commit/a3ad1991dfc6d4e0f60b755dd8365e40ccacbf78))
+
+
+## v0.101.0 (2026-02-23)
+
+### Features
+
+- Implement note metadata data model and events
+  ([#1502](https://github.com/canvas-medical/canvas-plugins/pull/1502),
+  [`563f789`](https://github.com/canvas-medical/canvas-plugins/commit/563f789fb4cdfca0602be521c162724f00903792))
+
+
+## v0.100.0 (2026-02-23)
+
+### Features
+
+- Add note letter data module and event
+  ([#1518](https://github.com/canvas-medical/canvas-plugins/pull/1518),
+  [`1a48f49`](https://github.com/canvas-medical/canvas-plugins/commit/1a48f49589695b46d0c1062b58bc4e3bac29b4f9))
+
+
 ## v0.99.1 (2026-02-19)
 
 ### Bug Fixes

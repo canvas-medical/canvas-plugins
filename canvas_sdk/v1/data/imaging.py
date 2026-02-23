@@ -1,13 +1,24 @@
 import json
+from typing import Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    IdentifiableModel,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.common import (
     DocumentReviewMode,
     OrderStatus,
     ReviewPatientCommunicationMethod,
     ReviewStatus,
+)
+from canvas_sdk.v1.data.report_template_base import (
+    BaseReportTemplate,
+    BaseReportTemplateField,
+    BaseReportTemplateFieldOption,
+    BaseReportTemplateQuerySet,
 )
 from canvas_sdk.v1.data.task import Task
 
@@ -108,8 +119,54 @@ class ImagingReport(TimestampedModel, IdentifiableModel):
     review = models.ForeignKey(ImagingReview, on_delete=models.DO_NOTHING, null=True)
 
 
+class ImagingReportTemplateQuerySet(BaseReportTemplateQuerySet):
+    """QuerySet for ImagingReportTemplate with filtering methods."""
+
+    def search(self, query: str) -> Self:
+        """Search templates by keywords."""
+        return self.filter(search_keywords__icontains=query)
+
+
+class ImagingReportTemplate(BaseReportTemplate):
+    """Model to read ImagingReportTemplate data for LLM-powered imaging report parsing."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_imagingreporttemplate_001"
+
+    objects = models.Manager.from_queryset(ImagingReportTemplateQuerySet)()
+
+    long_name = models.CharField(max_length=1000)
+    rank = models.IntegerField(default=0)
+
+
+class ImagingReportTemplateField(BaseReportTemplateField):
+    """Model to read ImagingReportTemplateField data."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_imagingreporttemplatefield_001"
+
+    report_template = models.ForeignKey(
+        ImagingReportTemplate, on_delete=models.DO_NOTHING, related_name="fields"
+    )
+
+
+class ImagingReportTemplateFieldOption(BaseReportTemplateFieldOption):
+    """Model to read ImagingReportTemplateFieldOption data."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_data_integration_imagingreporttmplfieldopt_001"
+
+    field = models.ForeignKey(
+        ImagingReportTemplateField, on_delete=models.DO_NOTHING, related_name="options"
+    )
+
+
 __exports__ = (
     "ImagingOrder",
     "ImagingReview",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateQuerySet",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
 )
