@@ -5,7 +5,6 @@ from canvas_sdk.effects.note.appointment import (
     ScheduleEvent,
 )
 from canvas_sdk.effects.note.base import AppointmentIdentifier
-from canvas_sdk.effects.note.freeze import FreezeNoteEffect, UnfreezeNoteEffect
 from canvas_sdk.effects.note.note import Note
 
 __all__ = __exports__ = (
@@ -15,6 +14,4 @@ __all__ = __exports__ = (
     "ScheduleEvent",
     "AddAppointmentLabel",
     "RemoveAppointmentLabel",
-    "FreezeNoteEffect",
-    "UnfreezeNoteEffect",
 )

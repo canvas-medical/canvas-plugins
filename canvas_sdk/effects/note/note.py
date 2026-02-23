@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
+from canvas_sdk.effects.note.freeze import _FreezeNoteEffect, _UnfreezeNoteEffect
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
 from canvas_sdk.v1.data import NoteType, Patient
@@ -115,6 +116,25 @@ class Note(NoteOrAppointmentABC):
         if not self.instance_id:
             raise ValueError("Field 'instance_id' is required to upsert metadata.")
         return _NoteMetadata(note_id=self.instance_id, key=key).upsert(value=value)
+
+    def freeze(self, duration: int = 300, user_id: str | None = None, blur: bool = False) -> Effect:
+        """Temporarily freeze the note to prevent edits by other users."""
+        if not self.instance_id:
+            raise ValueError("Field 'instance_id' is required to freeze the note.")
+
+        return _FreezeNoteEffect(
+            note_id=self.instance_id,
+            duration=duration,
+            user_id=user_id,
+            blur=blur,
+        ).apply()
+
+    def unfreeze(self) -> Effect:
+        """Unfreeze the note to allow edits again."""
+        if not self.instance_id:
+            raise ValueError("Field 'instance_id' is required to unfreeze the note.")
+
+        return _UnfreezeNoteEffect(note_id=self.instance_id).apply()
 
     def _validate_state_transition(
         self, note: NoteModel, next_state: NoteStates

@@ -687,3 +687,122 @@ def test_update_note_related_data(mock_db_queries: dict[str, MagicMock]) -> None
     payload = json.loads(effect.payload)
     assert payload["data"]["related_data"] == related_data
     assert payload["data"]["instance_id"] == instance_id
+
+
+@pytest.fixture
+def mock_freeze_db_queries() -> Generator[dict[str, MagicMock]]:
+    """Mock database queries for freeze/unfreeze validation."""
+    with (
+        patch("canvas_sdk.effects.note.freeze.Note.objects") as mock_note,
+        patch("canvas_sdk.effects.note.freeze.Staff.objects") as mock_staff,
+    ):
+        mock_note.filter.return_value.exists.return_value = True
+        mock_staff.filter.return_value.exists.return_value = True
+
+        yield {
+            "note": mock_note,
+            "staff": mock_staff,
+        }
+
+
+def test_freeze_success(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note freeze with all parameters."""
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+    effect = note.freeze(duration=60, user_id="staff-key-123", blur=True)
+
+    assert effect.type == EffectType.FREEZE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note_id"] == instance_id
+    assert payload["data"]["duration"] == 60
+    assert payload["data"]["user_id"] == "staff-key-123"
+    assert payload["data"]["blur"] is True
+
+
+def test_freeze_default_params(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze with default parameters."""
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+    effect = note.freeze()
+
+    payload = json.loads(effect.payload)
+    assert payload["data"]["duration"] == 300
+    assert payload["data"]["blur"] is False
+    assert "user_id" not in payload["data"]
+
+
+def test_freeze_with_uuid_instance_id(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze accepts UUID instance_id."""
+    instance_id = uuid4()
+    note = Note(instance_id=instance_id)
+    effect = note.freeze(duration=120)
+
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note_id"] == str(instance_id)
+
+
+def test_freeze_note_does_not_exist(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze raises validation error when note does not exist."""
+    mock_freeze_db_queries["note"].filter.return_value.exists.return_value = False
+
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.freeze()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert any("does not exist" in m for m in msgs)
+
+
+def test_freeze_staff_does_not_exist(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze raises validation error when staff does not exist."""
+    mock_freeze_db_queries["staff"].filter.return_value.exists.return_value = False
+
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.freeze(user_id="nonexistent-staff")
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert "Staff with ID nonexistent-staff does not exist." in msgs
+
+
+def test_unfreeze_success(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test successful note unfreeze."""
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+    effect = note.unfreeze()
+
+    assert effect.type == EffectType.UNFREEZE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note_id"] == instance_id
+    assert "duration" not in payload["data"]
+
+
+def test_unfreeze_with_uuid_instance_id(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test unfreeze accepts UUID instance_id."""
+    instance_id = uuid4()
+    note = Note(instance_id=instance_id)
+    effect = note.unfreeze()
+
+    payload = json.loads(effect.payload)
+    assert payload["data"]["note_id"] == str(instance_id)
+
+
+def test_unfreeze_note_does_not_exist(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test unfreeze raises validation error when note does not exist."""
+    mock_freeze_db_queries["note"].filter.return_value.exists.return_value = False
+
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+
+    with pytest.raises(ValidationError) as exc_info:
+        note.unfreeze()
+
+    errors = exc_info.value.errors()
+    msgs = [e["msg"] for e in errors]
+    assert any("does not exist" in m for m in msgs)
