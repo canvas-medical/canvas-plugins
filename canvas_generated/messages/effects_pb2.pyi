@@ -331,6 +331,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CREATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     UPDATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     DELETE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
+    CREATE_CCDA: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
@@ -656,6 +657,7 @@ UPDATE_EXTERNAL_EVENT: EffectType
 CREATE_PATIENT_FACILITY_ADDRESS: EffectType
 UPDATE_PATIENT_FACILITY_ADDRESS: EffectType
 DELETE_PATIENT_FACILITY_ADDRESS: EffectType
+CREATE_CCDA: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
 
 class Effect(_message.Message):

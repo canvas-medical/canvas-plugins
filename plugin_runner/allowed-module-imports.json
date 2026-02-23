@@ -455,6 +455,14 @@
     "Event",
     "EventRecurrence"
   ],
+  "canvas_sdk.effects.ccda": [
+    "CreateCCDA",
+    "DocumentType"
+  ],
+  "canvas_sdk.effects.ccda.ccda_export": [
+    "CreateCCDA",
+    "DocumentType"
+  ],
   "canvas_sdk.effects.claim": [
     "ClaimEffect",
     "ColorEnum",
