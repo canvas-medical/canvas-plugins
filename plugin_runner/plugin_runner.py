@@ -595,7 +595,11 @@ def resolve_namespace_secret(
 
     Returns the secret value.
     """
-    secret_name = "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+    secret_name = (
+        "namespace_read_write_access_key"
+        if declared_access == "read_write"
+        else "namespace_read_access_key"
+    )
 
     secret_value = secrets_json.get(secret_name)
     if not secret_value:
@@ -645,7 +649,7 @@ def verify_plugin_namespace_access(
             raise NamespaceAccessError(
                 f"Plugin '{plugin_name}' requests 'read_write' access to namespace '{namespace_name}' "
                 f"but the provided key only grants 'read' access. "
-                f"Use the 'read_write_access_key' secret for write access."
+                f"Use the 'namespace_read_write_access_key' secret for write access."
             )
     except NamespaceAccessError:
         raise

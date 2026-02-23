@@ -23,7 +23,7 @@ from plugin_runner.plugin_runner import (
 
 def test_resolve_returns_value_for_read_access() -> None:
     """Read access should use 'read_access_key' and return its value."""
-    secrets = {"read_access_key": "my-read-secret"}
+    secrets = {"namespace_read_access_key": "my-read-secret"}
 
     result = resolve_namespace_secret("my_plugin", "my_ns", "read", secrets)
 
@@ -32,7 +32,7 @@ def test_resolve_returns_value_for_read_access() -> None:
 
 def test_resolve_returns_value_for_read_write_access() -> None:
     """Read-write access should use 'read_write_access_key' and return its value."""
-    secrets = {"read_write_access_key": "my-rw-secret"}
+    secrets = {"namespace_read_write_access_key": "my-rw-secret"}
 
     result = resolve_namespace_secret("my_plugin", "my_ns", "read_write", secrets)
 
@@ -49,7 +49,7 @@ def test_resolve_raises_when_secret_missing() -> None:
 
 def test_resolve_raises_when_secret_empty() -> None:
     """Should raise NamespaceAccessError when the secret value is an empty string."""
-    secrets = {"read_access_key": ""}
+    secrets = {"namespace_read_access_key": ""}
 
     with pytest.raises(NamespaceAccessError):
         resolve_namespace_secret("my_plugin", "my_ns", "read", secrets)
@@ -64,7 +64,7 @@ def test_resolve_error_message_includes_context() -> None:
 
     message = str(exc_info.value)
     assert "org__data" in message
-    assert "read_access_key" in message
+    assert "namespace_read_access_key" in message
 
 
 # ===========================================================================
@@ -76,7 +76,7 @@ def test_resolve_error_message_includes_context() -> None:
 def test_returns_config_on_success(mock_verify: MagicMock) -> None:
     """Happy path: should return namespace config dict."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
-    secrets = {"read_access_key": "valid-key"}
+    secrets = {"namespace_read_access_key": "valid-key"}
 
     result = verify_plugin_namespace_access("my_plugin", custom_data, secrets)
 
@@ -97,7 +97,7 @@ def test_raises_for_missing_secret() -> None:
 def test_raises_for_invalid_key(mock_verify: MagicMock) -> None:
     """Should raise NamespaceAccessError when the key is not recognized."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
-    secrets = {"read_access_key": "bad-key"}
+    secrets = {"namespace_read_access_key": "bad-key"}
 
     with pytest.raises(NamespaceAccessError, match="not a valid access key"):
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
@@ -107,7 +107,7 @@ def test_raises_for_invalid_key(mock_verify: MagicMock) -> None:
 def test_raises_for_insufficient_access(mock_verify: MagicMock) -> None:
     """Should raise when read_write requested but only read granted."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read_write"}
-    secrets = {"read_write_access_key": "valid-key"}
+    secrets = {"namespace_read_write_access_key": "valid-key"}
 
     with pytest.raises(NamespaceAccessError, match="only grants 'read' access"):
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
@@ -117,7 +117,7 @@ def test_raises_for_insufficient_access(mock_verify: MagicMock) -> None:
 def test_read_access_accepted_with_read_write_grant(mock_verify: MagicMock) -> None:
     """Read access should succeed even when the key grants read_write."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
-    secrets = {"read_access_key": "valid-key"}
+    secrets = {"namespace_read_access_key": "valid-key"}
 
     result = verify_plugin_namespace_access("my_plugin", custom_data, secrets)
 
@@ -132,7 +132,7 @@ def test_read_access_accepted_with_read_write_grant(mock_verify: MagicMock) -> N
 def test_wraps_unexpected_exceptions(mock_verify: MagicMock, mock_sentry: MagicMock) -> None:
     """Unexpected exceptions should be wrapped in NamespaceAccessError with __cause__."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
-    secrets = {"read_access_key": "valid-key"}
+    secrets = {"namespace_read_access_key": "valid-key"}
 
     with pytest.raises(NamespaceAccessError, match="Unexpected error") as exc_info:
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
@@ -171,7 +171,7 @@ def test_logs_and_reports_unexpected_exceptions(
 ) -> None:
     """Unexpected exceptions should be logged and reported to Sentry."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
-    secrets = {"read_access_key": "valid-key"}
+    secrets = {"namespace_read_access_key": "valid-key"}
 
     with pytest.raises(NamespaceAccessError):
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)

@@ -44,6 +44,10 @@ from settings import (
 # Plugin "packages" include this prefix in the database record for the plugin and the S3 bucket key.
 UPLOAD_TO_PREFIX = "plugins"
 
+# Secret key names for namespace access credentials.
+READ_ACCESS_KEY = "namespace_read_access_key"
+READ_WRITE_ACCESS_KEY = "namespace_read_write_access_key"
+
 
 def open_database_connection() -> Connection:
     """Opens a psycopg connection to the home-app database.
@@ -223,7 +227,7 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
     - custom_attribute and attribute_hub tables for data storage
 
     Returns:
-        Dict with 'read_access_key' and 'read_write_access_key' if namespace was created,
+        Dict with 'namespace_read_access_key' and 'namespace_read_write_access_key' if namespace was created,
         None if namespace already existed.
     """
     if not is_valid_namespace_name(namespace):
@@ -271,8 +275,8 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
             )
 
             generated_keys = {
-                "read_access_key": read_key,
-                "read_write_access_key": read_write_key,
+                READ_ACCESS_KEY: read_key,
+                READ_WRITE_ACCESS_KEY: read_write_key,
             }
 
             log.info(f"Created namespace schema '{namespace}' with auto-generated access keys")
@@ -373,7 +377,7 @@ def store_namespace_keys_as_plugin_secrets(plugin_name: str, keys: dict[str, str
 
     Args:
         plugin_name: The plugin that created the namespace
-        keys: Dict with 'read_access_key' and 'read_write_access_key'
+        keys: Dict with 'namespace_read_access_key' and 'namespace_read_write_access_key'
     """
     # Store in database for UI visibility
     with open_database_connection() as conn, conn.cursor() as cursor:
@@ -735,17 +739,17 @@ def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict
     """
     if namespace_exists(schema_name):
         # Namespace already exists - must verify the key grants read_write access
-        secret_value = secrets.get("read_write_access_key")
+        secret_value = secrets.get(READ_WRITE_ACCESS_KEY)
         if not secret_value:
             raise PluginInstallationError(
                 f"Plugin '{plugin_name}' declares read_write access to namespace "
-                f"'{schema_name}' but 'read_write_access_key' secret is not configured."
+                f"'{schema_name}' but '{READ_WRITE_ACCESS_KEY}' secret is not configured."
             )
         granted_access = check_namespace_auth_key(schema_name, secret_value)
         if granted_access != "read_write":
             raise PluginInstallationError(
                 f"Plugin '{plugin_name}' has invalid or insufficient access key "
-                f"for namespace '{schema_name}'. Ensure 'read_write_access_key' "
+                f"for namespace '{schema_name}'. Ensure '{READ_WRITE_ACCESS_KEY}' "
                 f"contains a valid key from the namespace owner."
             )
         return True
@@ -776,17 +780,17 @@ def verify_read_namespace_access(
             f"'{schema_name}', but the namespace does not exist. "
             f"A plugin with 'read_write' access must create the namespace first."
         )
-    secret_value = secrets.get("read_access_key")
+    secret_value = secrets.get(READ_ACCESS_KEY)
     if not secret_value:
         raise PluginInstallationError(
             f"Plugin '{plugin_name}' declares read access to namespace "
-            f"'{schema_name}' but 'read_access_key' secret is not configured."
+            f"'{schema_name}' but '{READ_ACCESS_KEY}' secret is not configured."
         )
     granted_access = check_namespace_auth_key(schema_name, secret_value)
     if not granted_access:
         raise PluginInstallationError(
             f"Plugin '{plugin_name}' has invalid access key for namespace "
-            f"'{schema_name}'. Ensure 'read_access_key' contains a valid key "
+            f"'{schema_name}'. Ensure '{READ_ACCESS_KEY}' contains a valid key "
             f"from the namespace owner."
         )
 

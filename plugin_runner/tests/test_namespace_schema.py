@@ -110,10 +110,10 @@ class TestCreateNamespaceSchemaNew:
         result = create_namespace_schema("org__namespace")
 
         assert result is not None
-        assert "read_access_key" in result
-        assert "read_write_access_key" in result
-        assert result["read_access_key"] == "read-uuid-123"
-        assert result["read_write_access_key"] == "write-uuid-456"
+        assert "namespace_read_access_key" in result
+        assert "namespace_read_write_access_key" in result
+        assert result["namespace_read_access_key"] == "read-uuid-123"
+        assert result["namespace_read_write_access_key"] == "write-uuid-456"
 
     @patch("plugin_runner.installation.uuid")
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
@@ -439,8 +439,8 @@ class TestNamespaceAccessValidation:
         # read_write plugins creating new namespaces get keys returned
         result = create_namespace_schema("org__new_namespace")
         assert result is not None
-        assert "read_access_key" in result
-        assert "read_write_access_key" in result
+        assert "namespace_read_access_key" in result
+        assert "namespace_read_write_access_key" in result
 
     @patch("plugin_runner.installation.open_database_connection")
     def test_create_namespace_schema_returns_none_for_existing_namespace(

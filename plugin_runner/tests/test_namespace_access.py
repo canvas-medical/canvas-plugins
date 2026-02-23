@@ -39,19 +39,19 @@ class TestNamespaceAccessError:
         """Error message should include helpful information about missing secrets."""
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' declares namespace 'org__data' with 'read' access "
-            "but secret 'read_access_key' is not configured. "
+            "but secret 'namespace_read_access_key' is not configured. "
             "Ensure the secret is listed in the manifest's 'secrets' array and has a value set."
         )
         assert "my_plugin" in str(exc)
         assert "org__data" in str(exc)
-        assert "read_access_key" in str(exc)
+        assert "namespace_read_access_key" in str(exc)
         assert "manifest" in str(exc)
 
     def test_exception_with_invalid_key_message(self) -> None:
         """Error message should include helpful information about invalid keys."""
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' denied access to namespace 'org__data': "
-            "the 'read_access_key' value is not a valid access key for this namespace."
+            "the 'namespace_read_access_key' value is not a valid access key for this namespace."
         )
         assert "denied access" in str(exc)
         assert "not a valid access key" in str(exc)
@@ -61,7 +61,7 @@ class TestNamespaceAccessError:
         exc = NamespaceAccessError(
             "Plugin 'my_plugin' requests 'read_write' access to namespace 'org__data' "
             "but the provided key only grants 'read' access. "
-            "Use the 'read_write_access_key' secret for write access."
+            "Use the `namespace_read_write_access_key' secret for write access."
         )
         assert "read_write" in str(exc)
         assert "only grants 'read' access" in str(exc)
@@ -185,21 +185,25 @@ class TestSecretNameDetermination:
     """Tests for determining the correct secret name based on access level."""
 
     def test_read_access_uses_read_access_key(self) -> None:
-        """Read access should use 'read_access_key' secret."""
-        # This tests the inline logic: secret_name = "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+        """Read access should use 'namespace_read_access_key' secret."""
+        # This tests the inline logic: secret_name = "namespace_read_write_access_key" if declared_access == "read_write" else "namespace_read_access_key"
         declared_access = "read"
         secret_name = (
-            "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+            "namespace_read_write_access_key"
+            if declared_access == "read_write"
+            else "namespace_read_access_key"
         )
-        assert secret_name == "read_access_key"
+        assert secret_name == "namespace_read_access_key"
 
     def test_read_write_access_uses_read_write_access_key(self) -> None:
-        """Read-write access should use 'read_write_access_key' secret."""
+        """Read-write access should use 'namespace_read_write_access_key' secret."""
         declared_access = "read_write"
         secret_name = (
-            "read_write_access_key" if declared_access == "read_write" else "read_access_key"
+            "namespace_read_write_access_key"
+            if declared_access == "read_write"
+            else "namespace_read_access_key"
         )
-        assert secret_name == "read_write_access_key"
+        assert secret_name == "namespace_read_write_access_key"
 
 
 class TestLoadPluginsHandlesNamespaceErrors:
