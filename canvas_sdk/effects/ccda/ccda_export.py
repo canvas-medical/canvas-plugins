@@ -18,7 +18,7 @@ class DocumentType(StrEnum):
     REFERRAL = "Referral"
 
 
-class CreateCCDAExport(_BaseEffect):
+class CreateCCDA(_BaseEffect):
     """
     An Effect that will create a CCDA document for a patient with the provided XML content.
 
@@ -29,7 +29,7 @@ class CreateCCDAExport(_BaseEffect):
     """
 
     class Meta:
-        effect_type = EffectType.CREATE_CCDA_EXPORT
+        effect_type = EffectType.CREATE_CCDA
 
     patient_id: str = Field(min_length=1)
     content: str = Field(min_length=1)
@@ -37,7 +37,7 @@ class CreateCCDAExport(_BaseEffect):
 
     @property
     def values(self) -> dict[str, Any]:
-        """The CreateCCDAExport's values."""
+        """The CreateCCDA's values."""
         return {
             "patient_id": self.patient_id,
             "content": self.content,
@@ -72,4 +72,4 @@ class CreateCCDAExport(_BaseEffect):
         return errors
 
 
-__exports__ = ("CreateCCDAExport", "DocumentType")
+__exports__ = ("CreateCCDA", "DocumentType")
