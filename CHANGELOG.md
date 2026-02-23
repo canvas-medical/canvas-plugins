@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.103.0 (2026-02-23)
+
+### Features
+
+- Add data models for IntegrationTask, and report templates
+  ([#1510](https://github.com/canvas-medical/canvas-plugins/pull/1510),
+  [`c215ce6`](https://github.com/canvas-medical/canvas-plugins/commit/c215ce6cba8b33e02f42a22fa67c2de30ca30cb5))
+
+
 ## v0.102.0 (2026-02-23)
 
 ### Features
