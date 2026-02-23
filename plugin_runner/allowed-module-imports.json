@@ -948,6 +948,7 @@
     "LabValueCoding",
     "Language",
     "Letter",
+    "LetterActionEvent",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -1214,7 +1215,8 @@
   ],
   "canvas_sdk.v1.data.letter": [
     "Language",
-    "Letter"
+    "Letter",
+    "LetterActionEvent"
   ],
   "canvas_sdk.v1.data.line_item_transaction": [
     "LineItemTransfer",

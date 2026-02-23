@@ -76,7 +76,7 @@ from .lab import (
     LabValue,
     LabValueCoding,
 )
-from .letter import Language, Letter
+from .letter import Language, Letter, LetterActionEvent
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -246,6 +246,7 @@ __all__ = __exports__ = (
     "LabReportTemplateField",
     "LabReportTemplateFieldOption",
     "LabReportTemplateQuerySet",
+    "LetterActionEvent",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",

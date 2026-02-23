@@ -1,6 +1,7 @@
 import factory
 
-from canvas_sdk.v1.data import Language, Letter
+from canvas_sdk.v1.data import Language, Letter, LetterActionEvent
+from canvas_sdk.v1.data.letter import EventTypeChoices
 
 
 class LanguageFactory(factory.django.DjangoModelFactory[Language]):
@@ -23,3 +24,18 @@ class LetterFactory(factory.django.DjangoModelFactory[Letter]):
     printed = None
     note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     staff = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
+
+
+class LetterActionEventFactory(factory.django.DjangoModelFactory[LetterActionEvent]):
+    """Factory for creating LetterActionEvent."""
+
+    class Meta:
+        model = LetterActionEvent
+
+    event_type = EventTypeChoices.PRINTED
+    send_fax_id = factory.Faker("uuid4")
+    received_by_fax = factory.Faker("boolean")
+    delivered_by_fax = factory.Faker("boolean")
+    fax_result_msg = factory.Faker("paragraph")
+    originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
+    letter = factory.SubFactory("canvas_sdk.test_utils.factories.LetterFactory")
