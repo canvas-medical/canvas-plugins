@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.103.1 (2026-02-23)
+
+### Bug Fixes
+
+- Remove FileField unsupported property
+  ([#1523](https://github.com/canvas-medical/canvas-plugins/pull/1523),
+  [`ab9ce10`](https://github.com/canvas-medical/canvas-plugins/commit/ab9ce10972d34e0ff3189087c673d9a0e8afd61f))
+
+### Chores
+
+- Fix 'canavs' typo ([#1522](https://github.com/canvas-medical/canvas-plugins/pull/1522),
+  [`9b425c8`](https://github.com/canvas-medical/canvas-plugins/commit/9b425c80de3a6d50ced4246e56f4b0a743f7e2c2))
+
+
 ## v0.103.0 (2026-02-23)
 
 ### Features
