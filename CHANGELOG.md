@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.104.0 (2026-02-24)
+
+### Documentation
+
+- Bulk update references to BaseProtocol to prefer BaseHandler
+  ([#1519](https://github.com/canvas-medical/canvas-plugins/pull/1519),
+  [`1214fa2`](https://github.com/canvas-medical/canvas-plugins/commit/1214fa2768f37d346f0f60c608f76ff3601c4d2b))
+
+### Features
+
+- Enable ClaimBannerAlert effects
+  ([#1485](https://github.com/canvas-medical/canvas-plugins/pull/1485),
+  [`cb13d4a`](https://github.com/canvas-medical/canvas-plugins/commit/cb13d4a803221d10ee8f8c43bf77fbb4b3f1d2a7))
+
+
 ## v0.103.1 (2026-02-23)
 
 ### Bug Fixes
