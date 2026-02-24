@@ -265,6 +265,7 @@ class PluginRunner(PluginRunnerServicer):
                     with metrics.measure(
                         name=handler_name,
                         track_queries=True,
+                        track_memory_usage=True,
                         extra_tags={
                             "plugin": base_plugin_name,
                             "event": event_name,
@@ -554,6 +555,7 @@ def get_client() -> tuple[redis.Redis, redis.client.PubSub]:
     return client, pubsub
 
 
+@measured(track_memory_usage=True)
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')

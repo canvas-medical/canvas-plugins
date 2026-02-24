@@ -1,3 +1,4 @@
+import os
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
@@ -5,6 +6,7 @@ from datetime import timedelta
 from functools import wraps
 from typing import Any, TypeVar, cast, overload
 
+import psutil
 from django.conf import settings
 from django.db import connection
 from statsd.client.base import StatsClientBase
@@ -116,6 +118,7 @@ def measure(
     client: StatsDClientProxy | None = None,
     track_plugins_usage: bool = False,
     track_queries: bool = False,
+    track_memory_usage: bool = False,
 ) -> Generator[PipelineProxy, None, None]:
     """A context manager for collecting metrics about a context block.
 
@@ -125,6 +128,7 @@ def measure(
         client: An optional alternate StatsD client.
         track_plugins_usage: Whether to track plugin usage (Adds plugin and handler tags if the caller was a plugin).
         track_queries: Whether to track queries (Adds query count and duration metrics).
+        track_memory_usage: Whether to track memory usage (Adds memory usage metrics).
 
     Yields:
         A pipeline for collecting additional metrics in the same batch.
@@ -143,6 +147,11 @@ def measure(
     if track_queries:
         connection.force_debug_cursor = True
         connection.queries_log.clear()
+
+    if track_memory_usage:
+        pid = os.getpid()
+        process = psutil.Process(pid)
+        rss_before = process.memory_info().rss
 
     tags = {
         "name": name,
@@ -169,6 +178,10 @@ def measure(
             pipeline.timing("plugins.query_count", delta=query_count, tags=tags)
             pipeline.timing("plugins.query_duration_ms", delta=query_duration_ms, tags=tags)
             connection.force_debug_cursor = False
+        if track_memory_usage:
+            rss_after = process.memory_info().rss
+            rss_diff = rss_after - rss_before
+            pipeline.incr("plugins.rss_delta_in_bytes", count=rss_diff, tags=tags)
 
         pipeline.send()
 
