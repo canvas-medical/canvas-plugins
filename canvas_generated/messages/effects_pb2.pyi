@@ -254,6 +254,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ADD_CLAIM_LABEL: _ClassVar[EffectType]
     REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
     ADD_CLAIM_COMMENT: _ClassVar[EffectType]
+    ADD_CLAIM_BANNER_ALERT: _ClassVar[EffectType]
+    REMOVE_CLAIM_BANNER_ALERT: _ClassVar[EffectType]
     UPSERT_CLAIM_METADATA: _ClassVar[EffectType]
     UPDATE_CLAIM_LINE_ITEM: _ClassVar[EffectType]
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
@@ -309,6 +311,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     APPOINTMENT__FORM__CREATE_ADDITIONAL_FIELDS: _ClassVar[EffectType]
     UPSERT_APPOINTMENT_METADATA: _ClassVar[EffectType]
     APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
+    UPSERT_NOTE_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
@@ -579,6 +582,8 @@ MOVE_CLAIM_TO_QUEUE: EffectType
 ADD_CLAIM_LABEL: EffectType
 REMOVE_CLAIM_LABEL: EffectType
 ADD_CLAIM_COMMENT: EffectType
+ADD_CLAIM_BANNER_ALERT: EffectType
+REMOVE_CLAIM_BANNER_ALERT: EffectType
 UPSERT_CLAIM_METADATA: EffectType
 UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
@@ -634,6 +639,7 @@ APPOINTMENT__FORM__REASON_FOR_VISIT__POST_SEARCH_RESULTS: EffectType
 APPOINTMENT__FORM__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_APPOINTMENT_METADATA: EffectType
 APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: EffectType
+UPSERT_NOTE_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
 REDIRECT_CONTEXT: EffectType

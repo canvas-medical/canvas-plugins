@@ -7,21 +7,21 @@ from pytest import MonkeyPatch
 from canvas_sdk.events import EventType
 
 
-class TestAbnormalLabProtocol:
-    """Test suite for AbnormalLabProtocol."""
+class TestAbnormalLabHandler:
+    """Test suite for AbnormalLabHandler."""
 
     def test_responds_to_correct_event(self) -> None:
-        """Test that AbnormalLabProtocol responds to LAB_REPORT_CREATED event."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that AbnormalLabHandler responds to LAB_REPORT_CREATED event."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
-        assert EventType.Name(EventType.LAB_REPORT_CREATED) == AbnormalLabProtocol.RESPONDS_TO
+        assert EventType.Name(EventType.LAB_REPORT_CREATED) == AbnormalLabHandler.RESPONDS_TO
 
     def test_compute_with_abnormal_lab_values(self, monkeypatch: MonkeyPatch) -> None:
-        """Test that protocol creates task when lab report has abnormal values."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler creates task when lab report has abnormal values."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         from canvas_sdk.effects.task import TaskStatus
@@ -52,22 +52,22 @@ class TestAbnormalLabProtocol:
 
         # Patch LabReport.objects.filter
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
             # Mock AddTask effect
             with patch(
-                "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.AddTask"
+                "abnormal_lab_task_notification.handlers.abnormal_lab_handler.AddTask"
             ) as mock_task_class:
                 mock_task_instance = MagicMock()
                 mock_applied_effect = MagicMock()
                 mock_task_instance.apply.return_value = mock_applied_effect
                 mock_task_class.return_value = mock_task_instance
 
-                # Execute protocol
-                protocol = AbnormalLabProtocol(event=mock_event)
-                result = protocol.compute()
+                # Execute handler
+                handler = AbnormalLabHandler(event=mock_event)
+                result = handler.compute()
 
                 # Verify task was created with correct parameters
                 mock_task_class.assert_called_once_with(
@@ -84,9 +84,9 @@ class TestAbnormalLabProtocol:
                 assert result == [mock_applied_effect]
 
     def test_compute_with_no_abnormal_values(self) -> None:
-        """Test that protocol returns empty list when no abnormal values."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler returns empty list when no abnormal values."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         # Mock event
@@ -114,19 +114,19 @@ class TestAbnormalLabProtocol:
         mock_queryset.first.return_value = mock_lab_report
 
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
-            protocol = AbnormalLabProtocol(event=mock_event)
-            result = protocol.compute()
+            handler = AbnormalLabHandler(event=mock_event)
+            result = handler.compute()
 
             assert result == []
 
     def test_compute_with_lab_report_not_found(self) -> None:
-        """Test that protocol returns empty list when lab report not found."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler returns empty list when lab report not found."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         # Mock event
@@ -138,19 +138,19 @@ class TestAbnormalLabProtocol:
         mock_queryset.first.return_value = None
 
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
-            protocol = AbnormalLabProtocol(event=mock_event)
-            result = protocol.compute()
+            handler = AbnormalLabHandler(event=mock_event)
+            result = handler.compute()
 
             assert result == []
 
     def test_compute_filters_test_and_junked_reports(self) -> None:
-        """Test that protocol properly filters out test and junked reports."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler properly filters out test and junked reports."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         # Mock event
@@ -162,12 +162,12 @@ class TestAbnormalLabProtocol:
         mock_queryset.first.return_value = None
 
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
-            protocol = AbnormalLabProtocol(event=mock_event)
-            protocol.compute()
+            handler = AbnormalLabHandler(event=mock_event)
+            handler.compute()
 
             # Verify filter was called with correct parameters
             mock_filter.assert_called_once_with(
@@ -175,9 +175,9 @@ class TestAbnormalLabProtocol:
             )
 
     def test_compute_handles_exception(self) -> None:
-        """Test that protocol handles exceptions gracefully."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler handles exceptions gracefully."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         # Mock event
@@ -186,20 +186,20 @@ class TestAbnormalLabProtocol:
 
         # Mock LabReport.objects.filter to raise exception
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.side_effect = Exception("Database error")
 
-            protocol = AbnormalLabProtocol(event=mock_event)
-            result = protocol.compute()
+            handler = AbnormalLabHandler(event=mock_event)
+            result = handler.compute()
 
             # Should return empty list on exception
             assert result == []
 
     def test_compute_with_whitespace_abnormal_flag(self) -> None:
-        """Test that protocol ignores abnormal flags that are only whitespace."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        """Test that handler ignores abnormal flags that are only whitespace."""
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         # Mock event
@@ -224,20 +224,20 @@ class TestAbnormalLabProtocol:
         mock_queryset.first.return_value = mock_lab_report
 
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
-            protocol = AbnormalLabProtocol(event=mock_event)
-            result = protocol.compute()
+            handler = AbnormalLabHandler(event=mock_event)
+            result = handler.compute()
 
             # Should return empty list since whitespace is stripped
             assert result == []
 
     def test_compute_single_abnormal_value(self) -> None:
         """Test task title with single abnormal value."""
-        from abnormal_lab_task_notification.protocols.abnormal_lab_protocol import (
-            AbnormalLabProtocol,
+        from abnormal_lab_task_notification.handlers.abnormal_lab_handler import (
+            AbnormalLabHandler,
         )
 
         from canvas_sdk.effects.task import TaskStatus
@@ -264,20 +264,20 @@ class TestAbnormalLabProtocol:
         mock_queryset.first.return_value = mock_lab_report
 
         with patch(
-            "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.LabReport.objects.filter"
+            "abnormal_lab_task_notification.handlers.abnormal_lab_handler.LabReport.objects.filter"
         ) as mock_filter:
             mock_filter.return_value = mock_queryset
 
             with patch(
-                "abnormal_lab_task_notification.protocols.abnormal_lab_protocol.AddTask"
+                "abnormal_lab_task_notification.handlers.abnormal_lab_handler.AddTask"
             ) as mock_task_class:
                 mock_task_instance = MagicMock()
                 mock_applied_effect = MagicMock()
                 mock_task_instance.apply.return_value = mock_applied_effect
                 mock_task_class.return_value = mock_task_instance
 
-                protocol = AbnormalLabProtocol(event=mock_event)
-                protocol.compute()
+                handler = AbnormalLabHandler(event=mock_event)
+                handler.compute()
 
                 # Verify task title for single abnormal value
                 mock_task_class.assert_called_once_with(

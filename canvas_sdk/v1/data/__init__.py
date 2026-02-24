@@ -25,6 +25,7 @@ from .claim import (
     ClaimSubmission,
     InstallmentPlan,
 )
+from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
 from .command import Command
@@ -38,27 +39,46 @@ from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .goal import Goal
-from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .imaging import (
+    ImagingOrder,
+    ImagingReport,
+    ImagingReportTemplate,
+    ImagingReportTemplateField,
+    ImagingReportTemplateFieldOption,
+    ImagingReportTemplateQuerySet,
+    ImagingReview,
+)
 from .immunization import (
     Immunization,
     ImmunizationCoding,
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .integration_task import (
+    IntegrationTask,
+    IntegrationTaskChannel,
+    IntegrationTaskReview,
+    IntegrationTaskStatus,
+)
 from .invoice import Invoice
 from .lab import (
+    FieldType,
     LabOrder,
     LabOrderReason,
     LabOrderReasonCondition,
     LabPartner,
     LabPartnerTest,
     LabReport,
+    LabReportTemplate,
+    LabReportTemplateField,
+    LabReportTemplateFieldOption,
+    LabReportTemplateQuerySet,
     LabReview,
     LabTest,
     LabValue,
     LabValueCoding,
 )
-from .letter import Language, Letter
+from .letter import Language, Letter, LetterActionEvent
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -73,7 +93,7 @@ from .medication_history import (
 )
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
+from .note import CurrentNoteStateEvent, Note, NoteMetadata, NoteStateChangeEvent, NoteType
 from .observation import (
     Observation,
     ObservationCoding,
@@ -126,6 +146,11 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
+from .specialty_report_template import (
+    SpecialtyReportTemplate,
+    SpecialtyReportTemplateField,
+    SpecialtyReportTemplateFieldOption,
+)
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
 from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
@@ -158,6 +183,9 @@ __all__ = __exports__ = (
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimBannerAlert",
+    "BannerAlertStatus",
+    "BannerAlertIntent",
     "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
@@ -186,15 +214,24 @@ __all__ = __exports__ = (
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
@@ -211,6 +248,11 @@ __all__ = __exports__ = (
     "LabValueCoding",
     "Language",
     "Letter",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
+    "LetterActionEvent",
     "LineItemTransfer",
     "Medication",
     "MedicationCoding",
@@ -225,6 +267,7 @@ __all__ = __exports__ = (
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
     "NoteType",
@@ -265,6 +308,9 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
     "Staff",
     "StaffAddress",
     "StaffLicense",

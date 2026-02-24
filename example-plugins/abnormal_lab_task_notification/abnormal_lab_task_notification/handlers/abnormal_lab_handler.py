@@ -1,14 +1,14 @@
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.task import AddTask, TaskStatus
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.v1.data.lab import LabReport
 from logger import log
 
 
-class AbnormalLabProtocol(BaseProtocol):
+class AbnormalLabHandler(BaseHandler):
     """
-    A protocol that monitors lab reports and creates task notifications
+    A handler that monitors lab reports and creates task notifications
     for abnormal lab values to ensure prompt review.
 
     Triggers on: LAB_REPORT_CREATED events

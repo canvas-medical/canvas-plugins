@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.claim import (
+    BannerAlertIntent,
     ClaimEffect,
     ColorEnum,
     Label,
@@ -22,6 +23,7 @@ from canvas_sdk.effects.claim import (
 def mock_db_queries() -> Generator[dict[str, MagicMock]]:
     """Mock all database queries to return True/exist by default."""
     with (
+        patch("canvas_sdk.effects.claim.claim_banner_alert.Claim") as mock_claim_banner,
         patch("canvas_sdk.effects.claim.claim_comment.Claim") as mock_claim_comment,
         patch("canvas_sdk.effects.claim.claim_label.Claim") as mock_claim_label,
         patch("canvas_sdk.effects.claim.claim_metadata.Claim") as mock_claim_metadata,
@@ -32,6 +34,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
     ):
         # Setup default behaviors - objects exist
+        mock_claim_banner.objects.filter.return_value.exists.return_value = True
         mock_claim_comment.objects.filter.return_value.exists.return_value = True
         mock_claim_label.objects.filter.return_value.exists.return_value = True
         mock_claim_metadata.objects.filter.return_value.exists.return_value = True
@@ -66,6 +69,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_claim_obj.coverages.active.return_value.filter.return_value = [1]
 
         yield {
+            "claim_banner": mock_claim_banner,
             "claim_comment": mock_claim_comment,
             "claim_label": mock_claim_label,
             "claim_metadata": mock_claim_metadata,
@@ -528,3 +532,111 @@ def test_line_item_transaction_is_first_transaction_not_in_list() -> None:
     result = transaction.is_first_transaction_for_line_item(other_transactions, index=0)
 
     assert result is False
+
+
+def test_add_banner_with_all_fields(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test add_banner with all fields including optional href."""
+    claim_id = "test-claim-id"
+    effect = ClaimEffect(claim_id=claim_id)
+
+    result = effect.add_banner(
+        key="test-key",
+        narrative="Test banner message",
+        intent=BannerAlertIntent.INFO,
+        href="https://example.com",
+    )
+
+    assert result.type == EffectType.ADD_CLAIM_BANNER_ALERT
+    payload = json.loads(result.payload)["data"]
+    assert payload["claim_id"] == "test-claim-id"
+    assert payload["key"] == "test-key"
+    assert payload["narrative"] == "Test banner message"
+    assert payload["intent"] == "info"
+    assert payload["href"] == "https://example.com"
+
+
+def test_add_banner_without_href(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test add_banner without the optional href."""
+    claim_id = "test-claim-id"
+    effect = ClaimEffect(claim_id=claim_id)
+
+    result = effect.add_banner(
+        key="test-key",
+        narrative="Test banner message",
+        intent=BannerAlertIntent.WARNING,
+    )
+
+    assert result.type == EffectType.ADD_CLAIM_BANNER_ALERT
+    payload = json.loads(result.payload)["data"]
+    assert payload["href"] is None
+
+
+def test_add_banner_requires_existing_claim(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_banner validates claim exists."""
+    mock_db_queries["claim_banner"].objects.filter.return_value.exists.return_value = False
+    effect = ClaimEffect(claim_id="nonexistent-claim")
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.add_banner(
+            key="test-key",
+            narrative="Test message",
+            intent=BannerAlertIntent.INFO,
+        )
+
+    err_msg = repr(exc_info.value)
+    assert "Claim with id nonexistent-claim does not exist" in err_msg
+
+
+def test_add_banner_narrative_max_length(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that narrative has a maximum length of 90 characters."""
+    effect = ClaimEffect(claim_id="claim-id")
+    long_narrative = "x" * 91
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.add_banner(
+            key="test-key",
+            narrative=long_narrative,
+            intent=BannerAlertIntent.INFO,
+        )
+
+    err_msg = repr(exc_info.value)
+    assert "String should have at most 90 characters" in err_msg
+
+
+def test_add_banner_narrative_at_max_length(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that narrative at exactly 90 characters is valid."""
+    effect = ClaimEffect(claim_id="claim-id")
+    max_narrative = "x" * 90
+
+    result = effect.add_banner(
+        key="test-key",
+        narrative=max_narrative,
+        intent=BannerAlertIntent.INFO,
+    )
+
+    assert max_narrative in result.payload
+
+
+def test_remove_banner(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test remove_banner returns correct effect."""
+    claim_id = "test-claim-id"
+    effect = ClaimEffect(claim_id=claim_id)
+
+    result = effect.remove_banner(key="test-key")
+
+    assert result.type == EffectType.REMOVE_CLAIM_BANNER_ALERT
+    payload = json.loads(result.payload)["data"]
+    assert payload["claim_id"] == "test-claim-id"
+    assert payload["key"] == "test-key"
+
+
+def test_remove_banner_requires_existing_claim(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that remove_banner validates claim exists."""
+    mock_db_queries["claim_banner"].objects.filter.return_value.exists.return_value = False
+    effect = ClaimEffect(claim_id="nonexistent-claim")
+
+    with pytest.raises(ValidationError) as exc_info:
+        effect.remove_banner(key="test-key")
+
+    err_msg = repr(exc_info.value)
+    assert "Claim with id nonexistent-claim does not exist" in err_msg

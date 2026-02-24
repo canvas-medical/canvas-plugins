@@ -1,6 +1,98 @@
 # CHANGELOG
 
 
+## v0.104.0 (2026-02-24)
+
+### Documentation
+
+- Bulk update references to BaseProtocol to prefer BaseHandler
+  ([#1519](https://github.com/canvas-medical/canvas-plugins/pull/1519),
+  [`1214fa2`](https://github.com/canvas-medical/canvas-plugins/commit/1214fa2768f37d346f0f60c608f76ff3601c4d2b))
+
+### Features
+
+- Enable ClaimBannerAlert effects
+  ([#1485](https://github.com/canvas-medical/canvas-plugins/pull/1485),
+  [`cb13d4a`](https://github.com/canvas-medical/canvas-plugins/commit/cb13d4a803221d10ee8f8c43bf77fbb4b3f1d2a7))
+
+
+## v0.103.1 (2026-02-23)
+
+### Bug Fixes
+
+- Remove FileField unsupported property
+  ([#1523](https://github.com/canvas-medical/canvas-plugins/pull/1523),
+  [`ab9ce10`](https://github.com/canvas-medical/canvas-plugins/commit/ab9ce10972d34e0ff3189087c673d9a0e8afd61f))
+
+### Chores
+
+- Fix 'canavs' typo ([#1522](https://github.com/canvas-medical/canvas-plugins/pull/1522),
+  [`9b425c8`](https://github.com/canvas-medical/canvas-plugins/commit/9b425c80de3a6d50ced4246e56f4b0a743f7e2c2))
+
+
+## v0.103.0 (2026-02-23)
+
+### Features
+
+- Add data models for IntegrationTask, and report templates
+  ([#1510](https://github.com/canvas-medical/canvas-plugins/pull/1510),
+  [`c215ce6`](https://github.com/canvas-medical/canvas-plugins/commit/c215ce6cba8b33e02f42a22fa67c2de30ca30cb5))
+
+
+## v0.102.0 (2026-02-23)
+
+### Features
+
+- Note metadata effects ([#1506](https://github.com/canvas-medical/canvas-plugins/pull/1506),
+  [`a3ad199`](https://github.com/canvas-medical/canvas-plugins/commit/a3ad1991dfc6d4e0f60b755dd8365e40ccacbf78))
+
+
+## v0.101.0 (2026-02-23)
+
+### Features
+
+- Implement note metadata data model and events
+  ([#1502](https://github.com/canvas-medical/canvas-plugins/pull/1502),
+  [`563f789`](https://github.com/canvas-medical/canvas-plugins/commit/563f789fb4cdfca0602be521c162724f00903792))
+
+
+## v0.100.0 (2026-02-23)
+
+### Features
+
+- Add note letter data module and event
+  ([#1518](https://github.com/canvas-medical/canvas-plugins/pull/1518),
+  [`1a48f49`](https://github.com/canvas-medical/canvas-plugins/commit/1a48f49589695b46d0c1062b58bc4e3bac29b4f9))
+
+
+## v0.99.1 (2026-02-19)
+
+### Bug Fixes
+
+- Allow float values for temperature in VitalsCommand and add related tests
+  ([#1499](https://github.com/canvas-medical/canvas-plugins/pull/1499),
+  [`dbcff10`](https://github.com/canvas-medical/canvas-plugins/commit/dbcff10d006dd87e92ec7cb65e2543c8b3d4e137))
+
+- Change the PatientMetadata.value attribute type
+  ([#1515](https://github.com/canvas-medical/canvas-plugins/pull/1515),
+  [`99b1638`](https://github.com/canvas-medical/canvas-plugins/commit/99b1638ce8b9212fe99e84de4d2ad557337eec99))
+
+
+## v0.99.0 (2026-02-18)
+
+### Bug Fixes
+
+- Allow hyphens in websocket channel names
+  ([#1483](https://github.com/canvas-medical/canvas-plugins/pull/1483),
+  [`ff544b6`](https://github.com/canvas-medical/canvas-plugins/commit/ff544b68963ba1904b94fc097c9200a5e2299673))
+
+### Features
+
+- Add ability to set note related_data via existing note effects
+  ([#1051](https://github.com/canvas-medical/canvas-plugins/pull/1051),
+  [`ac10e3d`](https://github.com/canvas-medical/canvas-plugins/commit/ac10e3d2409acfc8b6759f374506f8033f020d79))
+
+
 ## v0.98.0 (2026-02-13)
 
 ### Features

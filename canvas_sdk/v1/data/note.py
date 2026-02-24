@@ -230,12 +230,26 @@ class CurrentNoteStateEvent(IdentifiableModel):
         ]
 
 
+class NoteMetadata(IdentifiableModel):
+    """A class representing Note Metadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_notemetadata_001"
+
+    note = models.ForeignKey(
+        "v1.Note", on_delete=models.CASCADE, related_name="metadata", null=True
+    )
+    key = models.CharField(max_length=32)
+    value = models.TextField()
+
+
 __exports__ = (
     "NoteTypeCategories",
     "PracticeLocationPOS",
     "NoteTypes",
     "NoteType",
     "Note",
+    "NoteMetadata",
     "NoteStates",
     "NoteStateChangeEvent",
     "CurrentNoteStateEvent",
