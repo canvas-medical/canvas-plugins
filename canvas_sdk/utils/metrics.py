@@ -13,6 +13,8 @@ from statsd.client.base import StatsClientBase
 from statsd.client.udp import Pipeline
 from statsd.defaults.env import statsd as default_statsd_client
 
+from logger import log
+
 LINE_PROTOCOL_TRANSLATION = str.maketrans(
     {
         ",": r"\,",
@@ -181,7 +183,13 @@ def measure(
         if track_memory_usage:
             rss_after = process.memory_info().rss
             rss_diff = rss_after - rss_before
-            pipeline.incr("plugins.rss_delta_in_bytes", count=rss_diff, tags=tags)
+            pipeline.timing("plugins.rss_delta_in_bytes", delta=rss_diff, tags=tags)
+
+            if rss_diff > int(os.getenv("PLUGIN_MEMORY_GROWTH_THRESHOLD_MB", 5)) * 1024 * 1024:
+                from canvas_sdk.utils.plugins import is_plugin_caller
+
+                is_plugin, caller = is_plugin_caller()
+                log.warning(f"Plugin RSS: Excessive memory growth while running {caller}")
 
         pipeline.send()
 
