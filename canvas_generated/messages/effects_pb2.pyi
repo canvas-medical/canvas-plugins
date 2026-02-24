@@ -254,6 +254,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ADD_CLAIM_LABEL: _ClassVar[EffectType]
     REMOVE_CLAIM_LABEL: _ClassVar[EffectType]
     ADD_CLAIM_COMMENT: _ClassVar[EffectType]
+    ADD_CLAIM_BANNER_ALERT: _ClassVar[EffectType]
+    REMOVE_CLAIM_BANNER_ALERT: _ClassVar[EffectType]
     UPDATE_CLAIM_LINE_ITEM: _ClassVar[EffectType]
     SHOW_PATIENT_PORTAL_MENU_ITEMS: _ClassVar[EffectType]
     PORTAL_WIDGET: _ClassVar[EffectType]
@@ -579,6 +581,8 @@ MOVE_CLAIM_TO_QUEUE: EffectType
 ADD_CLAIM_LABEL: EffectType
 REMOVE_CLAIM_LABEL: EffectType
 ADD_CLAIM_COMMENT: EffectType
+ADD_CLAIM_BANNER_ALERT: EffectType
+REMOVE_CLAIM_BANNER_ALERT: EffectType
 UPDATE_CLAIM_LINE_ITEM: EffectType
 SHOW_PATIENT_PORTAL_MENU_ITEMS: EffectType
 PORTAL_WIDGET: EffectType

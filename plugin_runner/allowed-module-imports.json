@@ -456,6 +456,7 @@
     "EventRecurrence"
   ],
   "canvas_sdk.effects.claim": [
+    "BannerAlertIntent",
     "ClaimEffect",
     "ColorEnum",
     "Label",
@@ -463,6 +464,7 @@
     "PaymentMethod"
   ],
   "canvas_sdk.effects.claim.claim": [
+    "BannerAlertIntent",
     "ClaimEffect",
     "ColorEnum",
     "Label",
@@ -871,6 +873,8 @@
     "AppointmentMetadata",
     "Assessment",
     "BannerAlert",
+    "BannerAlertIntent",
+    "BannerAlertStatus",
     "BasePosting",
     "BaseRemittanceAdvice",
     "BillingLineItem",
@@ -883,6 +887,7 @@
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimBannerAlert",
     "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
@@ -1084,6 +1089,11 @@
     "ClaimTypeCode",
     "InstallmentPlan",
     "InstallmentPlanStatus"
+  ],
+  "canvas_sdk.v1.data.claim_banner_alert": [
+    "BannerAlertIntent",
+    "BannerAlertStatus",
+    "ClaimBannerAlert"
   ],
   "canvas_sdk.v1.data.claim_diagnosis_code": [
     "ClaimDiagnosisCode"
