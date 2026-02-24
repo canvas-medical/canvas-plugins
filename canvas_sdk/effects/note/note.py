@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
+from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
 from canvas_sdk.v1.data import NoteType, Patient
 from canvas_sdk.v1.data.note import NoteStates, NoteTypeCategories
@@ -47,6 +48,7 @@ class Note(NoteOrAppointmentABC):
     datetime_of_service: datetime.datetime | None = None
     patient_id: str | None = None
     title: str | None = None
+    related_data: dict | None = None
 
     def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
@@ -95,6 +97,24 @@ class Note(NoteOrAppointmentABC):
             type=EffectType.NO_SHOW_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """
+        Upserts a metadata record to the note.
+
+        Args:
+            key (str): The key of the metadata.
+            value (str): The value of the metadata.
+
+        Returns:
+            Effect: An effect that upserts the metadata record to the note.
+
+        Raises:
+            ValueError: If instance_id is not set.
+        """
+        if not self.instance_id:
+            raise ValueError("Field 'instance_id' is required to upsert metadata.")
+        return _NoteMetadata(note_id=self.instance_id, key=key).upsert(value=value)
 
     def _validate_state_transition(
         self, note: NoteModel, next_state: NoteStates

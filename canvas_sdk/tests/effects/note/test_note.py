@@ -656,3 +656,34 @@ def test_no_show_success(mock_db_queries: dict[str, MagicMock]) -> None:
     assert effect.type == EffectType.NO_SHOW_NOTE
     payload = json.loads(effect.payload)
     assert payload["data"]["note"] == instance_id
+
+
+def test_create_note_with_related_data(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test creating a note with related_data."""
+    related_data = {"custom_field": "custom_value", "nested": {"key": "value"}}
+    valid_note_data["related_data"] = related_data
+
+    note = Note(**valid_note_data)
+    effect = note.create()
+
+    assert effect.type == EffectType.CREATE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["related_data"] == related_data
+
+
+def test_update_note_related_data(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test updating a note's related_data."""
+    instance_id = str(uuid4())
+    related_data = {"updated_field": "updated_value"}
+
+    note = Note(instance_id=instance_id)
+    note.related_data = related_data
+
+    effect = note.update()
+
+    assert effect.type == EffectType.UPDATE_NOTE
+    payload = json.loads(effect.payload)
+    assert payload["data"]["related_data"] == related_data
+    assert payload["data"]["instance_id"] == instance_id
