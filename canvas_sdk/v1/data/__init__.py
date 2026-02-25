@@ -130,6 +130,7 @@ from .practicelocation import (
     PracticeLocationContactPoint,
     PracticeLocationSetting,
 )
+from .prescription import Prescription, PrescriptionResponse, PrescrptionStatus
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -294,6 +295,9 @@ __all__ = __exports__ = (
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescrptionStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",

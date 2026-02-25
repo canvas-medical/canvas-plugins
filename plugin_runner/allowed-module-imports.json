@@ -997,6 +997,9 @@
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescrptionStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
@@ -1315,6 +1318,11 @@
     "PracticeLocationContactPoint",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
+  ],
+  "canvas_sdk.v1.data.prescription": [
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescriptionStatus"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",
