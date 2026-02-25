@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import pkgutil
+import signal
 import sys
 import threading
 from collections import defaultdict
@@ -766,15 +767,29 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
 
     server.start()
 
+    shutdown_reason = "unknown"
+
+    def handle_signal(signum: int, _frame: object) -> None:
+        nonlocal shutdown_reason
+        shutdown_reason = signal.Signals(signum).name
+        server.stop(grace=0)
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
-        pass
+        shutdown_reason = "SIGINT"
+    except Exception as ex:
+        shutdown_reason = f"exception: {ex}"
     finally:
+        log.info(f"Server shutting down (reason: {shutdown_reason})")
         executor.shutdown(wait=True, cancel_futures=True)
         if synchronizer_thread.is_alive():
             STOP_SYNCHRONIZER.set()
             synchronizer_thread.join()
+        log.info("Server stopped")
 
 
 if __name__ == "__main__":
