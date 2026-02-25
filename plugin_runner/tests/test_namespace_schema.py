@@ -13,6 +13,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+from plugin_runner.exceptions import PluginInstallationError
+
 
 class TestCreateNamespaceSchemaValidation:
     """Tests for namespace name validation in create_namespace_schema."""
@@ -686,3 +688,147 @@ class TestStoreNamespaceKeysAsPluginSecrets:
 
         written = json.loads(secrets_file.read_text())
         assert written == {"existing_secret": "old_value", "new_key": "new_value"}
+
+
+class TestSetupReadWriteNamespace:
+    """Tests for setup_read_write_namespace function."""
+
+    @patch("plugin_runner.installation.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.installation.create_namespace_schema")
+    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    def test_creates_namespace_when_not_exists(
+        self,
+        mock_exists: MagicMock,
+        mock_create: MagicMock,
+        mock_store: MagicMock,
+    ) -> None:
+        """Should create the namespace and store keys when it doesn't exist."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        mock_create.return_value = {"key_a": "val_a", "key_b": "val_b"}
+
+        result = setup_read_write_namespace("my_plugin", "org__data", {})
+
+        assert result is True
+        mock_create.assert_called_once_with(namespace="org__data")
+        mock_store.assert_called_once_with("my_plugin", {"key_a": "val_a", "key_b": "val_b"})
+
+    @patch("plugin_runner.installation.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.installation.create_namespace_schema")
+    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    def test_skips_store_when_create_returns_none(
+        self,
+        mock_exists: MagicMock,
+        mock_create: MagicMock,
+        mock_store: MagicMock,
+    ) -> None:
+        """Should not store keys when create_namespace_schema returns None."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        mock_create.return_value = None
+
+        result = setup_read_write_namespace("my_plugin", "org__data", {})
+
+        assert result is True
+        mock_store.assert_not_called()
+
+    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read_write")
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_verifies_key_when_namespace_exists(
+        self,
+        mock_exists: MagicMock,
+        mock_check: MagicMock,
+    ) -> None:
+        """Should verify access key and return True when key grants read_write."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        secrets = {"namespace_read_write_access_key": "valid-key"}
+        result = setup_read_write_namespace("my_plugin", "org__data", secrets)
+
+        assert result is True
+        mock_check.assert_called_once_with("org__data", "valid-key")
+
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_raises_when_key_missing_and_namespace_exists(self, mock_exists: MagicMock) -> None:
+        """Should raise PluginInstallationError when secret is not configured."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        with pytest.raises(PluginInstallationError, match="secret is not configured"):
+            setup_read_write_namespace("my_plugin", "org__data", {})
+
+    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_raises_when_key_grants_insufficient_access(
+        self,
+        mock_exists: MagicMock,
+        mock_check: MagicMock,
+    ) -> None:
+        """Should raise PluginInstallationError when key only grants read access."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        secrets = {"namespace_read_write_access_key": "read-only-key"}
+        with pytest.raises(PluginInstallationError, match="invalid or insufficient"):
+            setup_read_write_namespace("my_plugin", "org__data", secrets)
+
+    @patch("plugin_runner.installation.check_namespace_auth_key", return_value=None)
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_raises_when_key_is_invalid(
+        self,
+        mock_exists: MagicMock,
+        mock_check: MagicMock,
+    ) -> None:
+        """Should raise PluginInstallationError when key is not recognized."""
+        from plugin_runner.installation import setup_read_write_namespace
+
+        secrets = {"namespace_read_write_access_key": "garbage"}
+        with pytest.raises(PluginInstallationError, match="invalid or insufficient"):
+            setup_read_write_namespace("my_plugin", "org__data", secrets)
+
+
+class TestVerifyReadNamespaceAccess:
+    """Tests for verify_read_namespace_access function."""
+
+    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_succeeds_with_valid_read_key(
+        self,
+        mock_exists: MagicMock,
+        mock_check: MagicMock,
+    ) -> None:
+        """Should return without error when key grants read access."""
+        from plugin_runner.installation import verify_read_namespace_access
+
+        secrets = {"namespace_read_access_key": "valid-key"}
+        verify_read_namespace_access("my_plugin", "org__data", secrets)
+
+        mock_check.assert_called_once_with("org__data", "valid-key")
+
+    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    def test_raises_when_namespace_does_not_exist(self, mock_exists: MagicMock) -> None:
+        """Should raise PluginInstallationError when namespace doesn't exist."""
+        from plugin_runner.installation import verify_read_namespace_access
+
+        with pytest.raises(PluginInstallationError, match="does not exist"):
+            verify_read_namespace_access("my_plugin", "org__missing", {})
+
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_raises_when_key_missing(self, mock_exists: MagicMock) -> None:
+        """Should raise PluginInstallationError when secret is not configured."""
+        from plugin_runner.installation import verify_read_namespace_access
+
+        with pytest.raises(PluginInstallationError, match="secret is not configured"):
+            verify_read_namespace_access("my_plugin", "org__data", {})
+
+    @patch("plugin_runner.installation.check_namespace_auth_key", return_value=None)
+    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    def test_raises_when_key_is_invalid(
+        self,
+        mock_exists: MagicMock,
+        mock_check: MagicMock,
+    ) -> None:
+        """Should raise PluginInstallationError when key is not recognized."""
+        from plugin_runner.installation import verify_read_namespace_access
+
+        secrets = {"namespace_read_access_key": "garbage"}
+        with pytest.raises(PluginInstallationError, match="invalid access key"):
+            verify_read_namespace_access("my_plugin", "org__data", secrets)
