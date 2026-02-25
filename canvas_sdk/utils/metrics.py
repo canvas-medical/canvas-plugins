@@ -189,7 +189,9 @@ def measure(
                 from canvas_sdk.utils.plugins import is_plugin_caller
 
                 is_plugin, caller = is_plugin_caller()
-                log.warning(f"Plugin RSS: Excessive memory growth while running {caller}")
+                log.warning(
+                    f"Plugin RSS: Excessive memory growth of {(rss_diff / 1024 / 1024):.2f}MB while running {caller}"
+                )
 
         pipeline.send()
 
