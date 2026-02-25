@@ -7,6 +7,8 @@ Tests verify that:
 4. initialize_namespace_partitions is called correctly
 """
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -522,3 +524,165 @@ class TestAddNamespaceAuthKey:
         add_namespace_auth_key("org__data", "secret", "read")
 
         mock_conn.commit.assert_called()
+
+
+class TestStoreNamespaceKeysAsPluginSecrets:
+    """Tests for store_namespace_keys_as_plugin_secrets function."""
+
+    def _make_mock_conn(self, cursor: MagicMock) -> MagicMock:
+        """Helper to build a mock connection wrapping the given cursor."""
+        cursor.__enter__ = MagicMock(return_value=cursor)
+        cursor.__exit__ = MagicMock(return_value=False)
+
+        conn = MagicMock()
+        conn.cursor.return_value = cursor
+        conn.__enter__ = MagicMock(return_value=conn)
+        conn.__exit__ = MagicMock(return_value=False)
+        return conn
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_early_when_plugin_not_found(self, mock_open_conn: MagicMock) -> None:
+        """Should log a warning and return without writing secrets when plugin not in DB."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None  # plugin not found
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        store_namespace_keys_as_plugin_secrets("nonexistent_plugin", {"key1": "val1"})
+
+        # Should NOT commit or attempt to insert secrets
+        mock_conn.commit.assert_not_called()
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_looks_up_plugin_by_name(self, mock_open_conn: MagicMock) -> None:
+        """Should query plugin_io_plugin for the plugin's database ID."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        store_namespace_keys_as_plugin_secrets("my_plugin", {"k": "v"})
+
+        first_execute = mock_cursor.execute.call_args_list[0]
+        sql = first_execute[0][0]
+        params = first_execute[0][1]
+        assert "plugin_io_plugin" in sql
+        assert params == ("my_plugin",)
+
+    @patch("builtins.open", new_callable=mock_open, read_data="{}")
+    @patch("plugin_runner.installation.Path")
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_inserts_keys_as_plugin_secrets(
+        self, mock_open_conn: MagicMock, mock_path_cls: MagicMock, mock_file: MagicMock
+    ) -> None:
+        """Should upsert each key into plugin_io_pluginsecret."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (42,)  # plugin_id = 42
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        # Mock Path so secrets_path.exists() returns False (skip file read)
+        mock_secrets_path = MagicMock()
+        mock_secrets_path.exists.return_value = False
+        mock_path_cls.return_value.__truediv__ = MagicMock(return_value=mock_secrets_path)
+
+        keys = {
+            "namespace_read_access_key": "read-uuid",
+            "namespace_read_write_access_key": "write-uuid",
+        }
+        store_namespace_keys_as_plugin_secrets("my_plugin", keys)
+
+        # First call is the plugin lookup; next two are the key inserts
+        insert_calls = [
+            c for c in mock_cursor.execute.call_args_list if "plugin_io_pluginsecret" in str(c)
+        ]
+        assert len(insert_calls) == 2
+
+        # Verify each key was upserted with the correct plugin_id and value
+        inserted_params = {call[0][1][1]: call[0][1][2] for call in insert_calls}
+        assert inserted_params["namespace_read_access_key"] == "read-uuid"
+        assert inserted_params["namespace_read_write_access_key"] == "write-uuid"
+
+        # All inserts use the same plugin_id
+        for call in insert_calls:
+            assert call[0][1][0] == 42
+
+    @patch("builtins.open", new_callable=mock_open, read_data="{}")
+    @patch("plugin_runner.installation.Path")
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_commits_after_inserting_secrets(
+        self, mock_open_conn: MagicMock, mock_path_cls: MagicMock, mock_file: MagicMock
+    ) -> None:
+        """Should commit the DB transaction after inserting all keys."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        mock_secrets_path = MagicMock()
+        mock_secrets_path.exists.return_value = False
+        mock_path_cls.return_value.__truediv__ = MagicMock(return_value=mock_secrets_path)
+
+        store_namespace_keys_as_plugin_secrets("p", {"k": "v"})
+
+        mock_conn.commit.assert_called_once()
+
+    @patch("plugin_runner.installation.SECRETS_FILE_NAME", "secrets.json")
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_writes_secrets_json_when_no_existing_file(
+        self, mock_open_conn: MagicMock, tmp_path: Path
+    ) -> None:
+        """Should create secrets.json with the keys when the file doesn't exist."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        plugin_dir = tmp_path / "my_plugin"
+        plugin_dir.mkdir()
+
+        keys = {"key_a": "val_a", "key_b": "val_b"}
+        with patch("plugin_runner.installation.PLUGIN_DIRECTORY", str(tmp_path)):
+            store_namespace_keys_as_plugin_secrets("my_plugin", keys)
+
+        secrets_file = plugin_dir / "secrets.json"
+        assert secrets_file.exists()
+        written = json.loads(secrets_file.read_text())
+        assert written == keys
+
+    @patch("plugin_runner.installation.SECRETS_FILE_NAME", "secrets.json")
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_merges_with_existing_secrets_json(
+        self, mock_open_conn: MagicMock, tmp_path: Path
+    ) -> None:
+        """Should merge new keys into existing secrets.json contents."""
+        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        plugin_dir = tmp_path / "my_plugin"
+        plugin_dir.mkdir()
+
+        # Write pre-existing secrets
+        secrets_file = plugin_dir / "secrets.json"
+        secrets_file.write_text(json.dumps({"existing_secret": "old_value"}))
+
+        keys = {"new_key": "new_value"}
+        with patch("plugin_runner.installation.PLUGIN_DIRECTORY", str(tmp_path)):
+            store_namespace_keys_as_plugin_secrets("my_plugin", keys)
+
+        written = json.loads(secrets_file.read_text())
+        assert written == {"existing_secret": "old_value", "new_key": "new_value"}
