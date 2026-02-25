@@ -756,7 +756,7 @@ class TestSetAttributesBulkOperations:
     @pytest.fixture
     def hub(self, db: None) -> AttributeHub:
         """Create an AttributeHub instance for testing."""
-        hub = AttributeHub(type="test", externally_exposable_id="test-123")
+        hub = AttributeHub(type="test", id="test-123")
         hub.save()
         return hub
 

@@ -50,8 +50,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_s
 CREATE TABLE IF NOT EXISTS {namespace}.attribute_hub (
     dbid SERIAL PRIMARY KEY,
     type VARCHAR(100) NOT NULL,
-    externally_exposable_id VARCHAR(100) NOT NULL,
-    UNIQUE(type, externally_exposable_id)
+    id VARCHAR(100) NOT NULL,
+    UNIQUE(type, id)
 );
 
 -- REVOKE ALL PRIVILEGES ON {namespace}.attribute_hub FROM canvas_sdk_read_only;

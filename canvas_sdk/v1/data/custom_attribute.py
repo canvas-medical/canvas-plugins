@@ -320,11 +320,11 @@ class AttributeHub(Model, CustomAttributeMixin):
 
     # Only id and type fields - all other data stored as custom attributes
     type = models.CharField(max_length=100)
-    externally_exposable_id = models.CharField(max_length=100)
+    id = models.CharField(max_length=100)
 
     def __str__(self) -> str:
         """Return a human-readable representation of the hub."""
-        return f"AttributeHub({self.type}): {self.externally_exposable_id}"
+        return f"AttributeHub({self.type}): {self.id}"
 
 
 __exports__ = (
