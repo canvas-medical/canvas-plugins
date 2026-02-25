@@ -15,13 +15,12 @@ from urllib import parse
 import psycopg
 import requests
 import sentry_sdk
-from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db.models import DateField, Field, Index
 from psycopg import Connection
 from psycopg.rows import dict_row
 
-from canvas_sdk.v1.data.base import CustomModel
+from canvas_sdk.v1.data.base import IS_SQLITE, CustomModel
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
 from plugin_runner.exceptions import (
@@ -436,11 +435,8 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
 
     Automatically detects SQLite and generates compatible SQL without schema prefixes.
     """
-    # Detect if we're using SQLite
-    is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
-
     # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
-    if is_sqlite:
+    if IS_SQLITE:
         table_name = model_class._meta.db_table
     else:
         table_name = f"{schema_name}.{model_class._meta.db_table}"
@@ -460,15 +456,15 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     # For PostgreSQL: only include primary key, add other fields via ALTER TABLE
     field_definitions = []
 
-    if is_sqlite:
+    if IS_SQLITE:
         # SQLite: include all fields in CREATE TABLE
         for field in model_class._meta.local_fields:
-            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
             field_definitions.append(f"    {field.column} {field_sql}")
     else:
         # PostgreSQL: only primary key fields initially
         for field in pk_fields:
-            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
             field_definitions.append(f"    {field.column} {field_sql}")
 
     # Construct CREATE TABLE statement
@@ -479,10 +475,10 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     # SQLite doesn't support "IF NOT EXISTS" in ALTER TABLE, so for SQLite we'll
     # include all columns in the initial CREATE TABLE instead
     alter_statements = []
-    if not is_sqlite:
+    if not IS_SQLITE:
         # PostgreSQL: use dynamic column addition with IF NOT EXISTS
         for field in regular_fields:
-            field_sql = generate_field_sql(field, is_sqlite=is_sqlite)
+            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
             alter_statement = (
                 f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
             )
@@ -492,7 +488,7 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     index_statements = []
     for index in model_class._meta.indexes:
         index_sql = generate_index_sql(
-            schema_name, model_class._meta.db_table, index, is_sqlite=is_sqlite
+            schema_name, model_class._meta.db_table, index, is_sqlite=IS_SQLITE
         )
         index_statements.append(index_sql)
 
@@ -671,10 +667,8 @@ def execute_create_table_sql(create_sql: str) -> None:
     """
     from django.db import connection
 
-    is_sqlite = "sqlite3" in settings.DATABASES["default"]["ENGINE"]
-
     with connection.cursor() as cursor:
-        if is_sqlite:
+        if IS_SQLITE:
             for statement in create_sql.split(SQL_STATEMENT_DELIMITER):
                 statement = statement.strip()
                 if statement:
