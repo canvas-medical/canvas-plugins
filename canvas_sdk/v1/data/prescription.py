@@ -13,7 +13,7 @@ from canvas_sdk.v1.data.base import (
 )
 
 
-class PrescrptionStatus(models.TextChoices):
+class PrescriptionStatus(models.TextChoices):
     """Prescription Status."""
 
     ACTIVE = "active", "active"
@@ -50,7 +50,7 @@ class PrescriptionQuerySet(
     """PrescriptionQuerySet."""
 
     def active(self) -> Self:
-        """Filter prescriptions."""
+        """Return committed prescriptions that have not been denied."""
         return self.committed().exclude(response_type=PrescriptionResponse.DENIED)
 
 
@@ -108,7 +108,7 @@ class Prescription(IdentifiableModel, AuditedModel):
     end_date = models.DateField(null=True, default=None, blank=True)
     end_date_original_input = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(
-        choices=PrescrptionStatus, max_length=50, null=True, default=PrescrptionStatus.OPEN
+        choices=PrescriptionStatus, max_length=50, null=True, default=PrescriptionStatus.OPEN
     )
     dose_quantity = models.FloatField(null=True, blank=True)
     dose_form = models.CharField(max_length=255, blank=True, default="")

@@ -32,6 +32,6 @@ class PrescriptionFactory(factory.django.DjangoModelFactory):
     pharmacy_address = "1234 Main Street"
     pharmacy_is_read_only = False
     pharmacy_name = "Walgreens"
-    pharmacy_ncpdp_id = 1367084
+    pharmacy_ncpdp_id = "1367084"
     pharmacy_phone_number = "4155353439"
     sig_original_input = "1 tab bid po"
