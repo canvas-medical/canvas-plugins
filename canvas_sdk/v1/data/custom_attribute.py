@@ -130,20 +130,38 @@ class CustomAttributeAwareManager(models.Manager):
 
 
 class CustomAttributeMixinMetaClass(ModelMetaclass):
-    """Metaclass that sets app_label for plugin proxy models."""
+    """Metaclass that sets app_label and proxy for plugin proxy models."""
 
     def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
-        """Create a new class, setting app_label from the module name for plugins."""
+        """Create a new class, setting app_label and proxy from the module name for plugins."""
         meta: Any = attrs.get("Meta")
         if meta is None:
             meta = type("Meta", (), {})
             attrs["Meta"] = meta
 
-        # set the app label for proxy models belonging to the plugin
         if not attrs["__module__"].startswith("canvas_sdk"):
+            # set the app label for proxy models belonging to the plugin
             meta.app_label = attrs["__module__"].split(".")[0]
 
+            # auto-set proxy if subclassing a concrete SDK model
+            if not getattr(meta, "abstract", False) and getattr(meta, "proxy", None) is None:
+                has_concrete_base = any(
+                    hasattr(b, "_meta") and not b._meta.abstract
+                    for b in bases
+                    if b is not CustomAttributeMixin
+                )
+                if has_concrete_base:
+                    meta.proxy = True
+
         new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
+
+        # Auto-assign the aware manager after Django's full class setup.
+        # This must happen here (not in __init_subclass__) because Django's
+        # proxy model machinery copies managers from the concrete parent
+        # during ModelBase.__new__, which would overwrite any manager set
+        # earlier in __init_subclass__.
+        if not new_class.__module__.startswith("canvas_sdk") and "objects" not in attrs:
+            new_class.add_to_class("objects", CustomAttributeAwareManager())
 
         return new_class
 

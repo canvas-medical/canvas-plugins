@@ -739,6 +739,155 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
 
 # ===========================================================================
+# Tests for CustomAttributeMixinMetaClass auto-proxy behavior
+# ===========================================================================
+
+
+class TestCustomAttributeMixinMetaClassAutoProxy:
+    """Tests that CustomAttributeMixinMetaClass auto-sets proxy = True.
+
+    The metaclass should auto-set proxy = True when:
+    - The class is defined in a non-SDK module
+    - The class has a concrete (non-abstract) base model
+    - The Meta class does not already set proxy or abstract
+    """
+
+    def test_plugin_subclass_of_concrete_model_gets_proxy_true(self) -> None:
+        """A plugin class extending a concrete model should auto-get proxy = True."""
+        attrs: dict[str, Any] = {
+            "__module__": "my_plugin.models",
+            "__qualname__": "MyProxy",
+        }
+
+        new_class: Any = CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "MyProxy",
+            (AttributeHub, CustomAttributeMixin),
+            attrs,
+        )
+
+        assert new_class._meta.proxy is True
+
+    def test_plugin_subclass_explicit_proxy_false_is_respected(self) -> None:
+        """If a plugin explicitly sets proxy = False, the metaclass should not override it."""
+        attrs: dict[str, Any] = {
+            "__module__": "my_plugin.models",
+            "__qualname__": "MyModel",
+            "Meta": type("Meta", (), {"proxy": False}),
+        }
+
+        meta: Any = attrs["Meta"]
+        CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "MyModel",
+            (AttributeHub, CustomAttributeMixin),
+            attrs,
+        )
+
+        assert meta.proxy is False
+
+    def test_plugin_abstract_class_does_not_get_proxy(self) -> None:
+        """Abstract plugin classes should not get proxy = True."""
+        attrs: dict[str, Any] = {
+            "__module__": "my_plugin.models",
+            "__qualname__": "MyAbstract",
+            "Meta": type("Meta", (), {"abstract": True}),
+        }
+
+        meta: Any = attrs["Meta"]
+        CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "MyAbstract",
+            (CustomAttributeMixin,),
+            attrs,
+        )
+
+        assert not getattr(meta, "proxy", False)
+
+    def test_sdk_class_does_not_get_auto_proxy(self) -> None:
+        """Classes defined in canvas_sdk should not get proxy auto-set."""
+        attrs: dict[str, Any] = {
+            "__module__": "canvas_sdk.v1.data.something",
+            "__qualname__": "SdkModel",
+            "Meta": type("Meta", (), {"abstract": True}),
+        }
+
+        meta: Any = attrs["Meta"]
+        CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "SdkModel",
+            (AttributeHub, CustomAttributeMixin),
+            attrs,
+        )
+
+        assert not getattr(meta, "proxy", False)
+
+    def test_mixin_only_base_does_not_get_proxy(self) -> None:
+        """A class that only extends CustomAttributeMixin (no concrete model) should not get proxy."""
+        attrs: dict[str, Any] = {
+            "__module__": "my_plugin.models",
+            "__qualname__": "MixinOnly",
+            "Meta": type("Meta", (), {"abstract": True}),
+        }
+
+        meta: Any = attrs["Meta"]
+        CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "MixinOnly",
+            (CustomAttributeMixin,),
+            attrs,
+        )
+
+        assert not getattr(meta, "proxy", False)
+
+
+# ===========================================================================
+# Tests for CustomAttributeMixin auto-manager assignment
+# ===========================================================================
+
+
+class TestCustomAttributeMixinAutoManager:
+    """Tests that CustomAttributeMixin auto-assigns CustomAttributeAwareManager."""
+
+    def test_subclass_gets_aware_manager_automatically(self) -> None:
+        """A subclass without an explicit manager should get CustomAttributeAwareManager."""
+        new_class: Any = CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "AutoManagerModel",
+            (AttributeHub, CustomAttributeMixin),
+            {
+                "__module__": "my_plugin.models",
+                "__qualname__": "AutoManagerModel",
+            },
+        )
+
+        from canvas_sdk.v1.data.custom_attribute import CustomAttributeAwareManager
+
+        assert isinstance(new_class.objects, CustomAttributeAwareManager)
+
+    def test_explicit_manager_is_not_overwritten(self) -> None:
+        """A subclass with an explicit objects manager should keep it."""
+        from django.db import models as dj_models
+
+        custom_manager: dj_models.Manager[Any] = dj_models.Manager()
+        new_class: Any = CustomAttributeMixinMetaClass.__new__(
+            CustomAttributeMixinMetaClass,
+            "ExplicitManagerModel",
+            (AttributeHub, CustomAttributeMixin),
+            {
+                "__module__": "my_plugin.models",
+                "__qualname__": "ExplicitManagerModel",
+                "objects": custom_manager,
+            },
+        )
+
+        assert new_class.objects is not None
+        from canvas_sdk.v1.data.custom_attribute import CustomAttributeAwareManager
+
+        assert not isinstance(new_class.objects, CustomAttributeAwareManager)
+
+
+# ===========================================================================
 # Tests for set_attributes bulk operation logic
 # ===========================================================================
 
