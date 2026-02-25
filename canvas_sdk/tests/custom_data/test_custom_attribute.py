@@ -4,7 +4,7 @@ Tests verify that:
 1. The setter correctly determines the data type and stores in the appropriate field
 2. The getter returns the correct value from the appropriate field
 3. Edge cases like bool vs int and datetime vs date are handled correctly
-4. CustomAttributeMixinMetaClass sets app_label correctly for proxy classes
+4. ModelExtensionMetaClass sets app_label correctly for proxy classes
 """
 
 import datetime
@@ -16,8 +16,8 @@ import pytest
 from canvas_sdk.v1.data.custom_attribute import (
     AttributeHub,
     CustomAttribute,
-    CustomAttributeMixin,
-    CustomAttributeMixinMetaClass,
+    ModelExtension,
+    ModelExtensionMetaClass,
 )
 
 
@@ -553,12 +553,12 @@ class TestCustomAttributeValueGetterPriority:
 
 
 # ===========================================================================
-# Tests for CustomAttributeMixinMetaClass app_label behavior
+# Tests for ModelExtensionMetaClass app_label behavior
 # ===========================================================================
 
 
-class TestCustomAttributeMixinMetaClassAppLabel:
-    """Tests that CustomAttributeMixinMetaClass sets app_label correctly.
+class TestModelExtensionMetaClassAppLabel:
+    """Tests that ModelExtensionMetaClass sets app_label correctly.
 
     The metaclass sets app_label based on __module__:
     - If __module__ starts with "canvas_sdk", app_label is NOT set by metaclass
@@ -577,10 +577,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
         # The metaclass should set app_label to "my_plugin"
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "MyPluginModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -595,10 +595,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "DeepModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -616,10 +616,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         # Ensure app_label is not set initially
         assert not hasattr(meta, "app_label")
 
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "SdkModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -635,10 +635,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "EffectModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -653,10 +653,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "SimpleModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -670,10 +670,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
             # No Meta class provided
         }
 
-        new_class: Any = CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        new_class: Any = ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "NoMetaModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -691,10 +691,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         meta: Any = attrs["Meta"]
         assert meta.app_label == "old_label"
 
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "OverwriteModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -710,10 +710,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "HyphenModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -728,10 +728,10 @@ class TestCustomAttributeMixinMetaClassAppLabel:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "UnderscoreModel",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -739,12 +739,12 @@ class TestCustomAttributeMixinMetaClassAppLabel:
 
 
 # ===========================================================================
-# Tests for CustomAttributeMixinMetaClass auto-proxy behavior
+# Tests for ModelExtensionMetaClass auto-proxy behavior
 # ===========================================================================
 
 
-class TestCustomAttributeMixinMetaClassAutoProxy:
-    """Tests that CustomAttributeMixinMetaClass auto-sets proxy = True.
+class TestModelExtensionMetaClassAutoProxy:
+    """Tests that ModelExtensionMetaClass auto-sets proxy = True.
 
     The metaclass should auto-set proxy = True when:
     - The class is defined in a non-SDK module
@@ -759,10 +759,10 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
             "__qualname__": "MyProxy",
         }
 
-        new_class: Any = CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        new_class: Any = ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "MyProxy",
-            (AttributeHub, CustomAttributeMixin),
+            (AttributeHub, ModelExtension),
             attrs,
         )
 
@@ -777,10 +777,10 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "MyModel",
-            (AttributeHub, CustomAttributeMixin),
+            (AttributeHub, ModelExtension),
             attrs,
         )
 
@@ -795,10 +795,10 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "MyAbstract",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -813,17 +813,17 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "SdkModel",
-            (AttributeHub, CustomAttributeMixin),
+            (AttributeHub, ModelExtension),
             attrs,
         )
 
         assert not getattr(meta, "proxy", False)
 
     def test_mixin_only_base_does_not_get_proxy(self) -> None:
-        """A class that only extends CustomAttributeMixin (no concrete model) should not get proxy."""
+        """A class that only extends ModelExtension (no concrete model) should not get proxy."""
         attrs: dict[str, Any] = {
             "__module__": "my_plugin.models",
             "__qualname__": "MixinOnly",
@@ -831,10 +831,10 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
         }
 
         meta: Any = attrs["Meta"]
-        CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "MixinOnly",
-            (CustomAttributeMixin,),
+            (ModelExtension,),
             attrs,
         )
 
@@ -842,19 +842,19 @@ class TestCustomAttributeMixinMetaClassAutoProxy:
 
 
 # ===========================================================================
-# Tests for CustomAttributeMixin auto-manager assignment
+# Tests for ModelExtension auto-manager assignment
 # ===========================================================================
 
 
-class TestCustomAttributeMixinAutoManager:
-    """Tests that CustomAttributeMixin auto-assigns CustomAttributeAwareManager."""
+class TestModelExtensionAutoManager:
+    """Tests that ModelExtension auto-assigns CustomAttributeAwareManager."""
 
     def test_subclass_gets_aware_manager_automatically(self) -> None:
         """A subclass without an explicit manager should get CustomAttributeAwareManager."""
-        new_class: Any = CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        new_class: Any = ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "AutoManagerModel",
-            (AttributeHub, CustomAttributeMixin),
+            (AttributeHub, ModelExtension),
             {
                 "__module__": "my_plugin.models",
                 "__qualname__": "AutoManagerModel",
@@ -870,10 +870,10 @@ class TestCustomAttributeMixinAutoManager:
         from django.db import models as dj_models
 
         custom_manager: dj_models.Manager[Any] = dj_models.Manager()
-        new_class: Any = CustomAttributeMixinMetaClass.__new__(
-            CustomAttributeMixinMetaClass,
+        new_class: Any = ModelExtensionMetaClass.__new__(
+            ModelExtensionMetaClass,
             "ExplicitManagerModel",
-            (AttributeHub, CustomAttributeMixin),
+            (AttributeHub, ModelExtension),
             {
                 "__module__": "my_plugin.models",
                 "__qualname__": "ExplicitManagerModel",
@@ -894,7 +894,7 @@ class TestCustomAttributeMixinAutoManager:
 
 @pytest.mark.django_db
 class TestSetAttributesBulkOperations:
-    """Tests for CustomAttributeMixin.set_attributes method.
+    """Tests for ModelExtension.set_attributes method.
 
     Tests cover the three main scenarios:
     1. All new attributes (bulk_create only)

@@ -36,7 +36,7 @@ from .custom_attribute import (
     AttributeHub,
     CustomAttribute,
     CustomAttributeAwareManager,
-    CustomAttributeMixin,
+    ModelExtension,
 )
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
@@ -210,7 +210,7 @@ __all__ = __exports__ = (
     "Coverage",
     "CustomAttribute",
     "CustomAttributeAwareManager",
-    "CustomAttributeMixin",
+    "ModelExtension",
     "CustomModel",
     "CoveragePosting",
     "CurrentNoteStateEvent",

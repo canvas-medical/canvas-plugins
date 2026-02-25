@@ -911,7 +911,6 @@
     "CurrentNoteStateEvent",
     "CustomAttribute",
     "CustomAttributeAwareManager",
-    "CustomAttributeMixin",
     "CustomModel",
     "DetectedIssue",
     "DetectedIssueEvidence",
@@ -973,6 +972,7 @@
     "Message",
     "MessageAttachment",
     "MessageTransmission",
+    "ModelExtension",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
@@ -1161,7 +1161,7 @@
     "AttributeHub",
     "CustomAttribute",
     "CustomAttributeAwareManager",
-    "CustomAttributeMixin"
+    "ModelExtension"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",

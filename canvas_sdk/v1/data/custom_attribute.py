@@ -129,7 +129,7 @@ class CustomAttributeAwareManager(models.Manager):
         )
 
 
-class CustomAttributeMixinMetaClass(ModelMetaclass):
+class ModelExtensionMetaClass(ModelMetaclass):
     """Metaclass that sets app_label and proxy for plugin proxy models."""
 
     def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
@@ -148,7 +148,7 @@ class CustomAttributeMixinMetaClass(ModelMetaclass):
                 has_concrete_base = any(
                     hasattr(b, "_meta") and not b._meta.abstract
                     for b in bases
-                    if b is not CustomAttributeMixin
+                    if b is not ModelExtension
                 )
                 if has_concrete_base:
                     meta.proxy = True
@@ -167,7 +167,7 @@ class CustomAttributeMixinMetaClass(ModelMetaclass):
 
 
 # Mixin for models that want custom attributes
-class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass):
+class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
     """
     Mixin to add custom attributes support to any SDK model.
     Automatically includes the GenericRelation field.
@@ -327,7 +327,7 @@ class CustomAttributeMixin(models.Model, metaclass=CustomAttributeMixinMetaClass
             return False
 
 
-class AttributeHub(Model, CustomAttributeMixin):
+class AttributeHub(Model, ModelExtension):
     """
     A simple model that serves only as a hub for custom attributes.
     Useful for storing arbitrary key-value data that doesn't belong to existing models.
@@ -348,6 +348,6 @@ class AttributeHub(Model, CustomAttributeMixin):
 __exports__ = (
     "CustomAttribute",
     "CustomAttributeAwareManager",
-    "CustomAttributeMixin",
+    "ModelExtension",
     "AttributeHub",
 )
