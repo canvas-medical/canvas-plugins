@@ -16,9 +16,6 @@ from canvas_sdk.v1.data.base import (
 class PrescriptionStatus(models.TextChoices):
     """Prescription Status."""
 
-    ACTIVE = "active", "active"
-    INACTIVE = "inactive", "inactive"
-
     OPEN = "open", "Open"
     PENDING = "pending", "Pending"
     ACCEPTED = "ultimately-accepted", "Ultimately Accepted"
