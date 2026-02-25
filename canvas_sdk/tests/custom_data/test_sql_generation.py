@@ -7,9 +7,8 @@ Tests cover:
 4. Both PostgreSQL and SQLite SQL generation
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
@@ -550,64 +549,37 @@ class TestGenerateCreateTableSqlSqlite:
 class TestGenerateCreateTableSqlPostgres:
     """Tests for PostgreSQL CREATE TABLE SQL generation.
 
-    These tests mock the Django settings to simulate a PostgreSQL environment.
+    These tests patch IS_SQLITE to False to simulate a PostgreSQL environment.
     """
 
-    @pytest.fixture
-    def postgres_settings(self) -> MagicMock:
-        """Create a mock settings object for PostgreSQL."""
-        mock_settings = MagicMock()
-        mock_settings.DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql"}}
-        return mock_settings
-
-    def test_postgres_uses_schema_prefix(self, postgres_settings: MagicMock) -> None:
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_postgres_uses_schema_prefix(self) -> None:
         """PostgreSQL should use schema prefix in table names."""
-        with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
-            # Re-import to get the patched version
-            import importlib
+        from plugin_runner.installation import generate_create_table_sql
 
-            import plugin_runner.installation as installation
+        sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
-            importlib.reload(installation)
+        assert "test_plugin.alldatatypesmodel" in sql
 
-            sql = installation.generate_create_table_sql("test_plugin", AllDataTypesModel)
-
-            assert "test_plugin.alldatatypesmodel" in sql
-
-            # Restore original module
-            importlib.reload(installation)
-
-    def test_postgres_uses_alter_table_for_columns(self, postgres_settings: MagicMock) -> None:
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_postgres_uses_alter_table_for_columns(self) -> None:
         """PostgreSQL should use ALTER TABLE for adding columns."""
-        with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
-            import importlib
+        from plugin_runner.installation import generate_create_table_sql
 
-            import plugin_runner.installation as installation
+        sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
-            importlib.reload(installation)
+        # Should have ALTER TABLE statements
+        assert "ALTER TABLE" in sql
+        assert "ADD COLUMN IF NOT EXISTS" in sql
 
-            sql = installation.generate_create_table_sql("test_plugin", AllDataTypesModel)
-
-            # Should have ALTER TABLE statements
-            assert "ALTER TABLE" in sql
-            assert "ADD COLUMN IF NOT EXISTS" in sql
-
-            importlib.reload(installation)
-
-    def test_postgres_gin_index(self, postgres_settings: MagicMock) -> None:
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_postgres_gin_index(self) -> None:
         """PostgreSQL should use USING GIN for GIN indexes."""
-        with patch.dict("sys.modules", {"django.conf": MagicMock(settings=postgres_settings)}):
-            import importlib
+        from plugin_runner.installation import generate_create_table_sql
 
-            import plugin_runner.installation as installation
+        sql = generate_create_table_sql("test_plugin", GinIndexModel)
 
-            importlib.reload(installation)
-
-            sql = installation.generate_create_table_sql("test_plugin", GinIndexModel)
-
-            assert "USING GIN(metadata)" in sql
-
-            importlib.reload(installation)
+        assert "USING GIN(metadata)" in sql
 
 
 # ===========================================================================
