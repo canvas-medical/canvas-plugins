@@ -99,7 +99,10 @@ class Prescription(IdentifiableModel, AuditedModel):
     written_date = models.DateTimeField(default=timezone.now)
     dispensed_date = models.DateTimeField(null=True, blank=True, db_index=True)
     indications = models.ManyToManyField(
-        "v1.Assessment", related_name="treatments_prescribed", blank=True
+        "v1.Assessment",
+        related_name="treatments_prescribed",
+        blank=True,
+        db_table="canvas_sdk_data_api_prescription_indications_001",
     )
     note_to_pharmacist = models.CharField(max_length=1024, blank=True, default="")
     end_date = models.DateField(null=True, default=None, blank=True)
