@@ -888,6 +888,71 @@ class TestModelExtensionAutoManager:
 
 
 # ===========================================================================
+# Tests for set_attribute (single attribute)
+# ===========================================================================
+
+
+@pytest.mark.django_db
+class TestSetAttribute:
+    """Tests for ModelExtension.set_attribute method."""
+
+    @pytest.fixture
+    def hub(self, db: None) -> AttributeHub:
+        """Create an AttributeHub instance for testing."""
+        hub = AttributeHub(type="test", id="set-attr-test")
+        hub.save()
+        return hub
+
+    def test_creates_new_attribute(self, hub: AttributeHub) -> None:
+        """Should create a new CustomAttribute and return it."""
+        result = hub.set_attribute("color", "blue")
+
+        assert isinstance(result, CustomAttribute)
+        assert result.name == "color"
+        assert result.value == "blue"
+        assert CustomAttribute.objects.filter(object_id=hub.pk, name="color").count() == 1
+
+    def test_updates_existing_attribute(self, hub: AttributeHub) -> None:
+        """Should update the value of an existing attribute in-place."""
+        hub.set_attribute("color", "blue")
+        hub.set_attribute("color", "red")
+
+        assert hub.get_attribute("color") == "red"
+        # Should still be only one row, not two
+        assert CustomAttribute.objects.filter(object_id=hub.pk, name="color").count() == 1
+
+    def test_returns_custom_attribute_instance(self, hub: AttributeHub) -> None:
+        """Return value should be a persisted CustomAttribute."""
+        result = hub.set_attribute("key", "value")
+
+        assert result.pk is not None
+        assert result.name == "key"
+
+    def test_stores_various_types(self, hub: AttributeHub) -> None:
+        """Should correctly store and retrieve different value types."""
+        hub.set_attribute("text", "hello")
+        hub.set_attribute("integer", 42)
+        hub.set_attribute("boolean", True)
+        hub.set_attribute("json_data", {"nested": [1, 2]})
+
+        assert hub.get_attribute("text") == "hello"
+        assert hub.get_attribute("integer") == 42
+        assert hub.get_attribute("boolean") is True
+        assert hub.get_attribute("json_data") == {"nested": [1, 2]}
+
+    def test_multiple_attributes_on_same_instance(self, hub: AttributeHub) -> None:
+        """Setting different attribute names should create separate records."""
+        hub.set_attribute("a", 1)
+        hub.set_attribute("b", 2)
+        hub.set_attribute("c", 3)
+
+        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 3
+        assert hub.get_attribute("a") == 1
+        assert hub.get_attribute("b") == 2
+        assert hub.get_attribute("c") == 3
+
+
+# ===========================================================================
 # Tests for set_attributes bulk operation logic
 # ===========================================================================
 
