@@ -1,4 +1,5 @@
 import concurrent
+import dataclasses
 import functools
 import os
 import urllib.parse
@@ -9,6 +10,7 @@ from typing import Any, Literal, Protocol, TypeVar
 import requests
 
 from canvas_sdk.utils.metrics import measured
+from settings import CUSTOMER_IDENTIFIER
 
 F = TypeVar("F", bound=Callable)
 
@@ -296,6 +298,112 @@ class JsonOnlyHttp(Http):
         raise NotImplementedError
 
 
+class PdfUrlResponse:
+    """A response wrapper that exposes the presigned S3 URL for a generated PDF."""
+
+    url: str
+    status_code: int
+
+    def __init__(self, response: requests.Response):
+        self.status_code = response.status_code
+        self.url = response.headers.get("Location", "")
+
+
+@dataclasses.dataclass
+class PdfAuthRequest:
+    """Credentials forwarded as X-PDF-Auth-User / X-PDF-Auth-Password headers."""
+
+    username: str
+    password: str
+
+
+class PdfOnlyHttp(Http):
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def _parse_redirect(self, response: requests.Response) -> PdfUrlResponse | None:
+        if response.status_code != 302 or not response.headers.get("Location"):
+            return None
+        return PdfUrlResponse(response)
+
+    def generate_from_url(
+        self,
+        print_url: str,
+        auth: PdfAuthRequest | None = None,
+    ) -> PdfUrlResponse | None:
+        """Generate a PDF from a URL that returns HTML."""
+        host = os.getenv("CANVAS_PUBLIC_HOST", "")
+        url = f"{host.rstrip('/')}/{print_url.lstrip('/')}"
+
+        params = urllib.parse.urlencode(
+            {
+                "customerId": CUSTOMER_IDENTIFIER,
+                "url": url,
+            }
+        )
+        headers: dict[str, str] = {}
+        if auth:
+            headers["X-PDF-Auth-User"] = auth.username
+            headers["X-PDF-Auth-Password"] = auth.password
+
+        response = self._session.get(
+            self.join_url(f"/generate/?{params}"),
+            headers=headers,
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+            allow_redirects=False,
+        )
+
+        return self._parse_redirect(response)
+
+    def generate_from_html(self, content: str) -> PdfUrlResponse | None:
+        """Generate a PDF from raw HTML content."""
+        params = urllib.parse.urlencode(
+            {
+                "customerId": CUSTOMER_IDENTIFIER,
+            }
+        )
+        response = self._session.post(
+            self.join_url(f"/generate/?{params}"),
+            data=content,
+            headers={"Content-Type": "text/html"},
+            timeout=self._MAX_REQUEST_TIMEOUT_SECONDS,
+            allow_redirects=False,
+        )
+
+        return self._parse_redirect(response)
+
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def put(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+    def patch(
+        self,
+        url: str,
+        json: dict | None = None,
+        data: dict | str | list | bytes | None = None,
+        headers: Mapping[str, str | bytes | None] | None = None,
+    ) -> requests.Response:
+        raise NotImplementedError
+
+
 class OntologiesHttp(JsonOnlyHttp):
     """
     An HTTP client for the ontologies service.
@@ -368,13 +476,24 @@ class ScienceHttp(JsonOnlyHttp):
         self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
 
 
+class WebToPdfHttp(PdfOnlyHttp):
+    def __init__(self) -> None:
+        super().__init__(
+            base_url=os.getenv("WEB_TO_PDF_ENDPOINT", "https://web-to-pdf.canvasmedical.com")
+        )
+
+        self._session.headers.update({"Authorization": os.getenv("PRE_SHARED_KEY", "")})
+
+
 ontologies_http = OntologiesHttp()
 science_http = ScienceHttp()
 pharmacy_http = PharmacyHttp()
+web_to_pdf_http = WebToPdfHttp()
 
 __all__ = __exports__ = (
     "ThreadPoolExecutor",
     "Http",
+    "PdfAuthRequest",
     "ontologies_http",
     "pharmacy_http",
     "science_http",
@@ -382,4 +501,5 @@ __all__ = __exports__ = (
     "batch_post",
     "batch_put",
     "batch_patch",
+    "web_to_pdf_http",
 )
