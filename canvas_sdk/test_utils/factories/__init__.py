@@ -59,6 +59,7 @@ from .practicelocation import (
     PracticeLocationFactory,
     PracticeLocationSettingFactory,
 )
+from .prescription import PrescriptionFactory
 from .protocol_current import ProtocolCurrentFactory
 from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
 from .service_provider import ServiceProviderFactory
@@ -144,6 +145,7 @@ __all__ = (
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
+    "PrescriptionFactory",
     "ProtocolCurrentFactory",
     "ReferralFactory",
     "ReferralReportFactory",
