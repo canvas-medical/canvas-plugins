@@ -1232,3 +1232,47 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("batch2_a") == 3
         assert hub.get_attribute("batch2_b") == 4
         assert hub.get_attribute("batch3_a") == 5
+
+
+# ===========================================================================
+# Tests for delete_attribute
+# ===========================================================================
+
+
+@pytest.mark.django_db
+class TestDeleteAttribute:
+    """Tests for ModelExtension.delete_attribute method."""
+
+    @pytest.fixture
+    def hub(self, db: None) -> AttributeHub:
+        """Create an AttributeHub instance for testing."""
+        hub = AttributeHub(type="test", id="delete-test")
+        hub.save()
+        return hub
+
+    def test_deletes_existing_attribute(self, hub: AttributeHub) -> None:
+        """Should delete the attribute and return True."""
+        hub.set_attribute("to_delete", "value")
+        assert hub.get_attribute("to_delete") == "value"
+
+        result = hub.delete_attribute("to_delete")
+
+        assert result is True
+        assert hub.get_attribute("to_delete") is None
+        assert CustomAttribute.objects.filter(object_id=hub.pk, name="to_delete").count() == 0
+
+    def test_returns_false_for_nonexistent_attribute(self, hub: AttributeHub) -> None:
+        """Should return False when the attribute doesn't exist."""
+        result = hub.delete_attribute("nonexistent")
+
+        assert result is False
+
+    def test_does_not_affect_other_attributes(self, hub: AttributeHub) -> None:
+        """Deleting one attribute should leave others intact."""
+        hub.set_attribute("keep", "kept")
+        hub.set_attribute("remove", "removed")
+
+        hub.delete_attribute("remove")
+
+        assert hub.get_attribute("keep") == "kept"
+        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 1
