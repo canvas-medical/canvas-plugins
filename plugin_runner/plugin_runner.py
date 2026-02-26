@@ -6,6 +6,7 @@ import pickle
 import pkgutil
 import sys
 import threading
+import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -44,6 +45,7 @@ from canvas_sdk.protocols import ClinicalQualityMeasure
 from canvas_sdk.templates.utils import _engine_for_plugin
 from canvas_sdk.utils import metrics
 from canvas_sdk.utils.metrics import measured
+from canvas_sdk.v1.data.base import IS_SQLITE
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
@@ -54,6 +56,7 @@ from plugin_runner.exceptions import (
 )
 from plugin_runner.installation import (
     enabled_plugins,
+    generate_plugin_migrations,
     install_plugin,
     install_plugins,
     uninstall_plugin,
@@ -186,6 +189,26 @@ class PluginManifest(TypedDict):
     diagram: bool
     readme: str
     custom_data: NotRequired[CustomData]
+
+
+_sqlite_schema_initialized = False
+
+
+def _ensure_sqlite_schema() -> None:
+    """Create the framework tables (django_content_type, custom_attribute,
+    attribute_hub) in the SQLite database if they don't already exist.
+
+    Same as the test database setup and the --reset-db path in run_plugins.
+    Must be called while the writable connection is the default.
+    """
+    global _sqlite_schema_initialized
+    if _sqlite_schema_initialized:
+        return
+
+    from django.core.management import call_command
+
+    call_command("migrate", run_syncdb=True, verbosity=0)
+    _sqlite_schema_initialized = True
 
 
 class PluginRunner(PluginRunnerServicer):
@@ -706,11 +729,57 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     namespace_config: dict | None = None
     custom_data = manifest_json.get("custom_data")
     if custom_data:
-        namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
-        log.info(
-            f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
-            f"with '{namespace_config['access_level']}' access"
-        )
+        if IS_SQLITE:
+            # Local development mode: skip namespace auth verification and
+            # schema creation (no PostgreSQL, no secrets, no namespace_auth table).
+            namespace_name = custom_data["namespace"]
+            namespace_config = {
+                "namespace": namespace_name,
+                "access_level": custom_data.get("access", "read"),
+            }
+            log.info(
+                f"Plugin '{name}' granted local '{namespace_config['access_level']}' "
+                f"access to namespace '{namespace_name}' (SQLite mode, auth skipped)"
+            )
+
+            # The default SQLite connection is read-only; swap to the writable
+            # one for schema initialisation and plugin migrations.
+            import django.db
+            from django.apps import apps as django_apps
+
+            original_default = django.db.connections["default"]
+            try:
+                temp_handler = django.db.utils.ConnectionHandler(
+                    {"default": settings.SQLITE_WRITE_MODE_DATABASE}
+                )
+                django.db.connections["default"] = temp_handler["default"]
+
+                # Ensure the framework tables exist (django_content_type,
+                # custom_attribute, attribute_hub) — same as the test database
+                # setup and the --reset-db path in run_plugins.
+                _ensure_sqlite_schema()
+
+                # install_plugins() is skipped in local mode, so custom data
+                # tables are never created. Run plugin-specific migrations here.
+                if namespace_config["access_level"] == "read_write":
+                    # Clear previously registered models for a clean slate on reload.
+                    django_apps.all_models.pop(name, None)
+
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            message=r"Model '.*' was already registered",
+                            category=RuntimeWarning,
+                        )
+                        generate_plugin_migrations(name, path, schema_name=namespace_name)
+            finally:
+                django.db.connections["default"] = original_default
+        else:
+            namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
+            log.info(
+                f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
+                f"with '{namespace_config['access_level']}' access"
+            )
 
     # TODO add existing schema validation from Michela here
     try:
@@ -743,8 +812,18 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             continue
 
         try:
-            sandbox = sandbox_from_module(path.parent, handler_module)
-            result = sandbox.execute()
+            # Suppress Django's "Model was already registered" RuntimeWarning.
+            # The sandbox re-executes plugin modules (including importlib.reload)
+            # to pick up the latest code, which harmlessly re-creates model classes
+            # whose metaclass calls apps.register_model() on every class definition.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r"Model '.*' was already registered",
+                    category=RuntimeWarning,
+                )
+                sandbox = sandbox_from_module(path.parent, handler_module)
+                result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
                 log.info(f"Reloading handler '{name_and_class}'")
