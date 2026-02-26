@@ -116,15 +116,18 @@ class CustomAttributeAwareManager(models.Manager):
         if isinstance(attribute_names, str):
             attribute_names = [attribute_names]
 
-        # Clear default prefetch and replace with narrower one
-        return (
-            self.get_queryset()
-            .prefetch_related(None)
-            .prefetch_related(
-                Prefetch(
-                    "custom_attributes",
-                    queryset=CustomAttribute.objects.filter(name__in=attribute_names),
-                )
+        # Remove only the default "custom_attributes" prefetch, preserving any
+        # others the programmer may have added, then add the filtered one.
+        qs = self.get_queryset()
+        qs._prefetch_related_lookups = tuple(  # type: ignore[attr-defined]
+            lookup
+            for lookup in qs._prefetch_related_lookups  # type: ignore[attr-defined]
+            if (lookup if isinstance(lookup, str) else lookup.prefetch_to) != "custom_attributes"
+        )
+        return qs.prefetch_related(
+            Prefetch(
+                "custom_attributes",
+                queryset=CustomAttribute.objects.filter(name__in=attribute_names),
             )
         )
 

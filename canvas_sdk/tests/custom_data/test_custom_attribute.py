@@ -976,6 +976,19 @@ class TestWithOnly:
         # "weight" exists in DB but wasn't prefetched — should still be found
         assert fetched.get_attribute("weight") == 42
 
+    def test_with_only_preserves_other_prefetches(self, hub: AttributeHub) -> None:
+        """with_only() should only replace the custom_attributes prefetch, not others."""
+        qs = AttributeHubProxy.objects.with_only(["color"])
+        # Simulate a programmer adding another prefetch
+        qs = qs.prefetch_related("some_relation")
+
+        lookups = [
+            lookup if isinstance(lookup, str) else lookup.prefetch_to
+            for lookup in qs._prefetch_related_lookups  # type: ignore[attr-defined]
+        ]
+        assert "custom_attributes" in lookups
+        assert "some_relation" in lookups
+
 
 # ===========================================================================
 # Tests for set_attribute (single attribute)
