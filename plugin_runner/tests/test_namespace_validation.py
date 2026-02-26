@@ -78,4 +78,4 @@ class TestIsValidNamespaceName:
 
     def test_pattern_matches_manifest_schema(self) -> None:
         """NAMESPACE_PATTERN should match the manifest JSON Schema pattern."""
-        assert NAMESPACE_PATTERN.pattern == r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$"
+        assert NAMESPACE_PATTERN.pattern == r"^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$"

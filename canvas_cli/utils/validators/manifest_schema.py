@@ -186,7 +186,7 @@ manifest_schema = {
             "properties": {
                 "namespace": {
                     "type": "string",
-                    "pattern": "^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$",
+                    "pattern": "^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$",
                     "description": "Namespace name in format 'org__name' (double underscore separator)",
                 },
                 "access": {

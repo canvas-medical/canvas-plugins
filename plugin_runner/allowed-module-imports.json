@@ -1063,6 +1063,7 @@
   ],
   "canvas_sdk.v1.data.base": [
     "CustomModel",
+    "ModelExtension",
     "NamespaceWriteDenied"
   ],
   "canvas_sdk.v1.data.billing": [
@@ -1160,8 +1161,7 @@
   "canvas_sdk.v1.data.custom_attribute": [
     "AttributeHub",
     "CustomAttribute",
-    "CustomAttributeAwareManager",
-    "ModelExtension"
+    "CustomAttributeAwareManager"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",

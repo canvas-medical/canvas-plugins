@@ -171,7 +171,7 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
 
 # Namespace format: org__name — lowercase alphanumeric/underscore on each side.
 # Shared with the manifest JSON Schema in canvas_cli/utils/validators/manifest_schema.py.
-NAMESPACE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
+NAMESPACE_PATTERN = re.compile(r"^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
 
 def is_valid_namespace_name(namespace: str) -> bool:

@@ -8,7 +8,7 @@ from .appointment import (
 )
 from .assessment import Assessment
 from .banner_alert import BannerAlert
-from .base import CustomModel
+from .base import CustomModel, ModelExtension
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -36,7 +36,6 @@ from .custom_attribute import (
     AttributeHub,
     CustomAttribute,
     CustomAttributeAwareManager,
-    ModelExtension,
 )
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device

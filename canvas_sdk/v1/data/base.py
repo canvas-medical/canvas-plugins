@@ -7,9 +7,11 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models
 from django.db.models import ForeignKey, OneToOneField, Q
 from django.db.models.base import ModelBase
+from django.utils.functional import cached_property
 
 if TYPE_CHECKING:
     from canvas_sdk.protocols.timeframe import Timeframe
+    from canvas_sdk.v1.data.custom_attribute import CustomAttribute
     from canvas_sdk.value_set.value_set import ValueSet
 
 IS_SQLITE = connection.vendor == "sqlite"
@@ -342,4 +344,218 @@ class ValueSetTimeframeLookupQuerySet(TimeframeLookupQuerySetMixin, ValueSetLook
     pass
 
 
-__exports__ = ("CustomModel", "NamespaceWriteDenied")
+class ModelExtensionMetaClass(ModelMetaclass):
+    """Metaclass that sets app_label and proxy for plugin proxy models."""
+
+    def __new__(cls, name: str, bases: tuple, attrs: dict[str, Any], **kwargs: Any) -> type:
+        """Create a new class, setting app_label and proxy from the module name for plugins."""
+        meta: Any = attrs.get("Meta")
+        if meta is None:
+            meta = type("Meta", (), {})
+            attrs["Meta"] = meta
+
+        if not attrs["__module__"].startswith("canvas_sdk"):
+            # set the app label for proxy models belonging to the plugin
+            meta.app_label = attrs["__module__"].split(".")[0]
+
+            # auto-set proxy if subclassing a concrete SDK model
+            if not getattr(meta, "abstract", False) and getattr(meta, "proxy", None) is None:
+                has_concrete_base = any(
+                    hasattr(b, "_meta") and not b._meta.abstract
+                    for b in bases
+                    if b is not ModelExtension
+                )
+                if has_concrete_base:
+                    meta.proxy = True
+
+        new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
+
+        # Auto-assign the aware manager after Django's full class setup.
+        # This must happen here (not in __init_subclass__) because Django's
+        # proxy model machinery copies managers from the concrete parent
+        # during ModelBase.__new__, which would overwrite any manager set
+        # earlier in __init_subclass__.
+        if not new_class.__module__.startswith("canvas_sdk") and "objects" not in attrs:
+            from .custom_attribute import CustomAttributeAwareManager
+
+            new_class.add_to_class("objects", CustomAttributeAwareManager())
+
+        return new_class
+
+
+# Mixin for models that want custom attributes
+class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
+    """
+    Mixin to add custom attributes support to any SDK model.
+    Automatically includes the GenericRelation field.
+    """
+
+    class Meta:
+        abstract = True
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Add a GenericRelation to custom_attributes on each subclass."""
+        super().__init_subclass__(**kwargs)
+
+        from django.contrib.contenttypes.fields import GenericRelation
+
+        from .custom_attribute import CustomAttribute
+
+        cls.add_to_class(
+            "custom_attributes",
+            GenericRelation(
+                CustomAttribute, content_type_field="content_type", object_id_field="object_id"
+            ),
+        )
+
+    @cached_property
+    def _content_type_id(self) -> int:
+        """Cache the content type ID lookup for this model instance."""
+        # For proxy models, use the content type of the base model
+        base_model = self._meta.concrete_model
+        assert base_model is not None
+        app_label = base_model._meta.app_label
+        model_name = base_model._meta.model_name
+
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM django_content_type WHERE app_label = %s AND model = %s",
+                [app_label, model_name],
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"ContentType not found for {app_label}.{model_name}")
+            return row[0]
+
+    def get_attribute(self, name: str) -> Any:
+        """Get a custom attribute value by name."""
+        from .custom_attribute import CustomAttribute
+
+        if not hasattr(self, "custom_attributes"):
+            raise AttributeError(
+                f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
+            )
+
+        if (
+            hasattr(self, "_prefetched_objects_cache")
+            and "custom_attributes" in self._prefetched_objects_cache
+        ):
+            # Use prefetched data first
+            for attr in self.custom_attributes.all():
+                if attr.name == name:
+                    return attr.value
+            # Attribute not in prefetch cache — fall back to DB so that
+            # with_only() doesn't silently return None for attributes that
+            # exist but weren't prefetched.
+
+        # Fall back to database query
+        try:
+            attr = CustomAttribute.objects.get(
+                content_type_id=self._content_type_id, object_id=self.pk, name=name
+            )
+            return attr.value
+        except CustomAttribute.DoesNotExist:
+            return None
+
+    def set_attribute(self, name: str, value: Any) -> "CustomAttribute":
+        """Set a custom attribute value."""
+        from .custom_attribute import CustomAttribute
+
+        if not hasattr(self, "custom_attributes"):
+            raise AttributeError(
+                f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
+            )
+
+        # Create custom attribute with cached content_type_id
+        attr, created = CustomAttribute.objects.get_or_create(
+            content_type_id=self._content_type_id, object_id=self.pk, name=name, defaults={}
+        )
+        attr.value = value  # Use the property setter
+        attr.save()
+        return attr
+
+    def set_attributes(self, attributes: dict[str, Any]) -> list["CustomAttribute"]:
+        """Set multiple custom attributes using bulk operations."""
+        from .custom_attribute import CustomAttribute
+
+        if not hasattr(self, "custom_attributes"):
+            raise AttributeError(
+                f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
+            )
+
+        # Get existing attributes from prefetched data or database
+        existing_attrs: dict[str, CustomAttribute] = {}
+        if (
+            hasattr(self, "_prefetched_objects_cache")
+            and "custom_attributes" in self._prefetched_objects_cache
+        ):
+            # Use prefetched data
+            for attr in self.custom_attributes.all():
+                existing_attrs[attr.name] = attr
+        else:
+            # Fall back to database query
+            for attr in CustomAttribute.objects.filter(
+                content_type_id=self._content_type_id, object_id=self.pk
+            ):
+                existing_attrs[attr.name] = attr
+
+        # Separate attributes to create vs update
+        to_create: list[CustomAttribute] = []
+        to_update: list[CustomAttribute] = []
+
+        for name, value in attributes.items():
+            if name in existing_attrs:
+                # Update existing attribute
+                attr = existing_attrs[name]
+                attr.value = value
+                to_update.append(attr)
+            else:
+                # Create new attribute
+                attr = CustomAttribute(
+                    content_type_id=self._content_type_id, object_id=self.pk, name=name
+                )
+                attr.value = value
+                to_create.append(attr)
+
+        # Perform bulk operations
+        created_attrs: list[CustomAttribute] = []
+        if to_create:
+            created_attrs = CustomAttribute.objects.bulk_create(to_create)
+
+        if to_update:
+            CustomAttribute.objects.bulk_update(
+                to_update,
+                [
+                    "text_value",
+                    "date_value",
+                    "timestamp_value",
+                    "int_value",
+                    "decimal_value",
+                    "bool_value",
+                    "json_value",
+                ],
+            )
+
+        return created_attrs + to_update
+
+    def delete_attribute(self, name: str) -> bool:
+        """Delete a custom attribute by name. Returns True if deleted, False if not found."""
+        from .custom_attribute import CustomAttribute
+
+        if not hasattr(self, "custom_attributes"):
+            raise AttributeError(
+                f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
+            )
+
+        try:
+            CustomAttribute.objects.get(
+                content_type_id=self._content_type_id, object_id=self.pk, name=name
+            ).delete()
+            return True
+        except CustomAttribute.DoesNotExist:
+            return False
+
+
+__exports__ = ("CustomModel", "ModelExtension", "NamespaceWriteDenied")

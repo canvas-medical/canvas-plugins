@@ -13,12 +13,11 @@ from typing import Any
 
 import pytest
 
+from canvas_sdk.v1.data.base import ModelExtension, ModelExtensionMetaClass
 from canvas_sdk.v1.data.custom_attribute import (
     AttributeHub,
     CustomAttribute,
     CustomAttributeAwareManager,
-    ModelExtension,
-    ModelExtensionMetaClass,
 )
 
 
