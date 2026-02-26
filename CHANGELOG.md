@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.105.0 (2026-02-26)
+
+### Features
+
+- Create claim metadata model and effect
+  ([#1514](https://github.com/canvas-medical/canvas-plugins/pull/1514),
+  [`fcf3f62`](https://github.com/canvas-medical/canvas-plugins/commit/fcf3f622ca70adf2015af9d12eaa18565048553a))
+
+
 ## v0.104.0 (2026-02-24)
 
 ### Documentation
