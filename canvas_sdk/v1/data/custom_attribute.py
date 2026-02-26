@@ -219,20 +219,22 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
             hasattr(self, "_prefetched_objects_cache")
             and "custom_attributes" in self._prefetched_objects_cache
         ):
-            # Use prefetched data
+            # Use prefetched data first
             for attr in self.custom_attributes.all():
                 if attr.name == name:
                     return attr.value
+            # Attribute not in prefetch cache — fall back to DB so that
+            # with_only() doesn't silently return None for attributes that
+            # exist but weren't prefetched.
+
+        # Fall back to database query
+        try:
+            attr = CustomAttribute.objects.get(
+                content_type_id=self._content_type_id, object_id=self.pk, name=name
+            )
+            return attr.value
+        except CustomAttribute.DoesNotExist:
             return None
-        else:
-            # Fall back to database query
-            try:
-                attr = CustomAttribute.objects.get(
-                    content_type_id=self._content_type_id, object_id=self.pk, name=name
-                )
-                return attr.value
-            except CustomAttribute.DoesNotExist:
-                return None
 
     def set_attribute(self, name: str, value: Any) -> CustomAttribute:
         """Set a custom attribute value."""
