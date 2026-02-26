@@ -854,7 +854,6 @@
   ],
   "canvas_sdk.utils.http": [
     "Http",
-    "PdfAuthRequest",
     "ThreadPoolExecutor",
     "batch_get",
     "batch_patch",
@@ -862,8 +861,11 @@
     "batch_put",
     "ontologies_http",
     "pharmacy_http",
-    "science_http",
-    "web_to_pdf_http"
+    "science_http"
+  ],
+  "canvas_sdk.utils.pdf": [
+    "PdfAuthRequest",
+    "pdf_generator"
   ],
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
