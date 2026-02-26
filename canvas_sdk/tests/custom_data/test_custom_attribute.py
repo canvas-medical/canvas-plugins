@@ -990,6 +990,70 @@ class TestWithOnly:
 
 
 # ===========================================================================
+# Tests for prefetch behaviour on aggregate / non-fetching queries
+# ===========================================================================
+
+
+@pytest.mark.django_db
+class TestPrefetchNotTriggered:
+    """Verify that count() and exists() do NOT execute the prefetch query."""
+
+    @pytest.fixture
+    def hub(self, db: None) -> AttributeHub:
+        """Create an AttributeHub with a custom attribute."""
+        hub = AttributeHub(type="test", id="prefetch-test")
+        hub.save()
+        hub.set_attribute("color", "blue")
+        return hub
+
+    def test_count_does_not_prefetch(self, hub: AttributeHub) -> None:
+        """count() should execute exactly one query (SELECT COUNT), no prefetch."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            result = AttributeHubProxy.objects.count()
+
+        assert result >= 1
+        assert len(ctx) == 1
+        assert "COUNT" in ctx[0]["sql"].upper()
+
+    def test_exists_does_not_prefetch(self, hub: AttributeHub) -> None:
+        """exists() should execute exactly one query, no prefetch."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            result = AttributeHubProxy.objects.exists()
+
+        assert result is True
+        assert len(ctx) == 1
+
+    def test_iteration_does_prefetch(self, hub: AttributeHub) -> None:
+        """Iterating a queryset should execute the prefetch (2 queries total)."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            list(AttributeHubProxy.objects.all())
+
+        assert len(ctx) == 2
+        assert "custom_attribute" in ctx[1]["sql"]
+
+    def test_values_list_does_not_prefetch(self, hub: AttributeHub) -> None:
+        """values_list() should not trigger the prefetch — Django skips it
+        when the result cache contains tuples rather than model instances.
+        """
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            list(AttributeHubProxy.objects.values_list("id", flat=True))
+
+        assert len(ctx) == 1
+
+
+# ===========================================================================
 # Tests for set_attribute (single attribute)
 # ===========================================================================
 
