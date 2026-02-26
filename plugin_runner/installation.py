@@ -9,14 +9,14 @@ import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 from urllib import parse
 
 import psycopg
 import requests
 import sentry_sdk
 from django.contrib.postgres.indexes import GinIndex
-from django.db.models import DateField, Field, Index
+from django.db.models import Field, Index
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -435,6 +435,8 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
 
     Automatically detects SQLite and generates compatible SQL without schema prefixes.
     """
+    from django.db import connection
+
     # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
     if IS_SQLITE:
         table_name = model_class._meta.db_table
@@ -459,12 +461,12 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     if IS_SQLITE:
         # SQLite: include all fields in CREATE TABLE
         for field in model_class._meta.local_fields:
-            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
+            field_sql = generate_field_sql(field, connection)
             field_definitions.append(f"    {field.column} {field_sql}")
     else:
         # PostgreSQL: only primary key fields initially
         for field in pk_fields:
-            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
+            field_sql = generate_field_sql(field, connection)
             field_definitions.append(f"    {field.column} {field_sql}")
 
     # Construct CREATE TABLE statement
@@ -478,7 +480,7 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     if not IS_SQLITE:
         # PostgreSQL: use dynamic column addition with IF NOT EXISTS
         for field in regular_fields:
-            field_sql = generate_field_sql(field, is_sqlite=IS_SQLITE)
+            field_sql = generate_field_sql(field, connection)
             alter_statement = (
                 f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {field.column} {field_sql};"
             )
@@ -502,61 +504,51 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     return SQL_STATEMENT_DELIMITER.join(all_statements)
 
 
-def generate_field_sql(field: Field, is_sqlite: bool = False) -> str:
+def generate_field_sql(field: Field, connection: Any) -> str:
     """Convert Django field to database-specific column definition.
+
+    Uses Django's field.db_type(connection) for type mapping, which automatically
+    handles SQLite vs PostgreSQL differences. We override CharField/TextField to
+    always use "text" so plugins can change max_length without a column migration.
+
+    We do not allow database constraints or default values. Validations will be
+    performed by the plugin and the plugin runner. This protects against dangerous
+    operations like adding a column with a default value on a large table (table
+    rewrite), or needing to alter a datatype to change a constraint.
 
     Args:
         field: Django model field instance
-        is_sqlite: If True, generate SQLite-compatible types; otherwise PostgreSQL types
+        connection: Django database connection
 
     Returns:
-        SQL column type definition
+        SQL column type definition (e.g., "text", "integer PRIMARY KEY", "jsonb")
     """
-    from django.db.models import (
-        BigAutoField,
-        BooleanField,
-        CharField,
-        DateTimeField,
-        DecimalField,
-        ForeignKey,
-        IntegerField,
-        JSONField,
-        OneToOneField,
-        TextField,
-    )
+    from django.db.models import CharField, DecimalField, TextField
 
-    # We do not allow database constraints or default values.
-    # Validations will be performed by the plugin and the plugin runner
-    # This is a decision meant to protect us from customers doing dangerous things like adding a column with a
-    # default value on a large table (table rewrite), or needing to alter a datatype to chnage a constraint
-    field_type = type(field)
-    if field_type is BigAutoField:
-        return "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite else "SERIAL PRIMARY KEY"
-    elif field_type in (CharField, TextField):
-        return "TEXT"
-    elif field_type is IntegerField:
-        return "INTEGER"
-    elif field_type is DateField:
-        return "TEXT" if is_sqlite else "DATE"
-    elif field_type is DateTimeField:
-        return "TEXT" if is_sqlite else "TIMESTAMP WITH TIME ZONE"
-    elif field_type is BooleanField:
-        return "INTEGER" if is_sqlite else "BOOLEAN"
-    elif field_type in (ForeignKey, OneToOneField):
-        return "INTEGER"
-    elif field_type is DecimalField:
-        if is_sqlite:
-            return "REAL"
-        else:
-            assert isinstance(field, DecimalField)
-            max_digits = field.max_digits or 20
-            decimal_places = field.decimal_places or 10
-            return f"NUMERIC({max_digits},{decimal_places})"
-    elif field_type is JSONField:
-        return "TEXT" if is_sqlite else "JSONB"
+    # CharField/TextField: always use "text" regardless of backend so plugins can
+    # change max_length without needing a column type migration.
+    if isinstance(field, (CharField, TextField)):
+        db_type = "text"
+    elif isinstance(field, DecimalField):
+        # Apply defaults if the developer omitted max_digits/decimal_places
+        max_digits = field.max_digits or 20
+        decimal_places = field.decimal_places or 10
+        field.max_digits = max_digits
+        field.decimal_places = decimal_places
+        db_type = field.db_type(connection) or "text"
     else:
-        # Fallback for unknown field types
-        return "TEXT"
+        db_type = field.db_type(connection) or "text"
+
+    # Append PRIMARY KEY before the auto-increment suffix because SQLite
+    # requires the order: INTEGER PRIMARY KEY AUTOINCREMENT
+    if field.primary_key:
+        db_type = f"{db_type} PRIMARY KEY"
+
+    suffix = field.db_type_suffix(connection)  # type: ignore[attr-defined]
+    if suffix:
+        db_type = f"{db_type} {suffix}"
+
+    return db_type
 
 
 def generate_index_sql(
