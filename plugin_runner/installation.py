@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import tarfile
@@ -168,36 +169,22 @@ def download_plugin(plugin_package: str) -> Generator[Path, None, None]:
         yield download_path
 
 
-# Reserved PostgreSQL schema names that cannot be used as namespaces
-RESERVED_SCHEMAS = frozenset(
-    {
-        "public",
-        "pg_catalog",
-        "pg_toast",
-        "information_schema",
-    }
-)
-
-RESERVED_SCHEMA_PREFIXES = ("pg_",)
+# Namespace format: org__name — lowercase alphanumeric/underscore on each side.
+# Shared with the manifest JSON Schema in canvas_cli/utils/validators/manifest_schema.py.
+NAMESPACE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
 
 def is_valid_namespace_name(namespace: str) -> bool:
-    """Validate namespace name format and check against reserved names.
+    """Validate namespace name format.
 
-    Valid namespaces must:
-    - Not be a reserved PostgreSQL schema name
-    - Not start with a reserved prefix (pg_)
-    - Follow the pattern: org__name (double underscore separator)
+    Valid namespaces must follow the pattern org__name (double underscore
+    separator), where each side starts with a lowercase letter and contains
+    only lowercase alphanumerics and underscores.
+
+    This implicitly excludes reserved PostgreSQL schemas (pg_catalog,
+    information_schema, etc.) since none match the org__name pattern.
     """
-    if namespace in RESERVED_SCHEMAS:
-        return False
-
-    if any(namespace.startswith(prefix) for prefix in RESERVED_SCHEMA_PREFIXES):
-        return False
-
-    # Require org__name format (validated by regex in manifest schema,
-    # but double-check here for safety)
-    return "__" in namespace
+    return NAMESPACE_PATTERN.match(namespace) is not None
 
 
 def namespace_exists(namespace: str) -> bool:
