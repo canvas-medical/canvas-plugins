@@ -16,6 +16,7 @@ import pytest
 from canvas_sdk.v1.data.custom_attribute import (
     AttributeHub,
     CustomAttribute,
+    CustomAttributeAwareManager,
     ModelExtension,
     ModelExtensionMetaClass,
 )
@@ -885,6 +886,82 @@ class TestModelExtensionAutoManager:
         from canvas_sdk.v1.data.custom_attribute import CustomAttributeAwareManager
 
         assert not isinstance(new_class.objects, CustomAttributeAwareManager)
+
+
+# ===========================================================================
+# Tests for CustomAttributeAwareManager.with_only
+# ===========================================================================
+
+
+class _AttributeHubProxy(AttributeHub):
+    """Proxy with CustomAttributeAwareManager for testing with_only."""
+
+    objects = CustomAttributeAwareManager()
+
+    class Meta:
+        proxy = True
+        app_label = "v1"
+
+
+@pytest.mark.django_db
+class TestWithOnly:
+    """Tests for CustomAttributeAwareManager.with_only method."""
+
+    @pytest.fixture
+    def hub(self, db: None) -> AttributeHub:
+        """Create an AttributeHub with several attributes."""
+        hub = AttributeHub(type="test", id="with-only-test")
+        hub.save()
+        hub.set_attribute("color", "blue")
+        hub.set_attribute("size", "large")
+        hub.set_attribute("weight", 42)
+        return hub
+
+    def test_prefetches_all_when_none(self, hub: AttributeHub) -> None:
+        """with_only(None) should prefetch all attributes (same as default)."""
+        fetched = _AttributeHubProxy.objects.with_only(None).get(pk=hub.pk)
+
+        assert fetched.get_attribute("color") == "blue"
+        assert fetched.get_attribute("size") == "large"
+        assert fetched.get_attribute("weight") == 42
+
+    def test_prefetches_single_string(self, hub: AttributeHub) -> None:
+        """with_only('name') should accept a single string."""
+        fetched = _AttributeHubProxy.objects.with_only("color").get(pk=hub.pk)
+
+        assert fetched.get_attribute("color") == "blue"
+        # Non-prefetched attributes return None (cache is present but attribute isn't in it)
+        assert fetched.get_attribute("size") is None
+
+    def test_prefetches_only_named_attributes(self, hub: AttributeHub) -> None:
+        """with_only([...]) should only prefetch the specified attributes."""
+        fetched = _AttributeHubProxy.objects.with_only(["color", "weight"]).get(pk=hub.pk)
+
+        assert fetched.get_attribute("color") == "blue"
+        assert fetched.get_attribute("weight") == 42
+
+    def test_prefetched_cache_contains_only_requested(self, hub: AttributeHub) -> None:
+        """The prefetch cache should only contain the requested attribute names."""
+        fetched = _AttributeHubProxy.objects.with_only(["color"]).get(pk=hub.pk)
+
+        cached = fetched._prefetched_objects_cache.get("custom_attributes")
+        cached_names = {attr.name for attr in cached}
+        assert cached_names == {"color"}
+
+    def test_default_queryset_prefetches_all(self, hub: AttributeHub) -> None:
+        """The default manager queryset should prefetch all attributes."""
+        fetched = _AttributeHubProxy.objects.get(pk=hub.pk)
+
+        cached = fetched._prefetched_objects_cache.get("custom_attributes")  # type: ignore[attr-defined]
+        cached_names = {attr.name for attr in cached}
+        assert cached_names == {"color", "size", "weight"}
+
+    def test_with_only_empty_list(self, hub: AttributeHub) -> None:
+        """with_only([]) should prefetch no attributes."""
+        fetched = _AttributeHubProxy.objects.with_only([]).get(pk=hub.pk)
+
+        cached = fetched._prefetched_objects_cache.get("custom_attributes")
+        assert list(cached) == []
 
 
 # ===========================================================================
