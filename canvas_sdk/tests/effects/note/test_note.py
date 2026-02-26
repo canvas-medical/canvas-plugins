@@ -741,6 +741,22 @@ def test_freeze_with_uuid_instance_id(mock_freeze_db_queries: dict[str, MagicMoc
     assert payload["data"]["note_id"] == str(instance_id)
 
 
+def test_freeze_missing_instance_id() -> None:
+    """Test freeze raises ValueError when instance_id is not set."""
+    note = Note()
+
+    with pytest.raises(ValueError, match="Field 'instance_id' is required to freeze the note."):
+        note.freeze()
+
+
+def test_unfreeze_missing_instance_id() -> None:
+    """Test unfreeze raises ValueError when instance_id is not set."""
+    note = Note()
+
+    with pytest.raises(ValueError, match="Field 'instance_id' is required to unfreeze the note."):
+        note.unfreeze()
+
+
 def test_freeze_note_does_not_exist(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
     """Test freeze raises validation error when note does not exist."""
     mock_freeze_db_queries["note"].filter.return_value.exists.return_value = False
