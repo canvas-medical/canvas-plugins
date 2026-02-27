@@ -4,10 +4,12 @@ from .claim import (
     ClaimCoverageFactory,
     ClaimFactory,
     ClaimLabelFactory,
+    ClaimMetadataFactory,
     ClaimProviderFactory,
     ClaimQueueFactory,
     ClaimSubmissionFactory,
 )
+from .claim_banner_alert import ClaimBannerAlertFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
 from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
 from .coverage import CoverageFactory
@@ -86,11 +88,13 @@ from .user import CanvasUserFactory
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
+    "ClaimBannerAlertFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
+    "ClaimMetadataFactory",
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
     "ClaimProviderFactory",

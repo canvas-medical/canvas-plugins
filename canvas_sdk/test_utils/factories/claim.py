@@ -5,6 +5,7 @@ from canvas_sdk.v1.data import (
     ClaimComment,
     ClaimCoverage,
     ClaimLabel,
+    ClaimMetadata,
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
@@ -79,3 +80,14 @@ class ClaimSubmissionFactory(factory.django.DjangoModelFactory[ClaimSubmission])
 
     claim = factory.SubFactory(ClaimFactory)
     clearinghouse_claim_id = "123456"
+
+
+class ClaimMetadataFactory(factory.django.DjangoModelFactory[ClaimMetadata]):
+    """Factory for creating ClaimMetadata."""
+
+    class Meta:
+        model = ClaimMetadata
+
+    claim = factory.SubFactory(ClaimFactory)
+    key = "test"
+    value = "testeroo"
