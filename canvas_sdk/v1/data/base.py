@@ -10,6 +10,8 @@ from django.db.models.base import ModelBase
 from django.utils.functional import cached_property
 
 if TYPE_CHECKING:
+    from django.contrib.contenttypes.fields import GenericRelation
+
     from canvas_sdk.protocols.timeframe import Timeframe
     from canvas_sdk.v1.data.custom_attribute import CustomAttribute
     from canvas_sdk.value_set.value_set import ValueSet
@@ -393,6 +395,9 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
     class Meta:
         abstract = True
 
+    if TYPE_CHECKING:
+        custom_attributes: GenericRelation
+
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Add a GenericRelation to custom_attributes on each subclass."""
         super().__init_subclass__(**kwargs)
@@ -525,18 +530,9 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
             created_attrs = CustomAttribute.objects.bulk_create(to_create)
 
         if to_update:
-            CustomAttribute.objects.bulk_update(
-                to_update,
-                [
-                    "text_value",
-                    "date_value",
-                    "timestamp_value",
-                    "int_value",
-                    "decimal_value",
-                    "bool_value",
-                    "json_value",
-                ],
-            )
+            from .custom_attribute import VALUE_FIELDS
+
+            CustomAttribute.objects.bulk_update(to_update, list(VALUE_FIELDS))
 
         return created_attrs + to_update
 

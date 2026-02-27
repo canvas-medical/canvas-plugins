@@ -18,6 +18,7 @@ from canvas_sdk.v1.data.custom_attribute import (
     AttributeHub,
     CustomAttribute,
     CustomAttributeAwareManager,
+    CustomAttributeQuerySet,
 )
 
 
@@ -1507,3 +1508,286 @@ class TestDeleteAttribute:
 
         assert hub.get_attribute("keep") == "kept"
         assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 1
+
+
+# ---------------------------------------------------------------------------
+# CustomAttributeQuerySet value filtering
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCustomAttributeQuerySetFilter:
+    """Tests for the type-aware ``value`` rewriting in CustomAttributeQuerySet."""
+
+    @pytest.fixture
+    def hub(self) -> AttributeHub:
+        """Create a fresh AttributeHub for each test."""
+        hub = AttributeHub(type="qs-test", id="qs-hub")
+        hub.save()
+        return hub
+
+    @staticmethod
+    def _create(hub: AttributeHub, name: str, value: Any) -> CustomAttribute:
+        """Create a CustomAttribute on *hub* and return it."""
+        attr = hub.set_attribute(name, value)
+        return attr
+
+    # -- type dispatch -------------------------------------------------
+
+    def test_filter_value_str(self, hub: AttributeHub) -> None:
+        """String value dispatches to text_value."""
+        self._create(hub, "color", "blue")
+        self._create(hub, "count", 42)
+        qs = hub.custom_attributes.filter(value="blue")
+        assert qs.count() == 1
+        assert qs.first().name == "color"
+
+    def test_filter_value_int(self, hub: AttributeHub) -> None:
+        """Integer value dispatches to int_value."""
+        self._create(hub, "count", 42)
+        self._create(hub, "label", "forty-two")
+        qs = hub.custom_attributes.filter(value=42)
+        assert qs.count() == 1
+        assert qs.first().name == "count"
+
+    def test_filter_value_bool_does_not_match_int(self, hub: AttributeHub) -> None:
+        """filter(value=True) must target bool_value, not int_value=1."""
+        self._create(hub, "flag", True)
+        self._create(hub, "one", 1)
+        qs = hub.custom_attributes.filter(value=True)
+        assert qs.count() == 1
+        assert qs.first().name == "flag"
+
+    def test_filter_value_date(self, hub: AttributeHub) -> None:
+        """Date value dispatches to date_value."""
+        d = datetime.date(2025, 6, 15)
+        self._create(hub, "birthday", d)
+        qs = hub.custom_attributes.filter(value=d)
+        assert qs.count() == 1
+
+    def test_filter_value_datetime(self, hub: AttributeHub) -> None:
+        """Datetime value dispatches to timestamp_value."""
+        dt = datetime.datetime(2025, 6, 15, 12, 0, 0, tzinfo=datetime.UTC)
+        self._create(hub, "created_at", dt)
+        qs = hub.custom_attributes.filter(value=dt)
+        assert qs.count() == 1
+
+    def test_filter_value_decimal(self, hub: AttributeHub) -> None:
+        """Decimal value dispatches to decimal_value."""
+        d = decimal.Decimal("3.14")
+        self._create(hub, "pi", d)
+        qs = hub.custom_attributes.filter(value=d)
+        assert qs.count() == 1
+
+    def test_filter_value_float(self, hub: AttributeHub) -> None:
+        """Float value dispatches to decimal_value."""
+        self._create(hub, "ratio", 2.5)
+        qs = hub.custom_attributes.filter(value=2.5)
+        assert qs.count() == 1
+
+    # -- lookups -------------------------------------------------------
+
+    def test_filter_value_with_lookup(self, hub: AttributeHub) -> None:
+        """Lookup suffixes like ``__gte`` are forwarded to the typed column."""
+        self._create(hub, "low", 1)
+        self._create(hub, "mid", 5)
+        self._create(hub, "high", 10)
+        qs = hub.custom_attributes.filter(value__gte=5)
+        assert qs.count() == 2
+        assert set(qs.values_list("name", flat=True)) == {"mid", "high"}
+
+    def test_filter_value_contains_str(self, hub: AttributeHub) -> None:
+        """``value__contains`` with a string dispatches to text_value__contains."""
+        self._create(hub, "greeting", "hello world")
+        self._create(hub, "farewell", "goodbye")
+        qs = hub.custom_attributes.filter(value__contains="world")
+        assert qs.count() == 1
+
+    # -- None / isnull -------------------------------------------------
+
+    def test_filter_value_none(self, hub: AttributeHub) -> None:
+        """``value=None`` matches rows where every typed column is NULL."""
+        self._create(hub, "has_value", "present")
+        # Create an attribute with all value columns NULL
+        CustomAttribute.objects.create(
+            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
+        )
+        qs = hub.custom_attributes.filter(value=None)
+        assert qs.count() == 1
+        assert qs.first().name == "empty"
+
+    def test_filter_value_isnull_true(self, hub: AttributeHub) -> None:
+        """``value__isnull=True`` matches rows where every typed column is NULL."""
+        self._create(hub, "has_value", "present")
+        CustomAttribute.objects.create(
+            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
+        )
+        qs = hub.custom_attributes.filter(value__isnull=True)
+        assert qs.count() == 1
+        assert qs.first().name == "empty"
+
+    def test_filter_value_isnull_false(self, hub: AttributeHub) -> None:
+        """``value__isnull=False`` matches rows where at least one column is not NULL."""
+        self._create(hub, "has_value", "present")
+        CustomAttribute.objects.create(
+            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
+        )
+        qs = hub.custom_attributes.filter(value__isnull=False)
+        assert qs.count() == 1
+        assert qs.first().name == "has_value"
+
+    # -- __in ----------------------------------------------------------
+
+    def test_filter_value_in_same_type(self, hub: AttributeHub) -> None:
+        """``value__in`` with a homogeneous list dispatches to the typed column."""
+        self._create(hub, "a", 1)
+        self._create(hub, "b", 2)
+        self._create(hub, "c", 3)
+        qs = hub.custom_attributes.filter(value__in=[1, 3])
+        assert qs.count() == 2
+        assert set(qs.values_list("name", flat=True)) == {"a", "c"}
+
+    def test_filter_value_in_mixed_types_raises(self, hub: AttributeHub) -> None:
+        """``value__in`` with mixed types raises TypeError."""
+        with pytest.raises(TypeError, match="same type"):
+            hub.custom_attributes.filter(value__in=[1, "two"])
+
+    # -- exclude -------------------------------------------------------
+
+    def test_exclude_value(self, hub: AttributeHub) -> None:
+        """``exclude(value=...)`` rewrites to the typed column."""
+        self._create(hub, "keep", 1)
+        self._create(hub, "drop", 2)
+        qs = hub.custom_attributes.exclude(value=2)
+        assert qs.count() == 1
+        assert qs.first().name == "keep"
+
+    def test_exclude_value_none(self, hub: AttributeHub) -> None:
+        """exclude(value=None) should keep only rows that have a value."""
+        self._create(hub, "has_value", "present")
+        CustomAttribute.objects.create(
+            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
+        )
+        qs = hub.custom_attributes.exclude(value=None)
+        assert qs.count() == 1
+        assert qs.first().name == "has_value"
+
+    # -- passthrough and errors ----------------------------------------
+
+    def test_non_value_kwargs_pass_through(self, hub: AttributeHub) -> None:
+        """Non-``value`` kwargs are forwarded to Django unchanged."""
+        self._create(hub, "color", "blue")
+        self._create(hub, "size", "large")
+        qs = hub.custom_attributes.filter(name="color")
+        assert qs.count() == 1
+        assert qs.first().value == "blue"
+
+    def test_unsupported_type_raises(self, hub: AttributeHub) -> None:
+        """Filtering by an unmapped type raises TypeError."""
+        with pytest.raises(TypeError, match="Cannot filter"):
+            hub.custom_attributes.filter(value=object())
+
+    # -- GenericRelation access ----------------------------------------
+
+    def test_filter_via_generic_relation(self, hub: AttributeHub) -> None:
+        """Value filtering should work through hub.custom_attributes."""
+        self._create(hub, "color", "blue")
+        self._create(hub, "count", 10)
+        assert hub.custom_attributes.filter(value="blue").count() == 1
+        assert hub.custom_attributes.filter(value=10).count() == 1
+
+    # -- direct manager access -----------------------------------------
+
+    def test_direct_manager_filter(self, hub: AttributeHub) -> None:
+        """CustomAttribute.objects.filter(value=...) should also work."""
+        self._create(hub, "color", "blue")
+        qs = CustomAttribute.objects.filter(object_id=hub.pk, value="blue")  # type: ignore[misc]
+        assert qs.count() == 1
+
+    def test_manager_returns_custom_queryset(self) -> None:
+        """The default manager should return a CustomAttributeQuerySet."""
+        assert isinstance(CustomAttribute.objects.all(), CustomAttributeQuerySet)
+
+
+# ---------------------------------------------------------------------------
+# Cross-relation value filtering (AttributeHub.objects.filter(custom_attributes__value=...))
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCrossRelationValueFilter:
+    """Tests for filtering parent models by custom attribute values across the join."""
+
+    @pytest.fixture
+    def hub_blue(self) -> AttributeHub:
+        """Hub with color=blue."""
+        hub = AttributeHub(type="cross-test", id="blue-hub")
+        hub.save()
+        hub.set_attribute("color", "blue")
+        return hub
+
+    @pytest.fixture
+    def hub_red(self) -> AttributeHub:
+        """Hub with color=red."""
+        hub = AttributeHub(type="cross-test", id="red-hub")
+        hub.save()
+        hub.set_attribute("color", "red")
+        return hub
+
+    @pytest.fixture
+    def hub_scored(self) -> AttributeHub:
+        """Hub with score=42."""
+        hub = AttributeHub(type="cross-test", id="scored-hub")
+        hub.save()
+        hub.set_attribute("score", 42)
+        return hub
+
+    def test_filter_str_value(self, hub_blue: AttributeHub, hub_red: AttributeHub) -> None:
+        """String value across the join dispatches to text_value."""
+        qs = AttributeHub.objects.filter(type="cross-test", custom_attributes__value="blue")
+        assert list(qs) == [hub_blue]
+
+    def test_filter_int_value(self, hub_blue: AttributeHub, hub_scored: AttributeHub) -> None:
+        """Integer value across the join dispatches to int_value."""
+        qs = AttributeHub.objects.filter(type="cross-test", custom_attributes__value=42)
+        assert list(qs) == [hub_scored]
+
+    def test_filter_with_lookup(self, hub_blue: AttributeHub, hub_scored: AttributeHub) -> None:
+        """Lookup suffixes like ``__gte`` work across the join."""
+        qs = AttributeHub.objects.filter(type="cross-test", custom_attributes__value__gte=40)
+        assert list(qs) == [hub_scored]
+
+    def test_filter_bool_value(self, hub_blue: AttributeHub) -> None:
+        """Bool value across the join does not match int 1."""
+        hub = AttributeHub(type="cross-test", id="flagged-hub")
+        hub.save()
+        hub.set_attribute("active", True)
+        hub.set_attribute("count", 1)  # int 1, should NOT match bool True
+        qs = AttributeHub.objects.filter(type="cross-test", custom_attributes__value=True)
+        assert list(qs) == [hub]
+
+    def test_exclude_value(self, hub_blue: AttributeHub, hub_red: AttributeHub) -> None:
+        """``exclude(custom_attributes__value=...)`` rewrites to the typed column."""
+        qs = AttributeHub.objects.filter(type="cross-test").exclude(custom_attributes__value="blue")
+        assert list(qs) == [hub_red]
+
+    def test_non_value_kwargs_pass_through(
+        self, hub_blue: AttributeHub, hub_red: AttributeHub
+    ) -> None:
+        """Normal custom_attributes__ lookups still work."""
+        qs = AttributeHub.objects.filter(type="cross-test", custom_attributes__text_value="red")
+        assert list(qs) == [hub_red]
+
+    def test_filter_value_in(
+        self, hub_blue: AttributeHub, hub_red: AttributeHub, hub_scored: AttributeHub
+    ) -> None:
+        """``value__in`` across the join dispatches to the typed column."""
+        qs = AttributeHub.objects.filter(
+            type="cross-test", custom_attributes__value__in=["blue", "red"]
+        )
+        assert set(qs) == {hub_blue, hub_red}
+
+    def test_unsupported_type_raises(self) -> None:
+        """Filtering by an unmapped type across the join raises TypeError."""
+        with pytest.raises(TypeError, match="Cannot filter"):
+            AttributeHub.objects.filter(custom_attributes__value=object())

@@ -1161,7 +1161,11 @@
   "canvas_sdk.v1.data.custom_attribute": [
     "AttributeHub",
     "CustomAttribute",
-    "CustomAttributeAwareManager"
+    "CustomAttributeAwareManager",
+    "CustomAttributeAwareQuerySet",
+    "CustomAttributeQuerySet",
+    "VALUE_FIELDS",
+    "VALUE_FIELD_MAP"
   ],
   "canvas_sdk.v1.data.detected_issue": [
     "DetectedIssue",
