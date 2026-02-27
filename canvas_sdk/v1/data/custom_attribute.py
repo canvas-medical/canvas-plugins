@@ -74,22 +74,34 @@ def _rewrite_one(
     extra_q: list[Q],
 ) -> None:
     """Rewrite a single value lookup into typed column lookup(s)."""
+    is_cross_relation = bool(target_prefix)
+
     # value=None → all columns must be NULL
     if not suffix and val is None:
+        if is_cross_relation:
+            raise TypeError(
+                "Filtering by value=None across a relation is not supported. "
+                "Use the specific column name (e.g., custom_attributes__text_value__isnull=True) directly."
+            )
         for field in VALUE_FIELDS:
-            new_kwargs[f"{target_prefix}{field}__isnull"] = True
+            new_kwargs[f"{field}__isnull"] = True
         return
 
     # value__isnull
     if suffix == "__isnull":
+        if is_cross_relation:
+            raise TypeError(
+                "Filtering by value__isnull across a relation is not supported. "
+                "Use the specific column name (e.g., custom_attributes__text_value__isnull=True) directly."
+            )
         if val:
             for field in VALUE_FIELDS:
-                new_kwargs[f"{target_prefix}{field}__isnull"] = True
+                new_kwargs[f"{field}__isnull"] = True
         else:
             extra_q.append(
                 reduce(
                     operator.or_,
-                    (Q(**{f"{target_prefix}{f}__isnull": False}) for f in VALUE_FIELDS),
+                    (Q(**{f"{f}__isnull": False}) for f in VALUE_FIELDS),
                 )
             )
         return

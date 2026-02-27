@@ -1787,6 +1787,21 @@ class TestCrossRelationValueFilter:
         )
         assert set(qs) == {hub_blue, hub_red}
 
+    def test_value_none_across_relation_raises(self) -> None:
+        """``custom_attributes__value=None`` across a relation is not supported."""
+        with pytest.raises(TypeError, match="not supported"):
+            AttributeHub.objects.filter(custom_attributes__value=None)
+
+    def test_value_isnull_true_across_relation_raises(self) -> None:
+        """``custom_attributes__value__isnull=True`` across a relation is not supported."""
+        with pytest.raises(TypeError, match="not supported"):
+            AttributeHub.objects.filter(custom_attributes__value__isnull=True)
+
+    def test_value_isnull_false_across_relation_raises(self) -> None:
+        """``custom_attributes__value__isnull=False`` across a relation is not supported."""
+        with pytest.raises(TypeError, match="not supported"):
+            AttributeHub.objects.filter(custom_attributes__value__isnull=False)
+
     def test_unsupported_type_raises(self) -> None:
         """Filtering by an unmapped type across the join raises TypeError."""
         with pytest.raises(TypeError, match="Cannot filter"):
