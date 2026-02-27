@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.105.1 (2026-02-27)
+
+### Bug Fixes
+
+- Ignore handling now applies correctly and ignore __pycache__-related files by default
+  ([#1524](https://github.com/canvas-medical/canvas-plugins/pull/1524),
+  [`4c7056f`](https://github.com/canvas-medical/canvas-plugins/commit/4c7056fabdb280e7f9aab182bbc0cea6e48bb1d2))
+
+
 ## v0.105.0 (2026-02-26)
 
 ### Features
