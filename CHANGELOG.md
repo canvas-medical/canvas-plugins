@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.106.0 (2026-02-27)
+
+### Features
+
+- Changes max_length of the StaffRole.name field
+  ([#1504](https://github.com/canvas-medical/canvas-plugins/pull/1504),
+  [`dd5f880`](https://github.com/canvas-medical/canvas-plugins/commit/dd5f880d03c880e3fc09fa5644d43d878fef340e))
+
+
 ## v0.105.1 (2026-02-27)
 
 ### Bug Fixes
