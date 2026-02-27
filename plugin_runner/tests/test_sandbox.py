@@ -512,6 +512,48 @@ def test_typeguard_import_and_usage() -> None:
     assert scope["result"] is True, "TypeGuard function should correctly identify string"
 
 
+def test_re_fullmatch_import_and_usage() -> None:
+    """Test that re.fullmatch can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from re import fullmatch
+
+            result = fullmatch(r'\\d+', '12345')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, "fullmatch should match an all-digit string"
+
+
+def test_re_fullmatch_no_match() -> None:
+    """Test that re.fullmatch correctly rejects partial matches."""
+    sandbox = _sandbox_from_code(
+        """
+            import re
+
+            result = re.fullmatch(r'\\d+', '123abc')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is None, "fullmatch should not match a partial digit string"
+
+
+def test_type_checking_import() -> None:
+    """Test that TYPE_CHECKING can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from typing import TYPE_CHECKING
+
+            result = TYPE_CHECKING
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is False, "TYPE_CHECKING should be False at runtime"
+
+
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
     sandbox = _sandbox_from_code("builtins = {}")
