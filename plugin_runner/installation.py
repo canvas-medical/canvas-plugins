@@ -690,7 +690,11 @@ def generate_plugin_migrations(
                     log.info(f"Skipping proxy model {model_class.__name__}")
                 elif hasattr(model_class, "_meta"):
                     db_table = model_class._meta.original_attrs["db_table"]
-                    log.warning(f"Skipping {db_table} because it references another schema")
+                    raise RuntimeError(
+                        f"Model {model_class.__name__} (table '{db_table}') references a "
+                        f"schema outside of '{schema_name}'. A plugin may only define tables "
+                        f"within its own namespace."
+                    )
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")

@@ -394,6 +394,33 @@ def test_adds_plugin_path_to_sys_path(
     sys.path.remove(str(plugin_path))
 
 
+@patch("plugin_runner.installation.execute_create_table_sql")
+@patch("plugin_runner.installation.generate_create_table_sql")
+@patch("plugin_runner.installation.extract_models_from_module")
+@patch("plugin_runner.installation.discover_model_files")
+def test_raises_on_cross_schema_model(
+    mock_discover: MagicMock,
+    mock_extract: MagicMock,
+    mock_gen_sql: MagicMock,
+    mock_exec: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """A model whose db_table references another schema should abort installation."""
+    sentinel_file = Path("/fake/models/a.py")
+    mock_discover.return_value = [sentinel_file]
+
+    model = MagicMock(__name__="CrossSchemaModel")
+    model._meta.proxy = False
+    model._meta.original_attrs = {"db_table": "other_schema.forbidden_table"}
+    mock_extract.return_value = [model]
+
+    with pytest.raises(RuntimeError, match="references a schema outside of"):
+        generate_plugin_migrations("my_plugin", tmp_path, schema_name="my_schema")
+
+    mock_gen_sql.assert_not_called()
+    mock_exec.assert_not_called()
+
+
 # ===========================================================================
 # Integration test
 # ===========================================================================
