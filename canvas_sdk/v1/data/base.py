@@ -482,59 +482,36 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
         return attr
 
     def set_attributes(self, attributes: dict[str, Any]) -> list["CustomAttribute"]:
-        """Set multiple custom attributes using bulk operations."""
-        from .custom_attribute import CustomAttribute
+        """Set multiple custom attributes using bulk operations.
+
+        Uses INSERT ... ON CONFLICT DO UPDATE (upsert) to atomically create or
+        update attributes, avoiding race conditions under concurrent writes.
+        """
+        from .custom_attribute import VALUE_FIELDS, CustomAttribute
 
         if not hasattr(self, "custom_attributes"):
             raise AttributeError(
                 f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
             )
 
-        # Get existing attributes from prefetched data or database
-        existing_attrs: dict[str, CustomAttribute] = {}
-        if (
-            hasattr(self, "_prefetched_objects_cache")
-            and "custom_attributes" in self._prefetched_objects_cache
-        ):
-            # Use prefetched data
-            for attr in self.custom_attributes.all():
-                existing_attrs[attr.name] = attr
-        else:
-            # Fall back to database query
-            for attr in CustomAttribute.objects.filter(
-                content_type_id=self._content_type_id, object_id=self.pk
-            ):
-                existing_attrs[attr.name] = attr
+        if not attributes:
+            return []
 
-        # Separate attributes to create vs update
-        to_create: list[CustomAttribute] = []
-        to_update: list[CustomAttribute] = []
-
+        attrs = []
         for name, value in attributes.items():
-            if name in existing_attrs:
-                # Update existing attribute
-                attr = existing_attrs[name]
-                attr.value = value
-                to_update.append(attr)
-            else:
-                # Create new attribute
-                attr = CustomAttribute(
-                    content_type_id=self._content_type_id, object_id=self.pk, name=name
-                )
-                attr.value = value
-                to_create.append(attr)
+            attr = CustomAttribute(
+                content_type_id=self._content_type_id, object_id=self.pk, name=name
+            )
+            attr.value = value
+            attrs.append(attr)
 
-        # Perform bulk operations
-        created_attrs: list[CustomAttribute] = []
-        if to_create:
-            created_attrs = CustomAttribute.objects.bulk_create(to_create)
-
-        if to_update:
-            from .custom_attribute import VALUE_FIELDS
-
-            CustomAttribute.objects.bulk_update(to_update, list(VALUE_FIELDS))
-
-        return created_attrs + to_update
+        # Atomic upsert: INSERT ... ON CONFLICT (content_type, object_id, name) DO UPDATE
+        return CustomAttribute.objects.bulk_create(
+            attrs,
+            update_conflicts=True,
+            unique_fields=["content_type", "object_id", "name"],
+            update_fields=list(VALUE_FIELDS),
+        )
 
     def delete_attribute(self, name: str) -> bool:
         """Delete a custom attribute by name. Returns True if deleted, False if not found."""
