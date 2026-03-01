@@ -1,0 +1,29 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "cross_plugin_thief",
+    "description": "A plugin that tries to load a protocol from another plugin",
+    "components": {
+        "protocols": [
+            {
+                "class": "example_plugin.protocols.my_protocol:Protocol",
+                "description": "Attempting to borrow from example_plugin",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
