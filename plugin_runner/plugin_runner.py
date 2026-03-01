@@ -311,6 +311,7 @@ class PluginRunner(PluginRunnerServicer):
                         metrics.measure(
                             name=handler_name,
                             track_queries=True,
+                            track_memory_usage=True,
                             extra_tags={
                                 "plugin": base_plugin_name,
                                 "event": event_name,
@@ -689,6 +690,7 @@ def verify_plugin_namespace_access(
     }
 
 
+@measured(track_memory_usage=True)
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')

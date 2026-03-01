@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.106.0 (2026-02-27)
+
+### Features
+
+- Changes max_length of the StaffRole.name field
+  ([#1504](https://github.com/canvas-medical/canvas-plugins/pull/1504),
+  [`dd5f880`](https://github.com/canvas-medical/canvas-plugins/commit/dd5f880d03c880e3fc09fa5644d43d878fef340e))
+
+
+## v0.105.1 (2026-02-27)
+
+### Bug Fixes
+
+- Ignore handling now applies correctly and ignore __pycache__-related files by default
+  ([#1524](https://github.com/canvas-medical/canvas-plugins/pull/1524),
+  [`4c7056f`](https://github.com/canvas-medical/canvas-plugins/commit/4c7056fabdb280e7f9aab182bbc0cea6e48bb1d2))
+
+
+## v0.105.0 (2026-02-26)
+
+### Features
+
+- Create claim metadata model and effect
+  ([#1514](https://github.com/canvas-medical/canvas-plugins/pull/1514),
+  [`fcf3f62`](https://github.com/canvas-medical/canvas-plugins/commit/fcf3f622ca70adf2015af9d12eaa18565048553a))
+
+
 ## v0.104.0 (2026-02-24)
 
 ### Documentation
