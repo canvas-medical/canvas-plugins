@@ -465,21 +465,26 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
             return None
 
     def set_attribute(self, name: str, value: Any) -> "CustomAttribute":
-        """Set a custom attribute value."""
-        from .custom_attribute import CustomAttribute
+        """Set a custom attribute value.
+
+        Uses INSERT ... ON CONFLICT DO UPDATE (upsert) for a single SQL
+        round-trip instead of get_or_create + save.
+        """
+        from .custom_attribute import VALUE_FIELDS, CustomAttribute
 
         if not hasattr(self, "custom_attributes"):
             raise AttributeError(
                 f"{self.__class__.__name__} must have a 'custom_attributes' GenericRelation field"
             )
 
-        # Create custom attribute with cached content_type_id
-        attr, created = CustomAttribute.objects.get_or_create(
-            content_type_id=self._content_type_id, object_id=self.pk, name=name, defaults={}
-        )
-        attr.value = value  # Use the property setter
-        attr.save()
-        return attr
+        attr = CustomAttribute(content_type_id=self._content_type_id, object_id=self.pk, name=name)
+        attr.value = value
+        return CustomAttribute.objects.bulk_create(
+            [attr],
+            update_conflicts=True,
+            unique_fields=["content_type", "object_id", "name"],
+            update_fields=list(VALUE_FIELDS),
+        )[0]
 
     def set_attributes(self, attributes: dict[str, Any]) -> list["CustomAttribute"]:
         """Set multiple custom attributes using bulk operations.
