@@ -55,7 +55,6 @@ class Prescription(IdentifiableModel, AuditedModel):
 
     class Meta:
         db_table = "canvas_sdk_data_api_prescription_001"
-        ordering = ["id"]
 
     objects = cast(PrescriptionQuerySet, PrescriptionManager())
 
