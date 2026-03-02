@@ -1,0 +1,113 @@
+<style>
+  #field-wrapper-card-name,
+  #field-wrapper-card-number,
+  #field-wrapper-card-exp,
+  #field-wrapper-card-cvv,
+  #field-wrapper-billing-zip {
+    width: 6em;
+    height: 2.5em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 5px;
+    padding: 5px;
+  }
+  .submitButton {
+    display: flex;
+    width: 100px;
+    height: 20px;
+    visibility: hidden;
+  }
+  .custom-fields {
+    display: {% if intent == "pay" %}flex{% else %}block{% endif %};
+  }
+</style>
+<div>
+  <div id="custom-payment-fields" class="custom-fields">
+    <div id="pay-theory-credit-card-account-name"></div>
+    <div id="pay-theory-credit-card"></div>
+    <div id="pay-theory-credit-card-zip"></div>
+  </div>
+  <div class="error"></div>
+  <button type="submit" id="submit" class="submitButton">Pay</button>
+
+
+  <script src="https://start.sdk.paytheory.com/index.js"></script>
+  <script>
+    var cleanUpReady, cleanUpValid, cleanUpState;
+
+    function setupPayTheory() {
+
+        if (!paytheory) {
+            console.log('PayTheory SDK not loaded yet, retrying...');
+            setTimeout(() => setupPayTheory(), 100);
+            return;
+        }
+
+      cleanUpReady = paytheory.readyObserver(ready => {
+        parentFormIsReady(ready);
+      })
+
+      cleanUpState = paytheory.stateObserver(state => {
+        if (state['billing-zip'].isDirty) {
+          document.getElementById('field-wrapper-billing-zip').style.borderColor = state['billing-zip'].errorMessages[0] ? 'red' : '#ccc';
+        }
+        if (state['card-cvv'].isDirty) {
+          document.getElementById('field-wrapper-card-cvv').style.borderColor = state['card-cvv'].errorMessages[0] ? 'red' : '#ccc';
+        }
+        if (state['card-exp'].isDirty) {
+          document.getElementById('field-wrapper-card-exp').style.borderColor = state['card-exp'].errorMessages[0] ? 'red' : '#ccc';
+        }
+        if (state['card-number'].isDirty) {
+          document.getElementById('field-wrapper-card-number').style.borderColor = state['card-number'].errorMessages[0] ? 'red' : '#ccc';
+        }
+      });
+
+      cleanUpValid = paytheory.validObserver(valid => {
+        parentSetFormIsValid(valid === 'card');
+      });
+
+      paytheory.payTheoryFields({
+        apiKey: '{{ public_api_key }}'
+      });
+
+      const submit = document.getElementById('submit');
+      submit.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const result = await paytheory.tokenizePaymentMethod({
+          payorId: '{{ payor_id }}',
+        });
+
+        if (result.type === "TOKENIZED") {
+          parentSetToken(result.body.payment_method_id);
+        } else {
+          parentSetError(result.error);
+        }
+      });
+    }
+
+    setTimeout(() => setupPayTheory(), 100);
+
+    window.teardown = function() {
+      cleanUpReady?.();
+      cleanUpValid?.();
+      cleanUpState?.();
+    };
+
+    function parentFormIsReady(ready) {
+      window.parent.setFormIsReady(ready);
+    }
+
+    function parentSetToken(token) {
+      window.parent.setToken(token);
+    }
+
+    function parentSetError(error) {
+      window.parent.setError(error);
+    }
+
+    function parentSetFormIsValid(isValid) {
+      window.parent.setFormIsValid(isValid);
+    }
+  </script>
+</div>
