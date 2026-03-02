@@ -686,6 +686,7 @@
   "canvas_sdk.effects.task": [
     "AddTask",
     "AddTaskComment",
+    "LinkedItemType",
     "TaskMetadata",
     "TaskStatus",
     "UpdateTask"
@@ -693,6 +694,7 @@
   "canvas_sdk.effects.task.task": [
     "AddTask",
     "AddTaskComment",
+    "LinkedItemType",
     "TaskMetadata",
     "TaskStatus",
     "UpdateTask"
