@@ -613,6 +613,16 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
         # TODO when we encounter an exception here, disable the plugin in response
         try:
             handler_module, handler_class = handler["class"].split(":")
+
+            handler_package = handler_module.split(".")[0]
+            if handler_package != name:
+                log.error(
+                    f'Plugin "{name}" declares handler from foreign package '
+                    f'"{handler_package}" — skipping'
+                )
+                any_failed = True
+                continue
+
             name_and_class = f"{name}:{handler_module}:{handler_class}"
         except ValueError as e:
             log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')

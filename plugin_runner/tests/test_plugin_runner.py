@@ -48,6 +48,18 @@ def plugin_runner() -> PluginRunner:
     return runner
 
 
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_rejects_foreign_package_handler(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a plugin cannot load a handler from a different plugin's package."""
+    with caplog.at_level(logging.ERROR):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+    assert any("foreign package" in record.message for record in caplog.records)
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test loading plugins with a valid plugin."""
