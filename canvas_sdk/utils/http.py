@@ -333,16 +333,47 @@ class PharmacyHttp:
         search_term: str | None = " ",
         latitude: str | None = None,
         longitude: str | None = None,
+        id: int | None = None,
+        ncpdp_id: str | None = None,
+        organization_name: str | None = None,
+        specialty_type: str | None = None,
+        state: str | None = None,
+        zip_code_prefix: str | None = None,
     ) -> list[dict]:
-        """Search for pharmacies by term and optional location."""
-        params = {"search": search_term}
+        """Search for pharmacies by term and optional location.
+
+        Args:
+            search_term: Full-text search across multiple fields.
+            latitude: Latitude for location-based ordering.
+            longitude: Longitude for location-based ordering.
+            id: Exact pharmacy ID match.
+            ncpdp_id: Exact NCPDP ID match.
+            organization_name: Case-insensitive contains match on organization name.
+            specialty_type: Case-insensitive contains match on specialty type.
+            state: Case-insensitive exact match on state.
+            zip_code_prefix: One or more comma/space-separated zip code prefixes.
+        """
+        params: dict[str, str | int] = {}
+
+        if search_term and search_term.strip():
+            params["search"] = search_term
+
         if latitude and longitude:
-            params.update(
-                {
-                    "latitude": latitude,
-                    "longitude": longitude,
-                }
-            )
+            params["latitude"] = latitude
+            params["longitude"] = longitude
+
+        if id is not None:
+            params["id"] = id
+        if ncpdp_id is not None:
+            params["ncpdp_id"] = ncpdp_id
+        if organization_name is not None:
+            params["organization_name__icontains"] = organization_name
+        if specialty_type is not None:
+            params["specialty_type__icontains"] = specialty_type
+        if state is not None:
+            params["state__iexact"] = state
+        if zip_code_prefix is not None:
+            params["zip_code_prefix"] = zip_code_prefix
 
         query_string = urllib.parse.urlencode(params)
         response = self._http_client.get_json(f"/surescripts/pharmacy/?{query_string}")
