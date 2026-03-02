@@ -1006,3 +1006,64 @@ def test_sandbox_allows_configdict_import_and_usage(configdict_code: str) -> Non
     assert "Success:" in scope["result"] or "Name:" in scope["result"], (
         f"ConfigDict usage failed: {scope.get('result')}"
     )
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "function_def": """
+                def sneaky():
+                    import os
+                    return os.listdir('.')
+
+                result = sneaky()
+            """,
+            "classmethod": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "staticmethod": """
+                class Exploit:
+                    @staticmethod
+                    def run():
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "lambda_import": """
+                result = (lambda: __import__('os').listdir('.'))()
+            """,
+            "nested_function": """
+                def outer():
+                    def inner():
+                        import os
+                        return os.listdir('.')
+                    return inner()
+
+                result = outer()
+            """,
+            "classmethod_from_import": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        from os import listdir
+                        return listdir('.')
+
+                result = Exploit.run()
+            """,
+        }
+    ),
+)
+def test_deferred_import_denied(code: str) -> None:
+    """Test that deferred imports (inside functions, classmethods, etc.) are still blocked."""
+    sandbox = _sandbox_from_code(code)
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()
