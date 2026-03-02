@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.107.0 (2026-03-02)
+
+### Bug Fixes
+
+- Maintain support for command and context implementation
+  ([#1531](https://github.com/canvas-medical/canvas-plugins/pull/1531),
+  [`155bb2a`](https://github.com/canvas-medical/canvas-plugins/commit/155bb2a79322f145c777c99289fd57c732e4be0a))
+
+### Features
+
+- Collect RSS metrics on plugin load, and invocation
+  ([#1525](https://github.com/canvas-medical/canvas-plugins/pull/1525),
+  [`4a2bfad`](https://github.com/canvas-medical/canvas-plugins/commit/4a2bfad904ec3a6e911ce87c0a4f6451433d6ac1))
+
+
 ## v0.106.0 (2026-02-27)
 
 ### Features
