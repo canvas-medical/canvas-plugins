@@ -39,11 +39,7 @@ class PrescriptionResponse(models.TextChoices):
     DENIED_PRESCRIPTION_TO_FOLLOW = "N", "Denied, new prescription to follow"
 
 
-class PrescriptionQuerySet(
-    CommittableQuerySetMixin,
-    ForPatientQuerySetMixin,
-    BaseQuerySet
-):
+class PrescriptionQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """PrescriptionQuerySet."""
 
     def active(self) -> Self:
