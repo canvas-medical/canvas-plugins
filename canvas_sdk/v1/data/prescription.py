@@ -40,9 +40,9 @@ class PrescriptionResponse(models.TextChoices):
 
 
 class PrescriptionQuerySet(
-    BaseQuerySet,
     CommittableQuerySetMixin,
     ForPatientQuerySetMixin,
+    BaseQuerySet
 ):
     """PrescriptionQuerySet."""
 
