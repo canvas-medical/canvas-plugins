@@ -16,3 +16,13 @@ class PluginInstallationError(PluginError):
 
 class PluginUninstallationError(PluginError):
     """An exception raised when a plugin fails to uninstall."""
+
+
+class NamespaceAccessError(PluginError):
+    """An exception raised when a plugin cannot access its declared namespace.
+
+    This typically occurs when:
+    - The required access key secret is not configured
+    - The access key is not found in the namespace's auth table
+    - The plugin requests write access but only has read access
+    """

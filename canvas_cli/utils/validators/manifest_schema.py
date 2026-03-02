@@ -46,6 +46,7 @@ manifest_schema = {
         "license": {"type": "string"},
         "diagram": {"type": ["boolean", "string"]},
         "readme": {"type": ["boolean", "string"]},
+        "custom_data": {"$ref": "#/$defs/custom_data"},
     },
     "required": [
         "sdk_version",
@@ -179,6 +180,23 @@ manifest_schema = {
                 "required": ["name", "schema_key"],
                 "additionalProperties": False,
             },
+        },
+        "custom_data": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "pattern": "^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$",
+                    "description": "Namespace name in format 'org__name' (double underscore separator)",
+                },
+                "access": {
+                    "type": "string",
+                    "enum": ["read", "read_write"],
+                    "description": "Access level: 'read' for read-only, 'read_write' for full access",
+                },
+            },
+            "required": ["namespace", "access"],
+            "additionalProperties": False,
         },
     },
 }
