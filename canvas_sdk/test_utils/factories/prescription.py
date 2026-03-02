@@ -3,7 +3,7 @@ import factory
 from canvas_sdk.v1.data import Prescription
 
 
-class PrescriptionFactory(factory.django.DjangoModelFactory):
+class PrescriptionFactory(factory.django.DjangoModelFactory[Prescription]):
     """Factory for Prescription."""
 
     class Meta:
