@@ -114,7 +114,9 @@ class Staff(TimestampedModel):
         if not roles:
             return None
 
-        return roles[0]
+        role = sorted(roles, key=lambda role: role.domain_privilege_level)[-1]
+
+        return role
 
     @cached_property
     def top_role_abbreviation(self) -> str | None:
