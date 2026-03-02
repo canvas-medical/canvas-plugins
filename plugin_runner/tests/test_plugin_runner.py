@@ -3,6 +3,7 @@ import json
 import logging
 import pickle
 import shutil
+import signal
 from base64 import b64encode
 from http import HTTPStatus
 from pathlib import Path
@@ -792,3 +793,67 @@ def test_payment_processor(
     ]
 
     assert result[0].effects == expected_effects
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_sigterm_on_signal(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs the signal name when terminated by SIGTERM."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+
+    # Simulate SIGTERM: when wait_for_termination is called, invoke the signal handler
+    registered_handlers: dict[int, Any] = {}
+
+    def capture_signal(signum: int, handler: Any) -> None:
+        registered_handlers[signum] = handler
+
+    def fake_wait() -> None:
+        # Trigger the SIGTERM handler
+        registered_handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+    mock_server.wait_for_termination.side_effect = fake_wait
+
+    with (
+        patch("plugin_runner.plugin_runner.signal.signal", side_effect=capture_signal),
+        caplog.at_level(logging.INFO),
+    ):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGTERM)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_keyboard_interrupt(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs SIGINT when terminated by KeyboardInterrupt."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    with caplog.at_level(logging.INFO):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)
