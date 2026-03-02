@@ -910,6 +910,10 @@
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "DocumentReference",
+    "DocumentReferenceCategory",
+    "DocumentReferenceCoding",
+    "DocumentReferenceStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -989,6 +993,7 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
+    "PatientIdentificationCard",
     "PatientMetadata",
     "PatientPosting",
     "PatientSetting",
@@ -1010,6 +1015,8 @@
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "Snapshot",
+    "SnapshotImage",
     "SpecialtyReportTemplate",
     "SpecialtyReportTemplateField",
     "SpecialtyReportTemplateFieldOption",
@@ -1157,6 +1164,12 @@
   "canvas_sdk.v1.data.discount": [
     "Discount"
   ],
+  "canvas_sdk.v1.data.document_reference": [
+    "DocumentReference",
+    "DocumentReferenceCategory",
+    "DocumentReferenceCoding",
+    "DocumentReferenceStatus"
+  ],
   "canvas_sdk.v1.data.encounter": [
     "Encounter",
     "EncounterMedium",
@@ -1287,6 +1300,7 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
+    "PatientIdentificationCard",
     "PatientMetadata",
     "PatientSetting",
     "PatientSettingConstants",
@@ -1357,6 +1371,10 @@
   ],
   "canvas_sdk.v1.data.service_provider": [
     "ServiceProvider"
+  ],
+  "canvas_sdk.v1.data.snapshot": [
+    "Snapshot",
+    "SnapshotImage"
   ],
   "canvas_sdk.v1.data.specialty_report_template": [
     "SpecialtyReportTemplate",

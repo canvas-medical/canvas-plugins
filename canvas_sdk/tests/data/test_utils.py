@@ -3,8 +3,9 @@ from decimal import Decimal, InvalidOperation
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 
-from canvas_sdk.v1.data.utils import generate_mrn, quantize
+from canvas_sdk.v1.data.utils import generate_mrn, presigned_url, quantize
 
 
 @pytest.mark.parametrize(
@@ -93,3 +94,59 @@ def test_raises_runtime_error_after_max_attempts(mock_patient: MagicMock) -> Non
         generate_mrn()
 
     assert mock_patient.objects.filter.call_count == 100
+
+
+def test_presigned_url_generates_valid_url(settings: SettingsWrapper) -> None:
+    """Test that presigned_url generates a valid URL with expected components."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+
+    url = presigned_url("path/to/file.pdf")
+
+    assert url.startswith("https://test-bucket.s3.us-west-2.amazonaws.com/")
+    assert "/path/to/file.pdf?" in url
+    assert "X-Amz-Algorithm=AWS4-HMAC-SHA256" in url
+    assert "X-Amz-Credential=" in url
+    assert "X-Amz-Date=" in url
+    assert "X-Amz-Expires=3600" in url
+    assert "X-Amz-SignedHeaders=host" in url
+    assert "X-Amz-Signature=" in url
+
+
+def test_presigned_url_with_custom_expiry(settings: SettingsWrapper) -> None:
+    """Test that presigned_url respects custom expiry time."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+
+    url = presigned_url("path/to/file.pdf", expires_in=7200)
+
+    assert "X-Amz-Expires=7200" in url
+
+
+def test_presigned_url_removes_bucket_prefix(settings: SettingsWrapper) -> None:
+    """Test that presigned_url removes bucket prefix from key."""
+    settings.AWS_ACCESS_KEY_ID = "test-access-key"
+    settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+
+    url = presigned_url("test-bucket/path/to/file.pdf")
+
+    # The bucket prefix should be removed, so path should be /path/to/file.pdf
+    assert "/path/to/file.pdf?" in url
+    assert "/test-bucket/path/to/file.pdf?" not in url
+
+
+def test_presigned_url_raises_error_without_credentials(settings: SettingsWrapper) -> None:
+    """Test that presigned_url raises ValueError when AWS credentials are missing."""
+    settings.AWS_ACCESS_KEY_ID = ""
+    settings.AWS_SECRET_ACCESS_KEY = ""
+    settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
+    settings.AWS_REGION = "us-west-2"
+
+    with pytest.raises(ValueError, match="AWS credentials not configured"):
+        presigned_url("path/to/file.pdf")
