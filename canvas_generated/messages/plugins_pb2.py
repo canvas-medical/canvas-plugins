@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"\x16\n\x14ReloadPluginsRequest\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13ReloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14ReloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13UnloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14UnloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'canvas_generated/messages/plugins.proto\"\x16\n\x14ReloadPluginsRequest\"(\n\x15ReloadPluginsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13ReloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14ReloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"%\n\x13UnloadPluginRequest\x12\x0e\n\x06plugin\x18\x01 \x01(\t\"\'\n\x14UnloadPluginResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\" \n\x1eGetRegisteredEventTypesRequest\"6\n\x1fGetRegisteredEventTypesResponse\x12\x13\n\x0b\x65vent_types\x18\x01 \x03(\tb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,4 +33,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_UNLOADPLUGINREQUEST']._serialized_end=226
   _globals['_UNLOADPLUGINRESPONSE']._serialized_start=228
   _globals['_UNLOADPLUGINRESPONSE']._serialized_end=267
+  _globals['_GETREGISTEREDEVENTTYPESREQUEST']._serialized_start=269
+  _globals['_GETREGISTEREDEVENTTYPESREQUEST']._serialized_end=301
+  _globals['_GETREGISTEREDEVENTTYPESRESPONSE']._serialized_start=303
+  _globals['_GETREGISTEREDEVENTTYPESRESPONSE']._serialized_end=357
 # @@protoc_insertion_point(module_scope)
