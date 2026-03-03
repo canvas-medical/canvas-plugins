@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.108.0 (2026-03-03)
+
+### Features
+
+- Add events for prescription status
+  ([#1534](https://github.com/canvas-medical/canvas-plugins/pull/1534),
+  [`0f28f2e`](https://github.com/canvas-medical/canvas-plugins/commit/0f28f2e182d5a6905f61178e45d1accf72881503))
+
+- Add Prescription to data module
+  ([#1530](https://github.com/canvas-medical/canvas-plugins/pull/1530),
+  [`17d0646`](https://github.com/canvas-medical/canvas-plugins/commit/17d06466daced8c64c10169269be656b4a312e08))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
 ## v0.107.0 (2026-03-02)
 
 ### Bug Fixes
