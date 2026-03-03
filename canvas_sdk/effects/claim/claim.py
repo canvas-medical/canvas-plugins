@@ -12,6 +12,14 @@ from canvas_sdk.effects.claim.claim_banner_alert import (
 from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
 from canvas_sdk.effects.claim.claim_metadata import _ClaimMetadata
+from canvas_sdk.effects.claim.claim_provider import (
+    ClaimBillingProvider,
+    ClaimFacility,
+    ClaimOrderingProvider,
+    ClaimProvider,
+    ClaimReferringProvider,
+    _UpdateClaimProvider,
+)
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
 from canvas_sdk.effects.claim.payment.base import (
     ClaimAllocation,
@@ -30,6 +38,39 @@ class ClaimEffect(Model):
     """
 
     claim_id: UUID | str
+
+    def update_provider(
+        self,
+        clia_number: str | None = None,
+        billing_provider: ClaimBillingProvider | None = None,
+        provider: ClaimProvider | None = None,
+        referring_provider: ClaimReferringProvider | None = None,
+        ordering_provider: ClaimOrderingProvider | None = None,
+        facility: ClaimFacility | None = None,
+    ) -> Effect:
+        """
+        Updates provider information for the claim.
+
+        Args:
+            clia_number (str | None): The CLIA number for the claim.
+            billing_provider (ClaimBillingProvider | None): Billing provider information.
+            provider (ClaimProvider | None): Rendering or attending provider information.
+            referring_provider (ClaimReferringProvider | None): Referring provider information.
+            ordering_provider (ClaimOrderingProvider | None): Ordering provider information.
+            facility (ClaimFacility | None): Facility information.
+
+        Returns:
+            Effect: An effect that updates provider information for the claim.
+        """
+        return _UpdateClaimProvider(
+            claim_id=self.claim_id,
+            clia_number=clia_number,
+            billing_provider=billing_provider,
+            provider=provider,
+            referring_provider=referring_provider,
+            ordering_provider=ordering_provider,
+            facility=facility,
+        ).apply()
 
     def upsert_metadata(self, key: str, value: str) -> Effect:
         """
