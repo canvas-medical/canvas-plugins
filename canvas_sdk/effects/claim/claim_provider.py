@@ -29,7 +29,7 @@ class ClaimBillingProvider:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return {f"billing_provider_{k}": v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass
@@ -48,7 +48,7 @@ class ClaimProvider:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return {f"provider_{k}": v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass
@@ -64,7 +64,7 @@ class ClaimReferringProvider:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return {f"referring_provider_{k}": v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass
@@ -78,7 +78,7 @@ class ClaimOrderingProvider:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return {f"ordering_provider_{k}": v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass
@@ -98,7 +98,11 @@ class ClaimFacility:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        result = {k: v for k, v in asdict(self).items() if v is not None}
+        result = {
+            f"facility_{k}": v
+            for k, v in asdict(self).items()
+            if v is not None and k not in ("hosp_from_date", "hosp_to_date")
+        }
         if self.hosp_from_date is not None:
             result["hosp_from_date"] = self.hosp_from_date.isoformat()
         if self.hosp_to_date is not None:
@@ -126,15 +130,15 @@ class _UpdateClaimProvider(_BaseEffect):
         v = {"claim_id": str(self.claim_id)}
         if self.clia_number:
             v["clia_number"] = self.clia_number
-        for key in (
-            "billing_provider",
-            "provider",
-            "referring_provider",
-            "ordering_provider",
-            "facility",
+        for section in (
+            self.billing_provider,
+            self.provider,
+            self.referring_provider,
+            self.ordering_provider,
+            self.facility,
         ):
-            if (val := getattr(self, key)) is not None:
-                v[key] = val.to_dict()
+            if section:
+                v = v | section.to_dict()
         return v
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:

@@ -679,65 +679,63 @@ def test_update_provider_with_clia_number(mock_db_queries: dict[str, MagicMock])
 
 
 def test_update_provider_with_billing_provider(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes billing_provider when provided."""
+    """Test that update_provider includes billing_provider fields with prefix."""
     claim = ClaimEffect(claim_id="claim-id")
     billing = ClaimBillingProvider(name="Test Practice", npi="1234567890", state="CA")
     effect = claim.update_provider(billing_provider=billing)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["billing_provider"] == {
-        "name": "Test Practice",
-        "npi": "1234567890",
-        "state": "CA",
-    }
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert payload["billing_provider_npi"] == "1234567890"
+    assert payload["billing_provider_state"] == "CA"
 
 
 def test_update_provider_with_provider(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes provider when provided."""
+    """Test that update_provider includes provider fields with prefix."""
     claim = ClaimEffect(claim_id="claim-id")
     provider = ClaimProvider(first_name="John", last_name="Doe", npi="9876543210")
     effect = claim.update_provider(provider=provider)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["provider"] == {"first_name": "John", "last_name": "Doe", "npi": "9876543210"}
+    assert payload["provider_first_name"] == "John"
+    assert payload["provider_last_name"] == "Doe"
+    assert payload["provider_npi"] == "9876543210"
 
 
 def test_update_provider_with_referring_provider(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes referring_provider when provided."""
+    """Test that update_provider includes referring_provider fields with prefix."""
     claim = ClaimEffect(claim_id="claim-id")
     referring = ClaimReferringProvider(first_name="Jane", last_name="Smith", npi="1112223334")
     effect = claim.update_provider(referring_provider=referring)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["referring_provider"] == {
-        "first_name": "Jane",
-        "last_name": "Smith",
-        "npi": "1112223334",
-    }
+    assert payload["referring_provider_first_name"] == "Jane"
+    assert payload["referring_provider_last_name"] == "Smith"
+    assert payload["referring_provider_npi"] == "1112223334"
 
 
 def test_update_provider_with_ordering_provider(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes ordering_provider when provided."""
+    """Test that update_provider includes ordering_provider fields with prefix."""
     claim = ClaimEffect(claim_id="claim-id")
     ordering = ClaimOrderingProvider(first_name="Bob", last_name="Jones", npi="5556667778")
     effect = claim.update_provider(ordering_provider=ordering)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["ordering_provider"] == {
-        "first_name": "Bob",
-        "last_name": "Jones",
-        "npi": "5556667778",
-    }
+    assert payload["ordering_provider_first_name"] == "Bob"
+    assert payload["ordering_provider_last_name"] == "Jones"
+    assert payload["ordering_provider_npi"] == "5556667778"
 
 
 def test_update_provider_with_facility(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes facility when provided."""
+    """Test that update_provider includes facility fields with prefix."""
     claim = ClaimEffect(claim_id="claim-id")
     facility = ClaimFacility(name="General Hospital", npi="1231231234", state="NY")
     effect = claim.update_provider(facility=facility)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["facility"] == {"name": "General Hospital", "npi": "1231231234", "state": "NY"}
+    assert payload["facility_name"] == "General Hospital"
+    assert payload["facility_npi"] == "1231231234"
+    assert payload["facility_state"] == "NY"
 
 
 def test_update_provider_facility_date_isoformat(mock_db_queries: dict[str, MagicMock]) -> None:
@@ -751,12 +749,12 @@ def test_update_provider_facility_date_isoformat(mock_db_queries: dict[str, Magi
     effect = claim.update_provider(facility=facility)
 
     payload = json.loads(effect.payload)["data"]
-    assert payload["facility"]["hosp_from_date"] == "2024-01-15"
-    assert payload["facility"]["hosp_to_date"] == "2024-01-20"
+    assert payload["hosp_from_date"] == "2024-01-15"
+    assert payload["hosp_to_date"] == "2024-01-20"
 
 
 def test_update_provider_with_all_params(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes all params when provided."""
+    """Test that update_provider includes all params with prefixed keys."""
     claim = ClaimEffect(claim_id="claim-id")
     effect = claim.update_provider(
         clia_number="12D4567890",
@@ -770,11 +768,14 @@ def test_update_provider_with_all_params(mock_db_queries: dict[str, MagicMock]) 
     payload = json.loads(effect.payload)["data"]
     assert payload["claim_id"] == "claim-id"
     assert payload["clia_number"] == "12D4567890"
-    assert payload["billing_provider"] == {"name": "Test Practice"}
-    assert payload["provider"] == {"first_name": "John", "last_name": "Doe"}
-    assert payload["referring_provider"] == {"first_name": "Jane", "last_name": "Smith"}
-    assert payload["ordering_provider"] == {"first_name": "Bob", "last_name": "Jones"}
-    assert payload["facility"] == {"name": "General Hospital"}
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert payload["provider_first_name"] == "John"
+    assert payload["provider_last_name"] == "Doe"
+    assert payload["referring_provider_first_name"] == "Jane"
+    assert payload["referring_provider_last_name"] == "Smith"
+    assert payload["ordering_provider_first_name"] == "Bob"
+    assert payload["ordering_provider_last_name"] == "Jones"
+    assert payload["facility_name"] == "General Hospital"
 
 
 def test_update_provider_excludes_none_dataclass_fields(
@@ -786,10 +787,9 @@ def test_update_provider_excludes_none_dataclass_fields(
     effect = claim.update_provider(billing_provider=billing)
 
     payload = json.loads(effect.payload)["data"]
-    # Only 'name' should be present, not all the None fields
-    assert payload["billing_provider"] == {"name": "Test Practice"}
-    assert "phone" not in payload["billing_provider"]
-    assert "npi" not in payload["billing_provider"]
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert "billing_provider_phone" not in payload
+    assert "billing_provider_npi" not in payload
 
 
 def test_update_provider_requires_existing_claim(
