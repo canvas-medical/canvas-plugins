@@ -217,4 +217,9 @@ __all__ = __exports__ = (
     "ColorEnum",
     "LineItemTransaction",
     "PaymentMethod",
+    "ClaimBillingProvider",
+    "ClaimFacility",
+    "ClaimOrderingProvider",
+    "ClaimProvider",
+    "ClaimReferringProvider",
 )
