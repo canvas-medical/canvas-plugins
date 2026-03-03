@@ -302,6 +302,75 @@ def test_unload_plugin_should_refresh_event_handler_map(
     assert len(EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]) == 1
 
 
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+def test_unload_plugin_should_clean_sys_modules(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading a plugin removes its entries from sys.modules."""
+    import sys
+
+    # After loading, plugin modules should be in sys.modules (this plugin has
+    # cross-module imports which register in sys.modules via __import__)
+    plugin_modules_before = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert len(plugin_modules_before) > 0
+
+    unload_plugin("test_module_imports_plugin")
+
+    # After unloading, plugin modules should be removed from sys.modules
+    plugin_modules_after = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert plugin_modules_after == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_unload_and_reload_plugin_loads_cleanly(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading then reloading a plugin works without stale sys.modules."""
+    import sys
+
+    handler_a = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_a:HandlerA"
+    handler_b = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_b:HandlerB"
+
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+    unload_plugin("test_shared_modules_plugin")
+    assert handler_a not in LOADED_PLUGINS
+    assert not any(m.startswith("test_shared_modules_plugin") for m in sys.modules)
+
+    # Reload should succeed without stale module interference
+    assert load_or_reload_plugin(install_test_plugin) is True
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_shared_modules_evaluated_once_per_load(
+    install_test_plugin: Path,
+) -> None:
+    """Test that shared modules are only evaluated once when multiple handlers import them."""
+    import importlib
+    from types import ModuleType
+    from unittest.mock import patch as mock_patch
+
+    original_reload = importlib.reload
+    reload_calls: list[str] = []
+
+    def tracking_reload(module: ModuleType) -> ModuleType:
+        reload_calls.append(getattr(module, "__name__", ""))
+        return original_reload(module)
+
+    with mock_patch("plugin_runner.sandbox.importlib.reload", side_effect=tracking_reload):
+        load_plugins()
+
+    # The shared constants module should be reloaded at most once (if it was in
+    # sys.modules), not once per handler
+    constants_reloads = [
+        c for c in reload_calls if c == "test_shared_modules_plugin.common_tools.constants"
+    ]
+    assert len(constants_reloads) <= 1
+
+
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_handle_plugin_event_returns_expected_result(
     install_test_plugin: Path,
