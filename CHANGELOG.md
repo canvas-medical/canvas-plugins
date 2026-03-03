@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.107.0 (2026-03-02)
+
+### Bug Fixes
+
+- Maintain support for command and context implementation
+  ([#1531](https://github.com/canvas-medical/canvas-plugins/pull/1531),
+  [`155bb2a`](https://github.com/canvas-medical/canvas-plugins/commit/155bb2a79322f145c777c99289fd57c732e4be0a))
+
+### Features
+
+- Collect RSS metrics on plugin load, and invocation
+  ([#1525](https://github.com/canvas-medical/canvas-plugins/pull/1525),
+  [`4a2bfad`](https://github.com/canvas-medical/canvas-plugins/commit/4a2bfad904ec3a6e911ce87c0a4f6451433d6ac1))
+
+
+## v0.106.0 (2026-02-27)
+
+### Features
+
+- Changes max_length of the StaffRole.name field
+  ([#1504](https://github.com/canvas-medical/canvas-plugins/pull/1504),
+  [`dd5f880`](https://github.com/canvas-medical/canvas-plugins/commit/dd5f880d03c880e3fc09fa5644d43d878fef340e))
+
+
+## v0.105.1 (2026-02-27)
+
+### Bug Fixes
+
+- Ignore handling now applies correctly and ignore __pycache__-related files by default
+  ([#1524](https://github.com/canvas-medical/canvas-plugins/pull/1524),
+  [`4c7056f`](https://github.com/canvas-medical/canvas-plugins/commit/4c7056fabdb280e7f9aab182bbc0cea6e48bb1d2))
+
+
 ## v0.105.0 (2026-02-26)
 
 ### Features

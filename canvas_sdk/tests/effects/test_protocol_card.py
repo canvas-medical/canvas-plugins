@@ -235,10 +235,8 @@ def test_recommendation_check_subclass_validates_command_instances() -> None:
 
 def test_recommendation_check_subclass_rejects_non_command_instances() -> None:
     """Test that check_subclass validator rejects non-_BaseCommand instances."""
-    # Create an invalid object
     not_a_command = NotACommand()
 
-    # This should raise a TypeError
     with pytest.raises(TypeError) as exc_info:
         Recommendation(title="Test", button="Click", commands=[not_a_command])
 
@@ -266,7 +264,6 @@ def test_recommendation_check_subclass_rejects_mixed_valid_invalid() -> None:
     cmd = PlanCommand(narrative="Valid command")
     not_a_command = NotACommand()
 
-    # This should raise a TypeError because one item is invalid
     with pytest.raises(TypeError) as exc_info:
         Recommendation(title="Test", button="Click", commands=[cmd, not_a_command])
 
@@ -278,6 +275,33 @@ def test_recommendation_check_subclass_allows_none() -> None:
     rec = Recommendation(title="Test", button="Click", commands=None)
 
     assert rec.commands is None
+
+
+def test_add_recommendation_with_command_and_context() -> None:
+    """Test that add_recommendation normalizes command/context into commands list."""
+    p = ProtocolCard(patient_id="uuid", key="test")
+    p.add_recommendation(
+        title="test",
+        button="click",
+        command="someCommand",
+        context={"key": "value"},
+    )
+
+    rec = p.values["recommendations"][0]
+    assert rec["commands"] == [{"command": {"type": "someCommand"}, "context": {"key": "value"}}]
+
+
+def test_add_recommendation_rejects_both_command_and_commands() -> None:
+    """Test that add_recommendation raises ValueError when both command and commands are provided."""
+    p = ProtocolCard(patient_id="uuid", key="test")
+
+    with pytest.raises(ValueError, match="Cannot provide both"):
+        p.add_recommendation(  # type: ignore[call-overload]
+            title="test",
+            button="click",
+            command="someCommand",
+            commands=[PlanCommand()],
+        )
 
 
 def test_recommendation_check_subclass_allows_empty_list() -> None:

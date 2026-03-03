@@ -56,13 +56,17 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
+    default_ignore = ["__pycache__", "*.pyc", "*.pyo"]
+
     ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
     if ignore_file.exists():
-        ignore_patterns = pathspec.PathSpec.from_lines(
-            pathspec.patterns.GitWildMatchPattern, ignore_file.read_text().splitlines()
-        )
+        ignore_lines = default_ignore + ignore_file.read_text().splitlines()
     else:
-        ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
+        ignore_lines = default_ignore
+
+    ignore_patterns = pathspec.PathSpec.from_lines(
+        pathspec.patterns.GitWildMatchPattern, ignore_lines
+    )
 
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
         with tarfile.open(tar_file.name, "w:gz") as tar:
@@ -70,8 +74,10 @@ def _build_package(package: Path) -> Path:
             file_size_total = 0
 
             for path in package.rglob("*"):
+                relative = path.relative_to(package)
+
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in path.parts):
+                if any(part.startswith(".") for part in relative.parts):
                     continue
 
                 # Skip symlinks
@@ -79,7 +85,7 @@ def _build_package(package: Path) -> Path:
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(path):
+                if ignore_patterns.match_file(relative):
                     continue
 
                 file_count += 1
@@ -94,7 +100,7 @@ def _build_package(package: Path) -> Path:
                         "plugin directory"
                     )
 
-                tar.add(path, arcname=path.relative_to(package))
+                tar.add(path, arcname=relative, recursive=False)
 
             if file_count > 100:
                 print(

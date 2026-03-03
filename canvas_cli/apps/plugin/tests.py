@@ -74,6 +74,10 @@ def init_plugin(cli_runner: CliRunner, init_plugin_name: str) -> Path:
     (plugin_dir / ".hidden-dir").mkdir()
     (plugin_dir / ".hidden.file").touch()
     (plugin_dir / "symlink").symlink_to("target")
+    (plugin_dir / "__pycache__").mkdir()
+    (plugin_dir / "__pycache__" / "module.cpython-312.pyc").write_bytes(b"\x00")
+    (plugin_dir / "handlers" / ".crush").mkdir()
+    (plugin_dir / "handlers" / ".crush" / "cache.json").write_text("{}")
 
     return plugin_dir
 
@@ -121,16 +125,25 @@ def test_build_package(init_plugin: Path) -> None:
 
     # check that the package contains the plugin files
     with tarfile.open(package, "r:gz") as tar:
-        assert "CANVAS_MANIFEST.json" in tar.getnames()
-        assert "handlers" in tar.getnames()
-        assert "README.md" in tar.getnames()
+        names = tar.getnames()
+        assert "CANVAS_MANIFEST.json" in names
+        assert "handlers" in names
+        assert "README.md" in names
+        # __pycache__ should be excluded by default
+        assert not any("__pycache__" in name for name in names)
+        # hidden directories nested inside subdirectories should be excluded
+        assert not any(".crush" in name for name in names)
 
 
 @pytest.mark.parametrize(
     "ignore_lines, expected_present, expected_ignored",
     [
         # 1. Empty ignore file
-        ([], ["CANVAS_MANIFEST.json", "handlers"], [".hidden-dir", ".hidden.file", "symlink"]),
+        (
+            [],
+            ["CANVAS_MANIFEST.json", "handlers"],
+            [".hidden-dir", ".hidden.file", "symlink", "__pycache__"],
+        ),
         # 2. Relative path
         (["*.md"], ["CANVAS_MANIFEST.json", "handlers"], ["README.md"]),
         # 3. Negated path
