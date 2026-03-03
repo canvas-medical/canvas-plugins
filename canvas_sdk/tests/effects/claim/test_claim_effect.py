@@ -810,7 +810,7 @@ def test_update_provider_requires_existing_provider_info(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
     """Test that update_provider validates the claim has existing provider information."""
-    mock_db_queries["claim_provider_obj"].provider = None
+    mock_db_queries["claim_provider_obj"].provider_id = None
     claim = ClaimEffect(claim_id="claim-id")
 
     with pytest.raises(ValidationError) as e:
