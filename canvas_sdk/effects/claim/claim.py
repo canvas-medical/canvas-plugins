@@ -41,7 +41,6 @@ class ClaimEffect(Model):
 
     def update_provider(
         self,
-        clia_number: str | None = None,
         billing_provider: ClaimBillingProvider | None = None,
         provider: ClaimProvider | None = None,
         referring_provider: ClaimReferringProvider | None = None,
@@ -64,7 +63,6 @@ class ClaimEffect(Model):
         """
         return _UpdateClaimProvider(
             claim_id=self.claim_id,
-            clia_number=clia_number,
             billing_provider=billing_provider,
             provider=provider,
             referring_provider=referring_provider,
