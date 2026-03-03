@@ -51,7 +51,6 @@ class ClaimEffect(Model):
         Updates provider information for the claim.
 
         Args:
-            clia_number (str | None): The CLIA number for the claim.
             billing_provider (ClaimBillingProvider | None): Billing provider information.
             provider (ClaimProvider | None): Rendering or attending provider information.
             referring_provider (ClaimReferringProvider | None): Referring provider information.
