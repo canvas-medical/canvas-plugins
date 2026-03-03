@@ -3,6 +3,7 @@ name: jira-link-labeler
 on:
   pull_request_target:
     types: [opened, edited, reopened]
+  workflow_dispatch:
 
 jobs:
   update-jira-labels:
@@ -15,51 +16,66 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const body = context.payload.pull_request.body || '';
-            const hasJira = body.includes('https://canvasmedical.atlassian.net');
+            async function labelPr(prNumber, prBody) {
+              const hasJira = prBody.includes('https://canvasmedical.atlassian.net');
 
-            const labels = await github.rest.issues.listLabelsOnIssue({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
-            });
+              const labels = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
 
-            const currentLabels = labels.data.map(l => l.name);
+              const currentLabels = labels.data.map(l => l.name);
 
-            if (hasJira) {
-              if (!currentLabels.includes('Jira: Linked')) {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  labels: ['Jira: Linked']
-                });
+              if (hasJira) {
+                if (!currentLabels.includes('Jira: Linked')) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    labels: ['Jira: Linked']
+                  });
+                }
+                if (currentLabels.includes('Jira: Not Linked')) {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    name: 'Jira: Not Linked'
+                  });
+                }
+              } else {
+                if (!currentLabels.includes('Jira: Not Linked')) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    labels: ['Jira: Not Linked']
+                  });
+                }
+                if (currentLabels.includes('Jira: Linked')) {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    name: 'Jira: Linked'
+                  });
+                }
               }
+            }
 
-              if (currentLabels.includes('Jira: Not Linked')) {
-                await github.rest.issues.removeLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  name: 'Jira: Not Linked'
-                });
+            if (context.eventName === 'workflow_dispatch') {
+              // Process all open PRs
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100
+              });
+              for (const pr of prs) {
+                console.log(`Processing PR #${pr.number}: ${pr.title}`);
+                await labelPr(pr.number, pr.body || '');
               }
             } else {
-              if (!currentLabels.includes('Jira: Not Linked')) {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  labels: ['Jira: Not Linked']
-                });
-              }
-
-              if (currentLabels.includes('Jira: Linked')) {
-                await github.rest.issues.removeLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  name: 'Jira: Linked'
-                });
-              }
+              await labelPr(context.issue.number, context.payload.pull_request.body || '');
             }
