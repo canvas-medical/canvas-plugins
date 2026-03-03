@@ -1,117 +1,113 @@
-from dataclasses import asdict, dataclass
+from dataclasses import fields
 from datetime import date
-from typing import Any
+from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
-from pydantic import constr
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim
 
 
+class _PrefixedDictMixin:
+    """Mixin that converts dataclass fields to a prefixed dict, excluding None values."""
+
+    _prefix: ClassVar[str]
+    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to a dictionary with prefixed keys, excluding None values."""
+        result = {}
+        for field in fields(self):  # type: ignore[arg-type]
+            f = field.name
+            if (val := getattr(self, f)) is None:
+                continue
+            value = val.isoformat() if isinstance(val, date) else val
+            key = f if f in self._unprefixed_fields else f"{self._prefix}_{f}"
+            result[key] = value
+        return result
+
+
 @dataclass
-class ClaimBillingProvider:
+class ClaimBillingProvider(_PrefixedDictMixin):
     """Billing provider information for a claim."""
 
-    name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    phone: constr(max_length=15) | None = None  # type: ignore[valid-type]
-    addr1: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    addr2: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    city: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    state: constr(max_length=2) | None = None  # type: ignore[valid-type]
-    zip: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
-    tax_id: constr(max_length=100) | None = None  # type: ignore[valid-type]
-    tax_id_type: constr(max_length=1) | None = None  # type: ignore[valid-type]
-    taxonomy: constr(max_length=100) | None = None  # type: ignore[valid-type]
-    clia_number: constr(max_length=100) | None = None  # type: ignore[valid-type]
+    _prefix: ClassVar[str] = "billing_provider"
+    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset({"clia_number"})
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary, excluding None values."""
-        base = {
-            f"billing_provider_{k}": v
-            for k, v in asdict(self).items()
-            if v is not None and k != "clia_number"
-        }
-        if self.clia_number:
-            base["clia_number"] = self.clia_number
-        return base
+    name: Annotated[str, Field(max_length=255)] | None = None
+    phone: Annotated[str, Field(max_length=15)] | None = None
+    addr1: Annotated[str, Field(max_length=255)] | None = None
+    addr2: Annotated[str, Field(max_length=255)] | None = None
+    city: Annotated[str, Field(max_length=255)] | None = None
+    state: Annotated[str, Field(max_length=2)] | None = None
+    zip: Annotated[str, Field(max_length=255)] | None = None
+    npi: Annotated[str, Field(max_length=10)] | None = None
+    tax_id: Annotated[str, Field(max_length=100)] | None = None
+    tax_id_type: Annotated[str, Field(max_length=1)] | None = None
+    taxonomy: Annotated[str, Field(max_length=100)] | None = None
+    clia_number: Annotated[str, Field(max_length=100)] | None = None
 
 
 @dataclass
-class ClaimProvider:
+class ClaimProvider(_PrefixedDictMixin):
     """Rendering or attending provider information for a claim."""
 
-    first_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    last_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    middle_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
-    tax_id: constr(max_length=100) | None = None  # type: ignore[valid-type]
-    tax_id_type: constr(max_length=1) | None = None  # type: ignore[valid-type]
-    taxonomy: constr(max_length=100) | None = None  # type: ignore[valid-type]
-    ptan_identifier: constr(max_length=50) | None = None  # type: ignore[valid-type]
+    _prefix: ClassVar[str] = "provider"
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary, excluding None values."""
-        return {f"provider_{k}": v for k, v in asdict(self).items() if v is not None}
+    first_name: Annotated[str, Field(max_length=255)] | None = None
+    last_name: Annotated[str, Field(max_length=255)] | None = None
+    middle_name: Annotated[str, Field(max_length=255)] | None = None
+    npi: Annotated[str, Field(max_length=10)] | None = None
+    tax_id: Annotated[str, Field(max_length=100)] | None = None
+    tax_id_type: Annotated[str, Field(max_length=1)] | None = None
+    taxonomy: Annotated[str, Field(max_length=100)] | None = None
+    ptan_identifier: Annotated[str, Field(max_length=50)] | None = None
 
 
 @dataclass
-class ClaimReferringProvider:
+class ClaimReferringProvider(_PrefixedDictMixin):
     """Referring provider information for a claim."""
 
-    first_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    last_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    middle_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
-    ptan_identifier: constr(max_length=50) | None = None  # type: ignore[valid-type]
+    _prefix: ClassVar[str] = "referring_provider"
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary, excluding None values."""
-        return {f"referring_provider_{k}": v for k, v in asdict(self).items() if v is not None}
+    first_name: Annotated[str, Field(max_length=255)] | None = None
+    last_name: Annotated[str, Field(max_length=255)] | None = None
+    middle_name: Annotated[str, Field(max_length=255)] | None = None
+    npi: Annotated[str, Field(max_length=10)] | None = None
+    ptan_identifier: Annotated[str, Field(max_length=50)] | None = None
 
 
 @dataclass
-class ClaimOrderingProvider:
+class ClaimOrderingProvider(_PrefixedDictMixin):
     """Ordering provider information for a claim."""
 
-    first_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    last_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    middle_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
+    _prefix: ClassVar[str] = "ordering_provider"
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary, excluding None values."""
-        return {f"ordering_provider_{k}": v for k, v in asdict(self).items() if v is not None}
+    first_name: Annotated[str, Field(max_length=255)] | None = None
+    last_name: Annotated[str, Field(max_length=255)] | None = None
+    middle_name: Annotated[str, Field(max_length=255)] | None = None
+    npi: Annotated[str, Field(max_length=10)] | None = None
 
 
 @dataclass
-class ClaimFacility:
+class ClaimFacility(_PrefixedDictMixin):
     """Facility information for a claim, including hospitalization dates."""
 
-    name: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
-    addr1: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    addr2: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    city: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    state: constr(max_length=2) | None = None  # type: ignore[valid-type]
-    zip: constr(max_length=255) | None = None  # type: ignore[valid-type]
+    _prefix: ClassVar[str] = "facility"
+    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset({"hosp_from_date", "hosp_to_date"})
+
+    name: Annotated[str, Field(max_length=255)] | None = None
+    npi: Annotated[str, Field(max_length=10)] | None = None
+    addr1: Annotated[str, Field(max_length=255)] | None = None
+    addr2: Annotated[str, Field(max_length=255)] | None = None
+    city: Annotated[str, Field(max_length=255)] | None = None
+    state: Annotated[str, Field(max_length=2)] | None = None
+    zip: Annotated[str, Field(max_length=255)] | None = None
     hosp_from_date: date | None = None
     hosp_to_date: date | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary, excluding None values."""
-        result = {
-            f"facility_{k}": v
-            for k, v in asdict(self).items()
-            if v is not None and k not in ("hosp_from_date", "hosp_to_date")
-        }
-        if self.hosp_from_date is not None:
-            result["hosp_from_date"] = self.hosp_from_date.isoformat()
-        if self.hosp_to_date is not None:
-            result["hosp_to_date"] = self.hosp_to_date.isoformat()
-        return result
 
 
 class _UpdateClaimProvider(_BaseEffect):
@@ -139,7 +135,7 @@ class _UpdateClaimProvider(_BaseEffect):
             self.facility,
         ):
             if section:
-                v = v | section.to_dict()
+                v.update(section.to_dict())
         return v
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
@@ -153,7 +149,7 @@ class _UpdateClaimProvider(_BaseEffect):
                 )
             )
             return errors
-        if not claim.provider:
+        if not claim.provider_id:
             # this scenario is extremely unlikely, but in the event that a claim is manually manipulated in home-app
             # to not have any provider info, this will at least let them know there's an issue with the claim
             errors.append(
