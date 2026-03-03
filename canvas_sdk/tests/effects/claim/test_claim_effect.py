@@ -669,9 +669,10 @@ def test_update_provider_with_only_claim_id(mock_db_queries: dict[str, MagicMock
 
 
 def test_update_provider_with_clia_number(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that update_provider includes clia_number when provided."""
+    """Test that update_provider includes clia_number via billing_provider."""
     claim = ClaimEffect(claim_id="claim-id")
-    effect = claim.update_provider(clia_number="12D4567890")
+    billing = ClaimBillingProvider(clia_number="12D4567890")
+    effect = claim.update_provider(billing_provider=billing)
 
     payload = json.loads(effect.payload)["data"]
     assert payload["claim_id"] == "claim-id"
@@ -757,8 +758,7 @@ def test_update_provider_with_all_params(mock_db_queries: dict[str, MagicMock]) 
     """Test that update_provider includes all params with prefixed keys."""
     claim = ClaimEffect(claim_id="claim-id")
     effect = claim.update_provider(
-        clia_number="12D4567890",
-        billing_provider=ClaimBillingProvider(name="Test Practice"),
+        billing_provider=ClaimBillingProvider(name="Test Practice", clia_number="12D4567890"),
         provider=ClaimProvider(first_name="John", last_name="Doe"),
         referring_provider=ClaimReferringProvider(first_name="Jane", last_name="Smith"),
         ordering_provider=ClaimOrderingProvider(first_name="Bob", last_name="Jones"),

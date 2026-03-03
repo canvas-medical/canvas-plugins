@@ -25,10 +25,18 @@ class ClaimBillingProvider:
     tax_id: constr(max_length=100) | None = None  # type: ignore[valid-type]
     tax_id_type: constr(max_length=1) | None = None  # type: ignore[valid-type]
     taxonomy: constr(max_length=100) | None = None  # type: ignore[valid-type]
+    clia_number: constr(max_length=100) | None = None  # type: ignore[valid-type]
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary, excluding None values."""
-        return {f"billing_provider_{k}": v for k, v in asdict(self).items() if v is not None}
+        base = {
+            f"billing_provider_{k}": v
+            for k, v in asdict(self).items()
+            if v is not None and k != "clia_number"
+        }
+        if self.clia_number:
+            base["clia_number"] = self.clia_number
+        return base
 
 
 @dataclass
@@ -113,7 +121,6 @@ class _UpdateClaimProvider(_BaseEffect):
         effect_type = EffectType.UPDATE_CLAIM_PROVIDER
 
     claim_id: UUID | str
-    clia_number: constr(max_length=100) | None = None  # type: ignore[valid-type]
     billing_provider: ClaimBillingProvider | None = None
     provider: ClaimProvider | None = None
     referring_provider: ClaimReferringProvider | None = None
@@ -124,8 +131,6 @@ class _UpdateClaimProvider(_BaseEffect):
     def values(self) -> dict[str, Any]:
         """The values for updating a claim provider."""
         v = {"claim_id": str(self.claim_id)}
-        if self.clia_number:
-            v["clia_number"] = self.clia_number
         for section in (
             self.billing_provider,
             self.provider,
