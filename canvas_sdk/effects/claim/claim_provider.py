@@ -21,7 +21,6 @@ class ClaimBillingProvider:
     city: constr(max_length=255) | None = None  # type: ignore[valid-type]
     state: constr(max_length=2) | None = None  # type: ignore[valid-type]
     zip: constr(max_length=255) | None = None  # type: ignore[valid-type]
-    id: constr(max_length=255) | None = None  # type: ignore[valid-type]
     npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
     tax_id: constr(max_length=100) | None = None  # type: ignore[valid-type]
     tax_id_type: constr(max_length=1) | None = None  # type: ignore[valid-type]
@@ -36,7 +35,6 @@ class ClaimBillingProvider:
 class ClaimProvider:
     """Rendering or attending provider information for a claim."""
 
-    id: constr(max_length=255) | None = None  # type: ignore[valid-type]
     first_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
     last_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
     middle_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
@@ -55,7 +53,6 @@ class ClaimProvider:
 class ClaimReferringProvider:
     """Referring provider information for a claim."""
 
-    id: constr(max_length=255) | None = None  # type: ignore[valid-type]
     first_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
     last_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
     middle_name: constr(max_length=255) | None = None  # type: ignore[valid-type]
@@ -85,7 +82,6 @@ class ClaimOrderingProvider:
 class ClaimFacility:
     """Facility information for a claim, including hospitalization dates."""
 
-    id: constr(max_length=255) | None = None  # type: ignore[valid-type]
     name: constr(max_length=255) | None = None  # type: ignore[valid-type]
     npi: constr(max_length=10) | None = None  # type: ignore[valid-type]
     addr1: constr(max_length=255) | None = None  # type: ignore[valid-type]
