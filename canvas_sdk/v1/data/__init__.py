@@ -116,6 +116,7 @@ from .patient_consent import (
     PatientConsentCoding,
     PatientConsentRejectionCoding,
 )
+from .patient_group import PatientGroup, PatientGroupMembership
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .posting import (
@@ -290,6 +291,8 @@ __all__ = __exports__ = (
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientGroup",
+    "PatientGroupMembership",
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
