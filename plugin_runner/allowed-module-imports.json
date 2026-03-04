@@ -873,6 +873,10 @@
     "pharmacy_http",
     "science_http"
   ],
+  "canvas_sdk.utils.pdf": [
+    "PdfAuthRequest",
+    "pdf_generator"
+  ],
   "canvas_sdk.v1.data": [
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
@@ -1008,6 +1012,9 @@
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescriptionStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
@@ -1327,6 +1334,11 @@
     "PracticeLocationContactPoint",
     "PracticeLocationPOS",
     "PracticeLocationSetting"
+  ],
+  "canvas_sdk.v1.data.prescription": [
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescriptionStatus"
   ],
   "canvas_sdk.v1.data.protocol_current": [
     "ProtocolCurrent",
