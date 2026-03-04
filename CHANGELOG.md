@@ -1,6 +1,47 @@
 # CHANGELOG
 
 
+## v0.108.0 (2026-03-03)
+
+### Features
+
+- Add events for prescription status
+  ([#1534](https://github.com/canvas-medical/canvas-plugins/pull/1534),
+  [`0f28f2e`](https://github.com/canvas-medical/canvas-plugins/commit/0f28f2e182d5a6905f61178e45d1accf72881503))
+
+- Add Prescription to data module
+  ([#1530](https://github.com/canvas-medical/canvas-plugins/pull/1530),
+  [`17d0646`](https://github.com/canvas-medical/canvas-plugins/commit/17d06466daced8c64c10169269be656b4a312e08))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.107.0 (2026-03-02)
+
+### Bug Fixes
+
+- Maintain support for command and context implementation
+  ([#1531](https://github.com/canvas-medical/canvas-plugins/pull/1531),
+  [`155bb2a`](https://github.com/canvas-medical/canvas-plugins/commit/155bb2a79322f145c777c99289fd57c732e4be0a))
+
+### Features
+
+- Collect RSS metrics on plugin load, and invocation
+  ([#1525](https://github.com/canvas-medical/canvas-plugins/pull/1525),
+  [`4a2bfad`](https://github.com/canvas-medical/canvas-plugins/commit/4a2bfad904ec3a6e911ce87c0a4f6451433d6ac1))
+
+
+## v0.106.0 (2026-02-27)
+
+### Features
+
+- Changes max_length of the StaffRole.name field
+  ([#1504](https://github.com/canvas-medical/canvas-plugins/pull/1504),
+  [`dd5f880`](https://github.com/canvas-medical/canvas-plugins/commit/dd5f880d03c880e3fc09fa5644d43d878fef340e))
+
+
 ## v0.105.1 (2026-02-27)
 
 ### Bug Fixes
