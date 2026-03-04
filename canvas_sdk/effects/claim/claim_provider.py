@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Claim
+from canvas_sdk.v1.data import ClaimProvider as ClaimProviderModel
 
 
 class _PrefixedDictMixin:
@@ -149,9 +150,7 @@ class _UpdateClaimProvider(_BaseEffect):
                 )
             )
             return errors
-        try:
-            _ = claim.provider
-        except Claim.provider.RelatedObjectDoesNotExist:
+        if not ClaimProviderModel.objects.filter(claim=claim).exists():
             # this scenario is extremely unlikely, but in the event that a claim is manually manipulated in home-app
             # to not have any provider info, this will at least let them know there's an issue with the claim
             errors.append(

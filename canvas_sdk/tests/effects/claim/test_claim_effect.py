@@ -38,6 +38,9 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.claim.claim_queue.Claim") as mock_claim_queue,
         patch("canvas_sdk.effects.claim.claim_queue.ClaimQueue") as mock_queue,
         patch("canvas_sdk.effects.claim.claim_provider.Claim") as mock_claim_provider,
+        patch(
+            "canvas_sdk.effects.claim.claim_provider.ClaimProviderModel"
+        ) as mock_claim_provider_model,
         patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
         patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli,
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
@@ -50,10 +53,10 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_claim_queue.objects.filter.return_value.exists.return_value = True
         mock_queue.objects.filter.return_value.exists.return_value = True
 
-        # Setup claim_provider mock - .first() returns a claim with a provider
+        # Setup claim_provider mock - .first() returns a claim, and ClaimProviderModel exists
         mock_provider_claim_obj = MagicMock()
-        mock_provider_claim_obj.provider = MagicMock()
         mock_claim_provider.objects.filter.return_value.first.return_value = mock_provider_claim_obj
+        mock_claim_provider_model.objects.filter.return_value.exists.return_value = True
 
         # Setup payment-related mocks
         mock_claim_obj = MagicMock()
@@ -90,6 +93,7 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
             "claim_queue": mock_claim_queue,
             "queue": mock_queue,
             "claim_provider": mock_claim_provider,
+            "claim_provider_model": mock_claim_provider_model,
             "claim_provider_obj": mock_provider_claim_obj,
             "payment_claim": mock_payment_claim,
             "payment_claim_obj": mock_claim_obj,
@@ -810,7 +814,7 @@ def test_update_provider_requires_existing_provider_info(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:
     """Test that update_provider validates the claim has existing provider information."""
-    mock_db_queries["claim_provider_obj"].provider_id = None
+    mock_db_queries["claim_provider_model"].objects.filter.return_value.exists.return_value = False
     claim = ClaimEffect(claim_id="claim-id")
 
     with pytest.raises(ValidationError) as e:
