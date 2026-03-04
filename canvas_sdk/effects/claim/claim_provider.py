@@ -1,6 +1,5 @@
-from collections.abc import Callable
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
 from pydantic import Field, TypeAdapter
@@ -12,38 +11,37 @@ from canvas_sdk.v1.data import Claim
 from canvas_sdk.v1.data import ClaimProvider as ClaimProviderModel
 
 
-class _ClaimSection:
-    """Base class providing to_dict type signature for claim section dataclasses."""
+class _PrefixedDict:
+    """Base class that converts dataclass fields to a prefixed dict, excluding None values."""
 
-    def to_dict(self) -> dict[str, str]:
-        raise NotImplementedError
+    _prefix: ClassVar[str]
+    _unprefixed_fields: ClassVar[frozenset[str]]
 
+    def __init_subclass__(
+        cls,
+        prefix: str = "",
+        unprefixed_fields: frozenset[str] = frozenset(),
+        **kwargs: Any,
+    ) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._prefix = prefix
+        cls._unprefixed_fields = unprefixed_fields
 
-def prefixed_dict(
-    prefix: str,
-    unprefixed_fields: frozenset[str] = frozenset(),
-) -> Callable[[type[_ClaimSection]], type[_ClaimSection]]:
-    """Decorator that adds a to_dict method with prefixed keys to a dataclass."""
-
-    def decorator(cls: type[_ClaimSection]) -> type[_ClaimSection]:
-        def to_dict(self: _ClaimSection) -> dict[str, str]:
-            raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
-            return {
-                (f if f in unprefixed_fields else f"{prefix}_{f}"): (
-                    v.isoformat() if isinstance(v, date) else v
-                )
-                for f, v in raw.items()
-            }
-
-        cls.to_dict = to_dict  # type: ignore[method-assign]
-        return cls
-
-    return decorator
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to a dictionary with prefixed keys, excluding None values."""
+        raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
+        return {
+            (f if f in self._unprefixed_fields else f"{self._prefix}_{f}"): (
+                v.isoformat() if isinstance(v, date) else v
+            )
+            for f, v in raw.items()
+        }
 
 
 @dataclass
-@prefixed_dict("billing_provider", unprefixed_fields=frozenset({"clia_number"}))
-class ClaimBillingProvider(_ClaimSection):
+class ClaimBillingProvider(
+    _PrefixedDict, prefix="billing_provider", unprefixed_fields=frozenset({"clia_number"})
+):
     """Billing provider information for a claim."""
 
     name: Annotated[str, Field(max_length=255)] | None = None
@@ -61,8 +59,7 @@ class ClaimBillingProvider(_ClaimSection):
 
 
 @dataclass
-@prefixed_dict("provider")
-class ClaimProvider(_ClaimSection):
+class ClaimProvider(_PrefixedDict, prefix="provider"):
     """Rendering or attending provider information for a claim."""
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
@@ -76,8 +73,7 @@ class ClaimProvider(_ClaimSection):
 
 
 @dataclass
-@prefixed_dict("referring_provider")
-class ClaimReferringProvider(_ClaimSection):
+class ClaimReferringProvider(_PrefixedDict, prefix="referring_provider"):
     """Referring provider information for a claim."""
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
@@ -88,8 +84,7 @@ class ClaimReferringProvider(_ClaimSection):
 
 
 @dataclass
-@prefixed_dict("ordering_provider")
-class ClaimOrderingProvider(_ClaimSection):
+class ClaimOrderingProvider(_PrefixedDict, prefix="ordering_provider"):
     """Ordering provider information for a claim."""
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
@@ -99,8 +94,11 @@ class ClaimOrderingProvider(_ClaimSection):
 
 
 @dataclass
-@prefixed_dict("facility", unprefixed_fields=frozenset({"hosp_from_date", "hosp_to_date"}))
-class ClaimFacility(_ClaimSection):
+class ClaimFacility(
+    _PrefixedDict,
+    prefix="facility",
+    unprefixed_fields=frozenset({"hosp_from_date", "hosp_to_date"}),
+):
     """Facility information for a claim, including hospitalization dates."""
 
     name: Annotated[str, Field(max_length=255)] | None = None
