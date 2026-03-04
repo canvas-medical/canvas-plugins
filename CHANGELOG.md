@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.109.0 (2026-03-04)
+
+### Features
+
+- Pdf generator util ([#1529](https://github.com/canvas-medical/canvas-plugins/pull/1529),
+  [`647e210`](https://github.com/canvas-medical/canvas-plugins/commit/647e210c7948ec913a3f70bb4905daa46ea87eb1))
+
+
 ## v0.108.0 (2026-03-03)
 
 ### Features
