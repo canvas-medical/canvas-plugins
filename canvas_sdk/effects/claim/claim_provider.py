@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from datetime import date
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import Field, TypeAdapter
@@ -11,29 +12,39 @@ from canvas_sdk.v1.data import Claim
 from canvas_sdk.v1.data import ClaimProvider as ClaimProviderModel
 
 
-class _PrefixedDictMixin:
-    """Mixin that converts dataclass fields to a prefixed dict, excluding None values."""
+class _ClaimSection:
+    """Base class providing to_dict type signature for claim section dataclasses."""
 
-    _prefix: ClassVar[str]
-    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset()
+    def to_dict(self) -> dict[str, str]:
+        raise NotImplementedError
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary with prefixed keys, excluding None values."""
-        raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
-        return {
-            (f if f in self._unprefixed_fields else f"{self._prefix}_{f}"): v.isoformat()
-            if isinstance(v, date)
-            else v
-            for f, v in raw.items()
-        }
+
+def prefixed_dict(
+    prefix: str,
+    unprefixed_fields: frozenset[str] = frozenset(),
+) -> Callable[[type[_ClaimSection]], type[_ClaimSection]]:
+    """Decorator that adds a to_dict method with prefixed keys to a dataclass."""
+
+    def decorator(cls: type[_ClaimSection]) -> type[_ClaimSection]:
+        def to_dict(self: _ClaimSection) -> dict[str, str]:
+            raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
+            return {
+                (f if f in unprefixed_fields else f"{prefix}_{f}"): (
+                    v.isoformat() if isinstance(v, date) else v
+                )
+                for f, v in raw.items()
+            }
+
+        cls.to_dict = to_dict  # type: ignore[method-assign]
+        return cls
+
+    return decorator
 
 
 @dataclass
-class ClaimBillingProvider(_PrefixedDictMixin):
+@prefixed_dict("billing_provider", unprefixed_fields=frozenset({"clia_number"}))
+class ClaimBillingProvider(_ClaimSection):
     """Billing provider information for a claim."""
-
-    _prefix: ClassVar[str] = "billing_provider"
-    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset({"clia_number"})
 
     name: Annotated[str, Field(max_length=255)] | None = None
     phone: Annotated[str, Field(max_length=15)] | None = None
@@ -50,10 +61,9 @@ class ClaimBillingProvider(_PrefixedDictMixin):
 
 
 @dataclass
-class ClaimProvider(_PrefixedDictMixin):
+@prefixed_dict("provider")
+class ClaimProvider(_ClaimSection):
     """Rendering or attending provider information for a claim."""
-
-    _prefix: ClassVar[str] = "provider"
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
     last_name: Annotated[str, Field(max_length=255)] | None = None
@@ -66,10 +76,9 @@ class ClaimProvider(_PrefixedDictMixin):
 
 
 @dataclass
-class ClaimReferringProvider(_PrefixedDictMixin):
+@prefixed_dict("referring_provider")
+class ClaimReferringProvider(_ClaimSection):
     """Referring provider information for a claim."""
-
-    _prefix: ClassVar[str] = "referring_provider"
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
     last_name: Annotated[str, Field(max_length=255)] | None = None
@@ -79,10 +88,9 @@ class ClaimReferringProvider(_PrefixedDictMixin):
 
 
 @dataclass
-class ClaimOrderingProvider(_PrefixedDictMixin):
+@prefixed_dict("ordering_provider")
+class ClaimOrderingProvider(_ClaimSection):
     """Ordering provider information for a claim."""
-
-    _prefix: ClassVar[str] = "ordering_provider"
 
     first_name: Annotated[str, Field(max_length=255)] | None = None
     last_name: Annotated[str, Field(max_length=255)] | None = None
@@ -91,11 +99,9 @@ class ClaimOrderingProvider(_PrefixedDictMixin):
 
 
 @dataclass
-class ClaimFacility(_PrefixedDictMixin):
+@prefixed_dict("facility", unprefixed_fields=frozenset({"hosp_from_date", "hosp_to_date"}))
+class ClaimFacility(_ClaimSection):
     """Facility information for a claim, including hospitalization dates."""
-
-    _prefix: ClassVar[str] = "facility"
-    _unprefixed_fields: ClassVar[frozenset[str]] = frozenset({"hosp_from_date", "hosp_to_date"})
 
     name: Annotated[str, Field(max_length=255)] | None = None
     npi: Annotated[str, Field(max_length=10)] | None = None
