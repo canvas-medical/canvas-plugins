@@ -149,7 +149,9 @@ class _UpdateClaimProvider(_BaseEffect):
                 )
             )
             return errors
-        if not claim.provider_id:
+        try:
+            _ = claim.provider
+        except Claim.provider.RelatedObjectDoesNotExist:
             # this scenario is extremely unlikely, but in the event that a claim is manually manipulated in home-app
             # to not have any provider info, this will at least let them know there's an issue with the claim
             errors.append(
