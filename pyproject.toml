@@ -4,7 +4,7 @@ requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
-  "grpcio-tools>=1.66.1,<2",
+  "grpcio-tools>=1.78.0,<2",
   "httpretty>=1.1.4",
   "mypy>=1.17.0,<2",
   "pre-commit>=4.3.0,<5",
@@ -35,11 +35,11 @@ dependencies = [
   "env-tools>=2.4.0,<3",
   "factory-boy>=3.3.3",
   "frozendict>=2.4.6",
-  "grpcio>=1.66.1,<2",
+  "grpcio>=1.78.0,<2",
   "ipython>=8.21.0,<9",
   "jsonschema>=4.21.1,<5",
   "pathspec>=0.12.1",
-  "protobuf>=5.26.1,<6",
+  "protobuf>=6,<7",
   "psutil==7.2.2",
   "psycopg[binary,pool]>=3.3.3,<4",
   "pydantic>=2.12.5,<3",
