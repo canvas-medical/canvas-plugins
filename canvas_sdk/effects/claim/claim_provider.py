@@ -1,9 +1,8 @@
-from dataclasses import fields
 from datetime import date
 from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, TypeAdapter
 from pydantic.dataclasses import dataclass
 from pydantic_core import InitErrorDetails
 
@@ -20,15 +19,13 @@ class _PrefixedDictMixin:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary with prefixed keys, excluding None values."""
-        result = {}
-        for field in fields(self):  # type: ignore[arg-type]
-            f = field.name
-            if (val := getattr(self, f)) is None:
-                continue
-            value = val.isoformat() if isinstance(val, date) else val
-            key = f if f in self._unprefixed_fields else f"{self._prefix}_{f}"
-            result[key] = value
-        return result
+        raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
+        return {
+            (f if f in self._unprefixed_fields else f"{self._prefix}_{f}"): v.isoformat()
+            if isinstance(v, date)
+            else v
+            for f, v in raw.items()
+        }
 
 
 @dataclass
