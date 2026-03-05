@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "example_plugin.handlers.my_protocol:Protocol",
+                "class": "example_plugin.handlers.my_handler:Handler",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

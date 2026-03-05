@@ -6,7 +6,7 @@
   "components": {
     "handlers": [
       {
-        "class": "coverage_metadata_sync.handlers.metadata_sync:CoverageStatusSyncProtocol",
+        "class": "coverage_metadata_sync.handlers.metadata_sync:CoverageStatusSyncHandler",
         "description": "Listens for MISSING_COVERAGE label events on appointments and synchronizes the patient's 'coverage_status' metadata field accordingly.",
         "data_access": {
           "event": "read",

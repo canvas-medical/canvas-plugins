@@ -1,10 +1,10 @@
-from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
+from test_caching_api.wrapper import WrappedCache, wrapped_get_cache
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """
     You should put a helpful description of this handler's behavior here.
     """
@@ -14,6 +14,16 @@ class Protocol(BaseHandler):
 
     def compute(self) -> list[Effect]:
         """Test that the plugin successfully sets and gets a key-value pair in the cache."""
-        cache = get_cache()
-        cache.set("foo", "bar")
-        return [Effect(type=EffectType.LOG, payload=cache.get("foo"))]
+        cache = wrapped_get_cache()
+        cache.set("foo2", "bar2")
+
+        WrappedCache.set("foo3", "bar3")
+
+        payload = f"{cache.get('foo2')}{WrappedCache.get('foo3')}"
+
+        return [
+            Effect(
+                type=EffectType.LOG,
+                payload=payload,
+            )
+        ]

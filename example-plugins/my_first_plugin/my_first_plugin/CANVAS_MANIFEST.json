@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "my_first_plugin.handlers.protocol:Protocol",
+                "class": "my_first_plugin.handlers.handler:Handler",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "ASSESS_COMMAND__CONDITION_SELECTED",

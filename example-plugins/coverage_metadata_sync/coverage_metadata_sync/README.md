@@ -247,7 +247,7 @@ coverage_metadata_sync/
 
 ### Key Components
 
-- **CoverageStatusSyncProtocol** - Main protocol class handling label events
+- **CoverageStatusSyncHandler** - Main protocol class handling label events
 - **compute()** - Event routing and metadata update logic
 - **MONITORED_LABEL** - Constant defining which label triggers updates ("MISSING_COVERAGE")
 - **METADATA_KEY** - Constant defining metadata field name ("coverage_status")
