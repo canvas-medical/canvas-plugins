@@ -4,9 +4,7 @@ from canvas_sdk.handlers.base import BaseHandler
 
 
 class BaseProtocol(BaseHandler, ABC):
-    """
-    The class that protocols inherit from.
-    """
+    """Deprecated alias for BaseHandler. Use canvas_sdk.handlers.base.BaseHandler instead."""
 
     pass
 

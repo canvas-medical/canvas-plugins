@@ -9,7 +9,7 @@ from canvas_sdk.events import EventType
 
 def test_import_protocol() -> None:
     """Test that Protocol can be imported without errors."""
-    from my_first_plugin.protocols.protocol import Protocol
+    from my_first_plugin.handlers.protocol import Protocol
 
     # Verify the class exists and has expected attributes
     assert Protocol is not None
@@ -20,7 +20,7 @@ def test_import_protocol() -> None:
 
 def test_protocol_configuration() -> None:
     """Test that Protocol has correct configuration."""
-    from my_first_plugin.protocols.protocol import Protocol
+    from my_first_plugin.handlers.protocol import Protocol
 
     # Verify configuration
     assert EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED) == Protocol.RESPONDS_TO
@@ -29,7 +29,7 @@ def test_protocol_configuration() -> None:
 
 def test_compute_creates_log_effect() -> None:
     """Test that compute method creates a LOG effect with correct payload."""
-    from my_first_plugin.protocols.protocol import Protocol
+    from my_first_plugin.handlers.protocol import Protocol
 
     # Create mock event
     mock_event = Mock()
@@ -39,7 +39,7 @@ def test_compute_creates_log_effect() -> None:
     protocol = Protocol(event=mock_event)
 
     # Mock the logger to prevent actual logging
-    with patch("my_first_plugin.protocols.protocol.log"):
+    with patch("my_first_plugin.handlers.protocol.log"):
         result = protocol.compute()
 
     # Verify result is a list with one effect
@@ -59,7 +59,7 @@ def test_compute_creates_log_effect() -> None:
 
 def test_compute_logs_narrative_string() -> None:
     """Test that compute method logs the narrative string."""
-    from my_first_plugin.protocols.protocol import Protocol
+    from my_first_plugin.handlers.protocol import Protocol
 
     # Create mock event
     mock_event = Mock()
@@ -69,7 +69,7 @@ def test_compute_logs_narrative_string() -> None:
     protocol = Protocol(event=mock_event)
 
     # Mock the logger and verify it's called with NARRATIVE_STRING
-    with patch("my_first_plugin.protocols.protocol.log") as mock_log:
+    with patch("my_first_plugin.handlers.protocol.log") as mock_log:
         protocol.compute()
 
         # Verify log.info was called with "zebra"

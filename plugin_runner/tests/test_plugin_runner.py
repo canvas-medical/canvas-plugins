@@ -65,9 +65,9 @@ def test_load_plugin_rejects_foreign_package_handler(
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test loading plugins with a valid plugin."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
         is True
     )
 
@@ -81,12 +81,12 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
     assert (
-        "test_module_imports_plugin:test_module_imports_plugin.protocols.my_protocol:Protocol"
+        "test_module_imports_plugin:test_module_imports_plugin.handlers.my_protocol:Protocol"
         in LOADED_PLUGINS
     )
     assert (
         LOADED_PLUGINS[
-            "test_module_imports_plugin:test_module_imports_plugin.protocols.my_protocol:Protocol"
+            "test_module_imports_plugin:test_module_imports_plugin.handlers.my_protocol:Protocol"
         ]["active"]
         is True
     )
@@ -154,7 +154,7 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
     with pytest.raises(ImportError, match="is not an allowed import."):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.protocols.my_protocol:Protocol"
+            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.handlers.my_protocol:Protocol"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -173,7 +173,7 @@ def test_plugin_that_implicitly_imports_allowed_modules(
     with caplog.at_level(logging.INFO):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Allowed"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_protocol:Allowed"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -199,7 +199,7 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
     ):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.protocols.my_protocol:Forbidden"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_protocol:Forbidden"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -230,9 +230,9 @@ def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> No
     """Test reloading a plugin."""
     load_plugins()
 
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
         is True
     )
 
@@ -242,10 +242,10 @@ def test_remove_plugin_should_be_removed_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test removing a plugin."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
     shutil.rmtree(install_test_plugin)
     load_plugins()
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -258,7 +258,7 @@ def test_load_plugins_should_refresh_event_handler_map(
     load_plugins()
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
     ]
 
 
@@ -272,7 +272,7 @@ def test_load_plugin_should_refresh_event_handler_map(
     load_plugin(install_test_plugin)
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
     ]
 
 
@@ -281,13 +281,13 @@ def test_unload_plugin_should_remove_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin successfully removes it from loaded plugins."""
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.protocols.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
         is True
     )
     unload_plugin("example_plugin")
-    assert "example_plugin:example_plugin.protocols.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -299,7 +299,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
     class OtherPluginHandler:
         RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
-    LOADED_PLUGINS["other_example_plugin:example_plugin.protocols.my_protocol:Protocol"] = {
+    LOADED_PLUGINS["other_example_plugin:example_plugin.handlers.my_protocol:Protocol"] = {
         "active": True,
         "class": OtherPluginHandler,
         "sandbox": None,
@@ -309,7 +309,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
 
     unload_plugin("example_plugin")
     assert (
-        "example_plugin:example_plugin.protocols.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
         not in EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]
     )
 
@@ -702,7 +702,7 @@ def test_simple_api_websocket(
             [
                 PaymentProcessorMetadata(
                     identifier=base64.b64encode(
-                        b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                        b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                     ).decode("utf-8"),
                     type=PaymentProcessorMetadata.PaymentProcessorType.CARD,
                 ).apply()
@@ -712,7 +712,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                 ).decode("utf-8"),
             },
             [
@@ -733,7 +733,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "amount": "1.23",
                 "token": "tok_123",
@@ -753,7 +753,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -785,7 +785,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -807,7 +807,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.protocols.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",

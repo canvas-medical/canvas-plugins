@@ -19,7 +19,7 @@
                 "icon": "assets/doctor.png"
             }
         ],
-        "protocols": [
+        "handlers": [
             {
                 "class": "example_provider_companion_app.handlers.my_web_app:MyWebApp",
                 "description": "Serves the application",

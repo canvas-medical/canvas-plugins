@@ -12,13 +12,13 @@ class TestSupervisingProviderPrescribeProtocol:
 
     def test_responds_to_correct_event(self) -> None:
         """Test that Protocol responds to PRESCRIBE_COMMAND__POST_ORIGINATE event."""
-        from supervising_provider_prescribe.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe.handlers.my_protocol import Protocol
 
         assert EventType.Name(EventType.PRESCRIBE_COMMAND__POST_ORIGINATE) == Protocol.RESPONDS_TO
 
     def test_compute_with_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute creates edit effect when staff is available."""
-        from supervising_provider_prescribe.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe.handlers.my_protocol import Protocol
 
         # Mock event and target
         mock_event = MagicMock()
@@ -37,13 +37,13 @@ class TestSupervisingProviderPrescribeProtocol:
 
         # Mock Staff.objects.first()
         with patch(
-            "supervising_provider_prescribe.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = mock_staff
 
             # Mock PrescribeCommand
             with patch(
-                "supervising_provider_prescribe.protocols.my_protocol.PrescribeCommand"
+                "supervising_provider_prescribe.handlers.my_protocol.PrescribeCommand"
             ) as mock_command_class:
                 mock_command_instance = MagicMock()
                 mock_edit_effect = MagicMock()
@@ -66,7 +66,7 @@ class TestSupervisingProviderPrescribeProtocol:
 
     def test_compute_without_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute returns empty list when no staff is available."""
-        from supervising_provider_prescribe.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe.handlers.my_protocol import Protocol
 
         # Mock event and target
         mock_event = MagicMock()
@@ -81,7 +81,7 @@ class TestSupervisingProviderPrescribeProtocol:
 
         # Mock Staff.objects.first() to return None
         with patch(
-            "supervising_provider_prescribe.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = None
 
@@ -92,7 +92,7 @@ class TestSupervisingProviderPrescribeProtocol:
 
     def test_compute_uses_target_as_command_uuid(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute correctly uses the target as command_uuid."""
-        from supervising_provider_prescribe.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe.handlers.my_protocol import Protocol
 
         # Mock event with specific target
         mock_event = MagicMock()
@@ -111,12 +111,12 @@ class TestSupervisingProviderPrescribeProtocol:
         monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
 
         with patch(
-            "supervising_provider_prescribe.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = mock_staff
 
             with patch(
-                "supervising_provider_prescribe.protocols.my_protocol.PrescribeCommand"
+                "supervising_provider_prescribe.handlers.my_protocol.PrescribeCommand"
             ) as mock_command_class:
                 mock_command_instance = MagicMock()
                 mock_command_class.return_value = mock_command_instance

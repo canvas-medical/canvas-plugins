@@ -4,9 +4,9 @@
   "name": "test_caching_api",
   "description": "Edit the description in CANVAS_MANIFEST.json",
   "components": {
-    "protocols": [
+    "handlers": [
       {
-        "class": "test_caching_api.protocols.my_protocol:Protocol",
+        "class": "test_caching_api.handlers.my_protocol:Protocol",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",
@@ -15,7 +15,7 @@
         }
       },
       {
-        "class": "test_caching_api.protocols.my_secondary_protocol:Protocol",
+        "class": "test_caching_api.handlers.my_secondary_protocol:Protocol",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",
@@ -24,7 +24,7 @@
         }
       },
       {
-        "class": "test_caching_api.protocols.invalid_protocol:InvalidProtocol",
+        "class": "test_caching_api.handlers.invalid_protocol:InvalidProtocol",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",

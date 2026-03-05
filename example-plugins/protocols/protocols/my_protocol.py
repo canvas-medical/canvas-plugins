@@ -12,7 +12,7 @@ from canvas_sdk.v1.data.compound_medication import CompoundMedication as Compoun
 from logger import log
 
 
-# Inherit from BaseProtocol to properly get registered for events
+# Inherit from BaseHandler to properly get registered for events
 class Handle(BaseHandler):
     """Handler for prescribe command available actions events."""
 
