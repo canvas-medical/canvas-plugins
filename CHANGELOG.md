@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.110.0 (2026-03-05)
+
+### Features
+
+- Add support for python 3.13 and 3.14
+  ([#1521](https://github.com/canvas-medical/canvas-plugins/pull/1521),
+  [`d4836bc`](https://github.com/canvas-medical/canvas-plugins/commit/d4836bc6c78294e54d12cf1e44af3e84a977ef28))
+
+
 ## v0.109.0 (2026-03-04)
 
 ### Features
