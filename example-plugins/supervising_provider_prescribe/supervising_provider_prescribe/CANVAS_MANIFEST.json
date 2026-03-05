@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "supervising_provider_prescribe.handlers.my_protocol:Protocol",
+                "class": "supervising_provider_prescribe.handlers.my_handler:Handler",
                 "description": "This protocol responds to the PRESCRIBE_COMMAND__POST_ORIGINATE event.\n\n    It is used to test whether the supervising provider field is automatically populated\n    when the Prescribe command is triggered. The protocol reacts to the command's creation\n    and sets the field accordingly.\n\n    The same logic can be tested for Refill and Adjust Prescription commands by updating\n    the RESPONDS_TO event and the command class.",
                 "data_access": {
                     "event": "",

@@ -9,7 +9,7 @@ MONITORED_LABEL = "MISSING_COVERAGE"
 METADATA_KEY = "coverage_status"
 
 
-class CoverageStatusSyncProtocol(BaseHandler):
+class CoverageStatusSyncHandler(BaseHandler):
     """
     Synchronizes patient metadata based on appointment label changes.
 
@@ -91,7 +91,7 @@ class CoverageStatusSyncProtocol(BaseHandler):
         else:
             log.warning(
                 f"Received unexpected event type '{self.event.type}' in "
-                "CoverageStatusSyncProtocol. This event type is in RESPONDS_TO but "
+                "CoverageStatusSyncHandler. This event type is in RESPONDS_TO but "
                 "has no handler logic defined."
             )
             return []

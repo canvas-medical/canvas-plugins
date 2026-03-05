@@ -7,7 +7,7 @@ from canvas_sdk.v1.data.staff import Staff
 from logger import log
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """You should put a helpful description of this handler's behavior here."""
 
     RESPONDS_TO = [

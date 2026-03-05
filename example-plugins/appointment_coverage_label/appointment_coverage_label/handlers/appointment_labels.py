@@ -7,7 +7,7 @@ from canvas_sdk.v1.data import Appointment, Coverage, Patient
 from logger import log
 
 
-class AppointmentLabelsProtocol(BaseHandler):
+class AppointmentLabelsHandler(BaseHandler):
     """
     Manages the 'MISSING_COVERAGE' label on patient appointments based on insurance coverage status.
 
@@ -185,7 +185,7 @@ class AppointmentLabelsProtocol(BaseHandler):
             list[Effect]: List of effects from the appropriate handler, or empty list if
                          event type is not recognized
         """
-        log.info(f"AppointmentLabelsProtocol.compute() called for event type: {self.event.type}")
+        log.info(f"AppointmentLabelsHandler.compute() called for event type: {self.event.type}")
 
         if self.event.type == EventType.APPOINTMENT_CREATED:
             return self.handle_appointment_created()
@@ -193,7 +193,7 @@ class AppointmentLabelsProtocol(BaseHandler):
             return self.handle_coverage_created()
 
         log.warning(
-            f"Received unexpected event type '{self.event.type}' in AppointmentLabelsProtocol. "
+            f"Received unexpected event type '{self.event.type}' in AppointmentLabelsHandler. "
             "No handler available."
         )
         return []
