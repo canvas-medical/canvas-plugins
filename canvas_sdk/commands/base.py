@@ -140,6 +140,14 @@ class _BaseCommand(TrackableFieldsModel):
             "line_number": line_number,
         }
 
+    def _commit_payload_for_batch(self) -> dict:
+        """Commit a command for batch processing."""
+        self._validate_before_effect("commit")
+        return {
+            "type": f"COMMIT_{self.constantized_key()}_COMMAND",
+            "command": self.command_uuid,
+        }
+
     def edit(self) -> Effect:
         """Edit the command."""
         self._validate_before_effect("edit")
