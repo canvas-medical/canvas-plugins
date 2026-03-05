@@ -12,13 +12,13 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
     def test_responds_to_correct_event(self) -> None:
         """Test that Protocol responds to NOTE_STATE_CHANGE_EVENT_CREATED event."""
-        from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe_protocol.handlers.my_protocol import Protocol
 
         assert EventType.Name(EventType.NOTE_STATE_CHANGE_EVENT_CREATED) == Protocol.RESPONDS_TO
 
     def test_compute_with_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute creates protocol card with prescribe recommendation when staff available."""
-        from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe_protocol.handlers.my_protocol import Protocol
 
         # Mock event
         mock_event = MagicMock()
@@ -36,13 +36,13 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
         # Mock Staff.objects.first()
         with patch(
-            "supervising_provider_prescribe_protocol.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe_protocol.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = mock_staff
 
             # Mock PrescribeCommand
             with patch(
-                "supervising_provider_prescribe_protocol.protocols.my_protocol.PrescribeCommand"
+                "supervising_provider_prescribe_protocol.handlers.my_protocol.PrescribeCommand"
             ) as mock_command_class:
                 mock_command_instance = MagicMock()
                 mock_recommendation = MagicMock()
@@ -51,7 +51,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
                 # Mock ProtocolCard
                 with patch(
-                    "supervising_provider_prescribe_protocol.protocols.my_protocol.ProtocolCard"
+                    "supervising_provider_prescribe_protocol.handlers.my_protocol.ProtocolCard"
                 ) as mock_card_class:
                     mock_card_instance = MagicMock()
                     mock_card_instance.recommendations = []
@@ -89,7 +89,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
     def test_compute_without_staff_available(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute returns empty list when no staff is available."""
-        from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe_protocol.handlers.my_protocol import Protocol
 
         # Mock event
         mock_event = MagicMock()
@@ -103,7 +103,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
         # Mock Staff.objects.first() to return None
         with patch(
-            "supervising_provider_prescribe_protocol.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe_protocol.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = None
 
@@ -114,7 +114,7 @@ class TestSupervisingProviderPrescribeProtocolCard:
 
     def test_compute_uses_context_patient_id(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute uses patient_id from context."""
-        from supervising_provider_prescribe_protocol.protocols.my_protocol import Protocol
+        from supervising_provider_prescribe_protocol.handlers.my_protocol import Protocol
 
         # Mock event
         mock_event = MagicMock()
@@ -132,16 +132,16 @@ class TestSupervisingProviderPrescribeProtocolCard:
         monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
 
         with patch(
-            "supervising_provider_prescribe_protocol.protocols.my_protocol.Staff.objects.first"
+            "supervising_provider_prescribe_protocol.handlers.my_protocol.Staff.objects.first"
         ) as mock_staff_first:
             mock_staff_first.return_value = mock_staff
 
             with (
                 patch(
-                    "supervising_provider_prescribe_protocol.protocols.my_protocol.PrescribeCommand"
+                    "supervising_provider_prescribe_protocol.handlers.my_protocol.PrescribeCommand"
                 ),
                 patch(
-                    "supervising_provider_prescribe_protocol.protocols.my_protocol.ProtocolCard"
+                    "supervising_provider_prescribe_protocol.handlers.my_protocol.ProtocolCard"
                 ) as mock_card_class,
             ):
                 mock_card_instance = MagicMock()

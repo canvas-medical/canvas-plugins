@@ -4,9 +4,9 @@
     "name": "test_payment_processor",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "test_payment_processor.protocols.my_protocol:CustomPaymentProcessor",
+                "class": "test_payment_processor.handlers.my_protocol:CustomPaymentProcessor",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

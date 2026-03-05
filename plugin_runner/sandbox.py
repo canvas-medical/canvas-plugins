@@ -654,7 +654,7 @@ class Sandbox:
         namespace: str,
         evaluated_modules: dict[str, bool] | None = None,
     ) -> None:
-        self.namespace = namespace or "protocols"
+        self.namespace = namespace or "handlers"
         self.package_name = self.namespace.split(".")[0]
 
         if not source_code.exists():
