@@ -4,9 +4,9 @@
     "name": "test_module_imports_outside_plugin_v2",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "test_module_imports_outside_plugin_v2.protocols.my_protocol:Protocol",
+                "class": "test_module_imports_outside_plugin_v2.handlers.my_protocol:Protocol",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

@@ -4,7 +4,7 @@
     "name": "appointment_state_field",
     "description": "Adds a US state selection field to appointment forms and filters available providers based on their licensing in the selected state",
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "appointment_state_field.handlers.form:AppointmentFormFields",
                 "description": "Adds a US state dropdown field to appointment forms"

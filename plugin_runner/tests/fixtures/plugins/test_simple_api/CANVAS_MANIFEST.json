@@ -4,7 +4,7 @@
     "name": "test_simple_api",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "test_simple_api.api.handler:Route",
                 "description": "A protocol that does xyz...",
