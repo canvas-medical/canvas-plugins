@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.111.0 (2026-03-05)
+
+### Features
+
+- Create effect for updating claim provider values
+  ([#1543](https://github.com/canvas-medical/canvas-plugins/pull/1543),
+  [`a5107b5`](https://github.com/canvas-medical/canvas-plugins/commit/a5107b54893fdabb9c0e29e7544d30f81a058c59))
+
+
 ## v0.110.0 (2026-03-05)
 
 ### Features
