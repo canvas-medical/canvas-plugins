@@ -1,41 +1,15 @@
 from datetime import date
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.utils import _PrefixedDict
 from canvas_sdk.v1.data import Claim
 from canvas_sdk.v1.data import ClaimProvider as ClaimProviderModel
-
-
-class _PrefixedDict:
-    """Base class that converts dataclass fields to a prefixed dict, excluding None values."""
-
-    _prefix: ClassVar[str]
-    _unprefixed_fields: ClassVar[frozenset[str]]
-
-    def __init_subclass__(
-        cls,
-        prefix: str = "",
-        unprefixed_fields: frozenset[str] = frozenset(),
-        **kwargs: Any,
-    ) -> None:
-        super().__init_subclass__(**kwargs)
-        cls._prefix = prefix
-        cls._unprefixed_fields = unprefixed_fields
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary with prefixed keys, excluding None values."""
-        raw = TypeAdapter(type(self)).dump_python(self, mode="json", exclude_none=True)
-        return {
-            (f if f in self._unprefixed_fields else f"{self._prefix}_{f}"): (
-                v.isoformat() if isinstance(v, date) else v
-            )
-            for f, v in raw.items()
-        }
 
 
 @dataclass
