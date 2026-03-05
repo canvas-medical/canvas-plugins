@@ -792,3 +792,32 @@ def test_payment_processor(
     ]
 
     assert result[0].effects == expected_effects
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_batch_commit"], indirect=True)
+def test_batch_commit_effect_through_plugin_runner(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+    db: None,
+) -> None:
+    """Test that a plugin can import and return a BatchCommitCommandEffect."""
+    result = list(plugin_runner.HandleEvent(EventRequest(type=EventType.UNKNOWN), None))
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 1
+
+    effect = result[0].effects[0]
+    assert effect.type == EffectType.BATCH_COMMIT_COMMANDS
+
+    payload = json.loads(effect.payload)
+    assert len(payload["data"]["commands"]) == 2
+    assert payload["data"]["commands"][0] == {
+        "type": "COMMIT_PLAN_COMMAND",
+        "command": "cmd-001",
+    }
+    assert payload["data"]["commands"][1] == {
+        "type": "COMMIT_ASSESS_COMMAND",
+        "command": "cmd-002",
+    }
