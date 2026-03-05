@@ -6,7 +6,7 @@
   "components": {
     "handlers": [
       {
-        "class": "test_caching_api.handlers.my_protocol:Protocol",
+        "class": "test_caching_api.handlers.my_handler:Handler",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",
@@ -15,7 +15,7 @@
         }
       },
       {
-        "class": "test_caching_api.handlers.my_secondary_protocol:Protocol",
+        "class": "test_caching_api.handlers.my_secondary_handler:Handler",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",
@@ -24,7 +24,7 @@
         }
       },
       {
-        "class": "test_caching_api.handlers.invalid_protocol:InvalidProtocol",
+        "class": "test_caching_api.handlers.invalid_handler:InvalidHandler",
         "description": "A protocol that does xyz...",
         "data_access": {
           "event": "",

@@ -1,11 +1,10 @@
-from test_module_imports_outside_plugin_v2.other_module.base import import_me
-
+from canvas_sdk.caching.plugins import get_cache
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """
     You should put a helpful description of this handler's behavior here.
     """
@@ -14,5 +13,7 @@ class Protocol(BaseHandler):
     RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
     def compute(self) -> list[Effect]:
-        """This method gets called when an event of the type RESPONDS_TO is fired."""
-        return [Effect(type=EffectType.LOG, payload=import_me())]
+        """Test that the plugin successfully sets and gets a key-value pair in the cache."""
+        cache = get_cache()
+        cache.set("foo", "bar")
+        return [Effect(type=EffectType.LOG, payload=cache.get("foo"))]

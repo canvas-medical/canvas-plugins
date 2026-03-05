@@ -64,9 +64,9 @@ def test_load_plugin_rejects_foreign_package_handler(
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
 def test_load_plugins_with_valid_plugin(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test loading plugins with a valid plugin."""
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
 
@@ -80,12 +80,12 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
 ) -> None:
     """Test loading plugins with a valid plugin that imports other modules within the current plugin package."""
     assert (
-        "test_module_imports_plugin:test_module_imports_plugin.handlers.my_protocol:Protocol"
+        "test_module_imports_plugin:test_module_imports_plugin.handlers.my_handler:Handler"
         in LOADED_PLUGINS
     )
     assert (
         LOADED_PLUGINS[
-            "test_module_imports_plugin:test_module_imports_plugin.handlers.my_protocol:Protocol"
+            "test_module_imports_plugin:test_module_imports_plugin.handlers.my_handler:Handler"
         ]["active"]
         is True
     )
@@ -153,7 +153,7 @@ def test_load_plugins_with_plugin_that_imports_forbidden_modules_at_runtime(
     with pytest.raises(ImportError, match="is not an allowed import."):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.handlers.my_protocol:Protocol"
+            "test_module_forbidden_imports_runtime_plugin:test_module_forbidden_imports_runtime_plugin.handlers.my_handler:Handler"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -229,9 +229,9 @@ def test_reload_plugin(install_test_plugin: Path, load_test_plugins: None) -> No
     """Test reloading a plugin."""
     load_plugins()
 
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
 
@@ -241,10 +241,10 @@ def test_remove_plugin_should_be_removed_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test removing a plugin."""
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     shutil.rmtree(install_test_plugin)
     load_plugins()
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -257,7 +257,7 @@ def test_load_plugins_should_refresh_event_handler_map(
     load_plugins()
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
     ]
 
 
@@ -271,7 +271,7 @@ def test_load_plugin_should_refresh_event_handler_map(
     load_plugin(install_test_plugin)
     assert EventType.Name(EventType.UNKNOWN) in EVENT_HANDLER_MAP
     assert EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)] == [
-        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
     ]
 
 
@@ -280,13 +280,13 @@ def test_unload_plugin_should_remove_from_loaded_plugins(
     install_test_plugin: Path, load_test_plugins: None
 ) -> None:
     """Test that unloading a plugin successfully removes it from loaded plugins."""
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" in LOADED_PLUGINS
     assert (
-        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_protocol:Protocol"]["active"]
+        LOADED_PLUGINS["example_plugin:example_plugin.handlers.my_handler:Handler"]["active"]
         is True
     )
     unload_plugin("example_plugin")
-    assert "example_plugin:example_plugin.handlers.my_protocol:Protocol" not in LOADED_PLUGINS
+    assert "example_plugin:example_plugin.handlers.my_handler:Handler" not in LOADED_PLUGINS
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -298,7 +298,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
     class OtherPluginHandler:
         RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
-    LOADED_PLUGINS["other_example_plugin:example_plugin.handlers.my_protocol:Protocol"] = {
+    LOADED_PLUGINS["other_example_plugin:example_plugin.handlers.my_handler:Handler"] = {
         "active": True,
         "class": OtherPluginHandler,
         "sandbox": None,
@@ -308,7 +308,7 @@ def test_unload_plugin_should_refresh_event_handler_map(
 
     unload_plugin("example_plugin")
     assert (
-        "example_plugin:example_plugin.handlers.my_protocol:Protocol"
+        "example_plugin:example_plugin.handlers.my_handler:Handler"
         not in EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]
     )
 

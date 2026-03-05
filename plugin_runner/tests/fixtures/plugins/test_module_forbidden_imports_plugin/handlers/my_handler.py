@@ -1,11 +1,11 @@
-from test_module_imports_outside_plugin_v3.other_module.base import import_me
+from test_module_forbidden_imports_plugin.other_module.base import import_me
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """
     You should put a helpful description of this handler's behavior here.
     """

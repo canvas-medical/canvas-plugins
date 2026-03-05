@@ -7,7 +7,7 @@ from canvas_sdk.v1.data import Staff
 from logger import log
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """
     This handler responds to the NOTE_STATE_CHANGE_EVENT_CREATED event.
 

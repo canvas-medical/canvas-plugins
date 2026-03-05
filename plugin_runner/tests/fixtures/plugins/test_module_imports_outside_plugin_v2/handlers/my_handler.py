@@ -1,10 +1,11 @@
-from canvas_sdk.caching.plugins import get_cache
-from canvas_sdk.effects import Effect
+from test_module_imports_outside_plugin_v2.other_module.base import import_me
+
+from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 
 
-class InvalidProtocol(BaseHandler):
+class Handler(BaseHandler):
     """
     You should put a helpful description of this handler's behavior here.
     """
@@ -13,7 +14,5 @@ class InvalidProtocol(BaseHandler):
     RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
     def compute(self) -> list[Effect]:
-        """Test forbidden access to private properties."""
-        cache = get_cache()
-        cache._connection.clear()
-        return []
+        """This method gets called when an event of the type RESPONDS_TO is fired."""
+        return [Effect(type=EffectType.LOG, payload=import_me())]

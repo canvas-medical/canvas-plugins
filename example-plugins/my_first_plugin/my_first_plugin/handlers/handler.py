@@ -6,7 +6,7 @@ from canvas_sdk.handlers import BaseHandler
 from logger import log
 
 
-class Protocol(BaseHandler):
+class Handler(BaseHandler):
     """You should put a helpful description of this handler's behavior here."""
 
     RESPONDS_TO = EventType.Name(EventType.ASSESS_COMMAND__CONDITION_SELECTED)

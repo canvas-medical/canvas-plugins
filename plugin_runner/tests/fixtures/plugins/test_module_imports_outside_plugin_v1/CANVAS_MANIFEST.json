@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "test_module_imports_outside_plugin_v1.handlers.my_protocol:Protocol",
+                "class": "test_module_imports_outside_plugin_v1.handlers.my_handler:Handler",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
