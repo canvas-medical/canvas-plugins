@@ -609,6 +609,11 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
 
     any_failed = False
 
+    # Share evaluated_modules across all handlers in this plugin so that common
+    # submodules (like constants.py) are only evaluated and reloaded once, not
+    # once per handler.
+    evaluated_modules: dict[str, bool] = {}
+
     for handler in handlers:
         # TODO add class colon validation to existing schema validation
         # TODO when we encounter an exception here, disable the plugin in response
@@ -634,7 +639,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             continue
 
         try:
-            sandbox = sandbox_from_module(path.parent, handler_module)
+            sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
             result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
@@ -672,6 +677,13 @@ def unload_plugin(name: str) -> None:
             log.info(f'Unloading handler "{handler_name}"')
             del LOADED_PLUGINS[handler_name]
             handlers_removed = True
+
+    # Remove stale sys.modules entries for this plugin's package so that subsequent
+    # loads do a clean import instead of calling importlib.reload on stale module
+    # objects (which can leave modules in a partially-initialized state).
+    stale_modules = [mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")]
+    for mod in stale_modules:
+        del sys.modules[mod]
 
     if handlers_removed:
         # Refresh the event type map to remove any handlers for the unloaded plugin
