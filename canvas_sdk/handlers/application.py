@@ -1,9 +1,10 @@
+import warnings
 from abc import ABC, abstractmethod
 
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.show_application import ShowApplicationEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
-from canvas_sdk.handlers.action_button import ActionButton
 from canvas_sdk.handlers.utils import normalize_effects
 
 
@@ -13,6 +14,7 @@ class Application(BaseHandler, ABC):
     RESPONDS_TO = [
         EventType.Name(EventType.APPLICATION__ON_OPEN),
         EventType.Name(EventType.APPLICATION__ON_CONTEXT_CHANGE),
+        EventType.Name(EventType.APPLICATION__ON_GET),
     ]
 
     def compute(self) -> list[Effect]:
@@ -42,34 +44,72 @@ class Application(BaseHandler, ABC):
         return f"{self.__class__.__module__}:{self.__class__.__qualname__}"
 
 
-class NoteApplication(ActionButton):
+class DynamicApplication(Application, ABC):
+    """An embeddable application that can be registered to Canvas."""
+
+    NAME: str
+    SCOPE: str
+    IDENTIFIER: str | None = None
+    PRIORITY: int = 0
+
+    def compute(self) -> list[Effect]:
+        """Handle the application events."""
+        match self.event.type:
+            case EventType.APPLICATION__ON_GET:
+                if self.visible():
+                    return [
+                        ShowApplicationEffect(
+                            name=self.NAME,
+                            identifier=self.identifier,
+                            open_by_default=self.open_by_default(),
+                            priority=self.PRIORITY,
+                        ).apply()
+                    ]
+                return []
+            case _:
+                return super().compute()
+
+    def open_by_default(self) -> bool:
+        """Open the application by default."""
+        return False
+
+    def visible(self) -> bool:
+        """Determine whether the application should be visible."""
+        return self.context.get("scope") == self.SCOPE
+
+    @property
+    def identifier(self) -> str:
+        """The application identifier."""
+        return self.IDENTIFIER if self.IDENTIFIER else super().identifier
+
+
+class NoteApplication(DynamicApplication):
     """An Application that can be shown in a note."""
 
-    NAME: str = ""
-    IDENTIFIER: str = ""
+    SCOPE = "note"
 
-    @property
-    def BUTTON_TITLE(self) -> str:  # type: ignore[override]
-        """Return NAME as the button title."""
-        return self.NAME
+    def on_open(self) -> Effect | list[Effect]:
+        """Delegate to handle() for backward compatibility with old plugins."""
+        # If a subclass overrides handle(), call it for backward compat.
+        # New plugins should override on_open() directly.
+        return self.handle()
 
-    @property
-    def BUTTON_KEY(self) -> str:  # type: ignore[override]
-        """Return IDENTIFIER as the button key."""
-        return self.IDENTIFIER
-
-    @property
-    def BUTTON_LOCATION(self) -> ActionButton.ButtonLocation:  # type: ignore[override]
-        """Return the note body as the button location."""
-        return ActionButton.ButtonLocation.NOTE_BODY
-
-    @abstractmethod
     def handle(self) -> list[Effect]:
-        """Method to handle button click."""
-        raise NotImplementedError("Implement to handle button click")
+        """Method to handle application click/on_open.
+
+        .. deprecated::
+            Override :meth:`on_open` instead.
+        """
+        warnings.warn(
+            "NoteApplication.handle() is deprecated. Override on_open() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return []
 
 
 __exports__ = (
     "Application",
+    "DynamicApplication",
     "NoteApplication",
 )
