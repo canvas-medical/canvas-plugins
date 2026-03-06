@@ -681,6 +681,9 @@
   "canvas_sdk.effects.send_invite": [
     "SendInviteEffect"
   ],
+  "canvas_sdk.effects.show_application": [
+    "ShowApplicationEffect"
+  ],
   "canvas_sdk.effects.show_button": [
     "ShowButtonEffect"
   ],
@@ -756,6 +759,7 @@
   ],
   "canvas_sdk.handlers.application": [
     "Application",
+    "DynamicApplication",
     "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
