@@ -42,11 +42,12 @@ def open_database_connection() -> Connection:
     When running within Aptible, use the database URL, otherwise pull from
     the environment variables.
     """
-    if os.getenv("DATABASE_URL"):
-        parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
+    database_url = os.getenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if database_url:
+        parsed_url = parse.urlparse(database_url)
 
         return psycopg.connect(
-            dbname=cast(str, parsed_url.path[1:]),
+            dbname=parsed_url.path[1:],
             user=cast(str, parsed_url.username),
             password=cast(str, parsed_url.password),
             host=cast(str, parsed_url.hostname),
