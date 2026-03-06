@@ -1023,6 +1023,7 @@
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
@@ -1369,7 +1370,8 @@
   ],
   "canvas_sdk.v1.data.referral": [
     "Referral",
-    "ReferralReport"
+    "ReferralReport",
+    "ReferralReportCoding"
   ],
   "canvas_sdk.v1.data.report_template_base": [
     "BaseReportTemplate",
