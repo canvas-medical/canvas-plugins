@@ -181,7 +181,7 @@ appointment_coverage_label/
 
 ### Key Components
 
-- **AppointmentLabelsProtocol** - Main protocol class handling both events
+- **AppointmentLabelsHandler** - Main protocol class handling both events
 - **handle_coverage_created()** - Removes labels when coverage is added
 - **handle_appointment_created()** - Adds labels when appointments are created for patients without coverage
 - **compute()** - Routes events to appropriate handlers

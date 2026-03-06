@@ -7,25 +7,25 @@ from pytest import MonkeyPatch
 from canvas_sdk.events import EventType
 
 
-class TestAppointmentLabelsProtocol:
-    """Test suite for AppointmentLabelsProtocol."""
+class TestAppointmentLabelsHandler:
+    """Test suite for AppointmentLabelsHandler."""
 
     def test_responds_to_correct_events(self) -> None:
         """Test that protocol responds to both COVERAGE_CREATED and APPOINTMENT_CREATED events."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         expected_events = [
             EventType.Name(EventType.COVERAGE_CREATED),
             EventType.Name(EventType.APPOINTMENT_CREATED),
         ]
-        assert expected_events == AppointmentLabelsProtocol.RESPONDS_TO
+        assert expected_events == AppointmentLabelsHandler.RESPONDS_TO
 
     def test_compute_routes_to_coverage_created_handler(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() routes COVERAGE_CREATED events to correct handler."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event
@@ -35,19 +35,19 @@ class TestAppointmentLabelsProtocol:
         # Mock context
         dummy_context = {"patient": {"id": "test-patient-id"}}
 
-        # Create protocol instance
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        # Create handler instance
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         # Mock the handler method
-        with patch.object(protocol, "handle_coverage_created", return_value=[]) as mock_handler:
-            protocol.compute()
+        with patch.object(handler, "handle_coverage_created", return_value=[]) as mock_handler:
+            handler.compute()
             mock_handler.assert_called_once()
 
     def test_compute_routes_to_appointment_created_handler(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() routes APPOINTMENT_CREATED events to correct handler."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event
@@ -57,19 +57,19 @@ class TestAppointmentLabelsProtocol:
         # Mock context
         dummy_context = {"patient": {"id": "test-patient-id"}}
 
-        # Create protocol instance
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        # Create handler instance
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         # Mock the handler method
-        with patch.object(protocol, "handle_appointment_created", return_value=[]) as mock_handler:
-            protocol.compute()
+        with patch.object(handler, "handle_appointment_created", return_value=[]) as mock_handler:
+            handler.compute()
             mock_handler.assert_called_once()
 
     def test_compute_with_unexpected_event_type(self, monkeypatch: MonkeyPatch) -> None:
         """Test that compute() handles unexpected event types gracefully."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event with unexpected type
@@ -79,17 +79,17 @@ class TestAppointmentLabelsProtocol:
         # Mock context
         dummy_context = {"patient": {"id": "test-patient-id"}}
 
-        # Create protocol instance
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        # Create handler instance
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
-        result = protocol.compute()
+        result = handler.compute()
         assert result == []
 
     def test_handle_coverage_created_removes_labels(self, monkeypatch: MonkeyPatch) -> None:
         """Test that handle_coverage_created removes MISSING_COVERAGE labels."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -112,28 +112,28 @@ class TestAppointmentLabelsProtocol:
         mock_queryset.__len__.return_value = 2
         mock_queryset.__iter__.return_value = iter([mock_appt1, mock_appt2])
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
             ) as mock_filter:
                 mock_filter.return_value.prefetch_related.return_value = mock_queryset
 
                 with patch(
-                    "appointment_coverage_label.protocols.appointment_labels.RemoveAppointmentLabel"
+                    "appointment_coverage_label.handlers.appointment_labels.RemoveAppointmentLabel"
                 ) as mock_effect_class:
                     mock_effect_instance = MagicMock()
                     mock_applied_effect = MagicMock()
                     mock_effect_instance.apply.return_value = mock_applied_effect
                     mock_effect_class.return_value = mock_effect_instance
 
-                    result = protocol.handle_coverage_created()
+                    result = handler.handle_coverage_created()
 
                     # Verify RemoveAppointmentLabel was called for both appointments
                     assert mock_effect_class.call_count == 2
@@ -143,8 +143,8 @@ class TestAppointmentLabelsProtocol:
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test handle_coverage_created when no appointments need labels removed."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -158,51 +158,51 @@ class TestAppointmentLabelsProtocol:
         mock_queryset = MagicMock()
         mock_queryset.exists.return_value = False
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
             ) as mock_filter:
                 mock_filter.return_value.prefetch_related.return_value = mock_queryset
 
-                result = protocol.handle_coverage_created()
+                result = handler.handle_coverage_created()
                 assert result == []
 
     def test_handle_coverage_created_patient_not_found(self, monkeypatch: MonkeyPatch) -> None:
         """Test handle_coverage_created when patient doesn't exist."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
         mock_event = MagicMock()
         dummy_context = {"patient": {"id": "nonexistent-patient"}}
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
-            from appointment_coverage_label.protocols.appointment_labels import Patient
+            from appointment_coverage_label.handlers.appointment_labels import Patient
 
             mock_patient_get.side_effect = Patient.DoesNotExist()
 
-            result = protocol.handle_coverage_created()
+            result = handler.handle_coverage_created()
             assert result == []
 
     def test_handle_appointment_created_adds_labels_when_no_coverage(
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that handle_appointment_created adds labels when patient has no coverage."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -229,33 +229,33 @@ class TestAppointmentLabelsProtocol:
         mock_coverage_queryset = MagicMock()
         mock_coverage_queryset.exists.return_value = False
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Coverage.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Coverage.objects.filter"
             ) as mock_coverage_filter:
                 mock_coverage_filter.return_value = mock_coverage_queryset
 
                 with patch(
-                    "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                    "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
                     mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     with patch(
-                        "appointment_coverage_label.protocols.appointment_labels.AddAppointmentLabel"
+                        "appointment_coverage_label.handlers.appointment_labels.AddAppointmentLabel"
                     ) as mock_effect_class:
                         mock_effect_instance = MagicMock()
                         mock_applied_effect = MagicMock()
                         mock_effect_instance.apply.return_value = mock_applied_effect
                         mock_effect_class.return_value = mock_effect_instance
 
-                        result = protocol.handle_appointment_created()
+                        result = handler.handle_appointment_created()
 
                         # Verify AddAppointmentLabel was called for both appointments
                         assert mock_effect_class.call_count == 2
@@ -265,8 +265,8 @@ class TestAppointmentLabelsProtocol:
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that handle_appointment_created doesn't add labels when patient has coverage."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -280,28 +280,28 @@ class TestAppointmentLabelsProtocol:
         mock_coverage_queryset = MagicMock()
         mock_coverage_queryset.exists.return_value = True
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Coverage.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Coverage.objects.filter"
             ) as mock_coverage_filter:
                 mock_coverage_filter.return_value = mock_coverage_queryset
 
-                result = protocol.handle_appointment_created()
+                result = handler.handle_appointment_created()
                 assert result == []
 
     def test_handle_appointment_created_all_appointments_already_labeled(
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test handle_appointment_created when all appointments already have labels."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -319,56 +319,56 @@ class TestAppointmentLabelsProtocol:
         mock_appt_queryset = MagicMock()
         mock_appt_queryset.exists.return_value = False
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Coverage.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Coverage.objects.filter"
             ) as mock_coverage_filter:
                 mock_coverage_filter.return_value = mock_coverage_queryset
 
                 with patch(
-                    "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                    "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
                     mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
-                    result = protocol.handle_appointment_created()
+                    result = handler.handle_appointment_created()
                     assert result == []
 
     def test_handle_appointment_created_patient_not_found(self, monkeypatch: MonkeyPatch) -> None:
         """Test handle_appointment_created when patient doesn't exist."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
         mock_event = MagicMock()
         dummy_context = {"patient": {"id": "nonexistent-patient"}}
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
-            from appointment_coverage_label.protocols.appointment_labels import Patient
+            from appointment_coverage_label.handlers.appointment_labels import Patient
 
             mock_patient_get.side_effect = Patient.DoesNotExist()
 
-            result = protocol.handle_appointment_created()
+            result = handler.handle_appointment_created()
             assert result == []
 
     def test_handle_coverage_created_handles_effect_exception(
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that handle_coverage_created handles exceptions when creating effects."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -388,30 +388,30 @@ class TestAppointmentLabelsProtocol:
         mock_queryset.__len__.return_value = 1
         mock_queryset.__iter__.return_value = iter([mock_appt])
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
             ) as mock_filter:
                 mock_filter.return_value.prefetch_related.return_value = mock_queryset
 
                 # Mock log.error to prevent exc_info TypeError
                 with (
-                    patch("appointment_coverage_label.protocols.appointment_labels.log"),
+                    patch("appointment_coverage_label.handlers.appointment_labels.log"),
                     patch(
-                        "appointment_coverage_label.protocols.appointment_labels.RemoveAppointmentLabel"
+                        "appointment_coverage_label.handlers.appointment_labels.RemoveAppointmentLabel"
                     ) as mock_effect_class,
                 ):
                     # Make the effect creation raise an exception
                     mock_effect_class.side_effect = Exception("Effect creation failed")
 
-                    result = protocol.handle_coverage_created()
+                    result = handler.handle_coverage_created()
 
                     # Should handle exception gracefully and return empty list
                     assert result == []
@@ -420,8 +420,8 @@ class TestAppointmentLabelsProtocol:
         self, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that handle_appointment_created handles exceptions when creating effects."""
-        from appointment_coverage_label.protocols.appointment_labels import (
-            AppointmentLabelsProtocol,
+        from appointment_coverage_label.handlers.appointment_labels import (
+            AppointmentLabelsHandler,
         )
 
         # Mock event and context
@@ -444,35 +444,35 @@ class TestAppointmentLabelsProtocol:
         mock_coverage_queryset = MagicMock()
         mock_coverage_queryset.exists.return_value = False
 
-        protocol = AppointmentLabelsProtocol(event=mock_event)
-        monkeypatch.setattr(type(protocol), "context", property(lambda self: dummy_context))
+        handler = AppointmentLabelsHandler(event=mock_event)
+        monkeypatch.setattr(type(handler), "context", property(lambda self: dummy_context))
 
         with patch(
-            "appointment_coverage_label.protocols.appointment_labels.Patient.objects.get"
+            "appointment_coverage_label.handlers.appointment_labels.Patient.objects.get"
         ) as mock_patient_get:
             mock_patient_get.return_value = mock_patient
 
             with patch(
-                "appointment_coverage_label.protocols.appointment_labels.Coverage.objects.filter"
+                "appointment_coverage_label.handlers.appointment_labels.Coverage.objects.filter"
             ) as mock_coverage_filter:
                 mock_coverage_filter.return_value = mock_coverage_queryset
 
                 with patch(
-                    "appointment_coverage_label.protocols.appointment_labels.Appointment.objects.filter"
+                    "appointment_coverage_label.handlers.appointment_labels.Appointment.objects.filter"
                 ) as mock_appt_filter:
                     mock_appt_filter.return_value.exclude.return_value.prefetch_related.return_value = mock_appt_queryset
 
                     # Mock log.error to prevent exc_info TypeError
                     with (
-                        patch("appointment_coverage_label.protocols.appointment_labels.log"),
+                        patch("appointment_coverage_label.handlers.appointment_labels.log"),
                         patch(
-                            "appointment_coverage_label.protocols.appointment_labels.AddAppointmentLabel"
+                            "appointment_coverage_label.handlers.appointment_labels.AddAppointmentLabel"
                         ) as mock_effect_class,
                     ):
                         # Make the effect creation raise an exception
                         mock_effect_class.side_effect = Exception("Effect creation failed")
 
-                        result = protocol.handle_appointment_created()
+                        result = handler.handle_appointment_created()
 
                         # Should handle exception gracefully and return empty list
                         assert result == []
