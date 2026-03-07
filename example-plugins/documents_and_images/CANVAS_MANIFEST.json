@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "documents_and_images",
+    "description": "UAT plugin for KOALA-1979: DocumentReference, Snapshot, PatientIdentificationCard, and presigned URL validation",
+    "components": {
+        "handlers": [
+            {
+                "class": "routes.uat:DocumentReferenceUAT",
+                "description": "UAT endpoint for DocumentReference and related models"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
