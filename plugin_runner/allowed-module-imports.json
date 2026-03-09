@@ -756,7 +756,8 @@
   ],
   "canvas_sdk.handlers.application": [
     "Application",
-    "DynamicApplication",
+    "ApplicationScope",
+    "EmbeddedApplication",
     "NoteApplication"
   ],
   "canvas_sdk.handlers.base": [
