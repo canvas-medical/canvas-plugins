@@ -1,11 +1,16 @@
-import warnings
+import importlib.metadata
 from abc import ABC, abstractmethod
+from enum import StrEnum
+
+import deprecation
 
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.show_application import ShowApplicationEffect
 from canvas_sdk.events import EventType
 from canvas_sdk.handlers import BaseHandler
 from canvas_sdk.handlers.utils import normalize_effects
+
+version = importlib.metadata.version("canvas")
 
 
 class Application(BaseHandler, ABC):
@@ -44,11 +49,17 @@ class Application(BaseHandler, ABC):
         return f"{self.__class__.__module__}:{self.__class__.__qualname__}"
 
 
-class DynamicApplication(Application, ABC):
+class ApplicationScope(StrEnum):
+    """Available scopes for embedded applications."""
+
+    NOTE = "note"
+
+
+class EmbeddedApplication(Application, ABC):
     """An embeddable application that can be registered to Canvas."""
 
     NAME: str
-    SCOPE: str
+    SCOPE: ApplicationScope
     IDENTIFIER: str | None = None
     PRIORITY: int = 0
 
@@ -56,7 +67,7 @@ class DynamicApplication(Application, ABC):
         """Handle the application events."""
         match self.event.type:
             case EventType.APPLICATION__ON_GET:
-                if self.visible():
+                if self._matches_scope() and self.visible():
                     return [
                         ShowApplicationEffect(
                             name=self.NAME,
@@ -69,13 +80,17 @@ class DynamicApplication(Application, ABC):
             case _:
                 return super().compute()
 
+    def _matches_scope(self) -> bool:
+        """Check if the event scope matches the application scope."""
+        return self.event.context.get("scope") == self.SCOPE
+
     def open_by_default(self) -> bool:
         """Open the application by default."""
         return False
 
     def visible(self) -> bool:
         """Determine whether the application should be visible."""
-        return self.context.get("scope") == self.SCOPE
+        return True
 
     @property
     def identifier(self) -> str:
@@ -83,10 +98,10 @@ class DynamicApplication(Application, ABC):
         return self.IDENTIFIER if self.IDENTIFIER else super().identifier
 
 
-class NoteApplication(DynamicApplication):
+class NoteApplication(EmbeddedApplication):
     """An Application that can be shown in a note."""
 
-    SCOPE = "note"
+    SCOPE = ApplicationScope.NOTE
 
     def on_open(self) -> Effect | list[Effect]:
         """Delegate to handle() for backward compatibility with old plugins."""
@@ -94,22 +109,20 @@ class NoteApplication(DynamicApplication):
         # New plugins should override on_open() directly.
         return self.handle()
 
+    @deprecation.deprecated(
+        deprecated_in="0.111.0",
+        removed_in="1.0.0",
+        current_version=version,
+        details="Use 'on_open' instead",
+    )
     def handle(self) -> list[Effect]:
-        """Method to handle application click/on_open.
-
-        .. deprecated::
-            Override :meth:`on_open` instead.
-        """
-        warnings.warn(
-            "NoteApplication.handle() is deprecated. Override on_open() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        """Method to handle application click/on_open."""
         return []
 
 
 __exports__ = (
     "Application",
-    "DynamicApplication",
+    "ApplicationScope",
+    "EmbeddedApplication",
     "NoteApplication",
 )
