@@ -3,6 +3,7 @@ import json
 import logging
 import pickle
 import shutil
+import signal
 from base64 import b64encode
 from http import HTTPStatus
 from pathlib import Path
@@ -46,6 +47,18 @@ def plugin_runner() -> PluginRunner:
     runner = PluginRunner()
     runner.statsd_client = MagicMock()  # type: ignore[attr-defined]
     return runner
+
+
+@pytest.mark.parametrize("install_test_plugin", ["cross_plugin_thief"], indirect=True)
+def test_load_plugin_rejects_foreign_package_handler(
+    install_test_plugin: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a plugin cannot load a handler from a different plugin's package."""
+    with caplog.at_level(logging.ERROR):
+        result = load_or_reload_plugin(install_test_plugin)
+
+    assert result is False
+    assert any("foreign package" in record.message for record in caplog.records)
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -300,6 +313,75 @@ def test_unload_plugin_should_refresh_event_handler_map(
     )
 
     assert len(EVENT_HANDLER_MAP[EventType.Name(EventType.UNKNOWN)]) == 1
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_module_imports_plugin"], indirect=True)
+def test_unload_plugin_should_clean_sys_modules(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading a plugin removes its entries from sys.modules."""
+    import sys
+
+    # After loading, plugin modules should be in sys.modules (this plugin has
+    # cross-module imports which register in sys.modules via __import__)
+    plugin_modules_before = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert len(plugin_modules_before) > 0
+
+    unload_plugin("test_module_imports_plugin")
+
+    # After unloading, plugin modules should be removed from sys.modules
+    plugin_modules_after = [m for m in sys.modules if m.startswith("test_module_imports_plugin")]
+    assert plugin_modules_after == []
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_unload_and_reload_plugin_loads_cleanly(
+    install_test_plugin: Path, load_test_plugins: None
+) -> None:
+    """Test that unloading then reloading a plugin works without stale sys.modules."""
+    import sys
+
+    handler_a = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_a:HandlerA"
+    handler_b = "test_shared_modules_plugin:test_shared_modules_plugin.handlers.handler_b:HandlerB"
+
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+    unload_plugin("test_shared_modules_plugin")
+    assert handler_a not in LOADED_PLUGINS
+    assert not any(m.startswith("test_shared_modules_plugin") for m in sys.modules)
+
+    # Reload should succeed without stale module interference
+    assert load_or_reload_plugin(install_test_plugin) is True
+    assert handler_a in LOADED_PLUGINS
+    assert handler_b in LOADED_PLUGINS
+
+
+@pytest.mark.parametrize("install_test_plugin", ["test_shared_modules_plugin"], indirect=True)
+def test_shared_modules_evaluated_once_per_load(
+    install_test_plugin: Path,
+) -> None:
+    """Test that shared modules are only evaluated once when multiple handlers import them."""
+    import importlib
+    from types import ModuleType
+    from unittest.mock import patch as mock_patch
+
+    original_reload = importlib.reload
+    reload_calls: list[str] = []
+
+    def tracking_reload(module: ModuleType) -> ModuleType:
+        reload_calls.append(getattr(module, "__name__", ""))
+        return original_reload(module)
+
+    with mock_patch("plugin_runner.sandbox.importlib.reload", side_effect=tracking_reload):
+        load_plugins()
+
+    # The shared constants module should be reloaded at most once (if it was in
+    # sys.modules), not once per handler
+    constants_reloads = [
+        c for c in reload_calls if c == "test_shared_modules_plugin.common_tools.constants"
+    ]
+    assert len(constants_reloads) <= 1
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
@@ -792,3 +874,67 @@ def test_payment_processor(
     ]
 
     assert result[0].effects == expected_effects
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_sigterm_on_signal(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs the signal name when terminated by SIGTERM."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+
+    # Simulate SIGTERM: when wait_for_termination is called, invoke the signal handler
+    registered_handlers: dict[int, Any] = {}
+
+    def capture_signal(signum: int, handler: Any) -> None:
+        registered_handlers[signum] = handler
+
+    def fake_wait() -> None:
+        # Trigger the SIGTERM handler
+        registered_handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+    mock_server.wait_for_termination.side_effect = fake_wait
+
+    with (
+        patch("plugin_runner.plugin_runner.signal.signal", side_effect=capture_signal),
+        caplog.at_level(logging.INFO),
+    ):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGTERM)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@patch("plugin_runner.plugin_runner.load_plugins")
+@patch("plugin_runner.plugin_runner.install_plugins")
+@patch("plugin_runner.plugin_runner.add_PluginRunnerServicer_to_server")
+@patch("plugin_runner.plugin_runner.grpc")
+def test_main_logs_keyboard_interrupt(
+    mock_grpc: MagicMock,
+    _mock_add_servicer: MagicMock,
+    _mock_install: MagicMock,
+    _mock_load: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that main() logs SIGINT when terminated by KeyboardInterrupt."""
+    from plugin_runner.plugin_runner import main
+
+    mock_server = MagicMock()
+    mock_grpc.server.return_value = mock_server
+    mock_server.wait_for_termination.side_effect = KeyboardInterrupt
+
+    with caplog.at_level(logging.INFO):
+        main(specified_plugin_paths=[])
+
+    assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
+    assert any("Server stopped" in r.message for r in caplog.records)

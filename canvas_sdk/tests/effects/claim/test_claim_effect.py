@@ -1,5 +1,6 @@
 import json
 from collections.abc import Generator
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -17,6 +18,13 @@ from canvas_sdk.effects.claim import (
     LineItemTransaction,
     PaymentMethod,
 )
+from canvas_sdk.effects.claim.claim_provider import (
+    ClaimBillingProvider,
+    ClaimFacility,
+    ClaimOrderingProvider,
+    ClaimProvider,
+    ClaimReferringProvider,
+)
 
 
 @pytest.fixture
@@ -29,6 +37,10 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         patch("canvas_sdk.effects.claim.claim_metadata.Claim") as mock_claim_metadata,
         patch("canvas_sdk.effects.claim.claim_queue.Claim") as mock_claim_queue,
         patch("canvas_sdk.effects.claim.claim_queue.ClaimQueue") as mock_queue,
+        patch("canvas_sdk.effects.claim.claim_provider.Claim") as mock_claim_provider,
+        patch(
+            "canvas_sdk.effects.claim.claim_provider.ClaimProviderModel"
+        ) as mock_claim_provider_model,
         patch("canvas_sdk.effects.claim.payment.base.Claim.objects") as mock_payment_claim,
         patch("canvas_sdk.effects.claim.payment.base.ClaimLineItem.objects") as mock_cli,
         patch("canvas_sdk.effects.claim.payment.base.ClaimQueue.objects") as mock_payment_queue,
@@ -40,6 +52,11 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
         mock_claim_metadata.objects.filter.return_value.exists.return_value = True
         mock_claim_queue.objects.filter.return_value.exists.return_value = True
         mock_queue.objects.filter.return_value.exists.return_value = True
+
+        # Setup claim_provider mock - .first() returns a claim, and ClaimProviderModel exists
+        mock_provider_claim_obj = MagicMock()
+        mock_claim_provider.objects.filter.return_value.first.return_value = mock_provider_claim_obj
+        mock_claim_provider_model.objects.filter.return_value.exists.return_value = True
 
         # Setup payment-related mocks
         mock_claim_obj = MagicMock()
@@ -75,6 +92,9 @@ def mock_db_queries() -> Generator[dict[str, MagicMock]]:
             "claim_metadata": mock_claim_metadata,
             "claim_queue": mock_claim_queue,
             "queue": mock_queue,
+            "claim_provider": mock_claim_provider,
+            "claim_provider_model": mock_claim_provider_model,
+            "claim_provider_obj": mock_provider_claim_obj,
             "payment_claim": mock_payment_claim,
             "payment_claim_obj": mock_claim_obj,
             "payment_cli": mock_cli,
@@ -640,3 +660,165 @@ def test_remove_banner_requires_existing_claim(mock_db_queries: dict[str, MagicM
 
     err_msg = repr(exc_info.value)
     assert "Claim with id nonexistent-claim does not exist" in err_msg
+
+
+def test_update_provider_with_only_claim_id(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider with no optional params returns correct effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.update_provider()
+
+    assert effect.type == EffectType.UPDATE_CLAIM_PROVIDER
+    payload = json.loads(effect.payload)["data"]
+    assert payload == {"claim_id": "claim-id"}
+
+
+def test_update_provider_with_clia_number(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes clia_number via billing_provider."""
+    claim = ClaimEffect(claim_id="claim-id")
+    billing = ClaimBillingProvider(clia_number="12D4567890")
+    effect = claim.update_provider(billing_provider=billing)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["claim_id"] == "claim-id"
+    assert payload["clia_number"] == "12D4567890"
+
+
+def test_update_provider_with_billing_provider(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes billing_provider fields with prefix."""
+    claim = ClaimEffect(claim_id="claim-id")
+    billing = ClaimBillingProvider(name="Test Practice", npi="1234567890", state="CA")
+    effect = claim.update_provider(billing_provider=billing)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert payload["billing_provider_npi"] == "1234567890"
+    assert payload["billing_provider_state"] == "CA"
+
+
+def test_update_provider_with_provider(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes provider fields with prefix."""
+    claim = ClaimEffect(claim_id="claim-id")
+    provider = ClaimProvider(first_name="John", last_name="Doe", npi="9876543210")
+    effect = claim.update_provider(provider=provider)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["provider_first_name"] == "John"
+    assert payload["provider_last_name"] == "Doe"
+    assert payload["provider_npi"] == "9876543210"
+
+
+def test_update_provider_with_referring_provider(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes referring_provider fields with prefix."""
+    claim = ClaimEffect(claim_id="claim-id")
+    referring = ClaimReferringProvider(first_name="Jane", last_name="Smith", npi="1112223334")
+    effect = claim.update_provider(referring_provider=referring)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["referring_provider_first_name"] == "Jane"
+    assert payload["referring_provider_last_name"] == "Smith"
+    assert payload["referring_provider_npi"] == "1112223334"
+
+
+def test_update_provider_with_ordering_provider(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes ordering_provider fields with prefix."""
+    claim = ClaimEffect(claim_id="claim-id")
+    ordering = ClaimOrderingProvider(first_name="Bob", last_name="Jones", npi="5556667778")
+    effect = claim.update_provider(ordering_provider=ordering)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["ordering_provider_first_name"] == "Bob"
+    assert payload["ordering_provider_last_name"] == "Jones"
+    assert payload["ordering_provider_npi"] == "5556667778"
+
+
+def test_update_provider_with_facility(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes facility fields with prefix."""
+    claim = ClaimEffect(claim_id="claim-id")
+    facility = ClaimFacility(name="General Hospital", npi="1231231234", state="NY")
+    effect = claim.update_provider(facility=facility)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["facility_name"] == "General Hospital"
+    assert payload["facility_npi"] == "1231231234"
+    assert payload["facility_state"] == "NY"
+
+
+def test_update_provider_facility_date_isoformat(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that facility hospitalization dates are serialized as ISO format strings."""
+    claim = ClaimEffect(claim_id="claim-id")
+    facility = ClaimFacility(
+        name="General Hospital",
+        hosp_from_date=date(2024, 1, 15),
+        hosp_to_date=date(2024, 1, 20),
+    )
+    effect = claim.update_provider(facility=facility)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["hosp_from_date"] == "2024-01-15"
+    assert payload["hosp_to_date"] == "2024-01-20"
+
+
+def test_update_provider_with_all_params(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider includes all params with prefixed keys."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.update_provider(
+        billing_provider=ClaimBillingProvider(name="Test Practice", clia_number="12D4567890"),
+        provider=ClaimProvider(first_name="John", last_name="Doe"),
+        referring_provider=ClaimReferringProvider(first_name="Jane", last_name="Smith"),
+        ordering_provider=ClaimOrderingProvider(first_name="Bob", last_name="Jones"),
+        facility=ClaimFacility(name="General Hospital"),
+    )
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["claim_id"] == "claim-id"
+    assert payload["clia_number"] == "12D4567890"
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert payload["provider_first_name"] == "John"
+    assert payload["provider_last_name"] == "Doe"
+    assert payload["referring_provider_first_name"] == "Jane"
+    assert payload["referring_provider_last_name"] == "Smith"
+    assert payload["ordering_provider_first_name"] == "Bob"
+    assert payload["ordering_provider_last_name"] == "Jones"
+    assert payload["facility_name"] == "General Hospital"
+
+
+def test_update_provider_excludes_none_dataclass_fields(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that to_dict excludes fields that are None."""
+    claim = ClaimEffect(claim_id="claim-id")
+    billing = ClaimBillingProvider(name="Test Practice")
+    effect = claim.update_provider(billing_provider=billing)
+
+    payload = json.loads(effect.payload)["data"]
+    assert payload["billing_provider_name"] == "Test Practice"
+    assert "billing_provider_phone" not in payload
+    assert "billing_provider_npi" not in payload
+
+
+def test_update_provider_requires_existing_claim(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update_provider validates the claim exists."""
+    mock_db_queries["claim_provider"].objects.filter.return_value.first.return_value = None
+    claim = ClaimEffect(claim_id="invalid-claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.update_provider()
+
+    err_msg = repr(e.value)
+    assert "Claim with id invalid-claim-id does not exist." in err_msg
+
+
+def test_update_provider_requires_existing_provider_info(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update_provider validates the claim has existing provider information."""
+    mock_db_queries["claim_provider_model"].objects.filter.return_value.exists.return_value = False
+    claim = ClaimEffect(claim_id="claim-id")
+
+    with pytest.raises(ValidationError) as e:
+        claim.update_provider()
+
+    err_msg = repr(e.value)
+    assert "does not have any existing provider information to update." in err_msg

@@ -14,4 +14,9 @@ __all__ = __exports__ = (
     "Label",
     "LineItemTransaction",
     "PaymentMethod",
+    "ClaimBillingProvider",
+    "ClaimFacility",
+    "ClaimOrderingProvider",
+    "ClaimProvider",
+    "ClaimReferringProvider",
 )

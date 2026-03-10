@@ -255,7 +255,7 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
         """
     )
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -266,7 +266,7 @@ def test_plugin_runner_os_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import os")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -277,7 +277,7 @@ def test_plugin_runner_sys_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import sys")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -510,6 +510,48 @@ def test_typeguard_import_and_usage() -> None:
 
     scope = sandbox.execute()
     assert scope["result"] is True, "TypeGuard function should correctly identify string"
+
+
+def test_re_fullmatch_import_and_usage() -> None:
+    """Test that re.fullmatch can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from re import fullmatch
+
+            result = fullmatch(r'\\d+', '12345')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, "fullmatch should match an all-digit string"
+
+
+def test_re_fullmatch_no_match() -> None:
+    """Test that re.fullmatch correctly rejects partial matches."""
+    sandbox = _sandbox_from_code(
+        """
+            import re
+
+            result = re.fullmatch(r'\\d+', '123abc')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is None, "fullmatch should not match a partial digit string"
+
+
+def test_type_checking_import() -> None:
+    """Test that TYPE_CHECKING can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from typing import TYPE_CHECKING
+
+            result = TYPE_CHECKING
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is False, "TYPE_CHECKING should be False at runtime"
 
 
 def test_forbidden_name() -> None:
@@ -1006,3 +1048,64 @@ def test_sandbox_allows_configdict_import_and_usage(configdict_code: str) -> Non
     assert "Success:" in scope["result"] or "Name:" in scope["result"], (
         f"ConfigDict usage failed: {scope.get('result')}"
     )
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "function_def": """
+                def sneaky():
+                    import os
+                    return os.listdir('.')
+
+                result = sneaky()
+            """,
+            "classmethod": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "staticmethod": """
+                class Exploit:
+                    @staticmethod
+                    def run():
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "lambda_import": """
+                result = (lambda: __import__('os').listdir('.'))()
+            """,
+            "nested_function": """
+                def outer():
+                    def inner():
+                        import os
+                        return os.listdir('.')
+                    return inner()
+
+                result = outer()
+            """,
+            "classmethod_from_import": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        from os import listdir
+                        return listdir('.')
+
+                result = Exploit.run()
+            """,
+        }
+    ),
+)
+def test_deferred_import_denied(code: str) -> None:
+    """Test that deferred imports (inside functions, classmethods, etc.) are still blocked."""
+    sandbox = _sandbox_from_code(code)
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()

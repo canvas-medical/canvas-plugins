@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import pkgutil
+import signal
 import sys
 import threading
 import warnings
@@ -799,11 +800,26 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
 
     any_failed = False
 
+    # Share evaluated_modules across all handlers in this plugin so that common
+    # submodules (like constants.py) are only evaluated and reloaded once, not
+    # once per handler.
+    evaluated_modules: dict[str, bool] = {}
+
     for handler in handlers:
         # TODO add class colon validation to existing schema validation
         # TODO when we encounter an exception here, disable the plugin in response
         try:
             handler_module, handler_class = handler["class"].split(":")
+
+            handler_package = handler_module.split(".")[0]
+            if handler_package != name:
+                log.error(
+                    f'Plugin "{name}" declares handler from foreign package '
+                    f'"{handler_package}" — skipping'
+                )
+                any_failed = True
+                continue
+
             name_and_class = f"{name}:{handler_module}:{handler_class}"
         except ValueError as e:
             log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
@@ -824,7 +840,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                     message=r"Model '.*' was already registered",
                     category=RuntimeWarning,
                 )
-                sandbox = sandbox_from_module(path.parent, handler_module)
+                sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
                 result = sandbox.execute()
 
             if name_and_class in LOADED_PLUGINS:
@@ -864,6 +880,13 @@ def unload_plugin(name: str) -> None:
             log.info(f'Unloading handler "{handler_name}"')
             del LOADED_PLUGINS[handler_name]
             handlers_removed = True
+
+    # Remove stale sys.modules entries for this plugin's package so that subsequent
+    # loads do a clean import instead of calling importlib.reload on stale module
+    # objects (which can leave modules in a partially-initialized state).
+    stale_modules = [mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")]
+    for mod in stale_modules:
+        del sys.modules[mod]
 
     if handlers_removed:
         # Refresh the event type map to remove any handlers for the unloaded plugin
@@ -985,15 +1008,29 @@ def main(specified_plugin_paths: list[str] | None = None) -> None:
 
     server.start()
 
+    shutdown_reason = "unknown"
+
+    def handle_signal(signum: int, _frame: object) -> None:
+        nonlocal shutdown_reason
+        shutdown_reason = signal.Signals(signum).name
+        server.stop(grace=0)
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
-        pass
+        shutdown_reason = "SIGINT"
+    except Exception as ex:
+        shutdown_reason = f"exception: {ex}"
     finally:
+        log.info(f"Server shutting down (reason: {shutdown_reason})")
         executor.shutdown(wait=True, cancel_futures=True)
         if synchronizer_thread.is_alive():
             STOP_SYNCHRONIZER.set()
             synchronizer_thread.join()
+        log.info("Server stopped")
 
 
 if __name__ == "__main__":

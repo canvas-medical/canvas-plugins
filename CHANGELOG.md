@@ -1,6 +1,64 @@
 # CHANGELOG
 
 
+## v0.111.0 (2026-03-05)
+
+### Features
+
+- Create effect for updating claim provider values
+  ([#1543](https://github.com/canvas-medical/canvas-plugins/pull/1543),
+  [`a5107b5`](https://github.com/canvas-medical/canvas-plugins/commit/a5107b54893fdabb9c0e29e7544d30f81a058c59))
+
+
+## v0.110.0 (2026-03-05)
+
+### Features
+
+- Add support for python 3.13 and 3.14
+  ([#1521](https://github.com/canvas-medical/canvas-plugins/pull/1521),
+  [`d4836bc`](https://github.com/canvas-medical/canvas-plugins/commit/d4836bc6c78294e54d12cf1e44af3e84a977ef28))
+
+
+## v0.109.0 (2026-03-04)
+
+### Features
+
+- Pdf generator util ([#1529](https://github.com/canvas-medical/canvas-plugins/pull/1529),
+  [`647e210`](https://github.com/canvas-medical/canvas-plugins/commit/647e210c7948ec913a3f70bb4905daa46ea87eb1))
+
+
+## v0.108.0 (2026-03-03)
+
+### Features
+
+- Add events for prescription status
+  ([#1534](https://github.com/canvas-medical/canvas-plugins/pull/1534),
+  [`0f28f2e`](https://github.com/canvas-medical/canvas-plugins/commit/0f28f2e182d5a6905f61178e45d1accf72881503))
+
+- Add Prescription to data module
+  ([#1530](https://github.com/canvas-medical/canvas-plugins/pull/1530),
+  [`17d0646`](https://github.com/canvas-medical/canvas-plugins/commit/17d06466daced8c64c10169269be656b4a312e08))
+
+Signed-off-by: Michela Iannaccone <mbiannaccone@gmail.com>
+
+Co-authored-by: José Magalhães <jose.magalhaes@canvasmedical.com>
+
+
+## v0.107.0 (2026-03-02)
+
+### Bug Fixes
+
+- Maintain support for command and context implementation
+  ([#1531](https://github.com/canvas-medical/canvas-plugins/pull/1531),
+  [`155bb2a`](https://github.com/canvas-medical/canvas-plugins/commit/155bb2a79322f145c777c99289fd57c732e4be0a))
+
+### Features
+
+- Collect RSS metrics on plugin load, and invocation
+  ([#1525](https://github.com/canvas-medical/canvas-plugins/pull/1525),
+  [`4a2bfad`](https://github.com/canvas-medical/canvas-plugins/commit/4a2bfad904ec3a6e911ce87c0a4f6451433d6ac1))
+
+
 ## v0.106.0 (2026-02-27)
 
 ### Features

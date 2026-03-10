@@ -3,7 +3,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -125,6 +126,18 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MEDICATION_STATEMENT__MEDICATION__PRE_SEARCH: _ClassVar[EventType]
     MEDICATION_STATEMENT__MEDICATION__POST_SEARCH: _ClassVar[EventType]
     MEDICATION_STATEMENT__MEDICATION__SELECTED: _ClassVar[EventType]
+    PRESCRIPTION_OPENED: _ClassVar[EventType]
+    PRESCRIPTION_PENDING: _ClassVar[EventType]
+    PRESCRIPTION_ACCEPTED: _ClassVar[EventType]
+    PRESCRIPTION_ERRORED: _ClassVar[EventType]
+    PRESCRIPTION_CANCEL_REQUESTED: _ClassVar[EventType]
+    PRESCRIPTION_CANCELED: _ClassVar[EventType]
+    PRESCRIPTION_CANCEL_DENIED: _ClassVar[EventType]
+    PRESCRIPTION_RECEIVED: _ClassVar[EventType]
+    PRESCRIPTION_SIGNED: _ClassVar[EventType]
+    PRESCRIPTION_INQUEUE: _ClassVar[EventType]
+    PRESCRIPTION_TRANSMITTED: _ClassVar[EventType]
+    PRESCRIPTION_DELIVERED: _ClassVar[EventType]
     ADJUST_PRESCRIPTION_COMMAND__PRE_ORIGINATE: _ClassVar[EventType]
     ADJUST_PRESCRIPTION_COMMAND__POST_ORIGINATE: _ClassVar[EventType]
     ADJUST_PRESCRIPTION_COMMAND__PRE_UPDATE: _ClassVar[EventType]
@@ -1191,6 +1204,18 @@ ASSESS_COMMAND__CONDITION_SELECTED: EventType
 MEDICATION_STATEMENT__MEDICATION__PRE_SEARCH: EventType
 MEDICATION_STATEMENT__MEDICATION__POST_SEARCH: EventType
 MEDICATION_STATEMENT__MEDICATION__SELECTED: EventType
+PRESCRIPTION_OPENED: EventType
+PRESCRIPTION_PENDING: EventType
+PRESCRIPTION_ACCEPTED: EventType
+PRESCRIPTION_ERRORED: EventType
+PRESCRIPTION_CANCEL_REQUESTED: EventType
+PRESCRIPTION_CANCELED: EventType
+PRESCRIPTION_CANCEL_DENIED: EventType
+PRESCRIPTION_RECEIVED: EventType
+PRESCRIPTION_SIGNED: EventType
+PRESCRIPTION_INQUEUE: EventType
+PRESCRIPTION_TRANSMITTED: EventType
+PRESCRIPTION_DELIVERED: EventType
 ADJUST_PRESCRIPTION_COMMAND__PRE_ORIGINATE: EventType
 ADJUST_PRESCRIPTION_COMMAND__POST_ORIGINATE: EventType
 ADJUST_PRESCRIPTION_COMMAND__PRE_UPDATE: EventType

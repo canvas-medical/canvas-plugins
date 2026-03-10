@@ -152,6 +152,7 @@ STANDARD_LIBRARY_MODULES = {
         "compile",
         "DOTALL",
         "IGNORECASE",
+        "fullmatch",
         "match",
         "search",
         "split",
@@ -179,6 +180,7 @@ STANDARD_LIBRARY_MODULES = {
         "Protocol",
         "Sequence",
         "Tuple",
+        "TYPE_CHECKING",
         "Type",
         "TypedDict",
         "TypeGuard",
@@ -677,7 +679,9 @@ class Sandbox:
         self.source_code = source_code.read_text()
         package_path = _find_folder_in_path(source_code, self.package_name)
         self.base_path = package_path.parent if package_path else None
-        self._evaluated_modules: dict[str, bool] = evaluated_modules or {}
+        self._evaluated_modules: dict[str, bool] = (
+            evaluated_modules if evaluated_modules is not None else {}
+        )
 
     @cached_property
     def scope(self) -> dict[str, Any]:
@@ -976,13 +980,17 @@ class Sandbox:
         return self.scope
 
 
-def sandbox_from_module(base_path: Path, module_name: str) -> Sandbox:
+def sandbox_from_module(
+    base_path: Path,
+    module_name: str,
+    evaluated_modules: dict[str, bool] | None = None,
+) -> Sandbox:
     """Sandbox the code execution."""
     module_path = base_path / str(module_name.replace(".", "/") + ".py")
 
     if not module_path.exists():
         raise ModuleNotFoundError(f'Could not load module "{module_name}"')
 
-    sandbox = Sandbox(module_path, namespace=module_name)
+    sandbox = Sandbox(module_path, namespace=module_name, evaluated_modules=evaluated_modules)
 
     return sandbox
