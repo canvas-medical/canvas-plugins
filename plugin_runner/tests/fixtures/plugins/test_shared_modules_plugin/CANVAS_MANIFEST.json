@@ -1,0 +1,38 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "test_shared_modules_plugin",
+    "description": "Plugin with multiple handlers sharing a common module",
+    "components": {
+        "protocols": [
+            {
+                "class": "test_shared_modules_plugin.handlers.handler_a:HandlerA",
+                "description": "First handler using shared constants",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            },
+            {
+                "class": "test_shared_modules_plugin.handlers.handler_b:HandlerB",
+                "description": "Second handler using shared constants",
+                "data_access": {
+                    "event": "",
+                    "read": [],
+                    "write": []
+                }
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": ""
+}
