@@ -583,13 +583,13 @@ def discover_model_files(plugin_path: Path) -> list[Path]:
         plugin_path: Path to the plugin directory.
 
     Returns:
-        Sorted list of .py file paths, excluding __init__.py.
+        Sorted list of .py file paths.
         Empty list if models/ doesn't exist.
     """
     models_path = plugin_path / "models"
     if not models_path.exists():
         return []
-    return sorted(f for f in models_path.glob("*.py") if f.name != "__init__.py")
+    return sorted(models_path.glob("*.py"))
 
 
 def extract_models_from_module(plugin_name: str, model_file: Path) -> list[type[CustomModel]]:
@@ -602,7 +602,11 @@ def extract_models_from_module(plugin_name: str, model_file: Path) -> list[type[
     Returns:
         List of model classes whose __module__ starts with '{plugin_name}.models'.
     """
-    module_name = f"{plugin_name}.models.{model_file.stem}"
+    module_name = (
+        f"{plugin_name}.models"
+        if model_file.name == "__init__.py"
+        else f"{plugin_name}.models.{model_file.stem}"
+    )
     s = Sandbox(model_file, namespace=module_name)
     scope = s.execute()
     return [

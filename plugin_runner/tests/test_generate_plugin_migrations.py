@@ -42,8 +42,8 @@ def test_discover_returns_py_files(tmp_path: Path) -> None:
     assert all(f.suffix == ".py" for f in result)
 
 
-def test_discover_excludes_init(tmp_path: Path) -> None:
-    """__init__.py should not be returned."""
+def test_discover_includes_init(tmp_path: Path) -> None:
+    """__init__.py should be returned alongside other model files."""
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "__init__.py").write_text("")
@@ -51,8 +51,10 @@ def test_discover_excludes_init(tmp_path: Path) -> None:
 
     result = discover_model_files(tmp_path)
 
-    assert len(result) == 1
-    assert result[0].name == "my_model.py"
+    names = [f.name for f in result]
+    assert len(result) == 2
+    assert "__init__.py" in names
+    assert "my_model.py" in names
 
 
 def test_discover_returns_empty_when_no_models_dir(tmp_path: Path) -> None:
