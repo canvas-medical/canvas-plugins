@@ -6,7 +6,7 @@
     "components": {
         "protocols": [
             {
-                "class": "test_batch_commit.protocols.my_protocol:Protocol",
+                "class": "test_batch_commit.handlers.my_handler:MyHandler",
                 "description": "Returns a BatchCommitCommandEffect",
                 "data_access": {
                     "event": "",

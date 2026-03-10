@@ -2,11 +2,11 @@ from canvas_sdk.commands import AssessCommand, PlanCommand
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.batch_commit import BatchCommitCommandEffect
 from canvas_sdk.events import EventType
-from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.handlers import BaseHandler
 
 
-class Protocol(BaseProtocol):
-    """Test protocol that returns a BatchCommitCommandEffect."""
+class MyHandler(BaseHandler):
+    """Test handler that returns a BatchCommitCommandEffect."""
 
     RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
