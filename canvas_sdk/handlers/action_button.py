@@ -55,7 +55,8 @@ class ActionButton(BaseHandler):
     BUTTON_KEY: str = ""
     BUTTON_LOCATION: ButtonLocation
     PRIORITY: int = 0
-    COLOR: str | None = None
+    BUTTON_TEXT_COLOR: str | None = None
+    BUTTON_BACKGROUND_COLOR: str | None = None
 
     @abstractmethod
     def handle(self) -> list[Effect]:
@@ -81,7 +82,8 @@ class ActionButton(BaseHandler):
                         key=self.BUTTON_KEY,
                         title=self.BUTTON_TITLE,
                         priority=self.PRIORITY,
-                        color=self.COLOR,
+                        color=self.BUTTON_TEXT_COLOR,
+                        background=self.BUTTON_BACKGROUND_COLOR,
                     ).apply()
                 ]
         elif self.context["key"] == self.BUTTON_KEY:

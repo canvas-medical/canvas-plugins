@@ -18,6 +18,7 @@ class ShowButtonEffect(_BaseEffect):
     title: str = Field(min_length=1)
     priority: int = Field(default=0)
     color: str | None = Field(min_length=7, max_length=7, default=None)
+    background: str | None = Field(min_length=7, max_length=7, default=None)
 
     @property
     def values(self) -> dict[str, Any]:
@@ -27,6 +28,7 @@ class ShowButtonEffect(_BaseEffect):
             "title": self.title,
             "priority": self.priority,
             "color": self.color,
+            "background": self.background,
         }
 
     @property
