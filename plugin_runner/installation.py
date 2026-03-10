@@ -49,6 +49,32 @@ READ_ACCESS_KEY = "namespace_read_access_key"
 READ_WRITE_ACCESS_KEY = "namespace_read_write_access_key"
 
 
+def is_schema_manager() -> bool:
+    """Return True if this process should perform DDL operations.
+
+    Schema creation, partition setup, and table migrations should only run
+    once per deployment. In Aptible this means the first 'cmd' container
+    (APTIBLE_PROCESS_TYPE=cmd, APTIBLE_PROCESS_INDEX=0). Outside Aptible
+    (local development) DDL is always allowed.
+    """
+    aptible_process_type = os.getenv("APTIBLE_PROCESS_TYPE")
+    if not aptible_process_type:
+        return True
+    return aptible_process_type == "cmd" and os.getenv("APTIBLE_PROCESS_INDEX", "0") == "0"
+
+
+def clear_registered_models(plugin_name: str) -> None:
+    """Remove previously registered models for a plugin from Django's app registry.
+
+    This prevents 'Conflicting models' errors when a model is moved between
+    files within a plugin's models/ directory during reinstallation.
+    """
+    from django.apps import apps
+
+    apps.all_models.pop(plugin_name, None)
+    apps.clear_cache()
+
+
 def open_database_connection() -> Connection:
     """Opens a psycopg connection to the home-app database.
 
@@ -681,6 +707,8 @@ def generate_plugin_migrations(
         if str(plugin_path) not in sys.path:
             sys.path.insert(0, str(plugin_path))
 
+        clear_registered_models(plugin_name)
+
         for model_file in discover_model_files(plugin_path):
             models = extract_models_from_module(plugin_name, model_file)
             for model_class in models:
@@ -800,8 +828,10 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                 manifest = json.load(f)
                 custom_data = manifest.get("custom_data")
 
-        # Initialize namespace schema and generate model migrations if custom_data is declared
-        if custom_data:
+        # Initialize namespace schema and generate model migrations if custom_data is declared.
+        # DDL operations (schema creation, partitions, table migrations) only run on the
+        # schema manager process to avoid duplicate work and race conditions across containers.
+        if custom_data and is_schema_manager():
             schema_name = custom_data["namespace"]
             declared_access = custom_data.get("access", "read")
             secrets = attributes["secrets"]
@@ -823,6 +853,11 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                     f"Plugin '{plugin_name}' has read-only access to namespace "
                     f"'{schema_name}' - skipping custom model table creation"
                 )
+        elif custom_data:
+            log.info(
+                f"Plugin '{plugin_name}' has custom_data but this process is not the "
+                f"schema manager - skipping namespace and table setup"
+            )
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 

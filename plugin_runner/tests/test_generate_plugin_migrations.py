@@ -7,8 +7,10 @@ Tests cover:
 4. execute_create_table_sql — SQL execution against SQLite
 5. generate_plugin_migrations — orchestrator logic
 6. End-to-end integration test
+7. is_schema_manager — DDL gating based on Aptible environment
 """
 
+import os
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import MagicMock, patch
@@ -17,10 +19,12 @@ import pytest
 
 from plugin_runner.installation import (
     SQL_STATEMENT_DELIMITER,
+    clear_registered_models,
     discover_model_files,
     execute_create_table_sql,
     extract_models_from_module,
     generate_plugin_migrations,
+    is_schema_manager,
     should_create_table,
 )
 
@@ -464,3 +468,107 @@ def test_end_to_end(tmp_path: Path) -> None:
     with connection.cursor() as cursor:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='thing'")
         assert cursor.fetchone() is not None
+
+
+# ===========================================================================
+# Tests for clear_registered_models
+# ===========================================================================
+
+
+def test_clear_registered_models_removes_existing_entry() -> None:
+    """Should remove a previously registered model from apps.all_models."""
+    from django.apps import apps
+
+    # Seed the registry with a fake model under a fake plugin name
+    fake_plugin = "clear_test_plugin"
+    apps.all_models[fake_plugin] = {"fakemodel": MagicMock()}
+
+    clear_registered_models(fake_plugin)
+
+    assert fake_plugin not in apps.all_models
+
+
+def test_clear_registered_models_noop_when_absent() -> None:
+    """Should not raise when the plugin has no registered models."""
+    clear_registered_models("nonexistent_plugin_xyz")
+
+
+@pytest.mark.django_db
+def test_model_relocation_does_not_conflict(tmp_path: Path) -> None:
+    """Moving a model between files should not raise a conflicting-models error.
+
+    Simulates a plugin that first defines CustomNote in models/__init__.py,
+    then relocates it to models/models.py on reinstallation.
+    """
+    plugin_name = "reloc_test_plugin"
+    plugin_dir = tmp_path / plugin_name
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    models_dir = plugin_dir / "models"
+    models_dir.mkdir()
+
+    model_code = dedent("""\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import TextField
+
+        class CustomNote(CustomModel):
+            body = TextField()
+    """)
+
+    # First installation: model lives in models/__init__.py
+    (models_dir / "__init__.py").write_text(model_code)
+    generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
+
+    # Second installation: model moves to models/models.py
+    (models_dir / "__init__.py").write_text("")
+    (models_dir / "models.py").write_text(model_code)
+
+    # This should NOT raise RuntimeError("Conflicting 'customnote' models ...")
+    result = generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
+
+    model_names = [m.__name__ for m in result]
+    assert "CustomNote" in model_names
+
+
+# ===========================================================================
+# Tests for is_schema_manager
+# ===========================================================================
+
+
+def test_is_schema_manager_outside_aptible() -> None:
+    """Without APTIBLE_PROCESS_TYPE, DDL is always allowed (local dev)."""
+    with patch.dict(os.environ, {}, clear=True):
+        os.environ.pop("APTIBLE_PROCESS_TYPE", None)
+        os.environ.pop("APTIBLE_PROCESS_INDEX", None)
+        assert is_schema_manager() is True
+
+
+def test_is_schema_manager_cmd_index_zero() -> None:
+    """First cmd container should be the schema manager."""
+    with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "cmd", "APTIBLE_PROCESS_INDEX": "0"}):
+        assert is_schema_manager() is True
+
+
+def test_is_schema_manager_cmd_index_default() -> None:
+    """When APTIBLE_PROCESS_INDEX is absent, it defaults to '0'."""
+    with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "cmd"}, clear=False):
+        os.environ.pop("APTIBLE_PROCESS_INDEX", None)
+        assert is_schema_manager() is True
+
+
+def test_is_schema_manager_cmd_index_nonzero() -> None:
+    """Non-primary cmd containers should not manage schemas."""
+    with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "cmd", "APTIBLE_PROCESS_INDEX": "1"}):
+        assert is_schema_manager() is False
+
+
+def test_is_schema_manager_worker_index_zero() -> None:
+    """Worker processes should never manage schemas, even at index 0."""
+    with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "worker", "APTIBLE_PROCESS_INDEX": "0"}):
+        assert is_schema_manager() is False
+
+
+def test_is_schema_manager_worker_index_nonzero() -> None:
+    """Worker processes should never manage schemas."""
+    with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "worker", "APTIBLE_PROCESS_INDEX": "1"}):
+        assert is_schema_manager() is False
