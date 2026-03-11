@@ -6,6 +6,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import time
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -61,6 +62,46 @@ def is_schema_manager() -> bool:
     if not aptible_process_type:
         return True
     return aptible_process_type == "cmd" and os.getenv("APTIBLE_PROCESS_INDEX", "0") == "0"
+
+
+# Default: wait up to 120 seconds for the schema manager to create a namespace,
+# polling every 2 seconds.
+NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "120"))
+NAMESPACE_POLL_INTERVAL = int(os.getenv("NAMESPACE_POLL_INTERVAL", "2"))
+
+
+def wait_for_namespace(
+    namespace: str,
+    timeout: int = NAMESPACE_WAIT_TIMEOUT,
+    poll_interval: int = NAMESPACE_POLL_INTERVAL,
+) -> None:
+    """Block until a namespace schema exists, or raise after timeout.
+
+    Non-schema-manager containers call this to wait for the schema manager
+    to finish creating the namespace before proceeding with plugin startup.
+
+    Args:
+        namespace: The namespace schema name to wait for.
+        timeout: Maximum seconds to wait before raising.
+        poll_interval: Seconds between existence checks.
+
+    Raises:
+        PluginInstallationError: If the namespace does not appear within the timeout.
+    """
+    elapsed = 0
+    while not namespace_exists(namespace):
+        if elapsed >= timeout:
+            raise PluginInstallationError(
+                f"Timed out after {timeout}s waiting for namespace '{namespace}' "
+                f"to be created by the schema manager."
+            )
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+        log.info(
+            f"Waiting for namespace '{namespace}' to be initialized ({elapsed}s / {timeout}s) ..."
+        )
+
+    log.info(f"Namespace '{namespace}' is ready")
 
 
 def clear_registered_models(plugin_name: str) -> None:
@@ -704,8 +745,13 @@ def generate_plugin_migrations(
     log.info(f"Generating migrations for plugin '{plugin_name}' in schema '{schema_name}'")
     discovered_models: list[type[CustomModel]] = []
     try:
-        if str(plugin_path) not in sys.path:
-            sys.path.insert(0, str(plugin_path))
+        # Add the plugin's parent directory so that intra-plugin imports like
+        # `from hello_custom_data.models import CustomPatient` can resolve.
+        # The plugin directory itself is a Python package (has __init__.py),
+        # so the *parent* must be on sys.path for the package to be importable.
+        parent_dir = str(plugin_path.parent)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
 
         clear_registered_models(plugin_name)
 
@@ -829,8 +875,8 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                 custom_data = manifest.get("custom_data")
 
         # Initialize namespace schema and generate model migrations if custom_data is declared.
-        # DDL operations (schema creation, partitions, table migrations) only run on the
-        # schema manager process to avoid duplicate work and race conditions across containers.
+        # Only the schema manager (primary cmd container) performs DDL.
+        # Non-schema-manager containers poll until the namespace exists.
         if custom_data and is_schema_manager():
             schema_name = custom_data["namespace"]
             declared_access = custom_data.get("access", "read")
@@ -854,10 +900,14 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                     f"'{schema_name}' - skipping custom model table creation"
                 )
         elif custom_data:
+            schema_name = custom_data["namespace"]
+
             log.info(
-                f"Plugin '{plugin_name}' has custom_data but this process is not the "
-                f"schema manager - skipping namespace and table setup"
+                f"Plugin '{plugin_name}' is not the schema manager — waiting for "
+                f"namespace '{schema_name}' to be initialized"
             )
+
+            wait_for_namespace(schema_name)
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 

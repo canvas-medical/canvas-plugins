@@ -8,6 +8,7 @@ Tests cover:
 5. generate_plugin_migrations — orchestrator logic
 6. End-to-end integration test
 7. is_schema_manager — DDL gating based on Aptible environment
+8. wait_for_namespace — non-schema-manager containers wait for namespace readiness
 """
 
 import os
@@ -26,6 +27,7 @@ from plugin_runner.installation import (
     generate_plugin_migrations,
     is_schema_manager,
     should_create_table,
+    wait_for_namespace,
 )
 
 # ===========================================================================
@@ -377,7 +379,7 @@ def test_raises_on_exception(
 @patch("plugin_runner.installation.should_create_table", return_value=True)
 @patch("plugin_runner.installation.extract_models_from_module")
 @patch("plugin_runner.installation.discover_model_files")
-def test_adds_plugin_path_to_sys_path(
+def test_adds_plugin_parent_to_sys_path(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
     mock_should: MagicMock,
@@ -385,7 +387,7 @@ def test_adds_plugin_path_to_sys_path(
     mock_exec: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """The plugin directory should be added to sys.path."""
+    """The plugin's parent directory should be added to sys.path."""
     import sys
 
     mock_discover.return_value = []
@@ -394,10 +396,10 @@ def test_adds_plugin_path_to_sys_path(
 
     generate_plugin_migrations("my_plugin", plugin_path)
 
-    assert str(plugin_path) in sys.path
+    assert str(tmp_path) in sys.path
 
     # Cleanup
-    sys.path.remove(str(plugin_path))
+    sys.path.remove(str(tmp_path))
 
 
 @patch("plugin_runner.installation.execute_create_table_sql")
@@ -572,3 +574,47 @@ def test_is_schema_manager_worker_index_nonzero() -> None:
     """Worker processes should never manage schemas."""
     with patch.dict(os.environ, {"APTIBLE_PROCESS_TYPE": "worker", "APTIBLE_PROCESS_INDEX": "1"}):
         assert is_schema_manager() is False
+
+
+# ===========================================================================
+# Tests for wait_for_namespace
+# ===========================================================================
+
+
+@patch("plugin_runner.installation.time.sleep")
+@patch("plugin_runner.installation.namespace_exists", return_value=True)
+def test_wait_for_namespace_returns_immediately_when_exists(
+    mock_exists: MagicMock, mock_sleep: MagicMock
+) -> None:
+    """Should return immediately without sleeping when namespace already exists."""
+    wait_for_namespace("org__data", timeout=10, poll_interval=1)
+
+    mock_exists.assert_called_once_with("org__data")
+    mock_sleep.assert_not_called()
+
+
+@patch("plugin_runner.installation.time.sleep")
+@patch("plugin_runner.installation.namespace_exists", side_effect=[False, False, True])
+def test_wait_for_namespace_polls_until_exists(
+    mock_exists: MagicMock, mock_sleep: MagicMock
+) -> None:
+    """Should poll repeatedly until namespace appears."""
+    wait_for_namespace("org__data", timeout=30, poll_interval=2)
+
+    assert mock_exists.call_count == 3
+    assert mock_sleep.call_count == 2
+
+
+@patch("plugin_runner.installation.time.sleep")
+@patch("plugin_runner.installation.namespace_exists", return_value=False)
+def test_wait_for_namespace_raises_on_timeout(
+    mock_exists: MagicMock, mock_sleep: MagicMock
+) -> None:
+    """Should raise PluginInstallationError after timeout."""
+    from plugin_runner.exceptions import PluginInstallationError
+
+    with pytest.raises(PluginInstallationError, match="Timed out after 4s"):
+        wait_for_namespace("org__data", timeout=4, poll_interval=2)
+
+    # Should have polled: initial check, then 2s, then 4s → timeout
+    assert mock_sleep.call_count == 2
