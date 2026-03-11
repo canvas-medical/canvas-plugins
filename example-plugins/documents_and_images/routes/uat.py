@@ -1,4 +1,3 @@
-import urllib.parse
 from typing import Any
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
@@ -16,9 +15,7 @@ from canvas_sdk.v1.data import (
     SnapshotImage,
 )
 
-# GET /plugin-io/api/koala_1979_uat/uat
-# No auth required for local UAT testing
-
+# GET /plugin-io/api/documents_and_images/uat
 
 EXPECTED_PRESIGNED_PARAMS = {
     "X-Amz-Algorithm",
@@ -28,6 +25,22 @@ EXPECTED_PRESIGNED_PARAMS = {
     "X-Amz-SignedHeaders",
     "X-Amz-Signature",
 }
+
+
+def _parse_query_string(url: str) -> dict[str, str]:
+    """Parse query string params from a URL using only string operations."""
+    qs: dict[str, str] = {}
+    if "?" not in url:
+        return qs
+    query = url.split("?", 1)[1]
+    # Strip fragment
+    if "#" in query:
+        query = query.split("#", 1)[0]
+    for part in query.split("&"):
+        if "=" in part:
+            key, val = part.split("=", 1)
+            qs[key] = val
+    return qs
 
 
 def check_presigned_url(url: str | None) -> dict:
@@ -44,18 +57,15 @@ def check_presigned_url(url: str | None) -> dict:
     result["checks"]["has_s3_host"] = ".s3." in url and ".amazonaws.com" in url
 
     # Check query parameters
-    parsed = urllib.parse.urlparse(url)
-    params = set(urllib.parse.parse_qs(parsed.query).keys())
-    missing = EXPECTED_PRESIGNED_PARAMS - params
+    params = _parse_query_string(url)
+    missing = EXPECTED_PRESIGNED_PARAMS - set(params.keys())
     result["checks"]["has_all_params"] = len(missing) == 0
     if missing:
         result["checks"]["missing_params"] = list(missing)
         result["valid"] = False
 
     # Check expiry is 3600
-    qs = urllib.parse.parse_qs(parsed.query)
-    expires = qs.get("X-Amz-Expires", [None])[0]
-    result["checks"]["expires_3600"] = expires == "3600"
+    result["checks"]["expires_3600"] = params.get("X-Amz-Expires") == "3600"
 
     return result
 
