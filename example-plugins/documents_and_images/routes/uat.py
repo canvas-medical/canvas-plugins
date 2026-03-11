@@ -3,6 +3,7 @@ from typing import Any
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute
+from canvas_sdk.handlers.simple_api.security import StaffSessionAuthMixin
 from canvas_sdk.v1.data import (
     DocumentReference,
     DocumentReferenceCategory,
@@ -73,7 +74,7 @@ def serialize_model(obj: Any, fields: list[str]) -> dict[str, str | None]:
     return result
 
 
-class DocumentReferenceUAT(SimpleAPIRoute):
+class DocumentReferenceUAT(StaffSessionAuthMixin, SimpleAPIRoute):
     """UAT endpoint that exercises all new data models from KOALA-1979."""
 
     PATH = "/uat"
