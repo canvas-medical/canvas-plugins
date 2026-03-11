@@ -1,4 +1,5 @@
 import urllib.parse
+from typing import Any
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute
@@ -58,7 +59,7 @@ def check_presigned_url(url: str | None) -> dict:
     return result
 
 
-def serialize_model(obj: object, fields: list[str]) -> dict[str, str | None]:
+def serialize_model(obj: Any, fields: list[str]) -> dict[str, str | None]:
     """Serialize a model instance to a dict with the given field names."""
     result: dict[str, str | None] = {}
     for field in fields:
