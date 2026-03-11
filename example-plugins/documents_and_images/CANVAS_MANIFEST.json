@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "routes.uat:DocumentReferenceUAT",
+                "class": "documents_and_images.routes.uat:DocumentReferenceUAT",
                 "description": "UAT endpoint for DocumentReference and related models"
             }
         ],
