@@ -3,11 +3,11 @@ from typing import Any
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
-class EnsurePatientInGroup(_BaseEffect):
+class PatientGroupAddMember(_BaseEffect):
     """An Effect that ensures one or more patients are members of a group (idempotent)."""
 
     class Meta:
-        effect_type = EffectType.ENSURE_PATIENT_IN_GROUP
+        effect_type = EffectType.PATIENT_GROUP__ADD_MEMBER
         apply_required_fields = ("patient_ids", "group_id")
 
     patient_ids: list[str] = []
@@ -24,11 +24,11 @@ class EnsurePatientInGroup(_BaseEffect):
         return {"patient_ids": self.patient_ids, "group_id": self.group_id}
 
 
-class EnsurePatientNotInGroup(_BaseEffect):
+class PatientGroupDeactivateMember(_BaseEffect):
     """An Effect that ensures one or more patients are not active members of a group (idempotent)."""
 
     class Meta:
-        effect_type = EffectType.ENSURE_PATIENT_NOT_IN_GROUP
+        effect_type = EffectType.PATIENT_GROUP__DEACTIVATE_MEMBER
         apply_required_fields = ("patient_ids", "group_id")
 
     patient_ids: list[str] = []
@@ -46,6 +46,6 @@ class EnsurePatientNotInGroup(_BaseEffect):
 
 
 __exports__ = (
-    "EnsurePatientInGroup",
-    "EnsurePatientNotInGroup",
+    "PatientGroupAddMember",
+    "PatientGroupDeactivateMember",
 )
