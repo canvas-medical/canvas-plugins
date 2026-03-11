@@ -34,6 +34,7 @@ class PatientGroupMember(TimestampedModel):
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True, blank=True)
     locked = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
 
     def __str__(self) -> str:
         return (
