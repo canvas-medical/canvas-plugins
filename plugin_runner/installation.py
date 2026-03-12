@@ -866,6 +866,12 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
 
+        # Clear any previously registered Django models for this plugin so that
+        # models moved between files (e.g. from biography.py to __init__.py)
+        # don't conflict with stale registrations from the prior version.
+        # This must run on ALL containers, not just the schema manager.
+        clear_registered_models(plugin_name)
+
         # Read the manifest to check for custom_data declaration
         manifest_path = plugin_installation_path / MANIFEST_FILE_NAME
         custom_data = None
