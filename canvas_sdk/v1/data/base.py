@@ -89,7 +89,7 @@ class MetadataModel(TimestampedModel, IdentifiableModel):
         abstract = True
 
     key = models.CharField(max_length=256)
-    value = models.CharField(max_length=256)
+    value = models.TextField()
 
 
 class BaseModelManager(models.Manager):
