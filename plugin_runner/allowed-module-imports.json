@@ -613,6 +613,10 @@
     "AddressType",
     "PatientFacilityAddress"
   ],
+  "canvas_sdk.effects.patient_group": [
+    "PatientGroupAddMember",
+    "PatientGroupDeactivateMember"
+  ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",
     "InputType",
@@ -1015,6 +1019,8 @@
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
+    "PatientGroup",
+    "PatientGroupMember",
     "PatientIdentificationCard",
     "PatientMetadata",
     "PatientPosting",
@@ -1335,6 +1341,10 @@
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding"
+  ],
+  "canvas_sdk.v1.data.patient_group": [
+    "PatientGroup",
+    "PatientGroupMember"
   ],
   "canvas_sdk.v1.data.payment_collection": [
     "PaymentCollection",
