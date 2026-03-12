@@ -242,6 +242,7 @@ THIRD_PARTY_MODULES = {
         "Q",
         "Subquery",
         "Sum",
+        "UniqueConstraint",
         "Value",
         "When",
     },

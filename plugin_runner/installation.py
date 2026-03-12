@@ -18,7 +18,8 @@ import psycopg
 import requests
 import sentry_sdk
 from django.contrib.postgres.indexes import GinIndex
-from django.db.models import Field, Index
+from django.db.models import Field, Index, OneToOneField
+from django.db.models.constraints import UniqueConstraint
 from psycopg import Connection
 from psycopg.rows import dict_row
 
@@ -548,12 +549,37 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
         )
         index_statements.append(index_sql)
 
+    # Build unique constraint definitions
+    constraint_statements = []
+
+    # OneToOneFields imply uniqueness on the FK column. Django normally enforces
+    # this with a UNIQUE constraint in the DDL, but our generate_field_sql strips
+    # all constraints. Emit an explicit unique index to honor the intent.
+    for field in model_class._meta.local_fields:
+        if isinstance(field, OneToOneField) and not field.primary_key:
+            uq_sql = generate_constraint_sql(
+                schema_name,
+                model_class._meta.db_table,
+                UniqueConstraint(fields=[field.column], name=f"uq_{field.column}"),
+                is_sqlite=IS_SQLITE,
+            )
+            constraint_statements.append(uq_sql)
+
+    for constraint in model_class._meta.constraints:
+        if isinstance(constraint, UniqueConstraint):
+            constraint_sql = generate_constraint_sql(
+                schema_name, model_class._meta.db_table, constraint, is_sqlite=IS_SQLITE
+            )
+            constraint_statements.append(constraint_sql)
+
     # Combine all statements
     all_statements = [create_table]
     if alter_statements:
         all_statements.extend(alter_statements)
     if index_statements:
         all_statements.extend(index_statements)
+    if constraint_statements:
+        all_statements.extend(constraint_statements)
 
     return SQL_STATEMENT_DELIMITER.join(all_statements)
 
@@ -641,6 +667,30 @@ def generate_index_sql(
         )
     else:
         return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
+
+
+def generate_constraint_sql(
+    schema_name: str, table_name: str, constraint: UniqueConstraint, is_sqlite: bool = False
+) -> str:
+    """Generate CREATE UNIQUE INDEX SQL from a Django UniqueConstraint.
+
+    Uses CREATE UNIQUE INDEX IF NOT EXISTS for idempotency — safe to run on
+    every deployment regardless of whether the constraint already exists.
+
+    Args:
+        schema_name: The PostgreSQL schema name (namespace or plugin name).
+        table_name: Name of the table (without schema prefix).
+        constraint: Django UniqueConstraint object.
+        is_sqlite: If True, generate SQLite-compatible SQL without schema prefix.
+
+    Returns:
+        CREATE UNIQUE INDEX IF NOT EXISTS SQL statement.
+    """
+    index_name = f"{schema_name}_{constraint.name}"
+    table_full_name = table_name if is_sqlite else f"{schema_name}.{table_name}"
+    field_list = ", ".join(constraint.fields)
+
+    return f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
 
 
 def discover_model_files(plugin_path: Path) -> list[Path]:

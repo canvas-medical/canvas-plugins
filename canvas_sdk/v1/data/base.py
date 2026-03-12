@@ -7,6 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import connection, models
 from django.db.models import ForeignKey, OneToOneField, Q
 from django.db.models.base import ModelBase
+from django.db.models.constraints import UniqueConstraint
 from django.utils.functional import cached_property
 
 if TYPE_CHECKING:
@@ -69,14 +70,120 @@ class CustomModelMetaclass(ModelMetaclass):
         meta.db_table = attrs["__qualname__"].lower()
         meta.app_label = attrs["__module__"].split(".")[0]
 
-        # Look for foreign keys and one to one fields. Index them.
+        # Only OneToOneField may declare primary_key=True, which replaces
+        # the inherited dbid. Reject primary_key=True on all other fields.
+        suppress_dbid = False
+        for key, value in attrs.items():
+            if not isinstance(value, models.Field) or not getattr(value, "primary_key", False):
+                continue
+            if isinstance(value, OneToOneField):
+                suppress_dbid = True
+            elif isinstance(value, ForeignKey):
+                raise ValueError(
+                    f"CustomModel '{name}' sets primary_key=True on ForeignKey '{key}'. "
+                    f"Use a OneToOneField instead."
+                )
+            else:
+                raise ValueError(
+                    f"CustomModel '{name}' sets primary_key=True on field '{key}'. "
+                    f"CustomModels use an auto-generated primary key. "
+                    f"To extend another model, use a OneToOneField with primary_key=True."
+                )
+        if suppress_dbid and "dbid" not in attrs:
+            attrs["dbid"] = None
+
+        # Look for foreign keys and one to one fields. Validate related_name and index them.
         for key, value in attrs.items():
             if isinstance(value, (ForeignKey, OneToOneField)):
-                if not hasattr(meta, "indexes"):
-                    meta.indexes = []
-                idx = models.Index(fields=[f"{key}_id"])
-                if idx not in meta.indexes:
-                    meta.indexes.append(idx)
+                # Reject non-namespaced related_name on FK/OneToOne fields that
+                # target SDK models. SDK models are shared across plugins, so an
+                # unqualified related_name like "status" would collide if two
+                # plugins chose the same name. Plugin-private targets (CustomModels
+                # and proxy models) don't need namespacing.
+                rel_name = value.remote_field.related_name
+                target = value.remote_field.model
+                target_is_plugin_private = isinstance(target, type) and (
+                    issubclass(target, CustomModel)
+                    or getattr(getattr(target, "_meta", None), "proxy", False)
+                )
+                app_label = meta.app_label
+                is_namespaced = rel_name and (
+                    "%(app_label)s" in rel_name or rel_name.startswith(f"{app_label}__")
+                )
+                if (
+                    rel_name
+                    and rel_name != "+"
+                    and not is_namespaced
+                    and not target_is_plugin_private
+                ):
+                    target_name = target.__name__ if isinstance(target, type) else target
+                    raise ValueError(
+                        f"CustomModel '{name}' declares related_name='{rel_name}' "
+                        f"on field '{key}' targeting SDK model '{target_name}'. "
+                        f"To prevent collisions across plugins, use a namespaced "
+                        f"related_name like related_name='%(app_label)s__{rel_name}', "
+                        f"or related_name='+' to disable the reverse relation."
+                    )
+
+                # Auto-index (skip PK fields — they are already indexed)
+                if not getattr(value, "primary_key", False):
+                    if not hasattr(meta, "indexes"):
+                        meta.indexes = []
+                    idx = models.Index(fields=[f"{key}_id"])
+                    if idx not in meta.indexes:
+                        meta.indexes.append(idx)
+
+        # Reject unique=True on individual fields. Developers should use
+        # UniqueConstraint in Meta.constraints instead, because our DDL pipeline
+        # cannot retroactively add UNIQUE to an existing column — it would
+        # silently do nothing, leaving developers confused.
+        # Skip relationship fields (OneToOneField inherently sets unique=True)
+        # and primary keys.
+        for key, value in attrs.items():
+            if (
+                isinstance(value, models.Field)
+                and not isinstance(value, (ForeignKey, OneToOneField))
+                and getattr(value, "unique", False)
+                and not getattr(value, "primary_key", False)
+            ):
+                raise ValueError(
+                    f"CustomModel '{name}' sets unique=True on field '{key}'. "
+                    f"Use a UniqueConstraint in Meta.constraints instead:\n\n"
+                    f"    class Meta:\n"
+                    f"        constraints = [\n"
+                    f"            models.UniqueConstraint(fields=['{key}'], name='uq_{key}'),\n"
+                    f"        ]"
+                )
+
+        # Catch UniqueConstraint placed in Meta.indexes instead of Meta.constraints.
+        # They're duck-type compatible with Index so Django doesn't complain, but
+        # our DDL pipeline would silently create a non-unique index.
+        indexes = getattr(meta, "indexes", None)
+        if indexes:
+            for idx in indexes:
+                if isinstance(idx, UniqueConstraint):
+                    raise ValueError(
+                        f"CustomModel '{name}' places a UniqueConstraint in Meta.indexes. "
+                        f"Move it to Meta.constraints instead."
+                    )
+
+        # Validate that Meta.constraints only contains UniqueConstraint instances
+        # with simple field references (no descending ordering, no expressions).
+        constraints = getattr(meta, "constraints", None)
+        if constraints:
+            for constraint in constraints:
+                if not isinstance(constraint, UniqueConstraint):
+                    raise ValueError(
+                        f"CustomModel '{name}' declares a {type(constraint).__name__} "
+                        f"in Meta.constraints. Only UniqueConstraint is supported."
+                    )
+                for field_name in constraint.fields:
+                    if field_name.startswith("-"):
+                        raise ValueError(
+                            f"CustomModel '{name}' uses descending order '-{field_name[1:]}' "
+                            f"in UniqueConstraint '{constraint.name}'. "
+                            f"Sort order has no effect on uniqueness — use '{field_name[1:]}' instead."
+                        )
 
         new_class = cast(type["Model"], super().__new__(cls, name, bases, attrs, **kwargs))
 

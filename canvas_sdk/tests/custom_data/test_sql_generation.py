@@ -9,12 +9,14 @@ Tests cover:
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.contrib.postgres.indexes import GinIndex
 from django.db import connection, models
 
-from canvas_sdk.v1.data.base import CustomModel
+from canvas_sdk.v1.data.base import CustomModel, Model, ModelExtension
 from plugin_runner.installation import (
     SQL_STATEMENT_DELIMITER,
+    generate_constraint_sql,
     generate_create_table_sql,
     generate_field_sql,
     generate_index_sql,
@@ -87,7 +89,7 @@ class ChildWithOneToOne(CustomModel):
 
 
 class MultipleForeignKeysModel(CustomModel):
-    """A model with multiple foreign keys."""
+    """A model with multiple foreign keys targeting a CustomModel (no namespacing)."""
 
     class Meta:
         app_label = "test_plugin"
@@ -99,6 +101,159 @@ class MultipleForeignKeysModel(CustomModel):
         ParentModel, on_delete=models.DO_NOTHING, related_name="children_two"
     )
     value = models.IntegerField()
+
+
+# ---------------------------------------------------------------------------
+# Test Models for related_name validation
+# ---------------------------------------------------------------------------
+
+
+class SDKModel(Model):
+    """A stand-in for an SDK model (inherits from Model, not CustomModel).
+
+    FK/OneToOne fields targeting this must use a namespaced related_name
+    because SDK models are shared across plugins.
+    """
+
+    class Meta:
+        app_label = "canvas_sdk"
+        managed = False
+
+
+class NamespacedRelatedNameModel(CustomModel):
+    """A model with a template-namespaced related_name targeting an SDK model."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    sdk_ref = models.ForeignKey(
+        SDKModel, on_delete=models.DO_NOTHING, related_name="%(app_label)s__custom"
+    )
+
+
+class HardcodedNamespacedModel(CustomModel):
+    """A model with a hardcoded app_label prefix in related_name targeting an SDK model."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    sdk_ref = models.ForeignKey(
+        SDKModel, on_delete=models.DO_NOTHING, related_name="canvas_sdk__hardcoded"
+    )
+
+
+class PlusRelatedNameModel(CustomModel):
+    """A model with related_name='+' (no reverse relation) targeting an SDK model."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    sdk_ref = models.ForeignKey(SDKModel, on_delete=models.DO_NOTHING, related_name="+")
+
+
+class NoExplicitRelatedNameModel(CustomModel):
+    """A model with no explicit related_name targeting an SDK model."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    sdk_ref = models.OneToOneField(SDKModel, on_delete=models.DO_NOTHING)
+
+
+class CustomModelTargetModel(CustomModel):
+    """A model with a non-namespaced related_name on a FK targeting another CustomModel.
+
+    This is allowed because CustomModels are plugin-private and can't collide.
+    """
+
+    class Meta:
+        app_label = "test_plugin"
+
+    parent = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING, related_name="children")
+
+
+class SDKModelProxy(SDKModel, ModelExtension):
+    """A proxy of an SDK model, as plugins typically create."""
+
+    class Meta:
+        app_label = "test_plugin"
+        proxy = True
+
+
+class ProxyTargetModel(CustomModel):
+    """A model with a non-namespaced related_name on a FK targeting a proxy model.
+
+    This is allowed because proxy models are plugin-private.
+    """
+
+    class Meta:
+        app_label = "test_plugin"
+
+    proxy_ref = models.OneToOneField(
+        SDKModelProxy, on_delete=models.DO_NOTHING, related_name="biography"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test Models with uniqueness constraints
+# ---------------------------------------------------------------------------
+
+
+class SingleColumnUniqueModel(CustomModel):
+    """A model with a single-column UniqueConstraint."""
+
+    class Meta:
+        app_label = "test_plugin"
+        constraints = [
+            models.UniqueConstraint(fields=["email"], name="uq_email"),
+        ]
+
+    email = models.TextField()
+    name = models.TextField()
+
+
+class MultiColumnUniqueModel(CustomModel):
+    """A model with a multi-column UniqueConstraint."""
+
+    class Meta:
+        app_label = "test_plugin"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant_id", "slug"], name="uq_tenant_slug"),
+        ]
+
+    tenant_id = models.IntegerField()
+    slug = models.TextField()
+    title = models.TextField()
+
+
+class MultipleUniqueConstraintsModel(CustomModel):
+    """A model with multiple UniqueConstraints."""
+
+    class Meta:
+        app_label = "test_plugin"
+        constraints = [
+            models.UniqueConstraint(fields=["code"], name="uq_code"),
+            models.UniqueConstraint(fields=["category", "name"], name="uq_cat_name"),
+        ]
+
+    code = models.TextField()
+    category = models.TextField()
+    name = models.TextField()
+
+
+# ---------------------------------------------------------------------------
+# Test Models with OneToOneField(primary_key=True)
+# ---------------------------------------------------------------------------
+
+
+class OneToOnePKModel(CustomModel):
+    """A model where a OneToOneField is the primary key, replacing dbid."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    parent = models.OneToOneField(ParentModel, on_delete=models.DO_NOTHING, primary_key=True)
+    extra = models.TextField()
 
 
 # ---------------------------------------------------------------------------
@@ -698,3 +853,400 @@ class TestCustomModelDbTableNaming:
         assert "alldatatypesmodel" in sql
         # Should not use a different table name
         assert "all_data_types" not in sql
+
+
+# ===========================================================================
+# Tests for CustomModelMetaclass related_name auto-namespacing
+# ===========================================================================
+
+
+class TestCustomModelMetaclassRelatedName:
+    """Tests that CustomModelMetaclass rejects non-namespaced related_name on
+    FK/OneToOne fields targeting SDK models, while allowing them on fields
+    targeting other CustomModels.
+    """
+
+    def test_non_namespaced_related_name_to_sdk_model_raises(self) -> None:
+        """A bare related_name on a FK to an SDK model should raise ValueError."""
+        with pytest.raises(ValueError, match="related_name='status'.*SDK model.*SDKModel"):
+            type(
+                "BadModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "BadModel",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "sdk_ref": models.ForeignKey(
+                        SDKModel, on_delete=models.DO_NOTHING, related_name="status"
+                    ),
+                },
+            )
+
+    def test_template_namespaced_related_name_to_sdk_model_is_allowed(self) -> None:
+        """A %(app_label)s-prefixed related_name on a FK to an SDK model should be accepted."""
+        field = NamespacedRelatedNameModel._meta.get_field("sdk_ref")
+        assert isinstance(field, models.ForeignKey)
+        assert field.remote_field.related_name == "canvas_sdk__custom"
+
+    def test_hardcoded_namespaced_related_name_to_sdk_model_is_allowed(self) -> None:
+        """A related_name with hardcoded app_label__ prefix should be accepted."""
+        field = HardcodedNamespacedModel._meta.get_field("sdk_ref")
+        assert isinstance(field, models.ForeignKey)
+        assert field.remote_field.related_name == "canvas_sdk__hardcoded"
+
+    def test_plus_related_name_to_sdk_model_is_allowed(self) -> None:
+        """related_name='+' should be accepted for SDK model targets."""
+        field = PlusRelatedNameModel._meta.get_field("sdk_ref")
+        assert isinstance(field, models.ForeignKey)
+        assert field.remote_field.related_name == "+"
+
+    def test_no_explicit_related_name_to_sdk_model_is_allowed(self) -> None:
+        """No explicit related_name on a FK to an SDK model should be accepted."""
+        # Django assigns None as the related_name when not specified.
+        field = NoExplicitRelatedNameModel._meta.get_field("sdk_ref")
+        assert isinstance(field, models.OneToOneField)
+        assert field.remote_field.related_name is None
+
+    def test_non_namespaced_related_name_to_custom_model_is_allowed(self) -> None:
+        """A bare related_name on a FK to a CustomModel should be accepted."""
+        field = CustomModelTargetModel._meta.get_field("parent")
+        assert isinstance(field, models.ForeignKey)
+        assert field.remote_field.related_name == "children"
+
+    def test_multiple_fk_to_custom_model_are_allowed(self) -> None:
+        """Multiple FKs to a CustomModel with bare related_name should be accepted."""
+        field_one = MultipleForeignKeysModel._meta.get_field("parent_one")
+        field_two = MultipleForeignKeysModel._meta.get_field("parent_two")
+        assert isinstance(field_one, models.ForeignKey)
+        assert isinstance(field_two, models.ForeignKey)
+        assert field_one.remote_field.related_name == "children_one"
+        assert field_two.remote_field.related_name == "children_two"
+
+    def test_non_namespaced_related_name_to_proxy_model_is_allowed(self) -> None:
+        """A bare related_name on a FK to a proxy model should be accepted."""
+        field = ProxyTargetModel._meta.get_field("proxy_ref")
+        assert isinstance(field, models.OneToOneField)
+        assert field.remote_field.related_name == "biography"
+
+    def test_error_message_includes_fix_suggestion(self) -> None:
+        """The error message should suggest the namespaced form."""
+        with pytest.raises(ValueError, match=r"%\(app_label\)s__my_rel"):
+            type(
+                "BadModel2",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "BadModel2",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "sdk_ref": models.ForeignKey(
+                        SDKModel, on_delete=models.DO_NOTHING, related_name="my_rel"
+                    ),
+                },
+            )
+
+
+# ===========================================================================
+# Tests for CustomModelMetaclass unique=True rejection
+# ===========================================================================
+
+
+class TestCustomModelMetaclassUniqueFieldRejection:
+    """Tests that CustomModelMetaclass rejects unique=True on fields."""
+
+    def test_unique_true_on_field_raises(self) -> None:
+        """unique=True on a field should raise ValueError."""
+        with pytest.raises(ValueError, match="unique=True.*UniqueConstraint"):
+            type(
+                "UniqueFieldModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "UniqueFieldModel",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "email": models.TextField(unique=True),
+                },
+            )
+
+    def test_error_message_suggests_unique_constraint(self) -> None:
+        """The error message should include a UniqueConstraint example."""
+        with pytest.raises(ValueError, match=r"UniqueConstraint\(fields=\['code'\]"):
+            type(
+                "UniqueFieldModel2",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "UniqueFieldModel2",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "code": models.CharField(max_length=50, unique=True),
+                },
+            )
+
+    def test_unsupported_constraint_type_raises(self) -> None:
+        """Non-UniqueConstraint constraints should raise ValueError."""
+        with pytest.raises(ValueError, match="Only UniqueConstraint is supported"):
+            type(
+                "CheckConstraintModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "CheckConstraintModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "constraints": [
+                                models.CheckConstraint(
+                                    condition=models.Q(age__gte=0), name="ck_age_positive"
+                                ),
+                            ],
+                        },
+                    ),
+                    "age": models.IntegerField(),
+                },
+            )
+
+    def test_unique_constraint_in_indexes_raises(self) -> None:
+        """UniqueConstraint in Meta.indexes should raise ValueError."""
+        with pytest.raises(ValueError, match="Move it to Meta.constraints"):
+            type(
+                "MisplacedConstraintModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "MisplacedConstraintModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "indexes": [
+                                models.UniqueConstraint(fields=["name"], name="uq_name"),
+                            ],
+                        },
+                    ),
+                    "name": models.TextField(),
+                },
+            )
+
+    def test_descending_field_in_unique_constraint_raises(self) -> None:
+        """Descending order in UniqueConstraint fields should raise ValueError."""
+        with pytest.raises(ValueError, match="Sort order has no effect on uniqueness"):
+            type(
+                "DescUniqueModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "DescUniqueModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "constraints": [
+                                models.UniqueConstraint(fields=["-name"], name="uq_name_desc"),
+                            ],
+                        },
+                    ),
+                    "name": models.TextField(),
+                },
+            )
+
+    def test_unique_constraint_is_allowed(self) -> None:
+        """UniqueConstraint in Meta.constraints should be accepted."""
+        assert hasattr(SingleColumnUniqueModel, "_meta")
+        constraints = SingleColumnUniqueModel._meta.constraints
+        assert len(constraints) == 1
+        assert constraints[0].name == "uq_email"
+
+
+# ===========================================================================
+# Tests for generate_constraint_sql
+# ===========================================================================
+
+
+class TestGenerateConstraintSqlPostgres:
+    """Tests for PostgreSQL unique constraint SQL generation."""
+
+    def test_single_column_unique(self) -> None:
+        """Single column UniqueConstraint should generate UNIQUE INDEX."""
+        constraint = models.UniqueConstraint(fields=["email"], name="uq_email")
+        sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
+        assert (
+            sql
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_email ON test_plugin.my_table (email);"
+        )
+
+    def test_multi_column_unique(self) -> None:
+        """Multi-column UniqueConstraint should list all columns."""
+        constraint = models.UniqueConstraint(fields=["tenant_id", "slug"], name="uq_tenant_slug")
+        sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
+        assert (
+            sql
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_tenant_slug ON test_plugin.my_table (tenant_id, slug);"
+        )
+
+
+class TestGenerateConstraintSqlSqlite:
+    """Tests for SQLite unique constraint SQL generation."""
+
+    def test_single_column_unique_no_schema(self) -> None:
+        """SQLite should not use schema prefix."""
+        constraint = models.UniqueConstraint(fields=["email"], name="uq_email")
+        sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
+        assert sql == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_email ON my_table (email);"
+
+    def test_multi_column_unique_no_schema(self) -> None:
+        """SQLite multi-column should not use schema prefix."""
+        constraint = models.UniqueConstraint(fields=["tenant_id", "slug"], name="uq_tenant_slug")
+        sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
+        assert (
+            sql
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_tenant_slug ON my_table (tenant_id, slug);"
+        )
+
+
+# ===========================================================================
+# Tests for UniqueConstraint in generate_create_table_sql
+# ===========================================================================
+
+
+class TestCreateTableSqlWithUniqueConstraints:
+    """Tests that generate_create_table_sql includes unique constraints."""
+
+    def test_single_column_unique_in_create_table(self) -> None:
+        """CREATE TABLE output should include UNIQUE INDEX for UniqueConstraint."""
+        sql = generate_create_table_sql("test_plugin", SingleColumnUniqueModel)
+        assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
+        assert "uq_email" in sql
+        assert "email" in sql
+
+    def test_multi_column_unique_in_create_table(self) -> None:
+        """CREATE TABLE output should include multi-column UNIQUE INDEX."""
+        sql = generate_create_table_sql("test_plugin", MultiColumnUniqueModel)
+        assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
+        assert "uq_tenant_slug" in sql
+        assert "tenant_id, slug" in sql
+
+    def test_multiple_unique_constraints_in_create_table(self) -> None:
+        """Multiple UniqueConstraints should all appear in output."""
+        sql = generate_create_table_sql("test_plugin", MultipleUniqueConstraintsModel)
+        assert sql.count("CREATE UNIQUE INDEX IF NOT EXISTS") == 2
+        assert "uq_code" in sql
+        assert "uq_cat_name" in sql
+
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_postgres_unique_constraint_has_schema_prefix(self) -> None:
+        """PostgreSQL UNIQUE INDEX should use schema-qualified table name."""
+        from plugin_runner.installation import generate_create_table_sql
+
+        sql = generate_create_table_sql("test_plugin", SingleColumnUniqueModel)
+        assert "ON test_plugin.singlecolumnuniquemodel" in sql
+
+    def test_one_to_one_field_generates_unique_index(self) -> None:
+        """OneToOneField should automatically get a UNIQUE INDEX on its column."""
+        sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
+        assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
+        assert "uq_parent_id" in sql
+
+    def test_foreign_key_does_not_generate_unique_index(self) -> None:
+        """ForeignKey should NOT get a UNIQUE INDEX (only a regular index)."""
+        sql = generate_create_table_sql("test_plugin", ChildWithForeignKey)
+        assert "CREATE UNIQUE INDEX" not in sql
+
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_one_to_one_unique_index_has_schema_prefix_postgres(self) -> None:
+        """PostgreSQL OneToOneField UNIQUE INDEX should use schema-qualified table name."""
+        from plugin_runner.installation import generate_create_table_sql
+
+        sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
+        assert (
+            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_parent_id ON test_plugin.childwithonetoone (parent_id);"
+            in sql
+        )
+
+    def test_one_to_one_pk_does_not_generate_unique_index(self) -> None:
+        """OneToOneField with primary_key=True should NOT get a separate UNIQUE INDEX."""
+        sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
+        assert "CREATE UNIQUE INDEX" not in sql
+
+
+# ===========================================================================
+# Tests for OneToOneField(primary_key=True) support
+# ===========================================================================
+
+
+class TestOneToOnePrimaryKey:
+    """Tests that CustomModelMetaclass supports OneToOneField(primary_key=True)."""
+
+    def test_dbid_is_suppressed(self) -> None:
+        """The inherited dbid field should not exist when another field is the PK."""
+        field_names = [f.name for f in OneToOnePKModel._meta.local_fields]
+        assert "dbid" not in field_names
+
+    def test_one_to_one_is_primary_key(self) -> None:
+        """The OneToOneField should be the model's primary key."""
+        assert OneToOnePKModel._meta.pk is not None
+        assert OneToOnePKModel._meta.pk.name == "parent"
+
+    def test_no_auto_index_on_pk_field(self) -> None:
+        """PK fields should not get a redundant auto-generated index."""
+        index_field_lists = [idx.fields for idx in OneToOnePKModel._meta.indexes]
+        assert not any("parent_id" in fields for fields in index_field_lists)
+
+    def test_sql_has_pk_column(self) -> None:
+        """Generated SQL should include the FK column as PRIMARY KEY."""
+        sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
+        assert "parent_id" in sql
+        assert "PRIMARY KEY" in sql
+
+    def test_sql_has_no_dbid(self) -> None:
+        """Generated SQL should not include a dbid column."""
+        sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
+        assert "dbid" not in sql
+
+    def test_sql_no_autoincrement(self) -> None:
+        """PK should not have AUTOINCREMENT/IDENTITY since it's a FK, not an AutoField."""
+        sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
+        assert "AUTOINCREMENT" not in sql
+        assert "IDENTITY" not in sql
+
+    @patch("plugin_runner.installation.IS_SQLITE", False)
+    def test_postgres_sql_structure(self) -> None:
+        """PostgreSQL SQL should have FK column as PK with no IDENTITY suffix."""
+        from plugin_runner.installation import generate_create_table_sql
+
+        sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
+        assert "parent_id bigint PRIMARY KEY" in sql
+        assert "dbid" not in sql
+        assert "IDENTITY" not in sql
+
+    def test_foreign_key_primary_key_raises(self) -> None:
+        """ForeignKey(primary_key=True) should raise ValueError."""
+        with pytest.raises(ValueError, match="Use a OneToOneField instead"):
+            type(
+                "FKPKModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "FKPKModel",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "parent": models.ForeignKey(
+                        ParentModel, on_delete=models.DO_NOTHING, primary_key=True
+                    ),
+                },
+            )
+
+    def test_regular_field_primary_key_raises(self) -> None:
+        """primary_key=True on a non-relationship field should raise ValueError."""
+        with pytest.raises(ValueError, match="auto-generated primary key"):
+            type(
+                "CustomPKModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "CustomPKModel",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "custom_id": models.IntegerField(primary_key=True),
+                },
+            )
