@@ -17,11 +17,22 @@ CREATE TABLE IF NOT EXISTS {namespace}.namespace_auth (
 -- Keys must be inserted by admin/owner, not by plugins
 GRANT SELECT ON {namespace}.namespace_auth TO canvas_sdk_read_only;
 
--- Custom attribute storage (same as plugin schema)
+-- Attribute hub for storing arbitrary key-value data
+CREATE TABLE IF NOT EXISTS {namespace}.attribute_hub (
+    dbid SERIAL PRIMARY KEY,
+    type VARCHAR(100) NOT NULL,
+    id VARCHAR(100) NOT NULL,
+    UNIQUE(type, id)
+);
+
+-- REVOKE ALL PRIVILEGES ON {namespace}.attribute_hub FROM canvas_sdk_read_only;
+GRANT USAGE ON {namespace}.attribute_hub_dbid_seq TO canvas_sdk_read_only;
+GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.attribute_hub TO canvas_sdk_read_only;
+
+-- Custom attribute storage (FK to attribute_hub)
 CREATE TABLE IF NOT EXISTS {namespace}.custom_attribute (
     dbid SERIAL NOT NULL,
-    content_type_id INT NOT NULL,
-    object_id INT NOT NULL,
+    hub_id INT NOT NULL REFERENCES {namespace}.attribute_hub(dbid),
     name TEXT NOT NULL,
     text_value TEXT,
     date_value DATE,
@@ -30,8 +41,8 @@ CREATE TABLE IF NOT EXISTS {namespace}.custom_attribute (
     decimal_value NUMERIC(20,10),
     bool_value BOOLEAN,
     json_value JSONB,
-    PRIMARY KEY (content_type_id, object_id, name)
-) PARTITION BY LIST(content_type_id);
+    PRIMARY KEY (hub_id, name)
+);
 
 CREATE INDEX IF NOT EXISTS custom_attribute_dbid_idx ON {namespace}.custom_attribute (dbid);
 CREATE INDEX IF NOT EXISTS custom_attribute_text_idx ON {namespace}.custom_attribute (text_value) WHERE text_value IS NOT NULL;
@@ -45,26 +56,3 @@ CREATE INDEX IF NOT EXISTS custom_attribute_json_idx ON {namespace}.custom_attri
 GRANT USAGE ON {namespace}.custom_attribute_dbid_seq TO canvas_sdk_read_only;
 -- REVOKE ALL PRIVILEGES ON {namespace}.custom_attribute FROM canvas_sdk_read_only;
 GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_sdk_read_only;
-
--- Attribute hub for storing arbitrary key-value data
-CREATE TABLE IF NOT EXISTS {namespace}.attribute_hub (
-    dbid SERIAL PRIMARY KEY,
-    type VARCHAR(100) NOT NULL,
-    id VARCHAR(100) NOT NULL,
-    UNIQUE(type, id)
-);
-
--- REVOKE ALL PRIVILEGES ON {namespace}.attribute_hub FROM canvas_sdk_read_only;
-GRANT USAGE ON {namespace}.attribute_hub_dbid_seq TO canvas_sdk_read_only;
-GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.attribute_hub TO canvas_sdk_read_only;
-
--- Django content type table for the namespace
-CREATE TABLE IF NOT EXISTS {namespace}.django_content_type (
-    id SERIAL PRIMARY KEY,
-    app_label VARCHAR(100) NOT NULL,
-    model VARCHAR(100) NOT NULL,
-    UNIQUE (app_label, model)
-);
-
--- REVOKE ALL PRIVILEGES ON {namespace}.django_content_type FROM canvas_sdk_read_only;
-GRANT SELECT ON {namespace}.django_content_type TO canvas_sdk_read_only;

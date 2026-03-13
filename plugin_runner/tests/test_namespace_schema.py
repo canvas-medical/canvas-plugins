@@ -4,7 +4,6 @@ Tests verify that:
 1. create_namespace_schema validates namespace name
 2. create_namespace_schema creates schema when it doesn't exist
 3. create_namespace_schema returns None when schema already exists
-4. initialize_namespace_partitions is called correctly
 """
 
 import json
@@ -179,59 +178,6 @@ class TestCreateNamespaceSchemaNew:
 
         # Verify commit was called
         mock_conn.commit.assert_called()
-
-
-class TestInitializeNamespacePartitions:
-    """Tests for initialize_namespace_partitions function."""
-
-    @patch("builtins.open", new_callable=mock_open, read_data="SELECT 1;")
-    @patch("plugin_runner.installation.open_database_connection")
-    def test_executes_partition_sql(self, mock_open_conn: MagicMock, mock_file: MagicMock) -> None:
-        """Should execute the partition initialization SQL."""
-        from plugin_runner.installation import initialize_namespace_partitions
-
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_cursor.__exit__ = MagicMock(return_value=False)
-
-        mock_conn = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-        mock_conn.__exit__ = MagicMock(return_value=False)
-
-        mock_open_conn.return_value = mock_conn
-
-        initialize_namespace_partitions("org__namespace")
-
-        # Verify SQL was executed and committed
-        mock_cursor.execute.assert_called()
-        mock_conn.commit.assert_called()
-
-    @patch("builtins.open", new_callable=mock_open, read_data="CREATE TABLE {namespace}.test;")
-    @patch("plugin_runner.installation.open_database_connection")
-    def test_replaces_namespace_in_sql(
-        self, mock_open_conn: MagicMock, mock_file: MagicMock
-    ) -> None:
-        """Should replace {namespace} placeholder in SQL."""
-        from plugin_runner.installation import initialize_namespace_partitions
-
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_cursor.__exit__ = MagicMock(return_value=False)
-
-        mock_conn = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-        mock_conn.__exit__ = MagicMock(return_value=False)
-
-        mock_open_conn.return_value = mock_conn
-
-        initialize_namespace_partitions("canvas__shared")
-
-        # Check that the namespace was replaced in the SQL
-        call_args = mock_cursor.execute.call_args[0][0]
-        assert "canvas__shared" in call_args
-        assert "{namespace}" not in call_args
 
 
 class TestReadOnlyAccessSkipsModelCreation:

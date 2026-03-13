@@ -114,6 +114,113 @@ def clear_registered_models(plugin_name: str) -> None:
     from django.apps import apps
 
     apps.all_models.pop(plugin_name, None)
+    apps.app_configs.pop(plugin_name, None)
+    apps.clear_cache()
+
+
+def register_plugin_app_config(plugin_name: str) -> None:
+    """Register a minimal AppConfig for a plugin so Django's relation graph includes its models.
+
+    Django's ``_populate_directed_relation_graph`` (which powers ``select_related``
+    for reverse relations) iterates ``apps.get_models()``, and that only yields
+    models from registered ``AppConfig`` instances.  Plugin models are added to
+    ``apps.all_models`` during Sandbox execution, but without an ``AppConfig``
+    they are invisible to the relation graph.  This function bridges that gap.
+    """
+    import types
+
+    from django.apps import AppConfig, apps
+
+    if plugin_name not in apps.all_models or plugin_name in apps.app_configs:
+        return
+
+    # Build a minimal AppConfig whose .models dict references the already-
+    # populated all_models bucket for this plugin.  We subclass AppConfig with
+    # a ``path`` class attribute so Django skips _path_from_module (our stub
+    # module has no filesystem location).
+    stub_module = types.ModuleType(plugin_name)
+
+    config = type(
+        f"{plugin_name}_AppConfig",
+        (AppConfig,),
+        {"path": "/dev/null"},
+    )(plugin_name, stub_module)
+    config.apps = apps
+    config.models = apps.all_models[plugin_name]
+
+    apps.app_configs[plugin_name] = config
+    apps.clear_cache()
+
+
+def normalize_plugin_model_references(plugin_name: str) -> None:
+    """Fix stale model references caused by double execution in the sandbox.
+
+    The sandbox's ``_evaluate_module`` runs plugin code twice: once via
+    ``Sandbox.execute()`` (restricted exec) and once via ``importlib.reload()``.
+    Each execution creates new model class objects.  Lazy relation callbacks
+    (``resolve_through_model``, ``resolve_related_class``) that fire during the
+    first execution resolve to classes from that execution, but the registry is
+    then overwritten by the second execution.  This leaves cross-references
+    (e.g. an M2M ``through`` pointing to a StaffSpecialty from exec-1 whose FK
+    targets a Specialty from exec-1, while the M2M field's own ``model`` is
+    Specialty from exec-2).
+
+    This function walks every relation on the plugin's registered models and
+    updates ``remote_field.model`` and ``remote_field.through`` to point at the
+    currently-registered class objects, then clears any cached M2M accessor
+    results so they are recomputed with the corrected references.
+    """
+    from django.apps import apps
+
+    plugin_models = apps.all_models.get(plugin_name)
+    if not plugin_models:
+        return
+
+    def _resolve(model_or_str: Any) -> type | None:
+        """Return the currently-registered class for a model, or None."""
+        if isinstance(model_or_str, str):
+            return None
+        try:
+            return apps.get_registered_model(
+                model_or_str._meta.app_label, model_or_str._meta.model_name
+            )
+        except LookupError:
+            return None
+
+    for model_cls in plugin_models.values():
+        for field in model_cls._meta.local_fields:
+            if not hasattr(field, "remote_field") or field.remote_field is None:
+                continue
+            registered = _resolve(field.remote_field.model)
+            if registered is not None and registered is not field.remote_field.model:
+                field.remote_field.model = registered
+
+        for field in model_cls._meta.local_many_to_many:
+            rel = field.remote_field
+            # Fix the through model reference.
+            if rel.through and not isinstance(rel.through, str):
+                registered_through = _resolve(rel.through)
+                if registered_through is not None and registered_through is not rel.through:
+                    rel.through = registered_through
+                # Also fix FKs inside the through model itself.
+                for through_field in rel.through._meta.local_fields:
+                    if (
+                        not hasattr(through_field, "remote_field")
+                        or through_field.remote_field is None
+                    ):
+                        continue
+                    registered = _resolve(through_field.remote_field.model)
+                    if (
+                        registered is not None
+                        and registered is not through_field.remote_field.model
+                    ):
+                        through_field.remote_field.model = registered
+
+            # Clear cached M2M accessor values so they are recomputed.
+            for attr in list(vars(field)):
+                if attr.startswith("_m2m_") and attr.endswith("_cache"):
+                    delattr(field, attr)
+
     apps.clear_cache()
 
 
@@ -340,27 +447,6 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
         conn.commit()
 
     return generated_keys
-
-
-def initialize_namespace_partitions(namespace: str) -> None:
-    """Populate content types and create partitions for the custom_attribute table.
-
-    This should be called every time a plugin with custom_data is installed,
-    to ensure all content types and partitions exist.
-
-    Args:
-        namespace: The namespace schema name.
-    """
-    log.info(f"Initializing partitions for namespace '{namespace}'")
-
-    with open_database_connection() as conn:
-        with open(Path(__file__).parent / "init_namespace_partitions.sql") as f:
-            sql_content = f.read()
-            sql_content = sql_content.replace("{namespace}", namespace)
-            conn.cursor().execute(sql_content)
-        conn.commit()
-
-    log.info(f"Initialized partitions for namespace '{namespace}'")
 
 
 def check_namespace_auth_key(namespace: str, secret: str) -> str | None:
@@ -827,6 +913,8 @@ def generate_plugin_migrations(
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
         raise e
+
+    register_plugin_app_config(plugin_name)
     return discovered_models
 
 
@@ -945,8 +1033,6 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             else:
                 verify_read_namespace_access(plugin_name, schema_name, secrets)
                 can_create_tables = False
-
-            initialize_namespace_partitions(schema_name)
 
             if can_create_tables:
                 generate_plugin_migrations(plugin_name, plugin_installation_path, schema_name)

@@ -232,6 +232,7 @@ THIRD_PARTY_MODULES = {
         "Exists",
         "IntegerField",
         "JSONField",
+        "ManyToManyField",
         "Max",
         "Min",
         "Model",  # remove when hyperscribe no longer needs it

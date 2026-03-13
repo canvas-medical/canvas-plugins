@@ -127,7 +127,7 @@ class NamespacedRelatedNameModel(CustomModel):
         app_label = "test_plugin"
 
     sdk_ref = models.ForeignKey(
-        SDKModel, on_delete=models.DO_NOTHING, related_name="%(app_label)s__custom"
+        SDKModel, on_delete=models.DO_NOTHING, related_name="%(app_label)s_custom"
     )
 
 
@@ -138,7 +138,7 @@ class HardcodedNamespacedModel(CustomModel):
         app_label = "test_plugin"
 
     sdk_ref = models.ForeignKey(
-        SDKModel, on_delete=models.DO_NOTHING, related_name="canvas_sdk__hardcoded"
+        SDKModel, on_delete=models.DO_NOTHING, related_name="canvas_sdk_hardcoded"
     )
 
 
@@ -886,13 +886,13 @@ class TestCustomModelMetaclassRelatedName:
         """A %(app_label)s-prefixed related_name on a FK to an SDK model should be accepted."""
         field = NamespacedRelatedNameModel._meta.get_field("sdk_ref")
         assert isinstance(field, models.ForeignKey)
-        assert field.remote_field.related_name == "canvas_sdk__custom"
+        assert field.remote_field.related_name == "canvas_sdk_custom"
 
     def test_hardcoded_namespaced_related_name_to_sdk_model_is_allowed(self) -> None:
-        """A related_name with hardcoded app_label__ prefix should be accepted."""
+        """A related_name with hardcoded app_label_ prefix should be accepted."""
         field = HardcodedNamespacedModel._meta.get_field("sdk_ref")
         assert isinstance(field, models.ForeignKey)
-        assert field.remote_field.related_name == "canvas_sdk__hardcoded"
+        assert field.remote_field.related_name == "canvas_sdk_hardcoded"
 
     def test_plus_related_name_to_sdk_model_is_allowed(self) -> None:
         """related_name='+' should be accepted for SDK model targets."""
@@ -930,7 +930,7 @@ class TestCustomModelMetaclassRelatedName:
 
     def test_error_message_includes_fix_suggestion(self) -> None:
         """The error message should suggest the namespaced form."""
-        with pytest.raises(ValueError, match=r"%\(app_label\)s__my_rel"):
+        with pytest.raises(ValueError, match=r"%\(app_label\)s_my_rel"):
             type(
                 "BadModel2",
                 (CustomModel,),

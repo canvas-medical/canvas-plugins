@@ -196,8 +196,8 @@ _sqlite_schema_initialized = False
 
 
 def _ensure_sqlite_schema() -> None:
-    """Create the framework tables (django_content_type, custom_attribute,
-    attribute_hub) in the SQLite database if they don't already exist.
+    """Create the framework tables (custom_attribute, attribute_hub) in the
+    SQLite database if they don't already exist.
 
     Same as the test database setup and the --reset-db path in run_plugins.
     Must be called while the writable connection is the default.
@@ -757,9 +757,9 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 )
                 django.db.connections["default"] = temp_handler["default"]
 
-                # Ensure the framework tables exist (django_content_type,
-                # custom_attribute, attribute_hub) — same as the test database
-                # setup and the --reset-db path in run_plugins.
+                # Ensure the framework tables exist (custom_attribute,
+                # attribute_hub) — same as the test database setup and the
+                # --reset-db path in run_plugins.
                 _ensure_sqlite_schema()
 
                 # install_plugins() is skipped in local mode, so custom data
@@ -767,6 +767,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 if namespace_config["access_level"] == "read_write":
                     # Clear previously registered models for a clean slate on reload.
                     django_apps.all_models.pop(name, None)
+                    django_apps.app_configs.pop(name, None)
 
                     with warnings.catch_warnings():
                         warnings.filterwarnings(
@@ -804,6 +805,18 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     # submodules (like constants.py) are only evaluated and reloaded once, not
     # once per handler.
     evaluated_modules: dict[str, bool] = {}
+
+    # Clear stale model registrations before handler sandboxes re-execute model
+    # files.  Without this, lazy_related_operation resolves string references
+    # (e.g. through="StaffSpecialty") to class objects from the prior execution,
+    # causing model-identity mismatches in ManyToManyField through-model resolution.
+    from django.apps import apps as django_apps
+
+    from plugin_runner.installation import register_plugin_app_config
+
+    django_apps.all_models.pop(name, None)
+    django_apps.app_configs.pop(name, None)
+    django_apps.clear_cache()
 
     for handler in handlers:
         # TODO add class colon validation to existing schema validation
@@ -867,6 +880,17 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
             log.exception(f"Error importing module '{name_and_class}'")
             sentry_sdk.capture_exception(e)
             any_failed = True
+
+    # Re-register the AppConfig so that the freshly-created model classes are
+    # visible to Django's relation graph (needed for select_related, etc.).
+    register_plugin_app_config(name)
+
+    # The sandbox's _evaluate_module runs plugin code twice (exec + reload),
+    # creating separate class objects whose cross-references can point to
+    # stale classes.  Normalize all relation targets to the registry.
+    from plugin_runner.installation import normalize_plugin_model_references
+
+    normalize_plugin_model_references(name)
 
     return not any_failed
 

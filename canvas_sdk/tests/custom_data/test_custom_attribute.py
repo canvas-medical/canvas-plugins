@@ -843,52 +843,6 @@ class TestModelExtensionMetaClassAutoProxy:
 
 
 # ===========================================================================
-# Tests for ModelExtension auto-manager assignment
-# ===========================================================================
-
-
-class TestModelExtensionAutoManager:
-    """Tests that ModelExtension auto-assigns CustomAttributeAwareManager."""
-
-    def test_subclass_gets_aware_manager_automatically(self) -> None:
-        """A subclass without an explicit manager should get CustomAttributeAwareManager."""
-        new_class: Any = ModelExtensionMetaClass.__new__(
-            ModelExtensionMetaClass,
-            "AutoManagerModel",
-            (AttributeHub, ModelExtension),
-            {
-                "__module__": "my_plugin.models",
-                "__qualname__": "AutoManagerModel",
-            },
-        )
-
-        from canvas_sdk.v1.data.custom_attribute import CustomAttributeAwareManager
-
-        assert isinstance(new_class.objects, CustomAttributeAwareManager)
-
-    def test_explicit_manager_is_not_overwritten(self) -> None:
-        """A subclass with an explicit objects manager should keep it."""
-        from django.db import models as dj_models
-
-        custom_manager: dj_models.Manager[Any] = dj_models.Manager()
-        new_class: Any = ModelExtensionMetaClass.__new__(
-            ModelExtensionMetaClass,
-            "ExplicitManagerModel",
-            (AttributeHub, ModelExtension),
-            {
-                "__module__": "my_plugin.models",
-                "__qualname__": "ExplicitManagerModel",
-                "objects": custom_manager,
-            },
-        )
-
-        assert new_class.objects is not None
-        from canvas_sdk.v1.data.custom_attribute import CustomAttributeAwareManager
-
-        assert not isinstance(new_class.objects, CustomAttributeAwareManager)
-
-
-# ===========================================================================
 # Tests for CustomAttributeAwareManager.with_only
 # ===========================================================================
 
@@ -1077,7 +1031,7 @@ class TestSetAttribute:
         assert isinstance(result, CustomAttribute)
         assert result.name == "color"
         assert result.value == "blue"
-        assert CustomAttribute.objects.filter(object_id=hub.pk, name="color").count() == 1
+        assert CustomAttribute.objects.filter(hub=hub, name="color").count() == 1
 
     def test_updates_existing_attribute(self, hub: AttributeHub) -> None:
         """Should update the value of an existing attribute in-place."""
@@ -1086,7 +1040,7 @@ class TestSetAttribute:
 
         assert hub.get_attribute("color") == "red"
         # Should still be only one row, not two
-        assert CustomAttribute.objects.filter(object_id=hub.pk, name="color").count() == 1
+        assert CustomAttribute.objects.filter(hub=hub, name="color").count() == 1
 
     def test_returns_custom_attribute_instance(self, hub: AttributeHub) -> None:
         """Return value should be a persisted CustomAttribute."""
@@ -1113,7 +1067,7 @@ class TestSetAttribute:
         hub.set_attribute("b", 2)
         hub.set_attribute("c", 3)
 
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 3
+        assert CustomAttribute.objects.filter(hub=hub).count() == 3
         assert hub.get_attribute("a") == 1
         assert hub.get_attribute("b") == 2
         assert hub.get_attribute("c") == 3
@@ -1158,7 +1112,7 @@ class TestSetAttributesBulkOperations:
         assert len(result) == 3
 
         # Verify attributes were created in database
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 3
+        assert CustomAttribute.objects.filter(hub=hub).count() == 3
 
         # Verify values are correct
         assert hub.get_attribute("name") == "Test Name"
@@ -1194,7 +1148,7 @@ class TestSetAttributesBulkOperations:
         result = hub.set_attributes({})
 
         assert len(result) == 0
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 0
+        assert CustomAttribute.objects.filter(hub=hub).count() == 0
 
     # -------------------------------------------------------------------------
     # Scenario 2: All existing attributes to update
@@ -1223,7 +1177,7 @@ class TestSetAttributesBulkOperations:
         assert len(result) == 3
 
         # Verify only 3 attributes exist (not 6)
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 3
+        assert CustomAttribute.objects.filter(hub=hub).count() == 3
 
         # Verify values are updated
         assert hub.get_attribute("name") == "Updated Name"
@@ -1245,7 +1199,7 @@ class TestSetAttributesBulkOperations:
         assert hub.get_attribute("flexible") == {"now": "json"}
 
         # Should still be only one attribute
-        assert CustomAttribute.objects.filter(object_id=hub.pk, name="flexible").count() == 1
+        assert CustomAttribute.objects.filter(hub=hub, name="flexible").count() == 1
 
     def test_update_date_value(self, hub: AttributeHub) -> None:
         """Updating a date attribute via bulk update should persist the new value."""
@@ -1258,7 +1212,7 @@ class TestSetAttributesBulkOperations:
         hub.set_attributes({"birthday": updated_date})
 
         # Re-fetch from database to confirm persistence
-        attr = CustomAttribute.objects.get(object_id=hub.pk, name="birthday")
+        attr = CustomAttribute.objects.get(hub=hub, name="birthday")
         assert attr.date_value == updated_date
         assert attr.value == updated_date
 
@@ -1287,11 +1241,11 @@ class TestSetAttributesBulkOperations:
         hub.set_attributes(updated)
 
         # Verify total count unchanged (all updates, no creates)
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 7
+        assert CustomAttribute.objects.filter(hub=hub).count() == 7
 
         # Re-fetch from database to confirm persistence
         for name, expected in updated.items():
-            attr = CustomAttribute.objects.get(object_id=hub.pk, name=name)
+            attr = CustomAttribute.objects.get(hub=hub, name=name)
             assert attr.value == expected, f"{name}: expected {expected!r}, got {attr.value!r}"
 
     def test_update_to_same_value(self, hub: AttributeHub) -> None:
@@ -1330,7 +1284,7 @@ class TestSetAttributesBulkOperations:
         assert len(result) == 4
 
         # Verify total count
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 4
+        assert CustomAttribute.objects.filter(hub=hub).count() == 4
 
         # Verify existing were updated
         assert hub.get_attribute("existing1") == "updated1"
@@ -1363,7 +1317,7 @@ class TestSetAttributesBulkOperations:
         assert len(result) == 3
 
         # Total should be 5 attributes
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 5
+        assert CustomAttribute.objects.filter(hub=hub).count() == 5
 
         # Check all values
         assert hub.get_attribute("a") == 1  # Unchanged
@@ -1386,7 +1340,7 @@ class TestSetAttributesBulkOperations:
         )
 
         assert len(result) == 4
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 4
+        assert CustomAttribute.objects.filter(hub=hub).count() == 4
 
         assert hub.get_attribute("solo") == "updated"
         assert hub.get_attribute("new1") == "a"
@@ -1413,7 +1367,7 @@ class TestSetAttributesBulkOperations:
         )
 
         assert len(result) == 4
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 4
+        assert CustomAttribute.objects.filter(hub=hub).count() == 4
 
         assert hub.get_attribute("x") == 10
         assert hub.get_attribute("y") == 20
@@ -1457,7 +1411,7 @@ class TestSetAttributesBulkOperations:
         hub.set_attributes({"batch3_a": 5})
 
         # All 5 attributes should exist
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 5
+        assert CustomAttribute.objects.filter(hub=hub).count() == 5
 
         assert hub.get_attribute("batch1_a") == 1
         assert hub.get_attribute("batch1_b") == 2
@@ -1491,7 +1445,7 @@ class TestDeleteAttribute:
 
         assert result is True
         assert hub.get_attribute("to_delete") is None
-        assert CustomAttribute.objects.filter(object_id=hub.pk, name="to_delete").count() == 0
+        assert CustomAttribute.objects.filter(hub=hub, name="to_delete").count() == 0
 
     def test_returns_false_for_nonexistent_attribute(self, hub: AttributeHub) -> None:
         """Should return False when the attribute doesn't exist."""
@@ -1507,7 +1461,7 @@ class TestDeleteAttribute:
         hub.delete_attribute("remove")
 
         assert hub.get_attribute("keep") == "kept"
-        assert CustomAttribute.objects.filter(object_id=hub.pk).count() == 1
+        assert CustomAttribute.objects.filter(hub=hub).count() == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1540,7 +1494,9 @@ class TestCustomAttributeQuerySetFilter:
         self._create(hub, "count", 42)
         qs = hub.custom_attributes.filter(value="blue")
         assert qs.count() == 1
-        assert qs.first().name == "color"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "color"
 
     def test_filter_value_int(self, hub: AttributeHub) -> None:
         """Integer value dispatches to int_value."""
@@ -1548,7 +1504,9 @@ class TestCustomAttributeQuerySetFilter:
         self._create(hub, "label", "forty-two")
         qs = hub.custom_attributes.filter(value=42)
         assert qs.count() == 1
-        assert qs.first().name == "count"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "count"
 
     def test_filter_value_bool_does_not_match_int(self, hub: AttributeHub) -> None:
         """filter(value=True) must target bool_value, not int_value=1."""
@@ -1556,7 +1514,9 @@ class TestCustomAttributeQuerySetFilter:
         self._create(hub, "one", 1)
         qs = hub.custom_attributes.filter(value=True)
         assert qs.count() == 1
-        assert qs.first().name == "flag"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "flag"
 
     def test_filter_value_date(self, hub: AttributeHub) -> None:
         """Date value dispatches to date_value."""
@@ -1609,32 +1569,32 @@ class TestCustomAttributeQuerySetFilter:
         """``value=None`` matches rows where every typed column is NULL."""
         self._create(hub, "has_value", "present")
         # Create an attribute with all value columns NULL
-        CustomAttribute.objects.create(
-            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
-        )
+        CustomAttribute.objects.create(hub=hub, name="empty")
         qs = hub.custom_attributes.filter(value=None)
         assert qs.count() == 1
-        assert qs.first().name == "empty"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "empty"
 
     def test_filter_value_isnull_true(self, hub: AttributeHub) -> None:
         """``value__isnull=True`` matches rows where every typed column is NULL."""
         self._create(hub, "has_value", "present")
-        CustomAttribute.objects.create(
-            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
-        )
+        CustomAttribute.objects.create(hub=hub, name="empty")
         qs = hub.custom_attributes.filter(value__isnull=True)
         assert qs.count() == 1
-        assert qs.first().name == "empty"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "empty"
 
     def test_filter_value_isnull_false(self, hub: AttributeHub) -> None:
         """``value__isnull=False`` matches rows where at least one column is not NULL."""
         self._create(hub, "has_value", "present")
-        CustomAttribute.objects.create(
-            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
-        )
+        CustomAttribute.objects.create(hub=hub, name="empty")
         qs = hub.custom_attributes.filter(value__isnull=False)
         assert qs.count() == 1
-        assert qs.first().name == "has_value"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "has_value"
 
     # -- __in ----------------------------------------------------------
 
@@ -1660,17 +1620,19 @@ class TestCustomAttributeQuerySetFilter:
         self._create(hub, "drop", 2)
         qs = hub.custom_attributes.exclude(value=2)
         assert qs.count() == 1
-        assert qs.first().name == "keep"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "keep"
 
     def test_exclude_value_none(self, hub: AttributeHub) -> None:
         """exclude(value=None) should keep only rows that have a value."""
         self._create(hub, "has_value", "present")
-        CustomAttribute.objects.create(
-            content_type_id=hub._content_type_id, object_id=hub.pk, name="empty"
-        )
+        CustomAttribute.objects.create(hub=hub, name="empty")
         qs = hub.custom_attributes.exclude(value=None)
         assert qs.count() == 1
-        assert qs.first().name == "has_value"
+        first = qs.first()
+        assert first is not None
+        assert first.name == "has_value"
 
     # -- passthrough and errors ----------------------------------------
 
@@ -1680,16 +1642,18 @@ class TestCustomAttributeQuerySetFilter:
         self._create(hub, "size", "large")
         qs = hub.custom_attributes.filter(name="color")
         assert qs.count() == 1
-        assert qs.first().value == "blue"
+        first = qs.first()
+        assert first is not None
+        assert first.value == "blue"
 
     def test_unsupported_type_raises(self, hub: AttributeHub) -> None:
         """Filtering by an unmapped type raises TypeError."""
         with pytest.raises(TypeError, match="Cannot filter"):
             hub.custom_attributes.filter(value=object())
 
-    # -- GenericRelation access ----------------------------------------
+    # -- reverse FK access ---------------------------------------------
 
-    def test_filter_via_generic_relation(self, hub: AttributeHub) -> None:
+    def test_filter_via_reverse_fk(self, hub: AttributeHub) -> None:
         """Value filtering should work through hub.custom_attributes."""
         self._create(hub, "color", "blue")
         self._create(hub, "count", 10)
@@ -1701,7 +1665,7 @@ class TestCustomAttributeQuerySetFilter:
     def test_direct_manager_filter(self, hub: AttributeHub) -> None:
         """CustomAttribute.objects.filter(value=...) should also work."""
         self._create(hub, "color", "blue")
-        qs = CustomAttribute.objects.filter(object_id=hub.pk, value="blue")  # type: ignore[misc]
+        qs = CustomAttribute.objects.filter(hub=hub, value="blue")  # type: ignore[misc]
         assert qs.count() == 1
 
     def test_manager_returns_custom_queryset(self) -> None:

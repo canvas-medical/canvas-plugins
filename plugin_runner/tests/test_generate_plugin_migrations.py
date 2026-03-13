@@ -9,6 +9,8 @@ Tests cover:
 6. End-to-end integration test
 7. is_schema_manager — DDL gating based on Aptible environment
 8. wait_for_namespace — non-schema-manager containers wait for namespace readiness
+9. register_plugin_app_config — AppConfig registration for plugin models
+10. normalize_plugin_model_references — fix stale model class references
 """
 
 import os
@@ -26,6 +28,8 @@ from plugin_runner.installation import (
     extract_models_from_module,
     generate_plugin_migrations,
     is_schema_manager,
+    normalize_plugin_model_references,
+    register_plugin_app_config,
     should_create_table,
     wait_for_namespace,
 )
@@ -618,3 +622,330 @@ def test_wait_for_namespace_raises_on_timeout(
 
     # Should have polled: initial check, then 2s, then 4s → timeout
     assert mock_sleep.call_count == 2
+
+
+# ===========================================================================
+# Tests for register_plugin_app_config
+# ===========================================================================
+
+
+def test_register_creates_app_config() -> None:
+    """Should create an AppConfig whose models dict is the same object as all_models."""
+    from django.apps import apps
+
+    plugin = "reg_test_plugin"
+    apps.all_models[plugin] = {"fakemodel": MagicMock()}
+    try:
+        register_plugin_app_config(plugin)
+
+        assert plugin in apps.app_configs
+        assert apps.app_configs[plugin].models is apps.all_models[plugin]
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_register_skips_when_no_models() -> None:
+    """Should not create an AppConfig when the plugin has no models in all_models."""
+    from django.apps import apps
+
+    register_plugin_app_config("absent_plugin")
+
+    assert "absent_plugin" not in apps.app_configs
+
+
+def test_register_skips_when_already_registered() -> None:
+    """Should not replace an existing AppConfig."""
+    from django.apps import apps
+
+    plugin = "already_reg"
+    sentinel = object()
+    apps.all_models[plugin] = {"fakemodel": MagicMock()}
+    apps.app_configs[plugin] = sentinel  # type: ignore[assignment]
+    try:
+        register_plugin_app_config(plugin)
+
+        assert apps.app_configs[plugin] is sentinel
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_register_app_config_models_visible_to_get_models() -> None:
+    """Models in a registered plugin AppConfig should appear in apps.get_models()."""
+    from django.apps import apps
+    from django.db import models
+
+    plugin = "vis_test"
+
+    # Build a minimal concrete model class with proper Meta.
+    model_cls = type(
+        "VisTestModel",
+        (models.Model,),
+        {
+            "__module__": f"{plugin}.models",
+            "Meta": type("Meta", (), {"app_label": plugin}),
+        },
+    )
+
+    apps.all_models[plugin] = {"vistestmodel": model_cls}
+    try:
+        register_plugin_app_config(plugin)
+
+        assert model_cls in list(apps.get_models())
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+# ===========================================================================
+# Tests for normalize_plugin_model_references
+# ===========================================================================
+
+
+def _make_mock_model(app_label: str, model_name: str) -> MagicMock:
+    """Create a MagicMock with _meta.app_label and _meta.model_name.
+
+    Defaults local_fields and local_many_to_many to empty lists so
+    normalize_plugin_model_references can safely iterate them.
+    """
+    model = MagicMock()
+    model._meta.app_label = app_label
+    model._meta.model_name = model_name
+    model._meta.local_fields = []
+    model._meta.local_many_to_many = []
+    return model
+
+
+def test_normalize_fixes_stale_fk_target() -> None:
+    """Should replace a stale FK remote_field.model with the registered class."""
+    from django.apps import apps
+
+    plugin = "norm_fk_plugin"
+    stale_target = _make_mock_model(plugin, "target")
+    current_target = _make_mock_model(plugin, "target")
+
+    # A field with a FK pointing at the stale class
+    fk_field = MagicMock()
+    fk_field.remote_field.model = stale_target
+
+    # The source model that has the FK
+    source = _make_mock_model(plugin, "source")
+    source._meta.local_fields = [fk_field]
+    source._meta.local_many_to_many = []
+
+    apps.all_models[plugin] = {
+        "target": current_target,
+        "source": source,
+    }
+    try:
+        normalize_plugin_model_references(plugin)
+
+        assert fk_field.remote_field.model is current_target
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_normalize_fixes_stale_m2m_through() -> None:
+    """Should replace a stale M2M through model reference with the registered class."""
+    from django.apps import apps
+
+    plugin = "norm_m2m_plugin"
+    stale_through = _make_mock_model(plugin, "through")
+    current_through = _make_mock_model(plugin, "through")
+    current_through._meta.local_fields = []
+
+    # An M2M field whose through points at the stale class
+    m2m_field = MagicMock()
+    m2m_field.remote_field.through = stale_through
+
+    source = _make_mock_model(plugin, "source")
+    source._meta.local_fields = []
+    source._meta.local_many_to_many = [m2m_field]
+
+    apps.all_models[plugin] = {
+        "through": current_through,
+        "source": source,
+    }
+    try:
+        normalize_plugin_model_references(plugin)
+
+        assert m2m_field.remote_field.through is current_through
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_normalize_fixes_fks_inside_through_model() -> None:
+    """Should fix FK references inside a through model."""
+    from django.apps import apps
+
+    plugin = "norm_thru_fk_plugin"
+    stale_endpoint = _make_mock_model(plugin, "endpoint")
+    current_endpoint = _make_mock_model(plugin, "endpoint")
+
+    # FK inside the through model pointing at stale class
+    through_fk = MagicMock()
+    through_fk.remote_field.model = stale_endpoint
+
+    through_model = _make_mock_model(plugin, "through")
+    through_model._meta.local_fields = [through_fk]
+
+    # M2M field referencing the through model (already correct)
+    m2m_field = MagicMock()
+    m2m_field.remote_field.through = through_model
+
+    source = _make_mock_model(plugin, "source")
+    source._meta.local_fields = []
+    source._meta.local_many_to_many = [m2m_field]
+
+    apps.all_models[plugin] = {
+        "endpoint": current_endpoint,
+        "through": through_model,
+        "source": source,
+    }
+    try:
+        normalize_plugin_model_references(plugin)
+
+        assert through_fk.remote_field.model is current_endpoint
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_normalize_clears_m2m_caches() -> None:
+    """Should delete _m2m_*_cache attributes from M2M fields."""
+    from django.apps import apps
+
+    plugin = "norm_cache_plugin"
+
+    # M2M field with a cached value
+    m2m_field = MagicMock(spec=[])
+    m2m_field.remote_field = MagicMock()
+    m2m_field.remote_field.through = None
+    m2m_field._m2m_column_name_cache = "old"
+
+    source = _make_mock_model(plugin, "source")
+    source._meta.local_fields = []
+    source._meta.local_many_to_many = [m2m_field]
+
+    apps.all_models[plugin] = {"source": source}
+    try:
+        normalize_plugin_model_references(plugin)
+
+        assert not hasattr(m2m_field, "_m2m_column_name_cache")
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+def test_normalize_noop_when_no_models() -> None:
+    """Should not raise when the plugin has no models in all_models."""
+    normalize_plugin_model_references("nonexistent_plugin_xyz")
+
+
+def test_normalize_leaves_correct_references_unchanged() -> None:
+    """Should not alter a field that already points at the registered class."""
+    from django.apps import apps
+
+    plugin = "norm_ok_plugin"
+    registered = _make_mock_model(plugin, "target")
+
+    fk_field = MagicMock()
+    fk_field.remote_field.model = registered
+
+    source = _make_mock_model(plugin, "source")
+    source._meta.local_fields = [fk_field]
+    source._meta.local_many_to_many = []
+
+    apps.all_models[plugin] = {
+        "target": registered,
+        "source": source,
+    }
+    try:
+        normalize_plugin_model_references(plugin)
+
+        assert fk_field.remote_field.model is registered
+    finally:
+        apps.all_models.pop(plugin, None)
+        apps.app_configs.pop(plugin, None)
+        apps.clear_cache()
+
+
+# ===========================================================================
+# Integration test — register + normalize with real plugin models
+# ===========================================================================
+
+
+@pytest.mark.django_db
+def test_end_to_end_register_and_normalize(tmp_path: Path) -> None:
+    """Full pipeline: generate migrations, register app config, normalize references.
+
+    Verifies that after register + normalize:
+    - Plugin appears in app_configs
+    - Plugin models appear in get_models()
+    - FK field's remote_field.model matches the registered model object
+    """
+    from django.apps import apps
+
+    plugin_name = "reg_norm_integ"
+    plugin_dir = tmp_path / plugin_name
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+
+    models_dir = plugin_dir / "models"
+    models_dir.mkdir()
+    (models_dir / "__init__.py").write_text("")
+    (models_dir / "things.py").write_text(
+        dedent("""\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import TextField, ForeignKey, DO_NOTHING
+
+        class Category(CustomModel):
+            name = TextField()
+
+        class Item(CustomModel):
+            title = TextField()
+            category = ForeignKey(Category, on_delete=DO_NOTHING, null=True)
+        """)
+    )
+
+    try:
+        generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
+        # generate_plugin_migrations already calls register_plugin_app_config
+        normalize_plugin_model_references(plugin_name)
+
+        # Plugin should be in app_configs
+        assert plugin_name in apps.app_configs
+
+        # Models should be visible via get_models()
+        all_model_names = {m.__name__ for m in apps.get_models()}
+        assert "Category" in all_model_names
+        assert "Item" in all_model_names
+
+        # The FK on Item should point at the registered Category
+        item_cls = apps.get_registered_model(plugin_name, "item")
+        category_cls = apps.get_registered_model(plugin_name, "category")
+
+        fk_field = next(
+            f
+            for f in item_cls._meta.local_fields
+            if hasattr(f, "remote_field")
+            and f.remote_field is not None
+            and getattr(f.remote_field.model, "_meta", None) is not None
+            and f.remote_field.model._meta.model_name == "category"
+        )
+        assert fk_field.remote_field is not None
+        assert fk_field.remote_field.model is category_cls
+    finally:
+        apps.all_models.pop(plugin_name, None)
+        apps.app_configs.pop(plugin_name, None)
+        apps.clear_cache()

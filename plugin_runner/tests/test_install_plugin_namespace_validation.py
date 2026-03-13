@@ -26,7 +26,6 @@ def _fake_extract(manifest: dict[str, Any]) -> Callable[[Path, Path], None]:
 
 
 @patch("plugin_runner.installation.generate_plugin_migrations")
-@patch("plugin_runner.installation.initialize_namespace_partitions")
 @patch("plugin_runner.installation.verify_read_namespace_access")
 @patch("plugin_runner.installation.install_plugin_secrets")
 @patch("plugin_runner.installation.extract_plugin")
@@ -36,7 +35,6 @@ def test_read_access_delegates_to_verify(
     mock_extract: MagicMock,
     mock_install_secrets: MagicMock,
     mock_verify_read: MagicMock,
-    mock_init_partitions: MagicMock,
     mock_gen_migrations: MagicMock,
     tmp_path: Path,
 ) -> None:
@@ -60,7 +58,6 @@ def test_read_access_delegates_to_verify(
 
 
 @patch("plugin_runner.installation.generate_plugin_migrations")
-@patch("plugin_runner.installation.initialize_namespace_partitions")
 @patch("plugin_runner.installation.setup_read_write_namespace", return_value=True)
 @patch("plugin_runner.installation.install_plugin_secrets")
 @patch("plugin_runner.installation.extract_plugin")
@@ -70,7 +67,6 @@ def test_read_write_access_delegates_to_setup(
     mock_extract: MagicMock,
     mock_install_secrets: MagicMock,
     mock_setup_ns: MagicMock,
-    mock_init_partitions: MagicMock,
     mock_gen_migrations: MagicMock,
     tmp_path: Path,
 ) -> None:

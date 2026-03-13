@@ -12,12 +12,10 @@ import operator
 from functools import reduce
 from typing import Any
 
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Prefetch, Q
 
-from .base import Model, ModelExtension
+from .base import Model
 
 VALUE_FIELD_MAP: dict[type, str] = {
     bool: "bool_value",
@@ -154,25 +152,23 @@ CustomAttributeManager = models.Manager.from_queryset(CustomAttributeQuerySet)
 
 
 class CustomAttribute(Model):
-    """
-    A flexible attribute storage model that can be attached to any SDK model
-    via GenericRelation. Supports multiple value types stored in separate columns.
+    """A flexible attribute storage model attached to AttributeHub via FK.
+
+    Supports multiple value types stored in separate columns.
     """
 
     class Meta:
         db_table = "custom_attribute"
 
         constraints = [
-            models.UniqueConstraint(
-                fields=["content_type", "object_id", "name"], name="unique_custom_attribute"
-            )
+            models.UniqueConstraint(fields=["hub", "name"], name="unique_custom_attribute")
         ]
 
     objects = CustomAttributeManager()
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey("content_type", "object_id")
+    hub = models.ForeignKey(
+        "AttributeHub", on_delete=models.CASCADE, related_name="custom_attributes"
+    )
 
     name = models.TextField()
 
@@ -187,7 +183,7 @@ class CustomAttribute(Model):
 
     def __str__(self) -> str:
         """Return a human-readable representation of the attribute."""
-        return f"{self.content_object} - {self.name}: {self.value}"
+        return f"{self.hub} - {self.name}: {self.value}"
 
     @property
     def value(self) -> Any | None:
@@ -286,10 +282,11 @@ class CustomAttributeAwareManager(models.Manager):
         )
 
 
-class AttributeHub(Model, ModelExtension):
-    """
-    A simple model that serves only as a hub for custom attributes.
-    Useful for storing arbitrary key-value data that doesn't belong to existing models.
+class AttributeHub(Model):
+    """A standalone hub for custom attributes (key-value storage).
+
+    Plugins use this to store arbitrary key-value data. The reverse relation
+    ``custom_attributes`` comes from the FK on CustomAttribute.
     """
 
     class Meta:
@@ -304,6 +301,72 @@ class AttributeHub(Model, ModelExtension):
     def __str__(self) -> str:
         """Return a human-readable representation of the hub."""
         return f"AttributeHub({self.type}): {self.id}"
+
+    def get_attribute(self, name: str) -> Any:
+        """Get a custom attribute value by name."""
+        if (
+            hasattr(self, "_prefetched_objects_cache")
+            and "custom_attributes" in self._prefetched_objects_cache
+        ):
+            # Use prefetched data first
+            for attr in self.custom_attributes.all():
+                if attr.name == name:
+                    return attr.value
+            # Attribute not in prefetch cache — fall back to DB so that
+            # with_only() doesn't silently return None for attributes that
+            # exist but weren't prefetched.
+
+        # Fall back to database query
+        try:
+            attr = CustomAttribute.objects.get(hub=self, name=name)
+            return attr.value
+        except CustomAttribute.DoesNotExist:
+            return None
+
+    def set_attribute(self, name: str, value: Any) -> "CustomAttribute":
+        """Set a custom attribute value.
+
+        Uses INSERT ... ON CONFLICT DO UPDATE (upsert) for a single SQL
+        round-trip instead of get_or_create + save.
+        """
+        attr = CustomAttribute(hub=self, name=name)
+        attr.value = value
+        return CustomAttribute.objects.bulk_create(
+            [attr],
+            update_conflicts=True,
+            unique_fields=["hub", "name"],
+            update_fields=list(VALUE_FIELDS),
+        )[0]
+
+    def set_attributes(self, attributes: dict[str, Any]) -> list["CustomAttribute"]:
+        """Set multiple custom attributes using bulk operations.
+
+        Uses INSERT ... ON CONFLICT DO UPDATE (upsert) to atomically create or
+        update attributes, avoiding race conditions under concurrent writes.
+        """
+        if not attributes:
+            return []
+
+        attrs = []
+        for attr_name, attr_value in attributes.items():
+            attr = CustomAttribute(hub=self, name=attr_name)
+            attr.value = attr_value
+            attrs.append(attr)
+
+        return CustomAttribute.objects.bulk_create(
+            attrs,
+            update_conflicts=True,
+            unique_fields=["hub", "name"],
+            update_fields=list(VALUE_FIELDS),
+        )
+
+    def delete_attribute(self, name: str) -> bool:
+        """Delete a custom attribute by name. Returns True if deleted, False if not found."""
+        try:
+            CustomAttribute.objects.get(hub=self, name=name).delete()
+            return True
+        except CustomAttribute.DoesNotExist:
+            return False
 
 
 __exports__ = (
