@@ -7,10 +7,7 @@ to exercise every new search_pharmacies parameter and get a pass/fail report.
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import Any
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
@@ -84,7 +81,7 @@ def _is_empty_ok(pharmacies: list[dict]) -> tuple[bool, str]:
     return True, f"returned {len(pharmacies)} result(s) (empty is acceptable)"
 
 
-def _all_in_state(state: str) -> Callable[[list[dict]], tuple[bool, str]]:
+def _all_in_state(state: str) -> Any:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"
@@ -100,7 +97,7 @@ def _all_in_state(state: str) -> Callable[[list[dict]], tuple[bool, str]]:
     return check
 
 
-def _all_zip_startswith(prefix: str) -> Callable[[list[dict]], tuple[bool, str]]:
+def _all_zip_startswith(prefix: str) -> Any:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"
@@ -116,7 +113,7 @@ def _all_zip_startswith(prefix: str) -> Callable[[list[dict]], tuple[bool, str]]
     return check
 
 
-def _org_name_contains(substr: str) -> Callable[[list[dict]], tuple[bool, str]]:
+def _org_name_contains(substr: str) -> Any:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"

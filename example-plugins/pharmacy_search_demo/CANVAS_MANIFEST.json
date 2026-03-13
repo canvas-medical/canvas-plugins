@@ -1,6 +1,6 @@
 {
     "sdk_version": "0.1.4",
-    "plugin_version": "0.0.3",
+    "plugin_version": "0.0.4",
     "name": "pharmacy_search_demo",
     "description": "Demo plugin for KOALA-4355: exercises all pharmacy search filter parameters",
     "components": {
