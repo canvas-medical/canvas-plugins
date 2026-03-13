@@ -240,14 +240,14 @@ coverage_metadata_sync/
 ├── CANVAS_MANIFEST.json          # Plugin configuration
 ├── README.md                      # This file
 ├── __init__.py                    # Package initializer
-└── protocols/
-    ├── __init__.py                # Protocol package initializer
-    └── metadata_sync.py           # Main protocol implementation
+└── handlers/
+    ├── __init__.py                # Handler package initializer
+    └── metadata_sync.py           # Main handler implementation
 ```
 
 ### Key Components
 
-- **CoverageStatusSyncHandler** - Main protocol class handling label events
+- **CoverageStatusSyncHandler** - Main handler class handling label events
 - **compute()** - Event routing and metadata update logic
 - **MONITORED_LABEL** - Constant defining which label triggers updates ("MISSING_COVERAGE")
 - **METADATA_KEY** - Constant defining metadata field name ("coverage_status")
