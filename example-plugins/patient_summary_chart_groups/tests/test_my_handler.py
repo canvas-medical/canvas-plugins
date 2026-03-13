@@ -8,7 +8,7 @@ in the patient summary chart.
 from unittest.mock import Mock
 
 import pytest
-from patient_summary_chart_groups.handlers.my_protocol import Conditions, Medications
+from patient_summary_chart_groups.handlers.my_handler import Conditions, Medications
 
 from canvas_sdk.commands.constants import CodeSystems
 from canvas_sdk.events import EventType

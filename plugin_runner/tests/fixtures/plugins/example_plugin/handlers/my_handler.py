@@ -11,7 +11,7 @@ class Handler(BaseHandler):
     # Name the event type you wish to run in response to
     RESPONDS_TO = EventType.Name(EventType.UNKNOWN)
 
-    NARRATIVE_STRING = "I was inserted from my plugin's protocol."
+    NARRATIVE_STRING = "I was inserted from my plugin's handler."
 
     def compute(self) -> list[Effect]:
         """This method gets called when an event of the type RESPONDS_TO is fired."""

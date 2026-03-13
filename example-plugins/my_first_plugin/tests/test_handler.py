@@ -7,7 +7,7 @@ from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 
 
-def test_import_protocol() -> None:
+def test_import_handler() -> None:
     """Test that Handler can be imported without errors."""
     from my_first_plugin.handlers.handler import Handler
 
@@ -18,7 +18,7 @@ def test_import_protocol() -> None:
     assert hasattr(Handler, "NARRATIVE_STRING")
 
 
-def test_protocol_configuration() -> None:
+def test_handler_configuration() -> None:
     """Test that Handler has correct configuration."""
     from my_first_plugin.handlers.handler import Handler
 

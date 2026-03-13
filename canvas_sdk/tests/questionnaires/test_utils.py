@@ -15,7 +15,7 @@ from settings import PLUGIN_DIRECTORY
 def test_from_yaml_valid_questionnaire(install_test_plugin: Path, load_test_plugins: None) -> None:
     """Test that the from_yaml function loads a valid questionnaire."""
     plugin = LOADED_PLUGINS[
-        "test_load_questionnaire:test_load_questionnaire.handlers.my_protocol:ValidQuestionnaire"
+        "test_load_questionnaire:test_load_questionnaire.handlers.my_handler:ValidQuestionnaire"
     ]
     result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -39,7 +39,7 @@ def test_from_yaml_invalid_questionnaire(
 ) -> None:
     """Test that the from_yaml function raises an error for invalid questionnaires."""
     plugin = LOADED_PLUGINS[
-        "test_load_questionnaire:test_load_questionnaire.handlers.my_protocol:InvalidQuestionnaire"
+        "test_load_questionnaire:test_load_questionnaire.handlers.my_handler:InvalidQuestionnaire"
     ]
     with pytest.raises(FileNotFoundError):
         plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
@@ -51,7 +51,7 @@ def test_from_yaml_forbidden_questionnaire(
 ) -> None:
     """Test that the from_yaml function raises an error for a questionnaire outside plugin package."""
     plugin = LOADED_PLUGINS[
-        "test_load_questionnaire:test_load_questionnaire.handlers.my_protocol:ForbiddenQuestionnaire"
+        "test_load_questionnaire:test_load_questionnaire.handlers.my_handler:ForbiddenQuestionnaire"
     ]
     with pytest.raises(PermissionError):
         plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()

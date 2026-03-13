@@ -172,7 +172,7 @@ def test_plugin_that_implicitly_imports_allowed_modules(
     with caplog.at_level(logging.INFO):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_protocol:Allowed"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Allowed"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -198,7 +198,7 @@ def test_plugin_that_implicitly_imports_forbidden_modules(
     ):
         load_or_reload_plugin(install_test_plugin)
         class_handler = LOADED_PLUGINS[
-            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_protocol:Forbidden"
+            "test_implicit_imports_plugin:test_implicit_imports_plugin.handlers.my_handler:Forbidden"
         ]["class"]
         class_handler(Event(EventRequest(type=EventType.UNKNOWN))).compute()
 
@@ -703,7 +703,7 @@ def test_simple_api_websocket(
             [
                 PaymentProcessorMetadata(
                     identifier=base64.b64encode(
-                        b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                        b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                     ).decode("utf-8"),
                     type=PaymentProcessorMetadata.PaymentProcessorType.CARD,
                 ).apply()
@@ -713,7 +713,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__SELECTED,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
             },
             [
@@ -734,7 +734,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__CHARGE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "amount": "1.23",
                 "token": "tok_123",
@@ -754,7 +754,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__LIST,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -786,7 +786,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__ADD,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",
@@ -808,7 +808,7 @@ def test_simple_api_websocket(
             EventType.REVENUE__PAYMENT_PROCESSOR__PAYMENT_METHODS__REMOVE,
             {
                 "identifier": base64.b64encode(
-                    b"test_payment_processor.handlers.my_protocol:CustomPaymentProcessor"
+                    b"test_payment_processor.handlers.my_handler:CustomPaymentProcessor"
                 ).decode("utf-8"),
                 "patient": {
                     "id": "patient_1",

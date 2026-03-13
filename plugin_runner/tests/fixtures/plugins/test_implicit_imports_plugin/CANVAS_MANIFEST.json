@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "test_implicit_imports_plugin.handlers.my_protocol:Forbidden",
+                "class": "test_implicit_imports_plugin.handlers.my_handler:Forbidden",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -15,7 +15,7 @@
                 }
             },
             {
-                "class": "test_implicit_imports_plugin.handlers.my_protocol:Allowed",
+                "class": "test_implicit_imports_plugin.handlers.my_handler:Allowed",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
