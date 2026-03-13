@@ -6,16 +6,16 @@ to exercise every new search_pharmacies parameter and get a pass/fail report.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from http import HTTPStatus
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from canvas_sdk.effects.simple_api import JSONResponse, Response
 from canvas_sdk.handlers.simple_api import SimpleAPIRoute, StaffSessionAuthMixin
 from canvas_sdk.utils.http import pharmacy_http
 from logger import log
-
-CheckFn = Callable[[list[dict]], tuple[bool, str]]
 
 
 class PharmacySearchDemo(StaffSessionAuthMixin, SimpleAPIRoute):
@@ -84,7 +84,7 @@ def _is_empty_ok(pharmacies: list[dict]) -> tuple[bool, str]:
     return True, f"returned {len(pharmacies)} result(s) (empty is acceptable)"
 
 
-def _all_in_state(state: str) -> CheckFn:
+def _all_in_state(state: str) -> Callable[[list[dict]], tuple[bool, str]]:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"
@@ -100,7 +100,7 @@ def _all_in_state(state: str) -> CheckFn:
     return check
 
 
-def _all_zip_startswith(prefix: str) -> CheckFn:
+def _all_zip_startswith(prefix: str) -> Callable[[list[dict]], tuple[bool, str]]:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"
@@ -116,7 +116,7 @@ def _all_zip_startswith(prefix: str) -> CheckFn:
     return check
 
 
-def _org_name_contains(substr: str) -> CheckFn:
+def _org_name_contains(substr: str) -> Callable[[list[dict]], tuple[bool, str]]:
     def check(pharmacies: list[dict]) -> tuple[bool, str]:
         if not pharmacies:
             return False, "no results to verify"
