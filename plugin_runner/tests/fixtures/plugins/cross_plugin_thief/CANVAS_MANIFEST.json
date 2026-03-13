@@ -4,9 +4,9 @@
     "name": "cross_plugin_thief",
     "description": "A plugin that tries to load a protocol from another plugin",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "example_plugin.protocols.my_protocol:Protocol",
+                "class": "example_plugin.handlers.my_handler:Handler",
                 "description": "Attempting to borrow from example_plugin",
                 "data_access": {
                     "event": "",

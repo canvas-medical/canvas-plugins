@@ -4,9 +4,9 @@
     "name": "pharmacy_search_demo",
     "description": "Demo plugin for KOALA-4355: exercises all pharmacy search filter parameters",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "pharmacy_search_demo.protocols.demo:PharmacySearchDemo",
+                "class": "pharmacy_search_demo.handlers.demo:PharmacySearchDemo",
                 "description": "Runs all pharmacy search test cases and returns results"
             }
         ],
