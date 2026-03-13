@@ -1,3 +1,4 @@
+import json
 import uuid
 from abc import abstractmethod
 from collections.abc import Container
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from canvas_sdk.value_set.value_set import ValueSet
 
 IS_SQLITE = connection.vendor == "sqlite"
+
+MAX_FIELD_SIZE = 1_048_576  # 1 MB
 
 
 class ModelMetaclass(ModelBase):
@@ -39,6 +42,12 @@ class ModelMetaclass(ModelBase):
 
 class NamespaceWriteDenied(Exception):
     """Raised when a write operation is attempted without write access."""
+
+    pass
+
+
+class FieldValueTooLarge(ValueError):
+    """Raised when a field value exceeds the maximum allowed size."""
 
     pass
 
@@ -193,8 +202,9 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
         abstract = True
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save the model instance, checking write permissions first."""
+        """Save the model instance, checking write permissions and field sizes first."""
         self._check_write_permission()
+        self._check_field_sizes()
         return super().save(*args, **kwargs)
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
@@ -220,6 +230,24 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
                 f"Write operation denied: namespace '{schema}' is read-only. "
                 f"Plugin must declare 'read_write' access to perform write operations."
             )
+
+    def _check_field_sizes(self) -> None:
+        """Check that TextField and JSONField values do not exceed the size limit.
+
+        Raises:
+            FieldValueTooLarge: If any field value exceeds MAX_FIELD_SIZE.
+        """
+        for field in self._meta.local_fields:
+            if isinstance(field, (models.TextField, models.JSONField)):
+                value = getattr(self, field.attname, None)
+                if value is None:
+                    continue
+                size = len(json.dumps(value)) if isinstance(field, models.JSONField) else len(value)
+                if size > MAX_FIELD_SIZE:
+                    raise FieldValueTooLarge(
+                        f"Field '{field.name}' on {type(self).__name__} has size "
+                        f"{size:,} bytes, exceeding the {MAX_FIELD_SIZE:,} byte limit."
+                    )
 
 
 class IdentifiableModel(Model):
@@ -485,4 +513,10 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
         abstract = True
 
 
-__exports__ = ("CustomModel", "ModelExtension", "NamespaceWriteDenied")
+__exports__ = (
+    "CustomModel",
+    "FieldValueTooLarge",
+    "MAX_FIELD_SIZE",
+    "ModelExtension",
+    "NamespaceWriteDenied",
+)

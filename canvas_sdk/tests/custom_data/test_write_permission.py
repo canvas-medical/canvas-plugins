@@ -10,8 +10,15 @@ Tests verify that:
 from unittest.mock import patch
 
 import pytest
+from django.db import models
 
-from canvas_sdk.v1.data.base import CustomModel, Model, NamespaceWriteDenied
+from canvas_sdk.v1.data.base import (
+    MAX_FIELD_SIZE,
+    CustomModel,
+    FieldValueTooLarge,
+    Model,
+    NamespaceWriteDenied,
+)
 from canvas_sdk.v1.plugin_database_context import (
     _plugin_context,
     clear_current_plugin,
@@ -25,6 +32,17 @@ class MockModel(CustomModel):
         app_label = "test"
         # Not abstract so we can instantiate it, but managed=False to avoid migrations
         managed = False
+
+
+class MockModelWithFields(CustomModel):
+    """A mock model with TextField and JSONField for size validation tests."""
+
+    class Meta:
+        app_label = "test"
+        managed = False
+
+    text_field = models.TextField(null=True)
+    json_field = models.JSONField(null=True)
 
 
 class TestNamespaceWriteDenied:
@@ -203,3 +221,40 @@ class TestWritePermissionWithContextManager:
             # Mock parent save to avoid database operations
             with patch.object(Model.__bases__[0], "save", return_value=None):
                 model.save()  # Should not raise
+
+
+class TestFieldSizeValidation:
+    """Tests for field size validation in CustomModel.save()."""
+
+    def test_save_raises_when_text_field_exceeds_limit(self) -> None:
+        """save() should raise FieldValueTooLarge when a TextField value exceeds the limit."""
+        model = MockModelWithFields()
+        model.text_field = "x" * (MAX_FIELD_SIZE + 1)
+
+        with pytest.raises(FieldValueTooLarge, match="text_field"):
+            model.save()
+
+    def test_save_raises_when_json_field_exceeds_limit(self) -> None:
+        """save() should raise FieldValueTooLarge when a JSONField serialized value exceeds the limit."""
+        model = MockModelWithFields()
+        model.json_field = {"data": "x" * MAX_FIELD_SIZE}
+
+        with pytest.raises(FieldValueTooLarge, match="json_field"):
+            model.save()
+
+    def test_save_allows_text_field_at_limit(self) -> None:
+        """save() should allow a TextField value exactly at the limit."""
+        model = MockModelWithFields()
+        model.text_field = "x" * MAX_FIELD_SIZE
+
+        with patch.object(Model.__bases__[0], "save", return_value=None):
+            model.save()  # Should not raise
+
+    def test_save_allows_none_values(self) -> None:
+        """save() should allow None values on TextField and JSONField."""
+        model = MockModelWithFields()
+        model.text_field = None
+        model.json_field = None
+
+        with patch.object(Model.__bases__[0], "save", return_value=None):
+            model.save()  # Should not raise

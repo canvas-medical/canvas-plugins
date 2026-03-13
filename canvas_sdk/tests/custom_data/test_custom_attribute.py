@@ -13,7 +13,12 @@ from typing import Any
 
 import pytest
 
-from canvas_sdk.v1.data.base import ModelExtension, ModelExtensionMetaClass
+from canvas_sdk.v1.data.base import (
+    MAX_FIELD_SIZE,
+    FieldValueTooLarge,
+    ModelExtension,
+    ModelExtensionMetaClass,
+)
 from canvas_sdk.v1.data.custom_attribute import (
     AttributeHub,
     CustomAttribute,
@@ -1770,3 +1775,79 @@ class TestCrossRelationValueFilter:
         """Filtering by an unmapped type across the join raises TypeError."""
         with pytest.raises(TypeError, match="Cannot filter"):
             AttributeHub.objects.filter(custom_attributes__value=object())
+
+
+# ---------------------------------------------------------------------------
+# Field size validation on CustomAttribute value setter
+# ---------------------------------------------------------------------------
+
+
+class TestCustomAttributeValueSizeValidation:
+    """Tests for size validation in the CustomAttribute.value setter."""
+
+    @pytest.fixture
+    def attr(self) -> CustomAttribute:
+        """Create a fresh CustomAttribute instance for each test."""
+        return CustomAttribute(name="test_attr")
+
+    def test_set_attribute_raises_when_text_exceeds_limit(self, attr: CustomAttribute) -> None:
+        """Setting a text value exceeding MAX_FIELD_SIZE should raise FieldValueTooLarge."""
+        with pytest.raises(FieldValueTooLarge, match="text value"):
+            attr.value = "x" * (MAX_FIELD_SIZE + 1)
+
+    def test_set_attribute_raises_when_json_exceeds_limit(self, attr: CustomAttribute) -> None:
+        """Setting a JSON value whose serialized form exceeds MAX_FIELD_SIZE should raise."""
+        with pytest.raises(FieldValueTooLarge, match="JSON value"):
+            attr.value = {"data": "x" * MAX_FIELD_SIZE}
+
+    def test_set_attribute_allows_text_at_limit(self, attr: CustomAttribute) -> None:
+        """A text value exactly at MAX_FIELD_SIZE should be accepted."""
+        attr.value = "x" * MAX_FIELD_SIZE
+        assert attr.text_value == "x" * MAX_FIELD_SIZE
+
+    def test_set_attribute_allows_json_at_limit(self, attr: CustomAttribute) -> None:
+        """A JSON value whose serialized form is exactly MAX_FIELD_SIZE should be accepted."""
+        import json
+
+        # Build a string payload so that json.dumps({"d": "<payload>"}) == MAX_FIELD_SIZE
+        overhead = len(json.dumps({"d": ""}))
+        payload = "x" * (MAX_FIELD_SIZE - overhead)
+        attr.value = {"d": payload}
+        assert len(json.dumps(attr.json_value)) == MAX_FIELD_SIZE
+
+
+@pytest.mark.django_db
+class TestAttributeHubSizeValidation:
+    """Tests for size validation through AttributeHub.set_attribute / set_attributes."""
+
+    @pytest.fixture
+    def hub(self, db: None) -> AttributeHub:
+        """Create an AttributeHub instance for testing."""
+        hub = AttributeHub(type="test", id="size-test")
+        hub.save()
+        return hub
+
+    def test_set_attribute_raises_when_text_exceeds_limit(self, hub: AttributeHub) -> None:
+        """set_attribute should raise FieldValueTooLarge for oversized text."""
+        with pytest.raises(FieldValueTooLarge, match="text value"):
+            hub.set_attribute("big_text", "x" * (MAX_FIELD_SIZE + 1))
+
+    def test_set_attribute_raises_when_json_exceeds_limit(self, hub: AttributeHub) -> None:
+        """set_attribute should raise FieldValueTooLarge for oversized JSON."""
+        with pytest.raises(FieldValueTooLarge, match="JSON value"):
+            hub.set_attribute("big_json", {"data": "x" * MAX_FIELD_SIZE})
+
+    def test_set_attributes_raises_when_any_value_exceeds_limit(self, hub: AttributeHub) -> None:
+        """set_attributes should raise FieldValueTooLarge if any value is too large."""
+        with pytest.raises(FieldValueTooLarge):
+            hub.set_attributes(
+                {
+                    "small": "ok",
+                    "big": "x" * (MAX_FIELD_SIZE + 1),
+                }
+            )
+
+    def test_set_attribute_allows_text_at_limit(self, hub: AttributeHub) -> None:
+        """set_attribute should accept a text value exactly at the limit."""
+        result = hub.set_attribute("at_limit", "x" * MAX_FIELD_SIZE)
+        assert result.value == "x" * MAX_FIELD_SIZE

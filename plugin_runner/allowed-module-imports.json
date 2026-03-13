@@ -938,6 +938,7 @@
     "ExternalVisit",
     "Facility",
     "FieldType",
+    "FieldValueTooLarge",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
@@ -1081,6 +1082,8 @@
   ],
   "canvas_sdk.v1.data.base": [
     "CustomModel",
+    "FieldValueTooLarge",
+    "MAX_FIELD_SIZE",
     "ModelExtension",
     "NamespaceWriteDenied"
   ],

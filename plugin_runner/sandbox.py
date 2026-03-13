@@ -215,6 +215,11 @@ THIRD_PARTY_MODULES = {
     "django.contrib.postgres.indexes": {
         "GinIndex",
     },
+    "django.db.transaction": {
+        "atomic",
+        "on_commit",
+        "on_rollback",
+    },
     "django.db.models": {
         "Avg",
         "BigIntegerField",

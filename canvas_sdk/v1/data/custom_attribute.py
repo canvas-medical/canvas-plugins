@@ -8,6 +8,7 @@ access without knowing which column a value lives in.
 
 import datetime
 import decimal
+import json
 import operator
 from functools import reduce
 from typing import Any
@@ -15,7 +16,7 @@ from typing import Any
 from django.db import models
 from django.db.models import Prefetch, Q
 
-from .base import Model
+from .base import MAX_FIELD_SIZE, FieldValueTooLarge, Model
 
 VALUE_FIELD_MAP: dict[type, str] = {
     bool: "bool_value",
@@ -218,6 +219,17 @@ class CustomAttribute(Model):
             self.json_value = value
         else:
             setattr(self, typed_field, value)
+
+        if self.text_value is not None and len(self.text_value) > MAX_FIELD_SIZE:
+            raise FieldValueTooLarge(
+                f"Attribute text value has size {len(self.text_value):,} bytes, "
+                f"exceeding the {MAX_FIELD_SIZE:,} byte limit."
+            )
+        if self.json_value is not None and len(json.dumps(self.json_value)) > MAX_FIELD_SIZE:
+            raise FieldValueTooLarge(
+                f"Attribute JSON value has size {len(json.dumps(self.json_value)):,} bytes, "
+                f"exceeding the {MAX_FIELD_SIZE:,} byte limit."
+            )
 
 
 class CustomAttributeAwareQuerySet(models.QuerySet):
