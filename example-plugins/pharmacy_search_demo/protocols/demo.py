@@ -6,7 +6,6 @@ to exercise every new search_pharmacies parameter and get a pass/fail report.
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
@@ -52,7 +51,6 @@ class PharmacySearchDemo(StaffSessionAuthMixin, SimpleAPIRoute):
                         "name": name,
                         "passed": False,
                         "detail": f"exception: {exc}",
-                        "traceback": traceback.format_exc(),
                     }
                 )
 
