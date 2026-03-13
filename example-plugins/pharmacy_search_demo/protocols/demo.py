@@ -86,9 +86,9 @@ def _all_in_state(state: str) -> Any:
         if not pharmacies:
             return False, "no results to verify"
         mismatches = [
-            p.get("standardized_state", "")
+            p.get("state", "")
             for p in pharmacies
-            if (p.get("standardized_state") or "").upper() != state.upper()
+            if (p.get("state") or "").upper() != state.upper()
         ]
         if mismatches:
             return False, f"{len(mismatches)} pharmacy(ies) not in state {state}: {mismatches[:5]}"
@@ -103,7 +103,7 @@ def _all_zip_startswith(prefix: str) -> Any:
             return False, "no results to verify"
         mismatches = []
         for p in pharmacies:
-            zip_code = str(p.get("standardized_zip_code") or "")
+            zip_code = str(p.get("zip_code") or "")
             if not zip_code.startswith(prefix):
                 mismatches.append(zip_code)
         if mismatches:

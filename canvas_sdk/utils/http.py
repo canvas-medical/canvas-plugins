@@ -373,7 +373,7 @@ class PharmacyHttp:
         if state is not None:
             params["state__iexact"] = state
         if zip_code_prefix is not None:
-            params["zip_code_prefix"] = zip_code_prefix
+            params["zip_code_prefix_in"] = zip_code_prefix
 
         query_string = urllib.parse.urlencode(params)
         response = self._http_client.get_json(f"/surescripts/pharmacy/?{query_string}")

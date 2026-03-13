@@ -196,7 +196,7 @@ def test_search_pharmacies_with_filter_fields(mock_get: MagicMock) -> None:
     assert "ncpdp_id=1234567" in call_url
     assert "organization_name__icontains=CVS" in call_url
     assert "state__iexact=CA" in call_url
-    assert "zip_code_prefix=902" in call_url
+    assert "zip_code_prefix_in=902" in call_url
     assert "specialty_type__icontains=retail" in call_url
     assert "search=" not in call_url
 
@@ -220,7 +220,7 @@ def test_search_pharmacies_with_zip_code_prefix(mock_get: MagicMock) -> None:
     pharmacy_http.search_pharmacies(search_term=None, zip_code_prefix="902,100,945")
 
     call_url = mock_get.call_args[0][0]
-    assert "zip_code_prefix=902%2C100%2C945" in call_url
+    assert "zip_code_prefix_in=902%2C100%2C945" in call_url
 
 
 @patch("requests.Session.get")
