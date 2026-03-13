@@ -6,7 +6,7 @@
     "components": {
         "handlers": [
             {
-                "class": "test_payment_processor.handlers.my_protocol:CustomPaymentProcessor",
+                "class": "test_payment_processor.handlers.my_handler:CustomPaymentProcessor",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

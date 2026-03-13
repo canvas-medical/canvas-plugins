@@ -13,7 +13,7 @@ def test_render_to_string_valid_template(
 ) -> None:
     """Test that the render_to_string function loads and renders a valid template."""
     plugin = LOADED_PLUGINS[
-        "test_render_template:test_render_template.handlers.my_protocol:ValidTemplate"
+        "test_render_template:test_render_template.handlers.my_handler:ValidTemplate"
     ]
     result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
     assert "This is always here" in result[0].payload
@@ -26,7 +26,7 @@ def test_render_to_string_valid_child_template(
 ) -> None:
     """Test that the render_to_string function allows template inheritance."""
     plugin = LOADED_PLUGINS[
-        "test_render_template:test_render_template.handlers.my_protocol:TemplateInheritance"
+        "test_render_template:test_render_template.handlers.my_handler:TemplateInheritance"
     ]
     result: list[Effect] = plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
     assert "This is always here" in result[0].payload
@@ -40,7 +40,7 @@ def test_render_to_string_invalid_template(
 ) -> None:
     """Test that the render_to_string function raises an error for invalid templates."""
     plugin = LOADED_PLUGINS[
-        "test_render_template:test_render_template.handlers.my_protocol:InvalidTemplate"
+        "test_render_template:test_render_template.handlers.my_handler:InvalidTemplate"
     ]
     with pytest.raises(FileNotFoundError):
         plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
@@ -52,7 +52,7 @@ def test_render_to_string_forbidden_template(
 ) -> None:
     """Test that the render_to_string function raises an error for a template outside plugin package."""
     plugin = LOADED_PLUGINS[
-        "test_render_template:test_render_template.handlers.my_protocol:ForbiddenTemplate"
+        "test_render_template:test_render_template.handlers.my_handler:ForbiddenTemplate"
     ]
     with pytest.raises(PermissionError):
         plugin["class"](Event(EventRequest(type=EventType.UNKNOWN))).compute()
