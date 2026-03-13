@@ -376,7 +376,8 @@ class PharmacyHttp:
             params["zip_code_prefix_in"] = zip_code_prefix
 
         query_string = urllib.parse.urlencode(params)
-        response = self._http_client.get_json(f"/surescripts/pharmacy/?{query_string}")
+        url = f"/surescripts/pharmacy/?{query_string}" if query_string else "/surescripts/pharmacy/"
+        response = self._http_client.get_json(url)
         response_json = response.json()
         return response_json.get("results", []) if response_json else []
 
