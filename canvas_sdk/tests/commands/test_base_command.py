@@ -131,6 +131,26 @@ def test_batch_originate_raises_error_when_required_fields_not_set() -> None:
         cmd._origination_payload_for_batch()
 
 
+def test_batch_commit_successfully_returns_dict(
+    dummy_command_instance: DummyCommand,
+) -> None:
+    """Test that _commit_payload_for_batch() successfully returns the correct dict."""
+    batch_payload = dummy_command_instance._commit_payload_for_batch()
+
+    assert batch_payload == {
+        "type": "COMMIT_PLAN_COMMAND",
+        "command": dummy_command_instance.command_uuid,
+    }
+
+
+def test_batch_commit_raises_error_when_required_fields_not_set() -> None:
+    """Test that _commit_payload_for_batch() raises an error when a required field is not set."""
+    cmd = DummyCommand()
+
+    with pytest.raises(ValueError, match="command_uuid"):
+        cmd._commit_payload_for_batch()
+
+
 def test_commit_successfully_returns_commit_effect(
     dummy_command_instance: DummyCommand,
 ) -> None:
