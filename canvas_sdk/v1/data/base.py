@@ -97,7 +97,12 @@ class CustomModelMetaclass(ModelMetaclass):
         if suppress_dbid and "dbid" not in attrs:
             attrs["dbid"] = None
 
+        # Snapshot developer-declared indexes/constraints before we auto-add FK indexes.
+        developer_indexes = list(getattr(meta, "indexes", []))
+        developer_constraints = list(getattr(meta, "constraints", []))
+
         # Look for foreign keys and one to one fields. Validate related_name and index them.
+        auto_indexed_columns: set[str] = set()
         for key, value in attrs.items():
             if isinstance(value, (ForeignKey, OneToOneField)):
                 # Reject non-namespaced related_name on FK/OneToOne fields that
@@ -134,9 +139,41 @@ class CustomModelMetaclass(ModelMetaclass):
                 if not getattr(value, "primary_key", False):
                     if not hasattr(meta, "indexes"):
                         meta.indexes = []
-                    idx = models.Index(fields=[f"{key}_id"])
+                    column_name = f"{key}_id"
+                    idx = models.Index(fields=[column_name])
                     if idx not in meta.indexes:
                         meta.indexes.append(idx)
+                    auto_indexed_columns.add(column_name)
+                    # Also track the field name so we catch both "room" and
+                    # "room_id" style declarations.
+                    auto_indexed_columns.add(key)
+
+        # Reject developer-declared indexes or constraints that duplicate an
+        # auto-indexed FK/OneToOne column.  These indexes are created
+        # automatically — a duplicate wastes space and confuses readers.
+        for idx in developer_indexes:
+            if idx.fields and len(idx.fields) == 1:
+                field_ref = idx.fields[0].lstrip("-")
+                if field_ref in auto_indexed_columns:
+                    raise ValueError(
+                        f"CustomModel '{name}' declares an explicit index on "
+                        f"'{idx.fields[0]}' in Meta.indexes. ForeignKey and "
+                        f"OneToOneField columns are indexed automatically — "
+                        f"remove the duplicate."
+                    )
+        for constraint in developer_constraints:
+            if (
+                isinstance(constraint, UniqueConstraint)
+                and constraint.fields
+                and len(constraint.fields) == 1
+                and constraint.fields[0] in auto_indexed_columns
+            ):
+                raise ValueError(
+                    f"CustomModel '{name}' declares a UniqueConstraint on "
+                    f"'{constraint.fields[0]}' in Meta.constraints. "
+                    f"OneToOneField columns already have a unique index — "
+                    f"remove the duplicate."
+                )
 
         # Reject unique=True on individual fields. Developers should use
         # UniqueConstraint in Meta.constraints instead, because our DDL pipeline

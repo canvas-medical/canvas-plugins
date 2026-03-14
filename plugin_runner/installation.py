@@ -732,7 +732,11 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     index_statements = []
     for index in model_class._meta.indexes:
         index_sql = generate_index_sql(
-            schema_name, model_class._meta.db_table, index, is_sqlite=IS_SQLITE
+            schema_name,
+            model_class._meta.db_table,
+            index,
+            model_class=model_class,
+            is_sqlite=IS_SQLITE,
         )
         index_statements.append(index_sql)
 
@@ -748,6 +752,7 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
                 schema_name,
                 model_class._meta.db_table,
                 UniqueConstraint(fields=[field.column], name=f"uq_{field.column}"),
+                model_class=model_class,
                 is_sqlite=IS_SQLITE,
             )
             constraint_statements.append(uq_sql)
@@ -755,7 +760,11 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
     for constraint in model_class._meta.constraints:
         if isinstance(constraint, UniqueConstraint):
             constraint_sql = generate_constraint_sql(
-                schema_name, model_class._meta.db_table, constraint, is_sqlite=IS_SQLITE
+                schema_name,
+                model_class._meta.db_table,
+                constraint,
+                model_class=model_class,
+                is_sqlite=IS_SQLITE,
             )
             constraint_statements.append(constraint_sql)
 
@@ -818,8 +827,26 @@ def generate_field_sql(field: Field, connection: Any) -> str:
     return db_type
 
 
+def _resolve_column_name(model_class: type[CustomModel], field_name: str) -> str:
+    """Resolve a Django field name to its database column name.
+
+    For example, a ForeignKey field named ``room`` resolves to column ``room_id``.
+    If the field name is not found on the model (e.g. it's already a column name),
+    it is returned unchanged.
+    """
+    try:
+        field = cast(Field, model_class._meta.get_field(field_name))
+        return str(field.column)
+    except Exception:
+        return field_name
+
+
 def generate_index_sql(
-    schema_name: str, table_name: str, index: Index, is_sqlite: bool = False
+    schema_name: str,
+    table_name: str,
+    index: Index,
+    model_class: type | None = None,
+    is_sqlite: bool = False,
 ) -> str:
     """Generate CREATE INDEX SQL from Django Index object.
 
@@ -827,6 +854,7 @@ def generate_index_sql(
         schema_name: The PostgreSQL schema name (namespace or plugin name).
         table_name: Name of the table (without schema prefix).
         index: Django Index object.
+        model_class: The Django model class, used to resolve field names to column names.
         is_sqlite: If True, generate SQLite-compatible SQL without schema prefix.
 
     Returns:
@@ -841,10 +869,12 @@ def generate_index_sql(
     for field in index.fields:
         if field.startswith("-"):
             # Descending order - remove the '-' prefix
-            field_parts.append(f"{field[1:]} DESC")
+            col = _resolve_column_name(model_class, field[1:]) if model_class else field[1:]
+            field_parts.append(f"{col} DESC")
         else:
+            col = _resolve_column_name(model_class, field) if model_class else field
             # Ascending order (default)
-            field_parts.append(field)
+            field_parts.append(col)
     field_list = ", ".join(field_parts)
 
     # Support GIN indexes on JSONB fields
@@ -857,7 +887,11 @@ def generate_index_sql(
 
 
 def generate_constraint_sql(
-    schema_name: str, table_name: str, constraint: UniqueConstraint, is_sqlite: bool = False
+    schema_name: str,
+    table_name: str,
+    constraint: UniqueConstraint,
+    model_class: type | None = None,
+    is_sqlite: bool = False,
 ) -> str:
     """Generate CREATE UNIQUE INDEX SQL from a Django UniqueConstraint.
 
@@ -868,6 +902,7 @@ def generate_constraint_sql(
         schema_name: The PostgreSQL schema name (namespace or plugin name).
         table_name: Name of the table (without schema prefix).
         constraint: Django UniqueConstraint object.
+        model_class: The Django model class, used to resolve field names to column names.
         is_sqlite: If True, generate SQLite-compatible SQL without schema prefix.
 
     Returns:
@@ -875,7 +910,10 @@ def generate_constraint_sql(
     """
     index_name = f"{schema_name}_{constraint.name}"
     table_full_name = table_name if is_sqlite else f"{schema_name}.{table_name}"
-    field_list = ", ".join(constraint.fields)
+    if model_class:
+        field_list = ", ".join(_resolve_column_name(model_class, f) for f in constraint.fields)
+    else:
+        field_list = ", ".join(constraint.fields)
 
     return f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
 

@@ -1061,6 +1061,197 @@ class TestCustomModelMetaclassUniqueFieldRejection:
 
 
 # ===========================================================================
+# Tests for duplicate index detection
+# ===========================================================================
+
+
+class TestCustomModelMetaclassDuplicateIndexDetection:
+    """Tests that CustomModelMetaclass rejects explicit indexes or constraints
+    that duplicate auto-indexed FK/OneToOne columns.
+    """
+
+    def test_explicit_index_on_fk_column_raises(self) -> None:
+        """An explicit index on a FK column (using column name) should raise."""
+        with pytest.raises(ValueError, match="indexed automatically.*remove the duplicate"):
+            type(
+                "DuplicateFKIndexModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "DuplicateFKIndexModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "indexes": [
+                                models.Index(fields=["parent_id"], name="idx_parent"),
+                            ],
+                        },
+                    ),
+                    "parent": models.ForeignKey(
+                        ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                    ),
+                },
+            )
+
+    def test_explicit_index_on_fk_field_name_raises(self) -> None:
+        """An explicit index using the field name (not column name) should raise."""
+        with pytest.raises(ValueError, match="indexed automatically.*remove the duplicate"):
+            type(
+                "DuplicateFKFieldNameIndexModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "DuplicateFKFieldNameIndexModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "indexes": [
+                                models.Index(fields=["parent"], name="idx_parent"),
+                            ],
+                        },
+                    ),
+                    "parent": models.ForeignKey(
+                        ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                    ),
+                },
+            )
+
+    def test_explicit_unique_constraint_on_one_to_one_raises(self) -> None:
+        """A UniqueConstraint on a OneToOneField column should raise."""
+        with pytest.raises(ValueError, match="already have a unique index.*remove the duplicate"):
+            type(
+                "DuplicateO2OConstraintModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "DuplicateO2OConstraintModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "constraints": [
+                                models.UniqueConstraint(fields=["parent_id"], name="uq_parent"),
+                            ],
+                        },
+                    ),
+                    "parent": models.OneToOneField(
+                        ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                    ),
+                },
+            )
+
+    def test_multi_column_index_including_fk_is_allowed(self) -> None:
+        """A multi-column index that includes a FK column should be accepted."""
+        Model = type(
+            "MultiColWithFKModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "MultiColWithFKModel",
+                "Meta": type(
+                    "Meta",
+                    (),
+                    {
+                        "app_label": "some_plugin",
+                        "indexes": [
+                            models.Index(fields=["parent_id", "name"], name="idx_parent_name"),
+                        ],
+                    },
+                ),
+                "parent": models.ForeignKey(
+                    ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                ),
+                "name": models.TextField(),
+            },
+        )
+        index_names = [idx.name for idx in Model._meta.indexes]  # type: ignore[attr-defined]
+        assert "idx_parent_name" in index_names
+
+    def test_multi_column_unique_constraint_including_fk_is_allowed(self) -> None:
+        """A multi-column UniqueConstraint that includes a FK column should be accepted."""
+        Model = type(
+            "MultiColUniqueWithFKModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "MultiColUniqueWithFKModel",
+                "Meta": type(
+                    "Meta",
+                    (),
+                    {
+                        "app_label": "some_plugin",
+                        "constraints": [
+                            models.UniqueConstraint(
+                                fields=["parent_id", "slug"], name="uq_parent_slug"
+                            ),
+                        ],
+                    },
+                ),
+                "parent": models.ForeignKey(
+                    ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                ),
+                "slug": models.TextField(),
+            },
+        )
+        constraint_names = [c.name for c in Model._meta.constraints]  # type: ignore[attr-defined]
+        assert "uq_parent_slug" in constraint_names
+
+    def test_index_on_non_fk_column_is_allowed(self) -> None:
+        """An index on a non-FK column should be accepted."""
+        Model = type(
+            "RegularIndexModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "RegularIndexModel",
+                "Meta": type(
+                    "Meta",
+                    (),
+                    {
+                        "app_label": "some_plugin",
+                        "indexes": [
+                            models.Index(fields=["email"], name="idx_email"),
+                        ],
+                    },
+                ),
+                "email": models.TextField(),
+            },
+        )
+        index_names = [idx.name for idx in Model._meta.indexes]  # type: ignore[attr-defined]
+        assert "idx_email" in index_names
+
+    def test_descending_index_on_fk_column_raises(self) -> None:
+        """A descending index on a FK column should also be caught."""
+        with pytest.raises(ValueError, match="indexed automatically.*remove the duplicate"):
+            type(
+                "DescFKIndexModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "DescFKIndexModel",
+                    "Meta": type(
+                        "Meta",
+                        (),
+                        {
+                            "app_label": "some_plugin",
+                            "indexes": [
+                                models.Index(fields=["-parent_id"], name="idx_parent_desc"),
+                            ],
+                        },
+                    ),
+                    "parent": models.ForeignKey(
+                        ParentModel, on_delete=models.DO_NOTHING, related_name="+"
+                    ),
+                },
+            )
+
+
+# ===========================================================================
 # Tests for generate_constraint_sql
 # ===========================================================================
 
