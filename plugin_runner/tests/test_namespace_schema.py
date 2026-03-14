@@ -678,14 +678,16 @@ class TestSetupReadWriteNamespace:
         assert result is True
         mock_store.assert_not_called()
 
+    @patch("plugin_runner.installation.create_namespace_schema")
     @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read_write")
     @patch("plugin_runner.installation.namespace_exists", return_value=True)
     def test_verifies_key_when_namespace_exists(
         self,
         mock_exists: MagicMock,
         mock_check: MagicMock,
+        mock_create: MagicMock,
     ) -> None:
-        """Should verify access key and return True when key grants read_write."""
+        """Should verify access key, re-run init SQL, and return True."""
         from plugin_runner.installation import setup_read_write_namespace
 
         secrets = {"namespace_read_write_access_key": "valid-key"}
@@ -693,6 +695,7 @@ class TestSetupReadWriteNamespace:
 
         assert result is True
         mock_check.assert_called_once_with("org__data", "valid-key")
+        mock_create.assert_called_once_with(namespace="org__data")
 
     @patch("plugin_runner.installation.namespace_exists", return_value=True)
     def test_raises_when_key_missing_and_namespace_exists(self, mock_exists: MagicMock) -> None:
@@ -778,3 +781,166 @@ class TestVerifyReadNamespaceAccess:
         secrets = {"namespace_read_access_key": "garbage"}
         with pytest.raises(PluginInstallationError, match="invalid access key"):
             verify_read_namespace_access("my_plugin", "org__data", secrets)
+
+
+class TestComputeModelsHash:
+    """Tests for compute_models_hash function."""
+
+    def test_returns_consistent_hash(self, tmp_path: Path) -> None:
+        """Same files should produce the same hash across calls."""
+        from plugin_runner.installation import compute_models_hash
+
+        models_dir = tmp_path / "models"
+        models_dir.mkdir()
+        (models_dir / "__init__.py").write_text("")
+        (models_dir / "patient.py").write_text("class Patient: pass")
+
+        hash1 = compute_models_hash(tmp_path)
+        hash2 = compute_models_hash(tmp_path)
+
+        assert hash1 == hash2
+        assert len(hash1) == 64  # SHA-256 hex digest
+
+    def test_different_contents_produce_different_hash(self, tmp_path: Path) -> None:
+        """Changing file contents should change the hash."""
+        from plugin_runner.installation import compute_models_hash
+
+        models_dir = tmp_path / "models"
+        models_dir.mkdir()
+        (models_dir / "model.py").write_text("class ModelV1: pass")
+
+        hash1 = compute_models_hash(tmp_path)
+
+        (models_dir / "model.py").write_text("class ModelV2: pass")
+
+        hash2 = compute_models_hash(tmp_path)
+
+        assert hash1 != hash2
+
+    def test_empty_when_no_models_dir(self, tmp_path: Path) -> None:
+        """Should return hash of empty input when models/ doesn't exist."""
+        import hashlib
+
+        from plugin_runner.installation import compute_models_hash
+
+        result = compute_models_hash(tmp_path)
+
+        assert result == hashlib.sha256().hexdigest()
+
+    def test_ignores_non_py_files(self, tmp_path: Path) -> None:
+        """Should not include .pyc, .txt, etc. in the hash."""
+        from plugin_runner.installation import compute_models_hash
+
+        models_dir = tmp_path / "models"
+        models_dir.mkdir()
+        (models_dir / "model.py").write_text("class Model: pass")
+
+        hash_without_extras = compute_models_hash(tmp_path)
+
+        (models_dir / "model.pyc").write_bytes(b"\x00\x01\x02")
+        (models_dir / "notes.txt").write_text("ignore me")
+
+        hash_with_extras = compute_models_hash(tmp_path)
+
+        assert hash_without_extras == hash_with_extras
+
+
+class TestNamespaceReady:
+    """Tests for namespace_ready function."""
+
+    def _make_mock_conn(self, cursor: MagicMock) -> MagicMock:
+        """Helper to build a mock connection wrapping the given cursor."""
+        cursor.__enter__ = MagicMock(return_value=cursor)
+        cursor.__exit__ = MagicMock(return_value=False)
+
+        conn = MagicMock()
+        conn.cursor.return_value = cursor
+        conn.__enter__ = MagicMock(return_value=conn)
+        conn.__exit__ = MagicMock(return_value=False)
+        return conn
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_false_when_schema_does_not_exist(self, mock_open_conn: MagicMock) -> None:
+        """Should return False if the namespace schema doesn't exist."""
+        from plugin_runner.installation import namespace_ready
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"count": 0}
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        assert namespace_ready("org__missing", "abc123") is False
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_false_when_schema_version_table_empty(self, mock_open_conn: MagicMock) -> None:
+        """Should return False if schema_version table has no rows."""
+        from plugin_runner.installation import namespace_ready
+
+        mock_cursor = MagicMock()
+        # schema exists, schema_version table is empty
+        mock_cursor.fetchone.side_effect = [{"count": 1}, None]
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        assert namespace_ready("org__migrating", "abc123") is False
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_true_when_hash_matches(self, mock_open_conn: MagicMock) -> None:
+        """Should return True if schema_version row has a matching models_hash."""
+        from plugin_runner.installation import namespace_ready
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [{"count": 1}, {"models_hash": "abc123"}]
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        assert namespace_ready("org__data", "abc123") is True
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_returns_false_when_hash_mismatches(self, mock_open_conn: MagicMock) -> None:
+        """Should return False if schema_version row has a different models_hash."""
+        from plugin_runner.installation import namespace_ready
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [{"count": 1}, {"models_hash": "old_hash"}]
+        mock_conn = self._make_mock_conn(mock_cursor)
+        mock_open_conn.return_value = mock_conn
+
+        assert namespace_ready("org__data", "new_hash") is False
+
+
+class TestMarkNamespaceReady:
+    """Tests for mark_namespace_ready function."""
+
+    @patch("plugin_runner.installation.open_database_connection")
+    def test_writes_hash_and_notifies(self, mock_open_conn: MagicMock) -> None:
+        """Should DELETE, INSERT with hash, NOTIFY with hash payload, then commit."""
+        from plugin_runner.installation import mark_namespace_ready
+
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_open_conn.return_value = mock_conn
+
+        mark_namespace_ready("org__data", "abc123")
+
+        calls = [str(c) for c in mock_cursor.execute.call_args_list]
+        assert any("DELETE FROM org__data.schema_version" in c for c in calls)
+        assert any("INSERT INTO org__data.schema_version" in c for c in calls)
+        assert any("pg_notify" in c for c in calls)
+
+        # Verify hash is in INSERT params
+        insert_call = next(c for c in mock_cursor.execute.call_args_list if "INSERT" in str(c))
+        assert "abc123" in insert_call[0][1]
+
+        # Verify hash is in NOTIFY params
+        notify_call = next(c for c in mock_cursor.execute.call_args_list if "pg_notify" in str(c))
+        assert "abc123" in notify_call[0][1]
+
+        mock_conn.commit.assert_called_once()

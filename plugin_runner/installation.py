@@ -6,7 +6,6 @@ import shutil
 import sys
 import tarfile
 import tempfile
-import time
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -65,44 +64,88 @@ def is_schema_manager() -> bool:
     return aptible_process_type == "cmd" and os.getenv("APTIBLE_PROCESS_INDEX", "0") == "0"
 
 
-# Default: wait up to 120 seconds for the schema manager to create a namespace,
-# polling every 2 seconds.
-NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "120"))
-NAMESPACE_POLL_INTERVAL = int(os.getenv("NAMESPACE_POLL_INTERVAL", "2"))
+# Default: wait up to 60 seconds for the schema manager to create a namespace.
+NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "60"))
+
+
+def _namespace_notify_channel(namespace: str) -> str:
+    """Return the PostgreSQL NOTIFY channel name for a namespace."""
+    return f"namespace_ready_{namespace}"
+
+
+def compute_models_hash(plugin_path: Path) -> str:
+    """Compute a SHA-256 hash of the plugin's models/ directory contents.
+
+    The hash is deterministic: sorted ``*.py`` filenames and their contents
+    are fed into the hasher in order.  All containers extract the same plugin
+    package, so the hash is identical across processes.
+
+    Args:
+        plugin_path: Root directory of the extracted plugin.
+
+    Returns:
+        Hex-encoded SHA-256 digest.
+    """
+    hasher = hashlib.sha256()
+    models_dir = plugin_path / "models"
+    if not models_dir.exists():
+        return hasher.hexdigest()
+    for file_path in sorted(models_dir.glob("*.py")):
+        hasher.update(file_path.name.encode())
+        hasher.update(file_path.read_bytes())
+    return hasher.hexdigest()
 
 
 def wait_for_namespace(
     namespace: str,
+    models_hash: str,
     timeout: int = NAMESPACE_WAIT_TIMEOUT,
-    poll_interval: int = NAMESPACE_POLL_INTERVAL,
 ) -> None:
-    """Block until a namespace schema exists, or raise after timeout.
+    """Block until a namespace is fully ready, or raise after timeout.
 
-    Non-schema-manager containers call this to wait for the schema manager
-    to finish creating the namespace before proceeding with plugin startup.
+    Uses PostgreSQL LISTEN/NOTIFY for instant notification when the schema
+    manager completes DDL migrations.  The function subscribes via ``LISTEN``
+    *before* checking the ``schema_version`` sentinel, so a ``NOTIFY`` that
+    fires between the check and the wait is never missed.
+
+    Falls back to the ``schema_version`` table for the case where the schema manager
+    finishes before this function starts listening.
 
     Args:
         namespace: The namespace schema name to wait for.
+        models_hash: Expected SHA-256 hash of the plugin's models/ directory.
         timeout: Maximum seconds to wait before raising.
-        poll_interval: Seconds between existence checks.
 
     Raises:
-        PluginInstallationError: If the namespace does not appear within the timeout.
+        PluginInstallationError: If the namespace does not become ready within the timeout.
     """
-    elapsed = 0
-    while not namespace_exists(namespace):
-        if elapsed >= timeout:
-            raise PluginInstallationError(
-                f"Timed out after {timeout}s waiting for namespace '{namespace}' "
-                f"to be created by the schema manager."
-            )
-        time.sleep(poll_interval)
-        elapsed += poll_interval
+    channel = _namespace_notify_channel(namespace)
+
+    with open_database_connection() as conn:
+        conn.autocommit = True
+        conn.execute(f"LISTEN {channel}")
+
+        # Check AFTER subscribing so any NOTIFY sent between this check and
+        # the wait below is queued on the connection and not lost.
+        if namespace_ready(namespace, models_hash):
+            log.info(f"Namespace '{namespace}' is ready (hash match)")
+            return
+
         log.info(
-            f"Waiting for namespace '{namespace}' to be initialized ({elapsed}s / {timeout}s) ..."
+            f"Waiting for namespace '{namespace}' to be initialized "
+            f"(listening on '{channel}', timeout {timeout}s) ..."
         )
 
-    log.info(f"Namespace '{namespace}' is ready")
+        for notify in conn.notifies(timeout=timeout):
+            if notify.channel == channel and notify.payload == models_hash:
+                log.info(f"Namespace '{namespace}' is ready (received NOTIFY with matching hash)")
+                return
+
+        # Generator exhausted without matching notification — timeout.
+        raise PluginInstallationError(
+            f"Timed out after {timeout}s waiting for namespace '{namespace}' "
+            f"to be created by the schema manager."
+        )
 
 
 def clear_registered_models(plugin_name: str) -> None:
@@ -380,12 +423,68 @@ def namespace_exists(namespace: str) -> bool:
         return row is not None and row["count"] > 0
 
 
-def create_namespace_schema(namespace: str) -> dict[str, str] | None:
-    """Create a shared data namespace schema if it doesn't exist.
+def namespace_ready(namespace: str, models_hash: str) -> bool:
+    """Check if a namespace has completed migration setup for the given models hash.
 
-    This initializes the namespace with:
-    - namespace_auth table for authentication (with auto-generated keys)
-    - custom_attribute and attribute_hub tables for data storage
+    Returns True when the namespace schema exists AND the ``schema_version``
+    sentinel table contains a row whose ``models_hash`` matches *models_hash*.
+
+    Args:
+        namespace: The namespace schema name to check.
+        models_hash: Expected SHA-256 hash of the plugin's models/ directory.
+
+    Returns:
+        True if the namespace is ready for this version of the models, False otherwise.
+    """
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            "SELECT count(*) AS count FROM pg_catalog.pg_namespace WHERE nspname = %s",
+            (namespace,),
+        )
+        row = cursor.fetchone()
+        if not row or row["count"] == 0:
+            return False
+
+        cursor.execute(f"SELECT models_hash FROM {namespace}.schema_version LIMIT 1")
+        row = cursor.fetchone()
+        return row is not None and row["models_hash"] == models_hash
+
+
+def mark_namespace_ready(namespace: str, models_hash: str) -> None:
+    """Write the readiness sentinel and notify waiting containers.
+
+    Replaces any existing row in the ``schema_version`` table with one carrying
+    the current *models_hash*, then sends a PostgreSQL ``NOTIFY`` whose payload
+    is the hash so that non-schema-manager containers (blocked in
+    ``wait_for_namespace``) can verify without an extra DB query.
+
+    Both operations are in the same transaction, so the notification fires
+    atomically at commit time.
+
+    The ``schema_version`` table is guaranteed to exist because
+    ``create_namespace_schema`` (which always runs the idempotent init SQL) is
+    called before this function.
+
+    Args:
+        namespace: The namespace schema name.
+        models_hash: SHA-256 hash of the plugin's models/ directory.
+    """
+    channel = _namespace_notify_channel(namespace)
+    with open_database_connection() as conn, conn.cursor() as cursor:
+        cursor.execute(f"DELETE FROM {namespace}.schema_version")
+        cursor.execute(
+            f"INSERT INTO {namespace}.schema_version (models_hash) VALUES (%s)", (models_hash,)
+        )
+        cursor.execute("SELECT pg_notify(%s, %s)", (channel, models_hash))
+        conn.commit()
+
+
+def create_namespace_schema(namespace: str) -> dict[str, str] | None:
+    """Create or update a shared data namespace schema.
+
+    Always runs the idempotent init SQL to ensure all schema objects
+    (including the ``schema_version`` sentinel table) exist.  For new namespaces,
+    also generates and inserts authentication keys.
 
     Returns:
         Dict with 'namespace_read_access_key' and 'namespace_read_write_access_key' if namespace was created,
@@ -402,16 +501,18 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
             (namespace,),
         )
         row = cursor.fetchone()
+        is_new = row is None or row["count"] == 0
+
+        # Always run the idempotent init SQL to ensure all schema objects
+        # (including the schema_version sentinel table) exist.
+        with open(Path(__file__).parent / "init_namespace_schema.sql") as f:
+            sql_content = f.read()
+            sql_content = sql_content.replace("{namespace}", namespace)
+            conn.cursor().execute(sql_content)
 
         generated_keys = None
 
-        if row is None or row["count"] == 0:
-            # Execute SQL file for namespace schema initialization
-            with open(Path(__file__).parent / "init_namespace_schema.sql") as f:
-                sql_content = f.read()
-                sql_content = sql_content.replace("{namespace}", namespace)
-                conn.cursor().execute(sql_content)
-
+        if is_new:
             # Generate UUID keys for read and read_write access
             read_key = str(uuid.uuid4())
             read_write_key = str(uuid.uuid4())
@@ -442,7 +543,7 @@ def create_namespace_schema(namespace: str) -> dict[str, str] | None:
 
             log.info(f"Created namespace schema '{namespace}' with auto-generated access keys")
         else:
-            log.info(f"Namespace schema '{namespace}' already exists")
+            log.info(f"Namespace schema '{namespace}' already exists, init SQL re-applied")
 
         conn.commit()
 
@@ -945,6 +1046,9 @@ def setup_read_write_namespace(plugin_name: str, schema_name: str, secrets: dict
                 f"for namespace '{schema_name}'. Ensure '{READ_WRITE_ACCESS_KEY}' "
                 f"contains a valid key from the namespace owner."
             )
+        # Re-run idempotent init SQL to ensure all schema objects are up to date
+        # (e.g. the schema_version table for namespaces created before it existed).
+        create_namespace_schema(namespace=schema_name)
         return True
 
     # Namespace doesn't exist - create it
@@ -1020,7 +1124,8 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         # Initialize namespace schema and generate model migrations if custom_data is declared.
         # Only the schema manager (primary cmd container) performs DDL.
-        # Non-schema-manager containers poll until the namespace exists.
+        # Non-schema-manager containers poll until the namespace is fully ready
+        # (schema created + all DDL migrations complete).
         if custom_data and is_schema_manager():
             schema_name = custom_data["namespace"]
             declared_access = custom_data.get("access", "read")
@@ -1036,6 +1141,8 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
             if can_create_tables:
                 generate_plugin_migrations(plugin_name, plugin_installation_path, schema_name)
+                models_hash = compute_models_hash(plugin_installation_path)
+                mark_namespace_ready(schema_name, models_hash)
             else:
                 log.info(
                     f"Plugin '{plugin_name}' has read-only access to namespace "
@@ -1043,13 +1150,14 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                 )
         elif custom_data:
             schema_name = custom_data["namespace"]
+            models_hash = compute_models_hash(plugin_installation_path)
 
             log.info(
                 f"Plugin '{plugin_name}' is not the schema manager — waiting for "
                 f"namespace '{schema_name}' to be initialized"
             )
 
-            wait_for_namespace(schema_name)
+            wait_for_namespace(schema_name, models_hash)
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 

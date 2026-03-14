@@ -585,43 +585,62 @@ def test_is_schema_manager_worker_index_nonzero() -> None:
 # ===========================================================================
 
 
-@patch("plugin_runner.installation.time.sleep")
-@patch("plugin_runner.installation.namespace_exists", return_value=True)
-def test_wait_for_namespace_returns_immediately_when_exists(
-    mock_exists: MagicMock, mock_sleep: MagicMock
+@patch("plugin_runner.installation.namespace_ready", return_value=True)
+@patch("plugin_runner.installation.open_database_connection")
+def test_wait_for_namespace_returns_immediately_when_ready(
+    mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
-    """Should return immediately without sleeping when namespace already exists."""
-    wait_for_namespace("org__data", timeout=10, poll_interval=1)
+    """Should return immediately when namespace is already ready (checked after LISTEN)."""
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_open_conn.return_value = mock_conn
 
-    mock_exists.assert_called_once_with("org__data")
-    mock_sleep.assert_not_called()
+    wait_for_namespace("org__data", models_hash="abc123", timeout=10)
+
+    mock_conn.execute.assert_called_once_with("LISTEN namespace_ready_org__data")
+    mock_ready.assert_called_once_with("org__data", "abc123")
+    mock_conn.notifies.assert_not_called()
 
 
-@patch("plugin_runner.installation.time.sleep")
-@patch("plugin_runner.installation.namespace_exists", side_effect=[False, False, True])
-def test_wait_for_namespace_polls_until_exists(
-    mock_exists: MagicMock, mock_sleep: MagicMock
+@patch("plugin_runner.installation.namespace_ready", return_value=False)
+@patch("plugin_runner.installation.open_database_connection")
+def test_wait_for_namespace_unblocks_on_notify(
+    mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
-    """Should poll repeatedly until namespace appears."""
-    wait_for_namespace("org__data", timeout=30, poll_interval=2)
+    """Should unblock when a matching NOTIFY with correct hash payload is received."""
+    from psycopg import Notify
 
-    assert mock_exists.call_count == 3
-    assert mock_sleep.call_count == 2
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.notifies.return_value = iter(
+        [Notify(channel="namespace_ready_org__data", payload="abc123", pid=0)]
+    )
+    mock_open_conn.return_value = mock_conn
+
+    wait_for_namespace("org__data", models_hash="abc123", timeout=30)
+
+    mock_conn.notifies.assert_called_once_with(timeout=30)
 
 
-@patch("plugin_runner.installation.time.sleep")
-@patch("plugin_runner.installation.namespace_exists", return_value=False)
+@patch("plugin_runner.installation.namespace_ready", return_value=False)
+@patch("plugin_runner.installation.open_database_connection")
 def test_wait_for_namespace_raises_on_timeout(
-    mock_exists: MagicMock, mock_sleep: MagicMock
+    mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
-    """Should raise PluginInstallationError after timeout."""
+    """Should raise PluginInstallationError when no NOTIFY arrives before timeout."""
     from plugin_runner.exceptions import PluginInstallationError
 
-    with pytest.raises(PluginInstallationError, match="Timed out after 4s"):
-        wait_for_namespace("org__data", timeout=4, poll_interval=2)
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    # Empty iterator — simulates timeout with no notifications
+    mock_conn.notifies.return_value = iter([])
+    mock_open_conn.return_value = mock_conn
 
-    # Should have polled: initial check, then 2s, then 4s → timeout
-    assert mock_sleep.call_count == 2
+    with pytest.raises(PluginInstallationError, match="Timed out after 4s"):
+        wait_for_namespace("org__data", models_hash="abc123", timeout=4)
 
 
 # ===========================================================================

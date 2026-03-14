@@ -56,3 +56,13 @@ CREATE INDEX IF NOT EXISTS custom_attribute_json_idx ON {namespace}.custom_attri
 GRANT USAGE ON {namespace}.custom_attribute_dbid_seq TO canvas_sdk_read_only;
 -- REVOKE ALL PRIVILEGES ON {namespace}.custom_attribute FROM canvas_sdk_read_only;
 GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_sdk_read_only;
+
+-- Migration readiness sentinel. The schema manager inserts a row after all DDL
+-- completes; non-schema-manager containers check the models_hash to verify the
+-- namespace is ready for the current version of the plugin's models.
+CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
+    models_hash VARCHAR(64),
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;

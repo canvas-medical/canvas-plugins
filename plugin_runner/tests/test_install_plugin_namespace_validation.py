@@ -16,11 +16,15 @@ from plugin_runner.installation import install_plugin
 
 
 def _fake_extract(manifest: dict[str, Any]) -> Callable[[Path, Path], None]:
-    """Return a side_effect for extract_plugin that writes the manifest to the dest directory."""
+    """Return a side_effect for extract_plugin that writes the manifest and a models/ dir."""
 
     def _extract(src: Path, dest: Path) -> None:
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "CANVAS_MANIFEST.json").write_text(json.dumps(manifest))
+        # Create a models/ directory so compute_models_hash can run
+        models_dir = dest / "models"
+        models_dir.mkdir(exist_ok=True)
+        (models_dir / "__init__.py").write_text("")
 
     return _extract
 
@@ -57,6 +61,8 @@ def test_read_access_delegates_to_verify(
     mock_verify_read.assert_called_once()
 
 
+@patch("plugin_runner.installation.mark_namespace_ready")
+@patch("plugin_runner.installation.compute_models_hash", return_value="fakehash123")
 @patch("plugin_runner.installation.generate_plugin_migrations")
 @patch("plugin_runner.installation.setup_read_write_namespace", return_value=True)
 @patch("plugin_runner.installation.install_plugin_secrets")
@@ -68,9 +74,11 @@ def test_read_write_access_delegates_to_setup(
     mock_install_secrets: MagicMock,
     mock_setup_ns: MagicMock,
     mock_gen_migrations: MagicMock,
+    mock_compute_hash: MagicMock,
+    mock_mark_ready: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """Plugin with read_write access should delegate to setup_read_write_namespace."""
+    """Plugin with read_write access should delegate to setup and mark ready with hash."""
     manifest = {
         "custom_data": {"namespace": "org__data", "access": "read_write"},
         "secrets": [],
@@ -87,6 +95,8 @@ def test_read_write_access_delegates_to_setup(
         )
 
     mock_setup_ns.assert_called_once()
+    mock_gen_migrations.assert_called_once()
+    mock_mark_ready.assert_called_once_with("org__data", "fakehash123")
 
 
 @patch("plugin_runner.installation.verify_read_namespace_access")
