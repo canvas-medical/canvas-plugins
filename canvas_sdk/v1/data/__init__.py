@@ -8,7 +8,7 @@ from .appointment import (
 )
 from .assessment import Assessment
 from .banner_alert import BannerAlert
-from .base import CustomModel, FieldValueTooLarge, ModelExtension
+from .base import CustomModel, FieldValueTooLarge, ModelExtension, proxy_field
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -346,4 +346,5 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    "proxy_field",
 )

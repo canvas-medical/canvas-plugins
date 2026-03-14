@@ -513,10 +513,47 @@ class ModelExtension(models.Model, metaclass=ModelExtensionMetaClass):
         abstract = True
 
 
+class proxy_field:
+    """Descriptor that returns a ModelExtension proxy from a FK field.
+
+    When a plugin defines a proxy model like ``CustomPatient(Patient, ModelExtension)``,
+    accessing a ForeignKey that returns ``Patient`` can be wrapped with ``proxy_field``
+    to transparently return ``CustomPatient`` instead::
+
+        class CustomNote(Note, ModelExtension):
+            patient = proxy_field(CustomPatient)
+
+        note = CustomNote.objects.get(id=note_id)
+        note.patient  # returns CustomPatient instance
+    """
+
+    def __init__(self, proxy_class: type) -> None:
+        self.proxy_class = proxy_class
+        self._parent_descriptor: Any = None
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        for base in owner.__mro__[1:]:
+            if name in base.__dict__:
+                self._parent_descriptor = base.__dict__[name]
+                break
+
+    def __get__(self, obj: Any, objtype: type | None = None) -> Any:
+        if obj is None:
+            return self
+        result = self._parent_descriptor.__get__(obj, objtype)
+        if result is not None:
+            result.__class__ = self.proxy_class
+        return result
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        self._parent_descriptor.__set__(obj, value)
+
+
 __exports__ = (
     "CustomModel",
     "FieldValueTooLarge",
     "MAX_FIELD_SIZE",
     "ModelExtension",
     "NamespaceWriteDenied",
+    "proxy_field",
 )

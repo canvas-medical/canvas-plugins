@@ -1057,7 +1057,8 @@
     "TransactorAddress",
     "TransactorPhone",
     "UncategorizedClinicalDocument",
-    "UncategorizedClinicalDocumentReview"
+    "UncategorizedClinicalDocumentReview",
+    "proxy_field"
   ],
   "canvas_sdk.v1.data.allergy_intolerance": [
     "AllergyIntolerance",
@@ -1085,7 +1086,8 @@
     "FieldValueTooLarge",
     "MAX_FIELD_SIZE",
     "ModelExtension",
-    "NamespaceWriteDenied"
+    "NamespaceWriteDenied",
+    "proxy_field"
   ],
   "canvas_sdk.v1.data.billing": [
     "BillingLineItem",
