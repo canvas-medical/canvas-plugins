@@ -1,3 +1,4 @@
+import importlib
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -37,6 +38,15 @@ def create_plugin_custom_model_tables(
 
     This fixture runs once per test session, after django_db_setup creates the test
     database but before any tests run.
+
+    IMPORTANT: We deliberately avoid calling ``generate_plugin_migrations`` here
+    because it re-executes model files via ``Sandbox.execute()``, creating new
+    class objects distinct from those already imported by test code.  That causes
+    Django's model registry to hold class-v2 while test code still references
+    class-v1, breaking reverse relations (CASCADE, related_objects, M2M through).
+    Instead we import model modules with ``importlib.import_module`` so the
+    registered classes are the *same* objects that tests use, then create their
+    tables directly.
     """
     from django.conf import settings
 
@@ -61,9 +71,36 @@ def create_plugin_custom_model_tables(
     if str(canvas_plugins_dir) not in sys.path:
         sys.path.insert(0, str(canvas_plugins_dir))
 
-    from plugin_runner.installation import generate_plugin_migrations
+    # Ensure the plugin's parent is on sys.path so intra-plugin imports resolve
+    parent_dir = str(plugin_path.parent)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    # Import all model modules so every CustomModel is registered in Django's
+    # app registry.  Using importlib (not Sandbox) means the class objects in
+    # the registry are identical to those imported by test code — no stale
+    # references, no need for normalize_plugin_model_references.
+    for model_file in sorted(models_path.glob("*.py")):
+        if model_file.name == "__init__.py":
+            module_name = f"{plugin_name}.models"
+        else:
+            module_name = f"{plugin_name}.models.{model_file.stem}"
+        importlib.import_module(module_name)
+
+    from django.apps import apps
+
+    from plugin_runner.installation import (
+        execute_create_table_sql,
+        generate_create_table_sql,
+        register_plugin_app_config,
+        should_create_table,
+    )
 
     with django_db_blocker.unblock():
-        # Generate and execute CREATE TABLE statements for custom models
-        # This will detect SQLite and generate SQLite-compatible SQL
-        generate_plugin_migrations(plugin_name, plugin_path, schema_name=None)
+        plugin_models = apps.all_models.get(plugin_name, {})
+        for model_class in plugin_models.values():
+            if should_create_table(model_class, plugin_name):
+                create_sql = generate_create_table_sql(plugin_name, model_class)  # type: ignore[arg-type]
+                execute_create_table_sql(create_sql)
+
+        register_plugin_app_config(plugin_name)
