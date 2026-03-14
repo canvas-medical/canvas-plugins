@@ -8,6 +8,7 @@ from .appointment import (
 )
 from .assessment import Assessment
 from .banner_alert import BannerAlert
+from .base import CustomModel, FieldValueTooLarge, ModelExtension, proxy_field
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -32,6 +33,11 @@ from .command import Command
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
+from .custom_attribute import (
+    AttributeHub,
+    CustomAttribute,
+    CustomAttributeAwareManager,
+)
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
@@ -179,6 +185,7 @@ __all__ = __exports__ = (
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -211,6 +218,10 @@ __all__ = __exports__ = (
     "Condition",
     "ConditionCoding",
     "Coverage",
+    "CustomAttribute",
+    "CustomAttributeAwareManager",
+    "ModelExtension",
+    "CustomModel",
     "CoveragePosting",
     "CurrentNoteStateEvent",
     "DetectedIssue",
@@ -227,6 +238,7 @@ __all__ = __exports__ = (
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FieldValueTooLarge",
     "FieldType",
     "Goal",
     "ImagingOrder",
@@ -349,4 +361,5 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    "proxy_field",
 )

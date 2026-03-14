@@ -3,7 +3,7 @@ from pathlib import Path
 
 import typer
 
-from canvas_cli.apps import plugin
+from canvas_cli.apps import namespace, plugin
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -39,6 +39,24 @@ config_app.command(name="list", short_help="List plugin secrets on a Canvas inst
 )
 config_app.command(name="set", short_help="Set plugin secrets on a Canvas instance.")(
     plugin.set_secrets
+)
+
+# Namespace app
+namespace_app = typer.Typer(
+    help="Manage custom data namespaces.", rich_markup_mode=None, add_completion=False
+)
+app.add_typer(namespace_app, name="namespace")
+namespace_app.command(name="list", short_help="List all custom data namespaces.")(
+    namespace.list_namespaces
+)
+namespace_app.command(name="inspect", short_help="Inspect tables in a namespace.")(
+    namespace.inspect
+)
+namespace_app.command(
+    name="reset", short_help="Reset a namespace to initial state (dry-run by default)."
+)(namespace.reset)
+namespace_app.command(name="drop", short_help="Drop a namespace (dry-run by default).")(
+    namespace.drop
 )
 
 # Our current version
