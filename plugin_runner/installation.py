@@ -195,78 +195,6 @@ def register_plugin_app_config(plugin_name: str) -> None:
     apps.clear_cache()
 
 
-def normalize_plugin_model_references(plugin_name: str) -> None:
-    """Fix stale model references caused by double execution in the sandbox.
-
-    The sandbox's ``_evaluate_module`` runs plugin code twice: once via
-    ``Sandbox.execute()`` (restricted exec) and once via ``importlib.reload()``.
-    Each execution creates new model class objects.  Lazy relation callbacks
-    (``resolve_through_model``, ``resolve_related_class``) that fire during the
-    first execution resolve to classes from that execution, but the registry is
-    then overwritten by the second execution.  This leaves cross-references
-    (e.g. an M2M ``through`` pointing to a StaffSpecialty from exec-1 whose FK
-    targets a Specialty from exec-1, while the M2M field's own ``model`` is
-    Specialty from exec-2).
-
-    This function walks every relation on the plugin's registered models and
-    updates ``remote_field.model`` and ``remote_field.through`` to point at the
-    currently-registered class objects, then clears any cached M2M accessor
-    results so they are recomputed with the corrected references.
-    """
-    from django.apps import apps
-
-    plugin_models = apps.all_models.get(plugin_name)
-    if not plugin_models:
-        return
-
-    def _resolve(model_or_str: Any) -> type | None:
-        """Return the currently-registered class for a model, or None."""
-        if isinstance(model_or_str, str):
-            return None
-        try:
-            return apps.get_registered_model(
-                model_or_str._meta.app_label, model_or_str._meta.model_name
-            )
-        except LookupError:
-            return None
-
-    for model_cls in plugin_models.values():
-        for field in model_cls._meta.local_fields:
-            if not hasattr(field, "remote_field") or field.remote_field is None:
-                continue
-            registered = _resolve(field.remote_field.model)
-            if registered is not None and registered is not field.remote_field.model:
-                field.remote_field.model = registered
-
-        for field in model_cls._meta.local_many_to_many:
-            rel = field.remote_field
-            # Fix the through model reference.
-            if rel.through and not isinstance(rel.through, str):
-                registered_through = _resolve(rel.through)
-                if registered_through is not None and registered_through is not rel.through:
-                    rel.through = registered_through
-                # Also fix FKs inside the through model itself.
-                for through_field in rel.through._meta.local_fields:
-                    if (
-                        not hasattr(through_field, "remote_field")
-                        or through_field.remote_field is None
-                    ):
-                        continue
-                    registered = _resolve(through_field.remote_field.model)
-                    if (
-                        registered is not None
-                        and registered is not through_field.remote_field.model
-                    ):
-                        through_field.remote_field.model = registered
-
-            # Clear cached M2M accessor values so they are recomputed.
-            for attr in list(vars(field)):
-                if attr.startswith("_m2m_") and attr.endswith("_cache"):
-                    delattr(field, attr)
-
-    apps.clear_cache()
-
-
 def open_database_connection() -> Connection:
     """Opens a psycopg connection to the home-app database.
 
@@ -935,26 +863,38 @@ def discover_model_files(plugin_path: Path) -> list[Path]:
 
 
 def extract_models_from_module(plugin_name: str, model_file: Path) -> list[type[CustomModel]]:
-    """Execute a model file in a sandbox and return discovered model classes.
+    """Sandbox-exec a model file and return discovered CustomModel subclasses.
+
+    Combines security validation and model extraction in a single execution.
+    Cross-file imports (e.g. ``booking.py`` importing from ``room.py``) are
+    handled by the sandbox's ``_evaluate_module``, which re-evaluates and
+    registers the dependency in ``sys.modules`` on demand — so this function
+    does not need to register anything itself.
 
     Args:
         plugin_name: Name of the plugin (used for module namespace).
         model_file: Path to a single .py model file.
 
     Returns:
-        List of model classes whose __module__ starts with '{plugin_name}.models'.
+        List of CustomModel subclasses whose __module__ starts with
+        '{plugin_name}.models'.
     """
     module_name = (
         f"{plugin_name}.models"
         if model_file.name == "__init__.py"
         else f"{plugin_name}.models.{model_file.stem}"
     )
-    s = Sandbox(model_file, namespace=module_name)
-    scope = s.execute()
+
+    sandbox = Sandbox(model_file, namespace=module_name)
+    sandbox.execute()
+
     return [
         value
-        for value in scope.values()
-        if hasattr(value, "__module__") and value.__module__.startswith(f"{plugin_name}.models")
+        for value in sandbox.scope.values()
+        if isinstance(value, type)
+        and issubclass(value, CustomModel)
+        and value is not CustomModel
+        and value.__module__.startswith(f"{plugin_name}.models")
     ]
 
 
@@ -1007,10 +947,18 @@ def generate_plugin_migrations(
 ) -> list[type[CustomModel]]:
     """Generate Django migrations for plugin models.
 
+    Sandbox-execs each model file for security validation, extracts the
+    resulting CustomModel subclasses, and generates CREATE TABLE SQL.
+
+    Model registration with Django's app registry is suppressed during
+    extraction — these classes exist only for DDL generation.  The runtime
+    path (``_evaluate_module``) creates the canonical model classes.
+
     Args:
         plugin_name: Name of the plugin (used for module namespace).
         plugin_path: Path to the plugin directory.
-        schema_name: The PostgreSQL schema where tables will be created. Defaults to plugin_name.
+        schema_name: The PostgreSQL schema where tables will be created.
+                     Defaults to plugin_name.
 
     Returns:
         List of discovered model classes.
@@ -1028,32 +976,53 @@ def generate_plugin_migrations(
         if parent_dir not in sys.path:
             sys.path.insert(0, parent_dir)
 
-        clear_registered_models(plugin_name)
+        model_files = discover_model_files(plugin_path)
 
-        for model_file in discover_model_files(plugin_path):
-            models = extract_models_from_module(plugin_name, model_file)
-            for model_class in models:
-                discovered_models.append(model_class)
-                if should_create_table(model_class, schema_name):
-                    create_sql = generate_create_table_sql(schema_name, model_class)
-                    log.info(f"Generated SQL for {model_class.__name__}:")
-                    log.info(create_sql)
-                    execute_create_table_sql(create_sql)
-                elif hasattr(model_class, "_meta") and model_class._meta.proxy:
-                    log.info(f"Skipping proxy model {model_class.__name__}")
-                elif hasattr(model_class, "_meta"):
-                    db_table = model_class._meta.original_attrs["db_table"]
-                    raise RuntimeError(
-                        f"Model {model_class.__name__} (table '{db_table}') references a "
-                        f"schema outside of '{schema_name}'. A plugin may only define tables "
-                        f"within its own namespace."
-                    )
+        from django.apps import apps
+
+        # Suppress Django's model registration and lazy FK resolution.
+        # The model classes created here are only needed for DDL
+        # generation, which uses only model._meta.  FK fields with
+        # direct class references have remote_field.model set during
+        # ForeignKey.__init__, before any of this machinery runs.
+        #
+        # Without these two suppresions, ModelBase.__new__ and
+        # ForeignKey.contribute_to_class would pollute apps.all_models,
+        # apps._pending_operations, and apps.app_configs — requiring
+        # fragile cleanup that risks destroying live state from a
+        # prior installation.
+        _original_register = apps.register_model
+        _original_lazy = apps.lazy_model_operation
+        apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
+        apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
+        try:
+            for model_file in model_files:
+                models = extract_models_from_module(plugin_name, model_file)
+                for model_class in models:
+                    discovered_models.append(model_class)
+                    if should_create_table(model_class, schema_name):
+                        create_sql = generate_create_table_sql(schema_name, model_class)
+                        log.info(f"Generated SQL for {model_class.__name__}:")
+                        log.info(create_sql)
+                        execute_create_table_sql(create_sql)
+                    elif hasattr(model_class, "_meta") and model_class._meta.proxy:
+                        log.info(f"Skipping proxy model {model_class.__name__}")
+                    elif hasattr(model_class, "_meta"):
+                        db_table = model_class._meta.original_attrs["db_table"]
+                        raise RuntimeError(
+                            f"Model {model_class.__name__} (table '{db_table}') "
+                            f"references a schema outside of '{schema_name}'. "
+                            f"A plugin may only define tables within its own "
+                            f"namespace."
+                        )
+        finally:
+            apps.register_model = _original_register  # type: ignore[method-assign]
+            apps.lazy_model_operation = _original_lazy  # type: ignore[method-assign]
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")
         raise e
 
-    register_plugin_app_config(plugin_name)
     return discovered_models
 
 
@@ -1162,7 +1131,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
         # Initialize namespace schema and generate model migrations if custom_data is declared.
         # Only the schema manager (primary cmd container) performs DDL.
-        # Non-schema-manager containers poll until the namespace is fully ready
+        # Non-schema-manager containers wait until the namespace is fully ready
         # (schema created + all DDL migrations complete).
         if custom_data and is_schema_manager():
             schema_name = custom_data["namespace"]
@@ -1201,9 +1170,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
 
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
-
         sentry_sdk.capture_exception(e)
-
         raise PluginInstallationError() from e
 
 

@@ -10,7 +10,6 @@ Tests cover:
 7. is_schema_manager — DDL gating based on Aptible environment
 8. wait_for_namespace — non-schema-manager containers wait for namespace readiness
 9. register_plugin_app_config — AppConfig registration for plugin models
-10. normalize_plugin_model_references — fix stale model class references
 """
 
 import os
@@ -28,7 +27,6 @@ from plugin_runner.installation import (
     extract_models_from_module,
     generate_plugin_migrations,
     is_schema_manager,
-    normalize_plugin_model_references,
     register_plugin_app_config,
     should_create_table,
     wait_for_namespace,
@@ -721,197 +719,25 @@ def test_register_app_config_models_visible_to_get_models() -> None:
 
 
 # ===========================================================================
-# Tests for normalize_plugin_model_references
-# ===========================================================================
-
-
-def _make_mock_model(app_label: str, model_name: str) -> MagicMock:
-    """Create a MagicMock with _meta.app_label and _meta.model_name.
-
-    Defaults local_fields and local_many_to_many to empty lists so
-    normalize_plugin_model_references can safely iterate them.
-    """
-    model = MagicMock()
-    model._meta.app_label = app_label
-    model._meta.model_name = model_name
-    model._meta.local_fields = []
-    model._meta.local_many_to_many = []
-    return model
-
-
-def test_normalize_fixes_stale_fk_target() -> None:
-    """Should replace a stale FK remote_field.model with the registered class."""
-    from django.apps import apps
-
-    plugin = "norm_fk_plugin"
-    stale_target = _make_mock_model(plugin, "target")
-    current_target = _make_mock_model(plugin, "target")
-
-    # A field with a FK pointing at the stale class
-    fk_field = MagicMock()
-    fk_field.remote_field.model = stale_target
-
-    # The source model that has the FK
-    source = _make_mock_model(plugin, "source")
-    source._meta.local_fields = [fk_field]
-    source._meta.local_many_to_many = []
-
-    apps.all_models[plugin] = {
-        "target": current_target,
-        "source": source,
-    }
-    try:
-        normalize_plugin_model_references(plugin)
-
-        assert fk_field.remote_field.model is current_target
-    finally:
-        apps.all_models.pop(plugin, None)
-        apps.app_configs.pop(plugin, None)
-        apps.clear_cache()
-
-
-def test_normalize_fixes_stale_m2m_through() -> None:
-    """Should replace a stale M2M through model reference with the registered class."""
-    from django.apps import apps
-
-    plugin = "norm_m2m_plugin"
-    stale_through = _make_mock_model(plugin, "through")
-    current_through = _make_mock_model(plugin, "through")
-    current_through._meta.local_fields = []
-
-    # An M2M field whose through points at the stale class
-    m2m_field = MagicMock()
-    m2m_field.remote_field.through = stale_through
-
-    source = _make_mock_model(plugin, "source")
-    source._meta.local_fields = []
-    source._meta.local_many_to_many = [m2m_field]
-
-    apps.all_models[plugin] = {
-        "through": current_through,
-        "source": source,
-    }
-    try:
-        normalize_plugin_model_references(plugin)
-
-        assert m2m_field.remote_field.through is current_through
-    finally:
-        apps.all_models.pop(plugin, None)
-        apps.app_configs.pop(plugin, None)
-        apps.clear_cache()
-
-
-def test_normalize_fixes_fks_inside_through_model() -> None:
-    """Should fix FK references inside a through model."""
-    from django.apps import apps
-
-    plugin = "norm_thru_fk_plugin"
-    stale_endpoint = _make_mock_model(plugin, "endpoint")
-    current_endpoint = _make_mock_model(plugin, "endpoint")
-
-    # FK inside the through model pointing at stale class
-    through_fk = MagicMock()
-    through_fk.remote_field.model = stale_endpoint
-
-    through_model = _make_mock_model(plugin, "through")
-    through_model._meta.local_fields = [through_fk]
-
-    # M2M field referencing the through model (already correct)
-    m2m_field = MagicMock()
-    m2m_field.remote_field.through = through_model
-
-    source = _make_mock_model(plugin, "source")
-    source._meta.local_fields = []
-    source._meta.local_many_to_many = [m2m_field]
-
-    apps.all_models[plugin] = {
-        "endpoint": current_endpoint,
-        "through": through_model,
-        "source": source,
-    }
-    try:
-        normalize_plugin_model_references(plugin)
-
-        assert through_fk.remote_field.model is current_endpoint
-    finally:
-        apps.all_models.pop(plugin, None)
-        apps.app_configs.pop(plugin, None)
-        apps.clear_cache()
-
-
-def test_normalize_clears_m2m_caches() -> None:
-    """Should delete _m2m_*_cache attributes from M2M fields."""
-    from django.apps import apps
-
-    plugin = "norm_cache_plugin"
-
-    # M2M field with a cached value
-    m2m_field = MagicMock(spec=[])
-    m2m_field.remote_field = MagicMock()
-    m2m_field.remote_field.through = None
-    m2m_field._m2m_column_name_cache = "old"
-
-    source = _make_mock_model(plugin, "source")
-    source._meta.local_fields = []
-    source._meta.local_many_to_many = [m2m_field]
-
-    apps.all_models[plugin] = {"source": source}
-    try:
-        normalize_plugin_model_references(plugin)
-
-        assert not hasattr(m2m_field, "_m2m_column_name_cache")
-    finally:
-        apps.all_models.pop(plugin, None)
-        apps.app_configs.pop(plugin, None)
-        apps.clear_cache()
-
-
-def test_normalize_noop_when_no_models() -> None:
-    """Should not raise when the plugin has no models in all_models."""
-    normalize_plugin_model_references("nonexistent_plugin_xyz")
-
-
-def test_normalize_leaves_correct_references_unchanged() -> None:
-    """Should not alter a field that already points at the registered class."""
-    from django.apps import apps
-
-    plugin = "norm_ok_plugin"
-    registered = _make_mock_model(plugin, "target")
-
-    fk_field = MagicMock()
-    fk_field.remote_field.model = registered
-
-    source = _make_mock_model(plugin, "source")
-    source._meta.local_fields = [fk_field]
-    source._meta.local_many_to_many = []
-
-    apps.all_models[plugin] = {
-        "target": registered,
-        "source": source,
-    }
-    try:
-        normalize_plugin_model_references(plugin)
-
-        assert fk_field.remote_field.model is registered
-    finally:
-        apps.all_models.pop(plugin, None)
-        apps.app_configs.pop(plugin, None)
-        apps.clear_cache()
-
-
-# ===========================================================================
-# Integration test — register + normalize with real plugin models
+# Integration test — register with real plugin models
 # ===========================================================================
 
 
 @pytest.mark.django_db
-def test_end_to_end_register_and_normalize(tmp_path: Path) -> None:
-    """Full pipeline: generate migrations, register app config, normalize references.
+def test_end_to_end_register_clean_references(tmp_path: Path) -> None:
+    """Full pipeline: DDL generation leaves a clean Django registry.
 
-    Verifies that after register + normalize:
-    - Plugin appears in app_configs
-    - Plugin models appear in get_models()
-    - FK field's remote_field.model matches the registered model object
+    Model registration is suppressed during generate_plugin_migrations so
+    schema-manager containers have the same registry state as non-schema-
+    manager containers before load_or_reload_plugin runs.
+
+    Verifies that after generate_plugin_migrations:
+    - Plugin is NOT in app_configs (no AppConfig created)
+    - Plugin is NOT in all_models (no models registered)
+    - No sys.modules entries for the plugin remain
+    - FK fields on returned model objects still resolve correctly
+      (direct class references are set during ForeignKey.__init__,
+      before register_model would have been called)
     """
     from django.apps import apps
 
@@ -938,21 +764,18 @@ def test_end_to_end_register_and_normalize(tmp_path: Path) -> None:
     )
 
     try:
-        generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
-        # generate_plugin_migrations already calls register_plugin_app_config
-        normalize_plugin_model_references(plugin_name)
+        result = generate_plugin_migrations(plugin_name, plugin_dir, schema_name=plugin_name)
 
-        # Plugin should be in app_configs
-        assert plugin_name in apps.app_configs
+        # Registry should be clean — no AppConfig, no registered models,
+        # no pending lazy references.
+        assert plugin_name not in apps.app_configs
+        assert plugin_name not in apps.all_models
+        assert not any(k[0] == plugin_name for k in apps._pending_operations)
 
-        # Models should be visible via get_models()
-        all_model_names = {m.__name__ for m in apps.get_models()}
-        assert "Category" in all_model_names
-        assert "Item" in all_model_names
-
-        # The FK on Item should point at the registered Category
-        item_cls = apps.get_registered_model(plugin_name, "item")
-        category_cls = apps.get_registered_model(plugin_name, "category")
+        # FK fields on the returned model objects should still resolve
+        # correctly — direct class references are set during ForeignKey.__init__
+        item_cls = next(m for m in result if m.__name__ == "Item")
+        category_cls = next(m for m in result if m.__name__ == "Category")
 
         fk_field = next(
             f
@@ -968,3 +791,109 @@ def test_end_to_end_register_and_normalize(tmp_path: Path) -> None:
         apps.all_models.pop(plugin_name, None)
         apps.app_configs.pop(plugin_name, None)
         apps.clear_cache()
+
+
+# ===========================================================================
+# Tests for _evaluate_module sandbox behavior
+# ===========================================================================
+
+
+def test_evaluate_module_sandboxes_model_module_and_registers_in_sys_modules(
+    tmp_path: Path,
+) -> None:
+    """_evaluate_module should sandbox model modules and register them in
+    sys.modules from the sandbox scope (not via importlib).
+
+    The resulting module should have _safe_import as __import__ in its
+    __builtins__, preserving runtime sandbox protection.
+    """
+    from plugin_runner.sandbox import Sandbox
+
+    plugin_name = "eval_model_plugin"
+    plugin_dir = tmp_path / plugin_name
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    models_dir = plugin_dir / "models"
+    models_dir.mkdir()
+    (models_dir / "__init__.py").write_text("")
+    (models_dir / "room.py").write_text(
+        dedent("""\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import TextField
+
+        class Room(CustomModel):
+            name = TextField()
+        """)
+    )
+
+    handler_file = plugin_dir / "handler.py"
+    handler_file.write_text("x = 1\n")
+
+    import sys
+
+    parent_dir = str(tmp_path)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    try:
+        sandbox = Sandbox(handler_file, namespace=f"{plugin_name}.handler")
+
+        # Pre-populate _evaluated_modules for the plugin package __init__ so
+        # that _evaluate_implicit_imports doesn't trigger a Sandbox for it.
+        sandbox._evaluated_modules[plugin_name] = True
+
+        module_name = f"{plugin_name}.models.room"
+        sandbox._evaluate_module(module_name)
+
+        # The model module should be registered in sys.modules
+        assert module_name in sys.modules
+
+        # The module should have _safe_import as __import__ (sandbox protection)
+        mod = sys.modules[module_name]
+        assert mod.__builtins__["__import__"].__name__ == "_safe_import"
+    finally:
+        for key in list(sys.modules.keys()):
+            if key.startswith(f"{plugin_name}"):
+                del sys.modules[key]
+        if parent_dir in sys.path:
+            sys.path.remove(parent_dir)
+
+
+def test_evaluate_module_still_sandboxes_non_model_modules(tmp_path: Path) -> None:
+    """_evaluate_module should still call Sandbox.execute() for non-model modules."""
+    from plugin_runner.sandbox import Sandbox
+
+    plugin_name = "eval_sandbox_plugin"
+    plugin_dir = tmp_path / plugin_name
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    utils_file = plugin_dir / "utils.py"
+    utils_file.write_text("SOME_VALUE = 42\n")
+
+    handler_file = plugin_dir / "handler.py"
+    handler_file.write_text("x = 1\n")
+
+    import sys
+
+    parent_dir = str(tmp_path)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    try:
+        sandbox = Sandbox(handler_file, namespace=f"{plugin_name}.handler")
+
+        # Pre-populate _evaluated_modules for the plugin package __init__
+        # so we only test the target module, not implicit imports.
+        sandbox._evaluated_modules[plugin_name] = True
+
+        with patch("plugin_runner.sandbox.Sandbox.execute", return_value={}) as mock_execute:
+            sandbox._evaluate_module(f"{plugin_name}.utils")
+
+            # Sandbox.execute() SHOULD have been called for a non-model module
+            mock_execute.assert_called_once()
+    finally:
+        for key in list(sys.modules.keys()):
+            if key.startswith(f"{plugin_name}"):
+                del sys.modules[key]
+        if parent_dir in sys.path:
+            sys.path.remove(parent_dir)

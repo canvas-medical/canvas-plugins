@@ -844,9 +844,8 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
 
         try:
             # Suppress Django's "Model was already registered" RuntimeWarning.
-            # The sandbox re-executes plugin modules (including importlib.reload)
-            # to pick up the latest code, which harmlessly re-creates model classes
-            # whose metaclass calls apps.register_model() on every class definition.
+            # When importlib.reload re-imports model modules, Django's metaclass
+            # calls apps.register_model() again for each model class.
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     "ignore",
@@ -884,13 +883,6 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     # Re-register the AppConfig so that the freshly-created model classes are
     # visible to Django's relation graph (needed for select_related, etc.).
     register_plugin_app_config(name)
-
-    # The sandbox's _evaluate_module runs plugin code twice (exec + reload),
-    # creating separate class objects whose cross-references can point to
-    # stale classes.  Normalize all relation targets to the registry.
-    from plugin_runner.installation import normalize_plugin_model_references
-
-    normalize_plugin_model_references(name)
 
     return not any_failed
 

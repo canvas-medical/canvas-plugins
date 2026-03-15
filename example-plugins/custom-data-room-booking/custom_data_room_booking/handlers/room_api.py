@@ -35,6 +35,24 @@ class RoomBookingAPI(SimpleAPI):
             )
         ]
 
+    @api.get("/patients")
+    def list_patients(self) -> list[Response | Effect]:
+        """Return up to 50 patients with id and display name."""
+        patients = PatientProxy.objects.all()[:50]
+        return [
+            JSONResponse(
+                {
+                    "patients": [
+                        {
+                            "id": str(p.id),
+                            "name": p.display_name,
+                        }
+                        for p in patients
+                    ]
+                }
+            )
+        ]
+
     @api.post("/rooms")
     def create_room(self) -> list[Response | Effect]:
         """Create a new room. Requires a JSON body with a 'name' field."""

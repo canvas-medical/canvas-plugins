@@ -1109,3 +1109,30 @@ def test_deferred_import_denied(code: str) -> None:
 
     with pytest.raises(ImportError, match="is not an allowed import"):
         sandbox.execute()
+
+
+def test_uncalled_method_import_blocked_at_runtime() -> None:
+    """A forbidden import inside an uncalled method is blocked at runtime
+    by ``_safe_import`` preserved in the sandbox scope.
+
+    ``sandbox.execute()`` only invokes ``_safe_import`` for imports that
+    actually run at module load time.  A method that is *defined* but never
+    *called* during exec slips through exec itself.  However, because the
+    sandbox scope retains ``_safe_import`` as ``__import__``, the forbidden
+    import is caught when the method is actually called at runtime.
+    """
+    source = dedent("""
+        class Exploit:
+            def sneaky(self):
+                import os
+                return os.listdir('.')
+    """)
+
+    # The sandbox exec does NOT catch this — sneaky() is never called during exec.
+    sandbox = _sandbox_from_code(source)
+    scope = sandbox.execute()
+
+    # But calling the method at runtime DOES trigger _safe_import.
+    exploit = scope["Exploit"]()
+    with pytest.raises(ImportError, match="'os' is not an allowed import"):
+        exploit.sneaky()
