@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import builtins
-import importlib
 import json
 import operator
 import sys
@@ -778,14 +777,9 @@ class Sandbox:
         If the module to import belongs to the same package as the current module,
         evaluate it inside a sandbox.
 
-        Model modules (under ``{package_name}.models``) are registered directly
-        from the sandbox scope into ``sys.modules``, preserving ``_safe_import``
-        as ``__import__`` so that forbidden imports in model methods are blocked
-        at runtime.
-
-        Non-model modules go through sandbox exec for validation and then
-        importlib for the actual module registration — handler classes are
-        extracted from the sandbox scope anyway so they retain protection.
+        All plugin modules are registered directly from the sandbox scope
+        into ``sys.modules``, preserving ``_safe_import`` as ``__import__``
+        so that forbidden imports in methods are blocked at runtime.
         """
         # Skip modules already evaluated
         if not self._same_module(module_name) or module_name in self._evaluated_modules:
@@ -793,10 +787,6 @@ class Sandbox:
 
         module = self._get_module(module_name)
         self._evaluate_implicit_imports(module)
-
-        is_model_module = module_name == f"{self.package_name}.models" or module_name.startswith(
-            f"{self.package_name}.models."
-        )
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
@@ -809,21 +799,14 @@ class Sandbox:
             sandbox.execute()
             self._evaluated_modules[module_name] = True
 
-            if is_model_module:
-                # Register the sandbox scope as a module in sys.modules.
-                # This preserves the sandbox-protected classes (with _safe_import)
-                # as the ones in Django's registry, without importlib creating
-                # new unprotected classes that overwrite them.
-                mod = types.ModuleType(module_name)
-                mod.__file__ = str(module)
-                mod.__dict__.update(sandbox.scope)
-                sys.modules[module_name] = mod
-            else:
-                # Non-model modules: reload if already in sys.modules so the
-                # latest version is used.  First-time registration happens via
-                # the __import__ call in _safe_import after we return.
-                if sys.modules.get(module_name):
-                    importlib.reload(sys.modules[module_name])
+            # Register the sandbox scope as a module in sys.modules.
+            # This preserves the sandbox-protected classes (with _safe_import)
+            # so that subsequent imports return the same protected objects
+            # instead of importlib creating new unprotected ones.
+            mod = types.ModuleType(module_name)
+            mod.__file__ = str(module)
+            mod.__dict__.update(sandbox.scope)
+            sys.modules[module_name] = mod
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
         """Evaluate implicit imports in the sandbox.
