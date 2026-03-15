@@ -765,17 +765,7 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
                 # install_plugins() is skipped in local mode, so custom data
                 # tables are never created. Run plugin-specific migrations here.
                 if namespace_config["access_level"] == "read_write":
-                    # Clear previously registered models for a clean slate on reload.
-                    django_apps.all_models.pop(name, None)
-                    django_apps.app_configs.pop(name, None)
-
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings(
-                            "ignore",
-                            message=r"Model '.*' was already registered",
-                            category=RuntimeWarning,
-                        )
-                        generate_plugin_migrations(name, path, schema_name=namespace_name)
+                    generate_plugin_migrations(name, path, schema_name=namespace_name)
             finally:
                 django.db.connections["default"] = original_default
         else:
