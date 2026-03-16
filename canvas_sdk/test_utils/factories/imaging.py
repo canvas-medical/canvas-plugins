@@ -54,6 +54,7 @@ class ImagingReviewFactory(factory.django.DjangoModelFactory[ImagingReview]):
     is_released_to_patient = False
     status = ReviewStatus.STATUS_REVIEWING
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
 
 
 class ImagingReportFactory(factory.django.DjangoModelFactory[ImagingReport]):
