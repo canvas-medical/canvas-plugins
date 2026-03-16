@@ -101,12 +101,12 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
                     None,
                 )
             )
-
-        if has_compound_medication_id:
-            # do not send type_to_dispense for compound meds, it will be auto-populated in home-app
-            self.type_to_dispense = None
         # Only require ClinicalQuantity.representative_ndc if not a compound med
-        elif self.type_to_dispense and not self.type_to_dispense.get("representative_ndc"):
+        if (
+            not has_compound_medication_id
+            and self.type_to_dispense
+            and not self.type_to_dispense.get("representative_ndc")
+        ):
             errors.append(
                 self._create_error_detail(
                     "value",
