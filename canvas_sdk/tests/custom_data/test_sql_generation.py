@@ -14,7 +14,7 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import connection, models
 
 from canvas_sdk.v1.data.base import CustomModel, Model, ModelExtension
-from plugin_runner.installation import (
+from plugin_runner.ddl import (
     SQL_STATEMENT_DELIMITER,
     generate_constraint_sql,
     generate_create_table_sql,
@@ -752,19 +752,19 @@ class TestGenerateCreateTableSqlPostgres:
     These tests patch IS_SQLITE to False to simulate a PostgreSQL environment.
     """
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_uses_schema_prefix(self) -> None:
         """PostgreSQL should use schema prefix in table names."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
         assert "test_plugin.alldatatypesmodel" in sql
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_uses_alter_table_for_columns(self) -> None:
         """PostgreSQL should use ALTER TABLE for adding columns."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", AllDataTypesModel)
 
@@ -772,10 +772,10 @@ class TestGenerateCreateTableSqlPostgres:
         assert "ALTER TABLE" in sql
         assert "ADD COLUMN IF NOT EXISTS" in sql
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_gin_index(self) -> None:
         """PostgreSQL should use USING GIN for GIN indexes."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", GinIndexModel)
 
@@ -1326,10 +1326,10 @@ class TestCreateTableSqlWithUniqueConstraints:
         assert "uq_code" in sql
         assert "uq_cat_name" in sql
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_unique_constraint_has_schema_prefix(self) -> None:
         """PostgreSQL UNIQUE INDEX should use schema-qualified table name."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", SingleColumnUniqueModel)
         assert "ON test_plugin.singlecolumnuniquemodel" in sql
@@ -1345,10 +1345,10 @@ class TestCreateTableSqlWithUniqueConstraints:
         sql = generate_create_table_sql("test_plugin", ChildWithForeignKey)
         assert "CREATE UNIQUE INDEX" not in sql
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_one_to_one_unique_index_has_schema_prefix_postgres(self) -> None:
         """PostgreSQL OneToOneField UNIQUE INDEX should use schema-qualified table name."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
         assert (
@@ -1402,10 +1402,10 @@ class TestOneToOnePrimaryKey:
         assert "AUTOINCREMENT" not in sql
         assert "IDENTITY" not in sql
 
-    @patch("plugin_runner.installation.IS_SQLITE", False)
+    @patch("plugin_runner.ddl.IS_SQLITE", False)
     def test_postgres_sql_structure(self) -> None:
         """PostgreSQL SQL should have FK column as PK with no IDENTITY suffix."""
-        from plugin_runner.installation import generate_create_table_sql
+        from plugin_runner.ddl import generate_create_table_sql
 
         sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
         assert "parent_id bigint PRIMARY KEY" in sql

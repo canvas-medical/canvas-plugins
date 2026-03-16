@@ -19,16 +19,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from plugin_runner.installation import (
+from plugin_runner.ddl import (
     SQL_STATEMENT_DELIMITER,
-    clear_registered_models,
     discover_model_files,
     execute_create_table_sql,
     extract_models_from_module,
     generate_plugin_migrations,
-    is_schema_manager,
-    register_plugin_app_config,
     should_create_table,
+)
+from plugin_runner.installation import (
+    clear_registered_models,
+    register_plugin_app_config,
+)
+from plugin_runner.namespace import (
+    is_schema_manager,
     wait_for_namespace,
 )
 
@@ -289,11 +293,11 @@ def test_is_idempotent() -> None:
 # ===========================================================================
 
 
-@patch("plugin_runner.installation.execute_create_table_sql")
-@patch("plugin_runner.installation.generate_create_table_sql", return_value="CREATE TABLE ...")
-@patch("plugin_runner.installation.should_create_table")
-@patch("plugin_runner.installation.extract_models_from_module")
-@patch("plugin_runner.installation.discover_model_files")
+@patch("plugin_runner.ddl.execute_create_table_sql")
+@patch("plugin_runner.ddl.generate_create_table_sql", return_value="CREATE TABLE ...")
+@patch("plugin_runner.ddl.should_create_table")
+@patch("plugin_runner.ddl.extract_models_from_module")
+@patch("plugin_runner.ddl.discover_model_files")
 def test_defaults_schema_to_plugin_name(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
@@ -311,11 +315,11 @@ def test_defaults_schema_to_plugin_name(
     mock_discover.assert_called_once_with(tmp_path)
 
 
-@patch("plugin_runner.installation.execute_create_table_sql")
-@patch("plugin_runner.installation.generate_create_table_sql", return_value="CREATE TABLE ...")
-@patch("plugin_runner.installation.should_create_table", return_value=True)
-@patch("plugin_runner.installation.extract_models_from_module")
-@patch("plugin_runner.installation.discover_model_files")
+@patch("plugin_runner.ddl.execute_create_table_sql")
+@patch("plugin_runner.ddl.generate_create_table_sql", return_value="CREATE TABLE ...")
+@patch("plugin_runner.ddl.should_create_table", return_value=True)
+@patch("plugin_runner.ddl.extract_models_from_module")
+@patch("plugin_runner.ddl.discover_model_files")
 def test_returns_all_discovered_models(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
@@ -339,11 +343,11 @@ def test_returns_all_discovered_models(
     assert len(result) == 2
 
 
-@patch("plugin_runner.installation.execute_create_table_sql")
-@patch("plugin_runner.installation.generate_create_table_sql")
-@patch("plugin_runner.installation.should_create_table", return_value=False)
-@patch("plugin_runner.installation.extract_models_from_module")
-@patch("plugin_runner.installation.discover_model_files")
+@patch("plugin_runner.ddl.execute_create_table_sql")
+@patch("plugin_runner.ddl.generate_create_table_sql")
+@patch("plugin_runner.ddl.should_create_table", return_value=False)
+@patch("plugin_runner.ddl.extract_models_from_module")
+@patch("plugin_runner.ddl.discover_model_files")
 def test_skips_ineligible_models_for_sql(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
@@ -366,7 +370,7 @@ def test_skips_ineligible_models_for_sql(
     mock_exec.assert_not_called()
 
 
-@patch("plugin_runner.installation.discover_model_files", side_effect=RuntimeError("boom"))
+@patch("plugin_runner.ddl.discover_model_files", side_effect=RuntimeError("boom"))
 def test_raises_on_exception(
     mock_discover: MagicMock,
     tmp_path: Path,
@@ -376,11 +380,11 @@ def test_raises_on_exception(
         generate_plugin_migrations("my_plugin", tmp_path)
 
 
-@patch("plugin_runner.installation.execute_create_table_sql")
-@patch("plugin_runner.installation.generate_create_table_sql", return_value="CREATE TABLE ...")
-@patch("plugin_runner.installation.should_create_table", return_value=True)
-@patch("plugin_runner.installation.extract_models_from_module")
-@patch("plugin_runner.installation.discover_model_files")
+@patch("plugin_runner.ddl.execute_create_table_sql")
+@patch("plugin_runner.ddl.generate_create_table_sql", return_value="CREATE TABLE ...")
+@patch("plugin_runner.ddl.should_create_table", return_value=True)
+@patch("plugin_runner.ddl.extract_models_from_module")
+@patch("plugin_runner.ddl.discover_model_files")
 def test_adds_plugin_parent_to_sys_path(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
@@ -404,10 +408,10 @@ def test_adds_plugin_parent_to_sys_path(
     sys.path.remove(str(tmp_path))
 
 
-@patch("plugin_runner.installation.execute_create_table_sql")
-@patch("plugin_runner.installation.generate_create_table_sql")
-@patch("plugin_runner.installation.extract_models_from_module")
-@patch("plugin_runner.installation.discover_model_files")
+@patch("plugin_runner.ddl.execute_create_table_sql")
+@patch("plugin_runner.ddl.generate_create_table_sql")
+@patch("plugin_runner.ddl.extract_models_from_module")
+@patch("plugin_runner.ddl.discover_model_files")
 def test_raises_on_cross_schema_model(
     mock_discover: MagicMock,
     mock_extract: MagicMock,
@@ -583,8 +587,8 @@ def test_is_schema_manager_worker_index_nonzero() -> None:
 # ===========================================================================
 
 
-@patch("plugin_runner.installation.namespace_ready", return_value=True)
-@patch("plugin_runner.installation.open_database_connection")
+@patch("plugin_runner.namespace.namespace_ready", return_value=True)
+@patch("plugin_runner.namespace.open_database_connection")
 def test_wait_for_namespace_returns_immediately_when_ready(
     mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
@@ -601,8 +605,8 @@ def test_wait_for_namespace_returns_immediately_when_ready(
     mock_conn.notifies.assert_not_called()
 
 
-@patch("plugin_runner.installation.namespace_ready", return_value=False)
-@patch("plugin_runner.installation.open_database_connection")
+@patch("plugin_runner.namespace.namespace_ready", return_value=False)
+@patch("plugin_runner.namespace.open_database_connection")
 def test_wait_for_namespace_unblocks_on_notify(
     mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
@@ -622,8 +626,8 @@ def test_wait_for_namespace_unblocks_on_notify(
     mock_conn.notifies.assert_called_once_with(timeout=30)
 
 
-@patch("plugin_runner.installation.namespace_ready", return_value=False)
-@patch("plugin_runner.installation.open_database_connection")
+@patch("plugin_runner.namespace.namespace_ready", return_value=False)
+@patch("plugin_runner.namespace.open_database_connection")
 def test_wait_for_namespace_raises_on_timeout(
     mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:

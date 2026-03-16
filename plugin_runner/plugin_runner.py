@@ -50,6 +50,7 @@ from canvas_sdk.v1.data.base import IS_SQLITE
 from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from logger import log
 from plugin_runner.authentication import token_for_plugin
+from plugin_runner.ddl import generate_plugin_migrations
 from plugin_runner.exceptions import (
     NamespaceAccessError,
     PluginInstallationError,
@@ -57,7 +58,6 @@ from plugin_runner.exceptions import (
 )
 from plugin_runner.installation import (
     enabled_plugins,
-    generate_plugin_migrations,
     install_plugin,
     install_plugins,
     uninstall_plugin,
@@ -650,7 +650,7 @@ def verify_plugin_namespace_access(
     Returns {"namespace": ..., "access_level": ...} on success.
     Raises NamespaceAccessError on any verification failure.
     """
-    from plugin_runner.installation import check_namespace_auth_key
+    from plugin_runner.namespace import check_namespace_auth_key
 
     namespace_name = custom_data["namespace"]
     declared_access = custom_data["access"]

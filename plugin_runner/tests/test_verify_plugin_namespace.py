@@ -72,7 +72,7 @@ def test_resolve_error_message_includes_context() -> None:
 # ===========================================================================
 
 
-@patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
+@patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read")
 def test_returns_config_on_success(mock_verify: MagicMock) -> None:
     """Happy path: should return namespace config dict."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
@@ -93,7 +93,7 @@ def test_raises_for_missing_secret() -> None:
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
 
 
-@patch("plugin_runner.installation.check_namespace_auth_key", return_value=None)
+@patch("plugin_runner.namespace.check_namespace_auth_key", return_value=None)
 def test_raises_for_invalid_key(mock_verify: MagicMock) -> None:
     """Should raise NamespaceAccessError when the key is not recognized."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
@@ -103,7 +103,7 @@ def test_raises_for_invalid_key(mock_verify: MagicMock) -> None:
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
 
 
-@patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
+@patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read")
 def test_raises_for_insufficient_access(mock_verify: MagicMock) -> None:
     """Should raise when read_write requested but only read granted."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read_write"}
@@ -113,7 +113,7 @@ def test_raises_for_insufficient_access(mock_verify: MagicMock) -> None:
         verify_plugin_namespace_access("my_plugin", custom_data, secrets)
 
 
-@patch("plugin_runner.installation.check_namespace_auth_key", return_value="read_write")
+@patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read_write")
 def test_read_access_accepted_with_read_write_grant(mock_verify: MagicMock) -> None:
     """Read access should succeed even when the key grants read_write."""
     custom_data: CustomData = {"namespace": "org__data", "access": "read"}
@@ -126,7 +126,7 @@ def test_read_access_accepted_with_read_write_grant(mock_verify: MagicMock) -> N
 
 @patch("plugin_runner.plugin_runner.sentry_sdk")
 @patch(
-    "plugin_runner.installation.check_namespace_auth_key",
+    "plugin_runner.namespace.check_namespace_auth_key",
     side_effect=RuntimeError("db connection failed"),
 )
 def test_wraps_unexpected_exceptions(mock_verify: MagicMock, mock_sentry: MagicMock) -> None:
@@ -142,7 +142,7 @@ def test_wraps_unexpected_exceptions(mock_verify: MagicMock, mock_sentry: MagicM
 
 @patch("plugin_runner.plugin_runner.sentry_sdk")
 @patch(
-    "plugin_runner.installation.check_namespace_auth_key",
+    "plugin_runner.namespace.check_namespace_auth_key",
     side_effect=RuntimeError("db connection failed"),
 )
 def test_propagates_namespace_access_error_unchanged(
@@ -163,7 +163,7 @@ def test_propagates_namespace_access_error_unchanged(
 @patch("plugin_runner.plugin_runner.sentry_sdk")
 @patch("plugin_runner.plugin_runner.log")
 @patch(
-    "plugin_runner.installation.check_namespace_auth_key",
+    "plugin_runner.namespace.check_namespace_auth_key",
     side_effect=RuntimeError("db connection failed"),
 )
 def test_logs_and_reports_unexpected_exceptions(

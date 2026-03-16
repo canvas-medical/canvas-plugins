@@ -1,6 +1,6 @@
 """Tests for namespace name validation."""
 
-from plugin_runner.installation import (
+from plugin_runner.namespace import (
     NAMESPACE_PATTERN,
     is_valid_namespace_name,
 )

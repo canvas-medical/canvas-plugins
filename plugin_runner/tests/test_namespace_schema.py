@@ -18,10 +18,10 @@ from plugin_runner.exceptions import PluginInstallationError
 class TestCreateNamespaceSchemaValidation:
     """Tests for namespace name validation in create_namespace_schema."""
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_rejects_invalid_namespace_name(self, mock_open_conn: MagicMock) -> None:
         """Should raise ValueError for invalid namespace names."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         # Names without __ are invalid
         with pytest.raises(ValueError) as exc_info:
@@ -32,20 +32,20 @@ class TestCreateNamespaceSchemaValidation:
         # Database should not be called
         mock_open_conn.assert_not_called()
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_rejects_reserved_schema_name(self, mock_open_conn: MagicMock) -> None:
         """Should raise ValueError for reserved schema names."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         with pytest.raises(ValueError):
             create_namespace_schema("public")
 
         mock_open_conn.assert_not_called()
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_rejects_pg_prefixed_name(self, mock_open_conn: MagicMock) -> None:
         """Should raise ValueError for pg_ prefixed names."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         with pytest.raises(ValueError):
             create_namespace_schema("pg__custom_schema")
@@ -56,10 +56,10 @@ class TestCreateNamespaceSchemaValidation:
 class TestCreateNamespaceSchemaExisting:
     """Tests for create_namespace_schema when schema already exists."""
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_none_when_schema_exists(self, mock_open_conn: MagicMock) -> None:
         """Should return None if namespace schema already exists."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         # Mock cursor that returns existing schema
         mock_cursor = MagicMock()
@@ -82,14 +82,14 @@ class TestCreateNamespaceSchemaExisting:
 class TestCreateNamespaceSchemaNew:
     """Tests for create_namespace_schema when creating new schema."""
 
-    @patch("plugin_runner.installation.uuid")
+    @patch("plugin_runner.namespace.uuid")
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_creates_schema_when_not_exists(
         self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
     ) -> None:
         """Should create schema and return generated keys when namespace doesn't exist."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         # Mock uuid.uuid4 to return predictable values
         mock_uuid.uuid4.side_effect = [
@@ -118,14 +118,14 @@ class TestCreateNamespaceSchemaNew:
         assert result["namespace_read_access_key"] == "read-uuid-123"
         assert result["namespace_read_write_access_key"] == "write-uuid-456"
 
-    @patch("plugin_runner.installation.uuid")
+    @patch("plugin_runner.namespace.uuid")
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_executes_sql_with_namespace_replaced(
         self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
     ) -> None:
         """Should execute SQL file with namespace placeholder replaced."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         mock_uuid.uuid4.return_value = MagicMock(__str__=lambda self: "test-uuid")
 
@@ -151,14 +151,14 @@ class TestCreateNamespaceSchemaNew:
         sql_executed = execute_calls[0][0][0]
         assert "acme__data" in sql_executed
 
-    @patch("plugin_runner.installation.uuid")
+    @patch("plugin_runner.namespace.uuid")
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_commits_transaction(
         self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
     ) -> None:
         """Should commit the database transaction after creating schema."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         mock_uuid.uuid4.return_value = MagicMock(__str__=lambda self: "test-uuid")
 
@@ -215,10 +215,10 @@ class TestReadOnlyAccessSkipsModelCreation:
 class TestNamespaceExists:
     """Tests for namespace_exists function."""
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_true_when_schema_exists(self, mock_open_conn: MagicMock) -> None:
         """Should return True if namespace schema exists."""
-        from plugin_runner.installation import namespace_exists
+        from plugin_runner.namespace import namespace_exists
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 1}
@@ -236,10 +236,10 @@ class TestNamespaceExists:
 
         assert result is True
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_schema_not_exists(self, mock_open_conn: MagicMock) -> None:
         """Should return False if namespace schema doesn't exist."""
-        from plugin_runner.installation import namespace_exists
+        from plugin_runner.namespace import namespace_exists
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 0}
@@ -257,10 +257,10 @@ class TestNamespaceExists:
 
         assert result is False
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_queries_pg_namespace_catalog(self, mock_open_conn: MagicMock) -> None:
         """Should query pg_catalog.pg_namespace for schema existence."""
-        from plugin_runner.installation import namespace_exists
+        from plugin_runner.namespace import namespace_exists
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 0}
@@ -292,12 +292,12 @@ class TestNamespaceAccessValidation:
     that would be called during plugin installation.
     """
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_namespace_exists_returns_false_for_missing_schema(
         self, mock_open_conn: MagicMock
     ) -> None:
         """namespace_exists should return False when schema doesn't exist."""
-        from plugin_runner.installation import namespace_exists
+        from plugin_runner.namespace import namespace_exists
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 0}
@@ -315,12 +315,12 @@ class TestNamespaceAccessValidation:
         result = namespace_exists("org__nonexistent")
         assert result is False
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_check_namespace_auth_key_returns_none_for_invalid_key(
         self, mock_open_conn: MagicMock
     ) -> None:
         """check_namespace_auth_key should return None for invalid keys."""
-        from plugin_runner.installation import check_namespace_auth_key
+        from plugin_runner.namespace import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None  # No matching key found
@@ -338,12 +338,12 @@ class TestNamespaceAccessValidation:
         result = check_namespace_auth_key("org__data", "invalid-key")
         assert result is None
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_check_namespace_auth_key_returns_access_level_for_valid_key(
         self, mock_open_conn: MagicMock
     ) -> None:
         """check_namespace_auth_key should return access level for valid keys."""
-        from plugin_runner.installation import check_namespace_auth_key
+        from plugin_runner.namespace import check_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"access_level": "read_write"}
@@ -360,14 +360,14 @@ class TestNamespaceAccessValidation:
         result = check_namespace_auth_key("org__data", "valid-key")
         assert result == "read_write"
 
-    @patch("plugin_runner.installation.uuid")
+    @patch("plugin_runner.namespace.uuid")
     @patch("builtins.open", new_callable=mock_open, read_data="CREATE SCHEMA {namespace};")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_create_namespace_schema_returns_keys_for_new_namespace(
         self, mock_open_conn: MagicMock, mock_file: MagicMock, mock_uuid: MagicMock
     ) -> None:
         """create_namespace_schema should return generated keys for new namespaces."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         mock_uuid.uuid4.side_effect = [
             MagicMock(__str__=lambda self: "read-key"),
@@ -392,12 +392,12 @@ class TestNamespaceAccessValidation:
         assert "namespace_read_access_key" in result
         assert "namespace_read_write_access_key" in result
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_create_namespace_schema_returns_none_for_existing_namespace(
         self, mock_open_conn: MagicMock
     ) -> None:
         """create_namespace_schema should return None for existing namespaces."""
-        from plugin_runner.installation import create_namespace_schema
+        from plugin_runner.namespace import create_namespace_schema
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 1}  # Namespace exists
@@ -419,12 +419,12 @@ class TestNamespaceAccessValidation:
 class TestAddNamespaceAuthKey:
     """Tests for add_namespace_auth_key function."""
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_inserts_auth_key_with_hash(self, mock_open_conn: MagicMock) -> None:
         """Should insert auth key with hashed secret."""
         import hashlib
 
-        from plugin_runner.installation import add_namespace_auth_key
+        from plugin_runner.namespace import add_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
@@ -453,10 +453,10 @@ class TestAddNamespaceAuthKey:
         assert expected_hash in params
         assert "read_write" in params
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_commits_after_insert(self, mock_open_conn: MagicMock) -> None:
         """Should commit the transaction after inserting."""
-        from plugin_runner.installation import add_namespace_auth_key
+        from plugin_runner.namespace import add_namespace_auth_key
 
         mock_cursor = MagicMock()
         mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
@@ -488,10 +488,10 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         conn.__exit__ = MagicMock(return_value=False)
         return conn
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_early_when_plugin_not_found(self, mock_open_conn: MagicMock) -> None:
         """Should log a warning and return without writing secrets when plugin not in DB."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None  # plugin not found
@@ -503,10 +503,10 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         # Should NOT commit or attempt to insert secrets
         mock_conn.commit.assert_not_called()
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_looks_up_plugin_by_name(self, mock_open_conn: MagicMock) -> None:
         """Should query plugin_io_plugin for the plugin's database ID."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None
@@ -522,13 +522,13 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         assert params == ("my_plugin",)
 
     @patch("builtins.open", new_callable=mock_open, read_data="{}")
-    @patch("plugin_runner.installation.Path")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.Path")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_inserts_keys_as_plugin_secrets(
         self, mock_open_conn: MagicMock, mock_path_cls: MagicMock, mock_file: MagicMock
     ) -> None:
         """Should upsert each key into plugin_io_pluginsecret."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = (42,)  # plugin_id = 42
@@ -562,13 +562,13 @@ class TestStoreNamespaceKeysAsPluginSecrets:
             assert call[0][1][0] == 42
 
     @patch("builtins.open", new_callable=mock_open, read_data="{}")
-    @patch("plugin_runner.installation.Path")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.Path")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_commits_after_inserting_secrets(
         self, mock_open_conn: MagicMock, mock_path_cls: MagicMock, mock_file: MagicMock
     ) -> None:
         """Should commit the DB transaction after inserting all keys."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = (1,)
@@ -583,13 +583,13 @@ class TestStoreNamespaceKeysAsPluginSecrets:
 
         mock_conn.commit.assert_called_once()
 
-    @patch("plugin_runner.installation.SECRETS_FILE_NAME", "secrets.json")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.SECRETS_FILE_NAME", "secrets.json")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_writes_secrets_json_when_no_existing_file(
         self, mock_open_conn: MagicMock, tmp_path: Path
     ) -> None:
         """Should create secrets.json with the keys when the file doesn't exist."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = (1,)
@@ -600,7 +600,7 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         plugin_dir.mkdir()
 
         keys = {"key_a": "val_a", "key_b": "val_b"}
-        with patch("plugin_runner.installation.PLUGIN_DIRECTORY", str(tmp_path)):
+        with patch("plugin_runner.namespace.PLUGIN_DIRECTORY", str(tmp_path)):
             store_namespace_keys_as_plugin_secrets("my_plugin", keys)
 
         secrets_file = plugin_dir / "secrets.json"
@@ -608,13 +608,13 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         written = json.loads(secrets_file.read_text())
         assert written == keys
 
-    @patch("plugin_runner.installation.SECRETS_FILE_NAME", "secrets.json")
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.SECRETS_FILE_NAME", "secrets.json")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_merges_with_existing_secrets_json(
         self, mock_open_conn: MagicMock, tmp_path: Path
     ) -> None:
         """Should merge new keys into existing secrets.json contents."""
-        from plugin_runner.installation import store_namespace_keys_as_plugin_secrets
+        from plugin_runner.namespace import store_namespace_keys_as_plugin_secrets
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = (1,)
@@ -629,7 +629,7 @@ class TestStoreNamespaceKeysAsPluginSecrets:
         secrets_file.write_text(json.dumps({"existing_secret": "old_value"}))
 
         keys = {"new_key": "new_value"}
-        with patch("plugin_runner.installation.PLUGIN_DIRECTORY", str(tmp_path)):
+        with patch("plugin_runner.namespace.PLUGIN_DIRECTORY", str(tmp_path)):
             store_namespace_keys_as_plugin_secrets("my_plugin", keys)
 
         written = json.loads(secrets_file.read_text())
@@ -639,9 +639,9 @@ class TestStoreNamespaceKeysAsPluginSecrets:
 class TestSetupReadWriteNamespace:
     """Tests for setup_read_write_namespace function."""
 
-    @patch("plugin_runner.installation.store_namespace_keys_as_plugin_secrets")
-    @patch("plugin_runner.installation.create_namespace_schema")
-    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.namespace.create_namespace_schema")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=False)
     def test_creates_namespace_when_not_exists(
         self,
         mock_exists: MagicMock,
@@ -649,7 +649,7 @@ class TestSetupReadWriteNamespace:
         mock_store: MagicMock,
     ) -> None:
         """Should create the namespace and store keys when it doesn't exist."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         mock_create.return_value = {"key_a": "val_a", "key_b": "val_b"}
 
@@ -659,9 +659,9 @@ class TestSetupReadWriteNamespace:
         mock_create.assert_called_once_with(namespace="org__data")
         mock_store.assert_called_once_with("my_plugin", {"key_a": "val_a", "key_b": "val_b"})
 
-    @patch("plugin_runner.installation.store_namespace_keys_as_plugin_secrets")
-    @patch("plugin_runner.installation.create_namespace_schema")
-    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    @patch("plugin_runner.namespace.store_namespace_keys_as_plugin_secrets")
+    @patch("plugin_runner.namespace.create_namespace_schema")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=False)
     def test_skips_store_when_create_returns_none(
         self,
         mock_exists: MagicMock,
@@ -669,7 +669,7 @@ class TestSetupReadWriteNamespace:
         mock_store: MagicMock,
     ) -> None:
         """Should not store keys when create_namespace_schema returns None."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         mock_create.return_value = None
 
@@ -678,9 +678,9 @@ class TestSetupReadWriteNamespace:
         assert result is True
         mock_store.assert_not_called()
 
-    @patch("plugin_runner.installation.create_namespace_schema")
-    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read_write")
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.create_namespace_schema")
+    @patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read_write")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_verifies_key_when_namespace_exists(
         self,
         mock_exists: MagicMock,
@@ -688,7 +688,7 @@ class TestSetupReadWriteNamespace:
         mock_create: MagicMock,
     ) -> None:
         """Should verify access key, re-run init SQL, and return True."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         secrets = {"namespace_read_write_access_key": "valid-key"}
         result = setup_read_write_namespace("my_plugin", "org__data", secrets)
@@ -697,37 +697,37 @@ class TestSetupReadWriteNamespace:
         mock_check.assert_called_once_with("org__data", "valid-key")
         mock_create.assert_called_once_with(namespace="org__data")
 
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_raises_when_key_missing_and_namespace_exists(self, mock_exists: MagicMock) -> None:
         """Should raise PluginInstallationError when secret is not configured."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         with pytest.raises(PluginInstallationError, match="secret is not configured"):
             setup_read_write_namespace("my_plugin", "org__data", {})
 
-    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_raises_when_key_grants_insufficient_access(
         self,
         mock_exists: MagicMock,
         mock_check: MagicMock,
     ) -> None:
         """Should raise PluginInstallationError when key only grants read access."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         secrets = {"namespace_read_write_access_key": "read-only-key"}
         with pytest.raises(PluginInstallationError, match="invalid or insufficient"):
             setup_read_write_namespace("my_plugin", "org__data", secrets)
 
-    @patch("plugin_runner.installation.check_namespace_auth_key", return_value=None)
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.check_namespace_auth_key", return_value=None)
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_raises_when_key_is_invalid(
         self,
         mock_exists: MagicMock,
         mock_check: MagicMock,
     ) -> None:
         """Should raise PluginInstallationError when key is not recognized."""
-        from plugin_runner.installation import setup_read_write_namespace
+        from plugin_runner.namespace import setup_read_write_namespace
 
         secrets = {"namespace_read_write_access_key": "garbage"}
         with pytest.raises(PluginInstallationError, match="invalid or insufficient"):
@@ -737,46 +737,46 @@ class TestSetupReadWriteNamespace:
 class TestVerifyReadNamespaceAccess:
     """Tests for verify_read_namespace_access function."""
 
-    @patch("plugin_runner.installation.check_namespace_auth_key", return_value="read")
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.check_namespace_auth_key", return_value="read")
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_succeeds_with_valid_read_key(
         self,
         mock_exists: MagicMock,
         mock_check: MagicMock,
     ) -> None:
         """Should return without error when key grants read access."""
-        from plugin_runner.installation import verify_read_namespace_access
+        from plugin_runner.namespace import verify_read_namespace_access
 
         secrets = {"namespace_read_access_key": "valid-key"}
         verify_read_namespace_access("my_plugin", "org__data", secrets)
 
         mock_check.assert_called_once_with("org__data", "valid-key")
 
-    @patch("plugin_runner.installation.namespace_exists", return_value=False)
+    @patch("plugin_runner.namespace.namespace_exists", return_value=False)
     def test_raises_when_namespace_does_not_exist(self, mock_exists: MagicMock) -> None:
         """Should raise PluginInstallationError when namespace doesn't exist."""
-        from plugin_runner.installation import verify_read_namespace_access
+        from plugin_runner.namespace import verify_read_namespace_access
 
         with pytest.raises(PluginInstallationError, match="does not exist"):
             verify_read_namespace_access("my_plugin", "org__missing", {})
 
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_raises_when_key_missing(self, mock_exists: MagicMock) -> None:
         """Should raise PluginInstallationError when secret is not configured."""
-        from plugin_runner.installation import verify_read_namespace_access
+        from plugin_runner.namespace import verify_read_namespace_access
 
         with pytest.raises(PluginInstallationError, match="secret is not configured"):
             verify_read_namespace_access("my_plugin", "org__data", {})
 
-    @patch("plugin_runner.installation.check_namespace_auth_key", return_value=None)
-    @patch("plugin_runner.installation.namespace_exists", return_value=True)
+    @patch("plugin_runner.namespace.check_namespace_auth_key", return_value=None)
+    @patch("plugin_runner.namespace.namespace_exists", return_value=True)
     def test_raises_when_key_is_invalid(
         self,
         mock_exists: MagicMock,
         mock_check: MagicMock,
     ) -> None:
         """Should raise PluginInstallationError when key is not recognized."""
-        from plugin_runner.installation import verify_read_namespace_access
+        from plugin_runner.namespace import verify_read_namespace_access
 
         secrets = {"namespace_read_access_key": "garbage"}
         with pytest.raises(PluginInstallationError, match="invalid access key"):
@@ -788,7 +788,7 @@ class TestComputeModelsHash:
 
     def test_returns_consistent_hash(self, tmp_path: Path) -> None:
         """Same files should produce the same hash across calls."""
-        from plugin_runner.installation import compute_models_hash
+        from plugin_runner.namespace import compute_models_hash
 
         models_dir = tmp_path / "models"
         models_dir.mkdir()
@@ -803,7 +803,7 @@ class TestComputeModelsHash:
 
     def test_different_contents_produce_different_hash(self, tmp_path: Path) -> None:
         """Changing file contents should change the hash."""
-        from plugin_runner.installation import compute_models_hash
+        from plugin_runner.namespace import compute_models_hash
 
         models_dir = tmp_path / "models"
         models_dir.mkdir()
@@ -821,7 +821,7 @@ class TestComputeModelsHash:
         """Should return hash of empty input when models/ doesn't exist."""
         import hashlib
 
-        from plugin_runner.installation import compute_models_hash
+        from plugin_runner.namespace import compute_models_hash
 
         result = compute_models_hash(tmp_path)
 
@@ -829,7 +829,7 @@ class TestComputeModelsHash:
 
     def test_ignores_non_py_files(self, tmp_path: Path) -> None:
         """Should not include .pyc, .txt, etc. in the hash."""
-        from plugin_runner.installation import compute_models_hash
+        from plugin_runner.namespace import compute_models_hash
 
         models_dir = tmp_path / "models"
         models_dir.mkdir()
@@ -859,10 +859,10 @@ class TestNamespaceReady:
         conn.__exit__ = MagicMock(return_value=False)
         return conn
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_schema_does_not_exist(self, mock_open_conn: MagicMock) -> None:
         """Should return False if the namespace schema doesn't exist."""
-        from plugin_runner.installation import namespace_ready
+        from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {"count": 0}
@@ -871,10 +871,10 @@ class TestNamespaceReady:
 
         assert namespace_ready("org__missing", "abc123") is False
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_schema_version_table_empty(self, mock_open_conn: MagicMock) -> None:
         """Should return False if schema_version table has no rows."""
-        from plugin_runner.installation import namespace_ready
+        from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
         # schema exists, schema_version table is empty
@@ -884,10 +884,10 @@ class TestNamespaceReady:
 
         assert namespace_ready("org__migrating", "abc123") is False
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_true_when_hash_matches(self, mock_open_conn: MagicMock) -> None:
         """Should return True if schema_version row has a matching models_hash."""
-        from plugin_runner.installation import namespace_ready
+        from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.side_effect = [{"count": 1}, {"models_hash": "abc123"}]
@@ -896,10 +896,10 @@ class TestNamespaceReady:
 
         assert namespace_ready("org__data", "abc123") is True
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_hash_mismatches(self, mock_open_conn: MagicMock) -> None:
         """Should return False if schema_version row has a different models_hash."""
-        from plugin_runner.installation import namespace_ready
+        from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.side_effect = [{"count": 1}, {"models_hash": "old_hash"}]
@@ -912,10 +912,10 @@ class TestNamespaceReady:
 class TestMarkNamespaceReady:
     """Tests for mark_namespace_ready function."""
 
-    @patch("plugin_runner.installation.open_database_connection")
+    @patch("plugin_runner.namespace.open_database_connection")
     def test_writes_hash_and_notifies(self, mock_open_conn: MagicMock) -> None:
         """Should DELETE, INSERT with hash, NOTIFY with hash payload, then commit."""
-        from plugin_runner.installation import mark_namespace_ready
+        from plugin_runner.namespace import mark_namespace_ready
 
         mock_cursor = MagicMock()
         mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)

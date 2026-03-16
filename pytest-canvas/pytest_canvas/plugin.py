@@ -89,12 +89,12 @@ def create_plugin_custom_model_tables(
 
     from django.apps import apps
 
-    from plugin_runner.installation import (
+    from plugin_runner.ddl import (
         execute_create_table_sql,
         generate_create_table_sql,
-        register_plugin_app_config,
         should_create_table,
     )
+    from plugin_runner.installation import register_plugin_app_config
 
     with django_db_blocker.unblock():
         plugin_models = apps.all_models.get(plugin_name, {})
