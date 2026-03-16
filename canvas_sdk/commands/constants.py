@@ -35,7 +35,7 @@ class Coding(TypedDict):
 class ClinicalQuantity(TypedDict):
     """A ClinicalQuantity for prescribe/refill commands."""
 
-    representative_ndc: str
+    representative_ndc: NotRequired[str]
     ncpdp_quantity_qualifier_code: str
 
 

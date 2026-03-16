@@ -128,6 +128,20 @@ class PrescribeCommand(_ReviewableCommandMixin, _SendableCommandMixin, _BaseComm
             )
             errors.extend(compound_med_errors)
 
+        # Only require ClinicalQuantity.representative_ndc if not a compound med
+        if (
+            not has_compound_medication_id
+            and self.type_to_dispense
+            and not self.type_to_dispense.get("representative_ndc")
+        ):
+            errors.append(
+                self._create_error_detail(
+                    "value",
+                    "ClinicalQuantity.representative_ndc is required in 'type_to_dispense' for non-compound medications. Provide the NDC code that identifies the dispensable product.",
+                    self.type_to_dispense,
+                )
+            )
+
         return errors
 
     def _process_compound_medication_fields(self, data: dict[str, Any]) -> dict[str, Any]:
