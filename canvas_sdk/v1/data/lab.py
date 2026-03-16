@@ -85,6 +85,7 @@ class LabReview(AuditedModel, IdentifiableModel):
 
     objects = cast(LabReviewQuerySet, LabReviewManager())
 
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING)
     internal_comment = models.TextField()
     message_to_patient = models.CharField(max_length=2048)
     status = models.CharField(max_length=50)
