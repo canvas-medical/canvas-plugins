@@ -4,10 +4,20 @@ import sys
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
+from unittest.mock import patch
 
 import pytest
+from django.db import models as django_models
 
 from canvas_sdk.tests.shared import params_from_dict
+from canvas_sdk.v1.data.base import (
+    MAX_FIELD_SIZE,
+    BulkOperationTooLarge,
+    CustomModel,
+    FieldValueTooLarge,
+    NamespaceWriteDenied,
+)
+from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
@@ -1199,6 +1209,18 @@ def test_implicit_import_preserves_safe_import(tmp_path: Path) -> None:
                 del sys.modules[key]
 
 
+def test_manager_raw_blocked() -> None:
+    """Test that Manager.raw() is blocked to prevent arbitrary SQL execution."""
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.v1.data.patient import Patient
+
+        Patient.objects.raw("SELECT 1")
+    """)
+
+    with pytest.raises(PermissionError, match="raw\\(\\) queries are not allowed"):
+        sandbox.execute()
+
+
 def test_implicit_import_deferred_os_import_blocked_at_runtime(tmp_path: Path) -> None:
     """A class from an implicitly imported intermediate package that defers
     ``import os`` to a method should still have that import blocked at
@@ -1251,3 +1273,156 @@ def test_implicit_import_deferred_os_import_blocked_at_runtime(tmp_path: Path) -
         for key in list(sys.modules):
             if key.startswith("my_plugin"):
                 del sys.modules[key]
+
+
+# ---------------------------------------------------------------------------
+# Bulk QuerySet operation wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class _BulkTestModel(CustomModel):
+    """A model for testing bulk operation wrappers."""
+
+    class Meta:
+        app_label = "test"
+        managed = False
+
+    text_field = django_models.TextField(null=True)
+
+
+# --- Permission denied ---
+
+
+def test_bulk_create_denied_in_read_only_context() -> None:
+    """bulk_create() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.bulk_create([_BulkTestModel()])  # type: ignore[attr-defined]
+
+
+def test_bulk_update_denied_in_read_only_context() -> None:
+    """bulk_update() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.bulk_update([_BulkTestModel()], fields=["text_field"])  # type: ignore[attr-defined]
+
+
+def test_queryset_delete_denied_in_read_only_context() -> None:
+    """QuerySet.delete() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.all().delete()  # type: ignore[attr-defined]
+
+
+def test_queryset_update_denied_in_read_only_context() -> None:
+    """QuerySet.update() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.all().update(text_field="new")  # type: ignore[attr-defined]
+
+
+# --- Size limits ---
+
+
+def test_bulk_create_exceeds_size_limit() -> None:
+    """bulk_create() should raise BulkOperationTooLarge when exceeding MAX_BULK_SIZE."""
+    test_limit = 3
+    objs = [_BulkTestModel() for _ in range(test_limit + 1)]
+    with (
+        patch("canvas_sdk.MAX_BULK_SIZE", test_limit),
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(BulkOperationTooLarge, match=f"{test_limit + 1:,}"),
+    ):
+        _BulkTestModel.objects.bulk_create(objs)  # type: ignore[attr-defined]
+
+
+def test_bulk_update_exceeds_size_limit() -> None:
+    """bulk_update() should raise BulkOperationTooLarge when exceeding MAX_BULK_SIZE."""
+    test_limit = 3
+    objs = [_BulkTestModel() for _ in range(test_limit + 1)]
+    with (
+        patch("canvas_sdk.MAX_BULK_SIZE", test_limit),
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(BulkOperationTooLarge, match=f"{test_limit + 1:,}"),
+    ):
+        _BulkTestModel.objects.bulk_update(objs, fields=["text_field"])  # type: ignore[attr-defined]
+
+
+# --- Field size validation ---
+
+
+def test_bulk_create_field_size_validation() -> None:
+    """bulk_create() should raise FieldValueTooLarge for oversized fields."""
+    obj = _BulkTestModel(text_field="x" * (MAX_FIELD_SIZE + 1))
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(FieldValueTooLarge, match="text_field"),
+    ):
+        _BulkTestModel.objects.bulk_create([obj])  # type: ignore[attr-defined]
+
+
+def test_bulk_update_field_size_validation() -> None:
+    """bulk_update() should raise FieldValueTooLarge for oversized fields."""
+    obj = _BulkTestModel(text_field="x" * (MAX_FIELD_SIZE + 1))
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(FieldValueTooLarge, match="text_field"),
+    ):
+        _BulkTestModel.objects.bulk_update([obj], fields=["text_field"])  # type: ignore[attr-defined]
+
+
+# --- Allowed operations ---
+
+
+def test_bulk_create_allowed_in_read_write_context() -> None:
+    """bulk_create() should succeed in a read_write context within limits."""
+    objs = [_BulkTestModel()]
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_bulk_create", return_value=objs) as mock,
+    ):
+        result = _BulkTestModel.objects.bulk_create(objs)  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == objs
+
+
+def test_bulk_update_allowed_in_read_write_context() -> None:
+    """bulk_update() should succeed in a read_write context within limits."""
+    objs = [_BulkTestModel()]
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_bulk_update", return_value=1) as mock,
+    ):
+        result = _BulkTestModel.objects.bulk_update(objs, fields=["text_field"])  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == 1
+
+
+def test_queryset_delete_allowed_in_read_write_context() -> None:
+    """QuerySet.delete() should succeed in a read_write context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_qs_delete", return_value=(0, {})) as mock,
+    ):
+        result = _BulkTestModel.objects.all().delete()  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == (0, {})
+
+
+def test_queryset_update_allowed_in_read_write_context() -> None:
+    """QuerySet.update() should succeed in a read_write context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_qs_update", return_value=0) as mock,
+    ):
+        result = _BulkTestModel.objects.all().update(text_field="new")  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == 0

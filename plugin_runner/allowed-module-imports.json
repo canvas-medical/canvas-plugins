@@ -1097,8 +1097,10 @@
     "BannerAlert"
   ],
   "canvas_sdk.v1.data.base": [
+    "BulkOperationTooLarge",
     "CustomModel",
     "FieldValueTooLarge",
+    "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
     "ModelExtension",
     "NamespaceWriteDenied",

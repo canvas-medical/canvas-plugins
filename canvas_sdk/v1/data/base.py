@@ -17,6 +17,13 @@ if TYPE_CHECKING:
 IS_SQLITE = connection.vendor == "sqlite"
 
 MAX_FIELD_SIZE = 1_048_576  # 1 MB
+MAX_BULK_SIZE = 10_000
+
+
+class BulkOperationTooLarge(ValueError):
+    """Raised when a bulk operation exceeds the maximum allowed size."""
+
+    pass
 
 
 class ModelMetaclass(ModelBase):
@@ -50,6 +57,25 @@ class FieldValueTooLarge(ValueError):
     """Raised when a field value exceeds the maximum allowed size."""
 
     pass
+
+
+def _check_write_permission() -> None:
+    """Check if write operations are allowed in the current plugin context.
+
+    Raises:
+        NamespaceWriteDenied: If in a namespace context with read-only access.
+    """
+    from canvas_sdk.v1.plugin_database_context import get_current_schema, is_write_allowed
+
+    schema = get_current_schema()
+    if schema is None:
+        return
+
+    if not is_write_allowed():
+        raise NamespaceWriteDenied(
+            f"Write operation denied: namespace '{schema}' is read-only. "
+            f"Plugin must declare 'read_write' access to perform write operations."
+        )
 
 
 class Model(models.Model, metaclass=ModelMetaclass):
@@ -600,8 +626,10 @@ class proxy_field:
 
 
 __exports__ = (
+    "BulkOperationTooLarge",
     "CustomModel",
     "FieldValueTooLarge",
+    "MAX_BULK_SIZE",
     "MAX_FIELD_SIZE",
     "ModelExtension",
     "NamespaceWriteDenied",
