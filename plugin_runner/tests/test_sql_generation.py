@@ -14,7 +14,7 @@ import pytest
 from django.contrib.postgres.indexes import GinIndex
 from django.db import connection, models
 
-from canvas_sdk.v1.data.base import CustomModel, Model, ModelExtension
+from canvas_sdk.v1.data.base import CustomModel
 from plugin_runner.ddl import (
     SQL_STATEMENT_DELIMITER,
     generate_constraint_sql,
@@ -109,58 +109,6 @@ class MultipleForeignKeysModel(CustomModel):
 # ---------------------------------------------------------------------------
 
 
-class SDKModel(Model):
-    """A stand-in for an SDK model (inherits from Model, not CustomModel).
-
-    FK/OneToOne fields targeting this must use a namespaced related_name
-    because SDK models are shared across plugins.
-    """
-
-    class Meta:
-        app_label = "canvas_sdk"
-        managed = False
-
-
-class NamespacedRelatedNameModel(CustomModel):
-    """A model with a template-namespaced related_name targeting an SDK model."""
-
-    class Meta:
-        app_label = "test_plugin"
-
-    sdk_ref = models.ForeignKey(
-        SDKModel, on_delete=models.DO_NOTHING, related_name="%(app_label)s_custom"
-    )
-
-
-class HardcodedNamespacedModel(CustomModel):
-    """A model with a hardcoded app_label prefix in related_name targeting an SDK model."""
-
-    class Meta:
-        app_label = "test_plugin"
-
-    sdk_ref = models.ForeignKey(
-        SDKModel, on_delete=models.DO_NOTHING, related_name="canvas_sdk_hardcoded"
-    )
-
-
-class PlusRelatedNameModel(CustomModel):
-    """A model with related_name='+' (no reverse relation) targeting an SDK model."""
-
-    class Meta:
-        app_label = "test_plugin"
-
-    sdk_ref = models.ForeignKey(SDKModel, on_delete=models.DO_NOTHING, related_name="+")
-
-
-class NoExplicitRelatedNameModel(CustomModel):
-    """A model with no explicit related_name targeting an SDK model."""
-
-    class Meta:
-        app_label = "test_plugin"
-
-    sdk_ref = models.OneToOneField(SDKModel, on_delete=models.DO_NOTHING)
-
-
 class CustomModelTargetModel(CustomModel):
     """A model with a non-namespaced related_name on a FK targeting another CustomModel.
 
@@ -171,29 +119,6 @@ class CustomModelTargetModel(CustomModel):
         app_label = "test_plugin"
 
     parent = models.ForeignKey(ParentModel, on_delete=models.DO_NOTHING, related_name="children")
-
-
-class SDKModelProxy(SDKModel, ModelExtension):
-    """A proxy of an SDK model, as plugins typically create."""
-
-    class Meta:
-        app_label = "test_plugin"
-        proxy = True
-
-
-class ProxyTargetModel(CustomModel):
-    """A model with a non-namespaced related_name on a FK targeting a proxy model.
-
-    This is allowed because proxy models are plugin-private — each plugin's
-    proxy has its own app_label, so reverse relations are scoped to the proxy.
-    """
-
-    class Meta:
-        app_label = "test_plugin"
-
-    proxy_ref = models.OneToOneField(
-        SDKModelProxy, on_delete=models.DO_NOTHING, related_name="biography"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -929,56 +854,15 @@ class TestCustomModelDbTableNaming:
 
 
 # ===========================================================================
-# Tests for CustomModelMetaclass related_name auto-namespacing
+# Tests for CustomModelMetaclass related_name (CustomModel-to-CustomModel only)
+#
+# Proxy-related and SDK-model-related related_name tests live in
+# canvas_sdk/tests/custom_data/test_proxy_field.py.
 # ===========================================================================
 
 
 class TestCustomModelMetaclassRelatedName:
-    """Tests that CustomModelMetaclass rejects non-namespaced related_name on
-    FK/OneToOne fields targeting SDK models, while allowing them on fields
-    targeting other CustomModels.
-    """
-
-    def test_non_namespaced_related_name_to_sdk_model_raises(self) -> None:
-        """A bare related_name on a FK to an SDK model should raise ValueError."""
-        with pytest.raises(ValueError, match="related_name='status'.*SDK model.*SDKModel"):
-            type(
-                "BadModel",
-                (CustomModel,),
-                {
-                    "__module__": "some_plugin.models",
-                    "__qualname__": "BadModel",
-                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
-                    "sdk_ref": models.ForeignKey(
-                        SDKModel, on_delete=models.DO_NOTHING, related_name="status"
-                    ),
-                },
-            )
-
-    def test_template_namespaced_related_name_to_sdk_model_is_allowed(self) -> None:
-        """A %(app_label)s-prefixed related_name on a FK to an SDK model should be accepted."""
-        field = NamespacedRelatedNameModel._meta.get_field("sdk_ref")
-        assert isinstance(field, models.ForeignKey)
-        assert field.remote_field.related_name == "canvas_sdk_custom"
-
-    def test_hardcoded_namespaced_related_name_to_sdk_model_is_allowed(self) -> None:
-        """A related_name with hardcoded app_label_ prefix should be accepted."""
-        field = HardcodedNamespacedModel._meta.get_field("sdk_ref")
-        assert isinstance(field, models.ForeignKey)
-        assert field.remote_field.related_name == "canvas_sdk_hardcoded"
-
-    def test_plus_related_name_to_sdk_model_is_allowed(self) -> None:
-        """related_name='+' should be accepted for SDK model targets."""
-        field = PlusRelatedNameModel._meta.get_field("sdk_ref")
-        assert isinstance(field, models.ForeignKey)
-        assert field.remote_field.related_name == "+"
-
-    def test_no_explicit_related_name_to_sdk_model_is_allowed(self) -> None:
-        """No explicit related_name on a FK to an SDK model should be accepted."""
-        # Django assigns None as the related_name when not specified.
-        field = NoExplicitRelatedNameModel._meta.get_field("sdk_ref")
-        assert isinstance(field, models.OneToOneField)
-        assert field.remote_field.related_name is None
+    """Tests that bare related_names on FK fields targeting other CustomModels are allowed."""
 
     def test_non_namespaced_related_name_to_custom_model_is_allowed(self) -> None:
         """A bare related_name on a FK to a CustomModel should be accepted."""
@@ -994,140 +878,6 @@ class TestCustomModelMetaclassRelatedName:
         assert isinstance(field_two, models.ForeignKey)
         assert field_one.remote_field.related_name == "children_one"
         assert field_two.remote_field.related_name == "children_two"
-
-    def test_non_namespaced_related_name_to_proxy_model_is_allowed(self) -> None:
-        """A bare related_name on a FK to a proxy model should be accepted."""
-        field = ProxyTargetModel._meta.get_field("proxy_ref")
-        assert isinstance(field, models.OneToOneField)
-        assert field.remote_field.related_name == "biography"
-
-    def test_error_message_includes_fix_suggestion(self) -> None:
-        """The error message should suggest the namespaced form."""
-        with pytest.raises(ValueError, match=r"%\(app_label\)s_my_rel"):
-            type(
-                "BadModel2",
-                (CustomModel,),
-                {
-                    "__module__": "some_plugin.models",
-                    "__qualname__": "BadModel2",
-                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
-                    "sdk_ref": models.ForeignKey(
-                        SDKModel, on_delete=models.DO_NOTHING, related_name="my_rel"
-                    ),
-                },
-            )
-
-
-# ===========================================================================
-# Tests for proxy model related_name scoping
-# ===========================================================================
-
-
-class SDKModelProxyB(SDKModel, ModelExtension):
-    """A second proxy of SDKModel, used to verify related_name isolation."""
-
-    class Meta:
-        app_label = "test_plugin"
-        proxy = True
-
-
-class AttachedToProxyA(CustomModel):
-    """A CustomModel with a FK to SDKModelProxy (proxy A), not SDKModelProxyB."""
-
-    class Meta:
-        app_label = "test_plugin"
-
-    proxy_a_ref = models.ForeignKey(
-        SDKModelProxy, on_delete=models.DO_NOTHING, related_name="attached_records"
-    )
-
-
-class TestProxyRelatedNameScoping:
-    """Tests demonstrating how Django scopes reverse relations on proxy models.
-
-    When a CustomModel FK targets a specific proxy (SDKModelProxy), Django
-    installs the reverse descriptor on the concrete parent (SDKModel). Python
-    MRO means ALL proxies of that base inherit the descriptor as an attribute.
-
-    However, the FK's ``related_model`` is the specific proxy class, so:
-    - The FK explicitly records which proxy it targets.
-    - Two plugins with different proxies of the same SDK model can each
-      declare bare related_names without colliding, because each FK targets
-      a distinct proxy class.
-    """
-
-    def test_fk_related_model_is_the_targeted_proxy_not_sibling(self) -> None:
-        """The FK's related_model should be the specific proxy, not the base or sibling."""
-        fk = AttachedToProxyA._meta.get_field("proxy_a_ref")
-        assert fk.related_model is SDKModelProxy
-        assert fk.related_model is not SDKModelProxyB
-        assert fk.related_model is not SDKModel
-
-    def test_descriptor_inherited_by_sibling_proxy_via_mro(self) -> None:
-        """Django installs the reverse descriptor on the concrete parent, so all
-        proxies inherit it through Python's MRO. This is expected Django behavior —
-        proxy models share their parent's class namespace.
-        """
-        assert hasattr(SDKModelProxy, "attached_records")
-        # Sibling also sees it — this is Python inheritance, not a bug.
-        assert hasattr(SDKModelProxyB, "attached_records")
-        assert hasattr(SDKModel, "attached_records")
-
-    def test_two_plugins_can_use_same_related_name_on_different_proxies(self) -> None:
-        """Two plugins targeting different proxies of the same base can use the same
-        bare related_name without the metaclass raising, because each proxy is a
-        distinct class and therefore a distinct FK target.
-        """
-        # Plugin A's proxy + CustomModel
-        PluginAProxy = type(
-            "PluginAProxy",
-            (SDKModel, ModelExtension),
-            {
-                "__module__": "plugin_a.models",
-                "__qualname__": "PluginAProxy",
-                "Meta": type("Meta", (), {"app_label": "plugin_a", "proxy": True}),
-            },
-        )
-        PluginAModel = type(
-            "PluginAModel",
-            (CustomModel,),
-            {
-                "__module__": "plugin_a.models",
-                "__qualname__": "PluginAModel",
-                "sdk_ref": models.ForeignKey(
-                    PluginAProxy, on_delete=models.DO_NOTHING, related_name="custom_records"
-                ),
-            },
-        )
-
-        # Plugin B's proxy + CustomModel with the SAME related_name — no collision
-        PluginBProxy = type(
-            "PluginBProxy",
-            (SDKModel, ModelExtension),
-            {
-                "__module__": "plugin_b.models",
-                "__qualname__": "PluginBProxy",
-                "Meta": type("Meta", (), {"app_label": "plugin_b", "proxy": True}),
-            },
-        )
-        PluginBModel = type(
-            "PluginBModel",
-            (CustomModel,),
-            {
-                "__module__": "plugin_b.models",
-                "__qualname__": "PluginBModel",
-                "sdk_ref": models.ForeignKey(
-                    PluginBProxy, on_delete=models.DO_NOTHING, related_name="custom_records"
-                ),
-            },
-        )
-
-        # Both FK fields target distinct proxy classes
-        fk_a = cast(models.Model, PluginAModel)._meta.get_field("sdk_ref")
-        fk_b = cast(models.Model, PluginBModel)._meta.get_field("sdk_ref")
-        assert fk_a.related_model is PluginAProxy
-        assert fk_b.related_model is PluginBProxy
-        assert fk_a.related_model is not fk_b.related_model
 
 
 # ===========================================================================
