@@ -4,7 +4,7 @@ from django.utils import timezone
 from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
-class PatientGroup(IdentifiableModel):
+class PatientGroup(TimestampedModel, IdentifiableModel):
     """A collection of patients."""
 
     class Meta:

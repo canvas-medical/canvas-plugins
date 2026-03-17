@@ -1,136 +1,123 @@
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.patient_group import PatientGroupAddMember, PatientGroupDeactivateMember
+from canvas_sdk.effects.patient_group import PatientGroup
+
+MOCK_PATIENT = "canvas_sdk.effects.patient_group.Patient.objects"
+MOCK_GROUP = "canvas_sdk.effects.patient_group.PatientGroupModel.objects"
 
 
-def test_add_member_effect_type() -> None:
-    """Test that PatientGroupAddMember has the correct effect type."""
-    effect = PatientGroupAddMember(
-        patient_ids=["patient-1"],
-        group_id="group-1",
-    )
-    applied = effect.apply()
-    assert applied.type == EffectType.PATIENT_GROUP__ADD_MEMBER
+def _mock_group_exists(mock: MagicMock, exists: bool = True) -> None:
+    mock.filter.return_value.exists.return_value = exists
 
 
-def test_add_member_single_patient_payload() -> None:
-    """Test PatientGroupAddMember payload with a single patient."""
-    effect = PatientGroupAddMember(
-        patient_ids=["patient-uuid"],
-        group_id="group-uuid",
-    )
-    applied = effect.apply()
+def _mock_patients_exist(mock: MagicMock, patient_ids: list[str]) -> None:
+    mock.filter.return_value.values_list.return_value = patient_ids
+
+
+@pytest.mark.parametrize(
+    "method,expected_type",
+    [
+        ("add_member", EffectType.PATIENT_GROUP__ADD_MEMBER),
+        ("deactivate_member", EffectType.PATIENT_GROUP__DEACTIVATE_MEMBER),
+    ],
+)
+@patch(MOCK_GROUP)
+@patch(MOCK_PATIENT)
+def test_effect_type(
+    mock_patient: MagicMock, mock_group: MagicMock, method: str, expected_type: EffectType
+) -> None:
+    """Test that each method returns the correct effect type."""
+    _mock_patients_exist(mock_patient, ["patient-1"])
+    _mock_group_exists(mock_group)
+    group = PatientGroup(group_id="group-1")
+    applied = getattr(group, method)(patient_ids=["patient-1"])
+    assert applied.type == expected_type
+
+
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+@patch(MOCK_PATIENT)
+def test_single_patient_payload(
+    mock_patient: MagicMock, mock_group: MagicMock, method: str
+) -> None:
+    """Test payload with a single patient."""
+    _mock_patients_exist(mock_patient, ["patient-uuid"])
+    _mock_group_exists(mock_group)
+    group = PatientGroup(group_id="group-uuid")
+    applied = getattr(group, method)(patient_ids=["patient-uuid"])
     payload = json.loads(applied.payload)
 
-    assert payload == {"patient_ids": ["patient-uuid"], "group_id": "group-uuid"}
+    assert payload == {"data": {"patient_ids": ["patient-uuid"], "group_id": "group-uuid"}}
 
 
-def test_add_member_multiple_patients_payload() -> None:
-    """Test PatientGroupAddMember payload with multiple patients."""
-    effect = PatientGroupAddMember(
-        patient_ids=["patient-1", "patient-2", "patient-3"],
-        group_id="group-uuid",
-    )
-    applied = effect.apply()
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+@patch(MOCK_PATIENT)
+def test_multiple_patients_payload(
+    mock_patient: MagicMock, mock_group: MagicMock, method: str
+) -> None:
+    """Test payload with multiple patients."""
+    _mock_patients_exist(mock_patient, ["patient-1", "patient-2"])
+    _mock_group_exists(mock_group)
+    group = PatientGroup(group_id="group-uuid")
+    applied = getattr(group, method)(patient_ids=["patient-1", "patient-2"])
     payload = json.loads(applied.payload)
 
-    assert payload["patient_ids"] == ["patient-1", "patient-2", "patient-3"]
-    assert payload["group_id"] == "group-uuid"
+    assert payload["data"]["patient_ids"] == ["patient-1", "patient-2"]
+    assert payload["data"]["group_id"] == "group-uuid"
 
 
-def test_add_member_empty_patients_payload() -> None:
-    """Test PatientGroupAddMember payload with empty patient list."""
-    effect = PatientGroupAddMember(
-        patient_ids=[],
-        group_id="group-uuid",
-    )
-    applied = effect.apply()
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+def test_empty_patients_payload(mock_group: MagicMock, method: str) -> None:
+    """Test payload with an empty patient list."""
+    _mock_group_exists(mock_group)
+    group = PatientGroup(group_id="group-uuid")
+    applied = getattr(group, method)(patient_ids=[])
     payload = json.loads(applied.payload)
 
-    assert payload["patient_ids"] == []
-    assert payload["group_id"] == "group-uuid"
+    assert payload["data"]["patient_ids"] == []
+    assert payload["data"]["group_id"] == "group-uuid"
 
 
-def test_add_member_missing_group_id_raises() -> None:
-    """Test that apply raises when group_id is not set."""
-    effect = PatientGroupAddMember(patient_ids=["patient-1"])
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+@patch(MOCK_PATIENT)
+def test_missing_group_id_raises(
+    mock_patient: MagicMock, mock_group: MagicMock, method: str
+) -> None:
+    """Test that a missing group_id raises ValidationError."""
+    _mock_patients_exist(mock_patient, ["patient-1"])
+    _mock_group_exists(mock_group)
+    group = PatientGroup()
     with pytest.raises(ValidationError):
-        effect.apply()
+        getattr(group, method)(patient_ids=["patient-1"])
 
 
-def test_add_member_default_patient_ids_is_empty_list() -> None:
-    """Test that patient_ids defaults to an empty list and apply succeeds."""
-    effect = PatientGroupAddMember(group_id="group-1")
-    applied = effect.apply()
-    payload = json.loads(applied.payload)
-
-    assert payload["patient_ids"] == []
-    assert payload["group_id"] == "group-1"
-
-
-def test_deactivate_member_effect_type() -> None:
-    """Test that PatientGroupDeactivateMember has the correct effect type."""
-    effect = PatientGroupDeactivateMember(
-        patient_ids=["patient-1"],
-        group_id="group-1",
-    )
-    applied = effect.apply()
-    assert applied.type == EffectType.PATIENT_GROUP__DEACTIVATE_MEMBER
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+@patch(MOCK_PATIENT)
+def test_invalid_patient_raises(
+    mock_patient: MagicMock, mock_group: MagicMock, method: str
+) -> None:
+    """Test that a nonexistent patient raises ValidationError."""
+    _mock_patients_exist(mock_patient, [])
+    _mock_group_exists(mock_group)
+    group = PatientGroup(group_id="group-1")
+    with pytest.raises(ValidationError, match="Patient with id.*does not exist"):
+        getattr(group, method)(patient_ids=["nonexistent-patient"])
 
 
-def test_deactivate_member_single_patient_payload() -> None:
-    """Test PatientGroupDeactivateMember payload with a single patient."""
-    effect = PatientGroupDeactivateMember(
-        patient_ids=["patient-uuid"],
-        group_id="group-uuid",
-    )
-    applied = effect.apply()
-    payload = json.loads(applied.payload)
-
-    assert payload == {"patient_ids": ["patient-uuid"], "group_id": "group-uuid"}
-
-
-def test_deactivate_member_multiple_patients_payload() -> None:
-    """Test PatientGroupDeactivateMember payload with multiple patients."""
-    effect = PatientGroupDeactivateMember(
-        patient_ids=["patient-1", "patient-2"],
-        group_id="group-uuid",
-    )
-    applied = effect.apply()
-    payload = json.loads(applied.payload)
-
-    assert payload["patient_ids"] == ["patient-1", "patient-2"]
-    assert payload["group_id"] == "group-uuid"
-
-
-def test_deactivate_member_missing_group_id_raises() -> None:
-    """Test that apply raises when group_id is not set."""
-    effect = PatientGroupDeactivateMember(patient_ids=["patient-1"])
-    with pytest.raises(ValidationError):
-        effect.apply()
-
-
-def test_deactivate_member_default_patient_ids_is_empty_list() -> None:
-    """Test that patient_ids defaults to an empty list and apply succeeds."""
-    effect = PatientGroupDeactivateMember(group_id="group-1")
-    applied = effect.apply()
-    payload = json.loads(applied.payload)
-
-    assert payload["patient_ids"] == []
-    assert payload["group_id"] == "group-1"
-
-
-def test_add_member_values_is_empty() -> None:
-    """Test that the values property returns an empty dict."""
-    effect = PatientGroupAddMember(patient_ids=["p1"], group_id="g1")
-    assert effect.values == {}
-
-
-def test_deactivate_member_values_is_empty() -> None:
-    """Test that the values property returns an empty dict."""
-    effect = PatientGroupDeactivateMember(patient_ids=["p1"], group_id="g1")
-    assert effect.values == {}
+@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
+@patch(MOCK_GROUP)
+def test_invalid_group_raises(mock_group: MagicMock, method: str) -> None:
+    """Test that a nonexistent group raises ValidationError."""
+    _mock_group_exists(mock_group, exists=False)
+    group = PatientGroup(group_id="nonexistent-group")
+    with pytest.raises(ValidationError, match="PatientGroup with id.*does not exist"):
+        getattr(group, method)(patient_ids=[])
