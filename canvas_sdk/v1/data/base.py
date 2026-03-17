@@ -60,6 +60,25 @@ class Model(models.Model, metaclass=ModelMetaclass):
 
     dbid = models.BigAutoField(primary_key=True)
 
+    def _check_write_permission(self) -> None:
+        """Check if write operations are allowed in the current context.
+
+        Raises:
+            NamespaceWriteDenied: If in a namespace context with read-only access.
+        """
+        from canvas_sdk.v1.plugin_database_context import get_current_schema, is_write_allowed
+
+        schema = get_current_schema()
+        if schema is None:
+            # Not in a plugin context, allow write
+            return
+
+        if not is_write_allowed():
+            raise NamespaceWriteDenied(
+                f"Write operation denied: namespace '{schema}' is read-only. "
+                f"Plugin must declare 'read_write' access to perform write operations."
+            )
+
 
 class CustomModelMetaclass(ModelMetaclass):
     """A metaclass for configuring data models."""
@@ -109,7 +128,9 @@ class CustomModelMetaclass(ModelMetaclass):
                 # target SDK models. SDK models are shared across plugins, so an
                 # unqualified related_name like "status" would collide if two
                 # plugins chose the same name. Plugin-private targets (CustomModels
-                # and proxy models) don't need namespacing.
+                # and proxy models) don't need namespacing — each plugin's proxy
+                # has its own app_label, so reverse relations are scoped to the
+                # proxy class, not the shared concrete base.
                 rel_name = value.remote_field.related_name
                 target = value.remote_field.model
                 target_is_plugin_private = isinstance(target, type) and (
@@ -173,6 +194,17 @@ class CustomModelMetaclass(ModelMetaclass):
                     f"'{constraint.fields[0]}' in Meta.constraints. "
                     f"OneToOneField columns already have a unique index — "
                     f"remove the duplicate."
+                )
+
+        # Require an explicit ``through`` model on ManyToManyFields.
+        # Without one, Django auto-generates a bridge table whose name
+        # won't match the plugin's schema, causing deployment failures.
+        for key, value in attrs.items():
+            if isinstance(value, models.ManyToManyField) and not value.remote_field.through:
+                raise ValueError(
+                    f"CustomModel '{name}' declares ManyToManyField '{key}' without "
+                    f"an explicit 'through' model. Define a through model as a "
+                    f"CustomModel and pass it via through='YourThroughModel'."
                 )
 
         # Reject unique=True on individual fields. Developers should use
@@ -248,25 +280,6 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
         """Delete the model instance, checking write permissions first."""
         self._check_write_permission()
         return super().delete(*args, **kwargs)
-
-    def _check_write_permission(self) -> None:
-        """Check if write operations are allowed in the current context.
-
-        Raises:
-            NamespaceWriteDenied: If in a namespace context with read-only access.
-        """
-        from canvas_sdk.v1.plugin_database_context import get_current_schema, is_write_allowed
-
-        schema = get_current_schema()
-        if schema is None:
-            # Not in a plugin context, allow write
-            return
-
-        if not is_write_allowed():
-            raise NamespaceWriteDenied(
-                f"Write operation denied: namespace '{schema}' is read-only. "
-                f"Plugin must declare 'read_write' access to perform write operations."
-            )
 
     def _check_field_sizes(self) -> None:
         """Check that TextField and JSONField values do not exceed the size limit.

@@ -3,8 +3,9 @@ from pathlib import Path
 from typing import Any, cast
 
 from django.contrib.postgres.indexes import GinIndex
-from django.db.models import Field, Index, OneToOneField
+from django.db.models import Field, Index, OneToOneField, Q
 from django.db.models.constraints import UniqueConstraint
+from django.db.models.sql import Query
 
 from canvas_sdk.v1.data.base import IS_SQLITE, CustomModel
 from logger import log
@@ -96,7 +97,9 @@ def generate_create_table_sql(schema_name: str, model_class: type[CustomModel]) 
             uq_sql = generate_constraint_sql(
                 schema_name,
                 model_class._meta.db_table,
-                UniqueConstraint(fields=[field.column], name=f"uq_{field.column}"),
+                UniqueConstraint(
+                    fields=[field.column], name=f"uq_{model_class._meta.db_table}_{field.column}"
+                ),
                 model_class=model_class,
                 is_sqlite=IS_SQLITE,
             )
@@ -152,8 +155,8 @@ def generate_field_sql(field: Field, connection: Any) -> str:
         db_type = "text"
     elif isinstance(field, DecimalField):
         # Apply defaults if the developer omitted max_digits/decimal_places
-        max_digits = field.max_digits or 20
-        decimal_places = field.decimal_places or 10
+        max_digits = field.max_digits if field.max_digits is not None else 20
+        decimal_places = field.decimal_places if field.decimal_places is not None else 10
         field.max_digits = max_digits
         field.decimal_places = decimal_places
         db_type = field.db_type(connection) or "text"
@@ -186,6 +189,32 @@ def _resolve_column_name(model_class: type[CustomModel], field_name: str) -> str
         return field_name
 
 
+def _compile_condition(condition: Q, model_class: type) -> str:
+    """Compile a Django Q object into a SQL WHERE clause fragment.
+
+    Uses the same approach as Django's ``Index._get_condition_sql``:
+    build a Query with ``alias_cols=False`` (suppresses table name prefixes),
+    compile to SQL, and inline quoted parameter values.
+
+    Args:
+        condition: A Django Q object representing the filter condition.
+        model_class: The Django model class, needed for field resolution.
+
+    Returns:
+        A SQL expression string suitable for use after ``WHERE``.
+    """
+    from django.db import connection
+
+    query = Query(model=model_class, alias_cols=False)
+    where = query.build_where(condition)
+    compiler = query.get_compiler(connection=connection)
+    sql, params = where.as_sql(compiler, connection)
+    # Instantiate the schema editor directly (not as a context manager) to
+    # avoid opening a DB transaction — quote_value is pure computation.
+    schema_editor = connection.SchemaEditorClass(connection)
+    return sql % tuple(schema_editor.quote_value(p) for p in params)
+
+
 def generate_index_sql(
     schema_name: str,
     table_name: str,
@@ -205,7 +234,7 @@ def generate_index_sql(
     Returns:
         CREATE INDEX SQL statement.
     """
-    index_name = f"{schema_name}_{index.name}"
+    index_name = f"{schema_name}_{table_name}_{index.name}"
 
     # For SQLite, don't use schema prefix; for PostgreSQL, use schema_name.table_name
     table_full_name = table_name if is_sqlite else f"{schema_name}.{table_name}"
@@ -222,13 +251,19 @@ def generate_index_sql(
             field_parts.append(col)
     field_list = ", ".join(field_parts)
 
+    # Compile optional WHERE clause for partial indexes
+    condition = getattr(index, "condition", None)
+    where_clause = ""
+    if condition is not None:
+        if model_class is None:
+            raise ValueError("model_class is required when index has a condition")
+        where_clause = f" WHERE {_compile_condition(condition, model_class)}"
+
     # Support GIN indexes on JSONB fields
     if not is_sqlite and isinstance(index, GinIndex):
-        return (
-            f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} USING GIN({field_list});"
-        )
+        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} USING GIN({field_list}){where_clause};"
     else:
-        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
+        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list}){where_clause};"
 
 
 def generate_constraint_sql(
@@ -253,14 +288,21 @@ def generate_constraint_sql(
     Returns:
         CREATE UNIQUE INDEX IF NOT EXISTS SQL statement.
     """
-    index_name = f"{schema_name}_{constraint.name}"
+    index_name = f"{schema_name}_{table_name}_{constraint.name}"
     table_full_name = table_name if is_sqlite else f"{schema_name}.{table_name}"
     if model_class:
         field_list = ", ".join(_resolve_column_name(model_class, f) for f in constraint.fields)
     else:
         field_list = ", ".join(constraint.fields)
 
-    return f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list});"
+    condition = getattr(constraint, "condition", None)
+    where_clause = ""
+    if condition is not None:
+        if model_class is None:
+            raise ValueError("model_class is required when constraint has a condition")
+        where_clause = f" WHERE {_compile_condition(condition, model_class)}"
+
+    return f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} ON {table_full_name} ({field_list}){where_clause};"
 
 
 def discover_model_files(plugin_path: Path) -> list[Path]:
@@ -335,7 +377,7 @@ def should_create_table(model_class: type, schema_name: str) -> bool:
     if model_class._meta.proxy:
         return False
     db_table = model_class._meta.original_attrs["db_table"]
-    return "." not in db_table or db_table.startswith(f"{schema_name}")
+    return "." not in db_table or db_table.startswith(f"{schema_name}.")
 
 
 def execute_create_table_sql(create_sql: str) -> None:

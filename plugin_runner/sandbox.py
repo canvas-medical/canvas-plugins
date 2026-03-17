@@ -790,6 +790,7 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
+            self._evaluated_modules[module_name] = True
             # All plugin modules go through sandbox exec for security validation.
             sandbox = Sandbox(
                 module,
@@ -797,7 +798,6 @@ class Sandbox:
                 evaluated_modules=self._evaluated_modules,
             )
             sandbox.execute()
-            self._evaluated_modules[module_name] = True
 
             # Register the sandbox scope as a module in sys.modules.
             # This preserves the sandbox-protected classes (with _safe_import)

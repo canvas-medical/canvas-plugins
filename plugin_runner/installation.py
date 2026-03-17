@@ -24,6 +24,7 @@ from plugin_runner.namespace import (
     compute_models_hash,  # noqa: F401 — re-export
     is_schema_manager,  # noqa: F401 — re-export
     mark_namespace_ready,  # noqa: F401 — re-export
+    namespace_exists,
     open_database_connection,  # noqa: F401 — re-export
     setup_read_write_namespace,  # noqa: F401 — re-export
     verify_read_namespace_access,  # noqa: F401 — re-export
@@ -233,7 +234,7 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             if can_create_tables:
                 generate_plugin_migrations(plugin_name, plugin_installation_path, schema_name)
                 models_hash = compute_models_hash(plugin_installation_path)
-                mark_namespace_ready(schema_name, models_hash)
+                mark_namespace_ready(schema_name, plugin_name, models_hash)
             else:
                 log.info(
                     f"Plugin '{plugin_name}' has read-only access to namespace "
@@ -241,14 +242,30 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
                 )
         elif custom_data:
             schema_name = custom_data["namespace"]
-            models_hash = compute_models_hash(plugin_installation_path)
+            declared_access = custom_data.get("access", "read")
 
-            log.info(
-                f"Plugin '{plugin_name}' is not the schema manager — waiting for "
-                f"namespace '{schema_name}' to be initialized"
-            )
-
-            wait_for_namespace(schema_name, models_hash)
+            if declared_access == "read_write":
+                # read_write plugins need to wait for the schema manager to
+                # finish DDL before they can safely use the tables.
+                models_hash = compute_models_hash(plugin_installation_path)
+                log.info(
+                    f"Plugin '{plugin_name}' is not the schema manager — waiting for "
+                    f"namespace '{schema_name}' to be initialized"
+                )
+                wait_for_namespace(schema_name, plugin_name, models_hash)
+            else:
+                # read-only plugins have no DDL to wait for — they just need
+                # the namespace to already exist.
+                if not namespace_exists(schema_name):
+                    raise PluginInstallationError(
+                        f"Plugin '{plugin_name}' declares read access to namespace "
+                        f"'{schema_name}', but the namespace does not exist. "
+                        f"A plugin with 'read_write' access must create the namespace first."
+                    )
+                log.info(
+                    f"Plugin '{plugin_name}' has read access to namespace "
+                    f"'{schema_name}' — namespace exists, proceeding"
+                )
         else:
             log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
 

@@ -220,6 +220,15 @@ def test_returns_true_for_same_schema_dotted() -> None:
     assert should_create_table(mock_model, "my_schema") is True
 
 
+def test_returns_false_for_overlapping_schema_prefix() -> None:
+    """A table in schema 'acme__data_extra' must not match schema 'acme__data'."""
+    mock_model = MagicMock()
+    mock_model._meta.proxy = False
+    mock_model._meta.original_attrs = {"db_table": "acme__data_extra.table"}
+
+    assert should_create_table(mock_model, "acme__data") is False
+
+
 def test_returns_false_when_no_meta() -> None:
     """Objects without _meta should not be eligible."""
 
@@ -598,10 +607,10 @@ def test_wait_for_namespace_returns_immediately_when_ready(
     mock_conn.__exit__ = MagicMock(return_value=False)
     mock_open_conn.return_value = mock_conn
 
-    wait_for_namespace("org__data", models_hash="abc123", timeout=10)
+    wait_for_namespace("org__data", plugin_name="my_plugin", models_hash="abc123", timeout=10)
 
-    mock_conn.execute.assert_called_once_with("LISTEN namespace_ready_org__data")
-    mock_ready.assert_called_once_with("org__data", "abc123")
+    mock_conn.execute.assert_called_once_with("LISTEN ns_ready_org__data")
+    mock_ready.assert_called_once_with("org__data", "my_plugin", "abc123")
     mock_conn.notifies.assert_not_called()
 
 
@@ -610,18 +619,18 @@ def test_wait_for_namespace_returns_immediately_when_ready(
 def test_wait_for_namespace_unblocks_on_notify(
     mock_open_conn: MagicMock, mock_ready: MagicMock
 ) -> None:
-    """Should unblock when a matching NOTIFY with correct hash payload is received."""
+    """Should unblock when a matching NOTIFY with correct plugin_name:hash payload is received."""
     from psycopg import Notify
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
     mock_conn.__exit__ = MagicMock(return_value=False)
     mock_conn.notifies.return_value = iter(
-        [Notify(channel="namespace_ready_org__data", payload="abc123", pid=0)]
+        [Notify(channel="ns_ready_org__data", payload="my_plugin:abc123", pid=0)]
     )
     mock_open_conn.return_value = mock_conn
 
-    wait_for_namespace("org__data", models_hash="abc123", timeout=30)
+    wait_for_namespace("org__data", plugin_name="my_plugin", models_hash="abc123", timeout=30)
 
     mock_conn.notifies.assert_called_once_with(timeout=30)
 
@@ -642,7 +651,36 @@ def test_wait_for_namespace_raises_on_timeout(
     mock_open_conn.return_value = mock_conn
 
     with pytest.raises(PluginInstallationError, match="Timed out after 4s"):
-        wait_for_namespace("org__data", models_hash="abc123", timeout=4)
+        wait_for_namespace("org__data", plugin_name="my_plugin", models_hash="abc123", timeout=4)
+
+
+def test_namespace_notify_channel_short_name() -> None:
+    """Short namespace should produce a plain prefixed channel name."""
+    from plugin_runner.namespace import _namespace_notify_channel
+
+    assert _namespace_notify_channel("org__data") == "ns_ready_org__data"
+
+
+def test_namespace_notify_channel_long_name_uses_hash() -> None:
+    """Namespace exceeding NAMEDATALEN should use a hashed channel name."""
+    import hashlib
+
+    from plugin_runner.namespace import PG_NAMEDATALEN, _namespace_notify_channel
+
+    long_ns = "a" * (PG_NAMEDATALEN + 1)
+    channel = _namespace_notify_channel(long_ns)
+
+    assert len(channel) <= PG_NAMEDATALEN
+    expected_hash = hashlib.sha256(long_ns.encode()).hexdigest()[:16]
+    assert channel == f"ns_ready_{expected_hash}"
+
+
+def test_namespace_notify_channel_deterministic() -> None:
+    """Same namespace should always produce the same channel name."""
+    from plugin_runner.namespace import _namespace_notify_channel
+
+    long_ns = "organization__very_long_namespace_that_exceeds_the_limit_easily"
+    assert _namespace_notify_channel(long_ns) == _namespace_notify_channel(long_ns)
 
 
 # ===========================================================================

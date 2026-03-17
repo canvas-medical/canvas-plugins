@@ -15,7 +15,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["my-api-key"],
+    "secrets": ["my-api-key", "namespace_read_write_access_key"],
     "custom_data": {
         "namespace": "custom_data__room_booking",
         "access": "read_write"

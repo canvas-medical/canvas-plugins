@@ -1477,8 +1477,7 @@
     "get_access_level",
     "get_current_plugin",
     "get_current_schema",
-    "is_write_allowed",
-    "plugin_database_context"
+    "is_write_allowed"
   ],
   "canvas_sdk.value_set.custom": [
     "Antiarrhythmics",

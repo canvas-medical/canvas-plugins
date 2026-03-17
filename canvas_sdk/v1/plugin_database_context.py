@@ -178,5 +178,4 @@ __exports__ = (
     "get_current_schema",
     "get_access_level",
     "is_write_allowed",
-    "plugin_database_context",
 )

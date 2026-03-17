@@ -14,7 +14,7 @@ from functools import reduce
 from typing import Any
 
 from django.db import models
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, UniqueConstraint
 
 from .base import MAX_FIELD_SIZE, FieldValueTooLarge, Model
 
@@ -303,6 +303,7 @@ class AttributeHub(Model):
 
     class Meta:
         db_table = "attribute_hub"
+        constraints = [UniqueConstraint(fields=["type", "id"], name="attribute_hub_type_id_key")]
 
     objects = CustomAttributeAwareManager()
 
@@ -341,6 +342,7 @@ class AttributeHub(Model):
         Uses INSERT ... ON CONFLICT DO UPDATE (upsert) for a single SQL
         round-trip instead of get_or_create + save.
         """
+        self._check_write_permission()
         attr = CustomAttribute(hub=self, name=name)
         attr.value = value
         return CustomAttribute.objects.bulk_create(
@@ -356,6 +358,7 @@ class AttributeHub(Model):
         Uses INSERT ... ON CONFLICT DO UPDATE (upsert) to atomically create or
         update attributes, avoiding race conditions under concurrent writes.
         """
+        self._check_write_permission()
         if not attributes:
             return []
 
@@ -374,6 +377,7 @@ class AttributeHub(Model):
 
     def delete_attribute(self, name: str) -> bool:
         """Delete a custom attribute by name. Returns True if deleted, False if not found."""
+        self._check_write_permission()
         try:
             CustomAttribute.objects.get(hub=self, name=name).delete()
             return True

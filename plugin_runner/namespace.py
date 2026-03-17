@@ -41,9 +41,25 @@ def is_schema_manager() -> bool:
     return aptible_process_type == "cmd" and os.getenv("APTIBLE_PROCESS_INDEX", "0") == "0"
 
 
+PG_NAMEDATALEN = 63
+_CHANNEL_PREFIX = "ns_ready_"
+
+
 def _namespace_notify_channel(namespace: str) -> str:
-    """Return the PostgreSQL NOTIFY channel name for a namespace."""
-    return f"namespace_ready_{namespace}"
+    """Return the PostgreSQL NOTIFY channel name for a namespace.
+
+    PostgreSQL silently truncates identifiers to 63 characters (NAMEDATALEN - 1).
+    If the full channel name would exceed this limit, we replace the namespace
+    portion with a short hash to guarantee both sides of the LISTEN/NOTIFY
+    pair use the same string.
+    """
+    full = f"{_CHANNEL_PREFIX}{namespace}"
+    if len(full) <= PG_NAMEDATALEN:
+        return full
+    # Use a 16-char hex digest (8 bytes of entropy) — collision-resistant
+    # enough for a channel name, and leaves room for the prefix.
+    short_hash = hashlib.sha256(namespace.encode()).hexdigest()[:16]
+    return f"{_CHANNEL_PREFIX}{short_hash}"
 
 
 def compute_models_hash(plugin_path: Path) -> str:
@@ -99,10 +115,11 @@ def open_database_connection() -> Connection:
 
 def wait_for_namespace(
     namespace: str,
+    plugin_name: str,
     models_hash: str,
     timeout: int = NAMESPACE_WAIT_TIMEOUT,
 ) -> None:
-    """Block until a namespace is fully ready, or raise after timeout.
+    """Block until a namespace is fully ready for a specific plugin, or raise after timeout.
 
     Uses PostgreSQL LISTEN/NOTIFY for instant notification when the schema
     manager completes DDL migrations.  The function subscribes via ``LISTEN``
@@ -114,6 +131,7 @@ def wait_for_namespace(
 
     Args:
         namespace: The namespace schema name to wait for.
+        plugin_name: Name of the plugin whose readiness to check.
         models_hash: Expected SHA-256 hash of the plugin's models/ directory.
         timeout: Maximum seconds to wait before raising.
 
@@ -121,6 +139,7 @@ def wait_for_namespace(
         PluginInstallationError: If the namespace does not become ready within the timeout.
     """
     channel = _namespace_notify_channel(namespace)
+    expected_payload = f"{plugin_name}:{models_hash}"
 
     with open_database_connection() as conn:
         conn.autocommit = True
@@ -128,18 +147,21 @@ def wait_for_namespace(
 
         # Check AFTER subscribing so any NOTIFY sent between this check and
         # the wait below is queued on the connection and not lost.
-        if namespace_ready(namespace, models_hash):
-            log.info(f"Namespace '{namespace}' is ready (hash match)")
+        if namespace_ready(namespace, plugin_name, models_hash):
+            log.info(f"Namespace '{namespace}' is ready for plugin '{plugin_name}' (hash match)")
             return
 
         log.info(
-            f"Waiting for namespace '{namespace}' to be initialized "
+            f"Waiting for namespace '{namespace}' plugin '{plugin_name}' to be initialized "
             f"(listening on '{channel}', timeout {timeout}s) ..."
         )
 
         for notify in conn.notifies(timeout=timeout):
-            if notify.channel == channel and notify.payload == models_hash:
-                log.info(f"Namespace '{namespace}' is ready (received NOTIFY with matching hash)")
+            if notify.channel == channel and notify.payload == expected_payload:
+                log.info(
+                    f"Namespace '{namespace}' is ready for plugin '{plugin_name}' "
+                    f"(received NOTIFY with matching payload)"
+                )
                 return
 
         # Generator exhausted without matching notification — timeout.
@@ -167,18 +189,20 @@ def namespace_exists(namespace: str) -> bool:
         return row is not None and row["count"] > 0
 
 
-def namespace_ready(namespace: str, models_hash: str) -> bool:
-    """Check if a namespace has completed migration setup for the given models hash.
+def namespace_ready(namespace: str, plugin_name: str, models_hash: str) -> bool:
+    """Check if a namespace has completed migration setup for a specific plugin's models hash.
 
     Returns True when the namespace schema exists AND the ``schema_version``
-    sentinel table contains a row whose ``models_hash`` matches *models_hash*.
+    sentinel table contains a row for *plugin_name* whose ``models_hash``
+    matches *models_hash*.
 
     Args:
         namespace: The namespace schema name to check.
+        plugin_name: Name of the plugin whose readiness to check.
         models_hash: Expected SHA-256 hash of the plugin's models/ directory.
 
     Returns:
-        True if the namespace is ready for this version of the models, False otherwise.
+        True if the namespace is ready for this version of the plugin's models, False otherwise.
     """
     with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
@@ -189,18 +213,21 @@ def namespace_ready(namespace: str, models_hash: str) -> bool:
         if not row or row["count"] == 0:
             return False
 
-        cursor.execute(f"SELECT models_hash FROM {namespace}.schema_version LIMIT 1")
+        cursor.execute(
+            f"SELECT models_hash FROM {namespace}.schema_version WHERE plugin_name = %s",
+            (plugin_name,),
+        )
         row = cursor.fetchone()
         return row is not None and row["models_hash"] == models_hash
 
 
-def mark_namespace_ready(namespace: str, models_hash: str) -> None:
-    """Write the readiness sentinel and notify waiting containers.
+def mark_namespace_ready(namespace: str, plugin_name: str, models_hash: str) -> None:
+    """Write the readiness sentinel for a plugin and notify waiting containers.
 
-    Replaces any existing row in the ``schema_version`` table with one carrying
+    Upserts a row keyed on *plugin_name* in the ``schema_version`` table with
     the current *models_hash*, then sends a PostgreSQL ``NOTIFY`` whose payload
-    is the hash so that non-schema-manager containers (blocked in
-    ``wait_for_namespace``) can verify without an extra DB query.
+    is ``plugin_name:models_hash`` so that non-schema-manager containers
+    (blocked in ``wait_for_namespace``) can filter by plugin.
 
     Both operations are in the same transaction, so the notification fires
     atomically at commit time.
@@ -211,15 +238,19 @@ def mark_namespace_ready(namespace: str, models_hash: str) -> None:
 
     Args:
         namespace: The namespace schema name.
+        plugin_name: Name of the plugin whose models are ready.
         models_hash: SHA-256 hash of the plugin's models/ directory.
     """
     channel = _namespace_notify_channel(namespace)
+    payload = f"{plugin_name}:{models_hash}"
     with open_database_connection() as conn, conn.cursor() as cursor:
-        cursor.execute(f"DELETE FROM {namespace}.schema_version")
         cursor.execute(
-            f"INSERT INTO {namespace}.schema_version (models_hash) VALUES (%s)", (models_hash,)
+            f"INSERT INTO {namespace}.schema_version (plugin_name, models_hash) "
+            f"VALUES (%s, %s) "
+            f"ON CONFLICT (plugin_name) DO UPDATE SET models_hash = %s, completed_at = NOW()",
+            (plugin_name, models_hash, models_hash),
         )
-        cursor.execute("SELECT pg_notify(%s, %s)", (channel, models_hash))
+        cursor.execute("SELECT pg_notify(%s, %s)", (channel, payload))
         conn.commit()
 
 

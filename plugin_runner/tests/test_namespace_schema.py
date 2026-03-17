@@ -869,24 +869,24 @@ class TestNamespaceReady:
         mock_conn = self._make_mock_conn(mock_cursor)
         mock_open_conn.return_value = mock_conn
 
-        assert namespace_ready("org__missing", "abc123") is False
+        assert namespace_ready("org__missing", "my_plugin", "abc123") is False
 
     @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_schema_version_table_empty(self, mock_open_conn: MagicMock) -> None:
-        """Should return False if schema_version table has no rows."""
+        """Should return False if schema_version has no row for the plugin."""
         from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
-        # schema exists, schema_version table is empty
+        # schema exists, schema_version table has no matching row
         mock_cursor.fetchone.side_effect = [{"count": 1}, None]
         mock_conn = self._make_mock_conn(mock_cursor)
         mock_open_conn.return_value = mock_conn
 
-        assert namespace_ready("org__migrating", "abc123") is False
+        assert namespace_ready("org__migrating", "my_plugin", "abc123") is False
 
     @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_true_when_hash_matches(self, mock_open_conn: MagicMock) -> None:
-        """Should return True if schema_version row has a matching models_hash."""
+        """Should return True if schema_version row for the plugin has a matching models_hash."""
         from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
@@ -894,11 +894,11 @@ class TestNamespaceReady:
         mock_conn = self._make_mock_conn(mock_cursor)
         mock_open_conn.return_value = mock_conn
 
-        assert namespace_ready("org__data", "abc123") is True
+        assert namespace_ready("org__data", "my_plugin", "abc123") is True
 
     @patch("plugin_runner.namespace.open_database_connection")
     def test_returns_false_when_hash_mismatches(self, mock_open_conn: MagicMock) -> None:
-        """Should return False if schema_version row has a different models_hash."""
+        """Should return False if schema_version row for the plugin has a different models_hash."""
         from plugin_runner.namespace import namespace_ready
 
         mock_cursor = MagicMock()
@@ -906,7 +906,7 @@ class TestNamespaceReady:
         mock_conn = self._make_mock_conn(mock_cursor)
         mock_open_conn.return_value = mock_conn
 
-        assert namespace_ready("org__data", "new_hash") is False
+        assert namespace_ready("org__data", "my_plugin", "new_hash") is False
 
 
 class TestMarkNamespaceReady:
@@ -914,7 +914,7 @@ class TestMarkNamespaceReady:
 
     @patch("plugin_runner.namespace.open_database_connection")
     def test_writes_hash_and_notifies(self, mock_open_conn: MagicMock) -> None:
-        """Should DELETE, INSERT with hash, NOTIFY with hash payload, then commit."""
+        """Should UPSERT with plugin_name+hash, NOTIFY with plugin_name:hash payload, then commit."""
         from plugin_runner.namespace import mark_namespace_ready
 
         mock_cursor = MagicMock()
@@ -928,19 +928,22 @@ class TestMarkNamespaceReady:
 
         mock_open_conn.return_value = mock_conn
 
-        mark_namespace_ready("org__data", "abc123")
+        mark_namespace_ready("org__data", "my_plugin", "abc123")
 
         calls = [str(c) for c in mock_cursor.execute.call_args_list]
-        assert any("DELETE FROM org__data.schema_version" in c for c in calls)
         assert any("INSERT INTO org__data.schema_version" in c for c in calls)
+        assert any("ON CONFLICT" in c for c in calls)
         assert any("pg_notify" in c for c in calls)
+        # No DELETE — upsert replaces the old row
+        assert not any("DELETE FROM org__data.schema_version" in c for c in calls)
 
-        # Verify hash is in INSERT params
+        # Verify plugin_name and hash are in INSERT params
         insert_call = next(c for c in mock_cursor.execute.call_args_list if "INSERT" in str(c))
+        assert "my_plugin" in insert_call[0][1]
         assert "abc123" in insert_call[0][1]
 
-        # Verify hash is in NOTIFY params
+        # Verify NOTIFY payload is plugin_name:hash
         notify_call = next(c for c in mock_cursor.execute.call_args_list if "pg_notify" in str(c))
-        assert "abc123" in notify_call[0][1]
+        assert notify_call[0][1] == ("ns_ready_org__data", "my_plugin:abc123")
 
         mock_conn.commit.assert_called_once()

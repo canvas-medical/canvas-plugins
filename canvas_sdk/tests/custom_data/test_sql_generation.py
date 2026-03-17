@@ -7,6 +7,7 @@ Tests cover:
 4. Both PostgreSQL and SQLite SQL generation
 """
 
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -183,7 +184,8 @@ class SDKModelProxy(SDKModel, ModelExtension):
 class ProxyTargetModel(CustomModel):
     """A model with a non-namespaced related_name on a FK targeting a proxy model.
 
-    This is allowed because proxy models are plugin-private.
+    This is allowed because proxy models are plugin-private — each plugin's
+    proxy has its own app_label, so reverse relations are scoped to the proxy.
     """
 
     class Meta:
@@ -332,6 +334,45 @@ class MixedIndexesModel(CustomModel):
     category = models.TextField()
     updated_at = models.DateTimeField()
     tags = models.JSONField()
+
+
+# ---------------------------------------------------------------------------
+# Test Models with conditional (partial) indexes and constraints
+# ---------------------------------------------------------------------------
+
+
+class ConditionalIndexModel(CustomModel):
+    """A model with a partial index (index with a WHERE condition)."""
+
+    class Meta:
+        app_label = "test_plugin"
+        indexes = [
+            models.Index(
+                fields=["email"],
+                condition=models.Q(is_active=True),
+                name="idx_active_email",
+            ),
+        ]
+
+    email = models.TextField()
+    is_active = models.BooleanField()
+
+
+class ConditionalUniqueModel(CustomModel):
+    """A model with a partial unique constraint (unique with a WHERE condition)."""
+
+    class Meta:
+        app_label = "test_plugin"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["email"],
+                condition=models.Q(is_active=True),
+                name="uq_active_email",
+            ),
+        ]
+
+    email = models.TextField()
+    is_active = models.BooleanField()
 
 
 # ===========================================================================
@@ -530,7 +571,8 @@ class TestGenerateIndexSqlPostgres:
         index = models.Index(fields=["name"], name="idx_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
-            sql == "CREATE INDEX IF NOT EXISTS test_plugin_idx_name ON test_plugin.my_table (name);"
+            sql
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON test_plugin.my_table (name);"
         )
 
     def test_multi_column_index(self) -> None:
@@ -539,7 +581,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_full_name ON test_plugin.my_table (first_name, last_name);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON test_plugin.my_table (first_name, last_name);"
         )
 
     def test_descending_single_column_index(self) -> None:
@@ -548,7 +590,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_created_desc ON test_plugin.my_table (created_at DESC);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON test_plugin.my_table (created_at DESC);"
         )
 
     def test_descending_mixed_index(self) -> None:
@@ -557,7 +599,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_cat_pri ON test_plugin.my_table (category, priority DESC);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_cat_pri ON test_plugin.my_table (category, priority DESC);"
         )
 
     def test_gin_index(self) -> None:
@@ -566,7 +608,7 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_metadata_gin ON test_plugin.my_table USING GIN(metadata);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON test_plugin.my_table USING GIN(metadata);"
         )
 
     def test_gin_index_multiple_fields(self) -> None:
@@ -575,7 +617,22 @@ class TestGenerateIndexSqlPostgres:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=False)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_multi_gin ON test_plugin.my_table USING GIN(data, tags);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_multi_gin ON test_plugin.my_table USING GIN(data, tags);"
+        )
+
+    def test_conditional_index(self) -> None:
+        """Partial index should include a WHERE clause."""
+        sql = generate_index_sql(
+            "test_plugin",
+            "conditionalindexmodel",
+            ConditionalIndexModel._meta.indexes[0],
+            model_class=ConditionalIndexModel,
+            is_sqlite=False,
+        )
+        assert sql == (
+            "CREATE INDEX IF NOT EXISTS test_plugin_conditionalindexmodel_idx_active_email"
+            " ON test_plugin.conditionalindexmodel (email)"
+            ' WHERE "is_active";'
         )
 
 
@@ -591,7 +648,7 @@ class TestGenerateIndexSqlSqlite:
         """Single column index should not use schema-qualified table name."""
         index = models.Index(fields=["name"], name="idx_name")
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
-        assert sql == "CREATE INDEX IF NOT EXISTS test_plugin_idx_name ON my_table (name);"
+        assert sql == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_name ON my_table (name);"
 
     def test_multi_column_index(self) -> None:
         """Multi-column index should list all columns without schema prefix."""
@@ -599,7 +656,7 @@ class TestGenerateIndexSqlSqlite:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_full_name ON my_table (first_name, last_name);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_full_name ON my_table (first_name, last_name);"
         )
 
     def test_descending_index(self) -> None:
@@ -608,7 +665,7 @@ class TestGenerateIndexSqlSqlite:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         assert (
             sql
-            == "CREATE INDEX IF NOT EXISTS test_plugin_idx_created_desc ON my_table (created_at DESC);"
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_created_desc ON my_table (created_at DESC);"
         )
 
     def test_gin_index_falls_back_to_btree(self) -> None:
@@ -617,7 +674,23 @@ class TestGenerateIndexSqlSqlite:
         sql = generate_index_sql("test_plugin", "my_table", index, is_sqlite=True)
         # GIN falls back to regular index for SQLite
         assert (
-            sql == "CREATE INDEX IF NOT EXISTS test_plugin_idx_metadata_gin ON my_table (metadata);"
+            sql
+            == "CREATE INDEX IF NOT EXISTS test_plugin_my_table_idx_metadata_gin ON my_table (metadata);"
+        )
+
+    def test_conditional_index(self) -> None:
+        """Partial index on SQLite should include a WHERE clause without schema prefix."""
+        sql = generate_index_sql(
+            "test_plugin",
+            "conditionalindexmodel",
+            ConditionalIndexModel._meta.indexes[0],
+            model_class=ConditionalIndexModel,
+            is_sqlite=True,
+        )
+        assert sql == (
+            "CREATE INDEX IF NOT EXISTS test_plugin_conditionalindexmodel_idx_active_email"
+            " ON conditionalindexmodel (email)"
+            ' WHERE "is_active";'
         )
 
 
@@ -678,7 +751,7 @@ class TestGenerateCreateTableSqlSqlite:
 
         assert "USING GIN" not in sql
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_idx_metadata_gin ON ginindexmodel (metadata)"
+            "CREATE INDEX IF NOT EXISTS test_plugin_ginindexmodel_idx_metadata_gin ON ginindexmodel (metadata)"
             in sql
         )
 
@@ -709,7 +782,7 @@ class TestGenerateCreateTableSqlSqlite:
         sql = generate_create_table_sql("test_plugin", SingleColumnIndexModel)
 
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_idx_name ON singlecolumnindexmodel (name)"
+            "CREATE INDEX IF NOT EXISTS test_plugin_singlecolumnindexmodel_idx_name ON singlecolumnindexmodel (name)"
             in sql
         )
 
@@ -718,7 +791,7 @@ class TestGenerateCreateTableSqlSqlite:
         sql = generate_create_table_sql("test_plugin", MultiColumnIndexModel)
 
         assert (
-            "CREATE INDEX IF NOT EXISTS test_plugin_idx_full_name ON multicolumnindexmodel (first_name, last_name)"
+            "CREATE INDEX IF NOT EXISTS test_plugin_multicolumnindexmodel_idx_full_name ON multicolumnindexmodel (first_name, last_name)"
             in sql
         )
 
@@ -946,6 +1019,118 @@ class TestCustomModelMetaclassRelatedName:
 
 
 # ===========================================================================
+# Tests for proxy model related_name scoping
+# ===========================================================================
+
+
+class SDKModelProxyB(SDKModel, ModelExtension):
+    """A second proxy of SDKModel, used to verify related_name isolation."""
+
+    class Meta:
+        app_label = "test_plugin"
+        proxy = True
+
+
+class AttachedToProxyA(CustomModel):
+    """A CustomModel with a FK to SDKModelProxy (proxy A), not SDKModelProxyB."""
+
+    class Meta:
+        app_label = "test_plugin"
+
+    proxy_a_ref = models.ForeignKey(
+        SDKModelProxy, on_delete=models.DO_NOTHING, related_name="attached_records"
+    )
+
+
+class TestProxyRelatedNameScoping:
+    """Tests demonstrating how Django scopes reverse relations on proxy models.
+
+    When a CustomModel FK targets a specific proxy (SDKModelProxy), Django
+    installs the reverse descriptor on the concrete parent (SDKModel). Python
+    MRO means ALL proxies of that base inherit the descriptor as an attribute.
+
+    However, the FK's ``related_model`` is the specific proxy class, so:
+    - The FK explicitly records which proxy it targets.
+    - Two plugins with different proxies of the same SDK model can each
+      declare bare related_names without colliding, because each FK targets
+      a distinct proxy class.
+    """
+
+    def test_fk_related_model_is_the_targeted_proxy_not_sibling(self) -> None:
+        """The FK's related_model should be the specific proxy, not the base or sibling."""
+        fk = AttachedToProxyA._meta.get_field("proxy_a_ref")
+        assert fk.related_model is SDKModelProxy
+        assert fk.related_model is not SDKModelProxyB
+        assert fk.related_model is not SDKModel
+
+    def test_descriptor_inherited_by_sibling_proxy_via_mro(self) -> None:
+        """Django installs the reverse descriptor on the concrete parent, so all
+        proxies inherit it through Python's MRO. This is expected Django behavior —
+        proxy models share their parent's class namespace.
+        """
+        assert hasattr(SDKModelProxy, "attached_records")
+        # Sibling also sees it — this is Python inheritance, not a bug.
+        assert hasattr(SDKModelProxyB, "attached_records")
+        assert hasattr(SDKModel, "attached_records")
+
+    def test_two_plugins_can_use_same_related_name_on_different_proxies(self) -> None:
+        """Two plugins targeting different proxies of the same base can use the same
+        bare related_name without the metaclass raising, because each proxy is a
+        distinct class and therefore a distinct FK target.
+        """
+        # Plugin A's proxy + CustomModel
+        PluginAProxy = type(
+            "PluginAProxy",
+            (SDKModel, ModelExtension),
+            {
+                "__module__": "plugin_a.models",
+                "__qualname__": "PluginAProxy",
+                "Meta": type("Meta", (), {"app_label": "plugin_a", "proxy": True}),
+            },
+        )
+        PluginAModel = type(
+            "PluginAModel",
+            (CustomModel,),
+            {
+                "__module__": "plugin_a.models",
+                "__qualname__": "PluginAModel",
+                "sdk_ref": models.ForeignKey(
+                    PluginAProxy, on_delete=models.DO_NOTHING, related_name="custom_records"
+                ),
+            },
+        )
+
+        # Plugin B's proxy + CustomModel with the SAME related_name — no collision
+        PluginBProxy = type(
+            "PluginBProxy",
+            (SDKModel, ModelExtension),
+            {
+                "__module__": "plugin_b.models",
+                "__qualname__": "PluginBProxy",
+                "Meta": type("Meta", (), {"app_label": "plugin_b", "proxy": True}),
+            },
+        )
+        PluginBModel = type(
+            "PluginBModel",
+            (CustomModel,),
+            {
+                "__module__": "plugin_b.models",
+                "__qualname__": "PluginBModel",
+                "sdk_ref": models.ForeignKey(
+                    PluginBProxy, on_delete=models.DO_NOTHING, related_name="custom_records"
+                ),
+            },
+        )
+
+        # Both FK fields target distinct proxy classes
+        fk_a = cast(models.Model, PluginAModel)._meta.get_field("sdk_ref")
+        fk_b = cast(models.Model, PluginBModel)._meta.get_field("sdk_ref")
+        assert fk_a.related_model is PluginAProxy
+        assert fk_b.related_model is PluginBProxy
+        assert fk_a.related_model is not fk_b.related_model
+
+
+# ===========================================================================
 # Tests for CustomModelMetaclass unique=True rejection
 # ===========================================================================
 
@@ -1058,6 +1243,56 @@ class TestCustomModelMetaclassUniqueFieldRejection:
         constraints = SingleColumnUniqueModel._meta.constraints
         assert len(constraints) == 1
         assert constraints[0].name == "uq_email"
+
+
+# ===========================================================================
+# Tests for ManyToManyField through model requirement
+# ===========================================================================
+
+
+class TestCustomModelMetaclassManyToManyThrough:
+    """Tests that CustomModelMetaclass requires an explicit through model on ManyToManyFields."""
+
+    def test_m2m_without_through_raises(self) -> None:
+        """ManyToManyField without an explicit through model should raise ValueError."""
+        with pytest.raises(ValueError, match="without an explicit 'through' model"):
+            type(
+                "M2MNoThroughModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "M2MNoThroughModel",
+                    "tags": models.ManyToManyField(ParentModel),
+                },
+            )
+
+    def test_m2m_with_through_is_allowed(self) -> None:
+        """ManyToManyField with an explicit through model should be accepted."""
+        through_model = type(
+            "TagLink",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "TagLink",
+                "source": models.ForeignKey(
+                    ParentModel, on_delete=models.CASCADE, related_name="+"
+                ),
+                "target": models.ForeignKey(
+                    ParentModel, on_delete=models.CASCADE, related_name="+"
+                ),
+            },
+        )
+        type(
+            "M2MWithThroughModel",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "M2MWithThroughModel",
+                "tags": models.ManyToManyField(
+                    ParentModel, through=through_model, related_name="+"
+                ),
+            },
+        )
 
 
 # ===========================================================================
@@ -1265,7 +1500,7 @@ class TestGenerateConstraintSqlPostgres:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_email ON test_plugin.my_table (email);"
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON test_plugin.my_table (email);"
         )
 
     def test_multi_column_unique(self) -> None:
@@ -1274,7 +1509,22 @@ class TestGenerateConstraintSqlPostgres:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=False)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_tenant_slug ON test_plugin.my_table (tenant_id, slug);"
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON test_plugin.my_table (tenant_id, slug);"
+        )
+
+    def test_conditional_unique(self) -> None:
+        """Partial unique constraint should include a WHERE clause."""
+        sql = generate_constraint_sql(
+            "test_plugin",
+            "conditionaluniquemodel",
+            cast(models.UniqueConstraint, ConditionalUniqueModel._meta.constraints[0]),
+            model_class=ConditionalUniqueModel,
+            is_sqlite=False,
+        )
+        assert sql == (
+            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_conditionaluniquemodel_uq_active_email"
+            " ON test_plugin.conditionaluniquemodel (email)"
+            ' WHERE "is_active";'
         )
 
 
@@ -1285,7 +1535,10 @@ class TestGenerateConstraintSqlSqlite:
         """SQLite should not use schema prefix."""
         constraint = models.UniqueConstraint(fields=["email"], name="uq_email")
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
-        assert sql == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_email ON my_table (email);"
+        assert (
+            sql
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_email ON my_table (email);"
+        )
 
     def test_multi_column_unique_no_schema(self) -> None:
         """SQLite multi-column should not use schema prefix."""
@@ -1293,7 +1546,22 @@ class TestGenerateConstraintSqlSqlite:
         sql = generate_constraint_sql("test_plugin", "my_table", constraint, is_sqlite=True)
         assert (
             sql
-            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_tenant_slug ON my_table (tenant_id, slug);"
+            == "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_my_table_uq_tenant_slug ON my_table (tenant_id, slug);"
+        )
+
+    def test_conditional_unique(self) -> None:
+        """Partial unique constraint on SQLite should include a WHERE clause."""
+        sql = generate_constraint_sql(
+            "test_plugin",
+            "conditionaluniquemodel",
+            cast(models.UniqueConstraint, ConditionalUniqueModel._meta.constraints[0]),
+            model_class=ConditionalUniqueModel,
+            is_sqlite=True,
+        )
+        assert sql == (
+            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_conditionaluniquemodel_uq_active_email"
+            " ON conditionaluniquemodel (email)"
+            ' WHERE "is_active";'
         )
 
 
@@ -1338,7 +1606,7 @@ class TestCreateTableSqlWithUniqueConstraints:
         """OneToOneField should automatically get a UNIQUE INDEX on its column."""
         sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
         assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
-        assert "uq_parent_id" in sql
+        assert "uq_childwithonetoone_parent_id" in sql
 
     def test_foreign_key_does_not_generate_unique_index(self) -> None:
         """ForeignKey should NOT get a UNIQUE INDEX (only a regular index)."""
@@ -1352,7 +1620,7 @@ class TestCreateTableSqlWithUniqueConstraints:
 
         sql = generate_create_table_sql("test_plugin", ChildWithOneToOne)
         assert (
-            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_uq_parent_id ON test_plugin.childwithonetoone (parent_id);"
+            "CREATE UNIQUE INDEX IF NOT EXISTS test_plugin_childwithonetoone_uq_childwithonetoone_parent_id ON test_plugin.childwithonetoone (parent_id);"
             in sql
         )
 
@@ -1360,6 +1628,20 @@ class TestCreateTableSqlWithUniqueConstraints:
         """OneToOneField with primary_key=True should NOT get a separate UNIQUE INDEX."""
         sql = generate_create_table_sql("test_plugin", OneToOnePKModel)
         assert "CREATE UNIQUE INDEX" not in sql
+
+    def test_conditional_unique_in_create_table(self) -> None:
+        """CREATE TABLE output should include partial UNIQUE INDEX with WHERE clause."""
+        sql = generate_create_table_sql("test_plugin", ConditionalUniqueModel)
+        assert "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
+        assert "uq_active_email" in sql
+        assert "WHERE" in sql
+
+    def test_conditional_index_in_create_table(self) -> None:
+        """CREATE TABLE output should include partial INDEX with WHERE clause."""
+        sql = generate_create_table_sql("test_plugin", ConditionalIndexModel)
+        assert "CREATE INDEX IF NOT EXISTS" in sql
+        assert "idx_active_email" in sql
+        assert "WHERE" in sql
 
 
 # ===========================================================================

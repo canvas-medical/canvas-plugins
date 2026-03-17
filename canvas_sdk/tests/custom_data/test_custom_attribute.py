@@ -1851,3 +1851,67 @@ class TestAttributeHubSizeValidation:
         """set_attribute should accept a text value exactly at the limit."""
         result = hub.set_attribute("at_limit", "x" * MAX_FIELD_SIZE)
         assert result.value == "x" * MAX_FIELD_SIZE
+
+
+class TestAttributeHubWritePermission:
+    """Tests for write permission enforcement on AttributeHub methods."""
+
+    def setup_method(self) -> None:
+        """Clear any existing plugin context before each test."""
+        from canvas_sdk.v1.plugin_database_context import _plugin_context, clear_current_plugin
+
+        clear_current_plugin()
+        for attr in ("schema", "access_level"):
+            if hasattr(_plugin_context, attr):
+                delattr(_plugin_context, attr)
+
+    def test_set_attribute_raises_when_read_only(self) -> None:
+        """set_attribute should raise NamespaceWriteDenied when access is read-only."""
+        from canvas_sdk.v1.data.base import NamespaceWriteDenied
+        from canvas_sdk.v1.plugin_database_context import _plugin_context
+
+        _plugin_context.schema = "test_ns"
+        _plugin_context.access_level = "read"
+
+        hub = AttributeHub()
+        with pytest.raises(NamespaceWriteDenied):
+            hub.set_attribute("key", "value")
+
+    def test_set_attributes_raises_when_read_only(self) -> None:
+        """set_attributes should raise NamespaceWriteDenied when access is read-only."""
+        from canvas_sdk.v1.data.base import NamespaceWriteDenied
+        from canvas_sdk.v1.plugin_database_context import _plugin_context
+
+        _plugin_context.schema = "test_ns"
+        _plugin_context.access_level = "read"
+
+        hub = AttributeHub()
+        with pytest.raises(NamespaceWriteDenied):
+            hub.set_attributes({"key": "value"})
+
+    def test_delete_attribute_raises_when_read_only(self) -> None:
+        """delete_attribute should raise NamespaceWriteDenied when access is read-only."""
+        from canvas_sdk.v1.data.base import NamespaceWriteDenied
+        from canvas_sdk.v1.plugin_database_context import _plugin_context
+
+        _plugin_context.schema = "test_ns"
+        _plugin_context.access_level = "read"
+
+        hub = AttributeHub()
+        with pytest.raises(NamespaceWriteDenied):
+            hub.delete_attribute("key")
+
+    def test_set_attribute_allowed_without_context(self) -> None:
+        """set_attribute should not raise when not in a plugin context."""
+        hub = AttributeHub()
+        hub._check_write_permission()  # Should not raise
+
+    def test_set_attribute_allowed_with_read_write_access(self) -> None:
+        """set_attribute should not raise when access level is read_write."""
+        from canvas_sdk.v1.plugin_database_context import _plugin_context
+
+        _plugin_context.schema = "test_ns"
+        _plugin_context.access_level = "read_write"
+
+        hub = AttributeHub()
+        hub._check_write_permission()  # Should not raise

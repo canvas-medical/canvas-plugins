@@ -19,7 +19,7 @@ GRANT SELECT ON {namespace}.namespace_auth TO canvas_sdk_read_only;
 
 -- Attribute hub for storing arbitrary key-value data
 CREATE TABLE IF NOT EXISTS {namespace}.attribute_hub (
-    dbid SERIAL PRIMARY KEY,
+    dbid BIGSERIAL PRIMARY KEY,
     type VARCHAR(100) NOT NULL,
     id VARCHAR(100) NOT NULL,
     UNIQUE(type, id)
@@ -31,8 +31,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.attribute_hub TO canvas_sdk_
 
 -- Custom attribute storage (FK to attribute_hub)
 CREATE TABLE IF NOT EXISTS {namespace}.custom_attribute (
-    dbid SERIAL NOT NULL,
-    hub_id INT NOT NULL REFERENCES {namespace}.attribute_hub(dbid),
+    dbid BIGSERIAL NOT NULL,
+    hub_id BIGINT NOT NULL REFERENCES {namespace}.attribute_hub(dbid),
     name TEXT NOT NULL,
     text_value TEXT,
     date_value DATE,
@@ -57,12 +57,33 @@ GRANT USAGE ON {namespace}.custom_attribute_dbid_seq TO canvas_sdk_read_only;
 -- REVOKE ALL PRIVILEGES ON {namespace}.custom_attribute FROM canvas_sdk_read_only;
 GRANT SELECT, INSERT, UPDATE, DELETE ON {namespace}.custom_attribute TO canvas_sdk_read_only;
 
--- Migration readiness sentinel. The schema manager inserts a row after all DDL
--- completes; non-schema-manager containers check the models_hash to verify the
--- namespace is ready for the current version of the plugin's models.
+-- Migration readiness sentinel. The schema manager inserts a row per plugin
+-- after all DDL completes; non-schema-manager containers check the
+-- (plugin_name, models_hash) pair to verify the namespace is ready for the
+-- current version of each plugin's models.
 CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
+    plugin_name VARCHAR(255) NOT NULL,
     models_hash VARCHAR(64),
-    completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (plugin_name)
 );
+
+-- Idempotent migration: add plugin_name column if missing (for namespaces
+-- created before this column existed).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = '{namespace}'
+          AND table_name = 'schema_version'
+          AND column_name = 'plugin_name'
+    ) THEN
+        ALTER TABLE {namespace}.schema_version ADD COLUMN plugin_name VARCHAR(255);
+        -- Clear old single-row data; the schema manager will re-insert per-plugin rows.
+        DELETE FROM {namespace}.schema_version;
+        ALTER TABLE {namespace}.schema_version ALTER COLUMN plugin_name SET NOT NULL;
+        ALTER TABLE {namespace}.schema_version ADD CONSTRAINT schema_version_plugin_name_key UNIQUE (plugin_name);
+    END IF;
+END $$;
 
 GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;
