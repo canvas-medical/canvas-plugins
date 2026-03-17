@@ -811,9 +811,9 @@ class Sandbox:
     def _evaluate_implicit_imports(self, module: Path) -> None:
         """Evaluate implicit imports in the sandbox.
 
-        All plugin packages go through sandbox exec for their ``__init__.py``.
-        Model packages additionally register a ``types.ModuleType`` from the
-        sandbox scope into ``sys.modules`` to preserve ``_safe_import``.
+        All plugin packages go through sandbox exec for their ``__init__.py``
+        and register a ``types.ModuleType`` from the sandbox scope into
+        ``sys.modules`` to preserve ``_safe_import``.
         """
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
@@ -827,10 +827,6 @@ class Sandbox:
         init_file = parent / "__init__.py"
 
         if module_name not in self._evaluated_modules:
-            is_model_module = (
-                module_name == f"{self.package_name}.models"
-                or module_name.startswith(f"{self.package_name}.models.")
-            )
             if init_file.exists():
                 # Mark as evaluated to prevent infinite recursion.
                 self._evaluated_modules[module_name] = True
@@ -840,11 +836,10 @@ class Sandbox:
                     evaluated_modules=self._evaluated_modules,
                 )
                 sandbox.execute()
-                if is_model_module:
-                    mod = types.ModuleType(module_name)
-                    mod.__file__ = str(init_file)
-                    mod.__dict__.update(sandbox.scope)
-                    sys.modules[module_name] = mod
+                mod = types.ModuleType(module_name)
+                mod.__file__ = str(init_file)
+                mod.__dict__.update(sandbox.scope)
+                sys.modules[module_name] = mod
             else:
                 # Mark as evaluated even if no init file exists to prevent redundant checks.
                 self._evaluated_modules[module_name] = True

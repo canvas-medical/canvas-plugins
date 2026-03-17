@@ -1,5 +1,6 @@
 import importlib
 import re
+import sys
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
@@ -1136,3 +1137,117 @@ def test_uncalled_method_import_blocked_at_runtime() -> None:
     exploit = scope["Exploit"]()
     with pytest.raises(ImportError, match="'os' is not an allowed import"):
         exploit.sneaky()
+
+
+def _make_plugin_tree(tmp_path: Path, plugin_name: str, tree: dict[str, str]) -> Path:
+    """Create a plugin directory tree from a dict of {relative_path: source_code}."""
+    base = tmp_path / plugin_name
+    for rel_path, source in tree.items():
+        file_path = base / rel_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(dedent(source))
+    return tmp_path
+
+
+def test_implicit_import_preserves_safe_import(tmp_path: Path) -> None:
+    """An implicitly imported intermediate package should be registered in
+    ``sys.modules`` so that subsequent imports return the sandboxed version
+    with ``_safe_import`` wired as ``__import__``.
+    """
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "my_plugin",
+        {
+            "__init__.py": "",
+            "utils/__init__.py": "UTILS_MARKER = 'sandboxed'",
+            "utils/helpers.py": "HELPER = True",
+            "protocols/__init__.py": "",
+            "protocols/my_protocol.py": "from my_plugin.utils.helpers import HELPER",
+        },
+    )
+
+    for key in list(sys.modules):
+        if key.startswith("my_plugin"):
+            del sys.modules[key]
+
+    original_path = sys.path[:]
+    sys.path.insert(0, str(base_path))
+
+    try:
+        sandbox = sandbox_from_module(base_path, "my_plugin.protocols.my_protocol")
+        sandbox.execute()
+
+        # If the package was registered in sys.modules we get the sandboxed
+        # version (with _safe_import as __import__).  If it wasn't, a
+        # subsequent import would bypass the sandbox.
+        utils_module = sys.modules["my_plugin.utils"]
+
+        module_builtins = getattr(utils_module, "__builtins__", {})
+        module_import = (
+            module_builtins.get("__import__")
+            if isinstance(module_builtins, dict)
+            else getattr(module_builtins, "__import__", None)
+        )
+
+        assert module_import is not __import__, (
+            "__import__ should be _safe_import, not the real __import__"
+        )
+    finally:
+        sys.path[:] = original_path
+        for key in list(sys.modules):
+            if key.startswith("my_plugin"):
+                del sys.modules[key]
+
+
+def test_implicit_import_deferred_os_import_blocked_at_runtime(tmp_path: Path) -> None:
+    """A class from an implicitly imported intermediate package that defers
+    ``import os`` to a method should still have that import blocked at
+    runtime via ``_safe_import``.
+    """
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "my_plugin",
+        {
+            "__init__.py": "",
+            "utils/__init__.py": """\
+                class Exploit:
+                    def sneaky(self):
+                        import os
+                        return os.listdir('.')
+            """,
+            "utils/helpers.py": "HELPER = True",
+            "protocols/__init__.py": "",
+            # First import triggers _evaluate_implicit_imports for utils/.
+            # Second import hits _evaluate_module which early-returns (already
+            # in _evaluated_modules) and falls through to __import__, which
+            # creates an unsandboxed module.
+            "protocols/my_protocol.py": dedent("""\
+                from my_plugin.utils.helpers import HELPER
+                from my_plugin.utils import Exploit
+
+                exploit = Exploit()
+            """),
+        },
+    )
+
+    for key in list(sys.modules):
+        if key.startswith("my_plugin"):
+            del sys.modules[key]
+
+    original_path = sys.path[:]
+    sys.path.insert(0, str(base_path))
+
+    try:
+        sandbox = sandbox_from_module(base_path, "my_plugin.protocols.my_protocol")
+        scope = sandbox.execute()
+
+        # The class was obtained inside the sandbox.  Calling the method
+        # should block ``import os`` via _safe_import at runtime.
+        exploit = scope["exploit"]
+        with pytest.raises(ImportError, match="'os' is not an allowed import"):
+            exploit.sneaky()
+    finally:
+        sys.path[:] = original_path
+        for key in list(sys.modules):
+            if key.startswith("my_plugin"):
+                del sys.modules[key]
