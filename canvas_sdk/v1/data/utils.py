@@ -30,8 +30,13 @@ def presigned_url(s3_key: str, expires_in: int = 3600) -> str:
     if not access_key_id or not secret_access_key:
         raise ValueError("AWS credentials not configured")
 
+    customer_identifier = settings.CUSTOMER_IDENTIFIER
+
     # Clean the key - remove bucket prefix if present
     s3_key = s3_key.replace(f"{bucket}/", "")
+
+    # Prepend the customer identifier prefix
+    s3_key = f"{customer_identifier}/{s3_key}"
 
     service = "s3"
     host = f"{bucket}.s3.{region}.amazonaws.com"
