@@ -1,0 +1,24 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.6",
+    "name": "pharmacy_search_demo",
+    "description": "Demo plugin for KOALA-4355: exercises all pharmacy search filter parameters",
+    "components": {
+        "protocols": [
+            {
+                "class": "pharmacy_search_demo.protocols.demo:PharmacySearchDemo",
+                "description": "Runs all pharmacy search test cases and returns results"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}

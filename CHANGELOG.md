@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## v0.112.0 (2026-03-11)
+
+### Bug Fixes
+
+- Don't let plugins define protocols from other modules
+  ([#1539](https://github.com/canvas-medical/canvas-plugins/pull/1539),
+  [`64d0f46`](https://github.com/canvas-medical/canvas-plugins/commit/64d0f46b4e8a7b4f5d584da7e1f8bc1ae57cbf45))
+
+- Prevent intermittent ImportError during plugin reload
+  ([#1546](https://github.com/canvas-medical/canvas-plugins/pull/1546),
+  [`47c3598`](https://github.com/canvas-medical/canvas-plugins/commit/47c35981407359bca7fe1a4e00f1b481e4a667b4))
+
+### Chores
+
+- Add additional tests on deferred imports
+  ([#1540](https://github.com/canvas-medical/canvas-plugins/pull/1540),
+  [`c3e1de6`](https://github.com/canvas-medical/canvas-plugins/commit/c3e1de6fe612e397cf13685893953a4c65a253e9))
+
+### Features
+
+- Add DocumentReference, SnapshotImage, PatientIdentificationCard, and related models
+  ([#1481](https://github.com/canvas-medical/canvas-plugins/pull/1481),
+  [`44a20c7`](https://github.com/canvas-medical/canvas-plugins/commit/44a20c7a78dc7c331b1d291ee622d513b36eafff))
+
+- Allow importing re.fullmatch and typing.TYPE_CHECKING
+  ([#1422](https://github.com/canvas-medical/canvas-plugins/pull/1422),
+  [`9895f8d`](https://github.com/canvas-medical/canvas-plugins/commit/9895f8d1fa01c18e0758ec82d2c064ff0567f07d))
+
+- Implement effect for exporting ccdas
+  ([#1477](https://github.com/canvas-medical/canvas-plugins/pull/1477),
+  [`f7651ea`](https://github.com/canvas-medical/canvas-plugins/commit/f7651ea76e9087458a93b46910d3e5d021482c67))
+
+- Log message when plugin-runner exits (and the reason)
+  ([#1526](https://github.com/canvas-medical/canvas-plugins/pull/1526),
+  [`b0a6bdb`](https://github.com/canvas-medical/canvas-plugins/commit/b0a6bdb4ae0c0e3aa98fc26ac720cd66e6d1aa02))
+
+
 ## v0.111.0 (2026-03-05)
 
 ### Features

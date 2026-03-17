@@ -41,6 +41,12 @@ from .custom_attribute import (
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .document_reference import (
+    DocumentReference,
+    DocumentReferenceCategory,
+    DocumentReferenceCoding,
+    DocumentReferenceStatus,
+)
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
@@ -114,6 +120,7 @@ from .patient import (
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientFacilityAddress,
+    PatientIdentificationCard,
     PatientMetadata,
     PatientSetting,
 )
@@ -153,6 +160,7 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
+from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
     SpecialtyReportTemplate,
     SpecialtyReportTemplateField,
@@ -220,6 +228,10 @@ __all__ = __exports__ = (
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "DocumentReference",
+    "DocumentReferenceCategory",
+    "DocumentReferenceCoding",
+    "DocumentReferenceStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
@@ -297,6 +309,7 @@ __all__ = __exports__ = (
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
+    "PatientIdentificationCard",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
@@ -327,6 +340,8 @@ __all__ = __exports__ = (
     "SpecialtyReportTemplate",
     "SpecialtyReportTemplateField",
     "SpecialtyReportTemplateFieldOption",
+    "Snapshot",
+    "SnapshotImage",
     "Staff",
     "StaffAddress",
     "StaffLicense",

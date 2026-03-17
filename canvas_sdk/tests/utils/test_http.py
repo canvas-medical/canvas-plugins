@@ -164,7 +164,7 @@ def test_search_pharmacies_default_search_term(mock_get: MagicMock) -> None:
     pharmacy_http.search_pharmacies()
 
     mock_get.assert_called_once_with(
-        "https://pharmacy-2017071.canvasmedical.com/surescripts/pharmacy/?search=+",
+        "https://pharmacy-2017071.canvasmedical.com/surescripts/pharmacy/",
         headers={},
         timeout=30,
     )
@@ -176,3 +176,61 @@ def test_search_pharmacies_default_search_term(mock_get: MagicMock) -> None:
         headers={},
         timeout=30,
     )
+
+
+@patch("requests.Session.get")
+def test_search_pharmacies_with_filter_fields(mock_get: MagicMock) -> None:
+    """Test that search_pharmacies passes filter fields as query parameters."""
+    mock_get.return_value = FakeResponse()
+
+    pharmacy_http.search_pharmacies(
+        search_term=None,
+        ncpdp_id="1234567",
+        organization_name="CVS",
+        state="CA",
+        zip_code_prefix="902",
+        specialty_type="retail",
+    )
+
+    call_url = mock_get.call_args[0][0]
+    assert "ncpdp_id=1234567" in call_url
+    assert "organization_name__icontains=CVS" in call_url
+    assert "state__iexact=CA" in call_url
+    assert "zip_code_prefix_in=902" in call_url
+    assert "specialty_type__icontains=retail" in call_url
+    assert "search=" not in call_url
+
+
+@patch("requests.Session.get")
+def test_search_pharmacies_with_id(mock_get: MagicMock) -> None:
+    """Test that search_pharmacies passes an exact id filter."""
+    mock_get.return_value = FakeResponse()
+
+    pharmacy_http.search_pharmacies(search_term=None, id=42)
+
+    call_url = mock_get.call_args[0][0]
+    assert "id=42" in call_url
+
+
+@patch("requests.Session.get")
+def test_search_pharmacies_with_zip_code_prefix(mock_get: MagicMock) -> None:
+    """Test that search_pharmacies passes zip_code_prefix."""
+    mock_get.return_value = FakeResponse()
+
+    pharmacy_http.search_pharmacies(search_term=None, zip_code_prefix="902,100,945")
+
+    call_url = mock_get.call_args[0][0]
+    assert "zip_code_prefix_in=902%2C100%2C945" in call_url
+
+
+@patch("requests.Session.get")
+def test_search_pharmacies_with_location(mock_get: MagicMock) -> None:
+    """Test that latitude and longitude are passed when provided."""
+    mock_get.return_value = FakeResponse()
+
+    pharmacy_http.search_pharmacies("walgreens", latitude="34.05", longitude="-118.24")
+
+    call_url = mock_get.call_args[0][0]
+    assert "search=walgreens" in call_url
+    assert "latitude=34.05" in call_url
+    assert "longitude=-118.24" in call_url
