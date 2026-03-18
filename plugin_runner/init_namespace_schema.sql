@@ -68,22 +68,4 @@ CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
     UNIQUE (plugin_name)
 );
 
--- Idempotent migration: add plugin_name column if missing (for namespaces
--- created before this column existed).
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = '{namespace}'
-          AND table_name = 'schema_version'
-          AND column_name = 'plugin_name'
-    ) THEN
-        ALTER TABLE {namespace}.schema_version ADD COLUMN plugin_name VARCHAR(255);
-        -- Clear old single-row data; the schema manager will re-insert per-plugin rows.
-        DELETE FROM {namespace}.schema_version;
-        ALTER TABLE {namespace}.schema_version ALTER COLUMN plugin_name SET NOT NULL;
-        ALTER TABLE {namespace}.schema_version ADD CONSTRAINT schema_version_plugin_name_key UNIQUE (plugin_name);
-    END IF;
-END $$;
-
 GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;
