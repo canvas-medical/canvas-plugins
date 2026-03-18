@@ -1,27 +1,46 @@
-import json
 from typing import Any
+from uuid import UUID
 
-from pydantic import ValidationError
 from pydantic_core import InitErrorDetails
 
-from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.base import _BaseEffect
+from canvas_sdk.base import Model
+from canvas_sdk.effects import Effect
+from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.patient_group import PatientGroup as PatientGroupModel
 
 
-class PatientGroup(_BaseEffect):
-    """An Effect for managing patient group membership."""
+class PatientGroupEffect(Model):
+    """
+    Effect for performing actions on a Patient Group.
 
-    class Meta:
-        apply_required_fields = ("group_id",)
+    Attributes:
+        group_id (UUID | str): The unique identifier for the patient group instance.
+    """
 
-    group_id: str | None = None
+    group_id: UUID | str
+
+    def add_member(self, patient_ids: list[str]) -> Effect:
+        """Add patient(s) as members of the group."""
+        return _AddPatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply()
+
+    def deactivate_member(self, patient_ids: list[str]) -> Effect:
+        """Deactivate patient(s) from the group."""
+        return _DeactivatePatientGroupMember(
+            group_id=self.group_id, patient_ids=patient_ids
+        ).apply()
+
+
+class _PatientGroupBase(_BaseEffect):
+    """Base class for managing Patient Groups."""
+
+    group_id: UUID | str
+    patient_ids: list[str]
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         errors = super()._get_error_details(method)
 
-        if self.group_id and not PatientGroupModel.objects.filter(id=self.group_id).exists():
+        if not PatientGroupModel.objects.filter(id=self.group_id).exists():
             errors.append(
                 self._create_error_detail(
                     "group_id",
@@ -30,45 +49,40 @@ class PatientGroup(_BaseEffect):
                 )
             )
 
+        if self.patient_ids:
+            existing_ids = set(
+                Patient.objects.filter(id__in=self.patient_ids).values_list("id", flat=True)
+            )
+            for patient_id in self.patient_ids:
+                if patient_id not in existing_ids:
+                    errors.append(
+                        self._create_error_detail(
+                            "patient_id",
+                            f"Patient with id: {patient_id} does not exist.",
+                            patient_id,
+                        )
+                    )
+
         return errors
 
     @property
     def values(self) -> dict[str, Any]:
         """The effect's serializable data."""
-        return {"group_id": self.group_id}
-
-    def _effect_payload(self, patient_ids: list[str]) -> dict[str, Any]:
-        """The payload of the effect."""
-        return {"data": {**self.values, "patient_ids": patient_ids}}
-
-    def _validate_patients(self, patient_ids: list[str]) -> None:
-        if not patient_ids:
-            return
-        existing_ids = set(Patient.objects.filter(id__in=patient_ids).values_list("id", flat=True))
-        missing = [pid for pid in patient_ids if pid not in existing_ids]
-        if missing:
-            errors = [
-                self._create_error_detail(
-                    "patient_id",
-                    f"Patient with id: {patient_id} does not exist.",
-                    patient_id,
-                )
-                for patient_id in missing
-            ]
-            raise ValidationError.from_exception_data(self.__class__.__name__, errors)
-
-    def _apply_effect(self, effect_type: EffectType, patient_ids: list[str]) -> Effect:
-        self._validate_before_effect("apply")
-        self._validate_patients(patient_ids)
-        return Effect(type=effect_type, payload=json.dumps(self._effect_payload(patient_ids)))
-
-    def add_member(self, patient_ids: list[str]) -> Effect:
-        """Add patient(s) as members of the group."""
-        return self._apply_effect(EffectType.PATIENT_GROUP__ADD_MEMBER, patient_ids)
-
-    def deactivate_member(self, patient_ids: list[str]) -> Effect:
-        """Deactivate patient(s) from the group."""
-        return self._apply_effect(EffectType.PATIENT_GROUP__DEACTIVATE_MEMBER, patient_ids)
+        return {"group_id": str(self.group_id), "patient_ids": self.patient_ids}
 
 
-__exports__ = ("PatientGroup",)
+class _AddPatientGroupMember(_PatientGroupBase):
+    """Effect to add a member to a Patient Group."""
+
+    class Meta:
+        effect_type = EffectType.PATIENT_GROUP__ADD_MEMBER
+
+
+class _DeactivatePatientGroupMember(_PatientGroupBase):
+    """Effect to deactivate a member from a Patient Group."""
+
+    class Meta:
+        effect_type = EffectType.PATIENT_GROUP__DEACTIVATE_MEMBER
+
+
+__exports__ = ("PatientGroupEffect",)

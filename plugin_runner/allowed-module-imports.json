@@ -614,7 +614,7 @@
     "PatientFacilityAddress"
   ],
   "canvas_sdk.effects.patient_group": [
-    "PatientGroup"
+    "PatientGroupEffect"
   ],
   "canvas_sdk.effects.patient_metadata": [
     "FormField",

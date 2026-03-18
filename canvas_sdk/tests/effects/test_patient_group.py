@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from canvas_sdk.effects import EffectType
-from canvas_sdk.effects.patient_group import PatientGroup
+from canvas_sdk.effects.patient_group import PatientGroupEffect
 
 MOCK_PATIENT = "canvas_sdk.effects.patient_group.Patient.objects"
 MOCK_GROUP = "canvas_sdk.effects.patient_group.PatientGroupModel.objects"
@@ -34,7 +34,7 @@ def test_effect_type(
     """Test that each method returns the correct effect type."""
     _mock_patients_exist(mock_patient, ["patient-1"])
     _mock_group_exists(mock_group)
-    group = PatientGroup(group_id="group-1")
+    group = PatientGroupEffect(group_id="group-1")
     applied = getattr(group, method)(patient_ids=["patient-1"])
     assert applied.type == expected_type
 
@@ -48,7 +48,7 @@ def test_single_patient_payload(
     """Test payload with a single patient."""
     _mock_patients_exist(mock_patient, ["patient-uuid"])
     _mock_group_exists(mock_group)
-    group = PatientGroup(group_id="group-uuid")
+    group = PatientGroupEffect(group_id="group-uuid")
     applied = getattr(group, method)(patient_ids=["patient-uuid"])
     payload = json.loads(applied.payload)
 
@@ -64,7 +64,7 @@ def test_multiple_patients_payload(
     """Test payload with multiple patients."""
     _mock_patients_exist(mock_patient, ["patient-1", "patient-2"])
     _mock_group_exists(mock_group)
-    group = PatientGroup(group_id="group-uuid")
+    group = PatientGroupEffect(group_id="group-uuid")
     applied = getattr(group, method)(patient_ids=["patient-1", "patient-2"])
     payload = json.loads(applied.payload)
 
@@ -77,26 +77,12 @@ def test_multiple_patients_payload(
 def test_empty_patients_payload(mock_group: MagicMock, method: str) -> None:
     """Test payload with an empty patient list."""
     _mock_group_exists(mock_group)
-    group = PatientGroup(group_id="group-uuid")
+    group = PatientGroupEffect(group_id="group-uuid")
     applied = getattr(group, method)(patient_ids=[])
     payload = json.loads(applied.payload)
 
     assert payload["data"]["patient_ids"] == []
     assert payload["data"]["group_id"] == "group-uuid"
-
-
-@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
-@patch(MOCK_GROUP)
-@patch(MOCK_PATIENT)
-def test_missing_group_id_raises(
-    mock_patient: MagicMock, mock_group: MagicMock, method: str
-) -> None:
-    """Test that a missing group_id raises ValidationError."""
-    _mock_patients_exist(mock_patient, ["patient-1"])
-    _mock_group_exists(mock_group)
-    group = PatientGroup()
-    with pytest.raises(ValidationError):
-        getattr(group, method)(patient_ids=["patient-1"])
 
 
 @pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
@@ -108,7 +94,7 @@ def test_invalid_patient_raises(
     """Test that a nonexistent patient raises ValidationError."""
     _mock_patients_exist(mock_patient, [])
     _mock_group_exists(mock_group)
-    group = PatientGroup(group_id="group-1")
+    group = PatientGroupEffect(group_id="group-1")
     with pytest.raises(ValidationError, match="Patient with id.*does not exist"):
         getattr(group, method)(patient_ids=["nonexistent-patient"])
 
@@ -118,6 +104,6 @@ def test_invalid_patient_raises(
 def test_invalid_group_raises(mock_group: MagicMock, method: str) -> None:
     """Test that a nonexistent group raises ValidationError."""
     _mock_group_exists(mock_group, exists=False)
-    group = PatientGroup(group_id="nonexistent-group")
+    group = PatientGroupEffect(group_id="nonexistent-group")
     with pytest.raises(ValidationError, match="PatientGroup with id.*does not exist"):
         getattr(group, method)(patient_ids=[])
