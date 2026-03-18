@@ -11,6 +11,7 @@ import decimal
 from typing import Any
 
 import pytest
+from django.db.models import Q
 
 from canvas_sdk.v1.data.base import (
     MAX_FIELD_SIZE,
@@ -1364,6 +1365,34 @@ class TestCustomAttributeQuerySetFilter:
         with pytest.raises(TypeError, match="Cannot filter"):
             hub.custom_attributes.filter(value=object())
 
+    # -- Q object rejection --------------------------------------------
+
+    def test_filter_q_with_value_raises(self, hub: AttributeHub) -> None:
+        """Q(value=...) in filter() args should raise TypeError."""
+        with pytest.raises(TypeError, match="Q.*not supported"):
+            hub.custom_attributes.filter(Q(value="blue"))
+
+    def test_filter_q_with_value_lookup_raises(self, hub: AttributeHub) -> None:
+        """Q(value__gte=...) in filter() args should raise TypeError."""
+        with pytest.raises(TypeError, match="Q.*not supported"):
+            hub.custom_attributes.filter(Q(value__gte=5))
+
+    def test_filter_q_with_nested_value_raises(self, hub: AttributeHub) -> None:
+        """Nested Q objects containing value lookups should raise TypeError."""
+        with pytest.raises(TypeError, match="Q.*not supported"):
+            hub.custom_attributes.filter(Q(value="a") | Q(value="b"))
+
+    def test_exclude_q_with_value_raises(self, hub: AttributeHub) -> None:
+        """Q(value=...) in exclude() args should raise TypeError."""
+        with pytest.raises(TypeError, match="Q.*not supported"):
+            hub.custom_attributes.exclude(Q(value="blue"))
+
+    def test_filter_q_without_value_passes(self, hub: AttributeHub) -> None:
+        """Q objects that don't reference value should pass through normally."""
+        self._create(hub, "color", "blue")
+        qs = hub.custom_attributes.filter(Q(name="color"))
+        assert qs.count() == 1
+
     # -- reverse FK access ---------------------------------------------
 
     def test_filter_via_reverse_fk(self, hub: AttributeHub) -> None:
@@ -1483,6 +1512,11 @@ class TestCrossRelationValueFilter:
         """Filtering by an unmapped type across the join raises TypeError."""
         with pytest.raises(TypeError, match="Cannot filter"):
             AttributeHub.objects.filter(custom_attributes__value=object())
+
+    def test_filter_q_with_cross_relation_value_raises(self) -> None:
+        """Q(custom_attributes__value=...) in filter() args should raise TypeError."""
+        with pytest.raises(TypeError, match="Q.*not supported"):
+            AttributeHub.objects.filter(Q(custom_attributes__value="blue"))
 
 
 # ---------------------------------------------------------------------------

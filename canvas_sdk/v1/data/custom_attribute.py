@@ -33,6 +33,19 @@ VALUE_FIELD_MAP: dict[type, str] = {
 VALUE_FIELDS = tuple(dict.fromkeys(VALUE_FIELD_MAP.values()))
 
 
+def _q_contains_value_lookup(q: Q, match_key: str) -> bool:
+    """Check if a Q object tree contains any lookup matching match_key."""
+    for child in q.children:
+        if isinstance(child, Q):
+            if _q_contains_value_lookup(child, match_key):
+                return True
+        elif isinstance(child, tuple) and len(child) == 2:
+            key = child[0]
+            if key == match_key or key.startswith(f"{match_key}__"):
+                return True
+    return False
+
+
 def _rewrite_value_lookups(
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
@@ -49,7 +62,20 @@ def _rewrite_value_lookups(
 
     Returns:
         A (args, kwargs) tuple with value lookups rewritten.
+
+    Raises:
+        TypeError: If a Q object in ``args`` contains a ``value`` lookup,
+            since those cannot be automatically rewritten.
     """
+    for arg in args:
+        if isinstance(arg, Q) and _q_contains_value_lookup(arg, match_key):
+            raise TypeError(
+                f"Q() objects containing '{match_key}' lookups are not supported "
+                f"because they cannot be automatically rewritten to typed columns. "
+                f"Use keyword arguments instead: .filter({match_key}=...) "
+                f"rather than .filter(Q({match_key}=...))."
+            )
+
     new_kwargs: dict[str, Any] = {}
     extra_q: list[Q] = []
     prefix_len = len(match_key)
@@ -222,13 +248,13 @@ class CustomAttribute(Model):
 
         if self.text_value is not None and len(self.text_value) > MAX_FIELD_SIZE:
             raise FieldValueTooLarge(
-                f"Attribute text value has size {len(self.text_value):,} bytes, "
-                f"exceeding the {MAX_FIELD_SIZE:,} byte limit."
+                f"Attribute text value has size {len(self.text_value):,} characters, "
+                f"exceeding the {MAX_FIELD_SIZE:,} character limit."
             )
         if self.json_value is not None and len(json.dumps(self.json_value)) > MAX_FIELD_SIZE:
             raise FieldValueTooLarge(
-                f"Attribute JSON value has size {len(json.dumps(self.json_value)):,} bytes, "
-                f"exceeding the {MAX_FIELD_SIZE:,} byte limit."
+                f"Attribute JSON value has size {len(json.dumps(self.json_value)):,} characters, "
+                f"exceeding the {MAX_FIELD_SIZE:,} character limit."
             )
 
 

@@ -224,6 +224,15 @@ def test_set_name_finds_parent_descriptor() -> None:
     assert pf._parent_descriptor is parent_desc
 
 
+def test_set_name_raises_when_parent_descriptor_not_found() -> None:
+    """__set_name__ should raise AttributeError when no base class defines the named field."""
+    ChildModel = type("ChildModel", (), {})
+
+    pf = proxy_field(FakeProxyClass)
+    with pytest.raises(AttributeError, match="could not find a parent descriptor named 'missing'"):
+        pf.__set_name__(ChildModel, "missing")
+
+
 # ===========================================================================
 # Tests for CustomModelMetaclass related_name auto-namespacing
 # ===========================================================================
@@ -288,18 +297,30 @@ class TestCustomModelMetaclassRelatedName:
         String FK references (e.g. "OrderItem") are not resolved at metaclass time,
         so the check infers that unqualified strings target the same app — which is
         always plugin-private for CustomModels.
+
+        The target model is created first so Django can resolve the lazy
+        reference and avoid spurious system-check errors.
         """
-        # Circular reference: Order → "StringTargetModel" (forward ref within same app).
+        # Create the target so the unqualified string resolves.
+        type(
+            "_UnqualifiedTarget",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "_UnqualifiedTarget",
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
+            },
+        )
         # Should NOT raise even though related_name is not namespaced.
         type(
             "StringRefModel",
             (CustomModel,),
             {
-                "__module__": "some_plugin.models",
+                "__module__": "test_plugin.models",
                 "__qualname__": "StringRefModel",
-                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
                 "other": models.ForeignKey(
-                    "StringTargetModel",
+                    "_UnqualifiedTarget",
                     on_delete=models.DO_NOTHING,
                     related_name="back_refs",
                 ),
@@ -312,9 +333,9 @@ class TestCustomModelMetaclassRelatedName:
             "SelfRefModel",
             (CustomModel,),
             {
-                "__module__": "some_plugin.models",
+                "__module__": "test_plugin.models",
                 "__qualname__": "SelfRefModel",
-                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
                 "parent": models.ForeignKey(
                     "self",
                     on_delete=models.DO_NOTHING,
@@ -325,16 +346,29 @@ class TestCustomModelMetaclassRelatedName:
         )
 
     def test_qualified_string_ref_to_same_app_allows_bare_related_name(self) -> None:
-        """A bare related_name on a qualified string FK within the same app should be allowed."""
+        """A bare related_name on a qualified string FK within the same app should be allowed.
+
+        The target model is created first so Django can resolve the lazy
+        reference and avoid spurious system-check errors.
+        """
+        type(
+            "_QualifiedTarget",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "_QualifiedTarget",
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
+            },
+        )
         type(
             "QualifiedStringRefModel",
             (CustomModel,),
             {
-                "__module__": "some_plugin.models",
+                "__module__": "test_plugin.models",
                 "__qualname__": "QualifiedStringRefModel",
-                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
                 "other": models.ForeignKey(
-                    "some_plugin.SomeOtherModel",
+                    "test_plugin._QualifiedTarget",
                     on_delete=models.DO_NOTHING,
                     related_name="qualified_refs",
                 ),
@@ -342,15 +376,19 @@ class TestCustomModelMetaclassRelatedName:
         )
 
     def test_qualified_string_ref_to_different_app_requires_namespace(self) -> None:
-        """A bare related_name on a qualified string FK to a different app should raise."""
+        """A bare related_name on a qualified string FK to a different app should raise.
+
+        The metaclass raises ValueError before the model is registered, so no
+        lazy reference is created.
+        """
         with pytest.raises(ValueError, match="related_name='bad_rel'.*SDK model"):
             type(
                 "CrossAppStringRefModel",
                 (CustomModel,),
                 {
-                    "__module__": "some_plugin.models",
+                    "__module__": "test_plugin.models",
                     "__qualname__": "CrossAppStringRefModel",
-                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "Meta": type("Meta", (), {"app_label": "test_plugin"}),
                     "sdk_ref": models.ForeignKey(
                         "v1.Patient",
                         on_delete=models.DO_NOTHING,
@@ -374,6 +412,63 @@ class TestCustomModelMetaclassRelatedName:
                     ),
                 },
             )
+
+
+# ===========================================================================
+# Tests for CustomModelMetaclass FK auto-indexing
+# ===========================================================================
+
+
+class TestCustomModelMetaclassAutoIndex:
+    """Tests that CustomModelMetaclass auto-indexes FK/OneToOne columns.
+
+    Auto-indexes use the Django attname (e.g. 'room_id'), not the raw
+    db_column.  Django's Index internally resolves the attname to the
+    correct database column, so db_column has no effect on auto-indexing.
+    """
+
+    def test_auto_index_uses_attname(self) -> None:
+        """Auto-index should use '{field_name}_id' as the index field reference."""
+        klass: Any = type(
+            "DefaultColModel",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "DefaultColModel",
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
+                "room": models.ForeignKey(
+                    "self", on_delete=models.DO_NOTHING, null=True, related_name="+"
+                ),
+            },
+        )
+        index_fields = [idx.fields for idx in klass._meta.indexes]
+        assert ["room_id"] in index_fields
+
+    def test_auto_index_with_db_column_still_uses_attname(self) -> None:
+        """Auto-index should still use the attname even when db_column is set.
+
+        Django's Index resolves attnames to db columns internally, so the
+        index will target the correct database column regardless.
+        """
+        klass: Any = type(
+            "ExplicitColModel",
+            (CustomModel,),
+            {
+                "__module__": "test_plugin.models",
+                "__qualname__": "ExplicitColModel",
+                "Meta": type("Meta", (), {"app_label": "test_plugin"}),
+                "room": models.ForeignKey(
+                    "self",
+                    on_delete=models.DO_NOTHING,
+                    null=True,
+                    related_name="+",
+                    db_column="custom_room_col",
+                ),
+            },
+        )
+        index_fields = [idx.fields for idx in klass._meta.indexes]
+        # The index references the attname, not the db_column
+        assert ["room_id"] in index_fields
 
 
 # ===========================================================================

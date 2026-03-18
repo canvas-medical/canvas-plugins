@@ -107,7 +107,9 @@ def _restore_connection(original: BaseDatabaseWrapper) -> None:
     """Restore the original default connection after a writable swap."""
     import django.db
 
+    temp_connection = django.db.connections["default"]
     django.db.connections["default"] = original
+    temp_connection.close()
 
 
 @contextmanager

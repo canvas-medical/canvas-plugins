@@ -332,7 +332,7 @@ class CustomModel(Model, metaclass=CustomModelMetaclass):
                 if size > MAX_FIELD_SIZE:
                     raise FieldValueTooLarge(
                         f"Field '{field.name}' on {type(self).__name__} has size "
-                        f"{size:,} bytes, exceeding the {MAX_FIELD_SIZE:,} byte limit."
+                        f"{size:,} bytes, exceeding the {MAX_FIELD_SIZE:,} character limit."
                     )
 
 
@@ -622,6 +622,12 @@ class proxy_field:
             if name in base.__dict__:
                 self._parent_descriptor = base.__dict__[name]
                 break
+        else:
+            raise AttributeError(
+                f"proxy_field '{name}' on {owner.__name__} could not find a "
+                f"parent descriptor named '{name}' in any base class. "
+                f"Ensure the base model defines a field with this name."
+            )
 
     def __get__(self, obj: Any, objtype: type | None = None) -> Any:
         if obj is None:

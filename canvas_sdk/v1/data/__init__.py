@@ -8,7 +8,15 @@ from .appointment import (
 )
 from .assessment import Assessment
 from .banner_alert import BannerAlert
-from .base import CustomModel, FieldValueTooLarge, ModelExtension, proxy_field
+from .base import (
+    MAX_BULK_SIZE,
+    MAX_FIELD_SIZE,
+    CustomModel,
+    FieldValueTooLarge,
+    ModelExtension,
+    NamespaceWriteDenied,
+    proxy_field,
+)
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -279,6 +287,8 @@ __all__ = __exports__ = (
     "LabReportTemplateQuerySet",
     "LetterActionEvent",
     "LineItemTransfer",
+    "MAX_BULK_SIZE",
+    "MAX_FIELD_SIZE",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -289,6 +299,7 @@ __all__ = __exports__ = (
     "Message",
     "MessageAttachment",
     "MessageTransmission",
+    "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
