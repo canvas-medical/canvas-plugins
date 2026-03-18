@@ -282,6 +282,83 @@ class TestCustomModelMetaclassRelatedName:
         assert isinstance(field, models.OneToOneField)
         assert field.remote_field.related_name == "biography"
 
+    def test_string_ref_to_same_app_model_allows_bare_related_name(self) -> None:
+        """A bare related_name on a string-based FK to a model in the same app should be allowed.
+
+        String FK references (e.g. "OrderItem") are not resolved at metaclass time,
+        so the check infers that unqualified strings target the same app — which is
+        always plugin-private for CustomModels.
+        """
+        # Circular reference: Order → "StringTargetModel" (forward ref within same app).
+        # Should NOT raise even though related_name is not namespaced.
+        type(
+            "StringRefModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "StringRefModel",
+                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "other": models.ForeignKey(
+                    "StringTargetModel",
+                    on_delete=models.DO_NOTHING,
+                    related_name="back_refs",
+                ),
+            },
+        )
+
+    def test_string_self_ref_allows_bare_related_name(self) -> None:
+        """A bare related_name on a self-referential FK using "self" should be allowed."""
+        type(
+            "SelfRefModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "SelfRefModel",
+                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "parent": models.ForeignKey(
+                    "self",
+                    on_delete=models.DO_NOTHING,
+                    null=True,
+                    related_name="children",
+                ),
+            },
+        )
+
+    def test_qualified_string_ref_to_same_app_allows_bare_related_name(self) -> None:
+        """A bare related_name on a qualified string FK within the same app should be allowed."""
+        type(
+            "QualifiedStringRefModel",
+            (CustomModel,),
+            {
+                "__module__": "some_plugin.models",
+                "__qualname__": "QualifiedStringRefModel",
+                "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                "other": models.ForeignKey(
+                    "some_plugin.SomeOtherModel",
+                    on_delete=models.DO_NOTHING,
+                    related_name="qualified_refs",
+                ),
+            },
+        )
+
+    def test_qualified_string_ref_to_different_app_requires_namespace(self) -> None:
+        """A bare related_name on a qualified string FK to a different app should raise."""
+        with pytest.raises(ValueError, match="related_name='bad_rel'.*SDK model"):
+            type(
+                "CrossAppStringRefModel",
+                (CustomModel,),
+                {
+                    "__module__": "some_plugin.models",
+                    "__qualname__": "CrossAppStringRefModel",
+                    "Meta": type("Meta", (), {"app_label": "some_plugin"}),
+                    "sdk_ref": models.ForeignKey(
+                        "v1.Patient",
+                        on_delete=models.DO_NOTHING,
+                        related_name="bad_rel",
+                    ),
+                },
+            )
+
     def test_error_message_includes_fix_suggestion(self) -> None:
         """The error message should suggest the namespaced form."""
         with pytest.raises(ValueError, match=r"%\(app_label\)s_my_rel"):

@@ -159,10 +159,20 @@ class CustomModelMetaclass(ModelMetaclass):
                 # proxy class, not the shared concrete base.
                 rel_name = value.remote_field.related_name
                 target = value.remote_field.model
-                target_is_plugin_private = isinstance(target, type) and (
-                    issubclass(target, CustomModel)
-                    or getattr(getattr(target, "_meta", None), "proxy", False)
-                )
+                if isinstance(target, str):
+                    # At metaclass time, string FK references are not yet
+                    # resolved.  Unqualified names and "self" resolve within
+                    # the same app, which is always plugin-private.
+                    target_is_plugin_private = (  # type: ignore[unreachable]
+                        target == "self"
+                        or "." not in target
+                        or target.startswith(f"{meta.app_label}.")
+                    )
+                else:
+                    target_is_plugin_private = isinstance(target, type) and (
+                        issubclass(target, CustomModel)
+                        or getattr(getattr(target, "_meta", None), "proxy", False)
+                    )
                 app_label = meta.app_label
                 is_namespaced = rel_name and (
                     "%(app_label)s" in rel_name or rel_name.startswith(f"{app_label}_")
