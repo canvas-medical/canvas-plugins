@@ -17,6 +17,7 @@ class ActionButton(BaseHandler):
         EventType.Name(EventType.SHOW_NOTE_HEADER_BUTTON),
         EventType.Name(EventType.SHOW_NOTE_FOOTER_BUTTON),
         EventType.Name(EventType.SHOW_NOTE_BODY_BUTTON),
+        EventType.Name(EventType.SHOW_NOTE_HEADER_DROPDOWN_BUTTON),
         EventType.Name(EventType.SHOW_CHART_SUMMARY_SOCIAL_DETERMINANTS_SECTION_BUTTON),
         EventType.Name(EventType.SHOW_CHART_SUMMARY_GOALS_SECTION_BUTTON),
         EventType.Name(EventType.SHOW_CHART_SUMMARY_CONDITIONS_SECTION_BUTTON),
@@ -35,6 +36,7 @@ class ActionButton(BaseHandler):
         NOTE_HEADER = "note_header"
         NOTE_FOOTER = "note_footer"
         NOTE_BODY = "note_body"
+        NOTE_HEADER_DROPDOWN = "note_header_dropdown"
         CHART_SUMMARY_SOCIAL_DETERMINANTS_SECTION = "chart_summary_social_determinants_section"
         CHART_SUMMARY_GOALS_SECTION = "chart_summary_goals_section"
         CHART_SUMMARY_CONDITIONS_SECTION = "chart_summary_conditions_section"
