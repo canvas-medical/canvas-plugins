@@ -12,6 +12,12 @@ def get_default_host(host: str | None) -> str | None:
 
 def validate_manifest_file(manifest_json: dict) -> None:
     """Validates a Canvas Manifest json against the manifest schema."""
+    if "secrets" in manifest_json:
+        print(
+            "Warning: 'secrets' is deprecated. Use 'variables' instead, e.g.:\n"
+            '  "variables": [{"name": "MY_KEY", "sensitive": true}]'
+        )
+
     validator = validators.validator_for(manifest_schema)(manifest_schema)
     tag_warnings = []
     tag_value_warnings = []
