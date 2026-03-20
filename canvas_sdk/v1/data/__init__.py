@@ -152,7 +152,7 @@ from .questionnaire import (
     ResponseOptionSet,
 )
 from .reason_for_visit import ReasonForVisitSettingCoding
-from .referral import Referral, ReferralReport, ReferralReview
+from .referral import Referral, ReferralReport, ReferralReportCoding, ReferralReview
 from .service_provider import ServiceProvider
 from .snapshot import Snapshot, SnapshotImage
 from .specialty_report_template import (
@@ -322,6 +322,7 @@ __all__ = __exports__ = (
     "ReasonForVisitSettingCoding",
     "Referral",
     "ReferralReport",
+    "ReferralReportCoding",
     "ReferralReview",
     "ResponseOption",
     "ResponseOptionSet",
