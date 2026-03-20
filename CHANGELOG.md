@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.116.0 (2026-03-20)
+
+### Features
+
+- Patient group data model, events, and effects
+  ([#1544](https://github.com/canvas-medical/canvas-plugins/pull/1544),
+  [`740e081`](https://github.com/canvas-medical/canvas-plugins/commit/740e0814cdd0c0240a1ba6c89ab8b195a5245e33))
+
+
 ## v0.115.0 (2026-03-20)
 
 ### Features
