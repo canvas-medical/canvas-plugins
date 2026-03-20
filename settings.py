@@ -66,7 +66,8 @@ CANVAS_SDK_DB_USERNAME = os.getenv("CANVAS_SDK_DB_USERNAME", "app")
 CANVAS_SDK_DB_PASSWORD = os.getenv("CANVAS_SDK_DB_PASSWORD", "app")
 CANVAS_SDK_DB_HOST = os.getenv("CANVAS_SDK_DB_HOST", "home-app-db")
 CANVAS_SDK_DB_PORT = os.getenv("CANVAS_SDK_DB_PORT", "5432")
-CANVAS_SDK_DB_URL = os.getenv("DATABASE_URL")
+CANVAS_SDK_DB_URL = os.getenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL") or os.getenv("DATABASE_URL")
+USING_BOUNCER = bool(os.getenv("CANVAS_PLUGINS_BOUNCER_DATABASE_URL"))
 
 if IS_TESTING:
     CANVAS_SDK_DB_BACKEND = "sqlite3"
@@ -92,13 +93,20 @@ if CANVAS_SDK_DB_BACKEND == "postgres":
     db_config: dict[str, Any] = {
         "ENGINE": "django.db.backends.postgresql",
         "CONN_HEALTH_CHECKS": CONN_HEALTH_CHECKS_ENABLED,
-        "OPTIONS": {
+    }
+
+    # When going through pgdog (bouncer), let it handle connection pooling.
+    # Keep connections persistent so threads reuse their connection to pgdog.
+    # Otherwise, use Django's built-in psycopg connection pool.
+    if USING_BOUNCER:
+        db_config["CONN_MAX_AGE"] = None
+    else:
+        db_config["OPTIONS"] = {
             "pool": {
                 "min_size": 2,
                 "max_size": PLUGIN_RUNNER_DATABASE_POOL_MAX,
             }
-        },
-    }
+        }
 
     if CANVAS_SDK_DB_URL:
         parsed_url = parse.urlparse(CANVAS_SDK_DB_URL)
