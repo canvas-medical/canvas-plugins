@@ -82,6 +82,16 @@ class AuditedModel(TimestampedModel):
     deleted = models.BooleanField(default=False)
 
 
+class MetadataModel(TimestampedModel, IdentifiableModel):
+    """An abstract base Metadata model with a key and value."""
+
+    class Meta:
+        abstract = True
+
+    key = models.CharField(max_length=256)
+    value = models.TextField()
+
+
 class BaseModelManager(models.Manager):
     """A base manager for models."""
 
