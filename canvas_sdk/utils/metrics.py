@@ -186,11 +186,9 @@ def measure(
             pipeline.timing("plugins.rss_delta_in_bytes", delta=rss_diff, tags=tags)
 
             if rss_diff > int(os.getenv("PLUGIN_MEMORY_GROWTH_THRESHOLD_MB", 5)) * 1024 * 1024:
-                from canvas_sdk.utils.plugins import is_plugin_caller
-
-                is_plugin, caller = is_plugin_caller()
+                plugin_identifier = (extra_tags or {}).get("plugin") or name
                 log.warning(
-                    f"Plugin RSS: Excessive memory growth of {(rss_diff / 1024 / 1024):.2f}MB while running {caller}"
+                    f"Plugin RSS: Excessive memory growth of {(rss_diff / 1024 / 1024):.2f}MB while running {plugin_identifier}"
                 )
 
         pipeline.send()
