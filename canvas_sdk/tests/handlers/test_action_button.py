@@ -13,7 +13,6 @@ class ExampleActionButton(ActionButton):
     BUTTON_KEY = "test_button_key"
     BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_HEADER
     PRIORITY = 5
-    COLOR = "#FF0000"
 
     def handle(self) -> list[Effect]:
         """Handle button click by returning a mock effect."""
