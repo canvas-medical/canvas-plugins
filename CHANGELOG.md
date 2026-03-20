@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.115.0 (2026-03-20)
+
+### Features
+
+- Add note foreign key to review sdk models
+  ([#1571](https://github.com/canvas-medical/canvas-plugins/pull/1571),
+  [`8f83ce4`](https://github.com/canvas-medical/canvas-plugins/commit/8f83ce42b7e206eee27651680abc9d56e859b8c2))
+
+
 ## v0.114.0 (2026-03-20)
 
 ### Features
