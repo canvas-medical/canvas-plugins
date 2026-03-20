@@ -38,6 +38,7 @@ from plugin_runner.plugin_runner import (
     synchronize_plugins,
     unload_plugin,
 )
+from plugin_runner.sandbox import Sandbox
 from settings import PLUGIN_DIRECTORY
 
 
@@ -362,26 +363,24 @@ def test_shared_modules_evaluated_once_per_load(
     install_test_plugin: Path,
 ) -> None:
     """Test that shared modules are only evaluated once when multiple handlers import them."""
-    import importlib
-    from types import ModuleType
     from unittest.mock import patch as mock_patch
 
-    original_reload = importlib.reload
-    reload_calls: list[str] = []
+    original_execute = Sandbox.execute
+    execute_calls: list[str] = []
 
-    def tracking_reload(module: ModuleType) -> ModuleType:
-        reload_calls.append(getattr(module, "__name__", ""))
-        return original_reload(module)
+    def tracking_execute(self: Sandbox) -> dict:
+        execute_calls.append(self.namespace)
+        return original_execute(self)
 
-    with mock_patch("plugin_runner.sandbox.importlib.reload", side_effect=tracking_reload):
+    with mock_patch.object(Sandbox, "execute", tracking_execute):
         load_plugins()
 
-    # The shared constants module should be reloaded at most once (if it was in
-    # sys.modules), not once per handler
-    constants_reloads = [
-        c for c in reload_calls if c == "test_shared_modules_plugin.common_tools.constants"
+    # The shared constants module should be sandbox-exec'd exactly once,
+    # not once per handler that imports it.
+    constants_executions = [
+        c for c in execute_calls if c == "test_shared_modules_plugin.common_tools.constants"
     ]
-    assert len(constants_reloads) <= 1
+    assert len(constants_executions) == 1
 
 
 @pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
