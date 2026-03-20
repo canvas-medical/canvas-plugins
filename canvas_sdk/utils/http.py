@@ -73,7 +73,7 @@ def batch_post(
     headers: Mapping[str, str | bytes | None] | None = None,
 ) -> BatchableRequest:
     """Return a batchable POST request."""
-    return _BatchableRequest("POST", url, json=json, data=data, headeres=headers)
+    return _BatchableRequest("POST", url, json=json, data=data, headers=headers)
 
 
 def batch_put(

@@ -922,6 +922,7 @@
     "ClaimQueue",
     "ClaimSubmission",
     "Command",
+    "CommandMetadata",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
@@ -1140,7 +1141,8 @@
     "LineItemCodes"
   ],
   "canvas_sdk.v1.data.command": [
-    "Command"
+    "Command",
+    "CommandMetadata"
   ],
   "canvas_sdk.v1.data.common": [
     "AddressState",

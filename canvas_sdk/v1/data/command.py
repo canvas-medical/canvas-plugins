@@ -47,4 +47,15 @@ class Command(TimestampedModel, IdentifiableModel):
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
 
 
-__exports__ = ("Command",)
+class CommandMetadata(IdentifiableModel):
+    """A class representing Command Metadata."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_commandmetadata_001"
+
+    command = models.ForeignKey("v1.Command", on_delete=models.CASCADE, related_name="metadata")
+    key = models.CharField(max_length=256)
+    value = models.TextField()
+
+
+__exports__ = ("Command", "CommandMetadata")

@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v0.114.0 (2026-03-20)
+
+### Features
+
+- Add new locations and colors to action buttons
+  ([#1554](https://github.com/canvas-medical/canvas-plugins/pull/1554),
+  [`7613767`](https://github.com/canvas-medical/canvas-plugins/commit/7613767468d994983817ec3d2192f84710936801))
+
+
+## v0.113.0 (2026-03-19)
+
+### Bug Fixes
+
+- Prepend CUSTOMER_IDENTIFIER to presigned URL S3 keys
+  ([#1569](https://github.com/canvas-medical/canvas-plugins/pull/1569),
+  [`2d00763`](https://github.com/canvas-medical/canvas-plugins/commit/2d007635efe1d860d2cf6ae43ecf203162f1378e))
+
+### Chores
+
+- **ci**: Use python 3.13 by default
+  ([#1562](https://github.com/canvas-medical/canvas-plugins/pull/1562),
+  [`a1a063b`](https://github.com/canvas-medical/canvas-plugins/commit/a1a063b3436d3974cd8d77ff9cb4db06690b3dbe))
+
+### Features
+
+- Command metadata ([#1574](https://github.com/canvas-medical/canvas-plugins/pull/1574),
+  [`7d7d539`](https://github.com/canvas-medical/canvas-plugins/commit/7d7d539d6fcd221ccf27f1e5c694e55f7cd3abec))
+
+- Improve pharmacy search ([#1542](https://github.com/canvas-medical/canvas-plugins/pull/1542),
+  [`a28526d`](https://github.com/canvas-medical/canvas-plugins/commit/a28526d50ab11c03e33143165063afbbfdefb75e))
+
+
 ## v0.112.0 (2026-03-11)
 
 ### Bug Fixes
