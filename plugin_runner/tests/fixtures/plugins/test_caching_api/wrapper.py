@@ -8,14 +8,14 @@ test_cache = get_cache()
 def wrapped_get_cache(*args: Any, **kwargs: Any) -> Any:
     """
     This contrived method just exists to ensure that we can import `get_cache`
-    from files that are imported from the main protocol.
+    from files that are imported from the main handler.
     """
     return get_cache(*args, **kwargs)
 
 
 class WrappedCache:
     """
-    Contrived class ensuring we can call get_cache from non-protocol code.
+    Contrived class ensuring we can call get_cache from non-handler code.
     """
 
     @classmethod

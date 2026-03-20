@@ -174,14 +174,14 @@ appointment_coverage_label/
 ├── CANVAS_MANIFEST.json          # Plugin configuration
 ├── README.md                      # This file
 ├── __init__.py                    # Package initializer
-└── protocols/
-    ├── __init__.py                # Protocol package initializer
-    └── appointment_labels.py      # Main protocol implementation
+└── handlers/
+    ├── __init__.py                # Handler package initializer
+    └── appointment_labels.py      # Main handler implementation
 ```
 
 ### Key Components
 
-- **AppointmentLabelsProtocol** - Main protocol class handling both events
+- **AppointmentLabelsHandler** - Main handler class handling both events
 - **handle_coverage_created()** - Removes labels when coverage is added
 - **handle_appointment_created()** - Adds labels when appointments are created for patients without coverage
 - **compute()** - Routes events to appropriate handlers

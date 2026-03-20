@@ -4,7 +4,7 @@
     "name": "test_shared_modules_plugin",
     "description": "Plugin with multiple handlers sharing a common module",
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "test_shared_modules_plugin.handlers.handler_a:HandlerA",
                 "description": "First handler using shared constants",
