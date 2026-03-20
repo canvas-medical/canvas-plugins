@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.114.0 (2026-03-20)
+
+### Features
+
+- Add new locations and colors to action buttons
+  ([#1554](https://github.com/canvas-medical/canvas-plugins/pull/1554),
+  [`7613767`](https://github.com/canvas-medical/canvas-plugins/commit/7613767468d994983817ec3d2192f84710936801))
+
+
 ## v0.113.0 (2026-03-19)
 
 ### Bug Fixes
