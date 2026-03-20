@@ -55,6 +55,7 @@ class LabReviewFactory(factory.django.DjangoModelFactory[LabReview]):
     message_to_patient = factory.Faker("text", max_nb_chars=2048)
     status = ReviewStatus.STATUS_REVIEWING
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     patient_communication_method = ReviewPatientCommunicationMethod.DELEGATED_CALL_CAN_LEAVE_MESSAGE
 
 

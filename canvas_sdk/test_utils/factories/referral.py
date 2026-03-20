@@ -49,6 +49,7 @@ class ReferralReviewFactory(factory.django.DjangoModelFactory[ReferralReview]):
     internal_comment = factory.Faker("paragraph")
     message_to_patient = factory.Faker("sentence", nb_words=20)
     status = factory.Faker("random_element", elements=["pending", "reviewed", "completed"])
+    note = factory.SubFactory("canvas_sdk.test_utils.factories.NoteFactory")
     patient = factory.SubFactory("canvas_sdk.test_utils.factories.PatientFactory")
     patient_communication_method = factory.Faker(
         "random_element", elements=["email", "phone", "portal", "mail"]
