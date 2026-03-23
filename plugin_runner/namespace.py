@@ -24,7 +24,7 @@ NAMESPACE_WAIT_TIMEOUT = int(os.getenv("NAMESPACE_WAIT_TIMEOUT", "60"))
 
 # Namespace format: org__name — lowercase alphanumeric/underscore on each side.
 # Shared with the manifest JSON Schema in canvas_cli/utils/validators/manifest_schema.py.
-NAMESPACE_PATTERN = re.compile(r"^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
+NAMESPACE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$")
 
 
 def is_schema_manager() -> bool:
@@ -264,7 +264,7 @@ def is_valid_namespace_name(namespace: str) -> bool:
     This implicitly excludes reserved PostgreSQL schemas (pg_catalog,
     information_schema, etc.) since none match the org__name pattern.
     """
-    return NAMESPACE_PATTERN.match(namespace) is not None
+    return NAMESPACE_PATTERN.match(namespace) is not None and len(namespace) <= PG_NAMEDATALEN
 
 
 def create_namespace_schema(namespace: str) -> dict[str, str] | None:

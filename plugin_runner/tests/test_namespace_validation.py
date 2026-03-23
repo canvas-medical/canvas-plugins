@@ -25,10 +25,14 @@ class TestIsValidNamespaceName:
         """Reserved schema 'information_schema' should be rejected."""
         assert is_valid_namespace_name("information_schema") is False
 
-    def test_reserved_prefix_pg_rejected(self) -> None:
-        """Namespace starting with 'pg_' prefix should be rejected."""
+    def test_reserved_prefix_pg_without_double_underscore_rejected(self) -> None:
+        """Namespace starting with 'pg_' but without '__' separator should be rejected."""
         assert is_valid_namespace_name("pg_custom") is False
         assert is_valid_namespace_name("pg_my_namespace") is False
+
+    def test_pg_prefix_with_double_underscore_accepted(self) -> None:
+        """A 'pg' org with '__' separator is valid — no collision with reserved pg_* schemas."""
+        assert is_valid_namespace_name("pg__custom_schema") is True
 
     def test_valid_namespace_with_double_underscore_accepted(self) -> None:
         """Valid namespace with org__name format should be accepted."""
@@ -78,4 +82,14 @@ class TestIsValidNamespaceName:
 
     def test_pattern_matches_manifest_schema(self) -> None:
         """NAMESPACE_PATTERN should match the manifest JSON Schema pattern."""
-        assert NAMESPACE_PATTERN.pattern == r"^(?!pg_)[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$"
+        assert NAMESPACE_PATTERN.pattern == r"^[a-z][a-z0-9_]*__[a-z][a-z0-9_]*$"
+
+    def test_namespace_exceeding_pg_namedatalen_rejected(self) -> None:
+        """Namespace longer than 63 characters should be rejected."""
+        long_name = "a" * 30 + "__" + "b" * 32  # 64 chars
+        assert is_valid_namespace_name(long_name) is False
+
+    def test_namespace_at_pg_namedatalen_limit_accepted(self) -> None:
+        """Namespace of exactly 63 characters should be accepted."""
+        name = "a" * 30 + "__" + "b" * 31  # 63 chars
+        assert is_valid_namespace_name(name) is True

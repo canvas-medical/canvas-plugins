@@ -43,12 +43,12 @@ class TestCreateNamespaceSchemaValidation:
         mock_open_conn.assert_not_called()
 
     @patch("plugin_runner.namespace.open_database_connection")
-    def test_rejects_pg_prefixed_name(self, mock_open_conn: MagicMock) -> None:
-        """Should raise ValueError for pg_ prefixed names."""
+    def test_rejects_name_without_double_underscore(self, mock_open_conn: MagicMock) -> None:
+        """Should raise ValueError for names without '__' separator."""
         from plugin_runner.namespace import create_namespace_schema
 
         with pytest.raises(ValueError):
-            create_namespace_schema("pg__custom_schema")
+            create_namespace_schema("pg_custom_schema")
 
         mock_open_conn.assert_not_called()
 
