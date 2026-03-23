@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.117.0 (2026-03-23)
+
+### Features
+
+- Embedded applications ([#1557](https://github.com/canvas-medical/canvas-plugins/pull/1557),
+  [`011b923`](https://github.com/canvas-medical/canvas-plugins/commit/011b9236f6c98e0694ec7f43b21d6b1cc52ae925))
+
+
 ## v0.116.0 (2026-03-20)
 
 ### Features
