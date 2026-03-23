@@ -102,11 +102,12 @@ def test_presigned_url_generates_valid_url(settings: SettingsWrapper) -> None:
     settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
     settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
     settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
 
     url = presigned_url("path/to/file.pdf")
 
     assert url.startswith("https://test-bucket.s3.us-west-2.amazonaws.com/")
-    assert "/path/to/file.pdf?" in url
+    assert "/test-customer/path/to/file.pdf?" in url
     assert "X-Amz-Algorithm=AWS4-HMAC-SHA256" in url
     assert "X-Amz-Credential=" in url
     assert "X-Amz-Date=" in url
@@ -121,6 +122,7 @@ def test_presigned_url_with_custom_expiry(settings: SettingsWrapper) -> None:
     settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
     settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
     settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
 
     url = presigned_url("path/to/file.pdf", expires_in=7200)
 
@@ -133,11 +135,12 @@ def test_presigned_url_removes_bucket_prefix(settings: SettingsWrapper) -> None:
     settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
     settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
     settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
 
     url = presigned_url("test-bucket/path/to/file.pdf")
 
-    # The bucket prefix should be removed, so path should be /path/to/file.pdf
-    assert "/path/to/file.pdf?" in url
+    # The bucket prefix should be removed, so path should be /test-customer/path/to/file.pdf
+    assert "/test-customer/path/to/file.pdf?" in url
     assert "/test-bucket/path/to/file.pdf?" not in url
 
 
@@ -147,6 +150,7 @@ def test_presigned_url_raises_error_without_credentials(settings: SettingsWrappe
     settings.AWS_SECRET_ACCESS_KEY = ""
     settings.MEDIA_S3_BUCKET_NAME = "test-bucket"
     settings.AWS_REGION = "us-west-2"
+    settings.CUSTOMER_IDENTIFIER = "test-customer"
 
     with pytest.raises(ValueError, match="AWS credentials not configured"):
         presigned_url("path/to/file.pdf")

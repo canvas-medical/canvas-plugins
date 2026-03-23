@@ -313,6 +313,7 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPSERT_APPOINTMENT_METADATA: _ClassVar[EffectType]
     APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: _ClassVar[EffectType]
     UPSERT_NOTE_METADATA: _ClassVar[EffectType]
+    UPSERT_COMMAND_METADATA: _ClassVar[EffectType]
     SHOW_PANEL_SECTIONS: _ClassVar[EffectType]
     PATIENT_TIMELINE__CONFIGURATION: _ClassVar[EffectType]
     REDIRECT_CONTEXT: _ClassVar[EffectType]
@@ -336,6 +337,8 @@ class EffectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UPDATE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     DELETE_PATIENT_FACILITY_ADDRESS: _ClassVar[EffectType]
     CREATE_CCDA: _ClassVar[EffectType]
+    PATIENT_GROUP__ADD_MEMBER: _ClassVar[EffectType]
+    PATIENT_GROUP__DEACTIVATE_MEMBER: _ClassVar[EffectType]
     HOMEPAGE_CONFIGURATION: _ClassVar[EffectType]
 UNKNOWN_EFFECT: EffectType
 LOG: EffectType
@@ -643,6 +646,7 @@ APPOINTMENT__FORM__CREATE_ADDITIONAL_FIELDS: EffectType
 UPSERT_APPOINTMENT_METADATA: EffectType
 APPOINTMENT__SLOTS__POST_SEARCH_RESULTS: EffectType
 UPSERT_NOTE_METADATA: EffectType
+UPSERT_COMMAND_METADATA: EffectType
 SHOW_PANEL_SECTIONS: EffectType
 PATIENT_TIMELINE__CONFIGURATION: EffectType
 REDIRECT_CONTEXT: EffectType
@@ -666,6 +670,8 @@ CREATE_PATIENT_FACILITY_ADDRESS: EffectType
 UPDATE_PATIENT_FACILITY_ADDRESS: EffectType
 DELETE_PATIENT_FACILITY_ADDRESS: EffectType
 CREATE_CCDA: EffectType
+PATIENT_GROUP__ADD_MEMBER: EffectType
+PATIENT_GROUP__DEACTIVATE_MEMBER: EffectType
 HOMEPAGE_CONFIGURATION: EffectType
 
 class Effect(_message.Message):

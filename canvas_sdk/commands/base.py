@@ -9,6 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.command_metadata.base import _CommandMetadata
 
 if TYPE_CHECKING:
     from canvas_sdk.effects.protocol_card import Recommendation
@@ -173,6 +174,26 @@ class _BaseCommand(TrackableFieldsModel):
             type=f"ENTER_IN_ERROR_{self.constantized_key()}_COMMAND",
             payload=json.dumps({"command": self.command_uuid}),
         )
+
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """Upsert a metadata record on the command.
+
+        Args:
+            key: The key of the metadata.
+            value: The value of the metadata.
+
+        Returns:
+            An effect that upserts the metadata record on the command.
+
+        Raises:
+            ValueError: If command_uuid is not set.
+        """
+        if not self.command_uuid:
+            raise ValueError("Field 'command_uuid' is required to upsert metadata.")
+
+        return _CommandMetadata(
+            command_id=self.command_uuid, schema_key=self.Meta.key, key=key
+        ).upsert(value=value)
 
     def recommendation_context(self) -> dict:
         return {

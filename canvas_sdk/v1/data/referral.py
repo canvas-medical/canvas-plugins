@@ -85,6 +85,9 @@ class ReferralReview(AuditedModel, IdentifiableModel):
 
     objects = cast(ReferralReviewQuerySet, ReferralReviewManager())
 
+    note = models.ForeignKey(
+        "v1.Note", on_delete=models.DO_NOTHING, related_name="referral_reviews"
+    )
     internal_comment = models.TextField()
     message_to_patient = models.CharField(max_length=2048)
     status = models.CharField(max_length=50)
