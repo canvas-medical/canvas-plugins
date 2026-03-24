@@ -636,6 +636,9 @@
     "InputType",
     "PatientMetadataCreateFormEffect"
   ],
+  "canvas_sdk.effects.patient_note_header_dropdown_configuration": [
+    "PatientNoteHeaderDropdownConfiguration"
+  ],
   "canvas_sdk.effects.patient_portal.application_configuration": [
     "PatientPortalApplicationConfiguration"
   ],
