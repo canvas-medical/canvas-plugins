@@ -65,7 +65,7 @@ def test_show_button_regex_extracts_location() -> None:
     cases = {
         "SHOW_NOTE_FOOTER_BUTTON": "NOTE_FOOTER",
         "SHOW_NOTE_BODY_BUTTON": "NOTE_BODY",
-        "SHOW_CHART_PATIENT_BUTTON": "PATIENT_HEADER",
+        "SHOW_CHART_PATIENT_HEADER_BUTTON": "CHART_PATIENT_HEADER",
         "SHOW_CHART_SUMMARY_GOALS_SECTION_BUTTON": "CHART_SUMMARY_GOALS_SECTION",
     }
     for event_name, expected_location in cases.items():
