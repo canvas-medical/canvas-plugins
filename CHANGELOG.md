@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.118.0 (2026-03-24)
+
+### Features
+
+- Custom attributes and custom models
+  ([#1336](https://github.com/canvas-medical/canvas-plugins/pull/1336),
+  [`284cb01`](https://github.com/canvas-medical/canvas-plugins/commit/284cb015ffef4626e152a24a2d751424f18fd5b9))
+
+Signed-off-by: David Jantzen <mr.djantzen@gmail.com>
+
+Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+
+
 ## v0.117.0 (2026-03-23)
 
 ### Features
