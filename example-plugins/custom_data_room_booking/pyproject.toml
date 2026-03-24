@@ -8,7 +8,7 @@ dependencies = [
 ]
 description = "Some description of your project."
 license = "MIT"
-name = "custom-data-room-booking"
+name = "custom_data_room_booking"
 readme = "custom_data_room_booking/README.md"
 requires-python = ">=3.11"
 version = "0.1.0"
