@@ -37,7 +37,7 @@ from .claim import (
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
 from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
-from .command import Command
+from .command import Command, CommandMetadata
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
@@ -137,6 +137,7 @@ from .patient_consent import (
     PatientConsentCoding,
     PatientConsentRejectionCoding,
 )
+from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .posting import (
@@ -222,6 +223,7 @@ __all__ = __exports__ = (
     "ClaimQueue",
     "ClaimSubmission",
     "Command",
+    "CommandMetadata",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
@@ -327,6 +329,8 @@ __all__ = __exports__ = (
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientGroup",
+    "PatientGroupMember",
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
