@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.121.1 (2026-03-25)
+
+### Bug Fixes
+
+- Sandbox compatibility for deferred annotations and timeout overrides
+  ([#1590](https://github.com/canvas-medical/canvas-plugins/pull/1590),
+  [`434d74d`](https://github.com/canvas-medical/canvas-plugins/commit/434d74d7a0c39bd2a8fd05db04985016a71c1f10))
+
+
 ## v0.121.0 (2026-03-25)
 
 ### Bug Fixes
