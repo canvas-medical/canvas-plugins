@@ -6,27 +6,36 @@ import tempfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TypedDict, cast
-from urllib import parse
+from typing import TypedDict
 
-import psycopg
 import requests
 import sentry_sdk
-from psycopg import Connection
 from psycopg.rows import dict_row
 
 from logger import log
 from plugin_runner.aws_headers import aws_sig_v4_headers
+from plugin_runner.ddl import generate_plugin_migrations  # noqa: F401 — re-export
 from plugin_runner.exceptions import (
     InvalidPluginFormat,
     PluginInstallationError,
     PluginUninstallationError,
+)
+from plugin_runner.namespace import (
+    compute_models_hash,  # noqa: F401 — re-export
+    is_schema_manager,  # noqa: F401 — re-export
+    mark_namespace_ready,  # noqa: F401 — re-export
+    namespace_exists,
+    open_database_connection,  # noqa: F401 — re-export
+    setup_read_write_namespace,  # noqa: F401 — re-export
+    verify_read_namespace_access,  # noqa: F401 — re-export
+    wait_for_namespace,  # noqa: F401 — re-export
 )
 from settings import (
     AWS_ACCESS_KEY_ID,
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     CUSTOMER_IDENTIFIER,
+    MANIFEST_FILE_NAME,
     MEDIA_S3_BUCKET_NAME,
     PLUGIN_DIRECTORY,
     SECRETS_FILE_NAME,
@@ -36,32 +45,51 @@ from settings import (
 UPLOAD_TO_PREFIX = "plugins"
 
 
-def open_database_connection() -> Connection:
-    """Opens a psycopg connection to the home-app database.
+def clear_registered_models(plugin_name: str) -> None:
+    """Remove previously registered models for a plugin from Django's app registry.
 
-    When running within Aptible, use the database URL, otherwise pull from
-    the environment variables.
+    This prevents 'Conflicting models' errors when a model is moved between
+    files within a plugin's models/ directory during reinstallation.
     """
-    if os.getenv("DATABASE_URL"):
-        parsed_url = parse.urlparse(os.getenv("DATABASE_URL"))
+    from django.apps import apps
 
-        return psycopg.connect(
-            dbname=cast(str, parsed_url.path[1:]),
-            user=cast(str, parsed_url.username),
-            password=cast(str, parsed_url.password),
-            host=cast(str, parsed_url.hostname),
-            port=parsed_url.port,
-        )
+    apps.all_models.pop(plugin_name, None)
+    apps.app_configs.pop(plugin_name, None)
+    apps.clear_cache()
 
-    APP_NAME = os.getenv("APP_NAME")
 
-    return psycopg.connect(
-        dbname=APP_NAME,
-        user=os.getenv("DB_USERNAME", "app"),
-        password=os.getenv("DB_PASSWORD", "app"),
-        host=os.getenv("DB_HOST", f"{APP_NAME}-db"),
-        port=os.getenv("DB_PORT", "5432"),
-    )
+def register_plugin_app_config(plugin_name: str) -> None:
+    """Register a minimal AppConfig for a plugin so Django's relation graph includes its models.
+
+    Django's ``_populate_directed_relation_graph`` (which powers ``select_related``
+    for reverse relations) iterates ``apps.get_models()``, and that only yields
+    models from registered ``AppConfig`` instances.  Plugin models are added to
+    ``apps.all_models`` during Sandbox execution, but without an ``AppConfig``
+    they are invisible to the relation graph.  This function bridges that gap.
+    """
+    import types
+
+    from django.apps import AppConfig, apps
+
+    if plugin_name not in apps.all_models or plugin_name in apps.app_configs:
+        return
+
+    # Build a minimal AppConfig whose .models dict references the already-
+    # populated all_models bucket for this plugin.  We subclass AppConfig with
+    # a ``path`` class attribute so Django skips _path_from_module (our stub
+    # module has no filesystem location).
+    stub_module = types.ModuleType(plugin_name)
+
+    config = type(
+        f"{plugin_name}_AppConfig",
+        (AppConfig,),
+        {"path": "/dev/null"},
+    )(plugin_name, stub_module)
+    config.apps = apps
+    config.models = apps.all_models[plugin_name]
+
+    apps.app_configs[plugin_name] = config
+    apps.clear_cache()
 
 
 class PluginAttributes(TypedDict):
@@ -96,6 +124,8 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
         cursor.execute(base_query, params)
         rows = cursor.fetchall()
         plugins = _extract_rows_to_dict(rows)
+
+    conn.close()
 
     return plugins
 
@@ -169,11 +199,79 @@ def install_plugin(plugin_name: str, attributes: PluginAttributes) -> None:
             extract_plugin(plugin_file_path, plugin_installation_path)
 
         install_plugin_secrets(plugin_name=plugin_name, secrets=attributes["secrets"])
+
+        # Clear any previously registered Django models for this plugin so that
+        # models moved between files (e.g. from biography.py to __init__.py)
+        # don't conflict with stale registrations from the prior version.
+        # This must run on ALL containers, not just the schema manager.
+        clear_registered_models(plugin_name)
+
+        # Read the manifest to check for custom_data declaration
+        manifest_path = plugin_installation_path / MANIFEST_FILE_NAME
+        custom_data = None
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+                custom_data = manifest.get("custom_data")
+
+        # Initialize namespace schema and generate model migrations if custom_data is declared.
+        # Only the schema manager (primary cmd container) performs DDL.
+        # Non-schema-manager containers wait until the namespace is fully ready
+        # (schema created + all DDL migrations complete).
+        if custom_data and is_schema_manager():
+            schema_name = custom_data["namespace"]
+            declared_access = custom_data.get("access", "read")
+            secrets = attributes["secrets"]
+
+            log.info(f"Plugin '{plugin_name}' uses namespace '{schema_name}'")
+
+            if declared_access == "read_write":
+                can_create_tables = setup_read_write_namespace(plugin_name, schema_name, secrets)
+            else:
+                verify_read_namespace_access(plugin_name, schema_name, secrets)
+                can_create_tables = False
+
+            if can_create_tables:
+                generate_plugin_migrations(plugin_name, plugin_installation_path, schema_name)
+                models_hash = compute_models_hash(plugin_installation_path)
+                mark_namespace_ready(schema_name, plugin_name, models_hash)
+            else:
+                log.info(
+                    f"Plugin '{plugin_name}' has read-only access to namespace "
+                    f"'{schema_name}' - skipping custom model table creation"
+                )
+        elif custom_data:
+            schema_name = custom_data["namespace"]
+            declared_access = custom_data.get("access", "read")
+
+            if declared_access == "read_write":
+                # read_write plugins need to wait for the schema manager to
+                # finish DDL before they can safely use the tables.
+                models_hash = compute_models_hash(plugin_installation_path)
+                log.info(
+                    f"Plugin '{plugin_name}' is not the schema manager — waiting for "
+                    f"namespace '{schema_name}' to be initialized"
+                )
+                wait_for_namespace(schema_name, plugin_name, models_hash)
+            else:
+                # read-only plugins have no DDL to wait for — they just need
+                # the namespace to already exist.
+                if not namespace_exists(schema_name):
+                    raise PluginInstallationError(
+                        f"Plugin '{plugin_name}' declares read access to namespace "
+                        f"'{schema_name}', but the namespace does not exist. "
+                        f"A plugin with 'read_write' access must create the namespace first."
+                    )
+                log.info(
+                    f"Plugin '{plugin_name}' has read access to namespace "
+                    f"'{schema_name}' — namespace exists, proceeding"
+                )
+        else:
+            log.info(f"Plugin '{plugin_name}' has no custom_data - skipping schema setup")
+
     except Exception as e:
         log.exception(f'Failed to install plugin "{plugin_name}", version {attributes["version"]}')
-
         sentry_sdk.capture_exception(e)
-
         raise PluginInstallationError() from e
 
 

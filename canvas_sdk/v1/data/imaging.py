@@ -75,8 +75,7 @@ class ImagingReview(AuditedModel, IdentifiableModel):
     patient_communication_method = models.CharField(
         choices=ReviewPatientCommunicationMethod.choices, max_length=30
     )
-    # TODO  - uncomment when Note model is complete
-    # note = models.ForeignKey('v1.Note', on_delete=models.DO_NOTHING, related_name="imaging_reviews", null=True)
+    note = models.ForeignKey("v1.Note", on_delete=models.DO_NOTHING, related_name="imaging_reviews")
     internal_comment = models.CharField(max_length=2048)
     message_to_patient = models.CharField(max_length=2048)
     is_released_to_patient = models.BooleanField()
