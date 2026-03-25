@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.119.1 (2026-03-25)
+
+### Bug Fixes
+
+- Add requests.session to the allowed imports
+  ([#1585](https://github.com/canvas-medical/canvas-plugins/pull/1585),
+  [`92ac6f4`](https://github.com/canvas-medical/canvas-plugins/commit/92ac6f41c4b3401be9c43c9a02b04dc324649b7f))
+
+
 ## v0.119.0 (2026-03-25)
 
 ### Features
