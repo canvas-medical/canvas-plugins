@@ -1,5 +1,6 @@
 import concurrent
 import functools
+import logging
 import os
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
@@ -11,6 +12,8 @@ import requests
 from canvas_sdk.utils.metrics import measured
 
 F = TypeVar("F", bound=Callable)
+
+logger = logging.getLogger("plugin_runner_logger")
 
 
 class _BatchableRequest:
@@ -118,6 +121,16 @@ class Http:
     def __init__(self, base_url: str = "") -> None:
         self._base_url = base_url
         self._session = requests.Session()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "_MAX_REQUEST_TIMEOUT_SECONDS":
+            logger.warning(
+                "Overriding %s._MAX_REQUEST_TIMEOUT_SECONDS is deprecated and will be "
+                "forbidden in a future release. Use the timeout parameter on individual "
+                "requests instead.",
+                type(self).__name__,
+            )
+        super().__setattr__(name, value)
 
     @measured(track_plugins_usage=True)
     def get(

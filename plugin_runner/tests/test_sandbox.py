@@ -1,4 +1,5 @@
 import importlib
+import logging
 import re
 import sys
 from pathlib import Path
@@ -980,6 +981,37 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 
     with pytest.raises(AttributeError):
         sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "ontologies_http": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http._MAX_REQUEST_TIMEOUT_SECONDS = 120
+            """,
+            "science_http": """
+                from canvas_sdk.utils.http import science_http
+
+                science_http._MAX_REQUEST_TIMEOUT_SECONDS = 120
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_max_timeout_override_with_deprecation_warning(
+    code: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Overriding _MAX_REQUEST_TIMEOUT_SECONDS on http clients should be allowed but log a warning."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with caplog.at_level(logging.WARNING, logger="plugin_runner_logger"):
+        sandbox.execute()
+
+    assert "deprecated" in caplog.text.lower()
+    assert "_MAX_REQUEST_TIMEOUT_SECONDS" in caplog.text
 
 
 @pytest.mark.parametrize(
