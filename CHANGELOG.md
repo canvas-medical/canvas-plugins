@@ -1,6 +1,45 @@
 # CHANGELOG
 
 
+## v0.119.1 (2026-03-25)
+
+### Bug Fixes
+
+- Add requests.session to the allowed imports
+  ([#1585](https://github.com/canvas-medical/canvas-plugins/pull/1585),
+  [`92ac6f4`](https://github.com/canvas-medical/canvas-plugins/commit/92ac6f41c4b3401be9c43c9a02b04dc324649b7f))
+
+
+## v0.119.0 (2026-03-25)
+
+### Features
+
+- Add re.findall to the allowed methods
+  ([#1584](https://github.com/canvas-medical/canvas-plugins/pull/1584),
+  [`fb91461`](https://github.com/canvas-medical/canvas-plugins/commit/fb914613b80249654fdfc62e46046f26a7a46a97))
+
+
+## v0.118.0 (2026-03-24)
+
+### Features
+
+- Custom attributes and custom models
+  ([#1336](https://github.com/canvas-medical/canvas-plugins/pull/1336),
+  [`284cb01`](https://github.com/canvas-medical/canvas-plugins/commit/284cb015ffef4626e152a24a2d751424f18fd5b9))
+
+Signed-off-by: David Jantzen <mr.djantzen@gmail.com>
+
+Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+
+
+## v0.117.0 (2026-03-23)
+
+### Features
+
+- Embedded applications ([#1557](https://github.com/canvas-medical/canvas-plugins/pull/1557),
+  [`011b923`](https://github.com/canvas-medical/canvas-plugins/commit/011b9236f6c98e0694ec7f43b21d6b1cc52ae925))
+
+
 ## v0.116.0 (2026-03-20)
 
 ### Features
