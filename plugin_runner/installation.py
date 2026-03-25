@@ -105,9 +105,7 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
 
     If `plugin_names` is provided, only returns those plugins (if enabled).
     """
-    conn = open_database_connection()
-
-    with conn.cursor(row_factory=dict_row) as cursor:
+    with open_database_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
         base_query = (
             "SELECT name, package, version, key, value "
             "FROM plugin_io_plugin p "
@@ -115,7 +113,7 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
             "WHERE is_enabled"
         )
 
-        params = []
+        params: list[str] = []
         if plugin_names:
             placeholders = ",".join(["%s"] * len(plugin_names))
             base_query += f" AND name IN ({placeholders})"
@@ -123,11 +121,8 @@ def enabled_plugins(plugin_names: list[str] | None = None) -> dict[str, PluginAt
 
         cursor.execute(base_query, params)
         rows = cursor.fetchall()
-        plugins = _extract_rows_to_dict(rows)
 
-    conn.close()
-
-    return plugins
+    return _extract_rows_to_dict(rows)
 
 
 def _extract_rows_to_dict(rows: list) -> dict[str, PluginAttributes]:
@@ -316,12 +311,11 @@ def install_plugin_secrets(plugin_name: str, secrets: dict[str, str]) -> None:
 
 def disable_plugin(plugin_name: str) -> None:
     """Disable the given plugin."""
-    conn = open_database_connection()
-    conn.cursor().execute(
-        "UPDATE plugin_io_plugin SET is_enabled = false WHERE name = %s", (plugin_name,)
-    )
-    conn.commit()
-    conn.close()
+    with open_database_connection() as conn, conn.cursor() as cursor:
+        cursor.execute(
+            "UPDATE plugin_io_plugin SET is_enabled = false WHERE name = %s", (plugin_name,)
+        )
+        conn.commit()
 
     uninstall_plugin(plugin_name)
 
