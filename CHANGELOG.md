@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.119.0 (2026-03-25)
+
+### Features
+
+- Add re.findall to the allowed methods
+  ([#1584](https://github.com/canvas-medical/canvas-plugins/pull/1584),
+  [`fb91461`](https://github.com/canvas-medical/canvas-plugins/commit/fb914613b80249654fdfc62e46046f26a7a46a97))
+
+
 ## v0.118.0 (2026-03-24)
 
 ### Features
