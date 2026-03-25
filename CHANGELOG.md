@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.120.0 (2026-03-25)
+
+### Features
+
+- Standardize all metadata model fields
+  ([#1565](https://github.com/canvas-medical/canvas-plugins/pull/1565),
+  [`4595f0c`](https://github.com/canvas-medical/canvas-plugins/commit/4595f0c8bea004254a63383e0c51e6d061bc34ab))
+
+
 ## v0.119.1 (2026-03-25)
 
 ### Bug Fixes
