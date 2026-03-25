@@ -123,6 +123,7 @@ STANDARD_LIBRARY_MODULES = {
     },
     "functools": {
         "reduce",
+        "wraps",
     },
     "hashlib": {
         "sha256",
@@ -168,7 +169,9 @@ STANDARD_LIBRARY_MODULES = {
     },
     "typing": {
         "Any",
+        "Callable",
         "cast",
+        "ClassVar",
         "Dict",
         "Final",
         "Iterable",
@@ -177,6 +180,7 @@ STANDARD_LIBRARY_MODULES = {
         "NamedTuple",
         "NotRequired",
         "Optional",
+        "Pattern",
         "Protocol",
         "Sequence",
         "Tuple",
@@ -214,6 +218,9 @@ THIRD_PARTY_MODULES = {
     },
     "django.contrib.postgres.indexes": {
         "GinIndex",
+    },
+    "django.db": {
+        "IntegrityError",
     },
     "django.db.transaction": {
         "atomic",
