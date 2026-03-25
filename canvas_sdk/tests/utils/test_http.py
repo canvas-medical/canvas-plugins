@@ -1,10 +1,11 @@
+import logging
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from canvas_sdk.utils import Http
-from canvas_sdk.utils.http import ontologies_http, pharmacy_http
+from canvas_sdk.utils.http import ontologies_http, pharmacy_http, science_http
 
 
 class FakeResponse:
@@ -234,3 +235,31 @@ def test_search_pharmacies_with_location(mock_get: MagicMock) -> None:
     assert "search=walgreens" in call_url
     assert "latitude=34.05" in call_url
     assert "longitude=-118.24" in call_url
+
+
+@pytest.mark.parametrize(
+    "client",
+    [
+        pytest.param(ontologies_http, id="ontologies_http"),
+        pytest.param(science_http, id="science_http"),
+    ],
+)
+def test_overriding_max_timeout_logs_deprecation_warning(
+    client: Http,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Overriding _MAX_REQUEST_TIMEOUT_SECONDS should still work but log a deprecation warning."""
+    original = type(client)._MAX_REQUEST_TIMEOUT_SECONDS
+
+    with caplog.at_level(logging.WARNING, logger="plugin_runner_logger"):
+        client._MAX_REQUEST_TIMEOUT_SECONDS = 120
+
+    assert "deprecated" in caplog.text.lower()
+    assert type(client).__name__ in caplog.text
+
+    # The override should have taken effect
+    assert client._MAX_REQUEST_TIMEOUT_SECONDS == 120
+
+    # Clean up: remove instance override to restore class default
+    del client._MAX_REQUEST_TIMEOUT_SECONDS
+    assert original == client._MAX_REQUEST_TIMEOUT_SECONDS
