@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.121.0 (2026-03-25)
+
+### Bug Fixes
+
+- Add new allowed imports ([#1588](https://github.com/canvas-medical/canvas-plugins/pull/1588),
+  [`538ea8e`](https://github.com/canvas-medical/canvas-plugins/commit/538ea8e3fdd3d3560f496382bfed039ff6f0e564))
+
+### Features
+
+- Wrap all database connection openings with `with`
+  ([#1586](https://github.com/canvas-medical/canvas-plugins/pull/1586),
+  [`adca003`](https://github.com/canvas-medical/canvas-plugins/commit/adca003b3081eecc76dd333657be94b2f1d3ef80))
+
+
 ## v0.120.0 (2026-03-25)
 
 ### Features
