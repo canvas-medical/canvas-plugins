@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import builtins
 import json
+import logging
 import operator
 import sys
 import types
@@ -31,6 +32,8 @@ from RestrictedPython.transformer import (
     INSPECT_ATTRIBUTES,
     copy_locations,
 )
+
+logger = logging.getLogger("plugin_runner_logger")
 
 if TYPE_CHECKING:
 
@@ -900,12 +903,31 @@ class Sandbox:
             # deny writes to dictionary underscore keys
             or (isinstance(_ob, dict) and isinstance(attribute, str) and attribute.startswith("_"))
         ):
+            # Deprecated: allow plugins to override _MAX_REQUEST_TIMEOUT_SECONDS on
+            # Http instances. This will be removed in a future release.
+            if attribute == "_MAX_REQUEST_TIMEOUT_SECONDS" and self._is_http_instance(_ob):
+                logger.warning(
+                    "Plugin '%s' is overriding %s._MAX_REQUEST_TIMEOUT_SECONDS. "
+                    "This is deprecated and will be forbidden in a future release. "
+                    "Use the timeout parameter on individual requests instead.",
+                    self.package_name,
+                    type(_ob).__name__,
+                )
+                return _ob
+
             raise AttributeError(
                 f"Forbidden assignment to a non-module attribute: {full_name} "
                 f"at {name}.{attribute}."
             )
 
         return _ob
+
+    @staticmethod
+    def _is_http_instance(_ob: Any) -> bool:
+        """Check if _ob is an instance of canvas_sdk.utils.http.Http."""
+        from canvas_sdk.utils.http import Http
+
+        return isinstance(_ob, Http)
 
     def _safe_getitem(self, ob: Any, index: Any) -> Any:
         """
