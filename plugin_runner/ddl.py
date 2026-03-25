@@ -386,10 +386,17 @@ def execute_create_table_sql(create_sql: str) -> None:
     SQLite requires executing one statement at a time; PostgreSQL can handle
     multiple statements in a single call.
 
+    Closes stale connections before executing so that long-running plugin
+    installations don't fail on a connection that the server has already
+    closed.
+
     Args:
         create_sql: The SQL string (possibly multi-statement) to execute.
     """
     from django.db import connection
+
+    connection.close_if_unusable_or_obsolete()
+    connection.ensure_connection()
 
     with connection.cursor() as cursor:
         if IS_SQLITE:
