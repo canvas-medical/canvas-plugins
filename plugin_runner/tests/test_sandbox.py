@@ -209,6 +209,30 @@ def test_support_type_annotations() -> None:
     sandbox.execute()
 
 
+def test_support_from_future_import_annotations() -> None:
+    """Test that `from __future__ import annotations` is allowed."""
+    sandbox = _sandbox_from_code(
+        """
+            from __future__ import annotations
+
+            def greet(name: str) -> str:
+                return f"hello {name}"
+
+            assert greet("world") == "hello world"
+        """
+    )
+
+    sandbox.execute()
+
+
+def test_disallowed_future_import() -> None:
+    """Test that importing non-annotations members from __future__ is not allowed."""
+    sandbox = _sandbox_from_code("from __future__ import division")
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()
+
+
 def test_support_dataclasses() -> None:
     """Test that dataclasses can be created."""
     sandbox = _sandbox_from_code("""
