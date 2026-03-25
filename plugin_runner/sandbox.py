@@ -151,6 +151,7 @@ STANDARD_LIBRARY_MODULES = {
         "compile",
         "DOTALL",
         "IGNORECASE",
+        "findall",
         "fullmatch",
         "match",
         "search",
