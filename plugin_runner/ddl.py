@@ -391,6 +391,9 @@ def execute_create_table_sql(create_sql: str) -> None:
     """
     from django.db import connection
 
+    if not IS_SQLITE:
+        connection.close()
+
     with connection.cursor() as cursor:
         if IS_SQLITE:
             for statement in create_sql.split(SQL_STATEMENT_DELIMITER):
