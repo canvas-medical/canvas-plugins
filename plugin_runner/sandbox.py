@@ -303,6 +303,7 @@ THIRD_PARTY_MODULES = {
         "request",
         "RequestException",
         "Response",
+        "Session",
     },
 }
 
