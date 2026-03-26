@@ -77,6 +77,52 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
 }
 
 
+def _is_private(key: str) -> bool:
+    return isinstance(key, str) and key.startswith("_")
+
+
+class _FilteredDict:
+    """A read-only view of a dict that hides underscore-prefixed keys."""
+
+    __slots__ = ("_wrapped",)
+
+    def __init__(self, wrapped: dict[str, Any]) -> None:
+        self._wrapped = wrapped
+
+    def __getitem__(self, key: str) -> Any:
+        if _is_private(key):
+            raise KeyError(key)
+        return self._wrapped[key]
+
+    def __contains__(self, key: object) -> bool:
+        if isinstance(key, str) and _is_private(key):
+            return False
+        return key in self._wrapped
+
+    def __iter__(self) -> Any:
+        return (k for k in self._wrapped if not _is_private(k))
+
+    def __len__(self) -> int:
+        return len([k for k in self._wrapped if not _is_private(k)])
+
+    def __repr__(self) -> str:
+        return repr(dict(self.items()))
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if _is_private(key):
+            return default
+        return self._wrapped.get(key, default)
+
+    def keys(self) -> Any:
+        return (k for k in self._wrapped if not _is_private(k))
+
+    def values(self) -> Any:
+        return (v for k, v in self._wrapped.items() if not _is_private(k))
+
+    def items(self) -> Any:
+        return ((k, v) for k, v in self._wrapped.items() if not _is_private(k))
+
+
 class _SafeClass:
     """A read-only proxy for __class__ that only exposes __name__."""
 
@@ -750,7 +796,7 @@ class Sandbox:
                 "staticmethod": builtins.staticmethod,
                 "sum": builtins.sum,
                 "super": builtins.super,
-                "vars": builtins.vars,
+                "vars": self._safe_vars,
             },
             "__is_plugin__": True,
             "__metaclass__": type,
@@ -920,8 +966,13 @@ class Sandbox:
             (name and name.split(".")[0] in self.imported_names["names"])
             # deny if it's anything callable
             or callable(value)
-            # deny writes to dictionary underscore keys
-            or (isinstance(_ob, dict) and isinstance(attribute, str) and attribute.startswith("_"))
+            # deny writes to dictionary underscore keys on external non-builtin types
+            or (
+                isinstance(_ob, dict)
+                and isinstance(attribute, str)
+                and attribute.startswith("_")
+                and module_name != "builtins"
+            )
         ):
             # Deprecated: allow plugins to override _MAX_REQUEST_TIMEOUT_SECONDS on
             # Http instances. This will be removed in a future release.
@@ -949,12 +1000,42 @@ class Sandbox:
 
         return isinstance(_ob, Http)
 
+    def _safe_vars(self, obj: Any) -> dict[str, Any] | _FilteredDict:
+        """Restricted vars() that filters private attributes on external objects."""
+        if isinstance(obj, types.ModuleType):
+            module = obj.__name__
+        elif isinstance(obj, type):
+            module = obj.__module__
+        else:
+            module = obj.__class__.__module__
+
+        raw = builtins.vars(obj)
+
+        if not self._same_module(module) and isinstance(raw, dict):
+            return _FilteredDict(raw)
+
+        return raw
+
     def _safe_getitem(self, ob: Any, index: Any) -> Any:
         """
-        Prevent access to several classes of items.
+        Prevent access to underscore-prefixed item keys on external objects.
+
+        Built-in containers (dict, list, etc.) and plugin-defined types are
+        allowed to hold underscore keys because they are data structures
+        owned by the plugin.
         """
         if isinstance(index, str) and index.startswith("_"):
-            raise AttributeError(f'"{index}" is an invalid item name because it starts with "_"')
+            if isinstance(ob, types.ModuleType):
+                module = ob.__name__
+            elif isinstance(ob, type):
+                module = ob.__module__
+            else:
+                module = ob.__class__.__module__
+
+            if module != "builtins" and not self._same_module(module):
+                raise AttributeError(
+                    f'"{index}" is an invalid item name because it starts with "_"'
+                )
 
         return ob[index]
 
@@ -1022,6 +1103,12 @@ class Sandbox:
 
         if name == "__class__" and not self._same_module(module):
             return _SafeClass(_ob.__class__.__name__)
+
+        if name == "__dict__" and not self._same_module(module):
+            raw = getattr(_ob, name, default)
+            if isinstance(raw, dict):
+                return _FilteredDict(raw)
+            return raw
 
         return getattr(_ob, name, default)
 
