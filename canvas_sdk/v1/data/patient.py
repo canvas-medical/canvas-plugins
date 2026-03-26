@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -276,7 +276,7 @@ class PatientSetting(TimestampedModel):
     value = models.JSONField()
 
 
-class PatientMetadata(MetadataModel):
+class PatientMetadata(IdentifiableModel):
     """A class representing Patient Metadata."""
 
     class Meta:
@@ -285,6 +285,8 @@ class PatientMetadata(MetadataModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
+    key = models.CharField(max_length=32)
+    value = models.TextField()
 
 
 class PatientFacilityAddress(PatientAddress):
