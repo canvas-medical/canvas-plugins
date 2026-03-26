@@ -190,8 +190,9 @@ STANDARD_LIBRARY_MODULES = {
         "digits",
     },
     "time": {
-        "time",
         "sleep",
+        "time",
+        "time_ns",
     },
     "typing": {
         "Any",
