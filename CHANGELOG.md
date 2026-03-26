@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.122.0 (2026-03-26)
+
+### Features
+
+- Add appointment validate ([#1548](https://github.com/canvas-medical/canvas-plugins/pull/1548),
+  [`7ed4005`](https://github.com/canvas-medical/canvas-plugins/commit/7ed400540bd5b3c8ebb61429bf11ac88f802d096))
+
+
 ## v0.121.4 (2026-03-26)
 
 ### Bug Fixes
