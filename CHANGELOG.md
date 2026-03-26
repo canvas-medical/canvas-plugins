@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.123.1 (2026-03-26)
+
+### Bug Fixes
+
+- Revert importlib security change, suppress model registration during sandbox validation
+  ([#1604](https://github.com/canvas-medical/canvas-plugins/pull/1604),
+  [`1fbd003`](https://github.com/canvas-medical/canvas-plugins/commit/1fbd003873d6a9c2fe8da762bbb1943220686ef0))
+
+
 ## v0.123.0 (2026-03-26)
 
 ### Bug Fixes
