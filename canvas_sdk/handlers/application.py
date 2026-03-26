@@ -107,6 +107,10 @@ class NoteApplication(EmbeddedApplication):
         """Delegate to handle() for backward compatibility with old plugins."""
         # If a subclass overrides handle(), call it for backward compat.
         # New plugins should override on_open() directly.
+        context_patient = self.event.context.get("patient")
+        if context_patient and (patient_id := context_patient.get("id")):
+            self.event.target.id = patient_id
+
         return self.handle()
 
     @deprecation.deprecated(
