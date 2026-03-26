@@ -772,6 +772,19 @@ def test_urllib() -> None:
                 vars(obj).get('note_uuid')
                 vars(obj).items()
             """,
+            "annotations_on_plugin_class": """
+                class MyClass:
+                    name: str
+                    age: int
+
+                assert MyClass.__annotations__ == {"name": str, "age": int}
+            """,
+            "annotations_on_external_class": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                annots = StopMedicationCommand.__annotations__
+                assert isinstance(annots, dict)
+            """,
         }
     ),
 )
