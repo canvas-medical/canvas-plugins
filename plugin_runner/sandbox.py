@@ -60,6 +60,7 @@ except FileNotFoundError:
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__annotations__",
     "__class__",
     "__dict__",
     "__eq__",
@@ -69,6 +70,7 @@ SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
 
 
 SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__annotations__",
     "__class__",
     "__dict__",
     "__eq__",
