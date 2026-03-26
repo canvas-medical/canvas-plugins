@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.121.2 (2026-03-26)
+
+### Bug Fixes
+
+- Return safe __class__ proxy for external module objects in sandbox
+  ([#1591](https://github.com/canvas-medical/canvas-plugins/pull/1591),
+  [`9b18c9b`](https://github.com/canvas-medical/canvas-plugins/commit/9b18c9b6243e419f7a987cfa6d9d2fac4a2836f4))
+
+
 ## v0.121.1 (2026-03-25)
 
 ### Bug Fixes
