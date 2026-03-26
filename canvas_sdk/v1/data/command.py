@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 
 
 class Command(TimestampedModel, IdentifiableModel):
@@ -47,13 +47,15 @@ class Command(TimestampedModel, IdentifiableModel):
         return anchor_model.objects.get(dbid=self.anchor_object_dbid)
 
 
-class CommandMetadata(MetadataModel):
+class CommandMetadata(IdentifiableModel):
     """A class representing Command Metadata."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_commandmetadata_001"
 
     command = models.ForeignKey("v1.Command", on_delete=models.CASCADE, related_name="metadata")
+    key = models.CharField(max_length=256)
+    value = models.TextField()
 
 
 __exports__ = ("Command", "CommandMetadata")

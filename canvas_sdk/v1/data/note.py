@@ -4,7 +4,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
 from canvas_sdk.v1.data.claim import Claim
 from canvas_sdk.v1.data.coding import Coding
 from canvas_sdk.v1.data.utils import empty_note_body
@@ -230,7 +230,7 @@ class CurrentNoteStateEvent(IdentifiableModel):
         ]
 
 
-class NoteMetadata(MetadataModel):
+class NoteMetadata(IdentifiableModel):
     """A class representing Note Metadata."""
 
     class Meta:
@@ -239,6 +239,8 @@ class NoteMetadata(MetadataModel):
     note = models.ForeignKey(
         "v1.Note", on_delete=models.CASCADE, related_name="metadata", null=True
     )
+    key = models.CharField(max_length=32)
+    value = models.TextField()
 
 
 __exports__ = (

@@ -1,6 +1,6 @@
 from django.db import models
 
-from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, Model, TimestampedModel
 
 
 class AppointmentProgressStatus(models.TextChoices):
@@ -92,7 +92,7 @@ class AppointmentLabel(Model):
     )
 
 
-class AppointmentMetadata(MetadataModel):
+class AppointmentMetadata(IdentifiableModel):
     """A class representing Appointment Metadata."""
 
     class Meta:
@@ -101,6 +101,8 @@ class AppointmentMetadata(MetadataModel):
     appointment = models.ForeignKey(
         "v1.Appointment", on_delete=models.CASCADE, related_name="metadata", null=True
     )
+    key = models.CharField(max_length=32)
+    value = models.CharField(max_length=256)
 
 
 __exports__ = (
