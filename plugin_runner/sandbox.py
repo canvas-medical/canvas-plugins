@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import ast
 import builtins
+import importlib
 import json
 import logging
 import operator
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Iterable, Sequence
+from collections.abc import Generator, Iterable, Sequence
+from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
@@ -57,6 +59,28 @@ try:
 except FileNotFoundError:
     print("Error: Unable to load plugin_runner/allowed-module-imports.json, aborting")
     sys.exit(1)
+
+
+@contextmanager
+def suppress_model_registration() -> Generator[None, None, None]:
+    """Temporarily replace Django's model registration with no-ops.
+
+    Prevents ModelBase.__new__ and ForeignKey.contribute_to_class from
+    polluting apps.all_models during sandbox validation or DDL extraction,
+    avoiding the "shadow model registry" problem where two class objects
+    exist for the same model.
+    """
+    from django.apps import apps
+
+    _orig_register = apps.register_model
+    _orig_lazy = apps.lazy_model_operation
+    apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
+    apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        apps.register_model = _orig_register  # type: ignore[method-assign]
+        apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
@@ -813,10 +837,6 @@ class Sandbox:
 
         If the module to import belongs to the same package as the current module,
         evaluate it inside a sandbox.
-
-        All plugin modules are registered directly from the sandbox scope
-        into ``sys.modules``, preserving ``_safe_import`` as ``__import__``
-        so that forbidden imports in methods are blocked at runtime.
         """
         # Skip modules already evaluated
         if not self._same_module(module_name) or module_name in self._evaluated_modules:
@@ -827,36 +847,23 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
-            self._evaluated_modules[module_name] = True
-            # All plugin modules go through sandbox exec for security validation.
-            sandbox = Sandbox(
-                module,
-                namespace=module_name,
-                evaluated_modules=self._evaluated_modules,
-            )
-            sandbox.execute()
+            with suppress_model_registration():
+                Sandbox(
+                    module,
+                    namespace=module_name,
+                    evaluated_modules=self._evaluated_modules,
+                ).execute()
 
-            # Register the sandbox scope as a module in sys.modules.
-            # This preserves the sandbox-protected classes (with _safe_import)
-            # so that subsequent imports return the same protected objects
-            # instead of importlib creating new unprotected ones.
-            mod = types.ModuleType(module_name)
-            mod.__file__ = str(module)
-            mod.__dict__.update(sandbox.scope)
-            sys.modules[module_name] = mod
+            self._evaluated_modules[module_name] = True
+
+        if sys.modules.get(module_name):
+            importlib.reload(sys.modules[module_name])
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
-        """Evaluate implicit imports in the sandbox.
-
-        All plugin packages go through sandbox exec for their ``__init__.py``
-        and register a ``types.ModuleType`` from the sandbox scope into
-        ``sys.modules`` to preserve ``_safe_import``.
-        """
+        """Evaluate implicit imports in the sandbox."""
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or
-        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -865,20 +872,15 @@ class Sandbox:
 
         if module_name not in self._evaluated_modules:
             if init_file.exists():
-                # Mark as evaluated to prevent infinite recursion.
                 self._evaluated_modules[module_name] = True
-                sandbox = Sandbox(
-                    init_file,
-                    namespace=module_name,
-                    evaluated_modules=self._evaluated_modules,
-                )
-                sandbox.execute()
-                mod = types.ModuleType(module_name)
-                mod.__file__ = str(init_file)
-                mod.__dict__.update(sandbox.scope)
-                sys.modules[module_name] = mod
+
+                with suppress_model_registration():
+                    Sandbox(
+                        init_file,
+                        namespace=module_name,
+                        evaluated_modules=self._evaluated_modules,
+                    ).execute()
             else:
-                # Mark as evaluated even if no init file exists to prevent redundant checks.
                 self._evaluated_modules[module_name] = True
 
         self._evaluate_implicit_imports(parent)
