@@ -325,6 +325,7 @@ THIRD_PARTY_MODULES = {
         "utils",
     },
     "requests": {
+        "codes",
         "delete",
         "get",
         "patch",
