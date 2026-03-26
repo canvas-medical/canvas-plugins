@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.123.0 (2026-03-26)
+
+### Bug Fixes
+
+- Allow __annotations__ in sandbox
+  ([#1596](https://github.com/canvas-medical/canvas-plugins/pull/1596),
+  [`6681230`](https://github.com/canvas-medical/canvas-plugins/commit/6681230507c08f3cbd2a6fec4a6c9011093c5cbe))
+
+- Allow datetime.time in sandbox
+  ([#1595](https://github.com/canvas-medical/canvas-plugins/pull/1595),
+  [`943b4dd`](https://github.com/canvas-medical/canvas-plugins/commit/943b4ddb4ab3706e00230a053178b58d97567226))
+
+- Allow requests.codes in sandbox
+  ([#1597](https://github.com/canvas-medical/canvas-plugins/pull/1597),
+  [`2bf7d2a`](https://github.com/canvas-medical/canvas-plugins/commit/2bf7d2a5cb1edd92cbe0c57bdedc9408e51ba05b))
+
+- Allow time.time_ns in sandbox
+  ([#1598](https://github.com/canvas-medical/canvas-plugins/pull/1598),
+  [`dc3b72f`](https://github.com/canvas-medical/canvas-plugins/commit/dc3b72f7b13d77ae9543418f25611ee79bbd9982))
+
+### Features
+
+- Revert "feat: standardize all metadata model fields"
+  ([#1603](https://github.com/canvas-medical/canvas-plugins/pull/1603),
+  [`f738732`](https://github.com/canvas-medical/canvas-plugins/commit/f738732c5ef33549f9b47b15e8ae4912a11b1ba4))
+
+
 ## v0.122.0 (2026-03-26)
 
 ### Features
