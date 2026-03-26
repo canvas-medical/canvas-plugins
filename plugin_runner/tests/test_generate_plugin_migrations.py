@@ -13,6 +13,7 @@ Tests cover:
 """
 
 import os
+import warnings
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import MagicMock, patch
@@ -958,8 +959,6 @@ def test_m2m_through_model_identity_consistent_after_double_execution(
     try:
         sandbox = Sandbox(handler_file, namespace=f"{plugin_name}.handler")
 
-        import warnings
-
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -970,21 +969,24 @@ def test_m2m_through_model_identity_consistent_after_double_execution(
 
         ItemTag = scope["ItemTag"]
 
-        # The through model's FK targets should be the SAME class objects
-        # that are registered in Django's all_models.
         registered = apps.all_models.get(plugin_name, {})
-        if registered:
-            # Verify FK on ItemTag points to the same Item and Tag in the registry.
-            for field in ItemTag._meta.local_fields:
-                if hasattr(field, "remote_field") and field.remote_field is not None:
-                    target = field.remote_field.model
-                    if hasattr(target, "_meta"):
-                        reg_model = registered.get(target._meta.model_name)
-                        if reg_model is not None:
-                            assert target is reg_model, (
-                                f"FK target {target} is not the same object as "
-                                f"registered model {reg_model}"
-                            )
+        assert registered, "Models should be registered in Django's app registry"
+
+        # Both FK targets on the through model must be the same class objects
+        # that are in Django's all_models — not stale sandbox copies.
+        fk_fields = [
+            f
+            for f in ItemTag._meta.local_fields
+            if f.remote_field is not None and f.remote_field.model is not ItemTag
+        ]
+        assert len(fk_fields) == 2, f"Expected 2 FK fields, got {len(fk_fields)}"
+
+        for field in fk_fields:
+            target = field.remote_field.model
+            reg_model = registered[target._meta.model_name]
+            assert target is reg_model, (
+                f"FK target {target} is not the same object as registered model {reg_model}"
+            )
     finally:
         apps.all_models.pop(plugin_name, None)
         apps.app_configs.pop(plugin_name, None)

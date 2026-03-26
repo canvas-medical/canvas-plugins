@@ -9,7 +9,8 @@ import operator
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Iterable, Sequence
+from collections.abc import Generator, Iterable, Sequence
+from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
@@ -58,6 +59,28 @@ try:
 except FileNotFoundError:
     print("Error: Unable to load plugin_runner/allowed-module-imports.json, aborting")
     sys.exit(1)
+
+
+@contextmanager
+def suppress_model_registration() -> Generator[None, None, None]:
+    """Temporarily replace Django's model registration with no-ops.
+
+    Prevents ModelBase.__new__ and ForeignKey.contribute_to_class from
+    polluting apps.all_models during sandbox validation or DDL extraction,
+    avoiding the "shadow model registry" problem where two class objects
+    exist for the same model.
+    """
+    from django.apps import apps
+
+    _orig_register = apps.register_model
+    _orig_lazy = apps.lazy_model_operation
+    apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
+    apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        apps.register_model = _orig_register  # type: ignore[method-assign]
+        apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
 
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
@@ -824,42 +847,23 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
-            # Suppress Django model registration during sandbox validation so
-            # that the subsequent importlib.reload / __import__ is the single
-            # source of truth for model class identity.  Without this,
-            # sandbox.execute() and importlib.reload() each create their own
-            # class objects, causing FK/M2M identity mismatches ("shadow
-            # model registry" problem).
-            from django.apps import apps
-
-            _orig_register = apps.register_model
-            _orig_lazy = apps.lazy_model_operation
-            apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
-            apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
-            try:
+            with suppress_model_registration():
                 Sandbox(
                     module,
                     namespace=module_name,
                     evaluated_modules=self._evaluated_modules,
                 ).execute()
-            finally:
-                apps.register_model = _orig_register  # type: ignore[method-assign]
-                apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
 
             self._evaluated_modules[module_name] = True
 
-        # Reload the module if already imported to ensure the latest version is used.
         if sys.modules.get(module_name):
             importlib.reload(sys.modules[module_name])
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
         """Evaluate implicit imports in the sandbox."""
-        # Determine the parent module to check for implicit imports.
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or
-        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -868,26 +872,15 @@ class Sandbox:
 
         if module_name not in self._evaluated_modules:
             if init_file.exists():
-                # Mark as evaluated to prevent infinite recursion.
                 self._evaluated_modules[module_name] = True
 
-                from django.apps import apps
-
-                _orig_register = apps.register_model
-                _orig_lazy = apps.lazy_model_operation
-                apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
-                apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
-                try:
+                with suppress_model_registration():
                     Sandbox(
                         init_file,
                         namespace=module_name,
                         evaluated_modules=self._evaluated_modules,
                     ).execute()
-                finally:
-                    apps.register_model = _orig_register  # type: ignore[method-assign]
-                    apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
             else:
-                # Mark as evaluated even if no init file exists to prevent redundant checks.
                 self._evaluated_modules[module_name] = True
 
         self._evaluate_implicit_imports(parent)
