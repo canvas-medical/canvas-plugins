@@ -77,6 +77,17 @@ class AlwaysVisibleNoteApplication(NoteApplication):
         return []
 
 
+class OldPatientAwareNoteApplication(NoteApplication):
+    """An old NoteApplication that reads the patient from self.event.target inside handle()."""
+
+    NAME = "Old Patient App"
+    IDENTIFIER = "test_plugin__old_patient_app"
+
+    def handle(self) -> list[Effect]:
+        """Include self.event.target.id in the URL to verify what the old plugin sees."""
+        return [LaunchModalEffect(url=f"https://example.com/{self.event.target.id}").apply()]
+
+
 class NoIdentifierNoteApplication(NoteApplication):
     """A NoteApplication without an explicit IDENTIFIER."""
 
@@ -209,6 +220,45 @@ def test_on_context_change_returns_empty_by_default(target: str) -> None:
     event = _make_event(EventType.APPLICATION__ON_CONTEXT_CHANGE, target=target)
     app = NewNoteApplication(event)
     assert app.compute() == []
+
+
+def test_on_open_backfills_patient_target_before_handle() -> None:
+    """Verify on_open sets event.target.id from patient context before delegating to handle()."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+        context={"patient": {"id": "patient-uuid-123"}},
+    )
+    app = OldPatientAwareNoteApplication(event)
+    result = app.compute()
+
+    payload = json.loads(result[0].payload)
+    assert payload["data"]["url"] == "https://example.com/patient-uuid-123"
+
+
+def test_on_open_does_not_modify_target_without_patient_context() -> None:
+    """Verify on_open leaves event.target.id unchanged when no patient is in context."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+    )
+    app = OldPatientAwareNoteApplication(event)
+    app.compute()
+
+    assert app.event.target.id == "test_plugin__old_patient_app"
+
+
+def test_on_open_does_not_modify_target_when_patient_has_no_id() -> None:
+    """Verify on_open leaves event.target.id unchanged when patient context has no id key."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+        context={"patient": {}},
+    )
+    app = OldPatientAwareNoteApplication(event)
+    app.compute()
+
+    assert app.event.target.id == "test_plugin__old_patient_app"
 
 
 def test_handle_emits_deprecation_warning() -> None:
