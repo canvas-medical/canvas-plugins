@@ -127,6 +127,7 @@ STANDARD_LIBRARY_MODULES = {
     "datetime": {
         "date",
         "datetime",
+        "time",
         "timedelta",
         "timezone",
         "UTC",
