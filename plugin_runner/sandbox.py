@@ -11,7 +11,7 @@ from _ast import AnnAssign
 from collections.abc import Iterable, Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
 
 from frozendict import frozendict
 from RestrictedPython import (
@@ -69,11 +69,31 @@ SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
 
 
 SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__class__",
     "__dict__",
     "__eq__",
     "__init__",
     "__name__",
 }
+
+
+class _SafeClass:
+    """A read-only proxy for __class__ that only exposes __name__."""
+
+    __slots__ = ("__name__",)
+
+    def __init__(self, name: str) -> None:
+        object.__setattr__(self, "__name__", name)
+
+    def __getattr__(self, name: str) -> NoReturn:
+        raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
+
+    def __setattr__(self, name: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on external __class__")
+
+    def __repr__(self) -> str:
+        return f"<SafeClass '{self.__name__}'>"
+
 
 STANDARD_LIBRARY_MODULES = {
     "__future__": {
@@ -995,6 +1015,13 @@ class Sandbox:
             raise AttributeError(
                 f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
             )
+
+        # Prevent sandbox escape via __class__.__mro__, __subclasses__, etc.
+        if isinstance(_ob, _SafeClass) and name != "__name__":
+            raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
+
+        if name == "__class__" and not self._same_module(module):
+            return _SafeClass(_ob.__class__.__name__)
 
         return getattr(_ob, name, default)
 
