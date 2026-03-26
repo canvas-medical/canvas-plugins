@@ -2,10 +2,14 @@ import importlib
 import logging
 import re
 import sys
+import types
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import _patch, patch
 
 import pytest
 from django.db import models as django_models
@@ -1381,6 +1385,174 @@ def test_implicit_import_deferred_os_import_blocked_at_runtime(tmp_path: Path) -
         for key in list(sys.modules):
             if key.startswith("my_plugin"):
                 del sys.modules[key]
+
+
+# ---------------------------------------------------------------------------
+# sys.modules registration fallback tests
+# ---------------------------------------------------------------------------
+
+
+def _force_sys_modules_fallback() -> _patch[Any]:
+    """Patch _register_sandboxed_module to raise, forcing the fallback path."""
+    return patch.object(
+        Sandbox,
+        "_register_sandboxed_module",
+        side_effect=RuntimeError("simulated sys.modules registration failure"),
+    )
+
+
+@contextmanager
+def _plugin_on_sys_path(base_path: Path, prefix: str) -> Generator[None]:
+    """Add base_path to sys.path and clean up sys.modules entries on exit."""
+    for key in list(sys.modules):
+        if key.startswith(prefix):
+            del sys.modules[key]
+
+    original_path = sys.path[:]
+    sys.path.insert(0, str(base_path))
+    try:
+        yield
+    finally:
+        sys.path[:] = original_path
+        for key in list(sys.modules):
+            if key.startswith(prefix):
+                del sys.modules[key]
+
+
+@contextmanager
+def _fallback_patches() -> Generator[types.SimpleNamespace]:
+    """Force the sys.modules fallback and silence Sentry calls.
+
+    Yields a namespace with mock_set_tag and mock_capture for assertions.
+    """
+    with (
+        _force_sys_modules_fallback(),
+        patch("sentry_sdk.set_tag") as mock_set_tag,
+        patch("sentry_sdk.capture_exception") as mock_capture,
+    ):
+        yield types.SimpleNamespace(
+            mock_set_tag=mock_set_tag,
+            mock_capture=mock_capture,
+        )
+
+
+def test_evaluate_module_fallback_loads_module(tmp_path: Path) -> None:
+    """When sys.modules registration fails, the fallback should still load the module
+    via importlib.reload and report to Sentry.
+    """
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "fb_plugin",
+        {
+            "__init__.py": "",
+            "utils/__init__.py": "",
+            "utils/helpers.py": "HELPER = True",
+            "protocols/__init__.py": "",
+            "protocols/my_protocol.py": "from fb_plugin.utils.helpers import HELPER",
+        },
+    )
+
+    with _plugin_on_sys_path(base_path, "fb_plugin"), _fallback_patches() as mocks:
+        sandbox = sandbox_from_module(base_path, "fb_plugin.protocols.my_protocol")
+        scope = sandbox.execute()
+
+        assert scope.get("HELPER") is True
+        assert mocks.mock_capture.called
+
+
+def test_evaluate_module_fallback_tags_sentry(tmp_path: Path) -> None:
+    """The fallback path should tag the Sentry event with sandbox:sys_modules_fallback."""
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "fb_plugin",
+        {
+            "__init__.py": "",
+            "helpers.py": "HELPER = True",
+            "handler.py": "from fb_plugin.helpers import HELPER",
+        },
+    )
+
+    with _plugin_on_sys_path(base_path, "fb_plugin"), _fallback_patches() as mocks:
+        sandbox = sandbox_from_module(base_path, "fb_plugin.handler")
+        sandbox.execute()
+
+        mocks.mock_set_tag.assert_any_call("error-type", "sandbox-fallback")
+
+
+def test_implicit_import_fallback_still_works(tmp_path: Path) -> None:
+    """When sys.modules registration fails for implicit imports, the sandbox
+    should still execute the __init__.py and the plugin should still work.
+    """
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "fb_plugin",
+        {
+            "__init__.py": "",
+            "utils/__init__.py": "UTILS_LOADED = True",
+            "utils/helpers.py": "HELPER = 42",
+            "protocols/__init__.py": "",
+            "protocols/my_protocol.py": dedent("""\
+                from fb_plugin.utils.helpers import HELPER
+                result = HELPER + 1
+            """),
+        },
+    )
+
+    with _plugin_on_sys_path(base_path, "fb_plugin"), _fallback_patches():
+        sandbox = sandbox_from_module(base_path, "fb_plugin.protocols.my_protocol")
+        scope = sandbox.execute()
+
+        assert scope.get("result") == 43
+
+
+def test_fallback_http_timeout_override_still_allowed() -> None:
+    """The _MAX_REQUEST_TIMEOUT_SECONDS deprecation allowance should work
+    even when the sys.modules fallback is active.
+    """
+    sandbox = _sandbox_from_code(
+        source_code="""
+        from canvas_sdk.utils.http import ontologies_http
+
+        ontologies_http._MAX_REQUEST_TIMEOUT_SECONDS = 120
+    """
+    )
+
+    with _fallback_patches():
+        sandbox.execute()
+
+
+def test_fallback_class_name_access_still_works() -> None:
+    """Accessing __class__.__name__ on external objects should work
+    even when the sys.modules fallback is active.
+    """
+    sandbox = _sandbox_from_code(
+        source_code="""
+        from canvas_sdk.commands import StopMedicationCommand
+
+        obj = StopMedicationCommand(note_uuid="123")
+        assert obj.__class__.__name__ == "StopMedicationCommand"
+    """
+    )
+
+    with _fallback_patches():
+        sandbox.execute()
+
+
+def test_fallback_class_traversal_still_blocked() -> None:
+    """Sandbox escape via __class__.__mro__ should still be blocked
+    even when the sys.modules fallback is active.
+    """
+    sandbox = _sandbox_from_code(
+        source_code="""
+        from canvas_sdk.commands import StopMedicationCommand
+
+        obj = StopMedicationCommand(note_uuid="123")
+        obj.__class__.__mro__
+    """
+    )
+
+    with _fallback_patches(), pytest.raises(AttributeError):
+        sandbox.execute()
 
 
 # ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import importlib
 import json
 import logging
 import operator
@@ -13,6 +14,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
 
+import sentry_sdk
 from frozendict import frozendict
 from RestrictedPython import (
     CompileResult,
@@ -803,15 +805,55 @@ class Sandbox:
 
         return module
 
+    @staticmethod
+    def _register_sandboxed_module(
+        module_name: str,
+        file_path: str,
+        scope: dict[str, Any],
+    ) -> None:
+        """Register a sandbox scope as a module in sys.modules.
+
+        This preserves the sandbox-protected classes (with _safe_import)
+        so that subsequent imports return the same protected objects
+        instead of importlib creating new unprotected ones.
+        """
+        mod = types.ModuleType(module_name)
+        mod.__file__ = file_path
+        mod.__dict__.update(scope)
+        sys.modules[module_name] = mod
+
+    def _sandbox_and_register(self, module_path: Path, module_name: str) -> None:
+        """Execute a module in a sandbox and register it in sys.modules.
+
+        If registration fails, logs to Sentry and falls back to importlib.reload.
+        """
+        self._evaluated_modules[module_name] = True
+        sandbox = Sandbox(
+            module_path,
+            namespace=module_name,
+            evaluated_modules=self._evaluated_modules,
+        )
+        sandbox.execute()
+
+        try:
+            self._register_sandboxed_module(module_name, str(module_path), sandbox.scope)
+        except Exception:
+            sentry_sdk.set_tag("error-type", "sandbox-fallback")
+            sentry_sdk.capture_exception()
+            logger.warning(
+                "Failed to register sandboxed module %s in sys.modules, "
+                "falling back to importlib.reload",
+                module_name,
+                exc_info=True,
+            )
+            if sys.modules.get(module_name):
+                importlib.reload(sys.modules[module_name])
+
     def _evaluate_module(self, module_name: str) -> None:
         """Evaluate the given module in the sandbox.
 
         If the module to import belongs to the same package as the current module,
         evaluate it inside a sandbox.
-
-        All plugin modules are registered directly from the sandbox scope
-        into ``sys.modules``, preserving ``_safe_import`` as ``__import__``
-        so that forbidden imports in methods are blocked at runtime.
         """
         # Skip modules already evaluated
         if not self._same_module(module_name) or module_name in self._evaluated_modules:
@@ -822,36 +864,13 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
-            self._evaluated_modules[module_name] = True
-            # All plugin modules go through sandbox exec for security validation.
-            sandbox = Sandbox(
-                module,
-                namespace=module_name,
-                evaluated_modules=self._evaluated_modules,
-            )
-            sandbox.execute()
-
-            # Register the sandbox scope as a module in sys.modules.
-            # This preserves the sandbox-protected classes (with _safe_import)
-            # so that subsequent imports return the same protected objects
-            # instead of importlib creating new unprotected ones.
-            mod = types.ModuleType(module_name)
-            mod.__file__ = str(module)
-            mod.__dict__.update(sandbox.scope)
-            sys.modules[module_name] = mod
+            self._sandbox_and_register(module, module_name)
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
-        """Evaluate implicit imports in the sandbox.
-
-        All plugin packages go through sandbox exec for their ``__init__.py``
-        and register a ``types.ModuleType`` from the sandbox scope into
-        ``sys.modules`` to preserve ``_safe_import``.
-        """
+        """Evaluate implicit imports in the sandbox."""
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or
-        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -860,18 +879,7 @@ class Sandbox:
 
         if module_name not in self._evaluated_modules:
             if init_file.exists():
-                # Mark as evaluated to prevent infinite recursion.
-                self._evaluated_modules[module_name] = True
-                sandbox = Sandbox(
-                    init_file,
-                    namespace=module_name,
-                    evaluated_modules=self._evaluated_modules,
-                )
-                sandbox.execute()
-                mod = types.ModuleType(module_name)
-                mod.__file__ = str(init_file)
-                mod.__dict__.update(sandbox.scope)
-                sys.modules[module_name] = mod
+                self._sandbox_and_register(init_file, module_name)
             else:
                 # Mark as evaluated even if no init file exists to prevent redundant checks.
                 self._evaluated_modules[module_name] = True
