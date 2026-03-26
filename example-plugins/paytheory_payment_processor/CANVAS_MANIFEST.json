@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "paytheory_payment_processor",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "PayTheory credit card payment processor integration",
     "url_permissions": [
         {
             "url": "https://*.sdk.paytheory.com/index.js",
@@ -45,7 +45,7 @@
         "protocols": [
             {
                 "class": "paytheory_payment_processor.handlers.paytheory_payment_processor:PayTheoryPaymentProcessor",
-                "description": "A protocol that does xyz...",
+                "description": "Handles credit card payments, tokenization, and payment method management via PayTheory",
                 "data_access": {
                     "event": "",
                     "read": [],
