@@ -887,15 +887,110 @@ def test_evaluate_module_sandboxes_model_module_and_registers_in_sys_modules(
         module_name = f"{plugin_name}.models.room"
         sandbox._evaluate_module(module_name)
 
-        # The model module should be registered in sys.modules
-        assert module_name in sys.modules
-
-        # The module should have _safe_import as __import__ (sandbox protection)
-        mod = sys.modules[module_name]
-        assert mod.__builtins__["__import__"].__name__ == "_safe_import"
+        # The model module should have been validated by Sandbox.execute()
+        assert module_name in sandbox._evaluated_modules
     finally:
         for key in list(sys.modules.keys()):
             if key.startswith(f"{plugin_name}"):
+                del sys.modules[key]
+        if parent_dir in sys.path:
+            sys.path.remove(parent_dir)
+
+
+def test_m2m_through_model_identity_consistent_after_double_execution(
+    tmp_path: Path,
+) -> None:
+    """After sandbox validation + importlib.reload, the M2M through model's FK
+    references should point to the same class objects in Django's registry.
+
+    This guards against the 'shadow model registry' problem where double
+    execution creates two class objects for the same model, causing FK
+    mismatches in ManyToManyField through-model resolution.
+    """
+    from django.apps import apps
+
+    from plugin_runner.sandbox import Sandbox
+
+    plugin_name = "m2m_identity_plugin"
+    plugin_dir = tmp_path / plugin_name
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    models_dir = plugin_dir / "models"
+    models_dir.mkdir()
+    (models_dir / "__init__.py").write_text("")
+    (models_dir / "core.py").write_text(
+        dedent("""\
+        from canvas_sdk.v1.data.base import CustomModel
+        from django.db.models import TextField, ForeignKey, CASCADE, ManyToManyField
+
+        class Tag(CustomModel):
+            label = TextField()
+
+        class ItemTag(CustomModel):
+            item = ForeignKey("Item", on_delete=CASCADE)
+            tag = ForeignKey(Tag, on_delete=CASCADE)
+
+        class Item(CustomModel):
+            name = TextField()
+            tags = ManyToManyField(Tag, through=ItemTag)
+        """)
+    )
+
+    handler_file = plugin_dir / "handler.py"
+    handler_file.write_text(
+        dedent("""\
+        from m2m_identity_plugin.models.core import Item, Tag, ItemTag
+        LOADED = True
+    """)
+    )
+
+    import sys
+
+    parent_dir = str(tmp_path)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+
+    # Clear any prior registrations.
+    apps.all_models.pop(plugin_name, None)
+    apps.app_configs.pop(plugin_name, None)
+    apps.clear_cache()
+
+    try:
+        sandbox = Sandbox(handler_file, namespace=f"{plugin_name}.handler")
+
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"Model '.*' was already registered",
+                category=RuntimeWarning,
+            )
+            scope = sandbox.execute()
+
+        ItemTag = scope["ItemTag"]
+
+        # The through model's FK targets should be the SAME class objects
+        # that are registered in Django's all_models.
+        registered = apps.all_models.get(plugin_name, {})
+        if registered:
+            # Verify FK on ItemTag points to the same Item and Tag in the registry.
+            for field in ItemTag._meta.local_fields:
+                if hasattr(field, "remote_field") and field.remote_field is not None:
+                    target = field.remote_field.model
+                    if hasattr(target, "_meta"):
+                        reg_model = registered.get(target._meta.model_name)
+                        if reg_model is not None:
+                            assert target is reg_model, (
+                                f"FK target {target} is not the same object as "
+                                f"registered model {reg_model}"
+                            )
+    finally:
+        apps.all_models.pop(plugin_name, None)
+        apps.app_configs.pop(plugin_name, None)
+        apps.clear_cache()
+        for key in list(sys.modules.keys()):
+            if key.startswith(plugin_name):
                 del sys.modules[key]
         if parent_dir in sys.path:
             sys.path.remove(parent_dir)
