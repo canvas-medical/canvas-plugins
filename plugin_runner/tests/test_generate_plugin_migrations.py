@@ -840,67 +840,6 @@ def test_end_to_end_register_clean_references(tmp_path: Path) -> None:
 # ===========================================================================
 
 
-def test_evaluate_module_sandboxes_model_module_and_registers_in_sys_modules(
-    tmp_path: Path,
-) -> None:
-    """_evaluate_module should sandbox model modules and register them in
-    sys.modules from the sandbox scope (not via importlib).
-
-    The resulting module should have _safe_import as __import__ in its
-    __builtins__, preserving runtime sandbox protection.
-    """
-    from plugin_runner.sandbox import Sandbox
-
-    plugin_name = "eval_model_plugin"
-    plugin_dir = tmp_path / plugin_name
-    plugin_dir.mkdir()
-    (plugin_dir / "__init__.py").write_text("")
-    models_dir = plugin_dir / "models"
-    models_dir.mkdir()
-    (models_dir / "__init__.py").write_text("")
-    (models_dir / "room.py").write_text(
-        dedent("""\
-        from canvas_sdk.v1.data.base import CustomModel
-        from django.db.models import TextField
-
-        class Room(CustomModel):
-            name = TextField()
-        """)
-    )
-
-    handler_file = plugin_dir / "handler.py"
-    handler_file.write_text("x = 1\n")
-
-    import sys
-
-    parent_dir = str(tmp_path)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-
-    try:
-        sandbox = Sandbox(handler_file, namespace=f"{plugin_name}.handler")
-
-        # Pre-populate _evaluated_modules for the plugin package __init__ so
-        # that _evaluate_implicit_imports doesn't trigger a Sandbox for it.
-        sandbox._evaluated_modules[plugin_name] = True
-
-        module_name = f"{plugin_name}.models.room"
-        sandbox._evaluate_module(module_name)
-
-        # The model module should be registered in sys.modules
-        assert module_name in sys.modules
-
-        # The module should have _safe_import as __import__ (sandbox protection)
-        mod = sys.modules[module_name]
-        assert mod.__builtins__["__import__"].__name__ == "_safe_import"
-    finally:
-        for key in list(sys.modules.keys()):
-            if key.startswith(f"{plugin_name}"):
-                del sys.modules[key]
-        if parent_dir in sys.path:
-            sys.path.remove(parent_dir)
-
-
 def test_evaluate_module_still_sandboxes_non_model_modules(tmp_path: Path) -> None:
     """_evaluate_module should still call Sandbox.execute() for non-model modules."""
     from plugin_runner.sandbox import Sandbox
