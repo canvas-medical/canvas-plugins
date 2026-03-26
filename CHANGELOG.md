@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.121.3 (2026-03-26)
+
+### Bug Fixes
+
+- Temporarily allow get_cache import
+  ([`9b828f6`](https://github.com/canvas-medical/canvas-plugins/commit/9b828f6eb125370f6c0bb11a739f04e27e2cefef))
+
+
 ## v0.121.2 (2026-03-26)
 
 ### Bug Fixes
