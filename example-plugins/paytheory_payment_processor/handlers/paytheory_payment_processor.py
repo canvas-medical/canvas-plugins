@@ -45,7 +45,6 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
             merchant_id=self.secrets["paytheory_merchant_id"],
             endpoint=api_url,
         )
-        self.default_payor_id = self.secrets.get("paytheory_default_payor_id") or self.api.get_or_create_guest_payor()
         self.public_api_key = self.secrets["paytheory_public_key"]
 
     def payment_form(self, patient: Patient | None = None) -> PaymentProcessorForm:
@@ -85,9 +84,12 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
         payor_id = self.api.get_payor_id(patient.id)
 
         if not payor_id:
-            payor_id = self.api.create_payor(
+            self.api.create_payor(
                 PayorInput(full_name=patient.full_name, metadata={"canvas_patient_id": patient.id})
             )
+            # Re-fetch to handle race conditions where concurrent requests
+            # both create a payor. Use the first one PayTheory indexed.
+            payor_id = self.api.get_payor_id(patient.id)
 
         return payor_id
 
@@ -103,14 +105,6 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
             status = transaction["status"]
             success = status in ["PENDING", "SUCCEEDED"]
             error_code = transaction.get("failure_reasons", [])[0] if not success else None
-
-            try:
-                # disable payment method if it belongs to DEFAULT_PAYOR_ID
-                if self.api.get_payment_method(token, self.default_payor_id):
-                    self.api.disable_payment_method(token)
-                    log.info("Payment method disabled")
-            except Exception as ex:
-                log.error(ex)
 
             return CardTransaction(
                 success=success,
