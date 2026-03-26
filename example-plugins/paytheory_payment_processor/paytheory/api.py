@@ -4,9 +4,12 @@ from typing import NotRequired, TypedDict
 
 import requests
 
+from logger import log
 from paytheory_payment_processor.paytheory.exceptions import TransactionError
 
-PAYTHEORY_GRAPHQL_URL = "https://api.start.paytheory.com/graphql"
+from paytheory_payment_processor.paytheory.environment import DEFAULT_ENVIRONMENT, DEFAULT_PARTNER, get_api_url
+
+PAYTHEORY_GRAPHQL_URL = get_api_url(DEFAULT_PARTNER, DEFAULT_ENVIRONMENT)
 
 
 class PayorInput(TypedDict):
@@ -124,14 +127,62 @@ class PayTheoryAPI:
             "variables": {"input": {**input_data, "merchant_uid": self.merchant_id}},
         }
 
+        log.info(f"PayTheory API: creating payor at {self.endpoint}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
+        log.info(f"PayTheory API: create_payor response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in response.json():
+            log.error(f"PayTheory API: create_payor error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
         payor_id = response.json().get("data", {}).get("createPayor", {}).get("payor_id")
+        log.info(f"PayTheory API: created payor_id={payor_id}")
 
         return payor_id
+
+    def get_or_create_guest_payor(self) -> str:
+        """Retrieve or create a guest payor for one-time payments."""
+        query = """
+        query Payors($limit: Int) {
+            payors(limit: $limit) {
+                items {
+                    payor_id
+                    metadata(query_list: [
+                        {
+                            key: "canvas_guest_payor"
+                            value: "true"
+                            operator: EQUAL
+                            conjunctive_operator: NONE_NEXT
+                        }
+                    ])
+                }
+                total_row_count
+            }
+        }
+        """
+
+        payload = {"query": query, "variables": {"limit": 1}}
+
+        log.info(f"PayTheory API: looking up guest payor at {self.endpoint}")
+        response = requests.post(self.endpoint, json=payload, headers=self._headers)
+        data = response.json()
+        log.info(f"PayTheory API: get_guest_payor response status={response.status_code}")
+
+        if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: get_guest_payor error: {response.text}")
+            raise Exception(f"GraphQL error: {response.text}")
+
+        payors = data.get("data", {}).get("payors", {}).get("items", [])
+
+        if payors:
+            payor_id = payors[0].get("payor_id")
+            log.info(f"PayTheory API: found existing guest payor_id={payor_id}")
+            return payor_id
+
+        log.info("PayTheory API: no guest payor found, creating one")
+        return self.create_payor(
+            PayorInput(full_name="Guest", metadata={"canvas_guest_payor": "true"})
+        )
 
     def get_payor_id(self, patient_id: str) -> str | None:
         """Retrieve a payor_id by filtering on metadata.canvas_patient_id."""
@@ -156,17 +207,23 @@ class PayTheoryAPI:
 
         payload = {"query": query, "variables": {"limit": 1}}
 
+        log.info(f"PayTheory API: looking up payor for patient_id={patient_id} at {self.endpoint}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
         data = response.json()
+        log.info(f"PayTheory API: get_payor_id response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: get_payor_id error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
         payors = data.get("data", {}).get("payors", {}).get("items", [])
 
         if payors:
-            return payors[0].get("payor_id")
+            payor_id = payors[0].get("payor_id")
+            log.info(f"PayTheory API: found payor_id={payor_id} for patient_id={patient_id}")
+            return payor_id
 
+        log.info(f"PayTheory API: no payor found for patient_id={patient_id}")
         return None
 
     def get_payment_methods(self, payor_id: str, limit: int = 5) -> list[PaymentMethod]:
@@ -221,16 +278,19 @@ class PayTheoryAPI:
 
         payload = {"query": query, "variables": variables}
 
+        log.info(f"PayTheory API: fetching payment methods for payor_id={payor_id}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
         data = response.json()
+        log.info(f"PayTheory API: get_payment_methods response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: get_payment_methods error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
-        return [
-            PaymentMethod(**item)
-            for item in data.get("data", {}).get("paymentMethodTokens", {}).get("items", [])
-        ]
+        methods = data.get("data", {}).get("paymentMethodTokens", {}).get("items", [])
+        log.info(f"PayTheory API: found {len(methods)} payment methods for payor_id={payor_id}")
+
+        return [PaymentMethod(**item) for item in methods]
 
     def get_payment_method(self, payment_method_id: str, payor_id: str) -> PaymentMethod | None:
         """Retrieve a list of payment methods for the given payor_id."""
@@ -290,10 +350,13 @@ class PayTheoryAPI:
 
         payload = {"query": query, "variables": variables}
 
+        log.info(f"PayTheory API: fetching payment method {payment_method_id} for payor_id={payor_id}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
         data = response.json()
+        log.info(f"PayTheory API: get_payment_method response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: get_payment_method error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
         return next(
@@ -354,22 +417,29 @@ class PayTheoryAPI:
         }
         """
 
+        amount_cents = round(input_data["amount"] * 100)
         payload = {
             "query": query,
             "variables": {
-                "amount": int(input_data["amount"] * 100),
+                "amount": amount_cents,
                 "payment_method_id": input_data["payment_method_id"],
                 "merchant_uid": self.merchant_id,
             },
         }
 
+        log.info(f"PayTheory API: creating transaction amount={amount_cents} payment_method_id={input_data['payment_method_id']}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
         data = response.json()
+        log.info(f"PayTheory API: create_transaction response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: create_transaction error: {json.dumps(data)}")
             raise TransactionError(api_response=data)
 
-        return Transaction(**data.get("data", {}).get("createTransaction", {}))
+        transaction = data.get("data", {}).get("createTransaction", {})
+        log.info(f"PayTheory API: transaction created id={transaction.get('transaction_id')} status={transaction.get('status')}")
+
+        return Transaction(**transaction)
 
     def disable_payment_method(self, payment_method_id: str) -> bool:
         """Disable a payment method."""
@@ -384,10 +454,13 @@ class PayTheoryAPI:
             "variables": {"payment_method_id": payment_method_id, "merchant_uid": self.merchant_id},
         }
 
+        log.info(f"PayTheory API: disabling payment method {payment_method_id}")
         response = requests.post(self.endpoint, json=payload, headers=self._headers)
         data = response.json()
+        log.info(f"PayTheory API: disable_payment_method response status={response.status_code}")
 
         if response.status_code != 200 or "errors" in data:
+            log.error(f"PayTheory API: disable_payment_method error: {response.text}")
             raise Exception(f"GraphQL error: {response.text}")
 
         return data.get("data", {}).get("updatePaymentMethodToDisabled")

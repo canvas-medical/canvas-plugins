@@ -15,6 +15,12 @@ from canvas_sdk.templates import render_to_string
 from canvas_sdk.v1.data import Patient
 from logger import log
 from paytheory_payment_processor.paytheory.api import PayorInput, PayTheoryAPI, TransactionInput
+from paytheory_payment_processor.paytheory.environment import (
+    DEFAULT_ENVIRONMENT,
+    DEFAULT_PARTNER,
+    get_api_url,
+    get_sdk_url,
+)
 from paytheory_payment_processor.paytheory.exceptions import TransactionError
 
 
@@ -24,11 +30,22 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the PayTheory payment processor."""
         super().__init__(*args, **kwargs)
+        partner = self.secrets.get("paytheory_partner", DEFAULT_PARTNER)
+        environment = self.secrets.get("paytheory_environment", DEFAULT_ENVIRONMENT)
+
+        api_url = get_api_url(partner, environment)
+        self.sdk_url = get_sdk_url(partner, environment)
+
+        log.info(f"PayTheory environment: partner={partner}, environment={environment}")
+        log.info(f"PayTheory API URL: {api_url}")
+        log.info(f"PayTheory SDK URL: {self.sdk_url}")
+
         self.api = PayTheoryAPI(
             api_key=self.secrets["paytheory_secret_key"],
             merchant_id=self.secrets["paytheory_merchant_id"],
+            endpoint=api_url,
         )
-        self.default_payor_id = self.secrets["paytheory_default_payor_id"]
+        self.default_payor_id = self.secrets.get("paytheory_default_payor_id") or self.api.get_or_create_guest_payor()
         self.public_api_key = self.secrets["paytheory_public_key"]
 
     def payment_form(self, patient: Patient | None = None) -> PaymentProcessorForm:
@@ -36,9 +53,9 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
         content = render_to_string(
             "templates/form.html",
             {
-                "payor_id": self.default_payor_id,
                 "intent": self.PaymentIntent.PAY,
                 "public_api_key": self.public_api_key,
+                "sdk_url": self.sdk_url,
             },
         )
 
@@ -54,6 +71,7 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
                 "payor_id": payor_id,
                 "intent": self.PaymentIntent.ADD_CARD,
                 "public_api_key": self.public_api_key,
+                "sdk_url": self.sdk_url,
             },
         )
 
@@ -74,7 +92,7 @@ class PayTheoryPaymentProcessor(CardPaymentProcessor):
         return payor_id
 
     def charge(
-        self, amount: Decimal, token: str, patient: Patient | None = None
+        self, amount: Decimal, token: str, patient: Patient | None = None, **kwargs: Any
     ) -> CardTransaction:
         """Charge the credit card using the PayTheory API."""
         try:

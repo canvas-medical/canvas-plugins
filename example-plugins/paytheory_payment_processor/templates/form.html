@@ -31,7 +31,7 @@
   <button type="submit" id="submit" class="submitButton">Pay</button>
 
 
-  <script src="https://start.sdk.paytheory.com/index.js"></script>
+  <script src="{{ sdk_url }}"></script>
   <script>
     var cleanUpReady, cleanUpValid, cleanUpState;
 
@@ -74,14 +74,16 @@
       submit.addEventListener('click', async (e) => {
         e.preventDefault();
 
-        const result = await paytheory.tokenizePaymentMethod({
-          payorId: '{{ payor_id }}',
-        });
+        const tokenizeParams = {};
+        {% if payor_id %}
+        tokenizeParams.payorId = '{{ payor_id }}';
+        {% endif %}
+        const result = await paytheory.tokenizePaymentMethod(tokenizeParams);
 
-        if (result.type === "TOKENIZED") {
+        if (result.body && result.body.payment_method_id) {
           parentSetToken(result.body.payment_method_id);
         } else {
-          parentSetError(result.error);
+          parentSetError(result.error || 'Tokenization failed');
         }
       });
     }

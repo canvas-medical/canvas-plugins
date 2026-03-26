@@ -5,15 +5,39 @@
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "url_permissions": [
         {
-            "url": "https://start.sdk.paytheory.com/index.js",
+            "url": "https://*.sdk.paytheory.com/index.js",
             "permissions": ["SCRIPTS"]
         },
         {
-            "url": "https://start.tags.static.paytheory.com",
+            "url": "https://*.sdk.paytheorystudy.com/index.js",
+            "permissions": ["SCRIPTS"]
+        },
+        {
+            "url": "https://*.sdk.paytheorylab.com/index.js",
+            "permissions": ["SCRIPTS"]
+        },
+        {
+            "url": "https://*.tags.static.paytheory.com",
             "permissions": []
         },
         {
-            "url": "https://start.paytheory.com/pt-token-service/",
+            "url": "https://*.tags.static.paytheorystudy.com",
+            "permissions": []
+        },
+        {
+            "url": "https://*.tags.static.paytheorylab.com",
+            "permissions": []
+        },
+        {
+            "url": "https://*.paytheory.com/pt-token-service/",
+            "permissions": []
+        },
+        {
+            "url": "https://*.paytheorystudy.com/pt-token-service/",
+            "permissions": []
+        },
+        {
+            "url": "https://*.paytheorylab.com/pt-token-service/",
             "permissions": []
         }
     ],
@@ -34,7 +58,7 @@
         "effects": [],
         "views": []
     },
-    "secrets": ["paytheory_merchant_id", "paytheory_public_key", "paytheory_secret_key", "paytheory_default_payor_id"],
+    "secrets": ["paytheory_merchant_id", "paytheory_public_key", "paytheory_secret_key", "paytheory_partner", "paytheory_environment"],
     "tags": {},
     "references": [],
     "license": "",
