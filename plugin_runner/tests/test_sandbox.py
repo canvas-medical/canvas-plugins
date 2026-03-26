@@ -737,13 +737,26 @@ def test_urllib() -> None:
     "code",
     params_from_dict(
         {
-            "class_name": """
+            "class_name_via_self": """
                 class Thing:
                     def __init__(self):
                         super().__init__()
                         print(f'name: {self.__class__.__name__}')
 
                 thing = Thing()
+            """,
+            "class_name_via_instance": """
+                class Thing:
+                    pass
+
+                thing = Thing()
+                assert thing.__class__.__name__ == "Thing"
+            """,
+            "class_name_via_external_instance": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                assert obj.__class__.__name__ == "StopMedicationCommand"
             """,
             "model_dict": """
                 from canvas_sdk.commands import StopMedicationCommand
@@ -768,6 +781,51 @@ def test_sandbox_allows_read_access_to_required_methods(code: str) -> None:
     """
     sandbox = _sandbox_from_code(code)
     sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "mro": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__mro__
+            """,
+            "subclasses": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__subclasses__()
+            """,
+            "setattr": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.evil = "hacked"
+            """,
+            "dict": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__dict__
+            """,
+            "reinit": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__init__("evil")
+            """,
+        }
+    ),
+)
+def test_sandbox_denies_traversal_via_external_safe_class(code: str) -> None:
+    """The safe __class__ proxy should only expose __name__, nothing else."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with pytest.raises(AttributeError):
+        sandbox.execute()
 
 
 def test_sandbox_allows_write_access_to_id() -> None:
@@ -945,12 +1003,6 @@ def test_type_is_inaccessible() -> None:
 
                 client = Http()
                 pvt = client._session
-            """,
-            "private_attr__class__": """
-                from canvas_sdk.utils import Http
-
-                client = Http()
-                pvt = client.__class__
             """,
             "ontologies_base_url": """
                 from canvas_sdk.utils.http import ontologies_http
