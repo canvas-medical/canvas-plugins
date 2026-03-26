@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.121.4 (2026-03-26)
+
+### Bug Fixes
+
+- Improvements to backward compatibility for note applications
+  ([#1592](https://github.com/canvas-medical/canvas-plugins/pull/1592),
+  [`729376c`](https://github.com/canvas-medical/canvas-plugins/commit/729376c91b4a1dc91cc58b5cb0f9ff6a62effc7b))
+
+
 ## v0.121.3 (2026-03-26)
 
 ### Bug Fixes
