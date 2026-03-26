@@ -1,4 +1,7 @@
 {
+  "canvas_sdk.caching.client": [
+    "get_cache"
+  ],
   "canvas_sdk.caching.exceptions": [
     "CacheConfigurationError",
     "CachingException"

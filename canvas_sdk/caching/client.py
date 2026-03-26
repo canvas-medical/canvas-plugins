@@ -23,4 +23,5 @@ def get_cache(
         raise CacheConfigurationError(driver) from error
 
 
-__exports__ = ()
+# temporarily allow this get_cache until hyperscribe can migrate off
+__exports__ = ("get_cache",)
