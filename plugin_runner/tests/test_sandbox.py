@@ -1507,6 +1507,36 @@ def test_implicit_import_fallback_still_works(tmp_path: Path) -> None:
         assert scope.get("result") == 43
 
 
+def test_fallback_reloads_existing_sys_module(tmp_path: Path) -> None:
+    """When a module is already in sys.modules and registration fails,
+    the fallback should call importlib.reload on it.
+    """
+    base_path = _make_plugin_tree(
+        tmp_path,
+        "fb_plugin",
+        {
+            "__init__.py": "",
+            "helpers.py": "HELPER = True",
+            "handler.py": "from fb_plugin.helpers import HELPER",
+        },
+    )
+
+    with _plugin_on_sys_path(base_path, "fb_plugin"):
+        # Pre-import so modules exist in sys.modules before the fallback fires.
+        import importlib as _il
+
+        _il.import_module("fb_plugin.helpers")
+
+        with (
+            _fallback_patches(),
+            patch("plugin_runner.sandbox.importlib.reload", wraps=importlib.reload) as mock_reload,
+        ):
+            sandbox = sandbox_from_module(base_path, "fb_plugin.handler")
+            sandbox.execute()
+
+            mock_reload.assert_called()
+
+
 def test_fallback_http_timeout_override_still_allowed() -> None:
     """The _MAX_REQUEST_TIMEOUT_SECONDS deprecation allowance should work
     even when the sys.modules fallback is active.
