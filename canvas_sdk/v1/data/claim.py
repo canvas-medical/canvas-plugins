@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Self
 
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, MetadataModel, TimestampedModel
 from canvas_sdk.v1.data.common import PersonSex
 from canvas_sdk.v1.data.coverage import (
     CoverageRelationshipCode,
@@ -404,7 +404,7 @@ class ClaimSubmission(IdentifiableModel):
     claim_index = models.PositiveIntegerField(default=0)
 
 
-class ClaimMetadata(IdentifiableModel, TimestampedModel):
+class ClaimMetadata(MetadataModel):
     """ClaimMetadata."""
 
     class Meta:
@@ -412,8 +412,6 @@ class ClaimMetadata(IdentifiableModel, TimestampedModel):
         unique_together = ("claim", "key")
 
     claim = models.ForeignKey("v1.Claim", on_delete=models.CASCADE, related_name="metadata")
-    key = models.CharField(max_length=32)
-    value = models.CharField(max_length=256)
 
 
 __exports__ = (
