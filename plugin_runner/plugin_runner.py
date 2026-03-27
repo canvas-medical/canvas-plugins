@@ -691,7 +691,6 @@ def verify_plugin_namespace_access(
     }
 
 
-@measured(track_memory_usage=True)
 def load_or_reload_plugin(path: pathlib.Path) -> bool:
     """Given a path, load or reload a plugin."""
     log.info(f'Loading plugin at "{path}"')
@@ -699,182 +698,187 @@ def load_or_reload_plugin(path: pathlib.Path) -> bool:
     # the name is the folder name underneath the plugins directory
     name = path.name
 
-    manifest_file = path / MANIFEST_FILE_NAME
+    with metrics.measure(
+        "load_or_reload_plugin",
+        track_memory_usage=True,
+        extra_tags={"plugin": name},
+    ):
+        manifest_file = path / MANIFEST_FILE_NAME
 
-    # If installed via `canvas install` we can rely on the manifest file
-    # existing. If installed via another method we still need to avoid crashing
-    # the entire runner if there's no manifest.
-    if not manifest_file.exists():
-        log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
-        return False
+        # If installed via `canvas install` we can rely on the manifest file
+        # existing. If installed via another method we still need to avoid crashing
+        # the entire runner if there's no manifest.
+        if not manifest_file.exists():
+            log.exception(f'Unable to load plugin "{name}", missing {MANIFEST_FILE_NAME}')
+            return False
 
-    manifest_json_str = manifest_file.read_text()
+        manifest_json_str = manifest_file.read_text()
 
-    try:
-        manifest_json: PluginManifest = json.loads(manifest_json_str)
-    except Exception as e:
-        log.exception(f'Unable to load plugin "{name}"')
-        sentry_sdk.capture_exception(e)
-
-        return False
-
-    secrets_file = path / SECRETS_FILE_NAME
-    secrets_json = {}
-
-    if secrets_file.exists():
         try:
-            secrets_json = json.load(secrets_file.open())
+            manifest_json: PluginManifest = json.loads(manifest_json_str)
         except Exception as e:
-            log.exception(f'Unable to load secrets for plugin "{name}"')
+            log.exception(f'Unable to load plugin "{name}"')
             sentry_sdk.capture_exception(e)
 
-    # Process custom_data configuration
-    namespace_config: dict | None = None
-    custom_data = manifest_json.get("custom_data")
-    if custom_data:
-        if IS_SQLITE:
-            # Local development mode: skip namespace auth verification and
-            # schema creation (no PostgreSQL, no secrets, no namespace_auth table).
-            namespace_name = custom_data["namespace"]
-            namespace_config = {
-                "namespace": namespace_name,
-                "access_level": custom_data.get("access", "read"),
-            }
-            log.info(
-                f"Plugin '{name}' granted local '{namespace_config['access_level']}' "
-                f"access to namespace '{namespace_name}' (SQLite mode, auth skipped)"
-            )
+            return False
 
-            # The default SQLite connection is read-only; swap to the writable
-            # one for schema initialisation and plugin migrations.
-            import django.db
-            from django.apps import apps as django_apps
+        secrets_file = path / SECRETS_FILE_NAME
+        secrets_json = {}
 
-            original_default = django.db.connections["default"]
+        if secrets_file.exists():
             try:
-                temp_handler = django.db.utils.ConnectionHandler(
-                    {"default": settings.SQLITE_WRITE_MODE_DATABASE}
+                secrets_json = json.load(secrets_file.open())
+            except Exception as e:
+                log.exception(f'Unable to load secrets for plugin "{name}"')
+                sentry_sdk.capture_exception(e)
+
+        # Process custom_data configuration
+        namespace_config: dict | None = None
+        custom_data = manifest_json.get("custom_data")
+        if custom_data:
+            if IS_SQLITE:
+                # Local development mode: skip namespace auth verification and
+                # schema creation (no PostgreSQL, no secrets, no namespace_auth table).
+                namespace_name = custom_data["namespace"]
+                namespace_config = {
+                    "namespace": namespace_name,
+                    "access_level": custom_data.get("access", "read"),
+                }
+                log.info(
+                    f"Plugin '{name}' granted local '{namespace_config['access_level']}' "
+                    f"access to namespace '{namespace_name}' (SQLite mode, auth skipped)"
                 )
-                django.db.connections["default"] = temp_handler["default"]
 
-                # Ensure the framework tables exist (custom_attribute,
-                # attribute_hub) — same as the test database setup and the
-                # --reset-db path in run_plugins.
-                _ensure_sqlite_schema()
+                # The default SQLite connection is read-only; swap to the writable
+                # one for schema initialisation and plugin migrations.
+                import django.db
+                from django.apps import apps as django_apps
 
-                # install_plugins() is skipped in local mode, so custom data
-                # tables are never created. Run plugin-specific migrations here.
-                if namespace_config["access_level"] == "read_write":
-                    generate_plugin_migrations(name, path, schema_name=namespace_name)
-            finally:
-                django.db.connections["default"] = original_default
-        else:
-            namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
-            log.info(
-                f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
-                f"with '{namespace_config['access_level']}' access"
-            )
+                original_default = django.db.connections["default"]
+                try:
+                    temp_handler = django.db.utils.ConnectionHandler(
+                        {"default": settings.SQLITE_WRITE_MODE_DATABASE}
+                    )
+                    django.db.connections["default"] = temp_handler["default"]
 
-    # TODO add existing schema validation from Michela here
-    try:
-        components = manifest_json["components"]
-        handlers = (
-            cast(list, components.get("protocols", []))
-            + cast(list, components.get("applications", []))
-            + cast(list, components.get("handlers", []))
-        )
-    except Exception as e:
-        log.exception(f'Unable to load plugin "{name}"')
-        sentry_sdk.capture_exception(e)
+                    # Ensure the framework tables exist (custom_attribute,
+                    # attribute_hub) — same as the test database setup and the
+                    # --reset-db path in run_plugins.
+                    _ensure_sqlite_schema()
 
-        return False
+                    # install_plugins() is skipped in local mode, so custom data
+                    # tables are never created. Run plugin-specific migrations here.
+                    if namespace_config["access_level"] == "read_write":
+                        generate_plugin_migrations(name, path, schema_name=namespace_name)
+                finally:
+                    django.db.connections["default"] = original_default
+            else:
+                namespace_config = verify_plugin_namespace_access(name, custom_data, secrets_json)
+                log.info(
+                    f"Plugin '{name}' authorized for namespace '{namespace_config['namespace']}' "
+                    f"with '{namespace_config['access_level']}' access"
+                )
 
-    any_failed = False
-
-    # Share evaluated_modules across all handlers in this plugin so that common
-    # submodules (like constants.py) are only evaluated and reloaded once, not
-    # once per handler.
-    evaluated_modules: dict[str, bool] = {}
-
-    # Clear stale model registrations before handler sandboxes re-execute model
-    # files.  Without this, lazy_related_operation resolves string references
-    # (e.g. through="StaffSpecialty") to class objects from the prior execution,
-    # causing model-identity mismatches in ManyToManyField through-model resolution.
-    from django.apps import apps as django_apps
-
-    from plugin_runner.installation import register_plugin_app_config
-
-    django_apps.all_models.pop(name, None)
-    django_apps.app_configs.pop(name, None)
-    django_apps.clear_cache()
-
-    for handler in handlers:
-        # TODO add class colon validation to existing schema validation
-        # TODO when we encounter an exception here, disable the plugin in response
+        # TODO add existing schema validation from Michela here
         try:
-            handler_module, handler_class = handler["class"].split(":")
+            components = manifest_json["components"]
+            handlers = (
+                cast(list, components.get("protocols", []))
+                + cast(list, components.get("applications", []))
+                + cast(list, components.get("handlers", []))
+            )
+        except Exception as e:
+            log.exception(f'Unable to load plugin "{name}"')
+            sentry_sdk.capture_exception(e)
 
-            handler_package = handler_module.split(".")[0]
-            if handler_package != name:
-                log.error(
-                    f'Plugin "{name}" declares handler from foreign package '
-                    f'"{handler_package}" — skipping'
-                )
+            return False
+
+        any_failed = False
+
+        # Share evaluated_modules across all handlers in this plugin so that common
+        # submodules (like constants.py) are only evaluated and reloaded once, not
+        # once per handler.
+        evaluated_modules: dict[str, bool] = {}
+
+        # Clear stale model registrations before handler sandboxes re-execute model
+        # files.  Without this, lazy_related_operation resolves string references
+        # (e.g. through="StaffSpecialty") to class objects from the prior execution,
+        # causing model-identity mismatches in ManyToManyField through-model resolution.
+        from django.apps import apps as django_apps
+
+        from plugin_runner.installation import register_plugin_app_config
+
+        django_apps.all_models.pop(name, None)
+        django_apps.app_configs.pop(name, None)
+        django_apps.clear_cache()
+
+        for handler in handlers:
+            # TODO add class colon validation to existing schema validation
+            # TODO when we encounter an exception here, disable the plugin in response
+            try:
+                handler_module, handler_class = handler["class"].split(":")
+
+                handler_package = handler_module.split(".")[0]
+                if handler_package != name:
+                    log.error(
+                        f'Plugin "{name}" declares handler from foreign package '
+                        f'"{handler_package}" — skipping'
+                    )
+                    any_failed = True
+                    continue
+
+                name_and_class = f"{name}:{handler_module}:{handler_class}"
+            except ValueError as e:
+                log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
+                sentry_sdk.capture_exception(e)
+
                 any_failed = True
+
                 continue
 
-            name_and_class = f"{name}:{handler_module}:{handler_class}"
-        except ValueError as e:
-            log.exception(f'Unable to parse class for plugin "{name}": "{handler["class"]}"')
-            sentry_sdk.capture_exception(e)
+            try:
+                # Suppress Django's "Model was already registered" RuntimeWarning.
+                # When importlib.reload re-imports model modules, Django's metaclass
+                # calls apps.register_model() again for each model class.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=r"Model '.*' was already registered",
+                        category=RuntimeWarning,
+                    )
+                    sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
+                    result = sandbox.execute()
 
-            any_failed = True
+                if name_and_class in LOADED_PLUGINS:
+                    log.info(f"Reloading handler '{name_and_class}'")
 
-            continue
+                    LOADED_PLUGINS[name_and_class]["active"] = True
 
-        try:
-            # Suppress Django's "Model was already registered" RuntimeWarning.
-            # When importlib.reload re-imports model modules, Django's metaclass
-            # calls apps.register_model() again for each model class.
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message=r"Model '.*' was already registered",
-                    category=RuntimeWarning,
-                )
-                sandbox = sandbox_from_module(path.parent, handler_module, evaluated_modules)
-                result = sandbox.execute()
+                    LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
+                    LOADED_PLUGINS[name_and_class]["sandbox"] = result
+                    LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
+                    LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
+                else:
+                    log.info(f'Loading handler "{name_and_class}"')
 
-            if name_and_class in LOADED_PLUGINS:
-                log.info(f"Reloading handler '{name_and_class}'")
+                    LOADED_PLUGINS[name_and_class] = {
+                        "active": True,
+                        "class": result[handler_class],
+                        "sandbox": result,
+                        "handler": handler,
+                        "secrets": secrets_json,
+                        "namespace_config": namespace_config,
+                    }
+            except Exception as e:
+                log.exception(f"Error importing module '{name_and_class}'")
+                sentry_sdk.capture_exception(e)
+                any_failed = True
 
-                LOADED_PLUGINS[name_and_class]["active"] = True
+        # Re-register the AppConfig so that the freshly-created model classes are
+        # visible to Django's relation graph (needed for select_related, etc.).
+        register_plugin_app_config(name)
 
-                LOADED_PLUGINS[name_and_class]["class"] = result[handler_class]
-                LOADED_PLUGINS[name_and_class]["sandbox"] = result
-                LOADED_PLUGINS[name_and_class]["secrets"] = secrets_json
-                LOADED_PLUGINS[name_and_class]["namespace_config"] = namespace_config
-            else:
-                log.info(f'Loading handler "{name_and_class}"')
-
-                LOADED_PLUGINS[name_and_class] = {
-                    "active": True,
-                    "class": result[handler_class],
-                    "sandbox": result,
-                    "handler": handler,
-                    "secrets": secrets_json,
-                    "namespace_config": namespace_config,
-                }
-        except Exception as e:
-            log.exception(f"Error importing module '{name_and_class}'")
-            sentry_sdk.capture_exception(e)
-            any_failed = True
-
-    # Re-register the AppConfig so that the freshly-created model classes are
-    # visible to Django's relation graph (needed for select_related, etc.).
-    register_plugin_app_config(name)
-
-    return not any_failed
+        return not any_failed
 
 
 def unload_plugin(name: str) -> None:
