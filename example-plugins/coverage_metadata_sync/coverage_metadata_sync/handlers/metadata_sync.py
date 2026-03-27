@@ -54,7 +54,7 @@ class CoverageStatusSyncHandler(BaseHandler):
         if not patient_id:
             log.warning(
                 "No patient ID found in event context for label event. "
-                "Cannot update metadata. Event type: {self.event.type}"
+                f"Cannot update metadata. Event type: {self.event.type}"
             )
             return []
 
