@@ -156,7 +156,7 @@ def test_track_plugins_usage_adds_plugin_tags(mock_time: MagicMock) -> None:
     with (
         patch(
             "canvas_sdk.utils.plugins.is_plugin_caller",
-            return_value=(True, "my_plugin.protocols.handler"),
+            return_value=(True, "my_plugin.handlers.handler"),
         ),
         measure("block", track_plugins_usage=True, client=client),
     ):
@@ -164,7 +164,7 @@ def test_track_plugins_usage_adds_plugin_tags(mock_time: MagicMock) -> None:
 
     tags = pipeline.timing.call_args.kwargs["tags"]
     assert tags["plugin"] == "my_plugin"
-    assert tags["handler"] == "my_plugin.protocols.handler"
+    assert tags["handler"] == "my_plugin.handlers.handler"
 
 
 @patch("canvas_sdk.utils.metrics.time")
@@ -218,7 +218,7 @@ def test_track_memory_usage_captures_rss_delta(
 @patch("canvas_sdk.utils.metrics.log")
 @patch(
     "canvas_sdk.utils.plugins.is_plugin_caller",
-    return_value=(True, "test_plugin.protocols.handler"),
+    return_value=(True, "test_plugin.handlers.handler"),
 )
 @patch("canvas_sdk.utils.metrics.psutil")
 @patch("canvas_sdk.utils.metrics.time")
@@ -269,7 +269,7 @@ def test_memory_below_threshold_no_warning(
 @patch("canvas_sdk.utils.metrics.log")
 @patch(
     "canvas_sdk.utils.plugins.is_plugin_caller",
-    return_value=(True, "test_plugin.protocols.handler"),
+    return_value=(True, "test_plugin.handlers.handler"),
 )
 @patch("canvas_sdk.utils.metrics.psutil")
 @patch("canvas_sdk.utils.metrics.time")

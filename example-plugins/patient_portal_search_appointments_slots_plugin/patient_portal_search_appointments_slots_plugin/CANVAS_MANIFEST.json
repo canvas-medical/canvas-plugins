@@ -4,7 +4,7 @@
     "name": "patient_portal_search_appointments_slots_plugin",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "patient_portal_search_appointments_slots_plugin.handlers.search_appointments_slots_handler:SearchAppointmentsSlotsHandler",
                 "description": "",

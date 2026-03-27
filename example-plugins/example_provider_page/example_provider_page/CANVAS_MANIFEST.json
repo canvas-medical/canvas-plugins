@@ -19,7 +19,7 @@
                 "icon": "assets/python-logo.png"
             }
         ],
-        "protocols": [
+        "handlers": [
             {
                 "class": "example_provider_page.handlers.my_web_app:MyWebApp",
                 "description": "Serves the application",

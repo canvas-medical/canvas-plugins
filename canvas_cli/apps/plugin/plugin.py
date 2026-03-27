@@ -186,10 +186,10 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
     return meta
 
 
-def _get_protocols_with_new_cqm_properties(
+def _get_handlers_with_new_cqm_properties(
     protocol_classes: Iterable[dict[str, Any]], plugin: Path
 ) -> Iterable[dict[str, Any]] | None:
-    """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
+    """Extract the meta properties of any ClinicalQualityMeasure handlers included in the plugin if they have changed."""
     has_updates = False
     protocol_props = []
     for p in protocol_classes:
@@ -229,8 +229,8 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
 
 def init(
     plugin_type: str = typer.Argument(
-        "protocol",
-        help="The type of plugin to create. Options are 'application' or 'protocol'.",
+        "handler",
+        help="The type of plugin to create. Options are 'application' or 'handler'.",
     ),
 ) -> None:
     """Create a new plugin."""
@@ -603,12 +603,14 @@ def validate_manifest(
 
     try:
         manifest_json = json.loads(manifest.read_text())
-        protocols = manifest_json.get("components", {}).get("protocols", [])
-        if new_protocols := _get_protocols_with_new_cqm_properties(protocols, plugin_name):
+        components = manifest_json.get("components", {})
+        handler_key = "handlers" if "handlers" in components else "protocols"
+        handlers = components.get(handler_key, [])
+        if new_handlers := _get_handlers_with_new_cqm_properties(handlers, plugin_name):
             print(
                 f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
             )
-            manifest_json["components"]["protocols"] = new_protocols
+            manifest_json["components"][handler_key] = new_handlers
             manifest.write_text(json.dumps(manifest_json))
             manifest_json = json.loads(manifest.read_text())
 

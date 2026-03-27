@@ -35,7 +35,7 @@ CANVAS_SUBMODULE_NAMES = [
 
 def _sandbox_from_code(
     source_code: str,
-    module_name: str = "plugin_name.protocols.protocol",
+    module_name: str = "plugin_name.handlers.handler",
     extra_source_code: str | None = None,
     extra_module_name: str | None = None,
 ) -> Sandbox:
