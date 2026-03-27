@@ -1,0 +1,28 @@
+{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "custom_data_uat",
+    "description": "UAT plugin for custom data features: CustomModel, ModelExtension, proxy_field, AttributeHub",
+    "components": {
+        "handlers": [
+            {
+                "class": "custom_data_uat.handlers.uat_api:CustomDataUatAPI",
+                "description": "API for UAT testing custom data features"
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": ["uat-api-key"],
+    "custom_data": {
+        "namespace": "custom_data__uat",
+        "access": "read_write"
+    },
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}
