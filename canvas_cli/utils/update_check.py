@@ -35,7 +35,8 @@ def _write_cache(cache_path: Path, latest_version: str) -> None:
         json.dump({"last_checked": time.time(), "latest_version": latest_version}, f)
 
 
-def _fetch_latest_version() -> str:
+# Excluded from coverage because this hits the network (PyPI) and is always mocked in tests.
+def _fetch_latest_version() -> str:  # pragma: no cover
     req = urllib.request.Request(PYPI_URL, headers={"Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=5) as resp:
         data = json.loads(resp.read())
