@@ -86,6 +86,38 @@ Here’s the format to use:
 
 ---
 
+## Hotfix Release Process
+
+To release a patch fix for a previous version without including unreleased features from `main`:
+
+1. **Create a release branch** from the version tag:
+   ```bash
+   git checkout -b release/0.122.x 0.122.0
+   git push origin release/0.122.x
+   ```
+
+2. **Cherry-pick the fix** onto the release branch:
+   ```bash
+   git cherry-pick <commit-sha>
+   git push origin release/0.122.x
+   ```
+
+3. **Trigger the release** from GitHub Actions:
+   - Go to Actions > "Semantic Release" workflow
+   - Click "Run workflow"
+   - Select branch `release/0.122.x`
+   - Optionally run with dry-run first to verify
+
+4. The workflow forces a patch bump on release branches, so it will produce `0.122.1` regardless of commit type.
+
+**Notes:**
+- Use the naming convention `release/X.Y.x` (e.g., `release/0.122.x`)
+- Multiple patches can be released from the same branch (0.122.1, 0.122.2, etc.)
+- Always merge the fix to `main` as well to ensure it's included in future releases
+- Only use a release branch when `main` has unreleased features you want to exclude. If `main` has no pending features, just release from `main` directly.
+
+---
+
 ## Code of Conduct
 
 This project adheres to a [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code and maintain a respectful and collaborative environment.
