@@ -216,16 +216,12 @@ def test_track_memory_usage_captures_rss_delta(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch(
-    "canvas_sdk.utils.plugins.is_plugin_caller",
-    return_value=(True, "test_plugin.handlers.handler"),
-)
 @patch("canvas_sdk.utils.metrics.psutil")
 @patch("canvas_sdk.utils.metrics.time")
-def test_memory_excessive_growth_logs_warning(
-    mock_time: MagicMock, mock_psutil: MagicMock, _mock_caller: MagicMock, mock_log: MagicMock
+def test_memory_excessive_growth_logs_warning_with_name(
+    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
 ) -> None:
-    """RSS growth above threshold should trigger a warning."""
+    """RSS growth above threshold should trigger a warning using the measure name."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
     mb = 1024 * 1024
     mock_process = MagicMock()
@@ -236,11 +232,45 @@ def test_memory_excessive_growth_logs_warning(
     mock_psutil.Process.return_value = mock_process
     client, pipeline = _make_client()
 
-    with measure("block", track_memory_usage=True, client=client):
+    with measure("my_handler.compute", track_memory_usage=True, client=client):
         pass
 
     mock_log.warning.assert_called_once()
-    assert "Excessive memory growth" in mock_log.warning.call_args.args[0]
+    warning_msg = mock_log.warning.call_args.args[0]
+    assert "Excessive memory growth" in warning_msg
+    assert "my_handler.compute" in warning_msg
+
+
+@patch("canvas_sdk.utils.metrics.log")
+@patch("canvas_sdk.utils.metrics.psutil")
+@patch("canvas_sdk.utils.metrics.time")
+def test_memory_excessive_growth_logs_plugin_name_from_extra_tags(
+    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
+) -> None:
+    """RSS growth warning should include both plugin name and measure name."""
+    mock_time.perf_counter_ns.side_effect = [0, 0]
+    mb = 1024 * 1024
+    mock_process = MagicMock()
+    mock_process.memory_info.side_effect = [
+        MagicMock(rss=100 * mb),
+        MagicMock(rss=110 * mb),  # 10 MB growth, default threshold is 5 MB
+    ]
+    mock_psutil.Process.return_value = mock_process
+    client, pipeline = _make_client()
+
+    with measure(
+        "handler_name",
+        track_memory_usage=True,
+        extra_tags={"plugin": "my_cool_plugin", "event": "some_event"},
+        client=client,
+    ):
+        pass
+
+    mock_log.warning.assert_called_once()
+    warning_msg = mock_log.warning.call_args.args[0]
+    assert "Excessive memory growth" in warning_msg
+    assert "my_cool_plugin" in warning_msg
+    assert "handler_name" in warning_msg
 
 
 @patch("canvas_sdk.utils.metrics.log")
@@ -267,15 +297,11 @@ def test_memory_below_threshold_no_warning(
 
 
 @patch("canvas_sdk.utils.metrics.log")
-@patch(
-    "canvas_sdk.utils.plugins.is_plugin_caller",
-    return_value=(True, "test_plugin.handlers.handler"),
-)
 @patch("canvas_sdk.utils.metrics.psutil")
 @patch("canvas_sdk.utils.metrics.time")
 @patch.dict(os.environ, {"PLUGIN_MEMORY_GROWTH_THRESHOLD_MB": "2"})
 def test_memory_threshold_respects_env_var(
-    mock_time: MagicMock, mock_psutil: MagicMock, _mock_caller: MagicMock, mock_log: MagicMock
+    mock_time: MagicMock, mock_psutil: MagicMock, mock_log: MagicMock
 ) -> None:
     """The warning threshold should be configurable via env var."""
     mock_time.perf_counter_ns.side_effect = [0, 0]
