@@ -11,7 +11,11 @@ from .claim import (
 )
 from .claim_banner_alert import ClaimBannerAlertFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
-from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
+from .claim_line_item import (
+    ClaimLineItemDiagnosisCodeFactory,
+    ClaimLineItemFactory,
+    ClaimLineItemModifierFactory,
+)
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
@@ -99,6 +103,7 @@ __all__ = (
     "ClaimMetadataFactory",
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
+    "ClaimLineItemModifierFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",

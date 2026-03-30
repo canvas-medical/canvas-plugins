@@ -1,6 +1,6 @@
 import factory
 
-from canvas_sdk.v1.data import ClaimLineItem, ClaimLineItemDiagnosisCode
+from canvas_sdk.v1.data import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
 
 
 class ClaimLineItemFactory(factory.django.DjangoModelFactory[ClaimLineItem]):
@@ -23,3 +23,13 @@ class ClaimLineItemDiagnosisCodeFactory(
 
     line_item = factory.SubFactory(ClaimLineItemFactory)
     code = "T1490"
+
+
+class ClaimLineItemModifierFactory(factory.django.DjangoModelFactory[ClaimLineItemModifier]):
+    """Factory for creating a ClaimLineItemModifier."""
+
+    class Meta:
+        model = ClaimLineItemModifier
+
+    line_item = factory.SubFactory(ClaimLineItemFactory)
+    modifier = "99"

@@ -36,7 +36,7 @@ from .claim import (
 )
 from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
-from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
+from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
 from .command import Command, CommandMetadata
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
@@ -218,6 +218,7 @@ __all__ = __exports__ = (
     "ClaimLineItem",
     "ClaimMetadata",
     "ClaimLineItemDiagnosisCode",
+    "ClaimLineItemModifier",
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
