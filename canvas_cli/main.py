@@ -1,3 +1,4 @@
+import atexit
 import importlib.metadata
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
 from canvas_cli.utils.context import context
+from canvas_cli.utils.update_check import check_for_updates
 
 APP_NAME = "canvas_cli"
 
@@ -87,6 +89,11 @@ def get_or_create_config_file() -> Path:
             file.write("{}")
 
     return config_path
+
+
+# Register the update check to run at exit so it fires for --version, --help,
+# and all subcommands regardless of how typer/click handles early exits.
+atexit.register(check_for_updates, __version__, get_app_dir())
 
 
 @app.callback()
