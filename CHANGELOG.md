@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.125.0 (2026-03-30)
+
+### Features
+
+- Merge patient header profile and chart action buttons
+  ([#1579](https://github.com/canvas-medical/canvas-plugins/pull/1579),
+  [`95ad465`](https://github.com/canvas-medical/canvas-plugins/commit/95ad46593d08f8b7aaa72a51b5bd7f6366646f95))
+
+
 ## v0.124.0 (2026-03-30)
 
 ### Bug Fixes
