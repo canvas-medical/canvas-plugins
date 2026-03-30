@@ -1,7 +1,13 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-from canvas_sdk.v1.data.base import AuditedModel, IdentifiableModel, Model, TimestampedModel
+from canvas_sdk.v1.data.base import (
+    AuditedModel,
+    IdentifiableModel,
+    MetadataModel,
+    Model,
+    TimestampedModel,
+)
 from canvas_sdk.v1.data.common import ColorEnum, Origin
 
 
@@ -139,15 +145,13 @@ class NoteTask(AuditedModel, IdentifiableModel):
     internal_comment = models.TextField(blank=True, default="")
 
 
-class TaskMetadata(IdentifiableModel):
+class TaskMetadata(MetadataModel):
     """TaskMetadata."""
 
     class Meta:
         db_table = "canvas_sdk_data_api_taskmetadata_001"
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="metadata")
-    key = models.CharField(max_length=32)
-    value = models.CharField(max_length=255)
 
 
 __exports__ = (
