@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v0.124.0 (2026-03-30)
+
+### Bug Fixes
+
+- Ensure excessive memory growth warning logs plugin name
+  ([#1560](https://github.com/canvas-medical/canvas-plugins/pull/1560),
+  [`24c82ee`](https://github.com/canvas-medical/canvas-plugins/commit/24c82ee1f025426aef40fbc19c18ca60ae9980d8))
+
+### Chores
+
+- Add custom data UAT plugin ([#1583](https://github.com/canvas-medical/canvas-plugins/pull/1583),
+  [`e6cca72`](https://github.com/canvas-medical/canvas-plugins/commit/e6cca72cbe1582d1c85fe080ae14993305c36e9b))
+
+- Add support for multi-branch releases
+  ([#1601](https://github.com/canvas-medical/canvas-plugins/pull/1601),
+  [`8d29987`](https://github.com/canvas-medical/canvas-plugins/commit/8d29987ea6c753879d5133b913e48e56ab8f9155))
+
+- Protocols → handlers ([#1556](https://github.com/canvas-medical/canvas-plugins/pull/1556),
+  [`6ad5840`](https://github.com/canvas-medical/canvas-plugins/commit/6ad5840e79fe155f404c310ecc6338325f9e89b5))
+
+### Features
+
+- Add snapshot FK to Coverage model
+  ([#1564](https://github.com/canvas-medical/canvas-plugins/pull/1564),
+  [`40b6305`](https://github.com/canvas-medical/canvas-plugins/commit/40b63057423fa99c7e1c9e642118fab063736daf))
+
+- Standardize all metadata model fields
+  ([#1606](https://github.com/canvas-medical/canvas-plugins/pull/1606),
+  [`8e65ee1`](https://github.com/canvas-medical/canvas-plugins/commit/8e65ee197308c746ad98cbc05afe72bcc827c5bd))
+
+
 ## v0.123.1 (2026-03-26)
 
 ### Bug Fixes
