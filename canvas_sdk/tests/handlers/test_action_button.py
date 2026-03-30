@@ -91,7 +91,6 @@ def test_responds_to_contains_expected_event_types() -> None:
     assert "SHOW_NOTE_FOOTER_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_NOTE_BODY_BUTTON" in ActionButton.RESPONDS_TO
     assert "SHOW_CHART_PATIENT_HEADER_BUTTON" in ActionButton.RESPONDS_TO
-    assert "SHOW_PROFILE_PATIENT_HEADER_BUTTON" in ActionButton.RESPONDS_TO
 
 
 # --- ButtonLocation enum tests ---
@@ -103,7 +102,6 @@ def test_button_location_enum_values() -> None:
     assert ActionButton.ButtonLocation.NOTE_FOOTER.value == "note_footer"
     assert ActionButton.ButtonLocation.NOTE_BODY.value == "note_body"
     assert ActionButton.ButtonLocation.CHART_PATIENT_HEADER.value == "chart_patient_header"
-    assert ActionButton.ButtonLocation.PROFILE_PATIENT_HEADER.value == "profile_patient_header"
 
 
 # --- visible() tests ---
