@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.126.0 (2026-03-30)
+
+### Features
+
+- Add note header dropdown action button
+  ([#1576](https://github.com/canvas-medical/canvas-plugins/pull/1576),
+  [`c95f34c`](https://github.com/canvas-medical/canvas-plugins/commit/c95f34c903690745519345ecf77f52e28e1e7632))
+
+
 ## v0.125.0 (2026-03-30)
 
 ### Features
