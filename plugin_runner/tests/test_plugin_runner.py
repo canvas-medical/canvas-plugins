@@ -14,6 +14,7 @@ import pytest
 
 from canvas_generated.messages.effects_pb2 import Effect, EffectType
 from canvas_generated.messages.plugins_pb2 import (
+    GetRegisteredEventTypesRequest,
     ReloadPluginRequest,
     ReloadPluginsRequest,
     UnloadPluginRequest,
@@ -937,3 +938,27 @@ def test_main_logs_keyboard_interrupt(
 
     assert any("Server shutting down (reason: SIGINT)" in r.message for r in caplog.records)
     assert any("Server stopped" in r.message for r in caplog.records)
+
+
+@pytest.mark.parametrize("install_test_plugin", ["example_plugin"], indirect=True)
+def test_get_registered_event_types_returns_loaded_event_types(
+    install_test_plugin: Path,
+    plugin_runner: PluginRunner,
+    load_test_plugins: None,
+) -> None:
+    """Test that GetRegisteredEventTypes returns the event types of loaded plugins."""
+    response = plugin_runner.GetRegisteredEventTypes(GetRegisteredEventTypesRequest(), None)
+
+    assert EventType.Name(EventType.UNKNOWN) in response.event_types
+
+
+def test_get_registered_event_types_returns_empty_when_no_plugins(
+    plugin_runner: PluginRunner,
+) -> None:
+    """Test that GetRegisteredEventTypes returns empty when no plugins are loaded."""
+    LOADED_PLUGINS.clear()
+    EVENT_HANDLER_MAP.clear()
+
+    response = plugin_runner.GetRegisteredEventTypes(GetRegisteredEventTypesRequest(), None)
+
+    assert list(response.event_types) == []
