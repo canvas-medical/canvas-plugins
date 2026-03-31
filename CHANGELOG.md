@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.127.0 (2026-03-31)
+
+### Features
+
+- Create ClaimLineItemModifier model and factory
+  ([#1593](https://github.com/canvas-medical/canvas-plugins/pull/1593),
+  [`203b7a5`](https://github.com/canvas-medical/canvas-plugins/commit/203b7a5d22270f5a5fac0a6442833f1ed8ee45c2))
+
+
 ## v0.126.0 (2026-03-30)
 
 ### Features
