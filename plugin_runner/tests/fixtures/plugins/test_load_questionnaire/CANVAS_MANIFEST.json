@@ -4,9 +4,9 @@
     "name": "test_load_questionnaire",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "test_load_questionnaire.protocols.my_protocol:ValidQuestionnaire",
+                "class": "test_load_questionnaire.handlers.my_handler:ValidQuestionnaire",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -15,7 +15,7 @@
                 }
             },
              {
-                "class": "test_load_questionnaire.protocols.my_protocol:InvalidQuestionnaire",
+                "class": "test_load_questionnaire.handlers.my_handler:InvalidQuestionnaire",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -24,7 +24,7 @@
                 }
             },
              {
-                "class": "test_load_questionnaire.protocols.my_protocol:ForbiddenQuestionnaire",
+                "class": "test_load_questionnaire.handlers.my_handler:ForbiddenQuestionnaire",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

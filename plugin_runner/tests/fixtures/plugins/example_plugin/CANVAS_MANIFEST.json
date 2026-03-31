@@ -4,9 +4,9 @@
     "name": "example_plugin",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "example_plugin.protocols.my_protocol:Protocol",
+                "class": "example_plugin.handlers.my_handler:Handler",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from canvas_sdk.v1.data.coverage import Coverage
 from canvas_sdk.v1.data.snapshot import Snapshot, SnapshotImage
 
 
@@ -41,3 +42,22 @@ def test_snapshot_image_url_without_image() -> None:
     image.image = ""
 
     assert image.image_url is None
+
+
+def test_coverage_has_snapshot_fk() -> None:
+    """Coverage.snapshot FK allows navigating to the linked Snapshot."""
+    snapshot = Snapshot()
+    snapshot.title = "Insurance card"
+
+    coverage = Coverage()
+    coverage.snapshot = snapshot
+
+    assert coverage.snapshot is snapshot
+    assert coverage.snapshot.title == "Insurance card"
+
+
+def test_coverage_snapshot_is_nullable() -> None:
+    """Coverage.snapshot can be None when no card images exist."""
+    coverage = Coverage()
+
+    assert coverage.snapshot is None

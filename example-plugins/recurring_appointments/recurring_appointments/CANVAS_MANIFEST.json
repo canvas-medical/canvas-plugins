@@ -4,7 +4,7 @@
     "name": "recurring_appointments",
     "description": "Adds configurable recurring appointment functionality with customizable intervals, recurrence types (days/weeks/months), and flexible end conditions that automatically creates follow-up appointments",
     "components": {
-        "protocols": [
+        "handlers": [
             {
                 "class": "recurring_appointments.handlers.recurrence:AppointmentRecurrence",
                 "description": "Automatically creates recurring appointments based on configurable interval, recurrence type, and end condition metadata when an appointment is created"

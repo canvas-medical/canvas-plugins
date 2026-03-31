@@ -62,7 +62,7 @@ license = "MIT"
 name = "canvas"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "0.122.0"
+version = "0.126.0"
 
 [project.optional-dependencies]
 test-utils = ["pytest-canvas"]
@@ -193,10 +193,17 @@ uv build
 """
 commit_message = "chore: v{version}\n\nSee the changelog for changes."
 commit_version_number = true
-match = "main"
 tag_format = "{version}"
 version_source = "tag"
 version_toml = ["pyproject.toml:project.version"]
+
+[tool.semantic_release.branches.hotfix]
+match = "release/.*"
+prerelease = false
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
 
 [tool.uv]
 required-version = ">=0.8.0"

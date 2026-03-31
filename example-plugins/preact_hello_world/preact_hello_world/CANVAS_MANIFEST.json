@@ -4,9 +4,9 @@
     "name": "preact_hello_world",
     "description": "A Hello World demo showing Vite + Preact integration with Canvas plugins",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "preact_hello_world.protocols.counter_button:CounterButton",
+                "class": "preact_hello_world.handlers.counter_button:CounterButton",
                 "description": "ActionButton that launches a Preact counter demo in the right chart pane"
             }
         ],

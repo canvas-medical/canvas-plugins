@@ -4,13 +4,13 @@
     "name": "patient_summary_chart_groups",
     "description": "A plugin that groups Psychiatry conditions and medications in the patient summary chart.",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "patient_summary_chart_groups.protocols.my_protocol:Conditions",
+                "class": "patient_summary_chart_groups.handlers.my_handler:Conditions",
                 "description": "A protocol that groups Psychiatry conditions"
             },
             {
-                "class": "patient_summary_chart_groups.protocols.my_protocol:Medications",
+                "class": "patient_summary_chart_groups.handlers.my_handler:Medications",
                 "description": "A protocol that groups Psychiatry medications"
             }
         ],

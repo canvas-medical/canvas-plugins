@@ -4,9 +4,9 @@
     "name": "test_render_template",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
-        "protocols": [
+        "handlers": [
             {
-                "class": "test_render_template.protocols.my_protocol:ValidTemplate",
+                "class": "test_render_template.handlers.my_handler:ValidTemplate",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -15,7 +15,7 @@
                 }
             },
             {
-                "class": "test_render_template.protocols.my_protocol:TemplateInheritance",
+                "class": "test_render_template.handlers.my_handler:TemplateInheritance",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -24,7 +24,7 @@
                 }
             },
             {
-                "class": "test_render_template.protocols.my_protocol:InvalidTemplate",
+                "class": "test_render_template.handlers.my_handler:InvalidTemplate",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",
@@ -33,7 +33,7 @@
                 }
             },
             {
-                "class": "test_render_template.protocols.my_protocol:ForbiddenTemplate",
+                "class": "test_render_template.handlers.my_handler:ForbiddenTemplate",
                 "description": "A protocol that does xyz...",
                 "data_access": {
                     "event": "",

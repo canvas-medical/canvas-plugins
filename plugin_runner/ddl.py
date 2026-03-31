@@ -9,7 +9,7 @@ from django.db.models.sql import Query
 
 from canvas_sdk.v1.data.base import IS_SQLITE, CustomModel
 from logger import log
-from plugin_runner.sandbox import Sandbox
+from plugin_runner.sandbox import Sandbox, suppress_model_registration
 
 SQL_STATEMENT_DELIMITER = "\n\n"
 
@@ -444,8 +444,6 @@ def generate_plugin_migrations(
 
         model_files = discover_model_files(plugin_path)
 
-        from django.apps import apps
-
         # Suppress Django's model registration and lazy FK resolution.
         # The model classes created here are only needed for DDL
         # generation, which uses only model._meta.  FK fields with
@@ -457,11 +455,7 @@ def generate_plugin_migrations(
         # apps._pending_operations, and apps.app_configs — requiring
         # fragile cleanup that risks destroying live state from a
         # prior installation.
-        _original_register = apps.register_model
-        _original_lazy = apps.lazy_model_operation
-        apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
-        apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
-        try:
+        with suppress_model_registration():
             for model_file in model_files:
                 models = extract_models_from_module(plugin_name, model_file)
                 for model_class in models:
@@ -481,9 +475,6 @@ def generate_plugin_migrations(
                             f"A plugin may only define tables within its own "
                             f"namespace."
                         )
-        finally:
-            apps.register_model = _original_register  # type: ignore[method-assign]
-            apps.lazy_model_operation = _original_lazy  # type: ignore[method-assign]
 
     except Exception as e:
         log.exception(f"Failed to generate migrations for plugin '{plugin_name}'")

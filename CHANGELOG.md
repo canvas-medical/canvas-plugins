@@ -1,6 +1,91 @@
 # CHANGELOG
 
 
+## v0.126.0 (2026-03-30)
+
+### Features
+
+- Add note header dropdown action button
+  ([#1576](https://github.com/canvas-medical/canvas-plugins/pull/1576),
+  [`c95f34c`](https://github.com/canvas-medical/canvas-plugins/commit/c95f34c903690745519345ecf77f52e28e1e7632))
+
+
+## v0.125.0 (2026-03-30)
+
+### Features
+
+- Merge patient header profile and chart action buttons
+  ([#1579](https://github.com/canvas-medical/canvas-plugins/pull/1579),
+  [`95ad465`](https://github.com/canvas-medical/canvas-plugins/commit/95ad46593d08f8b7aaa72a51b5bd7f6366646f95))
+
+
+## v0.124.0 (2026-03-30)
+
+### Bug Fixes
+
+- Ensure excessive memory growth warning logs plugin name
+  ([#1560](https://github.com/canvas-medical/canvas-plugins/pull/1560),
+  [`24c82ee`](https://github.com/canvas-medical/canvas-plugins/commit/24c82ee1f025426aef40fbc19c18ca60ae9980d8))
+
+### Chores
+
+- Add custom data UAT plugin ([#1583](https://github.com/canvas-medical/canvas-plugins/pull/1583),
+  [`e6cca72`](https://github.com/canvas-medical/canvas-plugins/commit/e6cca72cbe1582d1c85fe080ae14993305c36e9b))
+
+- Add support for multi-branch releases
+  ([#1601](https://github.com/canvas-medical/canvas-plugins/pull/1601),
+  [`8d29987`](https://github.com/canvas-medical/canvas-plugins/commit/8d29987ea6c753879d5133b913e48e56ab8f9155))
+
+- Protocols → handlers ([#1556](https://github.com/canvas-medical/canvas-plugins/pull/1556),
+  [`6ad5840`](https://github.com/canvas-medical/canvas-plugins/commit/6ad5840e79fe155f404c310ecc6338325f9e89b5))
+
+### Features
+
+- Add snapshot FK to Coverage model
+  ([#1564](https://github.com/canvas-medical/canvas-plugins/pull/1564),
+  [`40b6305`](https://github.com/canvas-medical/canvas-plugins/commit/40b63057423fa99c7e1c9e642118fab063736daf))
+
+- Standardize all metadata model fields
+  ([#1606](https://github.com/canvas-medical/canvas-plugins/pull/1606),
+  [`8e65ee1`](https://github.com/canvas-medical/canvas-plugins/commit/8e65ee197308c746ad98cbc05afe72bcc827c5bd))
+
+
+## v0.123.1 (2026-03-26)
+
+### Bug Fixes
+
+- Revert importlib security change, suppress model registration during sandbox validation
+  ([#1604](https://github.com/canvas-medical/canvas-plugins/pull/1604),
+  [`1fbd003`](https://github.com/canvas-medical/canvas-plugins/commit/1fbd003873d6a9c2fe8da762bbb1943220686ef0))
+
+
+## v0.123.0 (2026-03-26)
+
+### Bug Fixes
+
+- Allow __annotations__ in sandbox
+  ([#1596](https://github.com/canvas-medical/canvas-plugins/pull/1596),
+  [`6681230`](https://github.com/canvas-medical/canvas-plugins/commit/6681230507c08f3cbd2a6fec4a6c9011093c5cbe))
+
+- Allow datetime.time in sandbox
+  ([#1595](https://github.com/canvas-medical/canvas-plugins/pull/1595),
+  [`943b4dd`](https://github.com/canvas-medical/canvas-plugins/commit/943b4ddb4ab3706e00230a053178b58d97567226))
+
+- Allow requests.codes in sandbox
+  ([#1597](https://github.com/canvas-medical/canvas-plugins/pull/1597),
+  [`2bf7d2a`](https://github.com/canvas-medical/canvas-plugins/commit/2bf7d2a5cb1edd92cbe0c57bdedc9408e51ba05b))
+
+- Allow time.time_ns in sandbox
+  ([#1598](https://github.com/canvas-medical/canvas-plugins/pull/1598),
+  [`dc3b72f`](https://github.com/canvas-medical/canvas-plugins/commit/dc3b72f7b13d77ae9543418f25611ee79bbd9982))
+
+### Features
+
+- Revert "feat: standardize all metadata model fields"
+  ([#1603](https://github.com/canvas-medical/canvas-plugins/pull/1603),
+  [`f738732`](https://github.com/canvas-medical/canvas-plugins/commit/f738732c5ef33549f9b47b15e8ae4912a11b1ba4))
+
+
 ## v0.122.0 (2026-03-26)
 
 ### Features
