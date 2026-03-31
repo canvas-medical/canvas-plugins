@@ -164,10 +164,23 @@ class ClaimLineItemDiagnosisCode(TimestampedModel, IdentifiableModel):
     linked = models.BooleanField(default=True)
 
 
+class ClaimLineItemModifier(TimestampedModel, IdentifiableModel):
+    """ClaimLineItemModifier."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_quality_and_revenue_lineitemmodifier_001"
+
+    line_item = models.ForeignKey(
+        "v1.ClaimLineItem", on_delete=models.CASCADE, related_name="modifiers"
+    )
+    modifier = models.CharField(max_length=2)
+
+
 __exports__ = (
     "ClaimLineItem",
     "ClaimLineItemStatus",
     "LineItemCodes",
     "FamilyPlanningOptions",
     "ClaimLineItemDiagnosisCode",
+    "ClaimLineItemModifier",
 )
