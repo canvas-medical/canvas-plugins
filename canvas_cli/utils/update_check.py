@@ -4,9 +4,9 @@ import json
 import os
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
+import requests
 from packaging.version import Version
 
 PYPI_URL = "https://pypi.org/pypi/canvas/json"
@@ -22,8 +22,7 @@ def _read_cache(cache_path: Path) -> dict | None:
     if not cache_path.is_file():
         return None
     try:
-        with open(cache_path) as f:
-            return json.load(f)
+        return json.loads(cache_path.read_text())
     except (json.JSONDecodeError, KeyError):
         # Treat a corrupt or incomplete cache file as a cache miss
         return None
@@ -31,16 +30,14 @@ def _read_cache(cache_path: Path) -> dict | None:
 
 def _write_cache(cache_path: Path, latest_version: str) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(cache_path, "w") as f:
-        json.dump({"last_checked": time.time(), "latest_version": latest_version}, f)
+    cache_path.write_text(
+        json.dumps({"last_checked": time.time(), "latest_version": latest_version})
+    )
 
 
 # Excluded from coverage because this hits the network (PyPI) and is always mocked in tests.
 def _fetch_latest_version() -> str:  # pragma: no cover
-    req = urllib.request.Request(PYPI_URL, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=5) as resp:
-        data = json.loads(resp.read())
-    return data["info"]["version"]
+    return requests.get(PYPI_URL, timeout=5).json()["info"]["version"]
 
 
 def _print_notice(current: str, latest: str) -> None:
