@@ -29,12 +29,30 @@ def mock_post() -> Generator[MagicMock, None, None]:
         yield mock
 
 
-def test__api_base_url(mock_get_cache: MagicMock) -> None:
+@pytest.fixture
+def mock_get() -> Generator[MagicMock, None, None]:
+    """Mock the get method of the Http instance."""
+    with patch("canvas_sdk.utils.http.Http.get") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_put() -> Generator[MagicMock, None, None]:
+    """Mock the put method of the Http instance."""
+    with patch("canvas_sdk.utils.http.Http.put") as mock:
+        yield mock
+
+
+@pytest.fixture
+def client(mock_get_cache: MagicMock) -> CanvasFhir:
+    """Return a CanvasFhir client with mocked credentials."""
+    mock_get_cache.return_value.get.return_value = MOCK_CREDENTIALS
+    return CanvasFhir(client_id="test", client_secret="test")
+
+
+def test__api_base_url(client: CanvasFhir) -> None:
     """Test the defined URL of the CanvasFhir instance."""
-    tested = CanvasFhir(client_id="test", client_secret="test")
-    result = tested._base_url
-    expected = f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
-    assert result == expected
+    assert client._base_url == f"https://fumage-{CUSTOMER_IDENTIFIER}.canvasmedical.com"
 
 
 def test__get_credentials_without_cached_credentials(
@@ -62,3 +80,61 @@ def test__get_credentials_with_cached_credentials(
 
     mock_post.assert_not_called()
     assert result == expected
+
+
+def test_create(client: CanvasFhir, mock_post: MagicMock) -> None:
+    """Test creating a FHIR resource."""
+    expected = {"resourceType": "Coverage", "id": "cov-123", "status": "active"}
+    mock_post.return_value = MagicMock(status_code=201, json=lambda: expected)
+
+    result = client.create("Coverage", {"resourceType": "Coverage", "status": "active"})
+
+    assert result == expected
+    mock_post.assert_called_once_with(
+        f"{client._base_url}/Coverage",
+        headers=client._get_headers(),
+        json={"resourceType": "Coverage", "status": "active"},
+    )
+
+
+def test_read(client: CanvasFhir, mock_get: MagicMock) -> None:
+    """Test reading a FHIR resource."""
+    expected = {"resourceType": "AllergyIntolerance", "id": "allergy-123"}
+    mock_get.return_value = MagicMock(status_code=200, json=lambda: expected)
+
+    result = client.read("AllergyIntolerance", "allergy-123")
+
+    assert result == expected
+    mock_get.assert_called_once_with(
+        f"{client._base_url}/AllergyIntolerance/allergy-123",
+        headers=client._get_headers(),
+    )
+
+
+def test_search(client: CanvasFhir, mock_get: MagicMock) -> None:
+    """Test searching for FHIR resources."""
+    expected = {"resourceType": "Bundle", "entry": []}
+    mock_get.return_value = MagicMock(status_code=200, json=lambda: expected)
+
+    result = client.search("AllergyIntolerance", {"patient": "Patient/abc123"})
+
+    assert result == expected
+    mock_get.assert_called_once_with(
+        f"{client._base_url}/AllergyIntolerance?patient=Patient%2Fabc123",
+        headers=client._get_headers(),
+    )
+
+
+def test_update(client: CanvasFhir, mock_put: MagicMock) -> None:
+    """Test updating a FHIR resource."""
+    data = {"resourceType": "Coverage", "id": "cov-123", "status": "cancelled"}
+    mock_put.return_value = MagicMock(status_code=200, json=lambda: data)
+
+    result = client.update("Coverage", "cov-123", data)
+
+    assert result == data
+    mock_put.assert_called_once_with(
+        f"{client._base_url}/Coverage/cov-123",
+        headers=client._get_headers(),
+        json=data,
+    )
