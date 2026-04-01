@@ -33,6 +33,9 @@
   "canvas_sdk.clients.aws.structures.s3_item": [
     "S3Item"
   ],
+  "canvas_sdk.clients.canvas_fhir": [
+    "CanvasFhir"
+  ],
   "canvas_sdk.clients.extend_ai.constants": [
     "BaseProcessor",
     "ParserChunking",
