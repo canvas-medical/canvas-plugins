@@ -50,7 +50,7 @@ def main() -> None:
     """
     Generate a JSON file of the allowed canvas_sdk imports.
     """
-    print("Generating allowed canavs_sdk imports...")
+    print("Generating allowed canvas_sdk imports...")
 
     CANVAS_SUBMODULE_NAMES = [
         found_module

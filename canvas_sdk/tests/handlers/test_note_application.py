@@ -1,65 +1,272 @@
 import json
+import warnings
 
 import pytest
 
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.events import Event, EventRequest, EventType
-from canvas_sdk.handlers.action_button import ActionButton
-from canvas_sdk.handlers.application import NoteApplication
+from canvas_sdk.handlers.application import ApplicationScope, NoteApplication
 
 
-class ExampleNoteApplication(NoteApplication):
-    """A concrete implementation of NoteApplication for testing."""
+class OldNoteApplication(NoteApplication):
+    """A NoteApplication using the deprecated handle() method."""
 
-    NAME = "Test Application"
-    IDENTIFIER = "test_plugin__test_app"
+    NAME = "Old App"
+    IDENTIFIER = "test_plugin__old_app"
 
     def handle(self) -> list[Effect]:
-        """Handle the button click by returning a mock effect."""
-        return [LaunchModalEffect(url="https://example.com").apply()]
+        """Handle a note application click."""
+        return [LaunchModalEffect(url="https://example.com/old").apply()]
 
 
-def test_note_application_properties() -> None:
-    """Test that NoteApplication properties map correctly from class attributes."""
-    request = EventRequest(type=EventType.ACTION_BUTTON_CLICKED)
-    event = Event(request)
-    app = ExampleNoteApplication(event)
+class NewNoteApplication(NoteApplication):
+    """A NoteApplication using the new on_open() method."""
 
-    assert app.NAME == "Test Application"
-    assert app.IDENTIFIER == "test_plugin__test_app"
-    assert app.BUTTON_TITLE == "Test Application"
-    assert app.BUTTON_KEY == "test_plugin__test_app"
-    assert app.BUTTON_LOCATION == ActionButton.ButtonLocation.NOTE_BODY
+    NAME = "New App"
+    IDENTIFIER = "test_plugin__new_app"
 
-    with pytest.raises(AttributeError):
-        app.BUTTON_LOCATION = ActionButton.ButtonLocation.NOTE_HEADER  # type: ignore[misc]
+    def on_open(self) -> list[Effect]:
+        """On open method."""
+        return [LaunchModalEffect(url="https://example.com/new").apply()]
 
 
-def test_compute_handles_action_button_clicked_with_matching_key() -> None:
-    """Test that compute calls handle() when action button clicked matches key."""
-    context = json.dumps({"key": "test_plugin__test_app"})
-    request = EventRequest(type=EventType.ACTION_BUTTON_CLICKED, context=context)
-    event = Event(request)
-    app = ExampleNoteApplication(event)
+class DefaultOpenNoteApplication(NoteApplication):
+    """A NoteApplication that opens by default."""
 
+    NAME = "Default Open App"
+    IDENTIFIER = "test_plugin__default_open"
+    PRIORITY = 5
+
+    def open_by_default(self) -> bool:
+        """Open a note application by default."""
+        return True
+
+    def on_open(self) -> list[Effect]:
+        """Open a note application by default."""
+        return [LaunchModalEffect(url="https://example.com/default").apply()]
+
+
+class HiddenNoteApplication(NoteApplication):
+    """A NoteApplication that is not visible."""
+
+    NAME = "Hidden App"
+    IDENTIFIER = "test_plugin__hidden"
+
+    def visible(self) -> bool:
+        """Visible note application."""
+        return False
+
+    def on_open(self) -> list[Effect]:
+        """On open method."""
+        return []
+
+
+class AlwaysVisibleNoteApplication(NoteApplication):
+    """A NoteApplication that overrides visible() to always return True."""
+
+    NAME = "Always Visible App"
+    IDENTIFIER = "test_plugin__always_visible"
+
+    def visible(self) -> bool:
+        """Always visible."""
+        return True
+
+    def on_open(self) -> list[Effect]:
+        """On open method."""
+        return []
+
+
+class OldPatientAwareNoteApplication(NoteApplication):
+    """An old NoteApplication that reads the patient from self.event.target inside handle()."""
+
+    NAME = "Old Patient App"
+    IDENTIFIER = "test_plugin__old_patient_app"
+
+    def handle(self) -> list[Effect]:
+        """Include self.event.target.id in the URL to verify what the old plugin sees."""
+        return [LaunchModalEffect(url=f"https://example.com/{self.event.target.id}").apply()]
+
+
+class NoIdentifierNoteApplication(NoteApplication):
+    """A NoteApplication without an explicit IDENTIFIER."""
+
+    NAME = "No ID App"
+
+    def on_open(self) -> list[Effect]:
+        """On open method."""
+        return []
+
+
+def _make_event(
+    event_type: EventType,
+    target: str = "",
+    context: dict | None = None,
+) -> Event:
+    """Create an Event from the given type, target, and context."""
+    return Event(
+        EventRequest(
+            type=event_type,
+            target=target,
+            context=json.dumps(context or {}),
+        )
+    )
+
+
+def _make_on_get_event(scope: str = "note") -> Event:
+    """Create an APPLICATION__ON_GET event with the given scope."""
+    return _make_event(EventType.APPLICATION__ON_GET, context={"scope": scope})
+
+
+def _make_on_open_event(target: str) -> Event:
+    """Create an APPLICATION__ON_OPEN event targeting the given identifier."""
+    return _make_event(EventType.APPLICATION__ON_OPEN, target=target)
+
+
+def test_note_application_scope_and_responds_to() -> None:
+    """Verify NoteApplication has the correct scope and responds to all application events."""
+    assert NoteApplication.SCOPE == ApplicationScope.NOTE
+    assert EventType.Name(EventType.APPLICATION__ON_OPEN) in NoteApplication.RESPONDS_TO
+    assert EventType.Name(EventType.APPLICATION__ON_CONTEXT_CHANGE) in NoteApplication.RESPONDS_TO
+    assert EventType.Name(EventType.APPLICATION__ON_GET) in NoteApplication.RESPONDS_TO
+
+
+@pytest.mark.parametrize(
+    "app_class,expected_identifier",
+    [
+        (OldNoteApplication, "test_plugin__old_app"),
+        (
+            NoIdentifierNoteApplication,
+            f"{NoIdentifierNoteApplication.__module__}:{NoIdentifierNoteApplication.__qualname__}",
+        ),
+    ],
+    ids=["explicit-identifier", "fallback-to-module-qualname"],
+)
+def test_identifier_resolution(app_class: type[NoteApplication], expected_identifier: str) -> None:
+    """Verify identifier uses IDENTIFIER when set, otherwise falls back to module:qualname."""
+    app = app_class(_make_on_get_event())
+    assert app.identifier == expected_identifier
+
+
+def test_on_get_returns_show_application_effect() -> None:
+    """Verify ON_GET returns a SHOW_APPLICATION effect with the correct payload."""
+    app = NewNoteApplication(_make_on_get_event(scope="note"))
     result = app.compute()
 
     assert len(result) == 1
-    assert isinstance(result[0], Effect)
+    assert result[0].type == EffectType.SHOW_APPLICATION
+    payload = json.loads(result[0].payload)["data"]
+    assert payload["name"] == "New App"
+    assert payload["identifier"] == "test_plugin__new_app"
+    assert payload["open_by_default"] is False
+    assert payload["priority"] == 0
+
+
+def test_on_get_respects_open_by_default_and_priority() -> None:
+    """Verify ON_GET includes open_by_default and priority in the effect payload."""
+    app = DefaultOpenNoteApplication(_make_on_get_event(scope="note"))
+    result = app.compute()
+
+    payload = json.loads(result[0].payload)["data"]
+    assert payload["open_by_default"] is True
+    assert payload["priority"] == 5
+
+
+@pytest.mark.parametrize(
+    "app_class,scope,reason",
+    [
+        (NewNoteApplication, "chart", "scope does not match"),
+        (HiddenNoteApplication, "note", "visible() returns False"),
+        (AlwaysVisibleNoteApplication, "chart", "scope mismatch cannot be bypassed by visible()"),
+    ],
+    ids=["wrong-scope", "not-visible", "scope-bypass-prevented"],
+)
+def test_on_get_returns_empty(app_class: type[NoteApplication], scope: str, reason: str) -> None:
+    """Verify ON_GET returns no effects when the application should not be shown."""
+    app = app_class(_make_on_get_event(scope=scope))
+    assert app.compute() == [], reason
+
+
+@pytest.mark.parametrize(
+    "app_class,target",
+    [
+        (OldNoteApplication, "test_plugin__old_app"),
+        (NewNoteApplication, "test_plugin__new_app"),
+    ],
+    ids=["old-plugin-via-handle", "new-plugin-via-on-open"],
+)
+def test_on_open_returns_effects(app_class: type[NoteApplication], target: str) -> None:
+    """Verify ON_OPEN returns effects for both old (handle) and new (on_open) plugins."""
+    app = app_class(_make_on_open_event(target))
+    result = app.compute()
+
+    assert len(result) == 1
     assert result[0].type == EffectType.LAUNCH_MODAL
 
 
-def test_compute_returns_empty_when_key_does_not_match() -> None:
-    """Test that compute returns empty list when clicked key doesn't match."""
-    context = json.dumps({"key": "different_key"})
-    request = EventRequest(type=EventType.ACTION_BUTTON_CLICKED, context=context)
-    event = Event(request)
-    app = ExampleNoteApplication(event)
-
+def test_on_open_returns_empty_when_target_does_not_match() -> None:
+    """Verify ON_OPEN returns no effects when the target identifier does not match."""
+    app = NewNoteApplication(_make_on_open_event(target="wrong_identifier"))
     assert app.compute() == []
 
 
-def test_note_application_responds_to_includes_action_button_clicked() -> None:
-    """Test that NoteApplication responds to ACTION_BUTTON_CLICKED events."""
-    assert EventType.Name(EventType.ACTION_BUTTON_CLICKED) in NoteApplication.RESPONDS_TO
+@pytest.mark.parametrize(
+    "target",
+    ["test_plugin__new_app", "wrong_target"],
+    ids=["matching-target", "wrong-target"],
+)
+def test_on_context_change_returns_empty_by_default(target: str) -> None:
+    """Verify ON_CONTEXT_CHANGE returns no effects by default (no override)."""
+    event = _make_event(EventType.APPLICATION__ON_CONTEXT_CHANGE, target=target)
+    app = NewNoteApplication(event)
+    assert app.compute() == []
+
+
+def test_on_open_backfills_patient_target_before_handle() -> None:
+    """Verify on_open sets event.target.id from patient context before delegating to handle()."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+        context={"patient": {"id": "patient-uuid-123"}},
+    )
+    app = OldPatientAwareNoteApplication(event)
+    result = app.compute()
+
+    payload = json.loads(result[0].payload)
+    assert payload["data"]["url"] == "https://example.com/patient-uuid-123"
+
+
+def test_on_open_does_not_modify_target_without_patient_context() -> None:
+    """Verify on_open leaves event.target.id unchanged when no patient is in context."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+    )
+    app = OldPatientAwareNoteApplication(event)
+    app.compute()
+
+    assert app.event.target.id == "test_plugin__old_patient_app"
+
+
+def test_on_open_does_not_modify_target_when_patient_has_no_id() -> None:
+    """Verify on_open leaves event.target.id unchanged when patient context has no id key."""
+    event = _make_event(
+        EventType.APPLICATION__ON_OPEN,
+        target="test_plugin__old_patient_app",
+        context={"patient": {}},
+    )
+    app = OldPatientAwareNoteApplication(event)
+    app.compute()
+
+    assert app.event.target.id == "test_plugin__old_patient_app"
+
+
+def test_handle_emits_deprecation_warning() -> None:
+    """Verify calling handle() directly emits a DeprecationWarning pointing to on_open."""
+    app = NewNoteApplication(_make_on_get_event())
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        app.handle()
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "on_open" in str(w[0].message)

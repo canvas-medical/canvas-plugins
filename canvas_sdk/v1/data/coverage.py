@@ -177,6 +177,12 @@ class Coverage(TimestampedModel, IdentifiableModel):
         max_length=2,
         default=CoverageRelationshipCode.SELF,
     )
+    snapshot = models.ForeignKey(
+        "v1.Snapshot",
+        on_delete=models.DO_NOTHING,
+        related_name="coverage",
+        null=True,
+    )
     issuer = models.ForeignKey(
         "v1.Transactor", on_delete=models.DO_NOTHING, related_name="coverages", null=True
     )

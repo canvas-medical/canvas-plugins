@@ -1,12 +1,23 @@
 import importlib
+import logging
 import re
 from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
+from unittest.mock import patch
 
 import pytest
+from django.db import models as django_models
 
 from canvas_sdk.tests.shared import params_from_dict
+from canvas_sdk.v1.data.base import (
+    MAX_FIELD_SIZE,
+    BulkOperationTooLarge,
+    CustomModel,
+    FieldValueTooLarge,
+    NamespaceWriteDenied,
+)
+from canvas_sdk.v1.plugin_database_context import plugin_database_context
 from plugin_runner.generate_allowed_imports import CANVAS_TOP_LEVEL_MODULES, find_submodules
 from plugin_runner.sandbox import (
     ALLOWED_MODULES,
@@ -24,7 +35,7 @@ CANVAS_SUBMODULE_NAMES = [
 
 def _sandbox_from_code(
     source_code: str,
-    module_name: str = "plugin_name.protocols.protocol",
+    module_name: str = "plugin_name.handlers.handler",
     extra_source_code: str | None = None,
     extra_module_name: str | None = None,
 ) -> Sandbox:
@@ -198,6 +209,30 @@ def test_support_type_annotations() -> None:
     sandbox.execute()
 
 
+def test_support_from_future_import_annotations() -> None:
+    """Test that `from __future__ import annotations` is allowed."""
+    sandbox = _sandbox_from_code(
+        """
+            from __future__ import annotations
+
+            def greet(name: str) -> str:
+                return f"hello {name}"
+
+            assert greet("world") == "hello world"
+        """
+    )
+
+    sandbox.execute()
+
+
+def test_disallowed_future_import() -> None:
+    """Test that importing non-annotations members from __future__ is not allowed."""
+    sandbox = _sandbox_from_code("from __future__ import division")
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()
+
+
 def test_support_dataclasses() -> None:
     """Test that dataclasses can be created."""
     sandbox = _sandbox_from_code("""
@@ -255,7 +290,7 @@ def test_plugin_runner_settings_allowed_module_import(allowed_module: str) -> No
         """
     )
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -266,7 +301,7 @@ def test_plugin_runner_os_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import os")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -277,7 +312,7 @@ def test_plugin_runner_sys_allowed_module_import(allowed_module: str) -> None:
     """
     sandbox = _sandbox_from_code(f"from {allowed_module} import sys")
 
-    with pytest.raises((ImportError, SyntaxError), match=RE_ERROR_STRINGS):
+    with pytest.raises((ImportError, SyntaxError, RuntimeError), match=RE_ERROR_STRINGS):
         sandbox.execute()
 
 
@@ -512,6 +547,48 @@ def test_typeguard_import_and_usage() -> None:
     assert scope["result"] is True, "TypeGuard function should correctly identify string"
 
 
+def test_re_fullmatch_import_and_usage() -> None:
+    """Test that re.fullmatch can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from re import fullmatch
+
+            result = fullmatch(r'\\d+', '12345')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is not None, "fullmatch should match an all-digit string"
+
+
+def test_re_fullmatch_no_match() -> None:
+    """Test that re.fullmatch correctly rejects partial matches."""
+    sandbox = _sandbox_from_code(
+        """
+            import re
+
+            result = re.fullmatch(r'\\d+', '123abc')
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is None, "fullmatch should not match a partial digit string"
+
+
+def test_type_checking_import() -> None:
+    """Test that TYPE_CHECKING can be imported and used in sandbox."""
+    sandbox = _sandbox_from_code(
+        """
+            from typing import TYPE_CHECKING
+
+            result = TYPE_CHECKING
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is False, "TYPE_CHECKING should be False at runtime"
+
+
 def test_forbidden_name() -> None:
     """Test that forbidden function names are blocked by Transformer."""
     sandbox = _sandbox_from_code("builtins = {}")
@@ -659,13 +736,26 @@ def test_urllib() -> None:
     "code",
     params_from_dict(
         {
-            "class_name": """
+            "class_name_via_self": """
                 class Thing:
                     def __init__(self):
                         super().__init__()
                         print(f'name: {self.__class__.__name__}')
 
                 thing = Thing()
+            """,
+            "class_name_via_instance": """
+                class Thing:
+                    pass
+
+                thing = Thing()
+                assert thing.__class__.__name__ == "Thing"
+            """,
+            "class_name_via_external_instance": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                assert obj.__class__.__name__ == "StopMedicationCommand"
             """,
             "model_dict": """
                 from canvas_sdk.commands import StopMedicationCommand
@@ -681,6 +771,19 @@ def test_urllib() -> None:
                 vars(obj).get('note_uuid')
                 vars(obj).items()
             """,
+            "annotations_on_plugin_class": """
+                class MyClass:
+                    name: str
+                    age: int
+
+                assert MyClass.__annotations__ == {"name": str, "age": int}
+            """,
+            "annotations_on_external_class": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                annots = StopMedicationCommand.__annotations__
+                assert isinstance(annots, dict)
+            """,
         }
     ),
 )
@@ -690,6 +793,51 @@ def test_sandbox_allows_read_access_to_required_methods(code: str) -> None:
     """
     sandbox = _sandbox_from_code(code)
     sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "mro": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__mro__
+            """,
+            "subclasses": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__subclasses__()
+            """,
+            "setattr": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.evil = "hacked"
+            """,
+            "dict": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__dict__
+            """,
+            "reinit": """
+                from canvas_sdk.commands import StopMedicationCommand
+
+                obj = StopMedicationCommand(note_uuid="123")
+                obj.__class__.__init__("evil")
+            """,
+        }
+    ),
+)
+def test_sandbox_denies_traversal_via_external_safe_class(code: str) -> None:
+    """The safe __class__ proxy should only expose __name__, nothing else."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with pytest.raises(AttributeError):
+        sandbox.execute()
 
 
 def test_sandbox_allows_write_access_to_id() -> None:
@@ -868,12 +1016,6 @@ def test_type_is_inaccessible() -> None:
                 client = Http()
                 pvt = client._session
             """,
-            "private_attr__class__": """
-                from canvas_sdk.utils import Http
-
-                client = Http()
-                pvt = client.__class__
-            """,
             "ontologies_base_url": """
                 from canvas_sdk.utils.http import ontologies_http
 
@@ -903,6 +1045,37 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
 
     with pytest.raises(AttributeError):
         sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "ontologies_http": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                ontologies_http._MAX_REQUEST_TIMEOUT_SECONDS = 120
+            """,
+            "science_http": """
+                from canvas_sdk.utils.http import science_http
+
+                science_http._MAX_REQUEST_TIMEOUT_SECONDS = 120
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_max_timeout_override_with_deprecation_warning(
+    code: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Overriding _MAX_REQUEST_TIMEOUT_SECONDS on http clients should be allowed but log a warning."""
+    sandbox = _sandbox_from_code(source_code=code)
+
+    with caplog.at_level(logging.WARNING, logger="plugin_runner_logger"):
+        sandbox.execute()
+
+    assert "deprecated" in caplog.text.lower()
+    assert "_MAX_REQUEST_TIMEOUT_SECONDS" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -1006,3 +1179,266 @@ def test_sandbox_allows_configdict_import_and_usage(configdict_code: str) -> Non
     assert "Success:" in scope["result"] or "Name:" in scope["result"], (
         f"ConfigDict usage failed: {scope.get('result')}"
     )
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "function_def": """
+                def sneaky():
+                    import os
+                    return os.listdir('.')
+
+                result = sneaky()
+            """,
+            "classmethod": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "staticmethod": """
+                class Exploit:
+                    @staticmethod
+                    def run():
+                        import os
+                        return os.listdir('.')
+
+                result = Exploit.run()
+            """,
+            "lambda_import": """
+                result = (lambda: __import__('os').listdir('.'))()
+            """,
+            "nested_function": """
+                def outer():
+                    def inner():
+                        import os
+                        return os.listdir('.')
+                    return inner()
+
+                result = outer()
+            """,
+            "classmethod_from_import": """
+                class Exploit:
+                    @classmethod
+                    def run(cls):
+                        from os import listdir
+                        return listdir('.')
+
+                result = Exploit.run()
+            """,
+        }
+    ),
+)
+def test_deferred_import_denied(code: str) -> None:
+    """Test that deferred imports (inside functions, classmethods, etc.) are still blocked."""
+    sandbox = _sandbox_from_code(code)
+
+    with pytest.raises(ImportError, match="is not an allowed import"):
+        sandbox.execute()
+
+
+def test_uncalled_method_import_blocked_at_runtime() -> None:
+    """A forbidden import inside an uncalled method is blocked at runtime
+    by ``_safe_import`` preserved in the sandbox scope.
+
+    ``sandbox.execute()`` only invokes ``_safe_import`` for imports that
+    actually run at module load time.  A method that is *defined* but never
+    *called* during exec slips through exec itself.  However, because the
+    sandbox scope retains ``_safe_import`` as ``__import__``, the forbidden
+    import is caught when the method is actually called at runtime.
+    """
+    source = dedent("""
+        class Exploit:
+            def sneaky(self):
+                import os
+                return os.listdir('.')
+    """)
+
+    # The sandbox exec does NOT catch this — sneaky() is never called during exec.
+    sandbox = _sandbox_from_code(source)
+    scope = sandbox.execute()
+
+    # But calling the method at runtime DOES trigger _safe_import.
+    exploit = scope["Exploit"]()
+    with pytest.raises(ImportError, match="'os' is not an allowed import"):
+        exploit.sneaky()
+
+
+def _make_plugin_tree(tmp_path: Path, plugin_name: str, tree: dict[str, str]) -> Path:
+    """Create a plugin directory tree from a dict of {relative_path: source_code}."""
+    base = tmp_path / plugin_name
+    for rel_path, source in tree.items():
+        file_path = base / rel_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(dedent(source))
+    return tmp_path
+
+
+def test_manager_raw_blocked() -> None:
+    """Test that Manager.raw() is blocked to prevent arbitrary SQL execution."""
+    sandbox = _sandbox_from_code("""
+        from canvas_sdk.v1.data.patient import Patient
+
+        Patient.objects.raw("SELECT 1")
+    """)
+
+    with pytest.raises(PermissionError, match="raw\\(\\) queries are not allowed"):
+        sandbox.execute()
+
+
+# ---------------------------------------------------------------------------
+# Bulk QuerySet operation wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class _BulkTestModel(CustomModel):
+    """A model for testing bulk operation wrappers."""
+
+    class Meta:
+        app_label = "test"
+        managed = False
+
+    text_field = django_models.TextField(null=True)
+
+
+# --- Permission denied ---
+
+
+def test_bulk_create_denied_in_read_only_context() -> None:
+    """bulk_create() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.bulk_create([_BulkTestModel()])  # type: ignore[attr-defined]
+
+
+def test_bulk_update_denied_in_read_only_context() -> None:
+    """bulk_update() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.bulk_update([_BulkTestModel()], fields=["text_field"])  # type: ignore[attr-defined]
+
+
+def test_queryset_delete_denied_in_read_only_context() -> None:
+    """QuerySet.delete() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.all().delete()  # type: ignore[attr-defined]
+
+
+def test_queryset_update_denied_in_read_only_context() -> None:
+    """QuerySet.update() should raise NamespaceWriteDenied in a read-only namespace context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read"),
+        pytest.raises(NamespaceWriteDenied, match="read-only"),
+    ):
+        _BulkTestModel.objects.all().update(text_field="new")  # type: ignore[attr-defined]
+
+
+# --- Size limits ---
+
+
+def test_bulk_create_exceeds_size_limit() -> None:
+    """bulk_create() should raise BulkOperationTooLarge when exceeding MAX_BULK_SIZE."""
+    test_limit = 3
+    objs = [_BulkTestModel() for _ in range(test_limit + 1)]
+    with (
+        patch("canvas_sdk.MAX_BULK_SIZE", test_limit),
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(BulkOperationTooLarge, match=f"{test_limit + 1:,}"),
+    ):
+        _BulkTestModel.objects.bulk_create(objs)  # type: ignore[attr-defined]
+
+
+def test_bulk_update_exceeds_size_limit() -> None:
+    """bulk_update() should raise BulkOperationTooLarge when exceeding MAX_BULK_SIZE."""
+    test_limit = 3
+    objs = [_BulkTestModel() for _ in range(test_limit + 1)]
+    with (
+        patch("canvas_sdk.MAX_BULK_SIZE", test_limit),
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(BulkOperationTooLarge, match=f"{test_limit + 1:,}"),
+    ):
+        _BulkTestModel.objects.bulk_update(objs, fields=["text_field"])  # type: ignore[attr-defined]
+
+
+# --- Field size validation ---
+
+
+def test_bulk_create_field_size_validation() -> None:
+    """bulk_create() should raise FieldValueTooLarge for oversized fields."""
+    obj = _BulkTestModel(text_field="x" * (MAX_FIELD_SIZE + 1))
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(FieldValueTooLarge, match="text_field"),
+    ):
+        _BulkTestModel.objects.bulk_create([obj])  # type: ignore[attr-defined]
+
+
+def test_bulk_update_field_size_validation() -> None:
+    """bulk_update() should raise FieldValueTooLarge for oversized fields."""
+    obj = _BulkTestModel(text_field="x" * (MAX_FIELD_SIZE + 1))
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        pytest.raises(FieldValueTooLarge, match="text_field"),
+    ):
+        _BulkTestModel.objects.bulk_update([obj], fields=["text_field"])  # type: ignore[attr-defined]
+
+
+# --- Allowed operations ---
+
+
+def test_bulk_create_allowed_in_read_write_context() -> None:
+    """bulk_create() should succeed in a read_write context within limits."""
+    objs = [_BulkTestModel()]
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_bulk_create", return_value=objs) as mock,
+    ):
+        result = _BulkTestModel.objects.bulk_create(objs)  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == objs
+
+
+def test_bulk_update_allowed_in_read_write_context() -> None:
+    """bulk_update() should succeed in a read_write context within limits."""
+    objs = [_BulkTestModel()]
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_bulk_update", return_value=1) as mock,
+    ):
+        result = _BulkTestModel.objects.bulk_update(objs, fields=["text_field"])  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == 1
+
+
+def test_queryset_delete_allowed_in_read_write_context() -> None:
+    """QuerySet.delete() should succeed in a read_write context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_qs_delete", return_value=(0, {})) as mock,
+    ):
+        result = _BulkTestModel.objects.all().delete()  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == (0, {})
+
+
+def test_queryset_update_allowed_in_read_write_context() -> None:
+    """QuerySet.update() should succeed in a read_write context."""
+    with (
+        plugin_database_context("test_plugin", namespace="ns", access_level="read_write"),
+        patch("canvas_sdk._original_qs_update", return_value=0) as mock,
+    ):
+        result = _BulkTestModel.objects.all().update(text_field="new")  # type: ignore[attr-defined]
+        mock.assert_called_once()
+        assert result == 0

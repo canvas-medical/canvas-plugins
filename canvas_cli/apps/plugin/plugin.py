@@ -56,13 +56,17 @@ def _build_package(package: Path) -> Path:
     if not package.exists() or not package.is_dir():
         raise typer.BadParameter(f"Couldn't build {package}, not a dir")
 
+    default_ignore = ["__pycache__", "*.pyc", "*.pyo"]
+
     ignore_file = Path.cwd() / CANVAS_IGNORE_FILENAME
     if ignore_file.exists():
-        ignore_patterns = pathspec.PathSpec.from_lines(
-            pathspec.patterns.GitWildMatchPattern, ignore_file.read_text().splitlines()
-        )
+        ignore_lines = default_ignore + ignore_file.read_text().splitlines()
     else:
-        ignore_patterns = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, [])
+        ignore_lines = default_ignore
+
+    ignore_patterns = pathspec.PathSpec.from_lines(
+        pathspec.patterns.GitWildMatchPattern, ignore_lines
+    )
 
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tar_file:
         with tarfile.open(tar_file.name, "w:gz") as tar:
@@ -70,8 +74,10 @@ def _build_package(package: Path) -> Path:
             file_size_total = 0
 
             for path in package.rglob("*"):
+                relative = path.relative_to(package)
+
                 # Skip hidden files and directories (starting with '.')
-                if any(part.startswith(".") for part in path.parts):
+                if any(part.startswith(".") for part in relative.parts):
                     continue
 
                 # Skip symlinks
@@ -79,7 +85,7 @@ def _build_package(package: Path) -> Path:
                     continue
 
                 # Skip files and directories matching the ignore patterns
-                if ignore_patterns.match_file(path):
+                if ignore_patterns.match_file(relative):
                     continue
 
                 file_count += 1
@@ -94,7 +100,7 @@ def _build_package(package: Path) -> Path:
                         "plugin directory"
                     )
 
-                tar.add(path, arcname=path.relative_to(package))
+                tar.add(path, arcname=relative, recursive=False)
 
             if file_count > 100:
                 print(
@@ -180,10 +186,10 @@ def _get_meta_properties(protocol_path: Path, classname: str) -> dict[str, str]:
     return meta
 
 
-def _get_protocols_with_new_cqm_properties(
+def _get_handlers_with_new_cqm_properties(
     protocol_classes: Iterable[dict[str, Any]], plugin: Path
 ) -> Iterable[dict[str, Any]] | None:
-    """Extract the meta properties of any ClinicalQualityMeasure Protocols included in the plugin if they have changed."""
+    """Extract the meta properties of any ClinicalQualityMeasure handlers included in the plugin if they have changed."""
     has_updates = False
     protocol_props = []
     for p in protocol_classes:
@@ -223,8 +229,8 @@ def parse_secrets(secrets: builtins.list[str]) -> builtins.list[str]:
 
 def init(
     plugin_type: str = typer.Argument(
-        "protocol",
-        help="The type of plugin to create. Options are 'application' or 'protocol'.",
+        "handler",
+        help="The type of plugin to create. Options are 'application' or 'handler'.",
     ),
 ) -> None:
     """Create a new plugin."""
@@ -597,12 +603,14 @@ def validate_manifest(
 
     try:
         manifest_json = json.loads(manifest.read_text())
-        protocols = manifest_json.get("components", {}).get("protocols", [])
-        if new_protocols := _get_protocols_with_new_cqm_properties(protocols, plugin_name):
+        components = manifest_json.get("components", {})
+        handler_key = "handlers" if "handlers" in components else "protocols"
+        handlers = components.get(handler_key, [])
+        if new_handlers := _get_handlers_with_new_cqm_properties(handlers, plugin_name):
             print(
                 f"Updating the CANVAS_MANIFEST.json file for {plugin_name} with CQM meta properties"
             )
-            manifest_json["components"]["protocols"] = new_protocols
+            manifest_json["components"][handler_key] = new_handlers
             manifest.write_text(json.dumps(manifest_json))
             manifest_json = json.loads(manifest.read_text())
 

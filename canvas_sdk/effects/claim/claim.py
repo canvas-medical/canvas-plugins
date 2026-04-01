@@ -4,8 +4,22 @@ from uuid import UUID
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.claim.claim_banner_alert import (
+    BannerAlertIntent,
+    _AddClaimBannerAlert,
+    _RemoveClaimBannerAlert,
+)
 from canvas_sdk.effects.claim.claim_comment import _AddClaimComment
 from canvas_sdk.effects.claim.claim_label import ColorEnum, Label, _AddClaimLabel, _RemoveClaimLabel
+from canvas_sdk.effects.claim.claim_metadata import _ClaimMetadata
+from canvas_sdk.effects.claim.claim_provider import (
+    ClaimBillingProvider,
+    ClaimFacility,
+    ClaimOrderingProvider,
+    ClaimProvider,
+    ClaimReferringProvider,
+    _UpdateClaimProvider,
+)
 from canvas_sdk.effects.claim.claim_queue import _MoveClaimToQueue
 from canvas_sdk.effects.claim.payment.base import (
     ClaimAllocation,
@@ -24,6 +38,80 @@ class ClaimEffect(Model):
     """
 
     claim_id: UUID | str
+
+    def update_provider(
+        self,
+        billing_provider: ClaimBillingProvider | None = None,
+        provider: ClaimProvider | None = None,
+        referring_provider: ClaimReferringProvider | None = None,
+        ordering_provider: ClaimOrderingProvider | None = None,
+        facility: ClaimFacility | None = None,
+    ) -> Effect:
+        """
+        Updates provider information for the claim.
+
+        Args:
+            billing_provider (ClaimBillingProvider | None): Billing provider information.
+            provider (ClaimProvider | None): Rendering or attending provider information.
+            referring_provider (ClaimReferringProvider | None): Referring provider information.
+            ordering_provider (ClaimOrderingProvider | None): Ordering provider information.
+            facility (ClaimFacility | None): Facility information.
+
+        Returns:
+            Effect: An effect that updates provider information for the claim.
+        """
+        return _UpdateClaimProvider(
+            claim_id=self.claim_id,
+            billing_provider=billing_provider,
+            provider=provider,
+            referring_provider=referring_provider,
+            ordering_provider=ordering_provider,
+            facility=facility,
+        ).apply()
+
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """
+        Upserts a metadata record to the claim.
+
+        Args:
+            key (str): The key of the metadata.
+            value (str): The value of the metadata.
+
+        Returns:
+            Effect: An effect that upserts the metadata record to the claim.
+        """
+        return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(value=value)
+
+    def add_banner(
+        self, key: str, narrative: str, intent: BannerAlertIntent, href: str | None = None
+    ) -> Effect:
+        """
+        Adds a banner alert to a claim.
+
+        Args:
+            key (str): A unique identifier for the banner alert.
+            narrative (str): The text content to display in the banner.
+            intent (BannerAlertIntent): The intent/severity level of the banner (info, warning, or alert).
+            href (str | None): Optional URL link for the banner. Defaults to None.
+
+        Returns:
+            Effect: An effect that adds the banner alert to the claim.
+        """
+        return _AddClaimBannerAlert(
+            claim_id=self.claim_id, key=key, narrative=narrative, intent=intent, href=href
+        ).apply()
+
+    def remove_banner(self, key: str) -> Effect:
+        """
+        Removes a banner alert from a claim.
+
+        Args:
+            key (str): A unique identifier for the banner alert.
+
+        Returns:
+            Effect: An effect that removes the banner alert from the claim.
+        """
+        return _RemoveClaimBannerAlert(claim_id=self.claim_id, key=key).apply()
 
     def add_comment(self, comment: str) -> Effect:
         """
@@ -120,9 +208,15 @@ class ClaimEffect(Model):
 
 
 __all__ = __exports__ = (
+    "BannerAlertIntent",
     "ClaimEffect",
     "Label",
     "ColorEnum",
     "LineItemTransaction",
     "PaymentMethod",
+    "ClaimBillingProvider",
+    "ClaimFacility",
+    "ClaimOrderingProvider",
+    "ClaimProvider",
+    "ClaimReferringProvider",
 )

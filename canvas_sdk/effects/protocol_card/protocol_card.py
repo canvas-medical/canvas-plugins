@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Any
+from typing import Any, overload
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
+from canvas_sdk.commands.base import _BaseCommand
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
@@ -16,8 +17,18 @@ class Recommendation(BaseModel):
     title: str = ""
     button: str = ""
     href: str | None = None
-    command: str | None = None
-    context: dict | None = None
+    commands: list[Any] | None = None
+
+    @field_validator("commands", mode="before")
+    @classmethod
+    def check_subclass(cls, commands: list[Any] | None) -> list[Any] | None:
+        """Validates that all commands are subclasses of _BaseCommand or dicts."""
+        if commands is None:
+            return commands
+        for command in commands:
+            if not isinstance(command, (_BaseCommand, dict)):
+                raise TypeError(f"'{type(command)}' must be subclass of _BaseCommand")
+        return commands
 
     @property
     def values(self) -> dict:
@@ -26,8 +37,12 @@ class Recommendation(BaseModel):
             "title": self.title,
             "button": self.button,
             "href": self.href,
-            "command": {"type": self.command} if self.command else {},
-            "context": self.context or {},
+            "commands": [
+                command.recommendation_context() if isinstance(command, _BaseCommand) else command
+                for command in self.commands
+            ]
+            if self.commands
+            else [],
         }
 
 
@@ -82,6 +97,7 @@ class ProtocolCard(_BaseEffect):
             "data": self.values,
         }
 
+    @overload
     def add_recommendation(
         self,
         title: str = "",
@@ -89,10 +105,42 @@ class ProtocolCard(_BaseEffect):
         href: str | None = None,
         command: str | None = None,
         context: dict | None = None,
+    ) -> None: ...
+
+    @overload
+    def add_recommendation(
+        self,
+        title: str = "",
+        button: str = "",
+        href: str | None = None,
+        commands: list[Any] | None = None,
+    ) -> None: ...
+
+    def add_recommendation(  # type: ignore[misc]
+        self,
+        title: str = "",
+        button: str = "",
+        href: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Adds a recommendation to the protocol card's list of recommendations."""
+        if "commands" in kwargs and "command" in kwargs:
+            raise ValueError("Cannot provide both 'commands' and 'command'")
+
+        commands: list[Any] = []
+        if "command" in kwargs:
+            command = kwargs.pop("command")
+            context = kwargs.pop("context", {}) or {}
+            if command:
+                commands.append({"command": {"type": command}, "context": context})
+        elif "commands" in kwargs:
+            commands = kwargs.pop("commands") or []
+
         recommendation = Recommendation(
-            title=title, button=button, href=href, command=command, context=context
+            title=title,
+            button=button,
+            href=href,
+            commands=commands,
         )
         self.recommendations.append(recommendation)
 

@@ -2,14 +2,17 @@ import json
 import re
 from enum import EnumType
 from types import NoneType, UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
 from django.core.exceptions import ImproperlyConfigured
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.commands.constants import Coding
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.protocol_card import Recommendation
+from canvas_sdk.effects.command_metadata.base import _CommandMetadata
+
+if TYPE_CHECKING:
+    from canvas_sdk.effects.protocol_card import Recommendation
 
 
 class _BaseCommand(TrackableFieldsModel):
@@ -172,17 +175,40 @@ class _BaseCommand(TrackableFieldsModel):
             payload=json.dumps({"command": self.command_uuid}),
         )
 
-    def recommend(self, title: str = "", button: str | None = None) -> Recommendation:
+    def upsert_metadata(self, key: str, value: str) -> Effect:
+        """Upsert a metadata record on the command.
+
+        Args:
+            key: The key of the metadata.
+            value: The value of the metadata.
+
+        Returns:
+            An effect that upserts the metadata record on the command.
+
+        Raises:
+            ValueError: If command_uuid is not set.
+        """
+        if not self.command_uuid:
+            raise ValueError("Field 'command_uuid' is required to upsert metadata.")
+
+        return _CommandMetadata(
+            command_id=self.command_uuid, schema_key=self.Meta.key, key=key
+        ).upsert(value=value)
+
+    def recommendation_context(self) -> dict:
+        return {
+            "command": {"type": self.Meta.key},
+            "context": self.values
+            | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
+        }
+
+    def recommend(self, title: str = "", button: str | None = None) -> "Recommendation":
         """Returns a command recommendation to be inserted via Protocol Card."""
+        from canvas_sdk.effects.protocol_card import Recommendation
+
         if button is None:
             button = self.constantized_key().lower().replace("_", " ")
-        command = self.Meta.key
-        return Recommendation(
-            title=title,
-            button=button,
-            command=command,
-            context=self.values | {"effect_type": f"ORIGINATE_{self.constantized_key()}_COMMAND"},
-        )
+        return Recommendation(title=title, button=button, commands=[self])
 
 
 class _SendableCommandMixin:

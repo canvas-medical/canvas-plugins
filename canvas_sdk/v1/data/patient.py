@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import TextChoices
 
-from canvas_sdk.v1.data.base import IdentifiableModel, TimestampedModel
+from canvas_sdk.v1.data.base import IdentifiableModel, MetadataModel, TimestampedModel
 from canvas_sdk.v1.data.common import (
     AddressState,
     AddressType,
@@ -16,7 +16,7 @@ from canvas_sdk.v1.data.common import (
     ContactPointSystem,
     ContactPointUse,
 )
-from canvas_sdk.v1.data.utils import create_key, generate_mrn
+from canvas_sdk.v1.data.utils import create_key, generate_mrn, presigned_url
 
 
 class SexAtBirth(TextChoices):
@@ -276,7 +276,7 @@ class PatientSetting(TimestampedModel):
     value = models.JSONField()
 
 
-class PatientMetadata(IdentifiableModel):
+class PatientMetadata(MetadataModel):
     """A class representing Patient Metadata."""
 
     class Meta:
@@ -285,8 +285,6 @@ class PatientMetadata(IdentifiableModel):
     patient = models.ForeignKey(
         "v1.Patient", on_delete=models.CASCADE, related_name="metadata", null=True
     )
-    key = models.CharField(max_length=32)
-    value = models.CharField(max_length=256)
 
 
 class PatientFacilityAddress(PatientAddress):
@@ -301,6 +299,35 @@ class PatientFacilityAddress(PatientAddress):
     )
 
 
+class PatientIdentificationCard(TimestampedModel):
+    """PatientIdentificationCard model for storing patient ID card images."""
+
+    class Meta:
+        db_table = "canvas_sdk_data_api_patientidentificationcard_001"
+
+    patient = models.ForeignKey(
+        "v1.Patient", on_delete=models.DO_NOTHING, related_name="identification_cards"
+    )
+    image = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, blank=True, default="")
+    active = models.BooleanField(default=True)
+
+    def __str__(self) -> str:
+        return f"PatientIdentificationCard(dbid={self.dbid}, title={self.title})"
+
+    @property
+    def image_url(self) -> str | None:
+        """
+        Return a presigned URL for accessing the ID card image.
+
+        Returns the presigned S3 URL if an image file exists,
+        otherwise returns None.
+        """
+        if self.image:
+            return presigned_url(self.image)
+        return None
+
+
 __exports__ = (
     "SexAtBirth",
     "PatientSettingConstants",
@@ -309,6 +336,7 @@ __exports__ = (
     "PatientAddress",
     "PatientFacilityAddress",
     "PatientExternalIdentifier",
+    "PatientIdentificationCard",
     "PatientSetting",
     "PatientMetadata",
     # not defined here but used by current plugins

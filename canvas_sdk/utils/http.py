@@ -1,5 +1,6 @@
 import concurrent
 import functools
+import logging
 import os
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
@@ -11,6 +12,8 @@ import requests
 from canvas_sdk.utils.metrics import measured
 
 F = TypeVar("F", bound=Callable)
+
+logger = logging.getLogger("plugin_runner_logger")
 
 
 class _BatchableRequest:
@@ -73,7 +76,7 @@ def batch_post(
     headers: Mapping[str, str | bytes | None] | None = None,
 ) -> BatchableRequest:
     """Return a batchable POST request."""
-    return _BatchableRequest("POST", url, json=json, data=data, headeres=headers)
+    return _BatchableRequest("POST", url, json=json, data=data, headers=headers)
 
 
 def batch_put(
@@ -118,6 +121,16 @@ class Http:
     def __init__(self, base_url: str = "") -> None:
         self._base_url = base_url
         self._session = requests.Session()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "_MAX_REQUEST_TIMEOUT_SECONDS":
+            logger.warning(
+                "Overriding %s._MAX_REQUEST_TIMEOUT_SECONDS is deprecated and will be "
+                "forbidden in a future release. Use the timeout parameter on individual "
+                "requests instead.",
+                type(self).__name__,
+            )
+        super().__setattr__(name, value)
 
     @measured(track_plugins_usage=True)
     def get(
@@ -333,19 +346,51 @@ class PharmacyHttp:
         search_term: str | None = " ",
         latitude: str | None = None,
         longitude: str | None = None,
+        id: int | None = None,
+        ncpdp_id: str | None = None,
+        organization_name: str | None = None,
+        specialty_type: str | None = None,
+        state: str | None = None,
+        zip_code_prefix: str | None = None,
     ) -> list[dict]:
-        """Search for pharmacies by term and optional location."""
-        params = {"search": search_term}
+        """Search for pharmacies by term and optional location.
+
+        Args:
+            search_term: Full-text search across multiple fields.
+            latitude: Latitude for location-based ordering.
+            longitude: Longitude for location-based ordering.
+            id: Exact pharmacy ID match.
+            ncpdp_id: Exact NCPDP ID match.
+            organization_name: Case-insensitive contains match on organization name.
+            specialty_type: Case-insensitive contains match on specialty type.
+            state: Case-insensitive exact match on state.
+            zip_code_prefix: One or more comma/space-separated zip code prefixes.
+        """
+        params: dict[str, str | int] = {}
+
+        if search_term and search_term.strip():
+            params["search"] = search_term
+
         if latitude and longitude:
-            params.update(
-                {
-                    "latitude": latitude,
-                    "longitude": longitude,
-                }
-            )
+            params["latitude"] = latitude
+            params["longitude"] = longitude
+
+        if id is not None:
+            params["id"] = id
+        if ncpdp_id is not None:
+            params["ncpdp_id"] = ncpdp_id
+        if organization_name is not None:
+            params["organization_name__icontains"] = organization_name
+        if specialty_type is not None:
+            params["specialty_type__icontains"] = specialty_type
+        if state is not None:
+            params["state__iexact"] = state
+        if zip_code_prefix is not None:
+            params["zip_code_prefix_in"] = zip_code_prefix
 
         query_string = urllib.parse.urlencode(params)
-        response = self._http_client.get_json(f"/surescripts/pharmacy/?{query_string}")
+        url = f"/surescripts/pharmacy/?{query_string}" if query_string else "/surescripts/pharmacy/"
+        response = self._http_client.get_json(url)
         response_json = response.json()
         return response_json.get("results", []) if response_json else []
 

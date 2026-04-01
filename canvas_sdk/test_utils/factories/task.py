@@ -1,3 +1,5 @@
+import datetime
+
 import factory
 
 from canvas_sdk.v1.data import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
@@ -79,7 +81,7 @@ class NoteTaskFactory(factory.django.DjangoModelFactory[NoteTask]):
     original_assignee = factory.SubFactory("canvas_sdk.test_utils.factories.StaffFactory")
     original_team = None
     original_role = None
-    original_due = factory.Faker("date_time")
+    original_due = factory.Faker("date_time", tzinfo=datetime.UTC)
     internal_comment = factory.Faker("sentence", nb_words=6)
     originator = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")
     committer = factory.SubFactory("canvas_sdk.test_utils.factories.CanvasUserFactory")

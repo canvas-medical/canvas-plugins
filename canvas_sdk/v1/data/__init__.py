@@ -8,6 +8,15 @@ from .appointment import (
 )
 from .assessment import Assessment
 from .banner_alert import BannerAlert
+from .base import (
+    MAX_BULK_SIZE,
+    MAX_FIELD_SIZE,
+    CustomModel,
+    FieldValueTooLarge,
+    ModelExtension,
+    NamespaceWriteDenied,
+    proxy_field,
+)
 from .billing import BillingLineItem, BillingLineItemModifier
 from .business_line import BusinessLine
 from .calendar import Calendar, Event
@@ -18,46 +27,78 @@ from .claim import (
     ClaimComment,
     ClaimCoverage,
     ClaimLabel,
+    ClaimMetadata,
     ClaimPatient,
     ClaimProvider,
     ClaimQueue,
     ClaimSubmission,
     InstallmentPlan,
 )
+from .claim_banner_alert import BannerAlertIntent, BannerAlertStatus, ClaimBannerAlert
 from .claim_diagnosis_code import ClaimDiagnosisCode
-from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode
-from .command import Command
+from .claim_line_item import ClaimLineItem, ClaimLineItemDiagnosisCode, ClaimLineItemModifier
+from .command import Command, CommandMetadata
 from .compound_medication import CompoundMedication
 from .condition import Condition, ConditionCoding
 from .coverage import Coverage, EligibilitySummary, Transactor, TransactorAddress, TransactorPhone
+from .custom_attribute import (
+    AttributeHub,
+    CustomAttribute,
+    CustomAttributeAwareManager,
+)
 from .detected_issue import DetectedIssue, DetectedIssueEvidence
 from .device import Device
 from .discount import Discount
+from .document_reference import (
+    DocumentReference,
+    DocumentReferenceCategory,
+    DocumentReferenceCoding,
+    DocumentReferenceStatus,
+)
 from .encounter import Encounter
 from .external_event import ExternalEvent, ExternalVisit
 from .facility import Facility
 from .goal import Goal
-from .imaging import ImagingOrder, ImagingReport, ImagingReview
+from .imaging import (
+    ImagingOrder,
+    ImagingReport,
+    ImagingReportTemplate,
+    ImagingReportTemplateField,
+    ImagingReportTemplateFieldOption,
+    ImagingReportTemplateQuerySet,
+    ImagingReview,
+)
 from .immunization import (
     Immunization,
     ImmunizationCoding,
     ImmunizationStatement,
     ImmunizationStatementCoding,
 )
+from .integration_task import (
+    IntegrationTask,
+    IntegrationTaskChannel,
+    IntegrationTaskReview,
+    IntegrationTaskStatus,
+)
 from .invoice import Invoice
 from .lab import (
+    FieldType,
     LabOrder,
     LabOrderReason,
     LabOrderReasonCondition,
     LabPartner,
     LabPartnerTest,
     LabReport,
+    LabReportTemplate,
+    LabReportTemplateField,
+    LabReportTemplateFieldOption,
+    LabReportTemplateQuerySet,
     LabReview,
     LabTest,
     LabValue,
     LabValueCoding,
 )
-from .letter import Language, Letter
+from .letter import Language, Letter, LetterActionEvent
 from .line_item_transaction import (
     LineItemTransfer,
     NewLineItemAdjustment,
@@ -72,7 +113,7 @@ from .medication_history import (
 )
 from .medication_statement import MedicationStatement
 from .message import Message, MessageAttachment, MessageTransmission
-from .note import CurrentNoteStateEvent, Note, NoteStateChangeEvent, NoteType
+from .note import CurrentNoteStateEvent, Note, NoteMetadata, NoteStateChangeEvent, NoteType
 from .observation import (
     Observation,
     ObservationCoding,
@@ -87,6 +128,7 @@ from .patient import (
     PatientContactPoint,
     PatientExternalIdentifier,
     PatientFacilityAddress,
+    PatientIdentificationCard,
     PatientMetadata,
     PatientSetting,
 )
@@ -95,6 +137,7 @@ from .patient_consent import (
     PatientConsentCoding,
     PatientConsentRejectionCoding,
 )
+from .patient_group import PatientGroup, PatientGroupMember
 from .payment_collection import PaymentCollection
 from .payor_specific_charge import PayorSpecificCharge
 from .posting import (
@@ -110,6 +153,7 @@ from .practicelocation import (
     PracticeLocationContactPoint,
     PracticeLocationSetting,
 )
+from .prescription import Prescription, PrescriptionResponse, PrescriptionStatus
 from .protocol_current import ProtocolCurrent
 from .protocol_override import ProtocolOverride
 from .questionnaire import (
@@ -125,6 +169,12 @@ from .questionnaire import (
 from .reason_for_visit import ReasonForVisitSettingCoding
 from .referral import Referral, ReferralReport, ReferralReview
 from .service_provider import ServiceProvider
+from .snapshot import Snapshot, SnapshotImage
+from .specialty_report_template import (
+    SpecialtyReportTemplate,
+    SpecialtyReportTemplateField,
+    SpecialtyReportTemplateFieldOption,
+)
 from .staff import Staff, StaffAddress, StaffContactPoint, StaffLicense, StaffPhoto, StaffRole
 from .stop_medication_event import StopMedicationEvent
 from .task import NoteTask, Task, TaskComment, TaskLabel, TaskMetadata, TaskTaskLabel
@@ -144,6 +194,7 @@ __all__ = __exports__ = (
     "AllergyIntolerance",
     "AllergyIntoleranceCoding",
     "Assessment",
+    "AttributeHub",
     "BannerAlert",
     "BasePosting",
     "BaseRemittanceAdvice",
@@ -157,42 +208,66 @@ __all__ = __exports__ = (
     "CareTeamRole",
     "ChargeDescriptionMaster",
     "Claim",
+    "ClaimBannerAlert",
+    "BannerAlertStatus",
+    "BannerAlertIntent",
     "ClaimComment",
     "ClaimCoverage",
     "ClaimDiagnosisCode",
     "ClaimLabel",
     "ClaimLineItem",
+    "ClaimMetadata",
     "ClaimLineItemDiagnosisCode",
+    "ClaimLineItemModifier",
     "ClaimPatient",
     "ClaimProvider",
     "ClaimQueue",
     "ClaimSubmission",
     "Command",
+    "CommandMetadata",
     "CompoundMedication",
     "Condition",
     "ConditionCoding",
     "Coverage",
+    "CustomAttribute",
+    "CustomAttributeAwareManager",
+    "ModelExtension",
+    "CustomModel",
     "CoveragePosting",
     "CurrentNoteStateEvent",
     "DetectedIssue",
     "DetectedIssueEvidence",
     "Device",
     "Discount",
+    "DocumentReference",
+    "DocumentReferenceCategory",
+    "DocumentReferenceCoding",
+    "DocumentReferenceStatus",
     "EligibilitySummary",
     "Encounter",
     "Event",
     "ExternalEvent",
     "ExternalVisit",
     "Facility",
+    "FieldValueTooLarge",
+    "FieldType",
     "Goal",
     "ImagingOrder",
     "ImagingReport",
+    "ImagingReportTemplate",
+    "ImagingReportTemplateField",
+    "ImagingReportTemplateFieldOption",
+    "ImagingReportTemplateQuerySet",
     "ImagingReview",
     "Immunization",
     "ImmunizationCoding",
     "ImmunizationStatement",
     "ImmunizationStatementCoding",
     "InstallmentPlan",
+    "IntegrationTask",
+    "IntegrationTaskChannel",
+    "IntegrationTaskReview",
+    "IntegrationTaskStatus",
     "Interview",
     "InterviewQuestionnaireMap",
     "InterviewQuestionResponse",
@@ -209,7 +284,14 @@ __all__ = __exports__ = (
     "LabValueCoding",
     "Language",
     "Letter",
+    "LabReportTemplate",
+    "LabReportTemplateField",
+    "LabReportTemplateFieldOption",
+    "LabReportTemplateQuerySet",
+    "LetterActionEvent",
     "LineItemTransfer",
+    "MAX_BULK_SIZE",
+    "MAX_FIELD_SIZE",
     "Medication",
     "MedicationCoding",
     "MedicationHistoryMedication",
@@ -220,9 +302,11 @@ __all__ = __exports__ = (
     "Message",
     "MessageAttachment",
     "MessageTransmission",
+    "NamespaceWriteDenied",
     "NewLineItemAdjustment",
     "NewLineItemPayment",
     "Note",
+    "NoteMetadata",
     "NoteStateChangeEvent",
     "NoteTask",
     "NoteType",
@@ -239,18 +323,24 @@ __all__ = __exports__ = (
     "PatientContactPoint",
     "PatientExternalIdentifier",
     "PatientFacilityAddress",
+    "PatientIdentificationCard",
     "PatientPosting",
     "PatientSetting",
     "PatientMetadata",
     "PatientConsent",
     "PatientConsentCoding",
     "PatientConsentRejectionCoding",
+    "PatientGroup",
+    "PatientGroupMember",
     "PayorSpecificCharge",
     "PaymentCollection",
     "PracticeLocation",
     "PracticeLocationAddress",
     "PracticeLocationContactPoint",
     "PracticeLocationSetting",
+    "Prescription",
+    "PrescriptionResponse",
+    "PrescriptionStatus",
     "ProtocolCurrent",
     "ProtocolOverride",
     "Question",
@@ -263,6 +353,11 @@ __all__ = __exports__ = (
     "ResponseOption",
     "ResponseOptionSet",
     "ServiceProvider",
+    "SpecialtyReportTemplate",
+    "SpecialtyReportTemplateField",
+    "SpecialtyReportTemplateFieldOption",
+    "Snapshot",
+    "SnapshotImage",
     "Staff",
     "StaffAddress",
     "StaffLicense",
@@ -282,4 +377,5 @@ __all__ = __exports__ = (
     "TransactorPhone",
     "UncategorizedClinicalDocumentReview",
     "UncategorizedClinicalDocument",
+    "proxy_field",
 )

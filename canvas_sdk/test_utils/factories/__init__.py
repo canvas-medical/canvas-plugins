@@ -4,16 +4,30 @@ from .claim import (
     ClaimCoverageFactory,
     ClaimFactory,
     ClaimLabelFactory,
+    ClaimMetadataFactory,
     ClaimProviderFactory,
     ClaimQueueFactory,
     ClaimSubmissionFactory,
 )
+from .claim_banner_alert import ClaimBannerAlertFactory
 from .claim_diagnosis_code import ClaimDiagnosisCodeFactory
-from .claim_line_item import ClaimLineItemDiagnosisCodeFactory, ClaimLineItemFactory
+from .claim_line_item import (
+    ClaimLineItemDiagnosisCodeFactory,
+    ClaimLineItemFactory,
+    ClaimLineItemModifierFactory,
+)
 from .coverage import CoverageFactory
 from .external_event import ExternalEventFactory, ExternalVisitFactory
 from .facility import FacilityFactory
-from .imaging import ImagingOrderFactory, ImagingReportFactory, ImagingReviewFactory
+from .imaging import (
+    ImagingOrderFactory,
+    ImagingReportFactory,
+    ImagingReportTemplateFactory,
+    ImagingReportTemplateFieldFactory,
+    ImagingReportTemplateFieldOptionFactory,
+    ImagingReviewFactory,
+)
+from .integration_task import IntegrationTaskFactory, IntegrationTaskReviewFactory
 from .lab import (
     LabOrderFactory,
     LabOrderReasonConditionFactory,
@@ -26,27 +40,35 @@ from .lab import (
     LabValueCodingFactory,
     LabValueFactory,
 )
-from .letter import LanguageFactory, LetterFactory
+from .lab_report_template import (
+    LabReportTemplateFactory,
+    LabReportTemplateFieldFactory,
+    LabReportTemplateFieldOptionFactory,
+)
+from .letter import LanguageFactory, LetterActionEventFactory, LetterFactory
 from .medication_history import (
     MedicationHistoryMedicationCodingFactory,
     MedicationHistoryMedicationFactory,
     MedicationHistoryResponseFactory,
 )
-from .note import NoteFactory, NoteStateChangeEventFactory, NoteTypeFactory
+from .note import NoteFactory, NoteMetadataFactory, NoteStateChangeEventFactory, NoteTypeFactory
 from .organization import (
     OrganizationAddressFactory,
     OrganizationContactPointFactory,
     OrganizationFactory,
 )
 from .patient import PatientAddressFactory, PatientFacilityAddressFactory, PatientFactory
+from .patient_group import PatientGroupFactory, PatientGroupMemberFactory
 from .practicelocation import (
     PracticeLocationAddressFactory,
     PracticeLocationContactPointFactory,
     PracticeLocationFactory,
     PracticeLocationSettingFactory,
 )
+from .prescription import PrescriptionFactory
 from .protocol_current import ProtocolCurrentFactory
 from .referral import ReferralFactory, ReferralReportFactory, ReferralReviewFactory
+from .service_provider import ServiceProviderFactory
 from .staff import (
     StaffAddressFactory,
     StaffContactPointFactory,
@@ -72,13 +94,16 @@ from .user import CanvasUserFactory
 __all__ = (
     "CalendarFactory",
     "CanvasUserFactory",
+    "ClaimBannerAlertFactory",
     "ClaimFactory",
     "ClaimCommentFactory",
     "ClaimCoverageFactory",
     "ClaimDiagnosisCodeFactory",
     "ClaimLabelFactory",
+    "ClaimMetadataFactory",
     "ClaimLineItemFactory",
     "ClaimLineItemDiagnosisCodeFactory",
+    "ClaimLineItemModifierFactory",
     "ClaimProviderFactory",
     "ClaimQueueFactory",
     "ClaimSubmissionFactory",
@@ -89,7 +114,12 @@ __all__ = (
     "FacilityFactory",
     "ImagingOrderFactory",
     "ImagingReportFactory",
+    "ImagingReportTemplateFactory",
+    "ImagingReportTemplateFieldFactory",
+    "ImagingReportTemplateFieldOptionFactory",
     "ImagingReviewFactory",
+    "IntegrationTaskFactory",
+    "IntegrationTaskReviewFactory",
     "LabOrderFactory",
     "LabOrderReasonConditionFactory",
     "LabOrderReasonFactory",
@@ -102,10 +132,15 @@ __all__ = (
     "LabValueFactory",
     "LanguageFactory",
     "LetterFactory",
+    "LabReportTemplateFactory",
+    "LabReportTemplateFieldFactory",
+    "LabReportTemplateFieldOptionFactory",
+    "LetterActionEventFactory",
     "MedicationHistoryMedicationFactory",
     "MedicationHistoryMedicationCodingFactory",
     "MedicationHistoryResponseFactory",
     "NoteFactory",
+    "NoteMetadataFactory",
     "NoteStateChangeEventFactory",
     "NoteTypeFactory",
     "OrganizationAddressFactory",
@@ -114,14 +149,18 @@ __all__ = (
     "PatientAddressFactory",
     "PatientFacilityAddressFactory",
     "PatientFactory",
+    "PatientGroupFactory",
+    "PatientGroupMemberFactory",
     "PracticeLocationFactory",
     "PracticeLocationAddressFactory",
     "PracticeLocationContactPointFactory",
     "PracticeLocationSettingFactory",
+    "PrescriptionFactory",
     "ProtocolCurrentFactory",
     "ReferralFactory",
     "ReferralReportFactory",
     "ReferralReviewFactory",
+    "ServiceProviderFactory",
     "StaffFactory",
     "StaffPhotoFactory",
     "StaffRoleFactory",

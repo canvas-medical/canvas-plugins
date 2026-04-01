@@ -13,7 +13,7 @@
                 "icon": "assets/note_icon.png"
             }
         ],
-        "protocols": [
+        "handlers": [
             {
                 "class": "note_management_app.handlers.api:AppApi",
                 "description": "SimpleAPI handler for serving the note management application."

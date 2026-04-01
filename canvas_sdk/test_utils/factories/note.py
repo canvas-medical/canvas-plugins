@@ -2,7 +2,7 @@ from typing import Any
 
 import factory
 
-from canvas_sdk.v1.data import Note, NoteStateChangeEvent, NoteType
+from canvas_sdk.v1.data import Note, NoteMetadata, NoteStateChangeEvent, NoteType
 from canvas_sdk.v1.data.note import NoteStates
 
 
@@ -36,6 +36,17 @@ class NoteStateChangeEventFactory(factory.django.DjangoModelFactory[NoteStateCha
     note = factory.SubFactory(NoteFactory)
     state = NoteStates.NEW
     originator = factory.SelfAttribute("note.originator")
+
+
+class NoteMetadataFactory(factory.django.DjangoModelFactory[NoteMetadata]):
+    """Factory for creating NoteMetadata."""
+
+    class Meta:
+        model = NoteMetadata
+
+    note = factory.SubFactory(NoteFactory)
+    key = factory.Faker("word")
+    value = factory.Faker("word")
 
 
 class NoteTypeFactory(factory.django.DjangoModelFactory[NoteType]):

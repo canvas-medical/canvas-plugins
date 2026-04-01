@@ -4,17 +4,17 @@ from canvas_cli.utils.validators import validate_manifest_file
 
 
 @pytest.fixture
-def protocol_manifest_example() -> dict:
-    """Return a valid protocol manifest example."""
+def handler_manifest_example() -> dict:
+    """Return a valid handler manifest example."""
     return {
         "sdk_version": "0.3.1",
         "plugin_version": "1.0.1",
         "name": "Prompt to prescribe when assessing condition",
         "description": "To assist in ....",
         "components": {
-            "protocols": [
+            "handlers": [
                 {
-                    "class": "prompt_to_prescribe.protocols.prompt_when_assessing.PromptWhenAssessing",
+                    "class": "prompt_to_prescribe.handlers.prompt_when_assessing.PromptWhenAssessing",
                     "description": "probably the same as the plugin's description",
                     "data_access": {
                         "event": "",
@@ -32,6 +32,6 @@ def protocol_manifest_example() -> dict:
     }
 
 
-def test_manifest_file_schema(protocol_manifest_example: dict) -> None:
+def test_manifest_file_schema(handler_manifest_example: dict) -> None:
     """Test that no exception raised when a valid manifest file is validated."""
-    validate_manifest_file(protocol_manifest_example)
+    validate_manifest_file(handler_manifest_example)

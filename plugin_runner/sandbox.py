@@ -4,14 +4,16 @@ import ast
 import builtins
 import importlib
 import json
+import logging
 import operator
 import sys
 import types
 from _ast import AnnAssign
-from collections.abc import Iterable, Sequence
+from collections.abc import Generator, Iterable, Sequence
+from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NoReturn, TypedDict, cast
 
 from frozendict import frozendict
 from RestrictedPython import (
@@ -32,6 +34,8 @@ from RestrictedPython.transformer import (
     INSPECT_ATTRIBUTES,
     copy_locations,
 )
+
+logger = logging.getLogger("plugin_runner_logger")
 
 if TYPE_CHECKING:
 
@@ -57,7 +61,30 @@ except FileNotFoundError:
     sys.exit(1)
 
 
+@contextmanager
+def suppress_model_registration() -> Generator[None, None, None]:
+    """Temporarily replace Django's model registration with no-ops.
+
+    Prevents ModelBase.__new__ and ForeignKey.contribute_to_class from
+    polluting apps.all_models during sandbox validation or DDL extraction,
+    avoiding the "shadow model registry" problem where two class objects
+    exist for the same model.
+    """
+    from django.apps import apps
+
+    _orig_register = apps.register_model
+    _orig_lazy = apps.lazy_model_operation
+    apps.register_model = lambda *a, **kw: None  # type: ignore[method-assign]
+    apps.lazy_model_operation = lambda *a, **kw: None  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        apps.register_model = _orig_register  # type: ignore[method-assign]
+        apps.lazy_model_operation = _orig_lazy  # type: ignore[method-assign]
+
+
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__annotations__",
     "__class__",
     "__dict__",
     "__eq__",
@@ -67,11 +94,32 @@ SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
 
 
 SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
+    "__annotations__",
+    "__class__",
     "__dict__",
     "__eq__",
     "__init__",
     "__name__",
 }
+
+
+class _SafeClass:
+    """A read-only proxy for __class__ that only exposes __name__."""
+
+    __slots__ = ("__name__",)
+
+    def __init__(self, name: str) -> None:
+        object.__setattr__(self, "__name__", name)
+
+    def __getattr__(self, name: str) -> NoReturn:
+        raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
+
+    def __setattr__(self, name: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on external __class__")
+
+    def __repr__(self) -> str:
+        return f"<SafeClass '{self.__name__}'>"
+
 
 STANDARD_LIBRARY_MODULES = {
     "__future__": {
@@ -105,6 +153,7 @@ STANDARD_LIBRARY_MODULES = {
     "datetime": {
         "date",
         "datetime",
+        "time",
         "timedelta",
         "timezone",
         "UTC",
@@ -124,6 +173,7 @@ STANDARD_LIBRARY_MODULES = {
     },
     "functools": {
         "reduce",
+        "wraps",
     },
     "hashlib": {
         "sha256",
@@ -152,6 +202,8 @@ STANDARD_LIBRARY_MODULES = {
         "compile",
         "DOTALL",
         "IGNORECASE",
+        "findall",
+        "fullmatch",
         "match",
         "search",
         "split",
@@ -162,12 +214,15 @@ STANDARD_LIBRARY_MODULES = {
         "digits",
     },
     "time": {
-        "time",
         "sleep",
+        "time",
+        "time_ns",
     },
     "typing": {
         "Any",
+        "Callable",
         "cast",
+        "ClassVar",
         "Dict",
         "Final",
         "Iterable",
@@ -176,9 +231,11 @@ STANDARD_LIBRARY_MODULES = {
         "NamedTuple",
         "NotRequired",
         "Optional",
+        "Pattern",
         "Protocol",
         "Sequence",
         "Tuple",
+        "TYPE_CHECKING",
         "Type",
         "TypedDict",
         "TypeGuard",
@@ -210,23 +267,48 @@ THIRD_PARTY_MODULES = {
         "now",
         "utcnow",
     },
+    "django.contrib.postgres.indexes": {
+        "GinIndex",
+    },
+    "django.db": {
+        "IntegrityError",
+    },
+    "django.db.transaction": {
+        "atomic",
+        "on_commit",
+        "on_rollback",
+    },
     "django.db.models": {
         "Avg",
         "BigIntegerField",
+        "BooleanField",
+        "CASCADE",
         "Case",
         "CharField",
         "Count",
-        "Exists",
+        "DateField",
+        "DateTimeField",
+        "DecimalField",
+        "DO_NOTHING",
         "F",
+        "ForeignKey",
+        "Index",
+        "Exists",
         "IntegerField",
+        "JSONField",
+        "ManyToManyField",
         "Max",
         "Min",
         "Model",  # remove when hyperscribe no longer needs it
+        "OneToOneField",
+        "TextField",
         "OuterRef",
         "Prefetch",
         "Q",
+        "SET_NULL",
         "Subquery",
         "Sum",
+        "UniqueConstraint",
         "Value",
         "When",
     },
@@ -271,6 +353,7 @@ THIRD_PARTY_MODULES = {
         "utils",
     },
     "requests": {
+        "codes",
         "delete",
         "get",
         "patch",
@@ -279,6 +362,7 @@ THIRD_PARTY_MODULES = {
         "request",
         "RequestException",
         "Response",
+        "Session",
     },
 }
 
@@ -654,7 +738,7 @@ class Sandbox:
         namespace: str,
         evaluated_modules: dict[str, bool] | None = None,
     ) -> None:
-        self.namespace = namespace or "protocols"
+        self.namespace = namespace or "handlers"
         self.package_name = self.namespace.split(".")[0]
 
         if not source_code.exists():
@@ -664,7 +748,9 @@ class Sandbox:
         self.source_code = source_code.read_text()
         package_path = _find_folder_in_path(source_code, self.package_name)
         self.base_path = package_path.parent if package_path else None
-        self._evaluated_modules: dict[str, bool] = evaluated_modules or {}
+        self._evaluated_modules: dict[str, bool] = (
+            evaluated_modules if evaluated_modules is not None else {}
+        )
 
     @cached_property
     def scope(self) -> dict[str, Any]:
@@ -761,26 +847,23 @@ class Sandbox:
 
         # Re-check after evaluating implicit imports to avoid duplicate evaluations.
         if module_name not in self._evaluated_modules:
-            Sandbox(
-                module,
-                namespace=module_name,
-                evaluated_modules=self._evaluated_modules,
-            ).execute()
+            with suppress_model_registration():
+                Sandbox(
+                    module,
+                    namespace=module_name,
+                    evaluated_modules=self._evaluated_modules,
+                ).execute()
 
             self._evaluated_modules[module_name] = True
 
-        # Reload the module if already imported to ensure the latest version is used.
         if sys.modules.get(module_name):
             importlib.reload(sys.modules[module_name])
 
     def _evaluate_implicit_imports(self, module: Path) -> None:
         """Evaluate implicit imports in the sandbox."""
-        # Determine the parent module to check for implicit imports.
         parent = module.parent.parent if module.name == "__init__.py" else module.parent
         base_path = cast(Path, self.base_path)
 
-        # Skip evaluation if the parent module is outside the base path or
-        # already the source code root.
         if not parent.is_relative_to(base_path) or parent == base_path:
             return
 
@@ -789,16 +872,15 @@ class Sandbox:
 
         if module_name not in self._evaluated_modules:
             if init_file.exists():
-                # Mark as evaluated to prevent infinite recursion.
                 self._evaluated_modules[module_name] = True
 
-                Sandbox(
-                    init_file,
-                    namespace=module_name,
-                    evaluated_modules=self._evaluated_modules,
-                ).execute()
+                with suppress_model_registration():
+                    Sandbox(
+                        init_file,
+                        namespace=module_name,
+                        evaluated_modules=self._evaluated_modules,
+                    ).execute()
             else:
-                # Mark as evaluated even if no init file exists to prevent redundant checks.
                 self._evaluated_modules[module_name] = True
 
         self._evaluate_implicit_imports(parent)
@@ -848,12 +930,31 @@ class Sandbox:
             # deny writes to dictionary underscore keys
             or (isinstance(_ob, dict) and isinstance(attribute, str) and attribute.startswith("_"))
         ):
+            # Deprecated: allow plugins to override _MAX_REQUEST_TIMEOUT_SECONDS on
+            # Http instances. This will be removed in a future release.
+            if attribute == "_MAX_REQUEST_TIMEOUT_SECONDS" and self._is_http_instance(_ob):
+                logger.warning(
+                    "Plugin '%s' is overriding %s._MAX_REQUEST_TIMEOUT_SECONDS. "
+                    "This is deprecated and will be forbidden in a future release. "
+                    "Use the timeout parameter on individual requests instead.",
+                    self.package_name,
+                    type(_ob).__name__,
+                )
+                return _ob
+
             raise AttributeError(
                 f"Forbidden assignment to a non-module attribute: {full_name} "
                 f"at {name}.{attribute}."
             )
 
         return _ob
+
+    @staticmethod
+    def _is_http_instance(_ob: Any) -> bool:
+        """Check if _ob is an instance of canvas_sdk.utils.http.Http."""
+        from canvas_sdk.utils.http import Http
+
+        return isinstance(_ob, Http)
 
     def _safe_getitem(self, ob: Any, index: Any) -> Any:
         """
@@ -922,6 +1023,13 @@ class Sandbox:
                 f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
             )
 
+        # Prevent sandbox escape via __class__.__mro__, __subclasses__, etc.
+        if isinstance(_ob, _SafeClass) and name != "__name__":
+            raise AttributeError(f'Access to "{name}" on external __class__ is restricted')
+
+        if name == "__class__" and not self._same_module(module):
+            return _SafeClass(_ob.__class__.__name__)
+
         return getattr(_ob, name, default)
 
     def _safe_import(
@@ -963,13 +1071,17 @@ class Sandbox:
         return self.scope
 
 
-def sandbox_from_module(base_path: Path, module_name: str) -> Sandbox:
+def sandbox_from_module(
+    base_path: Path,
+    module_name: str,
+    evaluated_modules: dict[str, bool] | None = None,
+) -> Sandbox:
     """Sandbox the code execution."""
     module_path = base_path / str(module_name.replace(".", "/") + ".py")
 
     if not module_path.exists():
         raise ModuleNotFoundError(f'Could not load module "{module_name}"')
 
-    sandbox = Sandbox(module_path, namespace=module_name)
+    sandbox = Sandbox(module_path, namespace=module_name, evaluated_modules=evaluated_modules)
 
     return sandbox

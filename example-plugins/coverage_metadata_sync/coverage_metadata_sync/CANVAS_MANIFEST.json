@@ -4,9 +4,9 @@
   "name": "coverage_metadata_sync",
   "description": "Automatically synchronizes a patient's 'Coverage status' metadata field based on appointment label changes. Updates the metadata to 'Missing' when the MISSING_COVERAGE label is added, and to 'Active' when the label is removed.",
   "components": {
-    "protocols": [
+    "handlers": [
       {
-        "class": "coverage_metadata_sync.protocols.metadata_sync:CoverageStatusSyncProtocol",
+        "class": "coverage_metadata_sync.handlers.metadata_sync:CoverageStatusSyncHandler",
         "description": "Listens for MISSING_COVERAGE label events on appointments and synchronizes the patient's 'coverage_status' metadata field accordingly.",
         "data_access": {
           "event": "read",
