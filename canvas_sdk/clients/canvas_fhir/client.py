@@ -119,4 +119,4 @@ class CanvasFhir:
         return cast(Credentials, response_json)
 
 
-__exports__ = ("CanvasFhir",)
+__exports__ = ()

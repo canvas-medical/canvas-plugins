@@ -1,4 +1,4 @@
-from canvas_sdk.clients import CanvasFhir
+from canvas_sdk.clients.canvas_fhir import CanvasFhir
 from canvas_sdk.effects import Effect
 from canvas_sdk.handlers.action_button import ActionButton
 from logger import log

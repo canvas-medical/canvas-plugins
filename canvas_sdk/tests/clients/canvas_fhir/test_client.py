@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from canvas_sdk.clients import CanvasFhir
+from canvas_sdk.clients.canvas_fhir import CanvasFhir
 from settings import CUSTOMER_IDENTIFIER
 
 MOCK_CREDENTIALS = {
