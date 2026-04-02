@@ -85,21 +85,27 @@ def suppress_model_registration() -> Generator[None, None, None]:
 
 SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__annotations__",
+    "__args__",
     "__class__",
     "__dict__",
     "__eq__",
     "__init__",
+    "__members__",
     "__name__",
+    "__origin__",
 }
 
 
 SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__annotations__",
+    "__args__",
     "__class__",
     "__dict__",
     "__eq__",
     "__init__",
+    "__members__",
     "__name__",
+    "__origin__",
 }
 
 

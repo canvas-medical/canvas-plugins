@@ -717,7 +717,7 @@ def test_urllib() -> None:
     """Test that urllib.parse (and modules like it) work, but only with the allowed attributes."""
     sandbox = _sandbox_from_code("""
         from urllib import parse
-        parse.quote("testing")
+        parse.unquote(parse.quote("testing"))
     """)
     sandbox.execute()
 
@@ -783,6 +783,43 @@ def test_urllib() -> None:
 
                 annots = StopMedicationCommand.__annotations__
                 assert isinstance(annots, dict)
+            """,
+            "typing_args_on_generic": """
+                from typing import List
+                tp = List[str]
+                assert tp.__args__ == (str,)
+            """,
+            "typing_origin_on_generic": """
+                from typing import List
+                tp = List[str]
+                assert tp.__origin__ is list
+            """,
+            "typing_args_via_getattr": """
+                from typing import Dict
+                tp = Dict[str, int]
+                args = getattr(tp, '__args__', ())
+                assert args == (str, int)
+            """,
+            "typing_origin_via_getattr": """
+                from typing import Dict
+                tp = Dict[str, int]
+                origin = getattr(tp, '__origin__', None)
+                assert origin is dict
+            """,
+            "typing_args_fallback_on_plain_type": """
+                result = getattr(str, '__args__', 'fallback')
+                assert result == 'fallback'
+            """,
+            "enum_members": """
+                from enum import StrEnum
+
+                class Color(StrEnum):
+                    RED = "red"
+                    GREEN = "green"
+
+                members = Color.__members__
+                assert "RED" in members
+                assert "GREEN" in members
             """,
         }
     ),
