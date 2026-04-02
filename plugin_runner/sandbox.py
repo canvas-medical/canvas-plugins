@@ -185,6 +185,11 @@ STANDARD_LIBRARY_MODULES = {
     "http": {
         "HTTPStatus",
     },
+    "html": {
+        "escape",
+        "HTML",
+        "unescape",
+    },
     "json": {
         "dumps",
         "loads",
@@ -247,6 +252,7 @@ STANDARD_LIBRARY_MODULES = {
     "urllib.parse": {
         "urlencode",
         "quote",
+        "unquote",
     },
     "uuid": {
         "uuid4",
@@ -291,7 +297,9 @@ THIRD_PARTY_MODULES = {
         "DecimalField",
         "DO_NOTHING",
         "F",
+        "FloatField",
         "ForeignKey",
+        "Func",
         "Index",
         "Exists",
         "IntegerField",
