@@ -468,6 +468,39 @@ def test_coalesce_function_import() -> None:
     )
 
 
+def test_window_expression_import() -> None:
+    """Test that Window, RowRange, and ValueRange can be imported from django.db.models."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models import Window, RowRange, ValueRange
+            result = "Window expression import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Window expression import successful", (
+        "Window, RowRange, and ValueRange should be importable from django.db.models."
+    )
+
+
+def test_window_functions_import() -> None:
+    """Test that window functions can be imported from django.db.models.functions."""
+    sandbox = _sandbox_from_code(
+        """
+            from django.db.models.functions import (
+                CumeDist, DenseRank, FirstValue, Lag, LastValue,
+                Lead, NthValue, Ntile, PercentRank, Rank, RowNumber,
+            )
+            result = "Window functions import successful"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "Window functions import successful", (
+        "All window functions should be importable from django.db.models.functions."
+    )
+
+
 def test_multiple_functions_import() -> None:
     """Test that multiple functions from django.db.models.functions can be imported together."""
     sandbox = _sandbox_from_code(
