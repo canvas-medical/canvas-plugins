@@ -501,6 +501,250 @@ def test_window_functions_import() -> None:
     )
 
 
+def test_traceback_format_exc() -> None:
+    """Test that traceback.format_exc can be imported and used."""
+    sandbox = _sandbox_from_code(
+        """
+            import traceback
+            try:
+                raise ValueError("test error")
+            except ValueError:
+                result = traceback.format_exc()
+        """
+    )
+
+    scope = sandbox.execute()
+    assert "ValueError: test error" in scope["result"], (
+        "traceback.format_exc() should return a string containing the exception."
+    )
+
+
+def test_traceback_restricted_attributes() -> None:
+    """Test that only format_exc is accessible on the traceback module."""
+    with pytest.raises(
+        AttributeError,
+        match=r'"traceback.extract_tb" is an invalid attribute name',
+    ):
+        sandbox = _sandbox_from_code(
+            """
+                import traceback
+                traceback.extract_tb(None)
+            """
+        )
+        sandbox.execute()
+
+
+def test_extract_exc_frames() -> None:
+    """Test that extract_exc_frames returns safe frame summaries."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test error")
+            except ValueError:
+                frames = extract_exc_frames()
+                result = {
+                    "count": len(frames),
+                    "has_filename": hasattr(frames[0], "filename"),
+                    "has_lineno": hasattr(frames[0], "lineno"),
+                    "has_name": hasattr(frames[0], "name"),
+                }
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"]["count"] > 0, "Should have at least one frame."
+    assert scope["result"]["has_filename"], "Frame should expose filename."
+    assert scope["result"]["has_lineno"], "Frame should expose lineno."
+    assert scope["result"]["has_name"], "Frame should expose name."
+
+
+def test_extract_exc_frames_no_exception() -> None:
+    """Test that extract_exc_frames returns empty list when no exception is active."""
+    sandbox = _sandbox_from_code(
+        """
+            result = extract_exc_frames()
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == [], "Should return empty list when no exception is active."
+
+
+def test_extract_exc_frames_restricts_locals() -> None:
+    """Test that safe frame summaries do not expose locals or source lines."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                secret = "sensitive_data"
+                raise ValueError("test")
+            except ValueError:
+                frames = extract_exc_frames()
+                try:
+                    frames[0].locals
+                    result = "FAIL: locals was accessible"
+                except AttributeError:
+                    result = "PASS: locals was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: locals was blocked", (
+        "Frame summaries must not expose local variables."
+    )
+
+
+def test_extract_exc_frames_restricts_line() -> None:
+    """Test that safe frame summaries do not expose source code lines."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test")
+            except ValueError:
+                frames = extract_exc_frames()
+                try:
+                    frames[0].line
+                    result = "FAIL: line was accessible"
+                except AttributeError:
+                    result = "PASS: line was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: line was blocked", (
+        "Frame summaries must not expose source code lines."
+    )
+
+
+def test_traceback_traversal_pattern() -> None:
+    """Test the standard tb = error.__traceback__; while tb: tb = tb.tb_next pattern."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test error")
+            except ValueError as error:
+                frames = []
+                tb = error.__traceback__
+                while tb is not None:
+                    frame = tb.tb_frame
+                    frames.append({
+                        'filename': frame.f_code.co_filename,
+                        'function': frame.f_code.co_name,
+                        'lineno': tb.tb_lineno,
+                    })
+                    tb = tb.tb_next
+                result = frames
+        """
+    )
+
+    scope = sandbox.execute()
+    assert len(scope["result"]) > 0, "Should have at least one frame."
+    assert "filename" in scope["result"][0], "Frame should have filename."
+    assert "function" in scope["result"][0], "Frame should have function."
+    assert "lineno" in scope["result"][0], "Frame should have lineno."
+
+
+def test_traceback_frame_blocks_locals() -> None:
+    """Test that __traceback__ frame proxy does not expose f_locals."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                secret = "sensitive_data"
+                raise ValueError("test")
+            except ValueError as error:
+                tb = error.__traceback__
+                frame = tb.tb_frame
+                try:
+                    frame.f_locals
+                    result = "FAIL: f_locals was accessible"
+                except AttributeError:
+                    result = "PASS: f_locals was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: f_locals was blocked", "Frame proxy must not expose f_locals."
+
+
+def test_traceback_frame_blocks_globals() -> None:
+    """Test that __traceback__ frame proxy does not expose f_globals."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test")
+            except ValueError as error:
+                tb = error.__traceback__
+                frame = tb.tb_frame
+                try:
+                    frame.f_globals
+                    result = "FAIL: f_globals was accessible"
+                except AttributeError:
+                    result = "PASS: f_globals was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: f_globals was blocked", (
+        "Frame proxy must not expose f_globals."
+    )
+
+
+def test_traceback_code_blocks_co_varnames() -> None:
+    """Test that the code object proxy blocks access to co_varnames."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test")
+            except ValueError as error:
+                code = error.__traceback__.tb_frame.f_code
+                try:
+                    code.co_varnames
+                    result = "FAIL: co_varnames was accessible"
+                except AttributeError:
+                    result = "PASS: co_varnames was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: co_varnames was blocked", (
+        "Code object proxy must block co_varnames."
+    )
+
+
+def test_traceback_code_blocks_co_consts() -> None:
+    """Test that the code object proxy blocks access to co_consts."""
+    sandbox = _sandbox_from_code(
+        """
+            try:
+                raise ValueError("test")
+            except ValueError as error:
+                code = error.__traceback__.tb_frame.f_code
+                try:
+                    code.co_consts
+                    result = "FAIL: co_consts was accessible"
+                except AttributeError:
+                    result = "PASS: co_consts was blocked"
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] == "PASS: co_consts was blocked", (
+        "Code object proxy must block co_consts."
+    )
+
+
+def test_traceback_none_when_no_traceback() -> None:
+    """Test that __traceback__ returns None for exceptions without a traceback."""
+    sandbox = _sandbox_from_code(
+        """
+            error = ValueError("no traceback")
+            result = error.__traceback__ is None
+        """
+    )
+
+    scope = sandbox.execute()
+    assert scope["result"] is True, "__traceback__ should be None for unraised exceptions."
+
+
 def test_multiple_functions_import() -> None:
     """Test that multiple functions from django.db.models.functions can be imported together."""
     sandbox = _sandbox_from_code(

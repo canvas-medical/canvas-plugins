@@ -7,6 +7,7 @@ import json
 import logging
 import operator
 import sys
+import traceback
 import types
 from _ast import AnnAssign
 from collections.abc import Generator, Iterable, Sequence
@@ -93,6 +94,7 @@ SAFE_INTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__members__",
     "__name__",
     "__origin__",
+    "__traceback__",
 }
 
 
@@ -106,6 +108,7 @@ SAFE_EXTERNAL_DUNDER_READ_ATTRIBUTES = {
     "__members__",
     "__name__",
     "__origin__",
+    "__traceback__",
 }
 
 
@@ -125,6 +128,125 @@ class _SafeClass:
 
     def __repr__(self) -> str:
         return f"<SafeClass '{self.__name__}'>"
+
+
+class _SafeCode:
+    """A read-only proxy for a code object that only exposes filename and function name.
+
+    Does not expose bytecode, constants, variable names, or other internals
+    that could be used to reverse-engineer or escape the sandbox.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = ("co_filename", "co_name")
+    __slots__ = ("co_filename", "co_name")
+    co_filename: str
+    co_name: str
+
+    def __init__(self, code: types.CodeType) -> None:
+        object.__setattr__(self, "co_filename", code.co_filename)
+        object.__setattr__(self, "co_name", code.co_name)
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on code object")
+
+    def __repr__(self) -> str:
+        return f'<SafeCode file="{self.co_filename}" name="{self.co_name}">'
+
+
+class _SafeFrame:
+    """A read-only proxy for a frame object that only exposes a safe code object.
+
+    Does not expose ``f_locals``, ``f_globals``, ``f_builtins``, or ``f_back``,
+    which would allow full sandbox escape.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = ("f_code",)
+    __slots__ = ("f_code",)
+    f_code: _SafeCode
+
+    def __init__(self, frame: types.FrameType) -> None:
+        object.__setattr__(self, "f_code", _SafeCode(frame.f_code))
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on frame object")
+
+    def __repr__(self) -> str:
+        return f"<SafeFrame {self.f_code!r}>"
+
+
+class _SafeTraceback:
+    """A read-only proxy for a traceback object that supports the standard traversal pattern.
+
+    Exposes ``tb_frame`` (as a ``_SafeFrame``), ``tb_lineno``, and ``tb_next``
+    (as another ``_SafeTraceback`` or ``None``).  Does not expose ``tb_lasti``
+    or allow mutation.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = ("tb_frame", "tb_lineno", "tb_next")
+    __slots__ = ("tb_frame", "tb_lineno", "tb_next")
+    tb_frame: _SafeFrame
+    tb_lineno: int
+    tb_next: _SafeTraceback | None
+
+    def __init__(self, tb: types.TracebackType) -> None:
+        object.__setattr__(self, "tb_frame", _SafeFrame(tb.tb_frame))
+        object.__setattr__(self, "tb_lineno", tb.tb_lineno)
+        object.__setattr__(self, "tb_next", _SafeTraceback(tb.tb_next) if tb.tb_next else None)
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on traceback object")
+
+    def __repr__(self) -> str:
+        return f"<SafeTraceback line={self.tb_lineno}>"
+
+
+class _SafeFrameSummary:
+    """A read-only proxy for traceback FrameSummary that only exposes safe attributes.
+
+    Exposes file name, line number, and function name. Does not expose
+    source code lines or local variables, which could leak sandbox internals.
+
+    Uses ``__exports__`` so the sandbox's ``_safe_getattr`` blocks everything else.
+    """
+
+    __exports__ = ("filename", "lineno", "name")
+    __slots__ = ("filename", "lineno", "name")
+    filename: str
+    lineno: int | None
+    name: str
+
+    def __init__(self, frame: traceback.FrameSummary) -> None:
+        object.__setattr__(self, "filename", frame.filename)
+        object.__setattr__(self, "lineno", frame.lineno)
+        object.__setattr__(self, "name", frame.name)
+
+    def __setattr__(self, attr: str, value: Any) -> NoReturn:
+        raise AttributeError("Cannot set attributes on frame summary")
+
+    def __repr__(self) -> str:
+        return f'<SafeFrameSummary file="{self.filename}" line={self.lineno} name="{self.name}">'
+
+
+def _extract_exc_frames() -> list[_SafeFrameSummary]:
+    """Extract frame summaries from the current exception's traceback.
+
+    Returns a list of SafeFrameSummary objects with only filename, lineno,
+    and function name. Must be called from within an except block.
+
+    Returns an empty list if no exception is active.
+    """
+    exc_info = sys.exc_info()
+    tb = exc_info[2]
+    if tb is None:
+        return []
+    frames = traceback.extract_tb(tb)
+    return [_SafeFrameSummary(frame) for frame in frames]
 
 
 STANDARD_LIBRARY_MODULES = {
@@ -228,6 +350,9 @@ STANDARD_LIBRARY_MODULES = {
         "sleep",
         "time",
         "time_ns",
+    },
+    "traceback": {
+        "format_exc",
     },
     "typing": {
         "Any",
@@ -808,6 +933,7 @@ class Sandbox:
                 "sum": builtins.sum,
                 "super": builtins.super,
                 "vars": builtins.vars,
+                "extract_exc_frames": _extract_exc_frames,
             },
             "__is_plugin__": True,
             "__metaclass__": type,
@@ -1000,7 +1126,7 @@ class Sandbox:
         Restricted attribute types:
 
         1. underscored attributes created outside of the defining namespace
-        2. attributes used by the `inspect` module
+        2. attributes used by the `inspect` module except those that we have safely wrapped
         3. dunder methods except for those we deem safe
         4. if a __exports__ module property is defined, any
            attribute not in that property's value
@@ -1024,6 +1150,16 @@ class Sandbox:
                 "Using the format and format_map methods of `str` is not safe"
             )
 
+        # Objects with __exports__ define their own allowlist — check it first
+        # so that safe wrapper types (e.g. _SafeTraceback, _SafeFrame) can
+        # expose attributes like tb_frame/f_code that are in INSPECT_ATTRIBUTES.
+        exports = getattr(_ob, "__exports__", None)
+
+        if exports:
+            if name not in exports:
+                raise AttributeError(f'"{name}" is an invalid attribute name (not in __exports__)')
+            return getattr(_ob, name, default)
+
         if name in INSPECT_ATTRIBUTES:
             raise AttributeError(f'"{name}" is a restricted name.')
 
@@ -1040,12 +1176,6 @@ class Sandbox:
                     raise AttributeError(
                         f'"{name}" is an invalid attribute name because it starts with "__"'
                     )
-
-        exports = getattr(_ob, "__exports__", None)
-
-        if exports:
-            if name not in exports:
-                raise AttributeError(f'"{name}" is an invalid attribute name (not in __exports__)')
         elif is_module and (module not in ALLOWED_MODULES or name not in ALLOWED_MODULES[module]):
             raise AttributeError(
                 f'"{module}.{name}" is an invalid attribute name (not in ALLOWED_MODULES)'
@@ -1057,6 +1187,10 @@ class Sandbox:
 
         if name == "__class__" and not self._same_module(module):
             return _SafeClass(_ob.__class__.__name__)
+
+        if name == "__traceback__":
+            tb = getattr(_ob, "__traceback__", None)
+            return _SafeTraceback(tb) if tb is not None else None
 
         return getattr(_ob, name, default)
 
