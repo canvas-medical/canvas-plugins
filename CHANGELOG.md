@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v0.128.0 (2026-04-06)
+
+### Features
+
+- Add canvas fhir client (from #1337)
+  ([#1610](https://github.com/canvas-medical/canvas-plugins/pull/1610),
+  [`696574f`](https://github.com/canvas-medical/canvas-plugins/commit/696574f49b4aa77a4431cecb51e97d01fd06e59c))
+
+Signed-off-by: Andrew Duane <andrew.m.duane@gmail.com>
+
+Signed-off-by: Andrew Duane <andrew.duane@canvasmedical.com>
+
+Co-authored-by: Reagan Elm <1347066+relm923@users.noreply.github.com>
+
+- Add data integration SDK event types
+  ([#1516](https://github.com/canvas-medical/canvas-plugins/pull/1516),
+  [`b8a376b`](https://github.com/canvas-medical/canvas-plugins/commit/b8a376b28a167feb32ce0a9479f5293e6e4384f5))
+
+- **cli**: Notify users when a newer version is available on PyPI
+  ([#1607](https://github.com/canvas-medical/canvas-plugins/pull/1607),
+  [`7ebcf72`](https://github.com/canvas-medical/canvas-plugins/commit/7ebcf72c7ef6548ed1997a28468fe90c5954346d))
+
+
 ## v0.127.0 (2026-03-31)
 
 ### Features
