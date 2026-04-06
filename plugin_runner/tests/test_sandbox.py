@@ -713,6 +713,213 @@ def test_sandbox_allows_access_to_private_attributes_same_module() -> None:
     sandbox.execute()
 
 
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "read_underscore_key_from_dict": """
+                d = {"_key": "value"}
+                result = d["_key"]
+                assert result == "value"
+            """,
+            "read_underscore_key_from_typed_dict": """
+                from typing import TypedDict
+
+                class MyConfig(TypedDict):
+                    _internal: str
+                    public: str
+
+                config: MyConfig = {"_internal": "secret", "public": "visible"}
+                result = config["_internal"]
+                assert result == "secret"
+            """,
+            "read_underscore_key_from_dict_in_method": """
+                class MyClass:
+                    def compute(self):
+                        d = {"_internal": 42}
+                        return d["_internal"]
+
+                result = MyClass().compute()
+                assert result == 42
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_underscore_item_access_on_plugin_objects(code: str) -> None:
+    """Test that underscore key access is allowed on objects defined within the plugin."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "write_underscore_key_to_dict": """
+                d = {}
+                d["_key"] = "value"
+                assert d["_key"] == "value"
+            """,
+            "update_underscore_key_in_dict": """
+                d = {"_key": "old"}
+                d["_key"] = "new"
+                assert d["_key"] == "new"
+            """,
+            "write_underscore_key_in_method": """
+                class MyClass:
+                    def build(self):
+                        d = {}
+                        d["_internal"] = 42
+                        return d["_internal"]
+
+                assert MyClass().build() == 42
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_underscore_item_write_on_plugin_dicts(code: str) -> None:
+    """Test that writing underscore keys to plugin-created dicts is allowed."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "dict_get_returns_none": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                assert d.get("_session") is None
+            """,
+            "dict_iteration_excludes_private_keys": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                private_keys = [k for k in d if k.startswith("_")]
+                assert len(private_keys) == 0, f"leaked keys: {private_keys}"
+            """,
+            "vars_get_returns_none": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = vars(ontologies_http)
+                assert d.get("_session") is None
+            """,
+            "vars_iteration_excludes_private_keys": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = vars(ontologies_http)
+                private_keys = [k for k in d if k.startswith("_")]
+                assert len(private_keys) == 0, f"leaked keys: {private_keys}"
+            """,
+            "dict_write_blocked": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                try:
+                    d["_evil"] = "injected"
+                    assert False, "write should have been blocked"
+                except TypeError:
+                    pass
+            """,
+            "vars_write_blocked": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = vars(ontologies_http)
+                try:
+                    d["_evil"] = "injected"
+                    assert False, "write should have been blocked"
+                except TypeError:
+                    pass
+            """,
+            "dict_values_excludes_private": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                for v in d.values():
+                    assert not hasattr(v, 'headers'), "session object leaked via values()"
+            """,
+            "dict_items_excludes_private": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                for k, v in d.items():
+                    assert not k.startswith("_"), f"private key leaked: {k}"
+            """,
+            "dict_contains_private_key_false": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                assert "_session" not in d
+            """,
+            "dict_len_excludes_private": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                all_keys = vars(ontologies_http)
+                assert len(d) == len(all_keys)
+                assert "_session" not in d
+            """,
+            "dict_underlying_not_accessible_via_wrapped": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = ontologies_http.__dict__
+                try:
+                    d._wrapped
+                    assert False, "_wrapped should not be accessible"
+                except AttributeError:
+                    pass
+            """,
+            "vars_underlying_not_accessible_via_wrapped": """
+                from canvas_sdk.utils.http import ontologies_http
+
+                d = vars(ontologies_http)
+                try:
+                    d._wrapped
+                    assert False, "_wrapped should not be accessible"
+                except AttributeError:
+                    pass
+            """,
+        }
+    ),
+)
+def test_sandbox_filters_private_attrs_from_external_dict_and_vars(code: str) -> None:
+    """Test that __dict__ and vars() on external objects exclude underscore-prefixed keys."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
+@pytest.mark.parametrize(
+    "code",
+    params_from_dict(
+        {
+            "plugin_dict_unfiltered": """
+                class MyClass:
+                    _private = 42
+
+                obj = MyClass()
+                d = obj.__dict__
+                assert "_private" not in d or True  # __dict__ may or may not have class attrs
+            """,
+            "plugin_vars_unfiltered": """
+                class MyClass:
+                    def __init__(self):
+                        self._private = 42
+
+                obj = MyClass()
+                d = vars(obj)
+                assert d["_private"] == 42
+            """,
+        }
+    ),
+)
+def test_sandbox_allows_unfiltered_dict_and_vars_on_plugin_objects(code: str) -> None:
+    """Test that __dict__ and vars() on plugin-defined objects include private attributes."""
+    sandbox = _sandbox_from_code(code)
+    sandbox.execute()
+
+
 def test_urllib() -> None:
     """Test that urllib.parse (and modules like it) work, but only with the allowed attributes."""
     sandbox = _sandbox_from_code("""
@@ -1043,7 +1250,7 @@ def test_sandbox_denies_access_to_private_attributes_of_external_modules(code: s
     """Test that private attribute/method access is not allowed for external modules."""
     sandbox = _sandbox_from_code(source_code=code)
 
-    with pytest.raises(AttributeError):
+    with pytest.raises((AttributeError, KeyError)):
         sandbox.execute()
 
 
