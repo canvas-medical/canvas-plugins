@@ -6,16 +6,19 @@ manifest_schema = {
         "name": {"type": "string"},
         "description": {"type": "string"},
         "variables": {
-            "description": "Plugin variables. Each entry has a name and an optional sensitive flag (default false). Sensitive variables are write-only.",
+            "description": "Plugin variables. Each entry has a name, an optional sensitive flag (default false), and an optional default value. Sensitive variables are write-only.",
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
                     "sensitive": {"type": "boolean", "default": False},
+                    "default": {"type": "string"},
                 },
                 "required": ["name"],
                 "additionalProperties": False,
+                "if": {"properties": {"sensitive": {"const": True}}, "required": ["sensitive"]},
+                "then": {"not": {"required": ["default"]}},
             },
         },
         "secrets": {

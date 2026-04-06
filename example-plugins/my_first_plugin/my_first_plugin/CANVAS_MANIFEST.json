@@ -26,7 +26,7 @@
     },
     "tags": [],
     "variables": [
-        {"name": "WEBHOOK_URL"},
+        {"name": "WEBHOOK_URL", "default": "https://example.com/webhook"},
         {"name": "WEBHOOK_API_KEY", "sensitive": true}
     ],
     "license": "NONE",
