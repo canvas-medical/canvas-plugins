@@ -5,6 +5,7 @@ from pathlib import Path
 import typer
 
 from canvas_cli.apps import namespace, plugin
+from canvas_cli.apps.auth import login, logout
 from canvas_cli.apps.emit import emit
 from canvas_cli.apps.logs import logs as logs_command
 from canvas_cli.apps.run_plugins import run_plugin, run_plugins
@@ -32,6 +33,8 @@ app.command(
 )(emit)
 app.command(short_help="Run the specified plugins for local development.")(run_plugins)
 app.command(short_help="Run the specified plugin for local development.")(run_plugin)
+app.command(short_help="Log in to Control Room via browser-based OAuth2.")(login)
+app.command(short_help="Log out of Control Room and clear stored credentials.")(logout)
 
 # Config app
 config_app = typer.Typer(
