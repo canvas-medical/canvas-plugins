@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.129.0 (2026-04-08)
+
+### Features
+
+- Add note header dropdown configuration
+  ([#1587](https://github.com/canvas-medical/canvas-plugins/pull/1587),
+  [`e319ba8`](https://github.com/canvas-medical/canvas-plugins/commit/e319ba80b182d04b658223834014af2f93d1c684))
+
+- Additional items for plugin runner sandbox
+  ([#1615](https://github.com/canvas-medical/canvas-plugins/pull/1615),
+  [`40be97c`](https://github.com/canvas-medical/canvas-plugins/commit/40be97cde708f13c95cdd5ab3073988c196c7dc7))
+
+
 ## v0.128.0 (2026-04-06)
 
 ### Features
