@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.130.0 (2026-04-09)
+
+### Features
+
+- Add delegate and sign actions to refer and imaging order commands
+  ([#1619](https://github.com/canvas-medical/canvas-plugins/pull/1619),
+  [`7f09674`](https://github.com/canvas-medical/canvas-plugins/commit/7f096743906a03ba05b770452ca72dff1ac14ea7))
+
+
 ## v0.129.0 (2026-04-08)
 
 ### Features
