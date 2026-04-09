@@ -27,6 +27,7 @@ class PatientNoteHeaderDropdownConfiguration(_BaseEffect):
         COPY_LINK = "copy_link"
         PRINT_NOTE = "print_note"
         FAX_NOTE = "fax_note"
+        FAX_EVENT_HISTORY = "fax_event_history"
         MOVE_COMMANDS = "move_commands"
 
     items: list[Items] = Field(min_length=1)
