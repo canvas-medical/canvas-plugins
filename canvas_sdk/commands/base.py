@@ -25,6 +25,8 @@ class _BaseCommand(TrackableFieldsModel):
         delete_required_fields = ("command_uuid",)
         commit_required_fields = ("command_uuid",)
         enter_in_error_required_fields = ("command_uuid",)
+        delegate_required_fields = ("command_uuid",)
+        sign_required_fields = ("command_uuid",)
 
     _dirty_excluded_keys = [
         "note_uuid",
@@ -227,6 +229,26 @@ class _ReviewableCommandMixin:
         self._validate_before_effect("review")  # type: ignore[attr-defined]
         return Effect(
             type=f"REVIEW_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+class _DelegateCommandMixin:
+    def delegate(self) -> Effect:
+        """Fire the delegate effect the command."""
+        self._validate_before_effect("delegate")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"DELEGATE_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
+            payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
+        )
+
+
+class _SignCommandMixin:
+    def sign(self) -> Effect:
+        """Fire the sign effect the command."""
+        self._validate_before_effect("sign")  # type: ignore[attr-defined]
+        return Effect(
+            type=f"SIGN_{self.constantized_key()}_COMMAND",  # type: ignore[attr-defined]
             payload=json.dumps({"command": self.command_uuid}),  # type: ignore[attr-defined]
         )
 
