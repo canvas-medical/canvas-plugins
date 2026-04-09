@@ -628,6 +628,49 @@ def test_edit_prescribe_output_mutually_exclusive_fields(
     assert not ("fdb_code" in payload["data"] and "compound_medication_values" in payload["data"])
 
 
+def test_prescribe_with_complete_clinical_quantity(
+    mock_db_queries: dict[str, MagicMock], valid_regular_prescription_data: dict[str, Any]
+) -> None:
+    """Test that a PrescribeCommand serializes a complete ClinicalQuantity (all fields) correctly."""
+    prescribe_cmd = PrescribeCommand(
+        **valid_regular_prescription_data,
+        type_to_dispense={
+            "representative_ndc": "00002024304",
+            "ncpdp_quantity_qualifier_code": "C28254",
+            "description": "0.5 mL vial",
+        },
+    )
+    effect = prescribe_cmd.originate()
+
+    assert effect.type == EffectType.ORIGINATE_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+    type_to_dispense = payload["data"]["type_to_dispense"]
+    assert type_to_dispense["representative_ndc"] == "00002024304"
+    assert type_to_dispense["ncpdp_quantity_qualifier_code"] == "C28254"
+    assert type_to_dispense["description"] == "0.5 mL vial"
+
+
+def test_prescribe_with_partial_clinical_quantity(
+    mock_db_queries: dict[str, MagicMock], valid_regular_prescription_data: dict[str, Any]
+) -> None:
+    """Test that a PrescribeCommand serializes a partial ClinicalQuantity (required fields only) correctly."""
+    prescribe_cmd = PrescribeCommand(
+        **valid_regular_prescription_data,
+        type_to_dispense={
+            "representative_ndc": "00002024304",
+            "ncpdp_quantity_qualifier_code": "C28254",
+        },
+    )
+    effect = prescribe_cmd.originate()
+
+    assert effect.type == EffectType.ORIGINATE_PRESCRIBE_COMMAND
+    payload = json.loads(effect.payload)
+    type_to_dispense = payload["data"]["type_to_dispense"]
+    assert type_to_dispense["representative_ndc"] == "00002024304"
+    assert type_to_dispense["ncpdp_quantity_qualifier_code"] == "C28254"
+    assert "display" not in type_to_dispense
+
+
 def test_adjust_prescription_medication_conflict(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that adjust_prescription fails when both fdb_code and compound_medication_id are provided."""
     adjust_prescription_cmd = AdjustPrescriptionCommand(
