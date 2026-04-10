@@ -66,6 +66,25 @@ class NoIdentifierApp(EmbeddedApplication):
         return []
 
 
+@pytest.mark.parametrize(
+    "member,expected_value",
+    [
+        (ApplicationScope.NOTE, "note"),
+        (ApplicationScope.PROVIDER_COMPANION_GLOBAL, "provider_companion_global"),
+        (
+            ApplicationScope.PROVIDER_COMPANION_PATIENT_SPECIFIC,
+            "provider_companion_patient_specific",
+        ),
+        (ApplicationScope.PROVIDER_COMPANION_NOTE_SPECIFIC, "provider_companion_note_specific"),
+    ],
+    ids=lambda v: v if isinstance(v, str) else "",
+)
+def test_application_scope_values(member: ApplicationScope, expected_value: str) -> None:
+    """Verify ApplicationScope enum members have the correct string values."""
+    assert member == expected_value
+    assert member.value == expected_value
+
+
 def _make_event(
     event_type: EventType,
     target: str = "",

@@ -53,6 +53,9 @@ class ApplicationScope(StrEnum):
     """Available scopes for embedded applications."""
 
     NOTE = "note"
+    PROVIDER_COMPANION_GLOBAL = "provider_companion_global"
+    PROVIDER_COMPANION_PATIENT_SPECIFIC = "provider_companion_patient_specific"
+    PROVIDER_COMPANION_NOTE_SPECIFIC = "provider_companion_note_specific"
 
 
 class EmbeddedApplication(Application, ABC):

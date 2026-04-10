@@ -2,7 +2,7 @@
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
     "name": "example_provider_companion_app",
-    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "description": "Example plugin demonstrating provider companion applications at global, patient, and note scope levels.",
     "url_permissions": [
         {
             "url": "https://www.canvasmedical.com/extensions",
@@ -12,17 +12,31 @@
     "components": {
         "applications": [
             {
-                "class": "example_provider_companion_app.applications.my_application:MyApplication",
-                "name": "My Cool Tool",
-                "description": "Defines the app icon what it should launch.",
-                "scope": "provider_companion",
+                "class": "example_provider_companion_app.applications.my_application:GlobalApp",
+                "name": "Global Tool",
+                "description": "A companion app available from the main page, not tied to a patient.",
+                "scope": "provider_companion_global",
+                "icon": "assets/doctor.png"
+            },
+            {
+                "class": "example_provider_companion_app.applications.my_application:PatientApp",
+                "name": "Patient Tool",
+                "description": "A companion app scoped to a specific patient.",
+                "scope": "provider_companion_patient_specific",
+                "icon": "assets/doctor.png"
+            },
+            {
+                "class": "example_provider_companion_app.applications.my_application:NoteApp",
+                "name": "Note Tool",
+                "description": "A companion app scoped to a specific note/encounter.",
+                "scope": "provider_companion_note_specific",
                 "icon": "assets/doctor.png"
             }
         ],
         "handlers": [
             {
                 "class": "example_provider_companion_app.handlers.my_web_app:MyWebApp",
-                "description": "Serves the application",
+                "description": "Serves the application pages for each scope level.",
                 "data_access": {
                     "event": "",
                     "read": [],
