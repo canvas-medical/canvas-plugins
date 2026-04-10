@@ -605,6 +605,9 @@
   "canvas_sdk.effects.patient.timeline": [
     "PatientTimelineEffect"
   ],
+  "canvas_sdk.effects.patient_chart_custom_section": [
+    "PatientChartCustomSection"
+  ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
   ],
