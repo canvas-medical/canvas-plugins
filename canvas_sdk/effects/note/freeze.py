@@ -38,6 +38,7 @@ class _FreezeNoteEffect(_BaseEffect):
         default=False,
         description="Whether to blur the note content for other users",
     )
+    message: str | None = Field(description="Message to display in the UI.", default=None)
 
     def _get_error_details(self, method: Any) -> list[InitErrorDetails]:
         """Validate that the note and staff exist."""
@@ -70,6 +71,7 @@ class _FreezeNoteEffect(_BaseEffect):
             "note_id": str(self.note_id),
             "duration": self.duration,
             "blur": self.blur,
+            "message": self.message,
         }
         if self.user_id:
             result["user_id"] = self.user_id

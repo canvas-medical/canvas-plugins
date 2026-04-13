@@ -111,6 +111,26 @@ def test_freeze_note_effect_without_user_id(mock_db_queries: dict[str, MagicMock
     assert "user_id" not in payload["data"]
 
 
+def test_freeze_note_effect_with_message(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze note effect includes message in payload when provided."""
+    note_id = uuid4()
+    effect = _FreezeNoteEffect(note_id=note_id, duration=60, message="Note is being edited.")
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["message"] == "Note is being edited."
+
+
+def test_freeze_note_effect_without_message(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test freeze note effect message defaults to None in payload."""
+    note_id = uuid4()
+    effect = _FreezeNoteEffect(note_id=note_id, duration=60)
+    applied = effect.apply()
+
+    payload = json.loads(applied.payload)
+    assert payload["data"]["message"] is None
+
+
 def test_freeze_note_effect_string_note_id(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test freeze note effect accepts string note_id."""
     note_id = uuid4()

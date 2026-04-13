@@ -719,6 +719,16 @@ def test_freeze_success(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
     assert payload["data"]["blur"] is True
 
 
+def test_freeze_with_message(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
+    """Test note freeze passes message through to the payload."""
+    instance_id = str(uuid4())
+    note = Note(instance_id=instance_id)
+    effect = note.freeze(message="Note is being edited.")
+
+    payload = json.loads(effect.payload)
+    assert payload["data"]["message"] == "Note is being edited."
+
+
 def test_freeze_default_params(mock_freeze_db_queries: dict[str, MagicMock]) -> None:
     """Test freeze with default parameters."""
     instance_id = str(uuid4())

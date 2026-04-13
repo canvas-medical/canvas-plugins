@@ -117,7 +117,13 @@ class Note(NoteOrAppointmentABC):
             raise ValueError("Field 'instance_id' is required to upsert metadata.")
         return _NoteMetadata(note_id=self.instance_id, key=key).upsert(value=value)
 
-    def freeze(self, duration: int = 300, user_id: str | None = None, blur: bool = False) -> Effect:
+    def freeze(
+        self,
+        duration: int = 300,
+        user_id: str | None = None,
+        blur: bool = False,
+        message: str | None = None,
+    ) -> Effect:
         """Temporarily freeze the note to prevent edits by other users."""
         if not self.instance_id:
             raise ValueError("Field 'instance_id' is required to freeze the note.")
@@ -127,6 +133,7 @@ class Note(NoteOrAppointmentABC):
             duration=duration,
             user_id=user_id,
             blur=blur,
+            message=message,
         ).apply()
 
     def unfreeze(self) -> Effect:
