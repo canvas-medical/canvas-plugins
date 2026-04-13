@@ -2,6 +2,7 @@ from django.db import models
 
 from canvas_sdk.v1.data.base import IdentifiableModel
 from canvas_sdk.v1.data.coding import Coding
+from canvas_sdk.v1.data.utils import presigned_url
 
 
 class PatientConsentRejectionCoding(Coding):
@@ -31,6 +32,17 @@ class PatientConsentCoding(Coding):
     show_in_patient_portal = models.BooleanField()
     summary = models.TextField()
     document = models.FileField(null=True)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return a presigned URL for accessing the consent document.
+
+        Returns the presigned S3 URL if a document file exists,
+        otherwise returns None.
+        """
+        if self.document:
+            return presigned_url(self.document)
+        return None
 
 
 class PatientConsentStatus(models.TextChoices):
