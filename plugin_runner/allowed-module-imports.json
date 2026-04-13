@@ -605,14 +605,14 @@
   "canvas_sdk.effects.patient.timeline": [
     "PatientTimelineEffect"
   ],
-  "canvas_sdk.effects.patient_chart_custom_section": [
-    "PatientChartCustomSection"
-  ],
   "canvas_sdk.effects.patient_chart_group": [
     "PatientChartGroup"
   ],
   "canvas_sdk.effects.patient_chart_summary_configuration": [
     "PatientChartSummaryConfiguration"
+  ],
+  "canvas_sdk.effects.patient_chart_summary_custom_section": [
+    "PatientChartSummaryCustomSection"
   ],
   "canvas_sdk.effects.patient_facility_address": [
     "AddressType",
@@ -781,6 +781,9 @@
   ],
   "canvas_sdk.handlers.cron_task": [
     "CronTask"
+  ],
+  "canvas_sdk.handlers.patient_chart_summary_custom_section_handler": [
+    "PatientChartSummaryCustomSectionHandler"
   ],
   "canvas_sdk.handlers.payment_processors.base": [
     "PaymentProcessor"
