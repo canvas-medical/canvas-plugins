@@ -37,6 +37,7 @@ class ClinicalQuantity(TypedDict):
 
     representative_ndc: str
     ncpdp_quantity_qualifier_code: str
+    description: NotRequired[str]
 
 
 class ServiceProvider(Model):
