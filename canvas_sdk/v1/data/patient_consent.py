@@ -30,6 +30,7 @@ class PatientConsentCoding(Coding):
     is_proof_required = models.BooleanField()
     show_in_patient_portal = models.BooleanField()
     summary = models.TextField()
+    document = models.FileField(null=True)
 
 
 class PatientConsentStatus(models.TextChoices):
