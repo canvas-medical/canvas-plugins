@@ -75,7 +75,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTE_STATE_CHANGE_EVENT_PRE_CREATE: _ClassVar[EventType]
     NOTE_CREATED: _ClassVar[EventType]
     NOTE_UPDATED: _ClassVar[EventType]
-    NOTE_BODY_UPDATED: _ClassVar[EventType]
     NOTE_FROZEN: _ClassVar[EventType]
     NOTE_UNFROZEN: _ClassVar[EventType]
     PATIENT_ADDRESS_CREATED: _ClassVar[EventType]
@@ -1177,7 +1176,6 @@ NOTE_STATE_CHANGE_EVENT_UPDATED: EventType
 NOTE_STATE_CHANGE_EVENT_PRE_CREATE: EventType
 NOTE_CREATED: EventType
 NOTE_UPDATED: EventType
-NOTE_BODY_UPDATED: EventType
 NOTE_FROZEN: EventType
 NOTE_UNFROZEN: EventType
 PATIENT_ADDRESS_CREATED: EventType
