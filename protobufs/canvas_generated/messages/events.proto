@@ -167,6 +167,10 @@ enum EventType {
   PRESCRIPTION_TRANSMITTED = 310;
   PRESCRIPTION_DELIVERED = 311;
 
+  // Claim lifecycle events
+
+  CLAIM_QUEUE_MOVED = 400;
+
   // Specific Command event types.
   // The commented lines are event types for commands that are not available yet.
 
