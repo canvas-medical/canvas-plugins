@@ -69,3 +69,17 @@ CREATE TABLE IF NOT EXISTS {namespace}.schema_version (
 );
 
 GRANT SELECT ON {namespace}.schema_version TO canvas_sdk_read_only;
+
+-- Grant read access to the reporting role (used by customers connecting to
+-- read replicas) so they can query custom data tables.  The DO block checks
+-- for the role's existence first since local/test environments may not have it.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'reporting') THEN
+        EXECUTE 'GRANT USAGE ON SCHEMA {namespace} TO reporting';
+        EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA {namespace} TO reporting';
+        -- Ensure future tables created in this schema are also readable.
+        EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA {namespace} GRANT SELECT ON TABLES TO reporting';
+    END IF;
+END
+$$;
