@@ -108,7 +108,6 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CLAIM_CREATED: _ClassVar[EventType]
     CLAIM_UPDATED: _ClassVar[EventType]
     CLAIM_QUEUE_MOVED: _ClassVar[EventType]
-    SCHEDULED_CALLBACK: _ClassVar[EventType]
     PATIENT_GROUP_CREATED: _ClassVar[EventType]
     PATIENT_GROUP_UPDATED: _ClassVar[EventType]
     PATIENT_GROUP_MEMBERSHIP_CREATED: _ClassVar[EventType]
@@ -1206,7 +1205,6 @@ APPOINTMENT_LABEL_REMOVED: EventType
 CLAIM_CREATED: EventType
 CLAIM_UPDATED: EventType
 CLAIM_QUEUE_MOVED: EventType
-SCHEDULED_CALLBACK: EventType
 PATIENT_GROUP_CREATED: EventType
 PATIENT_GROUP_UPDATED: EventType
 PATIENT_GROUP_MEMBERSHIP_CREATED: EventType
