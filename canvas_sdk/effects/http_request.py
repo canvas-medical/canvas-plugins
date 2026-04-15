@@ -27,9 +27,8 @@ class HttpRequest(_BaseEffect):
             on_failure=[
                 AddClaimComment(claim_id=claim_id, comment="Failed").apply(),
             ],
-            delay_seconds=60,
         )
-        return [http_effect.apply()]
+        return [http_effect.apply(delay_seconds=60)]
     """
 
     class Meta:

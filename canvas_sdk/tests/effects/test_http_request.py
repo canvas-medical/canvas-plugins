@@ -72,8 +72,7 @@ def test_http_request_with_delay() -> None:
     """delay_seconds should be set on the Effect protobuf."""
     effect = HttpRequest(
         url="https://api.example.com",
-        delay_seconds=60,
-    ).apply()
+    ).apply(delay_seconds=60)
 
     assert effect.HasField("delay_seconds")
     assert effect.delay_seconds == 60

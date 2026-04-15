@@ -23,11 +23,11 @@ class BaseMetadata(TrackableFieldsModel):
 
     key: str
 
-    def upsert(self, value: str) -> Effect:
+    def upsert(self, value: str, delay_seconds: int | None = None) -> Effect:
         """Upsert the metadata."""
         self._validate_before_effect("upsert")
 
-        return Effect(
+        effect = Effect(
             type=f"UPSERT_{self.Meta.effect_type}",  # type: ignore[attr-defined]
             payload=json.dumps(
                 {
@@ -35,6 +35,9 @@ class BaseMetadata(TrackableFieldsModel):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("Metadata",)

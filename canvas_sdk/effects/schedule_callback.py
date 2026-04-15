@@ -26,8 +26,7 @@ class ScheduleCallback(_BaseEffect):
                 return [ScheduleCallback(
                     key=f"candid-submit-{self.target}",
                     context={"claim_id": str(self.target)},
-                    delay_seconds=60,
-                ).apply()]
+                ).apply(delay_seconds=60)]
 
         class OnSubmissionCheck(BaseProtocol):
             RESPONDS_TO = EventType.Name(EventType.SCHEDULED_CALLBACK)

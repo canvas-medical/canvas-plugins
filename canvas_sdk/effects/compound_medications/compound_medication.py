@@ -238,7 +238,7 @@ class CompoundMedication(TrackableFieldsModel):
 
         return errors
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
 
@@ -250,12 +250,15 @@ class CompoundMedication(TrackableFieldsModel):
         if self.active is None:
             payload["data"]["active"] = True
 
-        return Effect(
+        effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def update(self) -> Effect:
+    def update(self, delay_seconds: int | None = None) -> Effect:
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")
 
@@ -266,10 +269,13 @@ class CompoundMedication(TrackableFieldsModel):
         payload = {"data": processed_data}
         payload["data"]["instance_id"] = str(self.instance_id)
 
-        return Effect(
+        effect = Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("CompoundMedication",)

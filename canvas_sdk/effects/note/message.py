@@ -94,10 +94,10 @@ class Message(TrackableFieldsModel):
 
         return errors
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("create")
-        return Effect(
+        effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -105,27 +105,39 @@ class Message(TrackableFieldsModel):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def create_and_send(self) -> Effect:
+    def create_and_send(self, delay_seconds: int | None = None) -> Effect:
         """Create and send message."""
         self._validate_before_effect("create_and_send")
-        return Effect(
+        effect = Effect(
             type="CREATE_AND_SEND_MESSAGE",
             payload=json.dumps({"data": self.values}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def edit(self) -> Effect:
+    def edit(self, delay_seconds: int | None = None) -> Effect:
         """Edit message."""
         self._validate_before_effect("edit")
-        return Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
+        effect = Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def send(self) -> Effect:
+    def send(self, delay_seconds: int | None = None) -> Effect:
         """Send message."""
         self._validate_before_effect("send")
-        return Effect(
+        effect = Effect(
             type="SEND_MESSAGE",
             payload=json.dumps({"data": self.values}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("Message",)

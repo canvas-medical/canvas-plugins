@@ -23,11 +23,11 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
             "patient_id": self.patient_id,
         }
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Create a new Patient External Identifier."""
         self._validate_before_effect("create")
 
-        return Effect(
+        effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -35,6 +35,9 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("CreatePatientExternalIdentifier",)

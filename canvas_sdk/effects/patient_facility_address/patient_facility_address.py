@@ -250,38 +250,47 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
         return errors
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Create a new Patient Facility Address."""
         self._validate_before_effect("create")
 
         payload = {"data": self.values}
 
-        return Effect(
+        effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def update(self) -> Effect:
+    def update(self, delay_seconds: int | None = None) -> Effect:
         """Update an existing Patient Facility Address."""
         self._validate_before_effect("update")
 
         payload = {"data": self.values}
 
-        return Effect(
+        effect = Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def delete(self) -> Effect:
+    def delete(self, delay_seconds: int | None = None) -> Effect:
         """Delete an existing Patient Facility Address."""
         self._validate_before_effect("delete")
 
         payload = {"data": {"id": str(self.id)}}
 
-        return Effect(
+        effect = Effect(
             type=f"DELETE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("PatientFacilityAddress", "AddressType")

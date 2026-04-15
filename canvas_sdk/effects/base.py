@@ -11,7 +11,6 @@ class _BaseEffect(Model):
     """
 
     patient_filter: dict | None = None
-    delay_seconds: int | None = None
 
     class Meta:
         effect_type = EffectType.UNKNOWN_EFFECT
@@ -24,11 +23,11 @@ class _BaseEffect(Model):
     def effect_payload(self) -> dict[str, Any]:
         return {"data": self.values}
 
-    def apply(self) -> Effect:
+    def apply(self, delay_seconds: int | None = None) -> Effect:
         self._validate_before_effect("apply")
         effect = Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
-        if self.delay_seconds is not None:
-            effect.delay_seconds = self.delay_seconds
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
         return effect
 
 

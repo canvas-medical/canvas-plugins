@@ -36,7 +36,7 @@ class Response(_BaseEffect):
             headers=headers,  # type: ignore[call-arg]
         )
 
-    def apply(self) -> Effect:
+    def apply(self, delay_seconds: int | None = None) -> Effect:
         """Convert the response into an effect."""
         payload = {
             "headers": self.headers or {},
@@ -44,7 +44,10 @@ class Response(_BaseEffect):
             "status_code": self.status_code,
         }
 
-        return Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))
+        effect = Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 class JSONResponse(Response):

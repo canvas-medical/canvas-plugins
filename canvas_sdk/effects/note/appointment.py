@@ -111,10 +111,10 @@ class ScheduleEvent(AppointmentABC):
 
         return errors
 
-    def delete(self) -> Effect:
+    def delete(self, delay_seconds: int | None = None) -> Effect:
         """Send a DELETE effect for the schedule event."""
         self._validate_before_effect("delete")
-        return Effect(
+        effect = Effect(
             type=f"DELETE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -122,6 +122,9 @@ class ScheduleEvent(AppointmentABC):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 class Appointment(AppointmentABC):
@@ -263,10 +266,10 @@ class Appointment(AppointmentABC):
             values["labels"] = sorted(self.labels)
         return values
 
-    def cancel(self) -> Effect:
+    def cancel(self, delay_seconds: int | None = None) -> Effect:
         """Send a CANCEL effect for the appointment."""
         self._validate_before_effect("cancel")
-        return Effect(
+        effect = Effect(
             type=f"CANCEL_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -274,6 +277,9 @@ class Appointment(AppointmentABC):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):

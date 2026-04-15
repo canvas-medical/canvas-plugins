@@ -46,6 +46,7 @@ class ClaimEffect(Model):
         referring_provider: ClaimReferringProvider | None = None,
         ordering_provider: ClaimOrderingProvider | None = None,
         facility: ClaimFacility | None = None,
+        delay_seconds: int | None = None,
     ) -> Effect:
         """
         Updates provider information for the claim.
@@ -56,6 +57,7 @@ class ClaimEffect(Model):
             referring_provider (ClaimReferringProvider | None): Referring provider information.
             ordering_provider (ClaimOrderingProvider | None): Ordering provider information.
             facility (ClaimFacility | None): Facility information.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that updates provider information for the claim.
@@ -67,23 +69,31 @@ class ClaimEffect(Model):
             referring_provider=referring_provider,
             ordering_provider=ordering_provider,
             facility=facility,
-        ).apply()
+        ).apply(delay_seconds=delay_seconds)
 
-    def upsert_metadata(self, key: str, value: str) -> Effect:
+    def upsert_metadata(self, key: str, value: str, delay_seconds: int | None = None) -> Effect:
         """
         Upserts a metadata record to the claim.
 
         Args:
             key (str): The key of the metadata.
             value (str): The value of the metadata.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that upserts the metadata record to the claim.
         """
-        return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(value=value)
+        return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(
+            value=value, delay_seconds=delay_seconds
+        )
 
     def add_banner(
-        self, key: str, narrative: str, intent: BannerAlertIntent, href: str | None = None
+        self,
+        key: str,
+        narrative: str,
+        intent: BannerAlertIntent,
+        href: str | None = None,
+        delay_seconds: int | None = None,
     ) -> Effect:
         """
         Adds a banner alert to a claim.
@@ -93,73 +103,89 @@ class ClaimEffect(Model):
             narrative (str): The text content to display in the banner.
             intent (BannerAlertIntent): The intent/severity level of the banner (info, warning, or alert).
             href (str | None): Optional URL link for the banner. Defaults to None.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that adds the banner alert to the claim.
         """
         return _AddClaimBannerAlert(
             claim_id=self.claim_id, key=key, narrative=narrative, intent=intent, href=href
-        ).apply()
+        ).apply(delay_seconds=delay_seconds)
 
-    def remove_banner(self, key: str) -> Effect:
+    def remove_banner(self, key: str, delay_seconds: int | None = None) -> Effect:
         """
         Removes a banner alert from a claim.
 
         Args:
             key (str): A unique identifier for the banner alert.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that removes the banner alert from the claim.
         """
-        return _RemoveClaimBannerAlert(claim_id=self.claim_id, key=key).apply()
+        return _RemoveClaimBannerAlert(claim_id=self.claim_id, key=key).apply(
+            delay_seconds=delay_seconds
+        )
 
-    def add_comment(self, comment: str) -> Effect:
+    def add_comment(self, comment: str, delay_seconds: int | None = None) -> Effect:
         """
         Adds a comment to the claim.
 
         Args:
             comment (str): The comment text to add to the claim.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that adds the comment to the claim.
         """
-        return _AddClaimComment(claim_id=self.claim_id, comment=comment).apply()
+        return _AddClaimComment(claim_id=self.claim_id, comment=comment).apply(
+            delay_seconds=delay_seconds
+        )
 
-    def add_labels(self, labels: list[str | Label]) -> Effect:
+    def add_labels(self, labels: list[str | Label], delay_seconds: int | None = None) -> Effect:
         """
         Adds one or more labels to the claim.
 
         Args:
             labels (list[str | Label]): A list of label names (str) or Label objects with color and name.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that adds the labels to the claim.
         """
-        return _AddClaimLabel(claim_id=self.claim_id, labels=labels).apply()
+        return _AddClaimLabel(claim_id=self.claim_id, labels=labels).apply(
+            delay_seconds=delay_seconds
+        )
 
-    def remove_labels(self, labels: list[str]) -> Effect:
+    def remove_labels(self, labels: list[str], delay_seconds: int | None = None) -> Effect:
         """
         Removes one or more labels from the claim.
 
         Args:
             labels (list[str]): A list of label names to remove.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that removes the labels from the claim.
         """
-        return _RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply()
+        return _RemoveClaimLabel(claim_id=self.claim_id, labels=labels).apply(
+            delay_seconds=delay_seconds
+        )
 
-    def move_to_queue(self, queue: str) -> Effect:
+    def move_to_queue(self, queue: str, delay_seconds: int | None = None) -> Effect:
         """
         Moves the claim to a queue.
 
         Args:
             queue (str): The name of the queue to move the claim to.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that moves the claim to the specified queue.
         """
-        return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply()
+        return _MoveClaimToQueue(claim_id=self.claim_id, queue=queue).apply(
+            delay_seconds=delay_seconds
+        )
 
     def post_payment(
         self,
@@ -172,6 +198,7 @@ class ClaimEffect(Model):
         check_number: str | None = None,
         deposit_date: date | None = None,
         payment_description: str | None = None,
+        delay_seconds: int | None = None,
     ) -> Effect:
         """
         Posts a coverage or patient payment to the claim.
@@ -186,6 +213,7 @@ class ClaimEffect(Model):
             check_number (str | None): Required when method is CHECK.
             deposit_date (date | None): Optional deposit date.
             payment_description (str | None): Optional payment description.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that posts the payment to the claim.
@@ -204,7 +232,7 @@ class ClaimEffect(Model):
             check_number=check_number,
             deposit_date=deposit_date,
             payment_description=payment_description,
-        ).apply()
+        ).apply(delay_seconds=delay_seconds)
 
 
 __all__ = __exports__ = (

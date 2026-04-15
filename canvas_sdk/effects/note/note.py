@@ -50,61 +50,80 @@ class Note(NoteOrAppointmentABC):
     title: str | None = None
     related_data: dict | None = None
 
-    def push_charges(self) -> Effect:
+    def push_charges(self, delay_seconds: int | None = None) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
         self._validate_before_effect("push_charges")
-        return Effect(
+        effect = Effect(
             type=EffectType.PUSH_NOTE_CHARGES,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def unlock(self) -> Effect:
+    def unlock(self, delay_seconds: int | None = None) -> Effect:
         """Unlocks the note to allow further edits."""
         self._validate_before_effect("unlock")
-        return Effect(
+        effect = Effect(
             type=EffectType.UNLOCK_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def lock(self) -> Effect:
+    def lock(self, delay_seconds: int | None = None) -> Effect:
         """Locks the note to prevent further edits."""
         self._validate_before_effect("lock")
-        return Effect(
+        effect = Effect(
             type=EffectType.LOCK_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def sign(self) -> Effect:
+    def sign(self, delay_seconds: int | None = None) -> Effect:
         """Signs the note."""
         self._validate_before_effect("sign")
-        return Effect(
+        effect = Effect(
             type=EffectType.SIGN_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def check_in(self) -> Effect:
+    def check_in(self, delay_seconds: int | None = None) -> Effect:
         """Mark the note as checked-in."""
         self._validate_before_effect("check_in")
-        return Effect(
+        effect = Effect(
             type=EffectType.CHECK_IN_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def no_show(self) -> Effect:
+    def no_show(self, delay_seconds: int | None = None) -> Effect:
         """Mark the note as no-show."""
         self._validate_before_effect("no_show")
-        return Effect(
+        effect = Effect(
             type=EffectType.NO_SHOW_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def upsert_metadata(self, key: str, value: str) -> Effect:
+    def upsert_metadata(self, key: str, value: str, delay_seconds: int | None = None) -> Effect:
         """
         Upserts a metadata record to the note.
 
         Args:
             key (str): The key of the metadata.
             value (str): The value of the metadata.
+            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that upserts the metadata record to the note.
@@ -114,7 +133,9 @@ class Note(NoteOrAppointmentABC):
         """
         if not self.instance_id:
             raise ValueError("Field 'instance_id' is required to upsert metadata.")
-        return _NoteMetadata(note_id=self.instance_id, key=key).upsert(value=value)
+        return _NoteMetadata(note_id=self.instance_id, key=key).upsert(
+            value=value, delay_seconds=delay_seconds
+        )
 
     def _validate_state_transition(
         self, note: NoteModel, next_state: NoteStates

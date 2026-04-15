@@ -246,11 +246,11 @@ class Patient(TrackableFieldsModel):
 
         return errors
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Create a new Patient."""
         self._validate_before_effect("create")
 
-        return Effect(
+        effect = Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -258,12 +258,15 @@ class Patient(TrackableFieldsModel):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def update(self) -> Effect:
+    def update(self, delay_seconds: int | None = None) -> Effect:
         """Update an existing Patient."""
         self._validate_before_effect("update")
 
-        return Effect(
+        effect = Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -271,6 +274,9 @@ class Patient(TrackableFieldsModel):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = (

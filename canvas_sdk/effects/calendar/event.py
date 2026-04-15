@@ -129,11 +129,11 @@ class Event(_BaseEffect):
 
         return errors
 
-    def create(self) -> Effect:
+    def create(self, delay_seconds: int | None = None) -> Effect:
         """Send a CREATE effect for the calendar event."""
         self._validate_before_effect("create")
 
-        return Effect(
+        effect = Effect(
             type=EffectType.CALENDAR__EVENT__CREATE,
             payload=json.dumps(
                 {
@@ -141,12 +141,15 @@ class Event(_BaseEffect):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def update(self) -> Effect:
+    def update(self, delay_seconds: int | None = None) -> Effect:
         """Send an UPDATE effect for the calendar event."""
         self._validate_before_effect("update")
 
-        return Effect(
+        effect = Effect(
             type=EffectType.CALENDAR__EVENT__UPDATE,
             payload=json.dumps(
                 {
@@ -154,12 +157,15 @@ class Event(_BaseEffect):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
-    def delete(self) -> Effect:
+    def delete(self, delay_seconds: int | None = None) -> Effect:
         """Send a DELETE effect for the calendar event."""
         self._validate_before_effect("delete")
 
-        return Effect(
+        effect = Effect(
             type=EffectType.CALENDAR__EVENT__DELETE,
             payload=json.dumps(
                 {
@@ -167,6 +173,9 @@ class Event(_BaseEffect):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("Event", "EventRecurrence", "DaysOfWeek")
