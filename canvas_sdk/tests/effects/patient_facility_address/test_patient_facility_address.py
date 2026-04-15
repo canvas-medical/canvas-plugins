@@ -746,3 +746,52 @@ def test_has_facility_creation_fields_false_with_only_optional() -> None:
         facility_npi_number="1234567890",
     )
     assert address._has_facility_creation_fields() is False
+
+
+# =============================================================================
+# delay_seconds Tests
+# =============================================================================
+
+
+def test_create_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+    valid_create_with_facility_id: dict[str, Any],
+) -> None:
+    """Test that create(delay_seconds=60) sets the field on the Effect."""
+    address = PatientFacilityAddress(**valid_create_with_facility_id)
+    effect = address.create(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_create_without_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+    valid_create_with_facility_id: dict[str, Any],
+) -> None:
+    """Test that create() without delay_seconds does not set the field."""
+    address = PatientFacilityAddress(**valid_create_with_facility_id)
+    effect = address.create()
+    assert not effect.HasField("delay_seconds")
+
+
+def test_update_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that update(delay_seconds=30) sets the field on the Effect."""
+    address = PatientFacilityAddress(
+        id="address-123",
+        room_number="999",
+    )
+    effect = address.update(delay_seconds=30)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30
+
+
+def test_delete_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+) -> None:
+    """Test that delete(delay_seconds=10) sets the field on the Effect."""
+    address = PatientFacilityAddress(id="address-123")
+    effect = address.delete(delay_seconds=10)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 10

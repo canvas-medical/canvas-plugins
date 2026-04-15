@@ -526,3 +526,35 @@ def test_observation_create_with_category_as_list(
     # Test the payload data includes the category as a list
     payload_data = json.loads(call_args.kwargs["payload"])
     assert payload_data["data"]["category"] == ["vital-signs", "exam"]
+
+
+def test_observation_create_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+    valid_observation_data: dict[str, Any],
+) -> None:
+    """Test that create(delay_seconds=60) sets the field on the Effect."""
+    observation = Observation(**valid_observation_data)
+    effect = observation.create(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_observation_create_without_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+    valid_observation_data: dict[str, Any],
+) -> None:
+    """Test that create() without delay_seconds does not set the field."""
+    observation = Observation(**valid_observation_data)
+    effect = observation.create()
+    assert not effect.HasField("delay_seconds")
+
+
+def test_observation_update_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock],
+    valid_observation_data: dict[str, Any],
+) -> None:
+    """Test that update(delay_seconds=30) sets the field on the Effect."""
+    observation = Observation(observation_id="obs-123", **valid_observation_data)
+    effect = observation.update(delay_seconds=30)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30

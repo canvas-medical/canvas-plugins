@@ -425,3 +425,32 @@ def test_patient_update_validation_allows_optional_names(
     # Should not raise validation error
     effect = patient.update()
     assert effect is not None
+
+
+def test_patient_create_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that create(delay_seconds=60) sets the field on the Effect."""
+    patient = Patient(**valid_patient_data)
+    effect = patient.create(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_patient_create_without_delay_seconds(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that create() without delay_seconds does not set the field."""
+    patient = Patient(**valid_patient_data)
+    effect = patient.create()
+    assert not effect.HasField("delay_seconds")
+
+
+def test_patient_update_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock], valid_patient_data: dict[str, Any]
+) -> None:
+    """Test that update(delay_seconds=30) sets the field on the Effect."""
+    patient = Patient(patient_id="123", **valid_patient_data)
+    effect = patient.update(delay_seconds=30)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30

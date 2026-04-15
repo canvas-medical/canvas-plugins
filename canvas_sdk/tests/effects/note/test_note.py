@@ -687,3 +687,125 @@ def test_update_note_related_data(mock_db_queries: dict[str, MagicMock]) -> None
     payload = json.loads(effect.payload)
     assert payload["data"]["related_data"] == related_data
     assert payload["data"]["instance_id"] == instance_id
+
+
+def test_create_note_with_delay_seconds(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test that create(delay_seconds=60) sets the field on the Effect."""
+    note = Note(**valid_note_data)
+    effect = note.create(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_create_note_without_delay_seconds(
+    mock_db_queries: dict[str, MagicMock], valid_note_data: dict[str, Any]
+) -> None:
+    """Test that create() without delay_seconds does not set the field."""
+    note = Note(**valid_note_data)
+    effect = note.create()
+    assert not effect.HasField("delay_seconds")
+
+
+def test_update_note_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update(delay_seconds=30) sets the field on the Effect."""
+    note = Note(instance_id=str(uuid4()))
+    note.title = "Updated Title"
+    effect = note.update(delay_seconds=30)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30
+
+
+def test_push_charges_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that push_charges(delay_seconds=60) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.note_type_version = MagicMock(is_billable=True)
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.push_charges(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_lock_note_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that lock(delay_seconds=45) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.lock(delay_seconds=45)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 45
+
+
+def test_unlock_note_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that unlock(delay_seconds=15) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.unlock(delay_seconds=15)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 15
+
+
+def test_sign_note_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that sign(delay_seconds=90) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.LOCKED)
+    fake_note.note_type_version = MagicMock(
+        name="Visit Note", category=NoteTypeCategories.ENCOUNTER, is_sig_required=True
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.sign(delay_seconds=90)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 90
+
+
+def test_check_in_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that check_in(delay_seconds=10) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Appointment", category=NoteTypeCategories.APPOINTMENT
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.check_in(delay_seconds=10)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 10
+
+
+def test_no_show_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that no_show(delay_seconds=20) sets the field on the Effect."""
+    instance_id = str(uuid4())
+    fake_note = MagicMock()
+    fake_note.current_state = MagicMock(state=NoteStates.NEW)
+    fake_note.note_type_version = MagicMock(
+        name="Appointment", category=NoteTypeCategories.APPOINTMENT
+    )
+    mock_db_queries["note"].filter.return_value.first.return_value = fake_note
+
+    note = Note(instance_id=instance_id)
+    effect = note.no_show(delay_seconds=20)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 20

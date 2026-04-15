@@ -76,3 +76,18 @@ def test_upsert_metadata_fails_without_instance_id() -> None:
 
     with pytest.raises(ValueError, match="instance_id"):
         note.upsert_metadata(key="test_key", value="test_value")
+
+
+def test_upsert_metadata_with_delay_seconds(mock_note_exists: MagicMock) -> None:
+    """Test that upsert_metadata(delay_seconds=60) sets the field on the Effect."""
+    note = Note(instance_id="test-note-id")
+    effect = note.upsert_metadata(key="test_key", value="test_value", delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_upsert_metadata_without_delay_seconds(mock_note_exists: MagicMock) -> None:
+    """Test that upsert_metadata without delay_seconds does not set the field."""
+    note = Note(instance_id="test-note-id")
+    effect = note.upsert_metadata(key="test_key", value="test_value")
+    assert not effect.HasField("delay_seconds")

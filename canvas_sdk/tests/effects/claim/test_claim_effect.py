@@ -822,3 +822,95 @@ def test_update_provider_requires_existing_provider_info(
 
     err_msg = repr(e.value)
     assert "does not have any existing provider information to update." in err_msg
+
+
+def test_add_comment_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_comment propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.add_comment("Test comment", delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_add_comment_without_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_comment without delay_seconds does not set the field."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.add_comment("Test comment")
+    assert not effect.HasField("delay_seconds")
+
+
+def test_move_to_queue_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that move_to_queue propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.move_to_queue("NeedsClinicianReview", delay_seconds=30)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30
+
+
+def test_add_labels_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_labels propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.add_labels(["urgent"], delay_seconds=45)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 45
+
+
+def test_remove_labels_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that remove_labels propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.remove_labels(["urgent"], delay_seconds=15)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 15
+
+
+def test_add_banner_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that add_banner propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.add_banner(
+        key="test-key",
+        narrative="Test message",
+        intent=BannerAlertIntent.INFO,
+        delay_seconds=60,
+    )
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_remove_banner_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that remove_banner propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.remove_banner(key="test-key", delay_seconds=20)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 20
+
+
+def test_upsert_metadata_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that upsert_metadata propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.upsert_metadata(key="billing_code", value="99213", delay_seconds=90)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 90
+
+
+def test_update_provider_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that update_provider propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    effect = claim.update_provider(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_post_payment_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that post_payment propagates delay_seconds to the effect."""
+    claim = ClaimEffect(claim_id="claim-id")
+    line_items = [
+        LineItemTransaction(claim_line_item_id="line-1", payment=Decimal("5.00")),
+    ]
+    effect = claim.post_payment(
+        claim_coverage_id="patient",
+        line_item_transactions=line_items,
+        method=PaymentMethod.CASH,
+        delay_seconds=120,
+    )
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 120

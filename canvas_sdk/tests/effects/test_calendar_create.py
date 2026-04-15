@@ -101,3 +101,18 @@ def test_create_calendar_with_description_only() -> None:
         payload.payload
         == '{"data": {"id": null, "provider": "provider-id", "type": "Clinic", "location": null, "description": "Evening clinic hours"}}'
     )
+
+
+def test_create_calendar_with_delay_seconds() -> None:
+    """Test Calendar.create(delay_seconds=60) sets the field on the Effect."""
+    calendar = Calendar(provider="provider-id", type=CalendarType.Clinic)
+    effect = calendar.create(delay_seconds=60)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
+
+
+def test_create_calendar_without_delay_seconds() -> None:
+    """Test Calendar.create() without delay_seconds does not set the field."""
+    calendar = Calendar(provider="provider-id", type=CalendarType.Clinic)
+    effect = calendar.create()
+    assert not effect.HasField("delay_seconds")
