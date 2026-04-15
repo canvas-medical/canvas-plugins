@@ -441,6 +441,7 @@ enum EffectType {
   // Platform effects
 
   HTTP_REQUEST = 10000;
+  SCHEDULE_CALLBACK = 10001;
 }
 
 message Effect {

@@ -687,6 +687,9 @@
   "canvas_sdk.effects.questionnaire_result": [
     "CreateQuestionnaireResult"
   ],
+  "canvas_sdk.effects.schedule_callback": [
+    "ScheduleCallback"
+  ],
   "canvas_sdk.effects.send_contact_verification": [
     "SendContactVerificationEffect"
   ],
