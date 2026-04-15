@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.131.0 (2026-04-13)
+
+### Features
+
+- Add description to ClinicalQuantity to help narrow the correct type to dispense
+  ([#1617](https://github.com/canvas-medical/canvas-plugins/pull/1617),
+  [`da29947`](https://github.com/canvas-medical/canvas-plugins/commit/da29947f91343a1b81b129775d7ebd43547af674))
+
+
+## v0.130.1 (2026-04-09)
+
+### Bug Fixes
+
+- Missing note header configuration item
+  ([#1618](https://github.com/canvas-medical/canvas-plugins/pull/1618),
+  [`5cefd61`](https://github.com/canvas-medical/canvas-plugins/commit/5cefd61082144a1e66e7acc4351c8c075a759c11))
+
+
 ## v0.130.0 (2026-04-09)
 
 ### Features
