@@ -534,6 +534,9 @@
   "canvas_sdk.effects.group": [
     "Group"
   ],
+  "canvas_sdk.effects.http_request": [
+    "HttpRequest"
+  ],
   "canvas_sdk.effects.launch_modal": [
     "LaunchModalEffect"
   ],

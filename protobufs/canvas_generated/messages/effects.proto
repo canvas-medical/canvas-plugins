@@ -437,6 +437,10 @@ enum EffectType {
   PATIENT_GROUP__DEACTIVATE_MEMBER = 8311;
 
   HOMEPAGE_CONFIGURATION = 9000;
+
+  // Platform effects
+
+  HTTP_REQUEST = 10000;
 }
 
 message Effect {
@@ -447,7 +451,5 @@ message Effect {
   string handler_name = 5;
   string actor = 6;
   string source = 7;
-  //Oneof effect_payload {
-  //  ...
-  //}
+  optional int32 delay_seconds = 8;
 }
