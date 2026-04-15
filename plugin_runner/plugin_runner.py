@@ -334,6 +334,11 @@ class PluginRunner(PluginRunnerServicer):
                                 handler_name=handler_name,
                                 actor=event.actor.id,
                                 source=event.source,
+                                **(
+                                    {"delay_seconds": effect.delay_seconds}
+                                    if effect.HasField("delay_seconds")
+                                    else {}
+                                ),
                             )
                             for effect in _effects
                         ]
