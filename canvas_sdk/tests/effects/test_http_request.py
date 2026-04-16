@@ -101,3 +101,9 @@ def test_http_request_invalid_method_raises() -> None:
     """An invalid HTTP method should raise a validation error."""
     with pytest.raises(ValidationError):
         HttpRequest(url="https://api.example.com", method="INVALID")
+
+
+def test_http_request_empty_url_raises() -> None:
+    """An empty URL should raise a validation error."""
+    with pytest.raises(ValidationError):
+        HttpRequest(url="", method="GET")

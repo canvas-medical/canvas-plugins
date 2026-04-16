@@ -34,7 +34,7 @@ class HttpRequest(_BaseEffect):
     class Meta:
         effect_type = EffectType.HTTP_REQUEST
 
-    url: str
+    url: Annotated[str, Field(min_length=1)]
     method: Annotated[str, Field(pattern="^(GET|POST|PUT|PATCH|DELETE)$")] = "GET"
     headers: dict[str, str] | None = None
     body: str | None = None
