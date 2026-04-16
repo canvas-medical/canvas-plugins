@@ -6,7 +6,7 @@ from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects.base import EffectType, _BaseEffect
 
 
-class HttpRequest(_BaseEffect):
+class HttpRequestEffect(_BaseEffect):
     """Make an HTTP request from a plugin with optional inline effect chaining.
 
     The platform will execute the HTTP request and, based on the response status,
@@ -16,7 +16,7 @@ class HttpRequest(_BaseEffect):
 
     Example usage::
 
-        http_effect = HttpRequest(
+        http_effect = HttpRequestEffect(
             url="https://api.example.com/submit",
             method="POST",
             headers={"Authorization": "Bearer token"},
@@ -67,4 +67,4 @@ class HttpRequest(_BaseEffect):
         return data
 
 
-__exports__ = ("HttpRequest",)
+__exports__ = ("HttpRequestEffect",)
