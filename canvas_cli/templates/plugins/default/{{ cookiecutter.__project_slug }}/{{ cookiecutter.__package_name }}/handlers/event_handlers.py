@@ -56,8 +56,8 @@ class NewOfficeVisitNoteHandler(BaseHandler):
         if note_type_name != "Office visit":
             return []
 
-        # Get the note UUID from context (it's already a UUID string)
-        note_uuid = note_id
+        # Get the note UUID from the Note object
+        note_uuid = str(note.uuid)
 
         # Get the patient to create a personalized goal statement
         patient_id = self.event.context.get("patient_id")
