@@ -100,6 +100,20 @@ def test_load_plugins_with_plugin_that_imports_other_modules_within_plugin_packa
     assert result[0].effects[0].payload == "Successfully imported!"
 
 
+def test_handle_event_with_unknown_event_type(plugin_runner: PluginRunner) -> None:
+    """Test that HandleEvent does not raise when receiving an event type unknown to the proto."""
+    unknown_event_type = (
+        999999  # simulates a newer home-app sending an event the proto doesn't know
+    )
+    result = list(
+        plugin_runner.HandleEvent(EventRequest(type=unknown_event_type), None)  # type: ignore[arg-type]
+    )
+
+    assert len(result) == 1
+    assert result[0].success is True
+    assert len(result[0].effects) == 0
+
+
 @pytest.mark.parametrize(
     "install_test_plugin",
     [
