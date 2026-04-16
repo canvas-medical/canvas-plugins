@@ -5,11 +5,10 @@ from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect, EffectType, _BaseEffect
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 
 JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
@@ -38,8 +37,8 @@ class Response(_BaseEffect):
             headers=headers,  # type: ignore[call-arg]
         )
 
-    @validate_delay_seconds
-    def apply(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def apply(self) -> Effect:
         """Convert the response into an effect."""
         payload = {
             "headers": self.headers or {},
@@ -47,10 +46,7 @@ class Response(_BaseEffect):
             "status_code": self.status_code,
         }
 
-        effect = Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
+        return Effect(type=EffectType.SIMPLE_API_RESPONSE, payload=json.dumps(payload))
 
 
 class JSONResponse(Response):

@@ -3,12 +3,12 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field, NonNegativeInt
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.v1.data.facility import Facility
 from canvas_sdk.v1.data.patient import Patient
 from canvas_sdk.v1.data.patient import PatientFacilityAddress as PatientFacilityAddressModel
@@ -251,50 +251,41 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
         return errors
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Create a new Patient Facility Address."""
         self._validate_before_effect("create")
 
         payload = {"data": self.values}
 
-        effect = Effect(
+        return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def update(self) -> Effect:
         """Update an existing Patient Facility Address."""
         self._validate_before_effect("update")
 
         payload = {"data": self.values}
 
-        effect = Effect(
+        return Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def delete(self) -> Effect:
         """Delete an existing Patient Facility Address."""
         self._validate_before_effect("delete")
 
         payload = {"data": {"id": str(self.id)}}
 
-        effect = Effect(
+        return Effect(
             type=f"DELETE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("PatientFacilityAddress", "AddressType")

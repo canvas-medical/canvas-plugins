@@ -8,7 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
@@ -52,77 +52,59 @@ class Note(NoteOrAppointmentABC):
     title: str | None = None
     related_data: dict | None = None
 
-    @validate_delay_seconds
-    def push_charges(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def push_charges(self) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
         self._validate_before_effect("push_charges")
-        effect = Effect(
+        return Effect(
             type=EffectType.PUSH_NOTE_CHARGES,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def unlock(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def unlock(self) -> Effect:
         """Unlocks the note to allow further edits."""
         self._validate_before_effect("unlock")
-        effect = Effect(
+        return Effect(
             type=EffectType.UNLOCK_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def lock(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def lock(self) -> Effect:
         """Locks the note to prevent further edits."""
         self._validate_before_effect("lock")
-        effect = Effect(
+        return Effect(
             type=EffectType.LOCK_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def sign(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def sign(self) -> Effect:
         """Signs the note."""
         self._validate_before_effect("sign")
-        effect = Effect(
+        return Effect(
             type=EffectType.SIGN_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def check_in(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def check_in(self) -> Effect:
         """Mark the note as checked-in."""
         self._validate_before_effect("check_in")
-        effect = Effect(
+        return Effect(
             type=EffectType.CHECK_IN_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def no_show(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def no_show(self) -> Effect:
         """Mark the note as no-show."""
         self._validate_before_effect("no_show")
-        effect = Effect(
+        return Effect(
             type=EffectType.NO_SHOW_NOTE,
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
     def upsert_metadata(
         self, key: str, value: str, delay_seconds: NonNegativeInt | None = None

@@ -3,12 +3,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
@@ -96,11 +95,11 @@ class Message(TrackableFieldsModel):
 
         return errors
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("create")
-        effect = Effect(
+        return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -108,42 +107,30 @@ class Message(TrackableFieldsModel):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def create_and_send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create_and_send(self) -> Effect:
         """Create and send message."""
         self._validate_before_effect("create_and_send")
-        effect = Effect(
+        return Effect(
             type="CREATE_AND_SEND_MESSAGE",
             payload=json.dumps({"data": self.values}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def edit(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def edit(self) -> Effect:
         """Edit message."""
         self._validate_before_effect("edit")
-        effect = Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
+        return Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
 
-    @validate_delay_seconds
-    def send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def send(self) -> Effect:
         """Send message."""
         self._validate_before_effect("send")
-        effect = Effect(
+        return Effect(
             type="SEND_MESSAGE",
             payload=json.dumps({"data": self.values}),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("Message",)

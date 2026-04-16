@@ -2,12 +2,11 @@ import json
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import _BaseEffect
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.effects.patient import PatientPreferredPharmacy
 from canvas_sdk.v1.data import Patient
 
@@ -55,12 +54,12 @@ class CreatePatientPreferredPharmacies(_BaseEffect):
             "patient_id": str(self.patient_id),
         }
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Create Patient Preferred Pharmacies."""
         self._validate_before_effect("create")
 
-        effect = Effect(
+        return Effect(
             type=self.Meta.effect_type,
             payload=json.dumps(
                 {
@@ -68,9 +67,6 @@ class CreatePatientPreferredPharmacies(_BaseEffect):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("CreatePatientPreferredPharmacies",)

@@ -4,12 +4,11 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.v1.data.observation import Observation as ObservationModel
 
 
@@ -174,12 +173,12 @@ class Observation(TrackableFieldsModel):
 
         return errors
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Create a new Observation."""
         self._validate_before_effect("create")
 
-        effect = Effect(
+        return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -187,16 +186,13 @@ class Observation(TrackableFieldsModel):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def update(self) -> Effect:
         """Update an existing Observation."""
         self._validate_before_effect("update")
 
-        effect = Effect(
+        return Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -204,9 +200,6 @@ class Observation(TrackableFieldsModel):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = (

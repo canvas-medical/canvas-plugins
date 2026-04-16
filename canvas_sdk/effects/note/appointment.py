@@ -3,12 +3,12 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from django.db.models import Count
-from pydantic import Field, NonNegativeInt
+from pydantic import Field
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
 from canvas_sdk.effects import Effect, EffectType
-from canvas_sdk.effects.base import _BaseEffect, validate_delay_seconds
+from canvas_sdk.effects.base import _BaseEffect, async_effect
 from canvas_sdk.effects.note.base import AppointmentABC
 from canvas_sdk.v1.data import Appointment as AppointmentDataModel
 from canvas_sdk.v1.data import AppointmentLabel, NoteType, Patient
@@ -111,11 +111,11 @@ class ScheduleEvent(AppointmentABC):
 
         return errors
 
-    @validate_delay_seconds
-    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def delete(self) -> Effect:
         """Send a DELETE effect for the schedule event."""
         self._validate_before_effect("delete")
-        effect = Effect(
+        return Effect(
             type=f"DELETE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -123,9 +123,6 @@ class ScheduleEvent(AppointmentABC):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 class Appointment(AppointmentABC):
@@ -267,11 +264,11 @@ class Appointment(AppointmentABC):
             values["labels"] = sorted(self.labels)
         return values
 
-    @validate_delay_seconds
-    def cancel(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def cancel(self) -> Effect:
         """Send a CANCEL effect for the appointment."""
         self._validate_before_effect("cancel")
-        effect = Effect(
+        return Effect(
             type=f"CANCEL_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -279,9 +276,6 @@ class Appointment(AppointmentABC):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 class _AppointmentLabelBase(_BaseEffect, TrackableFieldsModel):

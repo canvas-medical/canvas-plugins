@@ -1,6 +1,7 @@
 import functools
 import inspect
 import json
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import NonNegativeInt
@@ -8,21 +9,47 @@ from pydantic import NonNegativeInt
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect, EffectType
 
+_DELAY_PARAM = inspect.Parameter(
+    "delay_seconds",
+    inspect.Parameter.KEYWORD_ONLY,
+    default=None,
+    annotation="NonNegativeInt | None",
+)
 
-def validate_delay_seconds(func):  # type: ignore[no-untyped-def]
-    """Decorator that validates delay_seconds is non-negative at runtime."""
-    sig = inspect.signature(func)
-    params = list(sig.parameters)
-    delay_idx = params.index("delay_seconds")
+_DELAY_SECONDS_DOC = (
+    "\n\nArgs:\n    delay_seconds (int | None): Optional number of seconds to delay the effect.\n"
+)
+
+
+def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
+    """Add a `delay_seconds` keyword argument to a method that returns an Effect.
+
+    The wrapped method returns a plain Effect. This decorator:
+    - Injects `delay_seconds` as a keyword-only argument on the public signature.
+    - Validates it is non-negative (raises ValueError otherwise).
+    - Sets it on the returned Effect when provided.
+    """
 
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        delay_value = kwargs.get("delay_seconds")
-        if delay_value is None and len(args) > delay_idx:
-            delay_value = args[delay_idx]
-        if delay_value is not None and delay_value < 0:
-            raise ValueError(f"delay_seconds must be non-negative, got {delay_value}")
-        return func(*args, **kwargs)
+    def wrapper(*args: Any, delay_seconds: NonNegativeInt | None = None, **kwargs: Any) -> Effect:
+        if delay_seconds is not None and delay_seconds < 0:
+            raise ValueError(f"delay_seconds must be non-negative, got {delay_seconds}")
+        effect = func(*args, **kwargs)
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
+
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+    insert_idx = len(params)
+    for i, p in enumerate(params):
+        if p.kind == inspect.Parameter.VAR_KEYWORD:
+            insert_idx = i
+            break
+    params.insert(insert_idx, _DELAY_PARAM)
+    wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
+
+    wrapper.__doc__ = (wrapper.__doc__ or "").rstrip() + _DELAY_SECONDS_DOC
 
     return wrapper
 
@@ -45,13 +72,10 @@ class _BaseEffect(Model):
     def effect_payload(self) -> dict[str, Any]:
         return {"data": self.values}
 
-    @validate_delay_seconds
-    def apply(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def apply(self) -> Effect:
         self._validate_before_effect("apply")
-        effect = Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
+        return Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
 
 
 __exports__ = (

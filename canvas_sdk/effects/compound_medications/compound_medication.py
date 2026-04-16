@@ -1,12 +1,11 @@
 import json
 from typing import Any
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 
@@ -240,12 +239,11 @@ class CompoundMedication(TrackableFieldsModel):
 
         return errors
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
 
-        # Get raw values and apply explicit processing
         raw_data = self.values
         processed_data = self.process_compound_medication_data(raw_data)
 
@@ -253,33 +251,26 @@ class CompoundMedication(TrackableFieldsModel):
         if self.active is None:
             payload["data"]["active"] = True
 
-        effect = Effect(
+        return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def update(self) -> Effect:
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")
 
-        # Get raw values and apply explicit processing
         raw_data = self.values
         processed_data = self.process_compound_medication_data(raw_data)
 
         payload = {"data": processed_data}
         payload["data"]["instance_id"] = str(self.instance_id)
 
-        effect = Effect(
+        return Effect(
             type=f"UPDATE_{self.Meta.effect_type}",
             payload=json.dumps(payload),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("CompoundMedication",)

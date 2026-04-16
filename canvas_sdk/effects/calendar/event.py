@@ -4,12 +4,11 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import EffectType, _BaseEffect
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 
 
 class EventRecurrence(StrEnum):
@@ -131,12 +130,12 @@ class Event(_BaseEffect):
 
         return errors
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Send a CREATE effect for the calendar event."""
         self._validate_before_effect("create")
 
-        effect = Effect(
+        return Effect(
             type=EffectType.CALENDAR__EVENT__CREATE,
             payload=json.dumps(
                 {
@@ -144,16 +143,13 @@ class Event(_BaseEffect):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def update(self) -> Effect:
         """Send an UPDATE effect for the calendar event."""
         self._validate_before_effect("update")
 
-        effect = Effect(
+        return Effect(
             type=EffectType.CALENDAR__EVENT__UPDATE,
             payload=json.dumps(
                 {
@@ -161,16 +157,13 @@ class Event(_BaseEffect):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
-    @validate_delay_seconds
-    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def delete(self) -> Effect:
         """Send a DELETE effect for the calendar event."""
         self._validate_before_effect("delete")
 
-        effect = Effect(
+        return Effect(
             type=EffectType.CALENDAR__EVENT__DELETE,
             payload=json.dumps(
                 {
@@ -178,9 +171,6 @@ class Event(_BaseEffect):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("Event", "EventRecurrence", "DaysOfWeek")

@@ -1,10 +1,8 @@
 import json
 
-from pydantic import NonNegativeInt
-
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 
 
 class CreatePatientExternalIdentifier(TrackableFieldsModel):
@@ -26,12 +24,12 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
             "patient_id": self.patient_id,
         }
 
-    @validate_delay_seconds
-    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def create(self) -> Effect:
         """Create a new Patient External Identifier."""
         self._validate_before_effect("create")
 
-        effect = Effect(
+        return Effect(
             type=f"CREATE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -39,9 +37,6 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("CreatePatientExternalIdentifier",)

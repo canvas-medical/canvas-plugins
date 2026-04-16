@@ -2,11 +2,9 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import NonNegativeInt
-
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import validate_delay_seconds
+from canvas_sdk.effects.base import async_effect
 
 
 @dataclass
@@ -26,12 +24,12 @@ class BaseMetadata(TrackableFieldsModel):
 
     key: str
 
-    @validate_delay_seconds
-    def upsert(self, value: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
+    @async_effect
+    def upsert(self, value: str) -> Effect:
         """Upsert the metadata."""
         self._validate_before_effect("upsert")
 
-        effect = Effect(
+        return Effect(
             type=f"UPSERT_{self.Meta.effect_type}",  # type: ignore[attr-defined]
             payload=json.dumps(
                 {
@@ -39,9 +37,6 @@ class BaseMetadata(TrackableFieldsModel):
                 }
             ),
         )
-        if delay_seconds is not None:
-            effect.delay_seconds = delay_seconds
-        return effect
 
 
 __exports__ = ("Metadata",)
