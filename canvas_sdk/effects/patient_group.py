@@ -1,12 +1,11 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import EffectType, _BaseEffect
+from canvas_sdk.effects.base import EffectType, _BaseEffect, async_effect
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.patient_group import PatientGroup as PatientGroupModel
 
@@ -21,21 +20,17 @@ class PatientGroupEffect(Model):
 
     group_id: UUID | str
 
-    def add_member(
-        self, patient_ids: list[str], delay_seconds: NonNegativeInt | None = None
-    ) -> Effect:
+    @async_effect
+    def add_member(self, patient_ids: list[str]) -> Effect:
         """Add patient(s) as members of the group."""
-        return _AddPatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply(
-            delay_seconds=delay_seconds
-        )
+        return _AddPatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply()
 
-    def deactivate_member(
-        self, patient_ids: list[str], delay_seconds: NonNegativeInt | None = None
-    ) -> Effect:
+    @async_effect
+    def deactivate_member(self, patient_ids: list[str]) -> Effect:
         """Deactivate patient(s) from the group."""
-        return _DeactivatePatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply(
-            delay_seconds=delay_seconds
-        )
+        return _DeactivatePatientGroupMember(
+            group_id=self.group_id, patient_ids=patient_ids
+        ).apply()
 
 
 class _PatientGroupBase(_BaseEffect):

@@ -3,7 +3,6 @@ import json
 from typing import Any
 from uuid import UUID
 
-from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
@@ -106,16 +105,14 @@ class Note(NoteOrAppointmentABC):
             payload=json.dumps({"data": {"note": str(self.instance_id)}}),
         )
 
-    def upsert_metadata(
-        self, key: str, value: str, delay_seconds: NonNegativeInt | None = None
-    ) -> Effect:
+    @async_effect
+    def upsert_metadata(self, key: str, value: str) -> Effect:
         """
         Upserts a metadata record to the note.
 
         Args:
             key (str): The key of the metadata.
             value (str): The value of the metadata.
-            delay_seconds (int | None): Optional number of seconds to delay the effect.
 
         Returns:
             Effect: An effect that upserts the metadata record to the note.
@@ -125,9 +122,7 @@ class Note(NoteOrAppointmentABC):
         """
         if not self.instance_id:
             raise ValueError("Field 'instance_id' is required to upsert metadata.")
-        return _NoteMetadata(note_id=self.instance_id, key=key).upsert(
-            value=value, delay_seconds=delay_seconds
-        )
+        return _NoteMetadata(note_id=self.instance_id, key=key).upsert(value=value)
 
     def _validate_state_transition(
         self, note: NoteModel, next_state: NoteStates
