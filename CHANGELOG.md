@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.132.0 (2026-04-16)
+
+### Bug Fixes
+
+- Grant usage and select on custom data objects to reporting user
+  ([#1622](https://github.com/canvas-medical/canvas-plugins/pull/1622),
+  [`0e20ba2`](https://github.com/canvas-medical/canvas-plugins/commit/0e20ba2fbca85c5bb1178e72fc25b8096f125f68))
+
+force merging because integration tests seem to be failing on other PRs too.
+
+### Features
+
+- Create CLAIM_QUEUE_MOVED event
+  ([#1625](https://github.com/canvas-medical/canvas-plugins/pull/1625),
+  [`90ff2d7`](https://github.com/canvas-medical/canvas-plugins/commit/90ff2d717eb4d1ceccedac91af6e9cbf9a235e2e))
+
+
 ## v0.131.0 (2026-04-13)
 
 ### Features
