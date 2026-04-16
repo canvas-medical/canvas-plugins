@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect, EffectType, _BaseEffect
@@ -36,7 +37,7 @@ class Response(_BaseEffect):
             headers=headers,  # type: ignore[call-arg]
         )
 
-    def apply(self, delay_seconds: int | None = None) -> Effect:
+    def apply(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Convert the response into an effect."""
         payload = {
             "headers": self.headers or {},

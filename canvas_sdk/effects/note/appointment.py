@@ -3,7 +3,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from django.db.models import Count
-from pydantic import Field
+from pydantic import Field, NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import TrackableFieldsModel
@@ -111,7 +111,7 @@ class ScheduleEvent(AppointmentABC):
 
         return errors
 
-    def delete(self, delay_seconds: int | None = None) -> Effect:
+    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a DELETE effect for the schedule event."""
         self._validate_before_effect("delete")
         effect = Effect(
@@ -266,7 +266,7 @@ class Appointment(AppointmentABC):
             values["labels"] = sorted(self.labels)
         return values
 
-    def cancel(self, delay_seconds: int | None = None) -> Effect:
+    def cancel(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a CANCEL effect for the appointment."""
         self._validate_before_effect("cancel")
         effect = Effect(

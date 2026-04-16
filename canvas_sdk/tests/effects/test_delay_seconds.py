@@ -33,3 +33,12 @@ def test_delay_seconds_none_does_not_set_field() -> None:
     """Explicitly passing delay_seconds=None should not set the field."""
     effect = _TestEffect().apply(delay_seconds=None)
     assert not effect.HasField("delay_seconds")
+
+
+def test_negative_delay_seconds_raises() -> None:
+    """Negative delay_seconds should be rejected by NonNegativeInt validation."""
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises((ValidationError, ValueError)):
+        _TestEffect().apply(delay_seconds=-5)

@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -250,7 +250,7 @@ class PatientFacilityAddress(TrackableFieldsModel):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Patient Facility Address."""
         self._validate_before_effect("create")
 
@@ -264,7 +264,7 @@ class PatientFacilityAddress(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def update(self, delay_seconds: int | None = None) -> Effect:
+    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing Patient Facility Address."""
         self._validate_before_effect("update")
 
@@ -278,7 +278,7 @@ class PatientFacilityAddress(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def delete(self, delay_seconds: int | None = None) -> Effect:
+    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Delete an existing Patient Facility Address."""
         self._validate_before_effect("delete")
 

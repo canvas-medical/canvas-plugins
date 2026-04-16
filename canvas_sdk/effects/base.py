@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+from pydantic import NonNegativeInt
+
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect, EffectType
 
@@ -23,7 +25,7 @@ class _BaseEffect(Model):
     def effect_payload(self) -> dict[str, Any]:
         return {"data": self.values}
 
-    def apply(self, delay_seconds: int | None = None) -> Effect:
+    def apply(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         self._validate_before_effect("apply")
         effect = Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
         if delay_seconds is not None:

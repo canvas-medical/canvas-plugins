@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -129,7 +130,7 @@ class Event(_BaseEffect):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a CREATE effect for the calendar event."""
         self._validate_before_effect("create")
 
@@ -145,7 +146,7 @@ class Event(_BaseEffect):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def update(self, delay_seconds: int | None = None) -> Effect:
+    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send an UPDATE effect for the calendar event."""
         self._validate_before_effect("update")
 
@@ -161,7 +162,7 @@ class Event(_BaseEffect):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def delete(self, delay_seconds: int | None = None) -> Effect:
+    def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a DELETE effect for the calendar event."""
         self._validate_before_effect("delete")
 

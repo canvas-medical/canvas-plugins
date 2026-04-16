@@ -2,6 +2,8 @@ from datetime import date
 from typing import Literal
 from uuid import UUID
 
+from pydantic import NonNegativeInt
+
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.claim.claim_banner_alert import (
@@ -46,7 +48,7 @@ class ClaimEffect(Model):
         referring_provider: ClaimReferringProvider | None = None,
         ordering_provider: ClaimOrderingProvider | None = None,
         facility: ClaimFacility | None = None,
-        delay_seconds: int | None = None,
+        delay_seconds: NonNegativeInt | None = None,
     ) -> Effect:
         """
         Updates provider information for the claim.
@@ -71,7 +73,9 @@ class ClaimEffect(Model):
             facility=facility,
         ).apply(delay_seconds=delay_seconds)
 
-    def upsert_metadata(self, key: str, value: str, delay_seconds: int | None = None) -> Effect:
+    def upsert_metadata(
+        self, key: str, value: str, delay_seconds: NonNegativeInt | None = None
+    ) -> Effect:
         """
         Upserts a metadata record to the claim.
 
@@ -93,7 +97,7 @@ class ClaimEffect(Model):
         narrative: str,
         intent: BannerAlertIntent,
         href: str | None = None,
-        delay_seconds: int | None = None,
+        delay_seconds: NonNegativeInt | None = None,
     ) -> Effect:
         """
         Adds a banner alert to a claim.
@@ -112,7 +116,7 @@ class ClaimEffect(Model):
             claim_id=self.claim_id, key=key, narrative=narrative, intent=intent, href=href
         ).apply(delay_seconds=delay_seconds)
 
-    def remove_banner(self, key: str, delay_seconds: int | None = None) -> Effect:
+    def remove_banner(self, key: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """
         Removes a banner alert from a claim.
 
@@ -127,7 +131,7 @@ class ClaimEffect(Model):
             delay_seconds=delay_seconds
         )
 
-    def add_comment(self, comment: str, delay_seconds: int | None = None) -> Effect:
+    def add_comment(self, comment: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """
         Adds a comment to the claim.
 
@@ -142,7 +146,9 @@ class ClaimEffect(Model):
             delay_seconds=delay_seconds
         )
 
-    def add_labels(self, labels: list[str | Label], delay_seconds: int | None = None) -> Effect:
+    def add_labels(
+        self, labels: list[str | Label], delay_seconds: NonNegativeInt | None = None
+    ) -> Effect:
         """
         Adds one or more labels to the claim.
 
@@ -157,7 +163,9 @@ class ClaimEffect(Model):
             delay_seconds=delay_seconds
         )
 
-    def remove_labels(self, labels: list[str], delay_seconds: int | None = None) -> Effect:
+    def remove_labels(
+        self, labels: list[str], delay_seconds: NonNegativeInt | None = None
+    ) -> Effect:
         """
         Removes one or more labels from the claim.
 
@@ -172,7 +180,7 @@ class ClaimEffect(Model):
             delay_seconds=delay_seconds
         )
 
-    def move_to_queue(self, queue: str, delay_seconds: int | None = None) -> Effect:
+    def move_to_queue(self, queue: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """
         Moves the claim to a queue.
 
@@ -198,7 +206,7 @@ class ClaimEffect(Model):
         check_number: str | None = None,
         deposit_date: date | None = None,
         payment_description: str | None = None,
-        delay_seconds: int | None = None,
+        delay_seconds: NonNegativeInt | None = None,
     ) -> Effect:
         """
         Posts a coverage or patient payment to the claim.

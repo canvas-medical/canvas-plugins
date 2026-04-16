@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -246,7 +247,7 @@ class Patient(TrackableFieldsModel):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Patient."""
         self._validate_before_effect("create")
 
@@ -262,7 +263,7 @@ class Patient(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def update(self, delay_seconds: int | None = None) -> Effect:
+    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing Patient."""
         self._validate_before_effect("update")
 

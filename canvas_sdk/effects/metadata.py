@@ -2,6 +2,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import NonNegativeInt
+
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
 
@@ -23,7 +25,7 @@ class BaseMetadata(TrackableFieldsModel):
 
     key: str
 
-    def upsert(self, value: str, delay_seconds: int | None = None) -> Effect:
+    def upsert(self, value: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Upsert the metadata."""
         self._validate_before_effect("upsert")
 

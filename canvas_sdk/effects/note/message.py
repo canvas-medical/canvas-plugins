@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -94,7 +95,7 @@ class Message(TrackableFieldsModel):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("create")
         effect = Effect(
@@ -109,7 +110,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def create_and_send(self, delay_seconds: int | None = None) -> Effect:
+    def create_and_send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create and send message."""
         self._validate_before_effect("create_and_send")
         effect = Effect(
@@ -120,7 +121,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def edit(self, delay_seconds: int | None = None) -> Effect:
+    def edit(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Edit message."""
         self._validate_before_effect("edit")
         effect = Effect(type="EDIT_MESSAGE", payload=json.dumps({"data": self.values}))
@@ -128,7 +129,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def send(self, delay_seconds: int | None = None) -> Effect:
+    def send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send message."""
         self._validate_before_effect("send")
         effect = Effect(

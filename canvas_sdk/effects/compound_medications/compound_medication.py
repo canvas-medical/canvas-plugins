@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -238,7 +239,7 @@ class CompoundMedication(TrackableFieldsModel):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
 
@@ -258,7 +259,7 @@ class CompoundMedication(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def update(self, delay_seconds: int | None = None) -> Effect:
+    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")
 

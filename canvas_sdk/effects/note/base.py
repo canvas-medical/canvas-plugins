@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
@@ -107,7 +108,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
 
         return errors
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a CREATE effect for the note or appointment."""
         self._validate_before_effect("create")
         effect = Effect(
@@ -122,7 +123,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             effect.delay_seconds = delay_seconds
         return effect
 
-    def update(self, delay_seconds: int | None = None) -> Effect:
+    def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send an UPDATE effect for the note or appointment."""
         self._validate_before_effect("update")
 

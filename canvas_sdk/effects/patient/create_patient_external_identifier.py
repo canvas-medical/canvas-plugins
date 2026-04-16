@@ -1,5 +1,7 @@
 import json
 
+from pydantic import NonNegativeInt
+
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
 
@@ -23,7 +25,7 @@ class CreatePatientExternalIdentifier(TrackableFieldsModel):
             "patient_id": self.patient_id,
         }
 
-    def create(self, delay_seconds: int | None = None) -> Effect:
+    def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Patient External Identifier."""
         self._validate_before_effect("create")
 

@@ -1,6 +1,7 @@
 from typing import Any
 from uuid import UUID
 
+from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model
@@ -20,13 +21,17 @@ class PatientGroupEffect(Model):
 
     group_id: UUID | str
 
-    def add_member(self, patient_ids: list[str], delay_seconds: int | None = None) -> Effect:
+    def add_member(
+        self, patient_ids: list[str], delay_seconds: NonNegativeInt | None = None
+    ) -> Effect:
         """Add patient(s) as members of the group."""
         return _AddPatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply(
             delay_seconds=delay_seconds
         )
 
-    def deactivate_member(self, patient_ids: list[str], delay_seconds: int | None = None) -> Effect:
+    def deactivate_member(
+        self, patient_ids: list[str], delay_seconds: NonNegativeInt | None = None
+    ) -> Effect:
         """Deactivate patient(s) from the group."""
         return _DeactivatePatientGroupMember(group_id=self.group_id, patient_ids=patient_ids).apply(
             delay_seconds=delay_seconds
