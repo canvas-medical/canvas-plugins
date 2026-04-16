@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import EffectType, _BaseEffect
+from canvas_sdk.effects.base import validate_delay_seconds
 
 
 class EventRecurrence(StrEnum):
@@ -130,6 +131,7 @@ class Event(_BaseEffect):
 
         return errors
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a CREATE effect for the calendar event."""
         self._validate_before_effect("create")
@@ -146,6 +148,7 @@ class Event(_BaseEffect):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send an UPDATE effect for the calendar event."""
         self._validate_before_effect("update")
@@ -162,6 +165,7 @@ class Event(_BaseEffect):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def delete(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a DELETE effect for the calendar event."""
         self._validate_before_effect("delete")

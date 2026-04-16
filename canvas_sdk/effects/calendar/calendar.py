@@ -7,6 +7,7 @@ from pydantic import NonNegativeInt
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects import EffectType, _BaseEffect
+from canvas_sdk.effects.base import validate_delay_seconds
 
 
 class CalendarType(StrEnum):
@@ -36,6 +37,7 @@ class Calendar(_BaseEffect):
             "description": self.description,
         }
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a CREATE effect for the calendar."""
         self._validate_before_effect("create")

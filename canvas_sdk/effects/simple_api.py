@@ -9,6 +9,7 @@ from pydantic import NonNegativeInt
 from pydantic_core import InitErrorDetails
 
 from canvas_sdk.effects import Effect, EffectType, _BaseEffect
+from canvas_sdk.effects.base import validate_delay_seconds
 
 JSON = Mapping[str, "JSON"] | Sequence["JSON"] | int | float | str | bool | None
 
@@ -37,6 +38,7 @@ class Response(_BaseEffect):
             headers=headers,  # type: ignore[call-arg]
         )
 
+    @validate_delay_seconds
     def apply(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Convert the response into an effect."""
         payload = {

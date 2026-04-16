@@ -9,6 +9,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.base import validate_delay_seconds
 from canvas_sdk.v1.data.observation import Observation as ObservationModel
 
 
@@ -173,6 +174,7 @@ class Observation(TrackableFieldsModel):
 
         return errors
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Observation."""
         self._validate_before_effect("create")
@@ -189,6 +191,7 @@ class Observation(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing Observation."""
         self._validate_before_effect("update")

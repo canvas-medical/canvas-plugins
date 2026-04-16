@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import EffectType
 from canvas_sdk.effects import Effect
+from canvas_sdk.effects.base import validate_delay_seconds
 from canvas_sdk.effects.note.base import NoteOrAppointmentABC
 from canvas_sdk.effects.note_metadata.base import _NoteMetadata
 from canvas_sdk.v1.data import Note as NoteModel
@@ -51,6 +52,7 @@ class Note(NoteOrAppointmentABC):
     title: str | None = None
     related_data: dict | None = None
 
+    @validate_delay_seconds
     def push_charges(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Pushes BillingLineItems from the Note to the associated Claim. Identicial to clicking the Push Charges button in the note footer."""
         self._validate_before_effect("push_charges")
@@ -62,6 +64,7 @@ class Note(NoteOrAppointmentABC):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def unlock(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Unlocks the note to allow further edits."""
         self._validate_before_effect("unlock")
@@ -73,6 +76,7 @@ class Note(NoteOrAppointmentABC):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def lock(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Locks the note to prevent further edits."""
         self._validate_before_effect("lock")
@@ -84,6 +88,7 @@ class Note(NoteOrAppointmentABC):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def sign(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Signs the note."""
         self._validate_before_effect("sign")
@@ -95,6 +100,7 @@ class Note(NoteOrAppointmentABC):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def check_in(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Mark the note as checked-in."""
         self._validate_before_effect("check_in")
@@ -106,6 +112,7 @@ class Note(NoteOrAppointmentABC):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def no_show(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Mark the note as no-show."""
         self._validate_before_effect("no_show")

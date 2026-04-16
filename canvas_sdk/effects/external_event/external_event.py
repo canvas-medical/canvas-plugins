@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.base import validate_delay_seconds
 from canvas_sdk.v1.data.external_event import ExternalEvent as ExternalEventModel
 
 
@@ -116,6 +117,7 @@ class ExternalEvent(TrackableFieldsModel):
 
         return errors
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new External Event."""
         self._validate_before_effect("create")
@@ -130,6 +132,7 @@ class ExternalEvent(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing External Event."""
         self._validate_before_effect("update")

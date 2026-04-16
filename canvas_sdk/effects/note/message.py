@@ -8,6 +8,7 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.base import validate_delay_seconds
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
@@ -95,6 +96,7 @@ class Message(TrackableFieldsModel):
 
         return errors
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Originate a new command in the note body."""
         self._validate_before_effect("create")
@@ -110,6 +112,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def create_and_send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create and send message."""
         self._validate_before_effect("create_and_send")
@@ -121,6 +124,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def edit(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Edit message."""
         self._validate_before_effect("edit")
@@ -129,6 +133,7 @@ class Message(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def send(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send message."""
         self._validate_before_effect("send")

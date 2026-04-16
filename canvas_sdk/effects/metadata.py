@@ -6,6 +6,7 @@ from pydantic import NonNegativeInt
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.base import validate_delay_seconds
 
 
 @dataclass
@@ -25,6 +26,7 @@ class BaseMetadata(TrackableFieldsModel):
 
     key: str
 
+    @validate_delay_seconds
     def upsert(self, value: str, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Upsert the metadata."""
         self._validate_before_effect("upsert")

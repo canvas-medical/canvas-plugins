@@ -6,6 +6,7 @@ from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
+from canvas_sdk.effects.base import validate_delay_seconds
 from canvas_sdk.v1.data.compound_medication import CompoundMedication as CompoundMedicationModel
 
 
@@ -239,6 +240,7 @@ class CompoundMedication(TrackableFieldsModel):
 
         return errors
 
+    @validate_delay_seconds
     def create(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
@@ -259,6 +261,7 @@ class CompoundMedication(TrackableFieldsModel):
             effect.delay_seconds = delay_seconds
         return effect
 
+    @validate_delay_seconds
     def update(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")
