@@ -129,6 +129,9 @@ class LabValue(TimestampedModel, IdentifiableModel):
     high_threshold = models.CharField(max_length=30)
     comment = models.TextField()
     observation_status = models.CharField(max_length=24)
+    test = models.ForeignKey(
+        "LabTest", related_name="values", null=True, on_delete=models.DO_NOTHING
+    )
 
 
 class LabValueCoding(TimestampedModel):
