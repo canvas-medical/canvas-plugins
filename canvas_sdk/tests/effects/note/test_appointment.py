@@ -712,3 +712,13 @@ def test_cancel_appointment_with_delay_seconds(mock_db_queries: dict[str, MagicM
     effect = appointment.cancel(delay_seconds=45)
     assert effect.HasField("delay_seconds")
     assert effect.delay_seconds == 45
+
+
+def test_reschedule_appointment_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
+    """Test that reschedule(delay_seconds=90) sets the field on the Effect."""
+    appointment = Appointment(instance_id=str(uuid4()))
+    appointment.start_time = datetime.datetime.now()
+    appointment.duration_minutes = 45
+    effect = appointment.reschedule(delay_seconds=90)
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 90

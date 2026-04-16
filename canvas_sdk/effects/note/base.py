@@ -249,7 +249,8 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
 
         return values
 
-    def reschedule(self) -> Effect:
+    @validate_delay_seconds
+    def reschedule(self, delay_seconds: NonNegativeInt | None = None) -> Effect:
         """Send a RESCHEDULE effect for the appointment."""
         self._validate_before_effect("update")
 
@@ -257,7 +258,7 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
         if self._dirty_keys == {"instance_id"}:
             raise ValueError("No fields have been modified. Nothing to update.")
 
-        return Effect(
+        effect = Effect(
             type=f"RESCHEDULE_{self.Meta.effect_type}",
             payload=json.dumps(
                 {
@@ -265,6 +266,9 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
                 }
             ),
         )
+        if delay_seconds is not None:
+            effect.delay_seconds = delay_seconds
+        return effect
 
 
 __exports__ = ("AppointmentIdentifier", "NoteOrAppointmentABC", "AppointmentABC")
