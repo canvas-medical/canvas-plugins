@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.133.0 (2026-04-16)
+
+### Features
+
+- Add address fields to claimprovider model and effect
+  ([#1629](https://github.com/canvas-medical/canvas-plugins/pull/1629),
+  [`3e43b92`](https://github.com/canvas-medical/canvas-plugins/commit/3e43b92297643196278e16e9f1da2f9529cd4045))
+
+
 ## v0.132.0 (2026-04-16)
 
 ### Bug Fixes
