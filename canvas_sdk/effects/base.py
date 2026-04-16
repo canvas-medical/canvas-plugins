@@ -29,6 +29,8 @@ class _BaseEffect(Model):
         self._validate_before_effect("apply")
         effect = Effect(type=self.Meta.effect_type, payload=json.dumps(self.effect_payload))
         if delay_seconds is not None:
+            if delay_seconds < 0:
+                raise ValueError(f"delay_seconds must be non-negative, got {delay_seconds}")
             effect.delay_seconds = delay_seconds
         return effect
 

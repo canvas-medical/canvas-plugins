@@ -36,9 +36,8 @@ def test_delay_seconds_none_does_not_set_field() -> None:
 
 
 def test_negative_delay_seconds_raises() -> None:
-    """Negative delay_seconds should be rejected by NonNegativeInt validation."""
+    """Negative delay_seconds should raise ValueError."""
     import pytest
-    from pydantic import ValidationError
 
-    with pytest.raises((ValidationError, ValueError)):
+    with pytest.raises(ValueError, match="delay_seconds must be non-negative"):
         _TestEffect().apply(delay_seconds=-5)
