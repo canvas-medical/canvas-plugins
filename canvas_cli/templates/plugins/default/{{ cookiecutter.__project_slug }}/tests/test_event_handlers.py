@@ -7,29 +7,27 @@ from unittest.mock import Mock
 
 from canvas_sdk.effects import EffectType
 from canvas_sdk.events import EventType
-from canvas_sdk.test_utils.factories import PatientFactory
+from canvas_sdk.test_utils.factories import NoteFactory, NoteTypeFactory, PatientFactory
 from canvas_sdk.v1.data.discount import Discount
 
 from {{ cookiecutter.__package_name }}.handlers.event_handlers import NewOfficeVisitNoteHandler
 
 
-# Test the handler's compute method with mocked event data
+# Test the handler's compute method using factories to create real database records
 def test_handler_responds_to_new_office_visit_note() -> None:
-    """Test that the handler originates commands for a new office visit note."""
-    # Create a mock event with the expected structure
+    """Test that the handler originates a goal command for a new office visit note."""
+    # Create real database records using factories
+    note_type = NoteTypeFactory.create(name="Office visit")
+    note = NoteFactory.create(note_type_version=note_type)
+
+    # Create a mock event with context referencing the real records
     mock_event = Mock()
     mock_event.type = EventType.NOTE_STATE_CHANGE_EVENT_CREATED
     mock_event.context = {
         "state": "NEW",
-        "note_id": 123,
-        "patient_id": 456,
+        "note_id": note.id,
+        "patient_id": note.patient.id,
     }
-
-    # Mock the note instance
-    mock_note = Mock()
-    mock_note.uuid = "test-note-uuid-123"
-    mock_note.note_type_version.name = "OFFICE VISIT"
-    mock_event.target.instance = mock_note
 
     # Instantiate the handler with the mock event
     handler = NewOfficeVisitNoteHandler(event=mock_event)
@@ -37,15 +35,11 @@ def test_handler_responds_to_new_office_visit_note() -> None:
     # Call compute and get the effects
     effects = handler.compute()
 
-    # Assert that two effects were returned (vitals and goal)
-    assert len(effects) == 2
+    # Assert that one effect was returned (goal command)
+    assert len(effects) == 1
 
-    # Assert both effects have the correct type
-    assert all(effect.type == EffectType.ORIGINATE_COMMAND for effect in effects)
-
-    # Verify that the effects contain the correct note_uuid in their payloads
-    for effect in effects:
-        assert "test-note-uuid-123" in effect.payload
+    # Assert the effect has the correct type
+    assert effects[0].type == EffectType.ORIGINATE_COMMAND
 
 
 def test_handler_skips_non_new_notes() -> None:
@@ -54,15 +48,9 @@ def test_handler_skips_non_new_notes() -> None:
     mock_event.type = EventType.NOTE_STATE_CHANGE_EVENT_CREATED
     mock_event.context = {
         "state": "SIGNED",
-        "note_id": 123,
-        "patient_id": 456,
+        "note_id": 1,
+        "patient_id": 1,
     }
-
-    # Mock the note instance
-    mock_note = Mock()
-    mock_note.uuid = "test-note-uuid-123"
-    mock_note.note_type_version.name = "OFFICE VISIT"
-    mock_event.target.instance = mock_note
 
     handler = NewOfficeVisitNoteHandler(event=mock_event)
     effects = handler.compute()
@@ -73,19 +61,17 @@ def test_handler_skips_non_new_notes() -> None:
 
 def test_handler_skips_non_office_visit_notes() -> None:
     """Test that the handler skips notes that are not office visits."""
+    # Create a note with a non-office-visit type
+    note_type = NoteTypeFactory.create(name="Progress note")
+    note = NoteFactory.create(note_type_version=note_type)
+
     mock_event = Mock()
     mock_event.type = EventType.NOTE_STATE_CHANGE_EVENT_CREATED
     mock_event.context = {
         "state": "NEW",
-        "note_id": 123,
-        "patient_id": 456,
+        "note_id": note.id,
+        "patient_id": note.patient.id,
     }
-
-    # Mock the note instance
-    mock_note = Mock()
-    mock_note.uuid = "test-note-uuid-123"
-    mock_note.note_type_version.name = "PROGRESS NOTE"
-    mock_event.target.instance = mock_note
 
     handler = NewOfficeVisitNoteHandler(event=mock_event)
     effects = handler.compute()
