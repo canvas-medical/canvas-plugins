@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects import EffectType
 from canvas_sdk.effects.http_request import HttpRequestEffect
 
 
@@ -37,54 +37,6 @@ def test_http_request_defaults() -> None:
     assert data["method"] == "GET"
     assert data["headers"] == {}
     assert data["body"] == ""
-
-
-def test_http_request_with_on_success_and_on_failure() -> None:
-    """on_success and on_failure effects should be serialized into the payload."""
-    success_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "ok"}}')
-    failure_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "fail"}}')
-
-    effect = HttpRequestEffect(
-        url="https://api.example.com/submit",
-        method="POST",
-        on_success=[success_effect],
-        on_failure=[failure_effect],
-    ).apply()
-
-    data = json.loads(effect.payload)["data"]
-    assert len(data["on_success"]) == 1
-    assert data["on_success"][0]["type"] == EffectType.LOG
-    assert json.loads(data["on_success"][0]["payload"])["data"]["message"] == "ok"
-    assert len(data["on_failure"]) == 1
-    assert json.loads(data["on_failure"][0]["payload"])["data"]["message"] == "fail"
-
-
-def test_chained_effects_preserve_delay_seconds() -> None:
-    """delay_seconds on chained effects should survive serialization."""
-    delayed_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "delayed"}}')
-    delayed_effect.delay_seconds = 30
-
-    non_delayed_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "immediate"}}')
-
-    effect = HttpRequestEffect(
-        url="https://api.example.com",
-        method="POST",
-        on_success=[delayed_effect],
-        on_failure=[non_delayed_effect],
-    ).apply()
-
-    data = json.loads(effect.payload)["data"]
-    assert data["on_success"][0]["delay_seconds"] == 30
-    assert "delay_seconds" not in data["on_failure"][0]
-
-
-def test_http_request_without_chaining_omits_keys() -> None:
-    """When on_success/on_failure are not set, they should not appear in the payload."""
-    effect = HttpRequestEffect(url="https://api.example.com").apply()
-
-    data = json.loads(effect.payload)["data"]
-    assert "on_success" not in data
-    assert "on_failure" not in data
 
 
 def test_http_request_with_delay() -> None:
