@@ -67,6 +67,24 @@ class LabReport(AuditedModel, IdentifiableModel):
     date_performed = models.DateTimeField()
     custom_document_name = models.CharField(max_length=500)
 
+    @property
+    def ordered_tests(self) -> "models.QuerySet[LabTest]":
+        """LabTests created when a LabOrder is placed.
+
+        These rows are not associated with any LabValue results.
+        They represent the tests that are ordered.
+        """
+        return self.tests.filter(order__isnull=False)
+
+    @property
+    def result_tests(self) -> "models.QuerySet[LabTest]":
+        """LabTests created for lab results.
+
+        For FHIR DiagnosticReport and Health Gorilla ingested reports,
+        LabValue records are associated with these tests.
+        """
+        return self.tests.filter(order__isnull=True)
+
 
 class LabReviewQuerySet(CommittableQuerySetMixin, ForPatientQuerySetMixin, BaseQuerySet):
     """A queryset for lab reviews."""
