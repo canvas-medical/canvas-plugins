@@ -59,6 +59,25 @@ def test_http_request_with_on_success_and_on_failure() -> None:
     assert json.loads(data["on_failure"][0]["payload"])["data"]["message"] == "fail"
 
 
+def test_chained_effects_preserve_delay_seconds() -> None:
+    """delay_seconds on chained effects should survive serialization."""
+    delayed_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "delayed"}}')
+    delayed_effect.delay_seconds = 30
+
+    non_delayed_effect = Effect(type=EffectType.LOG, payload='{"data": {"message": "immediate"}}')
+
+    effect = HttpRequest(
+        url="https://api.example.com",
+        method="POST",
+        on_success=[delayed_effect],
+        on_failure=[non_delayed_effect],
+    ).apply()
+
+    data = json.loads(effect.payload)["data"]
+    assert data["on_success"][0]["delay_seconds"] == 30
+    assert "delay_seconds" not in data["on_failure"][0]
+
+
 def test_http_request_without_chaining_omits_keys() -> None:
     """When on_success/on_failure are not set, they should not appear in the payload."""
     effect = HttpRequest(url="https://api.example.com").apply()

@@ -54,10 +54,18 @@ class HttpRequest(_BaseEffect):
             "body": self.body or "",
         }
         if self.on_success:
-            v["on_success"] = [{"type": e.type, "payload": e.payload} for e in self.on_success]
+            v["on_success"] = [self._serialize_chained_effect(e) for e in self.on_success]
         if self.on_failure:
-            v["on_failure"] = [{"type": e.type, "payload": e.payload} for e in self.on_failure]
+            v["on_failure"] = [self._serialize_chained_effect(e) for e in self.on_failure]
         return v
+
+    @staticmethod
+    def _serialize_chained_effect(effect: Effect) -> dict[str, Any]:
+        """Serialize a chained effect, preserving delay_seconds if set."""
+        data: dict[str, Any] = {"type": effect.type, "payload": effect.payload}
+        if effect.HasField("delay_seconds"):
+            data["delay_seconds"] = effect.delay_seconds
+        return data
 
 
 __exports__ = ("HttpRequest",)
