@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.effects.base import EffectType, _BaseEffect
@@ -41,8 +41,7 @@ class HttpRequest(_BaseEffect):
     on_success: list[Effect] | None = None
     on_failure: list[Effect] | None = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def values(self) -> dict[str, Any]:

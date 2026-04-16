@@ -102,7 +102,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    "Provider with ID {self.provider_id} does not exist.",
+                    f"Provider with ID {self.provider_id} does not exist.",
                     self.provider_id,
                 )
             )
