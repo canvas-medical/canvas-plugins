@@ -1,6 +1,7 @@
 import functools
 import inspect
 import re
+import warnings
 from collections.abc import Callable
 from datetime import date, datetime
 from enum import Enum
@@ -19,7 +20,10 @@ _DELAY_PARAM = inspect.Parameter(
     annotation="NonNegativeInt | None",
 )
 
-_DELAY_SECONDS_DESC = "delay_seconds (int | None): Optional number of seconds to delay the effect."
+_DELAY_SECONDS_DESC = (
+    "delay_seconds (NonNegativeInt | None): Optional number of seconds to delay the effect. "
+    "Must be >= 0."
+)
 
 _DOCSTRING_SECTION_HEADERS = (
     "Returns",
@@ -103,9 +107,20 @@ class _AsyncEffectMixin:
         for name, attr in list(vars(cls).items()):
             if not inspect.isfunction(attr) or name.startswith("_"):
                 continue
+            raw_return = attr.__annotations__.get("return")
+            if raw_return is Effect:
+                setattr(cls, name, async_effect(attr))
+                continue
+            if not isinstance(raw_return, str) or "Effect" not in raw_return:
+                continue
             try:
                 hints = get_type_hints(attr)
-            except Exception:
+            except Exception as exc:
+                warnings.warn(
+                    f"Could not resolve type hints for {cls.__qualname__}.{name}: {exc}. "
+                    "This method will not receive delay_seconds support.",
+                    stacklevel=2,
+                )
                 continue
             if hints.get("return") is Effect:
                 setattr(cls, name, async_effect(attr))
