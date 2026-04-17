@@ -46,7 +46,13 @@ def _insert_delay_seconds_into_doc(doc: str | None) -> str:
 
     args_match = re.search(r"^([ \t]*)Args:[ \t]*$", doc, re.MULTILINE)
     if args_match is None:
-        return doc.rstrip() + "\n\nArgs:\n    " + _DELAY_SECONDS_DESC + "\n"
+        other_section_re = rf"^([ \t]*)(?:{'|'.join(_DOCSTRING_SECTION_HEADERS)}):[ \t]*$"
+        other_match = re.search(other_section_re, doc, re.MULTILINE)
+        if other_match is None:
+            return doc.rstrip() + "\n\nArgs:\n    " + _DELAY_SECONDS_DESC + "\n"
+        indent = other_match.group(1)
+        block = f"{indent}Args:\n{indent}    {_DELAY_SECONDS_DESC}\n\n"
+        return doc[: other_match.start()] + block + doc[other_match.start() :]
 
     args_indent = args_match.group(1)
     entry_line = f"{args_indent}    {_DELAY_SECONDS_DESC}"

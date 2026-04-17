@@ -3,6 +3,7 @@ import warnings
 
 import pytest
 
+from canvas_sdk.base import _insert_delay_seconds_into_doc
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.effects.base import _BaseEffect
 
@@ -90,6 +91,28 @@ def test_string_annotation_resolving_to_non_effect_is_not_wrapped() -> None:
 
     sig = inspect.signature(_ReturnsFakeEffect.do_thing)
     assert "delay_seconds" not in sig.parameters
+
+
+def test_docstring_with_returns_but_no_args_inserts_args_before_returns() -> None:
+    """When a docstring has a Returns: section but no Args:, Args: is inserted before Returns:."""
+    doc = "Sign the note.\n\n    Returns:\n        Effect: A sign note effect.\n"
+    result = _insert_delay_seconds_into_doc(doc)
+
+    args_pos = result.index("Args:")
+    returns_pos = result.index("Returns:")
+    assert args_pos < returns_pos
+    assert "    Args:" in result
+    assert "        delay_seconds" in result
+
+
+def test_docstring_with_only_summary_appends_args() -> None:
+    """When a docstring has only a summary, Args: is appended at the end."""
+    doc = "Sign the note."
+    result = _insert_delay_seconds_into_doc(doc)
+
+    assert result.startswith("Sign the note.")
+    assert "Args:" in result
+    assert "delay_seconds" in result
 
 
 def test_method_with_var_keyword_is_wrapped_correctly() -> None:
