@@ -42,6 +42,7 @@ class _BaseCommand(TrackableFieldsModel):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate that the command has a key and required fields."""
+        super().__init_subclass__(**kwargs)
         if (not hasattr(cls.Meta, "key") or not cls.Meta.key) and not getattr(
             cls.Meta, "abstract", False
         ):

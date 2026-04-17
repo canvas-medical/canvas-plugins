@@ -115,6 +115,30 @@ def test_docstring_with_only_summary_appends_args() -> None:
     assert "delay_seconds" in result
 
 
+def test_inherited_mixin_methods_are_wrapped() -> None:
+    """Methods from non-_AsyncEffectMixin parent classes should be wrapped on the subclass."""
+    from canvas_sdk.commands.commands.prescribe import PrescribeCommand
+
+    send_sig = inspect.signature(PrescribeCommand.send)
+    review_sig = inspect.signature(PrescribeCommand.review)
+    assert "delay_seconds" in send_sig.parameters
+    assert "delay_seconds" in review_sig.parameters
+
+
+def test_prescribe_command_overrides_are_wrapped() -> None:
+    """Overrides defined on a concrete command class should be wrapped.
+
+    Regression test: _BaseCommand.__init_subclass__ previously omitted super(),
+    so _AsyncEffectMixin.__init_subclass__ never fired for PrescribeCommand.
+    """
+    from canvas_sdk.commands.commands.prescribe import PrescribeCommand
+
+    originate_sig = inspect.signature(PrescribeCommand.originate)
+    edit_sig = inspect.signature(PrescribeCommand.edit)
+    assert "delay_seconds" in originate_sig.parameters
+    assert "delay_seconds" in edit_sig.parameters
+
+
 def test_method_with_var_keyword_is_wrapped_correctly() -> None:
     """A method with **kwargs should get delay_seconds inserted before VAR_KEYWORD."""
 

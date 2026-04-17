@@ -101,6 +101,7 @@ def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
     wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
 
     wrapper.__doc__ = _insert_delay_seconds_into_doc(wrapper.__doc__)
+    wrapper._is_async_effect = True  # type: ignore[attr-defined]
 
     return wrapper
 
@@ -114,8 +115,20 @@ class _AsyncEffectMixin:
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        for name, attr in list(vars(cls).items()):
-            if not inspect.isfunction(attr) or name.startswith("_"):
+        candidates: dict[str, Any] = {}
+        for base in reversed(cls.__mro__):
+            if base is object or base is _AsyncEffectMixin:
+                continue
+            if base is not cls and issubclass(base, _AsyncEffectMixin):
+                continue
+            for name, attr in vars(base).items():
+                if not inspect.isfunction(attr) or name.startswith("_"):
+                    continue
+                candidates[name] = attr
+
+        for name, attr in candidates.items():
+            current = getattr(cls, name, None)
+            if getattr(current, "_is_async_effect", False):
                 continue
             raw_return = attr.__annotations__.get("return")
             if raw_return is Effect:
