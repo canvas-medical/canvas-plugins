@@ -83,9 +83,16 @@ def async_effect(func: Callable[..., Effect]) -> Callable[..., Effect]:
         return effect
 
     sig = inspect.signature(func)
-    wrapper.__signature__ = sig.replace(  # type: ignore[attr-defined]
-        parameters=[*sig.parameters.values(), _DELAY_PARAM]
+    params = list(sig.parameters.values())
+    var_kw_idx = next(
+        (i for i, p in enumerate(params) if p.kind == inspect.Parameter.VAR_KEYWORD),
+        None,
     )
+    if var_kw_idx is not None:
+        params.insert(var_kw_idx, _DELAY_PARAM)
+    else:
+        params.append(_DELAY_PARAM)
+    wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
 
     wrapper.__doc__ = _insert_delay_seconds_into_doc(wrapper.__doc__)
 

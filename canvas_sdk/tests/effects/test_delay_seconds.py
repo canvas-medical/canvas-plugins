@@ -92,6 +92,26 @@ def test_string_annotation_resolving_to_non_effect_is_not_wrapped() -> None:
     assert "delay_seconds" not in sig.parameters
 
 
+def test_method_with_var_keyword_is_wrapped_correctly() -> None:
+    """A method with **kwargs should get delay_seconds inserted before VAR_KEYWORD."""
+
+    class _VarKwargsEffect(_BaseEffect):
+        class Meta:
+            effect_type = EffectType.LOG
+
+        def do_thing(self, name: str, **extra: object) -> Effect:
+            return self.apply()
+
+    sig = inspect.signature(_VarKwargsEffect.do_thing)
+    kinds = [p.kind for p in sig.parameters.values()]
+    assert "delay_seconds" in sig.parameters
+    delay_idx = list(sig.parameters).index("delay_seconds")
+    extra_idx = list(sig.parameters).index("extra")
+    assert delay_idx < extra_idx
+    assert kinds[delay_idx] == inspect.Parameter.KEYWORD_ONLY
+    assert kinds[extra_idx] == inspect.Parameter.VAR_KEYWORD
+
+
 def test_unresolvable_string_annotation_emits_warning() -> None:
     """An unresolvable string annotation mentioning 'Effect' should emit a warning."""
     with warnings.catch_warnings(record=True) as caught:
