@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Lab Results</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 0 4px; }
+      table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 13px; }
+      th { background: #f5f5f5; }
+      .abnormal { color: #b00; font-weight: 600; }
+      .report-header { margin: 1rem 0 .25rem; }
+      .report-meta { color: #666; font-size: 12px; margin-bottom: .5rem; }
+      .empty { color: #666; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    {% if not reports %}
+      <p class="empty">No lab reports on file.</p>
+    {% endif %}
+
+    {% for report in reports %}
+      <h3 class="report-header">{{ report.title }}</h3>
+      <div class="report-meta">Collected {{ report.date }}</div>
+
+      {% if not report.sections %}
+        <p class="empty">No values on this report.</p>
+      {% endif %}
+
+      {% for section in report.sections %}
+        {% if section.heading %}<h4>{{ section.heading }}</h4>{% endif %}
+        <table>
+          <thead>
+            <tr>
+              <th>Value</th>
+              <th>Units</th>
+              <th>Reference range</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for value in section.values %}
+              <tr>
+                <td>{{ value.value }}</td>
+                <td>{{ value.units }}</td>
+                <td>{{ value.reference_range }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endfor %}
+    {% endfor %}
+  </body>
+</html>
