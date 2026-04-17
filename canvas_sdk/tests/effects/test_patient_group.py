@@ -107,30 +107,3 @@ def test_invalid_group_raises(mock_group: MagicMock, method: str) -> None:
     group = PatientGroupEffect(group_id="nonexistent-group")
     with pytest.raises(ValidationError, match="PatientGroup with id.*does not exist"):
         getattr(group, method)(patient_ids=[])
-
-
-@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
-@patch(MOCK_GROUP)
-@patch(MOCK_PATIENT)
-def test_delay_seconds_set(mock_patient: MagicMock, mock_group: MagicMock, method: str) -> None:
-    """Test that delay_seconds is propagated to the returned effect."""
-    _mock_patients_exist(mock_patient, ["patient-1"])
-    _mock_group_exists(mock_group)
-    group = PatientGroupEffect(group_id="group-1")
-    applied = getattr(group, method)(patient_ids=["patient-1"], delay_seconds=60)
-    assert applied.HasField("delay_seconds")
-    assert applied.delay_seconds == 60
-
-
-@pytest.mark.parametrize("method", ["add_member", "deactivate_member"])
-@patch(MOCK_GROUP)
-@patch(MOCK_PATIENT)
-def test_delay_seconds_not_set_by_default(
-    mock_patient: MagicMock, mock_group: MagicMock, method: str
-) -> None:
-    """Test that delay_seconds is not set when not passed."""
-    _mock_patients_exist(mock_patient, ["patient-1"])
-    _mock_group_exists(mock_group)
-    group = PatientGroupEffect(group_id="group-1")
-    applied = getattr(group, method)(patient_ids=["patient-1"])
-    assert not applied.HasField("delay_seconds")

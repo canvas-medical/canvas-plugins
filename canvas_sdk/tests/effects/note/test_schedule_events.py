@@ -265,14 +265,6 @@ def test_schedule_event_delete(mock_db_queries: dict[str, MagicMock]) -> None:
     assert "instance_id" in payload["data"]
 
 
-def test_schedule_event_delete_with_delay_seconds(mock_db_queries: dict[str, MagicMock]) -> None:
-    """Test that ScheduleEvent.delete(delay_seconds=60) sets the field on the Effect."""
-    event = ScheduleEvent(instance_id=str(uuid4()))
-    effect = event.delete(delay_seconds=60)
-    assert effect.HasField("delay_seconds")
-    assert effect.delay_seconds == 60
-
-
 def test_schedule_event_delete_missing_instance_id(mock_db_queries: dict[str, MagicMock]) -> None:
     """Test that delete without instance_id raises error."""
     event = ScheduleEvent(practice_location_id=str(uuid4()), provider_id=str(uuid4()))

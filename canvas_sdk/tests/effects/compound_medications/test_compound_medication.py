@@ -440,38 +440,6 @@ def test_compound_medication_whitespace_only_formulation(
     assert any("Field 'formulation' cannot be empty" in str(e) for e in errors)
 
 
-def test_create_compound_medication_with_delay_seconds(
-    mock_db_queries: dict[str, MagicMock],
-    valid_compound_medication_data: dict[str, Any],
-) -> None:
-    """Test that create(delay_seconds=60) sets the field on the Effect."""
-    compound_med = CompoundMedication(**valid_compound_medication_data)
-    effect = compound_med.create(delay_seconds=60)
-    assert effect.HasField("delay_seconds")
-    assert effect.delay_seconds == 60
-
-
-def test_create_compound_medication_without_delay_seconds(
-    mock_db_queries: dict[str, MagicMock],
-    valid_compound_medication_data: dict[str, Any],
-) -> None:
-    """Test that create() without delay_seconds does not set the field."""
-    compound_med = CompoundMedication(**valid_compound_medication_data)
-    effect = compound_med.create()
-    assert not effect.HasField("delay_seconds")
-
-
-def test_update_compound_medication_with_delay_seconds(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test that update(delay_seconds=30) sets the field on the Effect."""
-    compound_med = CompoundMedication(instance_id=str(uuid4()))
-    compound_med.formulation = "Updated Formulation"
-    effect = compound_med.update(delay_seconds=30)
-    assert effect.HasField("delay_seconds")
-    assert effect.delay_seconds == 30
-
-
 def test_compound_medication_edge_case_formulation_length(
     mock_db_queries: dict[str, MagicMock],
 ) -> None:

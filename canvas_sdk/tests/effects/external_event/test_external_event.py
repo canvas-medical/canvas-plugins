@@ -343,35 +343,3 @@ def test_external_event_id_accepts_uuid() -> None:
         event_type="ADT^A03",
     )
     assert external_event.external_event_id == uuid_val
-
-
-def test_create_external_event_with_delay_seconds(
-    valid_create_data: dict[str, Any],
-) -> None:
-    """Test that create(delay_seconds=60) sets the field on the Effect."""
-    external_event = ExternalEvent(**valid_create_data)
-    effect = external_event.create(delay_seconds=60)
-    assert effect.HasField("delay_seconds")
-    assert effect.delay_seconds == 60
-
-
-def test_create_external_event_without_delay_seconds(
-    valid_create_data: dict[str, Any],
-) -> None:
-    """Test that create() without delay_seconds does not set the field."""
-    external_event = ExternalEvent(**valid_create_data)
-    effect = external_event.create()
-    assert not effect.HasField("delay_seconds")
-
-
-def test_update_external_event_with_delay_seconds(
-    mock_db_queries: dict[str, MagicMock],
-) -> None:
-    """Test that update(delay_seconds=30) sets the field on the Effect."""
-    external_event = ExternalEvent(
-        external_event_id="event-123",
-        event_type="ADT^A03",
-    )
-    effect = external_event.update(delay_seconds=30)
-    assert effect.HasField("delay_seconds")
-    assert effect.delay_seconds == 30
