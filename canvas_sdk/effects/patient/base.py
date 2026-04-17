@@ -7,7 +7,6 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.effects.metadata import Metadata as PatientMetadata
 from canvas_sdk.v1.data import Patient as PatientModel
 from canvas_sdk.v1.data import PracticeLocation, Staff
@@ -104,7 +103,7 @@ class PatientAddress:
         }
 
 
-class Patient(TrackableFieldsModel, _AsyncEffectMixin):
+class Patient(TrackableFieldsModel):
     """Effect to create a Patient record."""
 
     class Meta:

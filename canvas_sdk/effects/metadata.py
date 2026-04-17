@@ -4,7 +4,6 @@ from typing import Any
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import _AsyncEffectMixin
 
 
 @dataclass
@@ -19,7 +18,7 @@ class Metadata:
         return {"key": self.key, "value": self.value}
 
 
-class BaseMetadata(TrackableFieldsModel, _AsyncEffectMixin):
+class BaseMetadata(TrackableFieldsModel):
     """Base class for metadata effects."""
 
     key: str

@@ -5,12 +5,12 @@ from pydantic_core import InitErrorDetails
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import EffectType, _AsyncEffectMixin, _BaseEffect
+from canvas_sdk.effects.base import EffectType, _BaseEffect
 from canvas_sdk.v1.data import Patient
 from canvas_sdk.v1.data.patient_group import PatientGroup as PatientGroupModel
 
 
-class PatientGroupEffect(Model, _AsyncEffectMixin):
+class PatientGroupEffect(Model):
     """
     Effect for performing actions on a Patient Group.
 

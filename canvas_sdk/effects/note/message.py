@@ -7,12 +7,11 @@ from pydantic_core import InitErrorDetails
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.v1.data import Message as MessageModel
 from canvas_sdk.v1.data import Patient, Staff
 
 
-class Message(TrackableFieldsModel, _AsyncEffectMixin):
+class Message(TrackableFieldsModel):
     """
     Effect to create and/or send a message.
     """

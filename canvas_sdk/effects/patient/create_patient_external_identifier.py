@@ -2,10 +2,9 @@ import json
 
 from canvas_generated.messages.effects_pb2 import Effect
 from canvas_sdk.base import TrackableFieldsModel
-from canvas_sdk.effects.base import _AsyncEffectMixin
 
 
-class CreatePatientExternalIdentifier(TrackableFieldsModel, _AsyncEffectMixin):
+class CreatePatientExternalIdentifier(TrackableFieldsModel):
     """Effect to create a Patient External Identifier record."""
 
     class Meta:

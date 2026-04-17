@@ -4,7 +4,6 @@ from uuid import UUID
 
 from canvas_sdk.base import Model
 from canvas_sdk.effects import Effect
-from canvas_sdk.effects.base import _AsyncEffectMixin
 from canvas_sdk.effects.claim.claim_banner_alert import (
     BannerAlertIntent,
     _AddClaimBannerAlert,
@@ -30,7 +29,7 @@ from canvas_sdk.effects.claim.payment.base import (
 from canvas_sdk.effects.claim.payment.claim_payment import _PostClaimPayment
 
 
-class ClaimEffect(Model, _AsyncEffectMixin):
+class ClaimEffect(Model):
     """
     Effect for performing actions on a Claim.
 
