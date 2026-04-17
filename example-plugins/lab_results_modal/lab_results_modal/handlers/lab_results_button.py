@@ -1,8 +1,10 @@
+from django.db.models import Prefetch
+
 from canvas_sdk.effects import Effect
 from canvas_sdk.effects.launch_modal import LaunchModalEffect
 from canvas_sdk.handlers.action_button import ActionButton
 from canvas_sdk.templates import render_to_string
-from canvas_sdk.v1.data.lab import LabReport
+from canvas_sdk.v1.data.lab import LabReport, LabTest
 
 
 class LabResultsButton(ActionButton):
@@ -16,11 +18,16 @@ class LabResultsButton(ActionButton):
     def handle(self) -> list[Effect]:
         """Render the patient's lab reports as HTML and launch a modal."""
         patient_id = self.event.target.id
-
         reports = (
             LabReport.objects.filter(patient__id=patient_id, junked=False, for_test_only=False)
             .order_by("-original_date")
-            .prefetch_related("tests", "values")
+            .prefetch_related(
+                Prefetch(
+                    "tests",
+                    queryset=LabTest.objects.filter(order__isnull=True).prefetch_related("values"),
+                ),
+                "values",
+            )
         )
 
         context = {"reports": [_build_report_context(r) for r in reports]}
@@ -36,16 +43,15 @@ class LabResultsButton(ActionButton):
 
 def _build_report_context(report: LabReport) -> dict:
     """Build the template context for a single LabReport."""
-    # result_tests: LabTests with values attached (not the tests associated with an order)
     sections = []
-    for test in report.result_tests:
+    for test in report.tests.all():
         values = list(test.values.all())
         if values:
             sections.append(_build_section(test.ontology_test_name or "Lab Test", values))
 
     # Orphan values: LabValues with no test FK. Happens for some data-integration
     # reports and for FHIR-API reports with `values_without_tests`.
-    orphan_values = list(report.values.filter(test__isnull=True))
+    orphan_values = [v for v in report.values.all() if v.test_id is None]
     if orphan_values:
         # Only label the orphan section when it sits alongside test-grouped values;
         # otherwise the heading just looks redundant on reports with no tests at all.

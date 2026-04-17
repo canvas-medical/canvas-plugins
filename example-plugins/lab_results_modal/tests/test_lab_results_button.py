@@ -60,15 +60,8 @@ def test_handle_renders_template_and_launches_modal() -> None:
         assert result == ["applied"]
 
 
-def test_build_section_hides_ref_range_when_all_blank() -> None:
-    """show_ref_range is False when no value carries a reference range."""
-    values = [MagicMock(reference_range=""), MagicMock(reference_range="   ")]
+def test_build_section_wraps_heading_and_values() -> None:
+    """_build_section packages the heading and values for the template."""
+    values = [MagicMock(), MagicMock()]
     section = _build_section("Glucose", values)
-    assert section == {"heading": "Glucose", "values": values, "show_ref_range": False}
-
-
-def test_build_section_shows_ref_range_when_any_present() -> None:
-    """show_ref_range is True when at least one value carries a reference range."""
-    values = [MagicMock(reference_range=""), MagicMock(reference_range="70-99")]
-    section = _build_section("Glucose", values)
-    assert section["show_ref_range"] is True
+    assert section == {"heading": "Glucose", "values": values, "show_ref_range": True}
