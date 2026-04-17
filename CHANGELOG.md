@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.134.0 (2026-04-17)
+
+### Features
+
+- Allow originate and commit with a single effect
+  ([#1632](https://github.com/canvas-medical/canvas-plugins/pull/1632),
+  [`473da5d`](https://github.com/canvas-medical/canvas-plugins/commit/473da5d035364fb856f0c0c0d3e180f5ecfc9e77))
+
+
 ## v0.133.0 (2026-04-16)
 
 ### Features
