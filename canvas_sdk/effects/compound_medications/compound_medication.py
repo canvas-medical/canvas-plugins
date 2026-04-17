@@ -242,6 +242,7 @@ class CompoundMedication(TrackableFieldsModel):
         """Create a new Compound Medication."""
         self._validate_before_effect("create")
 
+        # Get raw values and apply explicit processing
         raw_data = self.values
         processed_data = self.process_compound_medication_data(raw_data)
 
@@ -258,6 +259,7 @@ class CompoundMedication(TrackableFieldsModel):
         """Update an existing Compound Medication."""
         self._validate_before_effect("update")
 
+        # Get raw values and apply explicit processing
         raw_data = self.values
         processed_data = self.process_compound_medication_data(raw_data)
 

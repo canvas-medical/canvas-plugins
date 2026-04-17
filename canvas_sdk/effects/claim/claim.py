@@ -83,11 +83,7 @@ class ClaimEffect(Model):
         return _ClaimMetadata(claim_id=self.claim_id, key=key).upsert(value=value)
 
     def add_banner(
-        self,
-        key: str,
-        narrative: str,
-        intent: BannerAlertIntent,
-        href: str | None = None,
+        self, key: str, narrative: str, intent: BannerAlertIntent, href: str | None = None
     ) -> Effect:
         """
         Adds a banner alert to a claim.

@@ -100,7 +100,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    f"Provider with ID {self.provider_id} does not exist.",
+                    "Provider with ID {self.provider_id} does not exist.",
                     self.provider_id,
                 )
             )
@@ -123,6 +123,7 @@ class NoteOrAppointmentABC(TrackableFieldsModel, ABC):
         """Send an UPDATE effect for the note or appointment."""
         self._validate_before_effect("update")
 
+        # Check if any fields were actually modified
         if self._dirty_keys == {"instance_id"}:
             raise ValueError("No fields have been modified. Nothing to update.")
 
@@ -242,6 +243,7 @@ class AppointmentABC(NoteOrAppointmentABC, ABC):
         """Send a RESCHEDULE effect for the appointment."""
         self._validate_before_effect("update")
 
+        # Check if any fields were actually modified
         if self._dirty_keys == {"instance_id"}:
             raise ValueError("No fields have been modified. Nothing to update.")
 

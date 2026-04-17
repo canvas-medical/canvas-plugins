@@ -192,7 +192,7 @@ class Appointment(AppointmentABC):
             errors.append(
                 self._create_error_detail(
                     "value",
-                    f"Patient with ID {self.patient_id} does not exist.",
+                    "Patient with ID {self.patient_id} does not exist.",
                     self.patient_id,
                 )
             )
