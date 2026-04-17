@@ -34,7 +34,7 @@
             <tr>
               <th>Value</th>
               <th>Units</th>
-              <th>Reference range</th>
+              {% if section.show_ref_range %}<th>Reference range</th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -42,7 +42,7 @@
               <tr>
                 <td>{{ value.value }}</td>
                 <td>{{ value.units }}</td>
-                <td>{{ value.reference_range }}</td>
+                {% if section.show_ref_range %}<td>{{ value.reference_range }}</td>{% endif %}
               </tr>
             {% endfor %}
           </tbody>

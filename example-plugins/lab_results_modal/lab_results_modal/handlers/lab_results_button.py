@@ -70,5 +70,5 @@ def _build_section(heading: str, values: list) -> dict:
     return {
         "heading": heading,
         "values": values,
-        "show_ref_range": True,
+        "show_ref_range": any((v.reference_range or "").strip() for v in values),
     }
