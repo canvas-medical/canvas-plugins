@@ -53,10 +53,7 @@ def _insert_delay_seconds_into_doc(doc: str | None) -> str:
 
     section_re = rf"^{re.escape(args_indent)}(?:{'|'.join(_DOCSTRING_SECTION_HEADERS)}):[ \t]*$"
     next_match = re.search(section_re, doc[args_match.end() :], re.MULTILINE)
-    if next_match is None:
-        return doc.rstrip() + "\n" + entry_line + "\n"
-
-    abs_pos = args_match.end() + next_match.start()
+    abs_pos = args_match.end() + next_match.start() if next_match else len(doc)
     while abs_pos > 0 and doc[abs_pos - 1] == "\n":
         abs_pos -= 1
     return doc[:abs_pos] + "\n" + entry_line + doc[abs_pos:]
