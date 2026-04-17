@@ -117,12 +117,38 @@ def test_docstring_with_only_summary_appends_args() -> None:
 
 def test_inherited_mixin_methods_are_wrapped() -> None:
     """Methods from non-_AsyncEffectMixin parent classes should be wrapped on the subclass."""
+    from canvas_sdk.commands.commands.imaging_order import ImagingOrderCommand
+    from canvas_sdk.commands.commands.lab_order import LabOrderCommand
+    from canvas_sdk.commands.commands.prescribe import PrescribeCommand
+    from canvas_sdk.commands.commands.refer import ReferCommand
+
+    assert "delay_seconds" in inspect.signature(PrescribeCommand.send).parameters
+    assert "delay_seconds" in inspect.signature(PrescribeCommand.review).parameters
+    assert "delay_seconds" in inspect.signature(LabOrderCommand.send).parameters
+    assert "delay_seconds" in inspect.signature(ReferCommand.delegate).parameters
+    assert "delay_seconds" in inspect.signature(ReferCommand.sign).parameters
+    assert "delay_seconds" in inspect.signature(ImagingOrderCommand.delegate).parameters
+    assert "delay_seconds" in inspect.signature(ImagingOrderCommand.sign).parameters
+
+
+def test_inherited_mixin_method_sets_delay_seconds_at_runtime() -> None:
+    """Calling a wrapped mixin method with delay_seconds should set the field on the Effect."""
     from canvas_sdk.commands.commands.prescribe import PrescribeCommand
 
-    send_sig = inspect.signature(PrescribeCommand.send)
-    review_sig = inspect.signature(PrescribeCommand.review)
-    assert "delay_seconds" in send_sig.parameters
-    assert "delay_seconds" in review_sig.parameters
+    cmd = PrescribeCommand(command_uuid="fake-uuid")
+    effect = cmd.send(delay_seconds=30)  # type: ignore[call-arg]
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 30
+
+
+def test_concrete_override_sets_delay_seconds_at_runtime() -> None:
+    """A concrete command's override (originate) wrapped via the MRO hook works end-to-end."""
+    from canvas_sdk.commands.commands.prescribe import PrescribeCommand
+
+    cmd = PrescribeCommand(note_uuid="fake-note")
+    effect = cmd.originate(delay_seconds=60)  # type: ignore[call-arg]
+    assert effect.HasField("delay_seconds")
+    assert effect.delay_seconds == 60
 
 
 def test_prescribe_command_overrides_are_wrapped() -> None:
