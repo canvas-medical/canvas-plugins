@@ -1,0 +1,44 @@
+from typing import Annotated, Any
+
+from pydantic import Field
+
+from canvas_sdk.effects.base import EffectType, _BaseEffect
+
+
+class HttpRequestEffect(_BaseEffect):
+    """Make an HTTP request from a plugin.
+
+    The platform will execute the HTTP request on behalf of the plugin.
+    The URL must be included in the plugin's url_permissions.
+
+    Example usage::
+
+        http_effect = HttpRequestEffect(
+            url="https://api.example.com/submit",
+            method="POST",
+            headers={"Authorization": "Bearer token"},
+            body=json.dumps({"key": "value"}),
+        )
+        return [http_effect.apply(delay_seconds=60)]
+    """
+
+    class Meta:
+        effect_type = EffectType.HTTP_REQUEST
+
+    url: Annotated[str, Field(min_length=1)]
+    method: Annotated[str, Field(pattern="^(GET|POST|PUT|PATCH|DELETE)$")] = "GET"
+    headers: dict[str, str] | None = None
+    body: str | None = None
+
+    @property
+    def values(self) -> dict[str, Any]:
+        """Serialize the HTTP request details into the payload."""
+        return {
+            "url": self.url,
+            "method": self.method,
+            "headers": self.headers or {},
+            "body": self.body or "",
+        }
+
+
+__exports__ = ("HttpRequestEffect",)

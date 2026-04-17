@@ -437,6 +437,8 @@ enum EffectType {
   PATIENT_GROUP__DEACTIVATE_MEMBER = 8311;
 
   HOMEPAGE_CONFIGURATION = 9000;
+
+  HTTP_REQUEST = 10000;
 }
 
 message Effect {
