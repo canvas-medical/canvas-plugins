@@ -97,6 +97,23 @@ def test_originate_successfully_returns_originate_effect(
         "note": dummy_command_instance.note_uuid,
         "data": dummy_command_instance.values,
         "line_number": -1,
+        "commit": False,
+    }
+
+
+def test_originate_with_commit_true(
+    dummy_command_instance: DummyCommand,
+) -> None:
+    """Test that originate(commit=True) includes commit flag in payload."""
+    effect = dummy_command_instance.originate(commit=True)
+
+    assert effect.type == EffectType.ORIGINATE_PLAN_COMMAND
+    assert json.loads(effect.payload) == {
+        "command": dummy_command_instance.command_uuid,
+        "note": dummy_command_instance.note_uuid,
+        "data": dummy_command_instance.values,
+        "line_number": -1,
+        "commit": True,
     }
 
 

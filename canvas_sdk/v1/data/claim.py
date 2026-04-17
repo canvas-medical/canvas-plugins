@@ -232,6 +232,11 @@ class ClaimProvider(TimestampedModel, IdentifiableModel):
     provider_tax_id_type = models.CharField(max_length=1, default="E")
     provider_taxonomy = models.CharField(max_length=100, default="", blank=True)
     provider_ptan_identifier = models.CharField(max_length=50, default="", blank=True)
+    provider_addr1 = models.CharField(max_length=255, default="", blank=True)
+    provider_addr2 = models.CharField(max_length=255, default="", blank=True)
+    provider_city = models.CharField(max_length=255, default="", blank=True)
+    provider_state = models.CharField(max_length=2, default="", blank=True)
+    provider_zip = models.CharField(max_length=255, default="", blank=True)
 
     referring_provider_id = models.CharField(max_length=255, default="", blank=True)
     referring_provider_first_name = models.CharField(max_length=255, default="", blank=True)

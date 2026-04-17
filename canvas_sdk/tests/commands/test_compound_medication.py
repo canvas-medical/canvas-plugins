@@ -611,6 +611,26 @@ def test_originate_prescribe_output_mutually_exclusive_fields(
 
 @pytest.mark.parametrize(
     "prescription",
+    ("valid_regular_prescription_data",),
+    indirect=True,
+    ids=["regular_medication"],
+)
+def test_originate_prescribe_ignores_commit_flag(
+    mock_db_queries: dict[str, MagicMock], prescription: dict[str, Any]
+) -> None:
+    """Test that originate(commit=True) does not include commit in prescribe payload.
+
+    Prescribe does not support COMMIT, so the flag must not be forwarded.
+    """
+    prescribe_cmd = PrescribeCommand(**prescription)
+    effect = prescribe_cmd.originate(commit=True)
+    payload = json.loads(effect.payload)
+
+    assert "commit" not in payload
+
+
+@pytest.mark.parametrize(
+    "prescription",
     ("valid_regular_prescription_data", "valid_compound_medication_prescription_data"),
     indirect=True,
     ids=["regular_medication", "compound_medication"],
